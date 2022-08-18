@@ -106,11 +106,8 @@ func main() {
 	}
 }
 
-func publishCommands(commandBus *cqrs.CommandBus) func() {
-	i := 0
-	for {
-		i++
-
+func publishCommands(commandBus *cqrs.CommandBus) {
+	for i := 0; i < 3; i++ {
 		cmd := &command.PipelineRunQueue{
 			IdentityID:    "e-gineer",
 			WorkspaceID:   "scratch",
@@ -122,9 +119,9 @@ func publishCommands(commandBus *cqrs.CommandBus) func() {
 			panic(err)
 		}
 
-		fmt.Println()
-
+		// Psuedo-serial execution for development
 		time.Sleep(time.Second * 3)
+		fmt.Println()
 	}
 }
 
