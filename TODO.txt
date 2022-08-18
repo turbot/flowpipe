@@ -1,0 +1,78 @@
+
+TODO
+- logging using zap
+- work out how to change the topic name to match our format / etc, I think it's related to the cqrs.JSONMarshaller.Name[FromMessage]
+- how are events logged into a stream (in order)? can we do middleware or something for that?
+
+NOTES
+- Should we capture / load the pipeline definition at the start of the run? What happens if it changes on the way through? We should at least capture the version and then abort if changed?
+
+
+
+
+
+
+COMMANDS
+
+pipeline.run.queue
+pipeline.run.load
+pipeline.run.start
+pipeline.run.cancel
+pipeline.run.finish
+pipeline.run.fail
+
+
+
+EVENTS
+
+pipeline.run.queued
+pipeline.run.loaded
+pipeline.run.started
+pipeline.run.canceled
+pipeline.run.finished
+pipeline.run.failed
+
+
+
+
+
+
+
+Events
+
+pipeline.scheduled
+
+pipeline.started
+
+step.http_request.started
+step.http_request.finished
+step.http_request.failed
+
+pipeline.canceled
+pipeline.finished
+pipeline.failed
+
+
+Commands
+
+pipeline.schedule
+pipeline.start
+
+step.http_request.start
+step.http_request.finish
+step.http_request.fail
+
+pipeline.cancel
+pipeline.finish
+pipeline.fail
+
+
+
+
+
+
+Event log
+- history of commands and their outputs
+
+Snapshot
+- current state of the pipeline, can be rebuilt anytime from the event log
