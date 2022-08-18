@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
-
-	"github.com/rs/xid"
 )
 
 type PipelineRunQueue struct {
@@ -15,6 +13,7 @@ type PipelineRunQueue struct {
 	WorkspaceID   string                 `json:"workspace_id"`
 	PipelineName  string                 `json:"pipeline_name"`
 	PipelineInput map[string]interface{} `json:"pipeline_input"`
+	RunID         string                 `json:"run_id"`
 }
 
 type PipelineRunQueueHandler CommandHandler
@@ -34,7 +33,7 @@ func (h PipelineRunQueueHandler) Handle(ctx context.Context, c interface{}) erro
 		WorkspaceID:   cmd.WorkspaceID,
 		PipelineName:  cmd.PipelineName,
 		PipelineInput: cmd.PipelineInput,
-		RunID:         xid.New().String(),
+		RunID:         cmd.RunID,
 		Timestamp:     time.Now(),
 	}
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), e)

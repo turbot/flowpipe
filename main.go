@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/handler"
 
@@ -15,28 +16,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 )
-
-func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
-	return func(msg *message.Message) ([]*message.Message, error) {
-
-		// event.log
-		f, err := os.OpenFile("event.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Println(err)
-		}
-		defer f.Close()
-		newline := []byte("\n")
-		logJson := append(msg.Payload, newline...)
-		if _, err := f.Write(logJson); err != nil {
-			fmt.Println("error", err)
-		}
-
-		// stdout
-		//fmt.Printf("[event  ] %s: %s\n", msg.Metadata["name"], string(msg.Payload))
-
-		return h(msg)
-	}
-}
 
 func main() {
 	logger := watermill.NewStdLogger(false, false)
@@ -137,6 +116,7 @@ func publishCommands(commandBus *cqrs.CommandBus) func() {
 			WorkspaceID:   "scratch",
 			PipelineName:  fmt.Sprintf("my_pipeline_%d", i%3),
 			PipelineInput: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"},
+			RunID:         xid.New().String(),
 		}
 		if err := commandBus.Send(context.Background(), cmd); err != nil {
 			panic(err)
@@ -145,5 +125,29 @@ func publishCommands(commandBus *cqrs.CommandBus) func() {
 		fmt.Println()
 
 		time.Sleep(time.Second * 3)
+	}
+}
+
+func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
+	return func(msg *message.Message) ([]*message.Message, error) {
+
+		// event.log
+		f, err := os.OpenFile("event.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println(err)
+		}
+		defer f.Close()
+		startOfLine := []byte(fmt.Sprintf(`{"event_type":"%s","timestamp":"%s","payload":`, msg.Metadata["name"], time.Now().Format(time.RFC3339)))
+		endOfLine := []byte("}\n")
+		logJson := append(startOfLine, msg.Payload...)
+		logJson = append(logJson, endOfLine...)
+		if _, err := f.Write(logJson); err != nil {
+			fmt.Println("error", err)
+		}
+
+		// stdout
+		//fmt.Printf("[event  ] %s: %s\n", msg.Metadata["name"], string(msg.Payload))
+
+		return h(msg)
 	}
 }
