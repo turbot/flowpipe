@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rs/xid"
+
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
@@ -54,13 +56,11 @@ func (h PipelineRunStarted) Handle(ctx context.Context, ei interface{}) error {
 
 	// Run the first step
 	cmd := &command.PipelineRunStepExecute{
-		IdentityID:    e.IdentityID,
-		WorkspaceID:   e.WorkspaceID,
-		PipelineName:  e.PipelineName,
-		PipelineInput: e.PipelineInput,
-		RunID:         e.RunID,
-		Pipeline:      e.Pipeline,
-		StepIndex:     0,
+		RunID:     e.RunID,
+		StepID:    xid.New().String(),
+		Pipeline:  e.Pipeline,
+		StepIndex: 0,
+		StepInput: e.Pipeline.Steps[0].Input,
 	}
 
 	return h.CommandBus.Send(ctx, cmd)

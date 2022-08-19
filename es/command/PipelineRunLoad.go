@@ -73,15 +73,14 @@ func PipelineDefinition(name string) (*pipeline.Pipeline, error) {
 		"my_pipeline_0": &pipeline.Pipeline{
 			Name: "my_pipeline_0",
 			Steps: []pipeline.PipelineStep{
-				{Type: "http_request", Name: "get_data_0"},
+				{Type: "http_request", Name: "get_data_0", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
 			},
 		},
 		"my_pipeline_1": &pipeline.Pipeline{
 			Name: "my_pipeline_1",
 			Steps: []pipeline.PipelineStep{
-				{Type: "http_request", Name: "get_data_1"},
-				{Type: "http_request", Name: "get_data_2"},
-				{Type: "http_request", Name: "get_data_3"},
+				{Type: "http_request", Name: "get_data_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
+				{Type: "http_request", Name: "get_data_2", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
 			},
 		},
 	}

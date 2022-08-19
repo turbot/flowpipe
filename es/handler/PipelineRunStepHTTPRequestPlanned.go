@@ -26,13 +26,8 @@ func (h PipelineRunStepHTTPRequestPlanned) Handle(ctx context.Context, ei interf
 
 	// We have another step to run
 	cmd := &command.PipelineRunStepHTTPRequestExecute{
-		IdentityID:    e.IdentityID,
-		WorkspaceID:   e.WorkspaceID,
-		PipelineName:  e.PipelineName,
-		PipelineInput: e.PipelineInput,
-		RunID:         e.RunID,
-		Pipeline:      e.Pipeline,
-		StepIndex:     e.StepIndex,
+		RunID: e.RunID,
+		Input: e.Input,
 	}
 
 	return h.CommandBus.Send(ctx, cmd)

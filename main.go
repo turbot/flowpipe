@@ -109,11 +109,10 @@ func main() {
 func publishCommands(commandBus *cqrs.CommandBus) {
 	for i := 0; i < 3; i++ {
 		cmd := &command.PipelineRunQueue{
-			IdentityID:    "e-gineer",
-			WorkspaceID:   "scratch",
-			PipelineName:  fmt.Sprintf("my_pipeline_%d", i%3),
-			PipelineInput: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"},
-			RunID:         xid.New().String(),
+			IdentityID:   "e-gineer",
+			WorkspaceID:  "scratch",
+			PipelineName: fmt.Sprintf("my_pipeline_%d", i%3),
+			RunID:        xid.New().String(),
 		}
 		if err := commandBus.Send(context.Background(), cmd); err != nil {
 			panic(err)

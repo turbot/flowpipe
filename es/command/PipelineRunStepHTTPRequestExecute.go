@@ -8,17 +8,11 @@ import (
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
 type PipelineRunStepHTTPRequestExecute struct {
-	IdentityID    string                 `json:"identity_id"`
-	WorkspaceID   string                 `json:"workspace_id"`
-	PipelineName  string                 `json:"pipeline_name"`
-	PipelineInput map[string]interface{} `json:"pipeline_input"`
-	RunID         string                 `json:"run_id"`
-	Pipeline      pipeline.Pipeline      `json:"pipeline"`
-	StepIndex     int                    `json:"step_index"`
+	RunID string                 `json:"run_id"`
+	Input map[string]interface{} `json:"input"`
 }
 
 type PipelineRunStepHTTPRequestExecuteHandler CommandHandler
@@ -37,14 +31,11 @@ func (h PipelineRunStepHTTPRequestExecuteHandler) Handle(ctx context.Context, c 
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), cmd)
 
 	var url string
-	if urli, ok := cmd.PipelineInput["url"]; ok {
+	if urli, ok := cmd.Input["url"]; ok {
 		url = urli.(string)
 	}
 	if url == "" {
 		e := event.PipelineRunFailed{
-			IdentityID:   cmd.IdentityID,
-			WorkspaceID:  cmd.WorkspaceID,
-			PipelineName: cmd.PipelineName,
 			RunID:        cmd.RunID,
 			Timestamp:    time.Now(),
 			ErrorMessage: "http_request requires url input",
@@ -57,13 +48,9 @@ func (h PipelineRunStepHTTPRequestExecuteHandler) Handle(ctx context.Context, c 
 	resp, err := http.Get(url)
 	if err != nil {
 		e := event.PipelineRunFailed{
-			IdentityID:    cmd.IdentityID,
-			WorkspaceID:   cmd.WorkspaceID,
-			PipelineName:  cmd.PipelineName,
-			PipelineInput: cmd.PipelineInput,
-			RunID:         cmd.RunID,
-			Timestamp:     time.Now(),
-			ErrorMessage:  err.Error(),
+			RunID:        cmd.RunID,
+			Timestamp:    time.Now(),
+			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
@@ -72,27 +59,17 @@ func (h PipelineRunStepHTTPRequestExecuteHandler) Handle(ctx context.Context, c 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		e := event.PipelineRunFailed{
-			IdentityID:    cmd.IdentityID,
-			WorkspaceID:   cmd.WorkspaceID,
-			PipelineName:  cmd.PipelineName,
-			PipelineInput: cmd.PipelineInput,
-			RunID:         cmd.RunID,
-			Timestamp:     time.Now(),
-			ErrorMessage:  err.Error(),
+			RunID:        cmd.RunID,
+			Timestamp:    time.Now(),
+			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
 
 	e := event.PipelineRunStepExecuted{
-		IdentityID:    cmd.IdentityID,
-		WorkspaceID:   cmd.WorkspaceID,
-		PipelineName:  cmd.PipelineName,
-		PipelineInput: cmd.PipelineInput,
-		RunID:         cmd.RunID,
-		Timestamp:     time.Now(),
-		Pipeline:      cmd.Pipeline,
-		StepIndex:     cmd.StepIndex,
-		Output:        string(body),
+		RunID:     cmd.RunID,
+		Timestamp: time.Now(),
+		Output:    map[string]interface{}{"body": string(body)},
 	}
 	return h.EventBus.Publish(ctx, &e)
 }

@@ -10,13 +10,11 @@ import (
 )
 
 type PipelineRunStepExecute struct {
-	IdentityID    string                 `json:"identity_id"`
-	WorkspaceID   string                 `json:"workspace_id"`
-	PipelineName  string                 `json:"pipeline_name"`
-	PipelineInput map[string]interface{} `json:"pipeline_input"`
-	RunID         string                 `json:"run_id"`
-	Pipeline      pipeline.Pipeline      `json:"pipeline"`
-	StepIndex     int                    `json:"step_index"`
+	RunID     string                 `json:"run_id"`
+	StepID    string                 `json:"step_id"`
+	Pipeline  pipeline.Pipeline      `json:"pipeline"`
+	StepIndex int                    `json:"step_index"`
+	StepInput map[string]interface{} `json:"step_input"`
 }
 
 type PipelineRunStepExecuteHandler CommandHandler
@@ -40,27 +38,20 @@ func (h PipelineRunStepExecuteHandler) Handle(ctx context.Context, c interface{}
 	case "http_request":
 		{
 			e := event.PipelineRunStepHTTPRequestPlanned{
-				IdentityID:    cmd.IdentityID,
-				WorkspaceID:   cmd.WorkspaceID,
-				PipelineName:  cmd.PipelineName,
-				PipelineInput: cmd.PipelineInput,
-				RunID:         cmd.RunID,
-				Timestamp:     time.Now(),
-				Pipeline:      cmd.Pipeline,
-				StepIndex:     cmd.StepIndex,
+				RunID:     cmd.RunID,
+				Timestamp: time.Now(),
+				StepID:    cmd.StepID,
+				Input:     cmd.StepInput,
 			}
 			return h.EventBus.Publish(ctx, &e)
 		}
 	}
 
+	// Need StepID in the failed status
 	e := event.PipelineRunFailed{
-		IdentityID:    cmd.IdentityID,
-		WorkspaceID:   cmd.WorkspaceID,
-		PipelineName:  cmd.PipelineName,
-		PipelineInput: cmd.PipelineInput,
-		RunID:         cmd.RunID,
-		Timestamp:     time.Now(),
-		ErrorMessage:  fmt.Sprintf("step_type_not_found: %s", step.Type),
+		RunID:        cmd.RunID,
+		Timestamp:    time.Now(),
+		ErrorMessage: fmt.Sprintf("step_type_not_found: %s", step.Type),
 	}
 	return h.EventBus.Publish(ctx, &e)
 }
