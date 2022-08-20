@@ -35,3 +35,4 @@
 
 # Ignore local event log development
 *.log
+/logs

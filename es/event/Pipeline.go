@@ -55,4 +55,12 @@ type PipelineRunStepExecuted struct {
 	Output    map[string]interface{} `json:"output"`
 }
 
+type PipelineRunStepFailed struct {
+	RunID        string            `json:"run_id"`
+	Timestamp    time.Time         `json:"timestamp"`
+	StepID       string            `json:"step_id"`
+	Pipeline     pipeline.Pipeline `json:"pipeline"`
+	ErrorMessage string            `json:"error_message"`
+}
+
 type PipelineRunFinished PipelineRunEvent

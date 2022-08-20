@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -54,6 +55,7 @@ func main() {
 				command.PipelineRunStepExecuteHandler{EventBus: eb},
 				command.PipelineRunStepHTTPRequestExecuteHandler{EventBus: eb},
 				command.PipelineRunFinishHandler{EventBus: eb},
+				command.PipelineRunFailHandler{EventBus: eb},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -71,6 +73,7 @@ func main() {
 				handler.PipelineRunStarted{CommandBus: cb},
 				handler.PipelineRunStepExecuted{CommandBus: cb},
 				handler.PipelineRunStepHTTPRequestPlanned{CommandBus: cb},
+				handler.PipelineRunStepFailed{CommandBus: cb},
 				handler.PipelineRunFinished{CommandBus: cb},
 				handler.PipelineRunFailed{CommandBus: cb},
 			}
@@ -117,18 +120,28 @@ func publishCommands(commandBus *cqrs.CommandBus) {
 		if err := commandBus.Send(context.Background(), cmd); err != nil {
 			panic(err)
 		}
-
 		// Psuedo-serial execution for development
 		time.Sleep(time.Second * 3)
 		fmt.Println()
 	}
 }
 
+type PipelinePayload struct {
+	RunID string `json:"run_id"`
+}
+
 func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 
+		// Get the run ID from the payload
+		var pp PipelinePayload
+		err := json.Unmarshal(msg.Payload, &pp)
+		if err != nil {
+			log.Println(err)
+		}
+
 		// event.log
-		f, err := os.OpenFile("event.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(fmt.Sprintf("logs/%s.jsonl", pp.RunID), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Println(err)
 		}

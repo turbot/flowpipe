@@ -71,5 +71,6 @@ func (h PipelineRunStepHTTPRequestExecuteHandler) Handle(ctx context.Context, c 
 		Timestamp: time.Now(),
 		Output:    map[string]interface{}{"body": string(body)},
 	}
+
 	return h.EventBus.Publish(ctx, &e)
 }
