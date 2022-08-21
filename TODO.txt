@@ -8,6 +8,12 @@ NOTES
 - Should we capture / load the pipeline definition at the start of the run? What happens if it changes on the way through? We should at least capture the version and then abort if changed?
 
 
+DECISIONS
+- Pipeline definitions and code are not stored in event history, they are referenced
+- So, pipeline definitions and code can be updated and will change running pipelines
+- But, a pipeline run can choose to pin its version, causing it to abort if an update is completed
+- Or, upgrades can choose to pause affected pipeline runs ... queue new runs > finish existing runs > upgrade > restart new runs
+
 
 
 

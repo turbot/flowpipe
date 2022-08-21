@@ -1,8 +1,11 @@
 package pipeline
 
 type Pipeline struct {
-	Name  string         `json:"name"`
-	Steps []PipelineStep `json:"steps"`
+	Type     string                 `json:"type"`
+	Name     string                 `json:"name"`
+	Steps    []PipelineStep         `json:"steps"`
+	Parallel bool                   `json:"parallel"`
+	Input    map[string]interface{} `json:"input"`
 }
 
 type PipelineStep struct {

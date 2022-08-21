@@ -71,6 +71,7 @@ func (h PipelineRunLoadHandler) Handle(ctx context.Context, c interface{}) error
 func PipelineDefinition(name string) (*pipeline.Pipeline, error) {
 	definitions := map[string]*pipeline.Pipeline{
 		"my_pipeline_0": {
+			Type: "pipeline",
 			Name: "my_pipeline_0",
 			Steps: []pipeline.PipelineStep{
 				{Type: "exec", Name: "exec_1", Input: map[string]interface{}{"command": "ls"}},
@@ -78,6 +79,7 @@ func PipelineDefinition(name string) (*pipeline.Pipeline, error) {
 			},
 		},
 		"my_pipeline_1": {
+			Type: "pipeline",
 			Name: "my_pipeline_1",
 			Steps: []pipeline.PipelineStep{
 				{Type: "http_request", Name: "get_data_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
