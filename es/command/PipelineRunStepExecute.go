@@ -35,16 +35,29 @@ func (h PipelineRunStepExecuteHandler) Handle(ctx context.Context, c interface{}
 	step := cmd.Pipeline.Steps[cmd.StepIndex]
 
 	switch step.Type {
-	case "http_request":
+	case "exec", "http_request":
 		{
-			e := event.PipelineRunStepHTTPRequestPlanned{
+			e := event.PipelineRunStepPrimitivePlanned{
 				RunID:     cmd.RunID,
 				Timestamp: time.Now(),
 				StepID:    cmd.StepID,
+				Primitive: step.Type,
 				Input:     cmd.StepInput,
 			}
 			return h.EventBus.Publish(ctx, &e)
 		}
+		/*
+			case "http_request":
+				{
+					e := event.PipelineRunStepHTTPRequestPlanned{
+						RunID:     cmd.RunID,
+						Timestamp: time.Now(),
+						StepID:    cmd.StepID,
+						Input:     cmd.StepInput,
+					}
+					return h.EventBus.Publish(ctx, &e)
+				}
+		*/
 	}
 
 	// Need StepID in the failed status

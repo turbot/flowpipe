@@ -7,21 +7,11 @@ import (
 	"net/http"
 )
 
-type HTTPRequest struct {
-	primitive
-}
-
-func (h *HTTPRequest) SetInput(i Input) error {
-	if i["url"] == nil {
-		return errors.New("HTTPRequest input must include url")
-	}
-	h.input = i
-	return nil
-}
+type HTTPRequest struct{}
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i Input) error {
 	if i["url"] == nil {
-		return errors.New("HTTPRequest input must include url")
+		return errors.New("HTTPRequest input must define a url")
 	}
 	return nil
 }

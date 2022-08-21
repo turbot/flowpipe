@@ -7,15 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHTTPRequestInputSetAndGet(t *testing.T) {
-	assert := assert.New(t)
-	hr := HTTPRequest{}
-	input := Input(map[string]interface{}{"url": "https://steampipe.io"})
-	hr.SetInput(input)
-	output := hr.Input()
-	assert.Equal(input, output)
-}
-
 func TestHTTPRequestOK(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}

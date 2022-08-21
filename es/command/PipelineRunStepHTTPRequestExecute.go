@@ -3,11 +3,10 @@ package command
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
+	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
 type PipelineRunStepHTTPRequestExecute struct {
@@ -30,33 +29,9 @@ func (h PipelineRunStepHTTPRequestExecuteHandler) Handle(ctx context.Context, c 
 
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), cmd)
 
-	var url string
-	if urli, ok := cmd.Input["url"]; ok {
-		url = urli.(string)
-	}
-	if url == "" {
-		e := event.PipelineRunFailed{
-			RunID:        cmd.RunID,
-			Timestamp:    time.Now(),
-			ErrorMessage: "http_request requires url input",
-		}
-		return h.EventBus.Publish(ctx, &e)
-	}
+	hr := primitive.HTTPRequest{}
 
-	//step := cmd.Pipeline.Steps[cmd.StepIndex]
-
-	resp, err := http.Get(url)
-	if err != nil {
-		e := event.PipelineRunFailed{
-			RunID:        cmd.RunID,
-			Timestamp:    time.Now(),
-			ErrorMessage: err.Error(),
-		}
-		return h.EventBus.Publish(ctx, &e)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
+	output, err := hr.Run(ctx, cmd.Input)
 	if err != nil {
 		e := event.PipelineRunFailed{
 			RunID:        cmd.RunID,
@@ -69,7 +44,7 @@ func (h PipelineRunStepHTTPRequestExecuteHandler) Handle(ctx context.Context, c 
 	e := event.PipelineRunStepExecuted{
 		RunID:     cmd.RunID,
 		Timestamp: time.Now(),
-		Output:    map[string]interface{}{"body": string(body)},
+		Output:    output,
 	}
 
 	return h.EventBus.Publish(ctx, &e)

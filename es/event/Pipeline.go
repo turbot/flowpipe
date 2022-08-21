@@ -39,6 +39,14 @@ type PipelineRunLoaded struct {
 
 type PipelineRunStarted PipelineRunLoaded
 
+type PipelineRunStepPrimitivePlanned struct {
+	RunID     string                 `json:"run_id"`
+	Timestamp time.Time              `json:"timestamp"`
+	StepID    string                 `json:"step_id"`
+	Primitive string                 `json:"primitive"`
+	Input     map[string]interface{} `json:"input"`
+}
+
 type PipelineRunStepHTTPRequestPlanned struct {
 	RunID     string                 `json:"run_id"`
 	Timestamp time.Time              `json:"timestamp"`
