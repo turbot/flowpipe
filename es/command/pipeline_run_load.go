@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -21,7 +20,7 @@ type PipelineRunLoad struct {
 type PipelineRunLoadHandler CommandHandler
 
 func (h PipelineRunLoadHandler) HandlerName() string {
-	return "pipeline.run.load"
+	return "command.pipeline_run_load"
 }
 
 func (h PipelineRunLoadHandler) NewCommand() interface{} {
@@ -82,14 +81,13 @@ func PipelineDefinition(name string) (*pipeline.Pipeline, error) {
 			Type: "pipeline",
 			Name: "my_pipeline_1",
 			Steps: []pipeline.PipelineStep{
-				{Type: "http_request", Name: "get_data_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
-				{Type: "http_request", Name: "get_data_2", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
-				{Type: "http_request", Name: "get_data_2", Input: map[string]interface{}{}},
+				{Type: "http_request", Name: "http_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
+				//{Type: "pipeline", Name: "pipeline_1", Input: map[string]interface{}{"name": "my_pipeline_0"}},
 			},
 		},
 	}
 	if d, ok := definitions[name]; ok {
 		return d, nil
 	}
-	return nil, errors.New(fmt.Sprintf("pipeline_not_found: %s", name))
+	return nil, fmt.Errorf("pipeline_not_found: %s", name)
 }

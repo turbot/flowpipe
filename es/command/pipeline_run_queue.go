@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
-type PipelineRunFinish struct {
+type PipelineRunQueue struct {
 	IdentityID    string                 `json:"identity_id"`
 	WorkspaceID   string                 `json:"workspace_id"`
 	PipelineName  string                 `json:"pipeline_name"`
@@ -16,20 +16,19 @@ type PipelineRunFinish struct {
 	RunID         string                 `json:"run_id"`
 }
 
-type PipelineRunFinishHandler CommandHandler
+type PipelineRunQueueHandler CommandHandler
 
-func (h PipelineRunFinishHandler) HandlerName() string {
-	return "pipeline.run.finish"
+func (h PipelineRunQueueHandler) HandlerName() string {
+	return "command.pipeline_run_queue"
 }
 
-func (h PipelineRunFinishHandler) NewCommand() interface{} {
-	return &PipelineRunFinish{}
+func (h PipelineRunQueueHandler) NewCommand() interface{} {
+	return &PipelineRunQueue{}
 }
 
-func (h PipelineRunFinishHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunFinish)
-
-	e := event.PipelineRunFinished{
+func (h PipelineRunQueueHandler) Handle(ctx context.Context, c interface{}) error {
+	cmd := c.(*PipelineRunQueue)
+	e := event.PipelineRunQueued{
 		IdentityID:    cmd.IdentityID,
 		WorkspaceID:   cmd.WorkspaceID,
 		PipelineName:  cmd.PipelineName,
@@ -37,8 +36,6 @@ func (h PipelineRunFinishHandler) Handle(ctx context.Context, c interface{}) err
 		RunID:         cmd.RunID,
 		Timestamp:     time.Now(),
 	}
-
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), e)
-
 	return h.EventBus.Publish(ctx, &e)
 }

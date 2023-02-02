@@ -20,7 +20,7 @@ type PipelineRunStepExecute struct {
 type PipelineRunStepExecuteHandler CommandHandler
 
 func (h PipelineRunStepExecuteHandler) HandlerName() string {
-	return "pipeline.run.step_execute"
+	return "command.pipeline_run_step_execute"
 }
 
 func (h PipelineRunStepExecuteHandler) NewCommand() interface{} {

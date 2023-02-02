@@ -13,7 +13,7 @@ import (
 type PipelineRunStarted EventHandler
 
 func (h PipelineRunStarted) HandlerName() string {
-	return "pipeline.run.started"
+	return "handler.pipeline_run_started"
 }
 
 func (PipelineRunStarted) NewEvent() interface{} {

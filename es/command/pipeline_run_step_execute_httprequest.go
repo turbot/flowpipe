@@ -17,7 +17,7 @@ type PipelineRunStepHTTPRequestExecute struct {
 type PipelineRunStepHTTPRequestExecuteHandler CommandHandler
 
 func (h PipelineRunStepHTTPRequestExecuteHandler) HandlerName() string {
-	return "pipeline.run.step_http_request_execute"
+	return "command.pipeline_run_step_execute_httprequest"
 }
 
 func (h PipelineRunStepHTTPRequestExecuteHandler) NewCommand() interface{} {

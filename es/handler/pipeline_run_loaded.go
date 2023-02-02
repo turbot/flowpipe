@@ -8,26 +8,27 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
-type PipelineRunQueued EventHandler
+type PipelineRunLoaded EventHandler
 
-func (h PipelineRunQueued) HandlerName() string {
-	return "pipeline.run.queued"
+func (h PipelineRunLoaded) HandlerName() string {
+	return "handler.pipeline_run_loaded"
 }
 
-func (PipelineRunQueued) NewEvent() interface{} {
-	return &event.PipelineRunQueued{}
+func (PipelineRunLoaded) NewEvent() interface{} {
+	return &event.PipelineRunLoaded{}
 }
 
-func (h PipelineRunQueued) Handle(ctx context.Context, ei interface{}) error {
+func (h PipelineRunLoaded) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.PipelineRunQueued)
+	e := ei.(*event.PipelineRunLoaded)
 
-	cmd := &command.PipelineRunLoad{
+	cmd := &command.PipelineRunStart{
 		IdentityID:    e.IdentityID,
 		WorkspaceID:   e.WorkspaceID,
 		PipelineName:  e.PipelineName,
 		PipelineInput: e.PipelineInput,
 		RunID:         e.RunID,
+		Pipeline:      e.Pipeline,
 	}
 
 	fmt.Printf("[handler] %s: %v\n", h.HandlerName(), cmd)

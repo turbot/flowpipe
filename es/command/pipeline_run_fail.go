@@ -16,7 +16,7 @@ type PipelineRunFail struct {
 type PipelineRunFailHandler CommandHandler
 
 func (h PipelineRunFailHandler) HandlerName() string {
-	return "pipeline.run.fail"
+	return "command.pipeline_run_fail"
 }
 
 func (h PipelineRunFailHandler) NewCommand() interface{} {

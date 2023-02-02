@@ -19,7 +19,7 @@ type PipelineRunStepPrimitiveExecute struct {
 type PipelineRunStepPrimitiveExecuteHandler CommandHandler
 
 func (h PipelineRunStepPrimitiveExecuteHandler) HandlerName() string {
-	return "pipeline.run.step_primitive_execute"
+	return "command.pipeline_run_step_execute_primitive"
 }
 
 func (h PipelineRunStepPrimitiveExecuteHandler) NewCommand() interface{} {

@@ -11,7 +11,7 @@ import (
 type PipelineRunStepHTTPRequestPlanned EventHandler
 
 func (h PipelineRunStepHTTPRequestPlanned) HandlerName() string {
-	return "pipeline.run.step_http_request_planned"
+	return "pipeline_run_step_planned_httprequest"
 }
 
 func (PipelineRunStepHTTPRequestPlanned) NewEvent() interface{} {

@@ -13,7 +13,7 @@ import (
 type PipelineRunStepExecuted EventHandler
 
 func (h PipelineRunStepExecuted) HandlerName() string {
-	return "pipeline.run.step_executed"
+	return "handler.pipeline_run_step_executed"
 }
 
 func (PipelineRunStepExecuted) NewEvent() interface{} {

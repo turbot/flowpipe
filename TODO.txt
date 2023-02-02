@@ -1,4 +1,10 @@
 
+
+- Log timestamps need milliseconds
+- prevent infinite running when pipeline name cannot be found (e.g. comment out my_pipeline_1)
+
+
+
 TODO
 - logging using zap
 - work out how to change the topic name to match our format / etc, I think it's related to the cqrs.JSONMarshaller.Name[FromMessage]
@@ -6,7 +12,6 @@ TODO
 
 NOTES
 - Should we capture / load the pipeline definition at the start of the run? What happens if it changes on the way through? We should at least capture the version and then abort if changed?
-
 
 DECISIONS
 - Pipeline definitions and code are not stored in event history, they are referenced

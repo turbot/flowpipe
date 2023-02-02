@@ -7,26 +7,26 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
-type PipelineRunFinished EventHandler
+type PipelineRunFailed EventHandler
 
-func (h PipelineRunFinished) HandlerName() string {
-	return "pipeline.run.finished"
+func (h PipelineRunFailed) HandlerName() string {
+	return "handler.pipeline_run_failed"
 }
 
-func (PipelineRunFinished) NewEvent() interface{} {
-	return &event.PipelineRunFinished{}
+func (PipelineRunFailed) NewEvent() interface{} {
+	return &event.PipelineRunFailed{}
 }
 
-func (h PipelineRunFinished) Handle(ctx context.Context, ei interface{}) error {
+func (h PipelineRunFailed) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.PipelineRunFinished)
+	e := ei.(*event.PipelineRunFailed)
 
 	fmt.Printf("[handler] %s: %v\n", h.HandlerName(), e)
 
 	return nil
 
 	/*
-		cmd := &command.PipelineRunFinish{
+		cmd := &command.PipelineRunLoad{
 			IdentityID:   e.IdentityID,
 			WorkspaceID:  e.WorkspaceID,
 			PipelineName: e.PipelineName,

@@ -11,7 +11,7 @@ import (
 type PipelineRunStepPrimitivePlanned EventHandler
 
 func (h PipelineRunStepPrimitivePlanned) HandlerName() string {
-	return "pipeline.run.step_primitive_planned"
+	return "handler.pipeline_run_step_planned_primitive"
 }
 
 func (PipelineRunStepPrimitivePlanned) NewEvent() interface{} {

@@ -10,6 +10,7 @@ import (
 
 	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/command"
+	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/handler"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -57,6 +58,15 @@ func main() {
 				command.PipelineRunStepHTTPRequestExecuteHandler{EventBus: eb},
 				command.PipelineRunFinishHandler{EventBus: eb},
 				command.PipelineRunFailHandler{EventBus: eb},
+
+				command.QueueHandler{EventBus: eb},
+				command.LoadHandler{EventBus: eb},
+				command.StartHandler{EventBus: eb},
+				command.PipelineStartHandler{EventBus: eb},
+				command.PipelinePlanHandler{EventBus: eb},
+				command.PipelineFinishHandler{EventBus: eb},
+				command.ExecuteHandler{EventBus: eb},
+				command.FinishHandler{EventBus: eb},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -78,6 +88,16 @@ func main() {
 				handler.PipelineRunStepFailed{CommandBus: cb},
 				handler.PipelineRunFinished{CommandBus: cb},
 				handler.PipelineRunFailed{CommandBus: cb},
+
+				handler.Queued{CommandBus: cb},
+				handler.Loaded{CommandBus: cb},
+				handler.Started{CommandBus: cb},
+				handler.PipelineStarted{CommandBus: cb},
+				handler.PipelinePlanned{CommandBus: cb},
+				handler.PipelineFinished{CommandBus: cb},
+				handler.Executed{CommandBus: cb},
+				handler.Failed{CommandBus: cb},
+				handler.Finished{CommandBus: cb},
 			}
 		},
 		EventsPublisher: eventsPubSub,
@@ -113,10 +133,10 @@ func main() {
 
 func publishCommands(commandBus *cqrs.CommandBus) {
 	for i := 0; i < 3; i++ {
-		cmd := &command.PipelineRunQueue{
+		cmd := &event.Queue{
 			IdentityID:   "e-gineer",
 			WorkspaceID:  "scratch",
-			PipelineName: fmt.Sprintf("my_pipeline_%d", i%3),
+			PipelineName: fmt.Sprintf("my_pipeline_%d", i%2),
 			RunID:        xid.New().String(),
 		}
 		if err := commandBus.Send(context.Background(), cmd); err != nil {

@@ -6,36 +6,42 @@ import (
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
+	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
-type PipelineRunQueue struct {
+type PipelineRunStart struct {
 	IdentityID    string                 `json:"identity_id"`
 	WorkspaceID   string                 `json:"workspace_id"`
 	PipelineName  string                 `json:"pipeline_name"`
 	PipelineInput map[string]interface{} `json:"pipeline_input"`
 	RunID         string                 `json:"run_id"`
+	Pipeline      pipeline.Pipeline      `json:"pipeline"`
 }
 
-type PipelineRunQueueHandler CommandHandler
+type PipelineRunStartHandler CommandHandler
 
-func (h PipelineRunQueueHandler) HandlerName() string {
-	return "pipeline.run.queue"
+func (h PipelineRunStartHandler) HandlerName() string {
+	return "command.pipeline_run_start"
 }
 
-func (h PipelineRunQueueHandler) NewCommand() interface{} {
-	return &PipelineRunQueue{}
+func (h PipelineRunStartHandler) NewCommand() interface{} {
+	return &PipelineRunStart{}
 }
 
-func (h PipelineRunQueueHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunQueue)
-	e := event.PipelineRunQueued{
+func (h PipelineRunStartHandler) Handle(ctx context.Context, c interface{}) error {
+	cmd := c.(*PipelineRunStart)
+
+	e := event.PipelineRunStarted{
 		IdentityID:    cmd.IdentityID,
 		WorkspaceID:   cmd.WorkspaceID,
 		PipelineName:  cmd.PipelineName,
-		PipelineInput: cmd.PipelineInput,
 		RunID:         cmd.RunID,
+		PipelineInput: cmd.PipelineInput,
 		Timestamp:     time.Now(),
+		Pipeline:      cmd.Pipeline,
 	}
+
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), e)
+
 	return h.EventBus.Publish(ctx, &e)
 }

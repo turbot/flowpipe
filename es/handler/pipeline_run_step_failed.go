@@ -11,7 +11,7 @@ import (
 type PipelineRunStepFailed EventHandler
 
 func (h PipelineRunStepFailed) HandlerName() string {
-	return "pipeline.run.step_failed"
+	return "handler.pipeline_run_step_failed"
 }
 
 func (PipelineRunStepFailed) NewEvent() interface{} {
