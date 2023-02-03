@@ -24,9 +24,10 @@ func (h Queued) Handle(ctx context.Context, ei interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
-	cmd := &command.Load{
+	// Next step is to load the mod triggers and pipelines.
+	cmd := command.Load{
 		RunID: e.RunID,
 	}
 
-	return h.CommandBus.Send(ctx, cmd)
+	return h.CommandBus.Send(ctx, &cmd)
 }

@@ -16,6 +16,8 @@ type PipelineStart struct {
 	Input        map[string]interface{} `json:"input"`
 }
 
+type PipelinePlan PipelineStart
+
 type PipelineFinish struct {
 	RunID   string `json:"run_id"`
 	StackID string `json:"stack_id"`

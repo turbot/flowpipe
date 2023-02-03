@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/rs/xid"
@@ -62,11 +64,12 @@ func main() {
 				command.QueueHandler{EventBus: eb},
 				command.LoadHandler{EventBus: eb},
 				command.StartHandler{EventBus: eb},
+				command.PlanHandler{EventBus: eb},
 				command.PipelineStartHandler{EventBus: eb},
 				command.PipelinePlanHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
 				command.ExecuteHandler{EventBus: eb},
-				command.FinishHandler{EventBus: eb},
+				command.StopHandler{EventBus: eb},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -92,12 +95,13 @@ func main() {
 				handler.Queued{CommandBus: cb},
 				handler.Loaded{CommandBus: cb},
 				handler.Started{CommandBus: cb},
+				handler.Planned{CommandBus: cb},
 				handler.PipelineStarted{CommandBus: cb},
 				handler.PipelinePlanned{CommandBus: cb},
 				handler.PipelineFinished{CommandBus: cb},
 				handler.Executed{CommandBus: cb},
 				handler.Failed{CommandBus: cb},
-				handler.Finished{CommandBus: cb},
+				handler.Stopped{CommandBus: cb},
 			}
 		},
 		EventsPublisher: eventsPubSub,
@@ -122,8 +126,22 @@ func main() {
 		panic(err)
 	}
 
+	runID := xid.New().String()
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cmd := &command.Stop{
+			RunID: runID,
+		}
+		if err := cqrsFacade.CommandBus().Send(context.Background(), cmd); err != nil {
+			panic(err)
+		}
+	}()
+
 	// publish commands every second to simulate incoming traffic
-	go publishCommands(cqrsFacade.CommandBus())
+	go publishCommands(runID, cqrsFacade.CommandBus())
 
 	// processors are based on router, so they will work when router will start
 	if err := router.Run(context.Background()); err != nil {
@@ -131,20 +149,15 @@ func main() {
 	}
 }
 
-func publishCommands(commandBus *cqrs.CommandBus) {
-	for i := 0; i < 3; i++ {
-		cmd := &event.Queue{
-			IdentityID:   "e-gineer",
-			WorkspaceID:  "scratch",
-			PipelineName: fmt.Sprintf("my_pipeline_%d", i%2),
-			RunID:        xid.New().String(),
-		}
-		if err := commandBus.Send(context.Background(), cmd); err != nil {
-			panic(err)
-		}
-		// Psuedo-serial execution for development
-		time.Sleep(time.Second * 3)
-		fmt.Println()
+func publishCommands(runID string, commandBus *cqrs.CommandBus) {
+	cmd := &event.Queue{
+		IdentityID:   "e-gineer",
+		WorkspaceID:  "scratch",
+		PipelineName: fmt.Sprintf("my_pipeline_%d", 0),
+		RunID:        runID,
+	}
+	if err := commandBus.Send(context.Background(), cmd); err != nil {
+		panic(err)
 	}
 }
 

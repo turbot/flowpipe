@@ -24,6 +24,8 @@ func (h Loaded) Handle(ctx context.Context, ei interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
+	// Now that the triggers and pipelines are loaded, we can start mod
+	// handling.
 	cmd := &command.Start{
 		RunID: e.RunID,
 	}

@@ -10,28 +10,25 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
-type Start struct {
+type Plan struct {
 	RunID string `json:"run_id"`
 }
 
-type StartHandler CommandHandler
+type PlanHandler CommandHandler
 
-func (h StartHandler) HandlerName() string {
-	return "command.start"
+func (h PlanHandler) HandlerName() string {
+	return "command.plan"
 }
 
-func (h StartHandler) NewCommand() interface{} {
-	return &Start{}
+func (h PlanHandler) NewCommand() interface{} {
+	return &Plan{}
 }
 
-func (h StartHandler) Handle(ctx context.Context, c interface{}) error {
+func (h PlanHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*Start)
+	cmd := c.(*Plan)
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
-
-	// TODO - Start running handlers for the mod. After this, we should be
-	// capturing and handling events.
 
 	s, err := state.NewState(cmd.RunID)
 	if err != nil {
@@ -39,7 +36,7 @@ func (h StartHandler) Handle(ctx context.Context, c interface{}) error {
 		return err
 	}
 
-	e := event.Started{
+	e := event.Planned{
 		RunID:        cmd.RunID,
 		Timestamp:    time.Now(),
 		StackID:      xid.New().String(),

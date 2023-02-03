@@ -26,7 +26,9 @@ type Started struct {
 	Input        map[string]interface{} `json:"input"`
 }
 
-type Finished struct {
+type Planned Started
+
+type Stopped struct {
 	RunID     string                 `json:"run_id"`
 	Timestamp time.Time              `json:"timestamp"`
 	Output    map[string]interface{} `json:"output"`

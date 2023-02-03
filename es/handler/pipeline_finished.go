@@ -25,7 +25,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
 	// TODO - this should pop off the stack, not just straight to the top
-	cmd := command.Finish{
+	cmd := command.Stop{
 		RunID: e.RunID,
 	}
 

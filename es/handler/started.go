@@ -23,14 +23,26 @@ func (h Started) Handle(ctx context.Context, ei interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
-	cmd := &event.PipelineStart{
-		RunID:        e.RunID,
-		StackID:      e.StackID,
-		PipelineName: e.PipelineName,
-		Input:        e.Input,
-	}
+	// TODO - Now we are ready to receive events, we should turn on the
+	// handlers.
 
-	return h.CommandBus.Send(ctx, cmd)
+	/*
+
+		TESTING - just run a pipeline
+
+		cmd := &event.PipelineStart{
+			RunID:        e.RunID,
+			StackID:      e.StackID,
+			PipelineName: e.PipelineName,
+			Input:        e.Input,
+		}
+
+		return h.CommandBus.Send(ctx, cmd)
+
+	*/
+
+	return nil
+
 }
 
 /*

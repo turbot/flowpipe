@@ -57,7 +57,7 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 
 	if nextStepIndex >= len(defn.Steps) {
 		// Nothing to do!
-		cmd := &command.Finish{
+		cmd := &command.Stop{
 			RunID: e.RunID,
 		}
 		return h.CommandBus.Send(ctx, cmd)
