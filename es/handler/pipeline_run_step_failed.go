@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -22,8 +22,10 @@ func (h PipelineRunStepFailed) Handle(ctx context.Context, ei interface{}) error
 
 	e := ei.(*event.PipelineRunStepFailed)
 
-	cmd := &command.PipelineRunFail{
+	cmd := &event.PipelineRunFail{
 		RunID:        e.RunID,
+		SpanID:       e.SpanID,
+		CreatedAt:    time.Now(),
 		ErrorMessage: e.ErrorMessage,
 	}
 

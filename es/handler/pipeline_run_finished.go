@@ -30,7 +30,7 @@ func (h PipelineRunFinished) Handle(ctx context.Context, ei interface{}) error {
 			IdentityID:   e.IdentityID,
 			WorkspaceID:  e.WorkspaceID,
 			PipelineName: e.PipelineName,
-			RunID:        e.RunID,
+			SpanID:        e.SpanID,
 		}
 
 		fmt.Printf("[handler] %s: %v\n", h.HandlerName(), cmd)

@@ -8,11 +8,6 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
-type PipelineRunFail struct {
-	RunID        string `json:"run_id"`
-	ErrorMessage string `json:"error_message"`
-}
-
 type PipelineRunFailHandler CommandHandler
 
 func (h PipelineRunFailHandler) HandlerName() string {
@@ -20,15 +15,16 @@ func (h PipelineRunFailHandler) HandlerName() string {
 }
 
 func (h PipelineRunFailHandler) NewCommand() interface{} {
-	return &PipelineRunFail{}
+	return &event.PipelineRunFail{}
 }
 
 func (h PipelineRunFailHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunFail)
+	cmd := c.(*event.PipelineRunFail)
 
 	e := event.PipelineRunFailed{
 		RunID:        cmd.RunID,
-		Timestamp:    time.Now(),
+		SpanID:       cmd.SpanID,
+		CreatedAt:    time.Now(),
 		ErrorMessage: cmd.ErrorMessage,
 	}
 

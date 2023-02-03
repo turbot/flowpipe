@@ -10,12 +10,6 @@ import (
 	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
-type PipelineRunStepPrimitiveExecute struct {
-	RunID     string                 `json:"run_id"`
-	Primitive string                 `json:"primitive"`
-	Input     map[string]interface{} `json:"input"`
-}
-
 type PipelineRunStepPrimitiveExecuteHandler CommandHandler
 
 func (h PipelineRunStepPrimitiveExecuteHandler) HandlerName() string {
@@ -23,11 +17,11 @@ func (h PipelineRunStepPrimitiveExecuteHandler) HandlerName() string {
 }
 
 func (h PipelineRunStepPrimitiveExecuteHandler) NewCommand() interface{} {
-	return &PipelineRunStepPrimitiveExecute{}
+	return &event.PipelineRunStepPrimitiveExecute{}
 }
 
 func (h PipelineRunStepPrimitiveExecuteHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunStepPrimitiveExecute)
+	cmd := c.(*event.PipelineRunStepPrimitiveExecute)
 
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), cmd)
 
@@ -48,7 +42,8 @@ func (h PipelineRunStepPrimitiveExecuteHandler) Handle(ctx context.Context, c in
 	if err != nil {
 		e := event.PipelineRunFailed{
 			RunID:        cmd.RunID,
-			Timestamp:    time.Now(),
+			SpanID:       cmd.SpanID,
+			CreatedAt:    time.Now(),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -56,7 +51,8 @@ func (h PipelineRunStepPrimitiveExecuteHandler) Handle(ctx context.Context, c in
 
 	e := event.PipelineRunStepExecuted{
 		RunID:     cmd.RunID,
-		Timestamp: time.Now(),
+		SpanID:    cmd.SpanID,
+		CreatedAt: time.Now(),
 		Output:    output,
 	}
 

@@ -7,7 +7,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/es/state"
 	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
@@ -27,18 +26,23 @@ func (h ExecuteHandler) Handle(ctx context.Context, c interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
 
-	s, err := state.NewState(cmd.RunID)
-	if err != nil {
-		// TODO - should this return a failed event? how are errors caught here?
-		return err
-	}
+	/*
+		s, err := state.NewState(cmd.SpanID)
+		if err != nil {
+			// TODO - should this return a failed event? how are errors caught here?
+			return err
+		}
+	*/
 
 	// Load the pipeline definition
-	defn, err := PipelineDefinition(s.PipelineName)
+	// TODO - pipeline name needs to be read from the state
+	//defn, err := PipelineDefinition(s.PipelineName)
+	defn, err := PipelineDefinition("my_pipeline_0")
 	if err != nil {
 		e := event.Failed{
-			RunID:        s.RunID,
-			Timestamp:    time.Now(),
+			RunID:        cmd.RunID,
+			SpanID:       cmd.SpanID,
+			CreatedAt:    time.Now(),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -62,7 +66,8 @@ func (h ExecuteHandler) Handle(ctx context.Context, c interface{}) error {
 	if err != nil {
 		e := event.Failed{
 			RunID:        cmd.RunID,
-			Timestamp:    time.Now(),
+			SpanID:       cmd.SpanID,
+			CreatedAt:    time.Now(),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -70,8 +75,9 @@ func (h ExecuteHandler) Handle(ctx context.Context, c interface{}) error {
 
 	e := event.Executed{
 		RunID:     cmd.RunID,
+		SpanID:    cmd.SpanID,
 		StackID:   cmd.StackID,
-		Timestamp: time.Now(),
+		CreatedAt: time.Now(),
 		Output:    output,
 	}
 

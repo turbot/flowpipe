@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -25,8 +24,8 @@ func (h PipelineRunStepPrimitivePlanned) Handle(ctx context.Context, ei interfac
 	fmt.Printf("[handler] %s: %v\n", h.HandlerName(), e)
 
 	// We have another step to run
-	cmd := &command.PipelineRunStepPrimitiveExecute{
-		RunID:     e.RunID,
+	cmd := &event.PipelineRunStepPrimitiveExecute{
+		SpanID:    e.SpanID,
 		Primitive: e.Primitive,
 		Input:     e.Input,
 	}

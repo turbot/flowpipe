@@ -26,10 +26,8 @@ func (h QueueHandler) Handle(ctx context.Context, c interface{}) error {
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
 
 	e := event.Queued{
-		// RunID is set by the caller, allowing them to track the status of the
-		// run.
-		RunID:     cmd.RunID,
-		Timestamp: time.Now(),
+		SpanID:    cmd.SpanID,
+		CreatedAt: time.Now(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

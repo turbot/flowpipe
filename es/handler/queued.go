@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -25,8 +25,10 @@ func (h Queued) Handle(ctx context.Context, ei interface{}) error {
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
 	// Next step is to load the mod triggers and pipelines.
-	cmd := command.Load{
-		RunID: e.RunID,
+	cmd := event.Load{
+		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
 	}
 
 	return h.CommandBus.Send(ctx, &cmd)

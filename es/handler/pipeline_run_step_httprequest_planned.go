@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -25,9 +24,9 @@ func (h PipelineRunStepHTTPRequestPlanned) Handle(ctx context.Context, ei interf
 	fmt.Printf("[handler] %s: %v\n", h.HandlerName(), e)
 
 	// We have another step to run
-	cmd := &command.PipelineRunStepHTTPRequestExecute{
-		RunID: e.RunID,
-		Input: e.Input,
+	cmd := &event.PipelineRunStepHTTPRequestExecute{
+		SpanID: e.SpanID,
+		Input:  e.Input,
 	}
 
 	return h.CommandBus.Send(ctx, cmd)

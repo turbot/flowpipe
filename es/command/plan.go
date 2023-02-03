@@ -7,12 +7,7 @@ import (
 
 	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/es/state"
 )
-
-type Plan struct {
-	RunID string `json:"run_id"`
-}
 
 type PlanHandler CommandHandler
 
@@ -21,27 +16,28 @@ func (h PlanHandler) HandlerName() string {
 }
 
 func (h PlanHandler) NewCommand() interface{} {
-	return &Plan{}
+	return &event.Plan{}
 }
 
 func (h PlanHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*Plan)
+	cmd := c.(*event.Plan)
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
 
-	s, err := state.NewState(cmd.RunID)
-	if err != nil {
-		// TODO - should this return a failed event? how are errors caught here?
-		return err
-	}
+	/*
+		s, err := state.NewState(cmd.SpanID)
+		if err != nil {
+			// TODO - should this return a failed event? how are errors caught here?
+			return err
+		}
+	*/
 
 	e := event.Planned{
-		RunID:        cmd.RunID,
-		Timestamp:    time.Now(),
-		StackID:      xid.New().String(),
-		PipelineName: s.PipelineName,
-		Input:        s.Input,
+		RunID:     cmd.RunID,
+		SpanID:    cmd.SpanID,
+		CreatedAt: time.Now(),
+		StackID:   xid.New().String(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

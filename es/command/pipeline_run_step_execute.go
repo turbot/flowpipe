@@ -6,16 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/pipeline"
 )
-
-type PipelineRunStepExecute struct {
-	RunID     string                 `json:"run_id"`
-	StepID    string                 `json:"step_id"`
-	Pipeline  pipeline.Pipeline      `json:"pipeline"`
-	StepIndex int                    `json:"step_index"`
-	StepInput map[string]interface{} `json:"step_input"`
-}
 
 type PipelineRunStepExecuteHandler CommandHandler
 
@@ -24,11 +15,11 @@ func (h PipelineRunStepExecuteHandler) HandlerName() string {
 }
 
 func (h PipelineRunStepExecuteHandler) NewCommand() interface{} {
-	return &PipelineRunStepExecute{}
+	return &event.PipelineRunStepExecute{}
 }
 
 func (h PipelineRunStepExecuteHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunStepExecute)
+	cmd := c.(*event.PipelineRunStepExecute)
 
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), cmd)
 
@@ -39,7 +30,8 @@ func (h PipelineRunStepExecuteHandler) Handle(ctx context.Context, c interface{}
 		{
 			e := event.PipelineRunStepPrimitivePlanned{
 				RunID:     cmd.RunID,
-				Timestamp: time.Now(),
+				SpanID:    cmd.SpanID,
+				CreatedAt: time.Now(),
 				StepID:    cmd.StepID,
 				Primitive: step.Type,
 				Input:     cmd.StepInput,
@@ -50,7 +42,7 @@ func (h PipelineRunStepExecuteHandler) Handle(ctx context.Context, c interface{}
 			case "http_request":
 				{
 					e := event.PipelineRunStepHTTPRequestPlanned{
-						RunID:     cmd.RunID,
+						SpanID:     cmd.SpanID,
 						Timestamp: time.Now(),
 						StepID:    cmd.StepID,
 						Input:     cmd.StepInput,
@@ -63,7 +55,8 @@ func (h PipelineRunStepExecuteHandler) Handle(ctx context.Context, c interface{}
 	// Need StepID in the failed status
 	e := event.PipelineRunFailed{
 		RunID:        cmd.RunID,
-		Timestamp:    time.Now(),
+		SpanID:       cmd.SpanID,
+		CreatedAt:    time.Now(),
 		ErrorMessage: fmt.Sprintf("step_type_not_found: %s", step.Type),
 	}
 	return h.EventBus.Publish(ctx, &e)

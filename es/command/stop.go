@@ -8,10 +8,6 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
-type Stop struct {
-	RunID string `json:"run_id"`
-}
-
 type StopHandler CommandHandler
 
 func (h StopHandler) HandlerName() string {
@@ -19,18 +15,19 @@ func (h StopHandler) HandlerName() string {
 }
 
 func (h StopHandler) NewCommand() interface{} {
-	return &Stop{}
+	return &event.Stop{}
 }
 
 func (h StopHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*Stop)
+	cmd := c.(*event.Stop)
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
 
 	e := event.Stopped{
 		RunID:     cmd.RunID,
-		Timestamp: time.Now(),
+		SpanID:    cmd.SpanID,
+		CreatedAt: time.Now(),
 		// TODO - Output
 	}
 

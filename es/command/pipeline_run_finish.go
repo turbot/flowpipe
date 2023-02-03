@@ -8,14 +8,6 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
-type PipelineRunFinish struct {
-	IdentityID    string                 `json:"identity_id"`
-	WorkspaceID   string                 `json:"workspace_id"`
-	PipelineName  string                 `json:"pipeline_name"`
-	PipelineInput map[string]interface{} `json:"pipeline_input"`
-	RunID         string                 `json:"run_id"`
-}
-
 type PipelineRunFinishHandler CommandHandler
 
 func (h PipelineRunFinishHandler) HandlerName() string {
@@ -23,19 +15,18 @@ func (h PipelineRunFinishHandler) HandlerName() string {
 }
 
 func (h PipelineRunFinishHandler) NewCommand() interface{} {
-	return &PipelineRunFinish{}
+	return &event.PipelineRunFinish{}
 }
 
 func (h PipelineRunFinishHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunFinish)
+	cmd := c.(*event.PipelineRunFinish)
 
 	e := event.PipelineRunFinished{
-		IdentityID:    cmd.IdentityID,
-		WorkspaceID:   cmd.WorkspaceID,
-		PipelineName:  cmd.PipelineName,
-		PipelineInput: cmd.PipelineInput,
-		RunID:         cmd.RunID,
-		Timestamp:     time.Now(),
+		Name:      cmd.Name,
+		Input:     cmd.Input,
+		RunID:     cmd.RunID,
+		SpanID:    cmd.SpanID,
+		CreatedAt: time.Now(),
 	}
 
 	fmt.Printf("[command] %s: %v\n", h.HandlerName(), e)

@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rs/xid"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -28,15 +28,17 @@ func (h PipelineRunStepExecuted) Handle(ctx context.Context, ei interface{}) err
 
 	if e.StepIndex >= len(e.Pipeline.Steps)-1 {
 		// Nothing to do!
-		cmd := &command.PipelineRunFinish{
-			RunID: e.RunID,
+		cmd := &event.PipelineRunFinish{
+			SpanID: e.SpanID,
 		}
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	// We have another step to run
-	cmd := &command.PipelineRunStepExecute{
+	cmd := &event.PipelineRunStepExecute{
 		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
 		StepID:    xid.New().String(),
 		Pipeline:  e.Pipeline,
 		StepIndex: e.StepIndex + 1,

@@ -32,3 +32,11 @@ When running a pipeline (regardless of the trigger), the sequence is:
 * Finish Step - Finish execution of the step
 * Fail Step - Fail execution of the step due to an error
 
+
+## Runtime identifiers
+
+The mod is running, waiting for triggers.
+Each trigger starts a pipeline, which has a unique ID.
+Each step in the pipeline has a unique ID.
+
+The IDs above are nested, giving a StackID.

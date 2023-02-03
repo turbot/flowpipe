@@ -11,11 +11,6 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
-type PipelinePlan struct {
-	RunID   string `json:"run_id"`
-	StackID string `json:"stack_id"`
-}
-
 type PipelinePlanHandler CommandHandler
 
 func (h PipelinePlanHandler) HandlerName() string {
@@ -23,12 +18,12 @@ func (h PipelinePlanHandler) HandlerName() string {
 }
 
 func (h PipelinePlanHandler) NewCommand() interface{} {
-	return &PipelinePlan{}
+	return &event.PipelinePlan{}
 }
 
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*PipelinePlan)
+	cmd := c.(*event.PipelinePlan)
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
 
@@ -39,7 +34,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Load the pipeline definition
-	defn, err := PipelineDefinition(s.PipelineName)
+	// TODO - definition be based off the load phase
+	// TODO - pipeline name needs to be read from the state
+	//defn, err := PipelineDefinition(s.PipelineName)
+	defn, err := PipelineDefinition("my_pipeline_0")
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -50,8 +48,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	if nextStepIndex >= len(defn.Steps) {
 		// Nothing to do!
 		e := event.PipelineFinished{
-			RunID:   cmd.RunID,
-			StackID: cmd.StackID,
+			RunID:     cmd.RunID,
+			SpanID:    cmd.SpanID,
+			CreatedAt: time.Now(),
+			StackID:   cmd.StackID,
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
@@ -65,10 +65,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		nextStackID = cmd.StackID[:strings.LastIndex(cmd.StackID, ".")+1] + xid.New().String()
 	}
 
+	// Send a planned event with the information about which step to run next.
 	e := event.PipelinePlanned{
 		RunID:     cmd.RunID,
+		SpanID:    cmd.SpanID,
+		CreatedAt: time.Now(),
 		StackID:   nextStackID,
-		Timestamp: time.Now(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

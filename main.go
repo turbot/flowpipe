@@ -52,8 +52,6 @@ func main() {
 		},
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
-				command.PipelineRunQueueHandler{EventBus: eb},
-				command.PipelineRunLoadHandler{EventBus: eb},
 				command.PipelineRunStartHandler{EventBus: eb},
 				command.PipelineRunStepExecuteHandler{EventBus: eb},
 				command.PipelineRunStepPrimitiveExecuteHandler{EventBus: eb},
@@ -65,6 +63,8 @@ func main() {
 				command.LoadHandler{EventBus: eb},
 				command.StartHandler{EventBus: eb},
 				command.PlanHandler{EventBus: eb},
+				command.PipelineQueueHandler{EventBus: eb},
+				command.PipelineLoadHandler{EventBus: eb},
 				command.PipelineStartHandler{EventBus: eb},
 				command.PipelinePlanHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
@@ -82,8 +82,6 @@ func main() {
 		},
 		EventHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.EventHandler {
 			return []cqrs.EventHandler{
-				handler.PipelineRunQueued{CommandBus: cb},
-				handler.PipelineRunLoaded{CommandBus: cb},
 				handler.PipelineRunStarted{CommandBus: cb},
 				handler.PipelineRunStepExecuted{CommandBus: cb},
 				handler.PipelineRunStepPrimitivePlanned{CommandBus: cb},
@@ -96,6 +94,8 @@ func main() {
 				handler.Loaded{CommandBus: cb},
 				handler.Started{CommandBus: cb},
 				handler.Planned{CommandBus: cb},
+				handler.PipelineQueued{CommandBus: cb},
+				handler.PipelineLoaded{CommandBus: cb},
 				handler.PipelineStarted{CommandBus: cb},
 				handler.PipelinePlanned{CommandBus: cb},
 				handler.PipelineFinished{CommandBus: cb},
@@ -132,8 +132,9 @@ func main() {
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		cmd := &command.Stop{
-			RunID: runID,
+		cmd := &event.Stop{
+			RunID:  runID,
+			SpanID: runID,
 		}
 		if err := cqrsFacade.CommandBus().Send(context.Background(), cmd); err != nil {
 			panic(err)
@@ -149,20 +150,39 @@ func main() {
 	}
 }
 
-func publishCommands(runID string, commandBus *cqrs.CommandBus) {
+func publishCommands(modSpanID string, commandBus *cqrs.CommandBus) {
+
+	// Initialize the mod
 	cmd := &event.Queue{
-		IdentityID:   "e-gineer",
-		WorkspaceID:  "scratch",
-		PipelineName: fmt.Sprintf("my_pipeline_%d", 0),
-		RunID:        runID,
+		Workspace: "e-gineer/scratch",
+		SpanID:    modSpanID,
 	}
 	if err := commandBus.Send(context.Background(), cmd); err != nil {
 		panic(err)
 	}
+
+	// Manually trigger some pipelines for testing
+	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
+	for _, i := range []int{1, 2, 3} {
+		time.Sleep(3 * time.Second)
+		fmt.Println()
+		spanID := xid.New().String()
+		cmd := &event.PipelineQueue{
+			RunID:  modSpanID,
+			SpanID: spanID,
+			//StackID:      e.StackID,
+			Name: fmt.Sprintf("my_pipeline_%d", i%2),
+			//Input:        e.Input,
+		}
+		if err := commandBus.Send(context.Background(), cmd); err != nil {
+			panic(err)
+		}
+	}
 }
 
 type PipelinePayload struct {
-	RunID string `json:"run_id"`
+	RunID  string `json:"run_id"`
+	SpanID string `json:"span_id"`
 }
 
 func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
@@ -175,10 +195,19 @@ func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
 			log.Println(err)
 		}
 
+		stackID := pp.RunID
+		if stackID == "" {
+			stackID = pp.SpanID
+		}
+		if stackID == "" {
+			fmt.Printf("No run_id or span_id found in payload: %s\n", msg.Payload)
+			return h(msg)
+		}
+
 		// event.log
-		f, err := os.OpenFile(fmt.Sprintf("logs/%s.jsonl", pp.RunID), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(fmt.Sprintf("logs/%s.jsonl", stackID), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Println(err)
+			panic(err)
 		}
 		defer f.Close()
 		startOfLine := []byte(fmt.Sprintf(`{"event_type":"%s","timestamp":"%s","payload":`, msg.Metadata["name"], time.Now().Format(time.RFC3339)))
@@ -186,8 +215,10 @@ func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
 		logJson := append(startOfLine, msg.Payload...)
 		logJson = append(logJson, endOfLine...)
 		if _, err := f.Write(logJson); err != nil {
-			fmt.Println("error", err)
+			panic(err)
 		}
+
+		//fmt.Printf(">> %s", string(logJson))
 
 		// stdout
 		//fmt.Printf("[event  ] %s: %s\n", msg.Metadata["name"], string(msg.Payload))

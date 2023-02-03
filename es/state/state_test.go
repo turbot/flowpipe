@@ -11,7 +11,6 @@ func TestNewState(t *testing.T) {
 	runID := "cc14106v9mc75ace8ocg"
 	s, err := NewState(runID)
 	assert.Nil(err)
-	assert.Equal(runID, s.RunID)
-	assert.Equal("e-gineer", s.IdentityID)
-	assert.Equal("scratch", s.WorkspaceID)
+	//assert.Equal(runID, s.SpanID)
+	assert.Equal("e-gineer/scratch", s.Workspace)
 }

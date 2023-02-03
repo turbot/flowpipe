@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
+
 	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
@@ -31,7 +33,7 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 
 			//Not sure what this was doing, but it created infinite loops
 			cmd := command.PipelinePlan{
-				RunID:   e.RunID,
+				SpanID:   e.SpanID,
 				StackID: e.StackID,
 			}
 
@@ -46,8 +48,9 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
-	// Load the pipeline definition
-	defn, err := command.PipelineDefinition(s.PipelineName)
+	// TODO - pipeline name needs to be read from the state
+	//defn, err := PipelineDefinition(s.PipelineName)
+	defn, err := command.PipelineDefinition("my_pipeline_0")
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -56,11 +59,14 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 	nextStepIndex := s.Stack[e.StackID].StepIndex + 1
 
 	if nextStepIndex >= len(defn.Steps) {
-		// Nothing to do!
-		cmd := &command.Stop{
-			RunID: e.RunID,
-		}
-		return h.CommandBus.Send(ctx, cmd)
+		return nil
+		/*
+			// Nothing to do!
+			cmd := &command.Stop{
+				SpanID: e.SpanID,
+			}
+			return h.CommandBus.Send(ctx, cmd)
+		*/
 	}
 
 	var nextStackID string
@@ -74,11 +80,13 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 
 	// Run the next step
 	cmd := event.Execute{
-		RunID:        e.RunID,
-		StackID:      nextStackID,
-		PipelineName: s.PipelineName,
-		StepIndex:    nextStepIndex,
-		Input:        defn.Steps[nextStepIndex].Input,
+		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
+		StackID:   nextStackID,
+		//PipelineName: s.PipelineName,
+		StepIndex: nextStepIndex,
+		Input:     defn.Steps[nextStepIndex].Input,
 	}
 
 	return h.CommandBus.Send(ctx, &cmd)

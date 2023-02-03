@@ -6,17 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/pipeline"
 )
-
-type PipelineRunStart struct {
-	IdentityID    string                 `json:"identity_id"`
-	WorkspaceID   string                 `json:"workspace_id"`
-	PipelineName  string                 `json:"pipeline_name"`
-	PipelineInput map[string]interface{} `json:"pipeline_input"`
-	RunID         string                 `json:"run_id"`
-	Pipeline      pipeline.Pipeline      `json:"pipeline"`
-}
 
 type PipelineRunStartHandler CommandHandler
 
@@ -25,19 +15,17 @@ func (h PipelineRunStartHandler) HandlerName() string {
 }
 
 func (h PipelineRunStartHandler) NewCommand() interface{} {
-	return &PipelineRunStart{}
+	return &event.PipelineRunStart{}
 }
 
 func (h PipelineRunStartHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*PipelineRunStart)
+	cmd := c.(*event.PipelineRunStart)
 
 	e := event.PipelineRunStarted{
-		IdentityID:    cmd.IdentityID,
-		WorkspaceID:   cmd.WorkspaceID,
-		PipelineName:  cmd.PipelineName,
 		RunID:         cmd.RunID,
+		SpanID:        cmd.SpanID,
 		PipelineInput: cmd.PipelineInput,
-		Timestamp:     time.Now(),
+		CreatedAt:     time.Now(),
 		Pipeline:      cmd.Pipeline,
 	}
 

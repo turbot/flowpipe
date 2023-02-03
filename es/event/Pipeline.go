@@ -7,12 +7,11 @@ import (
 )
 
 type PipelineRunEvent struct {
-	IdentityID    string                 `json:"identity_id"`
-	WorkspaceID   string                 `json:"workspace_id"`
-	PipelineName  string                 `json:"pipeline_name"`
-	PipelineInput map[string]interface{} `json:"pipeline_input"`
-	RunID         string                 `json:"run_id"`
-	Timestamp     time.Time              `json:"timestamp"`
+	Name      string                 `json:"name"`
+	Input     map[string]interface{} `json:"input"`
+	RunID     string                 `json:"run_id"`
+	SpanID    string                 `json:"span_id"`
+	CreatedAt time.Time              `json:"created_at"`
 }
 
 type PipelineRunFailed struct {
@@ -21,27 +20,30 @@ type PipelineRunFailed struct {
 	PipelineName  string                 `json:"pipeline_name"`
 	PipelineInput map[string]interface{} `json:"pipeline_input"`
 	RunID         string                 `json:"run_id"`
-	Timestamp     time.Time              `json:"timestamp"`
+	SpanID        string                 `json:"span_id"`
+	CreatedAt     time.Time              `json:"created_at"`
 	ErrorMessage  string                 `json:"error_message"`
 }
 
-type PipelineRunQueued PipelineRunEvent
+type PipelineQueued PipelineRunEvent
 
-type PipelineRunLoaded struct {
+type PipelineLoaded struct {
 	IdentityID    string                 `json:"identity_id"`
 	WorkspaceID   string                 `json:"workspace_id"`
 	PipelineName  string                 `json:"pipeline_name"`
 	PipelineInput map[string]interface{} `json:"pipeline_input"`
 	RunID         string                 `json:"run_id"`
-	Timestamp     time.Time              `json:"timestamp"`
+	SpanID        string                 `json:"span_id"`
+	CreatedAt     time.Time              `json:"created_at"`
 	Pipeline      pipeline.Pipeline      `json:"pipeline"`
 }
 
-type PipelineRunStarted PipelineRunLoaded
+type PipelineRunStarted PipelineLoaded
 
 type PipelineRunStepPrimitivePlanned struct {
 	RunID     string                 `json:"run_id"`
-	Timestamp time.Time              `json:"timestamp"`
+	SpanID    string                 `json:"span_id"`
+	CreatedAt time.Time              `json:"created_at"`
 	StepID    string                 `json:"step_id"`
 	Primitive string                 `json:"primitive"`
 	Input     map[string]interface{} `json:"input"`
@@ -49,14 +51,16 @@ type PipelineRunStepPrimitivePlanned struct {
 
 type PipelineRunStepHTTPRequestPlanned struct {
 	RunID     string                 `json:"run_id"`
-	Timestamp time.Time              `json:"timestamp"`
+	SpanID    string                 `json:"span_id"`
+	CreatedAt time.Time              `json:"created_at"`
 	StepID    string                 `json:"step_id"`
 	Input     map[string]interface{} `json:"input"`
 }
 
 type PipelineRunStepExecuted struct {
 	RunID     string                 `json:"run_id"`
-	Timestamp time.Time              `json:"timestamp"`
+	SpanID    string                 `json:"span_id"`
+	CreatedAt time.Time              `json:"created_at"`
 	StepID    string                 `json:"step_id"`
 	Pipeline  pipeline.Pipeline      `json:"pipeline"`
 	StepIndex int                    `json:"step_index"`
@@ -65,7 +69,8 @@ type PipelineRunStepExecuted struct {
 
 type PipelineRunStepFailed struct {
 	RunID        string            `json:"run_id"`
-	Timestamp    time.Time         `json:"timestamp"`
+	SpanID       string            `json:"span_id"`
+	CreatedAt    time.Time         `json:"created_at"`
 	StepID       string            `json:"step_id"`
 	Pipeline     pipeline.Pipeline `json:"pipeline"`
 	ErrorMessage string            `json:"error_message"`

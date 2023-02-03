@@ -3,7 +3,6 @@ package state
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -24,13 +23,18 @@ type StackEntry struct {
 
 type Stack map[string]StackEntry
 
+// Queue a mod for running in a given workspace context.
 type State struct {
-	IdentityID   string                 `json:"identity_id"`
-	WorkspaceID  string                 `json:"workspace_id"`
-	PipelineName string                 `json:"pipeline_name"`
-	Input        map[string]interface{} `json:"input"`
-	RunID        string                 `json:"run_id"`
-	Stack        Stack                  `json:"stack"`
+	// Host of the workspace. If empty, then assume localhost.
+	CloudHost string `json:"host"`
+	// The workspace context to use. May be a local workspace (e.g. default) or
+	// a cloud workspace (e.g. e-gineer/scratch).
+	Workspace string `json:"workspace"`
+	// File system location where the mod is located, including pipeline
+	// defintions.
+	ModLocation string `json:"mod_location"`
+	// Current execution stack
+	Stack Stack `json:"stack"`
 }
 
 func NewState(runID string) (*State, error) {
@@ -77,11 +81,8 @@ func (s *State) Load(runID string) error {
 				// TODO - log and continue?
 				return err
 			}
-			s.IdentityID = queue.IdentityID
-			s.WorkspaceID = queue.WorkspaceID
-			s.PipelineName = queue.PipelineName
-			s.Input = queue.Input
-			s.RunID = queue.RunID
+			s.CloudHost = queue.CloudHost
+			s.Workspace = queue.Workspace
 
 		case "event.Execute":
 			var execute event.Execute
@@ -102,9 +103,11 @@ func (s *State) Load(runID string) error {
 		return err
 	}
 
-	if s.RunID == "" {
-		return errors.New(fmt.Sprintf("load_failed: %s", logFile))
-	}
+	/*
+		if s.SpanID == "" {
+			return errors.New(fmt.Sprintf("load_failed: %s", logFile))
+		}
+	*/
 
 	return nil
 

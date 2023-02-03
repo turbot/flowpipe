@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
@@ -25,6 +26,8 @@ func (h Planned) Handle(ctx context.Context, ei interface{}) error {
 
 	cmd := &event.PipelinePlan{
 		RunID:        e.RunID,
+		SpanID:       e.SpanID,
+		CreatedAt:    time.Now(),
 		StackID:      e.StackID,
 		PipelineName: e.PipelineName,
 		Input:        e.Input,

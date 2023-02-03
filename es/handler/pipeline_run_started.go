@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rs/xid"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -33,7 +33,7 @@ func (h PipelineRunStarted) Handle(ctx context.Context, ei interface{}) error {
 				IdentityID:   e.IdentityID,
 				WorkspaceID:  e.WorkspaceID,
 				PipelineName: e.PipelineName,
-				RunID:        e.RunID,
+				SpanID:        e.SpanID,
 				Timestamp:    time.Now(),
 				ErrorMessage: "pipeline_run_failed",
 			}
@@ -44,19 +44,19 @@ func (h PipelineRunStarted) Handle(ctx context.Context, ei interface{}) error {
 
 	if len(e.Pipeline.Steps) <= 0 {
 		// Nothing to do!
-		cmd := &command.PipelineRunFinish{
-			IdentityID:    e.IdentityID,
-			WorkspaceID:   e.WorkspaceID,
-			PipelineName:  e.PipelineName,
-			PipelineInput: e.PipelineInput,
-			RunID:         e.RunID,
+		cmd := &event.PipelineRunFinish{
+			RunID:     e.RunID,
+			SpanID:    e.SpanID,
+			CreatedAt: time.Now(),
 		}
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	// Run the first step
-	cmd := &command.PipelineRunStepExecute{
+	cmd := &event.PipelineRunStepExecute{
 		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
 		StepID:    xid.New().String(),
 		Pipeline:  e.Pipeline,
 		StepIndex: 0,

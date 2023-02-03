@@ -3,8 +3,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -26,8 +26,10 @@ func (h Loaded) Handle(ctx context.Context, ei interface{}) error {
 
 	// Now that the triggers and pipelines are loaded, we can start mod
 	// handling.
-	cmd := &command.Start{
-		RunID: e.RunID,
+	cmd := &event.Start{
+		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
 	}
 
 	return h.CommandBus.Send(ctx, cmd)
