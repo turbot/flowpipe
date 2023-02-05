@@ -101,8 +101,8 @@ func (s *State) Load(runID string) error {
 			s.CloudHost = queue.CloudHost
 			s.Workspace = queue.Workspace
 
-		case "event.Execute":
-			var execute event.Execute
+		case "event.PipelineStepExecute":
+			var execute event.PipelineStepExecute
 			err := json.Unmarshal(e.Payload, &execute)
 			if err != nil {
 				// TODO - log and continue?

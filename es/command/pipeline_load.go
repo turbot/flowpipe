@@ -32,7 +32,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 
 	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
-		e := event.PipelineRunFailed{
+		e := event.PipelineFailed{
 			RunID:        cmd.RunID,
 			SpanID:       cmd.SpanID,
 			CreatedAt:    time.Now(),

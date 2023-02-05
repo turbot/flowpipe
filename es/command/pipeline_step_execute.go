@@ -11,19 +11,19 @@ import (
 	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
-type ExecuteHandler CommandHandler
+type PipelineStepExecuteHandler CommandHandler
 
-func (h ExecuteHandler) HandlerName() string {
-	return "command.execute"
+func (h PipelineStepExecuteHandler) HandlerName() string {
+	return "command.pipeline_step_execute"
 }
 
-func (h ExecuteHandler) NewCommand() interface{} {
-	return &event.Execute{}
+func (h PipelineStepExecuteHandler) NewCommand() interface{} {
+	return &event.PipelineStepExecute{}
 }
 
-func (h ExecuteHandler) Handle(ctx context.Context, c interface{}) error {
+func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*event.Execute)
+	cmd := c.(*event.PipelineStepExecute)
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
 
@@ -71,7 +71,7 @@ func (h ExecuteHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, &e)
 	}
 
-	e := event.Executed{
+	e := event.PipelineStepExecuted{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
 		StackID:   cmd.StackID,

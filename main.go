@@ -61,7 +61,7 @@ func main() {
 				command.PipelineStartHandler{EventBus: eb},
 				command.PipelinePlanHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
-				command.ExecuteHandler{EventBus: eb},
+				command.PipelineStepExecuteHandler{EventBus: eb},
 				command.StopHandler{EventBus: eb},
 			}
 		},
@@ -84,7 +84,7 @@ func main() {
 				handler.PipelineStarted{CommandBus: cb},
 				handler.PipelinePlanned{CommandBus: cb},
 				handler.PipelineFinished{CommandBus: cb},
-				handler.Executed{CommandBus: cb},
+				handler.PipelineStepExecuted{CommandBus: cb},
 				handler.Failed{CommandBus: cb},
 				handler.Stopped{CommandBus: cb},
 			}

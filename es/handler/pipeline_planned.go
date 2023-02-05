@@ -55,7 +55,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// Run the first step
-	cmd := event.Execute{
+	cmd := event.PipelineStepExecute{
 		RunID:     e.RunID,
 		SpanID:    e.SpanID,
 		CreatedAt: time.Now(),

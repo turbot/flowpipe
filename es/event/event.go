@@ -56,7 +56,7 @@ type PipelineFinished struct {
 	Output    map[string]interface{} `json:"output"`
 }
 
-type Executed struct {
+type PipelineStepExecuted struct {
 	RunID     string                 `json:"run_id"`
 	SpanID    string                 `json:"span_id"`
 	StackID   string                 `json:"stack_id"`
@@ -64,7 +64,7 @@ type Executed struct {
 	Output    map[string]interface{} `json:"output"`
 }
 
-type ExecuteFailed struct {
+type PipelineFailed struct {
 	RunID        string    `json:"run_id"`
 	SpanID       string    `json:"span_id"`
 	StackID      string    `json:"stack_id"`

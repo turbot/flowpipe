@@ -13,19 +13,19 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
-type Executed EventHandler
+type PipelineStepExecuted EventHandler
 
-func (h Executed) HandlerName() string {
+func (h PipelineStepExecuted) HandlerName() string {
 	return "handler.executed"
 }
 
-func (Executed) NewEvent() interface{} {
-	return &event.Executed{}
+func (PipelineStepExecuted) NewEvent() interface{} {
+	return &event.PipelineStepExecuted{}
 }
 
-func (h Executed) Handle(ctx context.Context, ei interface{}) error {
+func (h PipelineStepExecuted) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.Executed)
+	e := ei.(*event.PipelineStepExecuted)
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
@@ -78,7 +78,7 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// Run the next step
-	cmd := event.Execute{
+	cmd := event.PipelineStepExecute{
 		RunID:     e.RunID,
 		SpanID:    e.SpanID,
 		CreatedAt: time.Now(),
