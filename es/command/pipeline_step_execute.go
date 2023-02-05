@@ -57,6 +57,9 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 	case "http_request":
 		p := primitive.HTTPRequest{}
 		output, err = p.Run(ctx, cmd.Input)
+	case "sleep":
+		p := primitive.Sleep{}
+		output, err = p.Run(ctx, cmd.Input)
 	default:
 		return errors.Errorf("step_type_not_found: %s", step.Type)
 	}

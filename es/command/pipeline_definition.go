@@ -13,6 +13,7 @@ func PipelineDefinition(name string) (*pipeline.Pipeline, error) {
 			Name: "my_pipeline_0",
 			Steps: []pipeline.PipelineStep{
 				{Type: "exec", Name: "exec_1", Input: map[string]interface{}{"command": "ls"}},
+				{Type: "sleep", Name: "sleep_1", Input: map[string]interface{}{"duration": "5s"}},
 				{Type: "http_request", Name: "http_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
 			},
 		},

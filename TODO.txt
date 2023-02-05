@@ -1,7 +1,19 @@
 
+DONE
+- Sleep primitive
 
+
+TODO
+- IDs consistent with SPC format
+- Run sub-pipelines
+- Improve console output and logging, will make everything easier and more attractive
+- Remove (unused) StackID stuff
+- Passing output to input
+- Stop and resume
 - Log timestamps need milliseconds
-- prevent infinite running when pipeline name cannot be found (e.g. comment out my_pipeline_1)
+- user input primitive
+- Test with RedPanda instead of gochannel
+- Single log file (per service or per pipeline? what about subpipelines?)
 
 
 
@@ -18,72 +30,3 @@ DECISIONS
 - So, pipeline definitions and code can be updated and will change running pipelines
 - But, a pipeline run can choose to pin its version, causing it to abort if an update is completed
 - Or, upgrades can choose to pause affected pipeline runs ... queue new runs > finish existing runs > upgrade > restart new runs
-
-
-
-
-
-COMMANDS
-
-pipeline.run.queue
-pipeline.run.load
-pipeline.run.start
-pipeline.run.cancel
-pipeline.run.finish
-pipeline.run.fail
-
-
-
-EVENTS
-
-pipeline.run.queued
-pipeline.run.loaded
-pipeline.run.started
-pipeline.run.canceled
-pipeline.run.finished
-pipeline.run.failed
-
-
-
-
-
-
-
-Events
-
-pipeline.scheduled
-
-pipeline.started
-
-step.http_request.started
-step.http_request.finished
-step.http_request.failed
-
-pipeline.canceled
-pipeline.finished
-pipeline.failed
-
-
-Commands
-
-pipeline.schedule
-pipeline.start
-
-step.http_request.start
-step.http_request.finish
-step.http_request.fail
-
-pipeline.cancel
-pipeline.finish
-pipeline.fail
-
-
-
-
-
-
-Event log
-- history of commands and their outputs
-
-Snapshot
-- current state of the pipeline, can be rebuilt anytime from the event log
