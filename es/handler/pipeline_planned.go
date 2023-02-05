@@ -42,9 +42,54 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
+	if e.NextStepIndex == -1 {
+		// Nothing to do!
+		cmd := event.PipelineFinish{
+			RunID:     e.RunID,
+			SpanID:    e.SpanID,
+			CreatedAt: time.Now(),
+			StackID:   e.StackID,
+		}
+		return h.CommandBus.Send(ctx, &cmd)
+	}
+
+	// Run the next step
+	cmd := event.PipelineStepExecute{
+		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
+		StackID:   e.StackID + "." + xid.New().String(),
+		StepIndex: e.NextStepIndex,
+		Input:     defn.Steps[e.NextStepIndex].Input,
+	}
+
+	return h.CommandBus.Send(ctx, &cmd)
+}
+
+/*
+
 	if len(defn.Steps) <= 0 {
 		// Nothing to do!
-		// TODO - should be PipelineFinish
+		cmd := event.PipelineFinish{
+			RunID:     e.RunID,
+			SpanID:    e.SpanID,
+			CreatedAt: time.Now(),
+			StackID:   e.StackID,
+		}
+		return h.CommandBus.Send(ctx, &cmd)
+	}
+
+	highestCompletedStepIndex := -1
+	for _, stepIndex := range s.PipelineCompletedSteps {
+		if stepIndex > highestCompletedStepIndex {
+			highestCompletedStepIndex = stepIndex
+		}
+	}
+
+	nextStepIndex := highestCompletedStepIndex + 1
+
+	if nextStepIndex >= len(defn.Steps) {
+		// Nothing to do!
 		cmd := event.PipelineFinish{
 			RunID:     e.RunID,
 			SpanID:    e.SpanID,
@@ -60,10 +105,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		SpanID:    e.SpanID,
 		CreatedAt: time.Now(),
 		StackID:   e.StackID + "." + xid.New().String(),
-		//PipelineName: s.PipelineName,
-		StepIndex: 0,
-		Input:     defn.Steps[0].Input,
+		StepIndex: nextStepIndex,
+		Input:     defn.Steps[nextStepIndex].Input,
 	}
 
 	return h.CommandBus.Send(ctx, &cmd)
 }
+
+*/

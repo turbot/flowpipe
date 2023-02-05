@@ -3,14 +3,9 @@ package handler
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/rs/xid"
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
-
-	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
 type PipelineStepExecuted EventHandler
@@ -29,18 +24,18 @@ func (h PipelineStepExecuted) Handle(ctx context.Context, ei interface{}) error 
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
-	/*
+	//Not sure what this was doing, but it created infinite loops
+	cmd := event.PipelinePlan{
+		RunID:     e.RunID,
+		SpanID:    e.SpanID,
+		CreatedAt: time.Now(),
+		StackID:   e.StackID,
+	}
 
-			//Not sure what this was doing, but it created infinite loops
-			cmd := command.PipelinePlan{
-				SpanID:   e.SpanID,
-				StackID: e.StackID,
-			}
+	return h.CommandBus.Send(ctx, &cmd)
+}
 
-			return h.CommandBus.Send(ctx, &cmd)
-		}
-
-	*/
+/*
 
 	s, err := state.NewState(e.RunID)
 	if err != nil {
@@ -56,17 +51,6 @@ func (h PipelineStepExecuted) Handle(ctx context.Context, ei interface{}) error 
 	}
 
 	nextStepIndex := s.Stack[e.StackID].StepIndex + 1
-
-	if nextStepIndex >= len(defn.Steps) {
-		return nil
-		/*
-			// Nothing to do!
-			cmd := &command.Stop{
-				SpanID: e.SpanID,
-			}
-			return h.CommandBus.Send(ctx, cmd)
-		*/
-	}
 
 	var nextStackID string
 
@@ -90,3 +74,5 @@ func (h PipelineStepExecuted) Handle(ctx context.Context, ei interface{}) error 
 
 	return h.CommandBus.Send(ctx, &cmd)
 }
+
+*/

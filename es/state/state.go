@@ -101,14 +101,25 @@ func (s *State) Load(runID string) error {
 			s.CloudHost = queue.CloudHost
 			s.Workspace = queue.Workspace
 
-		case "event.PipelineStepExecute":
-			var execute event.PipelineStepExecute
-			err := json.Unmarshal(e.Payload, &execute)
+		/*
+			case "event.PipelineStepExecute":
+				var execute event.PipelineStepExecute
+				err := json.Unmarshal(e.Payload, &execute)
+				if err != nil {
+					// TODO - log and continue?
+					return err
+				}
+				s.Stack[execute.StackID] = StackEntry{PipelineName: execute.PipelineName, StepIndex: execute.StepIndex}
+		*/
+
+		case "event.PipelineStepExecuted":
+			var executed event.PipelineStepExecuted
+			err := json.Unmarshal(e.Payload, &executed)
 			if err != nil {
 				// TODO - log and continue?
 				return err
 			}
-			s.Stack[execute.StackID] = StackEntry{PipelineName: execute.PipelineName, StepIndex: execute.StepIndex}
+			s.PipelineCompletedSteps = append(s.PipelineCompletedSteps, executed.StepIndex)
 
 		default:
 			// Ignore unknown types while loading

@@ -3,10 +3,8 @@ package command
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
-	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/state"
 )
@@ -33,41 +31,32 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return err
 	}
 
-	// Load the pipeline definition
 	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
 	}
 
-	nextStepIndex := s.Stack[cmd.StackID].StepIndex + 1
-
-	if nextStepIndex >= len(defn.Steps) {
-		// Nothing to do!
-		e := event.PipelineFinished{
-			RunID:     cmd.RunID,
-			SpanID:    cmd.SpanID,
-			CreatedAt: time.Now(),
-			StackID:   cmd.StackID,
-		}
-		return h.EventBus.Publish(ctx, &e)
-	}
-
-	var nextStackID string
-
-	lastPartIndex := strings.LastIndex(cmd.StackID, ".")
-	if lastPartIndex == -1 {
-		nextStackID = cmd.StackID + "." + xid.New().String()
-	} else {
-		nextStackID = cmd.StackID[:strings.LastIndex(cmd.StackID, ".")+1] + xid.New().String()
-	}
-
-	// Send a planned event with the information about which step to run next.
 	e := event.PipelinePlanned{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
 		CreatedAt: time.Now(),
-		StackID:   nextStackID,
+	}
+
+	highestCompletedStepIndex := -1
+	for _, stepIndex := range s.PipelineCompletedSteps {
+		if stepIndex > highestCompletedStepIndex {
+			highestCompletedStepIndex = stepIndex
+		}
+	}
+	nextStepIndex := highestCompletedStepIndex + 1
+
+	if nextStepIndex < len(defn.Steps) {
+		// Plan to run the next step
+		e.NextStepIndex = nextStepIndex
+	} else {
+		// Nothing more to do!
+		e.NextStepIndex = -1
 	}
 
 	return h.EventBus.Publish(ctx, &e)

@@ -75,6 +75,7 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
 		StackID:   cmd.StackID,
+		StepIndex: cmd.StepIndex,
 		CreatedAt: time.Now(),
 		Output:    output,
 	}
