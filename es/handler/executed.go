@@ -49,8 +49,7 @@ func (h Executed) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// TODO - pipeline name needs to be read from the state
-	//defn, err := PipelineDefinition(s.PipelineName)
-	defn, err := command.PipelineDefinition("my_pipeline_0")
+	defn, err := command.PipelineDefinition(s.PipelineName)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err

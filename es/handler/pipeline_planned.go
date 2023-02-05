@@ -9,6 +9,7 @@ import (
 
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
+	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
 type PipelinePlanned EventHandler
@@ -28,18 +29,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
 	// PRE: The planner has told us what to run next, our job is to schedule it
-
-	/*
-		s, err := state.NewState(e.SpanID)
-		if err != nil {
-			// TODO - should this return a failed event? how are errors caught here?
-			return err
-		}
-	*/
+	s, err := state.NewState(e.RunID)
+	if err != nil {
+		// TODO - should this return a failed event? how are errors caught here?
+		return err
+	}
 
 	// TODO - pipeline name needs to be read from the state
-	//defn, err := PipelineDefinition(s.PipelineName)
-	defn, err := command.PipelineDefinition("my_pipeline_0")
+	defn, err := command.PipelineDefinition(s.PipelineName)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err

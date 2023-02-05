@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/turbot/steampipe-pipelines/es/event"
+	"github.com/turbot/steampipe-pipelines/es/state"
 	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
@@ -26,18 +27,15 @@ func (h ExecuteHandler) Handle(ctx context.Context, c interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
 
-	/*
-		s, err := state.NewState(cmd.SpanID)
-		if err != nil {
-			// TODO - should this return a failed event? how are errors caught here?
-			return err
-		}
-	*/
+	s, err := state.NewState(cmd.RunID)
+	if err != nil {
+		// TODO - should this return a failed event? how are errors caught here?
+		return err
+	}
 
 	// Load the pipeline definition
 	// TODO - pipeline name needs to be read from the state
-	//defn, err := PipelineDefinition(s.PipelineName)
-	defn, err := PipelineDefinition("my_pipeline_0")
+	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
 		e := event.Failed{
 			RunID:        cmd.RunID,

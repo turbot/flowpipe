@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
+	"github.com/turbot/steampipe-pipelines/es/state"
 )
 
 type PipelineLoadHandler CommandHandler
@@ -23,8 +24,13 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
 
-	//defn, err := PipelineDefinition(cmd.Name)
-	defn, err := PipelineDefinition("my_pipeline_0")
+	s, err := state.NewState(cmd.RunID)
+	if err != nil {
+		// TODO - should this return a failed event? how are errors caught here?
+		return err
+	}
+
+	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
 		e := event.PipelineRunFailed{
 			RunID:        cmd.RunID,

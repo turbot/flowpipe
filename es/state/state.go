@@ -33,8 +33,13 @@ type State struct {
 	// File system location where the mod is located, including pipeline
 	// defintions.
 	ModLocation string `json:"mod_location"`
+	// Pipeline information
+	PipelineName           string                 `json:"pipeline_name"`
+	PipelineInput          map[string]interface{} `json:"pipeline_input"`
+	PipelineCompletedSteps []int                  `json:"pipeline_completed_steps"`
 	// Current execution stack
-	Stack Stack `json:"stack"`
+	RunID string `json:"run_id"`
+	Stack Stack  `json:"stack"`
 }
 
 func NewState(runID string) (*State, error) {
@@ -72,6 +77,18 @@ func (s *State) Load(runID string) error {
 		}
 
 		switch e.EventType {
+
+		case "event.PipelineQueued":
+			// Get the run ID from the payload
+			var queue event.PipelineQueued
+			err := json.Unmarshal(e.Payload, &queue)
+			if err != nil {
+				// TODO - log and continue?
+				return err
+			}
+			s.RunID = queue.RunID
+			s.PipelineName = queue.Name
+			s.PipelineInput = queue.Input
 
 		case "event.Queue":
 			// Get the run ID from the payload

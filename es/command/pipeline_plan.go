@@ -34,10 +34,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Load the pipeline definition
-	// TODO - definition be based off the load phase
-	// TODO - pipeline name needs to be read from the state
-	//defn, err := PipelineDefinition(s.PipelineName)
-	defn, err := PipelineDefinition("my_pipeline_0")
+	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
