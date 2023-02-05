@@ -31,13 +31,13 @@ func (e *Exec) Run(ctx context.Context, input Input) (Output, error) {
 	if err != nil {
 		return nil, err
 	}
-	stdoutString := ""
+	stdoutLines := []string{}
 	stdoutScanner := bufio.NewScanner(stdout)
 	go func() {
 		for stdoutScanner.Scan() {
 			t := stdoutScanner.Text()
 			// TODO - send to logs immediately
-			stdoutString += t
+			stdoutLines = append(stdoutLines, t)
 		}
 	}()
 
@@ -46,13 +46,13 @@ func (e *Exec) Run(ctx context.Context, input Input) (Output, error) {
 	if err != nil {
 		return nil, err
 	}
-	stderrString := ""
+	stderrLines := []string{}
 	stderrScanner := bufio.NewScanner(stderr)
 	go func() {
 		for stderrScanner.Scan() {
 			t := stderrScanner.Text()
 			// TODO - send to logs immediately
-			stderrString += t
+			stderrLines = append(stderrLines, t)
 		}
 	}()
 
@@ -81,9 +81,9 @@ func (e *Exec) Run(ctx context.Context, input Input) (Output, error) {
 	}
 
 	output := Output{
-		"exit_code": exitCode,
-		"stdout":    stdoutString,
-		"stderr":    stderrString,
+		"exit_code":    exitCode,
+		"stdout_lines": stdoutLines,
+		"stderr_lines": stderrLines,
 	}
 
 	return output, nil
