@@ -52,13 +52,6 @@ func main() {
 		},
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
-				command.PipelineRunStartHandler{EventBus: eb},
-				command.PipelineRunStepExecuteHandler{EventBus: eb},
-				command.PipelineRunStepPrimitiveExecuteHandler{EventBus: eb},
-				command.PipelineRunStepHTTPRequestExecuteHandler{EventBus: eb},
-				command.PipelineRunFinishHandler{EventBus: eb},
-				command.PipelineRunFailHandler{EventBus: eb},
-
 				command.QueueHandler{EventBus: eb},
 				command.LoadHandler{EventBus: eb},
 				command.StartHandler{EventBus: eb},
@@ -82,14 +75,6 @@ func main() {
 		},
 		EventHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.EventHandler {
 			return []cqrs.EventHandler{
-				handler.PipelineRunStarted{CommandBus: cb},
-				handler.PipelineRunStepExecuted{CommandBus: cb},
-				handler.PipelineRunStepPrimitivePlanned{CommandBus: cb},
-				handler.PipelineRunStepHTTPRequestPlanned{CommandBus: cb},
-				handler.PipelineRunStepFailed{CommandBus: cb},
-				handler.PipelineRunFinished{CommandBus: cb},
-				handler.PipelineRunFailed{CommandBus: cb},
-
 				handler.Queued{CommandBus: cb},
 				handler.Loaded{CommandBus: cb},
 				handler.Started{CommandBus: cb},
