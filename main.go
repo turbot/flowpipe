@@ -14,15 +14,22 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/handler"
+	"github.com/turbot/steampipe-pipelines/fplog"
+	"go.uber.org/zap"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
+
+	"github.com/garsue/watermillzap"
 )
 
 func main() {
-	logger := watermill.NewStdLogger(false, false)
+
+	ctx := fplog.ContextWithLogger(context.Background())
+
+	logger := watermillzap.NewLogger(fplog.Logger(ctx))
+
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 
 	commandsPubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
@@ -41,7 +48,12 @@ func main() {
 	// List of available middlewares you can find in message/router/middleware.
 	//router.AddMiddleware(middleware.RandomFail(0.5))
 	//router.AddMiddleware(middleware.Recoverer)
+
+	// TODO - don't log twice unless we really need to
+	// Log to file for creation of state
 	router.AddMiddleware(LogEventMiddleware)
+	// Log via zap as a test
+	router.AddMiddleware(LogEventMiddlewareWithContext(ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
@@ -168,6 +180,48 @@ func publishCommands(modSpanID string, commandBus *cqrs.CommandBus) {
 type PipelinePayload struct {
 	RunID  string `json:"run_id"`
 	SpanID string `json:"span_id"`
+}
+
+func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddleware {
+	return func(h message.HandlerFunc) message.HandlerFunc {
+		return func(msg *message.Message) ([]*message.Message, error) {
+
+			var payload map[string]interface{}
+			err := json.Unmarshal(msg.Payload, &payload)
+			if err != nil {
+				panic("TODO - invalid log payload, log me?")
+			}
+
+			stackID := ""
+			if payload["run_id"] != nil {
+				if runID, ok := payload["run_id"].(string); ok {
+					stackID = runID
+				}
+			}
+			if stackID == "" {
+				if payload["span_id"] != nil {
+					if spanID, ok := payload["span_id"].(string); ok {
+						stackID = spanID
+					}
+				}
+			}
+			if stackID == "" {
+				panic(fmt.Sprintf("TODO - No run_id or span_id found in payload: %s\n", msg.Payload))
+			}
+
+			logger := fplog.Logger(ctx)
+			defer logger.Sync()
+			logger.Info("es",
+				// Structured context as strongly typed Field values.
+				zap.String("event_type", msg.Metadata["name"]),
+				// zap adds ts field automatically, so don't need zap.Time("created_at", time.Now()),
+				zap.Any("payload", payload),
+			)
+
+			return h(msg)
+
+		}
+	}
 }
 
 func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {

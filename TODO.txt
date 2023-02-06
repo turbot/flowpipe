@@ -4,6 +4,8 @@ DONE
 
 
 TODO
+- rename event package to es or something more generic (it has commands too)
+- ensure context is passed through layers (when appropriate)
 - IDs consistent with SPC format
 - Run sub-pipelines
 - Improve console output and logging, will make everything easier and more attractive
