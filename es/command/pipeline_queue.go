@@ -24,9 +24,10 @@ func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
 
 	e := event.PipelineQueued{
-		Name:      cmd.Name,
-		Input:     cmd.Input,
-		RunID:     fmt.Sprintf("%s.%s", cmd.RunID, cmd.SpanID),
+		Name:  cmd.Name,
+		Input: cmd.Input,
+		RunID: cmd.RunID,
+		//RunID:     fmt.Sprintf("%s.%s", cmd.RunID, cmd.SpanID),
 		SpanID:    cmd.SpanID,
 		CreatedAt: time.Now().UTC(),
 	}

@@ -1,21 +1,24 @@
 
 DONE
 - Sleep primitive
+- ensure context is passed through layers (when appropriate)
+- Log timestamps need milliseconds
+- Single log file per session (may include multiple pipelines)
 
 
 TODO
+- how do we handle failure? Return error? Raise failed event?
+- Prevent infinite retries on error
+- Support for retries
 - rename event package to es or something more generic (it has commands too)
-- ensure context is passed through layers (when appropriate)
 - IDs consistent with SPC format
 - Run sub-pipelines
 - Improve console output and logging, will make everything easier and more attractive
 - Remove (unused) StackID stuff
 - Passing output to input
 - Stop and resume
-- Log timestamps need milliseconds
 - user input primitive
 - Test with RedPanda instead of gochannel
-- Single log file (per service or per pipeline? what about subpipelines?)
 
 
 

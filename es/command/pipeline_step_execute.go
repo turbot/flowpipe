@@ -57,6 +57,9 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 	case "http_request":
 		p := primitive.HTTPRequest{}
 		output, err = p.Run(ctx, cmd.Input)
+	case "query":
+		p := primitive.Query{}
+		output, err = p.Run(ctx, cmd.Input)
 	case "sleep":
 		p := primitive.Sleep{}
 		output, err = p.Run(ctx, cmd.Input)

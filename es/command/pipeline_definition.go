@@ -12,8 +12,9 @@ func PipelineDefinition(name string) (*pipeline.Pipeline, error) {
 			Type: "pipeline",
 			Name: "my_pipeline_0",
 			Steps: []pipeline.PipelineStep{
-				{Type: "exec", Name: "exec_1", Input: map[string]interface{}{"command": "ls"}},
-				{Type: "sleep", Name: "sleep_1", Input: map[string]interface{}{"duration": "5s"}},
+				{Type: "query", Name: "query_accounts", Input: map[string]interface{}{"sql": "select account_id, title from aws_account"}},
+				{Type: "exec", Name: "exec_1", Input: map[string]interface{}{"command": "ls2"}},
+				{Type: "sleep", Name: "sleep_1", Input: map[string]interface{}{"duration": "100ms"}},
 				{Type: "http_request", Name: "http_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
 			},
 		},

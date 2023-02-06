@@ -11,7 +11,7 @@ import (
 type PipelineStepExecuted EventHandler
 
 func (h PipelineStepExecuted) HandlerName() string {
-	return "handler.executed"
+	return "handler.pipeline_step_executed"
 }
 
 func (PipelineStepExecuted) NewEvent() interface{} {
@@ -24,7 +24,6 @@ func (h PipelineStepExecuted) Handle(ctx context.Context, ei interface{}) error 
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
 
-	//Not sure what this was doing, but it created infinite loops
 	cmd := event.PipelinePlan{
 		RunID:     e.RunID,
 		SpanID:    e.SpanID,

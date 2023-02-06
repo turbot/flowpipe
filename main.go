@@ -13,6 +13,7 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/handler"
+	"github.com/turbot/steampipe-pipelines/es/state"
 	"github.com/turbot/steampipe-pipelines/fplog"
 	"github.com/turbot/steampipe-pipelines/utils"
 	"go.uber.org/zap"
@@ -53,6 +54,8 @@ func main() {
 
 	// Log to file for creation of state
 	router.AddMiddleware(LogEventMiddlewareWithContext(ctx))
+	// Dump the state of the event sourcing log with every event
+	// router.AddMiddleware(DumpState(ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
@@ -122,20 +125,25 @@ func main() {
 		panic(err)
 	}
 
-	runID := xid.New().String()
+	runID := utils.NewProcessID()
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		cmd := &event.Stop{
-			RunID:     runID,
-			SpanID:    runID,
-			CreatedAt: time.Now().UTC(),
-		}
-		if err := cqrsFacade.CommandBus().Send(ctx, cmd); err != nil {
-			panic(err)
-		}
+		os.Exit(1)
+		/*
+			// Graceful exit through stop, but this makes the event log
+			// seem like the process is complete.
+			cmd := &event.Stop{
+				RunID:     runID,
+				SpanID:    runID,
+				CreatedAt: time.Now().UTC(),
+			}
+			if err := cqrsFacade.CommandBus().Send(ctx, cmd); err != nil {
+				panic(err)
+			}
+		*/
 	}()
 
 	// publish commands every second to simulate incoming traffic
@@ -147,12 +155,12 @@ func main() {
 	}
 }
 
-func publishCommands(ctx context.Context, modSpanID string, commandBus *cqrs.CommandBus) {
+func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.CommandBus) {
 
 	// Initialize the mod
 	cmd := &event.Queue{
 		Workspace: "e-gineer/scratch",
-		SpanID:    modSpanID,
+		SpanID:    sessionID,
 		CreatedAt: time.Now().UTC(),
 	}
 	if err := commandBus.Send(ctx, cmd); err != nil {
@@ -166,7 +174,7 @@ func publishCommands(ctx context.Context, modSpanID string, commandBus *cqrs.Com
 		fmt.Println()
 		spanID := xid.New().String()
 		cmd := &event.PipelineQueue{
-			RunID:     modSpanID,
+			RunID:     utils.NewProcessID(),
 			SpanID:    spanID,
 			CreatedAt: time.Now().UTC(),
 			//StackID:      e.StackID,
@@ -222,6 +230,15 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 
 			return h(msg)
 
+		}
+	}
+}
+
+func DumpState(ctx context.Context) message.HandlerMiddleware {
+	return func(h message.HandlerFunc) message.HandlerFunc {
+		return func(msg *message.Message) ([]*message.Message, error) {
+			state.Dump(ctx)
+			return h(msg)
 		}
 	}
 }
