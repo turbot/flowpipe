@@ -28,7 +28,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
 		StackID:   cmd.StackID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

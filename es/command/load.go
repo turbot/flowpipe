@@ -31,7 +31,7 @@ func (h LoadHandler) Handle(ctx context.Context, c interface{}) error {
 	e := event.Loaded{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

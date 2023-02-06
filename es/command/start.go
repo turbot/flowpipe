@@ -39,7 +39,7 @@ func (h StartHandler) Handle(ctx context.Context, c interface{}) error {
 	e := event.Started{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		StackID:   xid.New().String(),
 	}
 

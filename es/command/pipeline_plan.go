@@ -25,7 +25,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
 
-	s, err := state.NewState(cmd.RunID)
+	s, err := state.NewState(ctx, cmd.RunID)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -40,7 +40,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	e := event.PipelinePlanned{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	highestCompletedStepIndex := -1

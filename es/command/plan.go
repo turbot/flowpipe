@@ -36,7 +36,7 @@ func (h PlanHandler) Handle(ctx context.Context, c interface{}) error {
 	e := event.Planned{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		StackID:   xid.New().String(),
 	}
 

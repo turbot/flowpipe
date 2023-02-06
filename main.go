@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,6 +14,7 @@ import (
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/handler"
 	"github.com/turbot/steampipe-pipelines/fplog"
+	"github.com/turbot/steampipe-pipelines/utils"
 	"go.uber.org/zap"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -26,7 +26,9 @@ import (
 
 func main() {
 
-	ctx := fplog.ContextWithLogger(context.Background())
+	ctx := context.Background()
+	ctx = utils.ContextWithSession(ctx)
+	ctx = fplog.ContextWithLogger(ctx)
 
 	logger := watermillzap.NewLogger(fplog.Logger(ctx))
 
@@ -49,10 +51,7 @@ func main() {
 	//router.AddMiddleware(middleware.RandomFail(0.5))
 	//router.AddMiddleware(middleware.Recoverer)
 
-	// TODO - don't log twice unless we really need to
 	// Log to file for creation of state
-	router.AddMiddleware(LogEventMiddleware)
-	// Log via zap as a test
 	router.AddMiddleware(LogEventMiddlewareWithContext(ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
@@ -130,31 +129,33 @@ func main() {
 	go func() {
 		<-c
 		cmd := &event.Stop{
-			RunID:  runID,
-			SpanID: runID,
+			RunID:     runID,
+			SpanID:    runID,
+			CreatedAt: time.Now().UTC(),
 		}
-		if err := cqrsFacade.CommandBus().Send(context.Background(), cmd); err != nil {
+		if err := cqrsFacade.CommandBus().Send(ctx, cmd); err != nil {
 			panic(err)
 		}
 	}()
 
 	// publish commands every second to simulate incoming traffic
-	go publishCommands(runID, cqrsFacade.CommandBus())
+	go publishCommands(ctx, runID, cqrsFacade.CommandBus())
 
 	// processors are based on router, so they will work when router will start
-	if err := router.Run(context.Background()); err != nil {
+	if err := router.Run(ctx); err != nil {
 		panic(err)
 	}
 }
 
-func publishCommands(modSpanID string, commandBus *cqrs.CommandBus) {
+func publishCommands(ctx context.Context, modSpanID string, commandBus *cqrs.CommandBus) {
 
 	// Initialize the mod
 	cmd := &event.Queue{
 		Workspace: "e-gineer/scratch",
 		SpanID:    modSpanID,
+		CreatedAt: time.Now().UTC(),
 	}
-	if err := commandBus.Send(context.Background(), cmd); err != nil {
+	if err := commandBus.Send(ctx, cmd); err != nil {
 		panic(err)
 	}
 
@@ -165,13 +166,14 @@ func publishCommands(modSpanID string, commandBus *cqrs.CommandBus) {
 		fmt.Println()
 		spanID := xid.New().String()
 		cmd := &event.PipelineQueue{
-			RunID:  modSpanID,
-			SpanID: spanID,
+			RunID:     modSpanID,
+			SpanID:    spanID,
+			CreatedAt: time.Now().UTC(),
 			//StackID:      e.StackID,
 			Name: fmt.Sprintf("my_pipeline_%d", i%2),
 			//Input:        e.Input,
 		}
-		if err := commandBus.Send(context.Background(), cmd); err != nil {
+		if err := commandBus.Send(ctx, cmd); err != nil {
 			panic(err)
 		}
 	}
@@ -221,47 +223,5 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 			return h(msg)
 
 		}
-	}
-}
-
-func LogEventMiddleware(h message.HandlerFunc) message.HandlerFunc {
-	return func(msg *message.Message) ([]*message.Message, error) {
-
-		// Get the run ID from the payload
-		var pp PipelinePayload
-		err := json.Unmarshal(msg.Payload, &pp)
-		if err != nil {
-			log.Println(err)
-		}
-
-		stackID := pp.RunID
-		if stackID == "" {
-			stackID = pp.SpanID
-		}
-		if stackID == "" {
-			fmt.Printf("No run_id or span_id found in payload: %s\n", msg.Payload)
-			return h(msg)
-		}
-
-		// event.log
-		f, err := os.OpenFile(fmt.Sprintf("logs/%s.jsonl", stackID), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-		startOfLine := []byte(fmt.Sprintf(`{"event_type":"%s","timestamp":"%s","payload":`, msg.Metadata["name"], time.Now().Format(time.RFC3339)))
-		endOfLine := []byte("}\n")
-		logJson := append(startOfLine, msg.Payload...)
-		logJson = append(logJson, endOfLine...)
-		if _, err := f.Write(logJson); err != nil {
-			panic(err)
-		}
-
-		//fmt.Printf(">> %s", string(logJson))
-
-		// stdout
-		//fmt.Printf("[event  ] %s: %s\n", msg.Metadata["name"], string(msg.Payload))
-
-		return h(msg)
 	}
 }

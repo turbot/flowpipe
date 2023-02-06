@@ -28,7 +28,7 @@ func (h Queued) Handle(ctx context.Context, ei interface{}) error {
 	cmd := event.Load{
 		RunID:     e.RunID,
 		SpanID:    e.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	return h.CommandBus.Send(ctx, &cmd)

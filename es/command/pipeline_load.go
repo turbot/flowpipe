@@ -24,7 +24,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
 
-	s, err := state.NewState(cmd.RunID)
+	s, err := state.NewState(ctx, cmd.RunID)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -35,7 +35,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		e := event.PipelineFailed{
 			RunID:        cmd.RunID,
 			SpanID:       cmd.SpanID,
-			CreatedAt:    time.Now(),
+			CreatedAt:    time.Now().UTC(),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -44,7 +44,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	e := event.PipelineLoaded{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		Pipeline:  *defn,
 	}
 	return h.EventBus.Publish(ctx, &e)

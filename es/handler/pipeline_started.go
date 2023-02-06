@@ -27,7 +27,7 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 	cmd := event.PipelinePlan{
 		RunID:     e.RunID,
 		SpanID:    e.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		StackID:   e.StackID,
 	}
 

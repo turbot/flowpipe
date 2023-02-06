@@ -27,7 +27,7 @@ func (h StopHandler) Handle(ctx context.Context, c interface{}) error {
 	e := event.Stopped{
 		RunID:     cmd.RunID,
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		// TODO - Output
 	}
 

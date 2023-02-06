@@ -27,7 +27,7 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 
 	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
 
-	s, err := state.NewState(cmd.RunID)
+	s, err := state.NewState(ctx, cmd.RunID)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -40,7 +40,7 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 		e := event.Failed{
 			RunID:        cmd.RunID,
 			SpanID:       cmd.SpanID,
-			CreatedAt:    time.Now(),
+			CreatedAt:    time.Now().UTC(),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -68,7 +68,7 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 		e := event.Failed{
 			RunID:        cmd.RunID,
 			SpanID:       cmd.SpanID,
-			CreatedAt:    time.Now(),
+			CreatedAt:    time.Now().UTC(),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -79,7 +79,7 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 		SpanID:    cmd.SpanID,
 		StackID:   cmd.StackID,
 		StepIndex: cmd.StepIndex,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		Output:    output,
 	}
 

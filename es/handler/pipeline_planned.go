@@ -30,7 +30,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	// PRE: The planner has told us what to run next, our job is to schedule it
 
-	s, err := state.NewState(e.RunID)
+	s, err := state.NewState(ctx, e.RunID)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -47,7 +47,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		cmd := event.PipelineFinish{
 			RunID:     e.RunID,
 			SpanID:    e.SpanID,
-			CreatedAt: time.Now(),
+			CreatedAt: time.Now().UTC(),
 			StackID:   e.StackID,
 		}
 		return h.CommandBus.Send(ctx, &cmd)
@@ -57,7 +57,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	cmd := event.PipelineStepExecute{
 		RunID:     e.RunID,
 		SpanID:    e.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 		StackID:   e.StackID + "." + xid.New().String(),
 		StepIndex: e.NextStepIndex,
 		Input:     defn.Steps[e.NextStepIndex].Input,

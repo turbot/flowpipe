@@ -27,7 +27,7 @@ func (h QueueHandler) Handle(ctx context.Context, c interface{}) error {
 
 	e := event.Queued{
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

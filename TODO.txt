@@ -32,3 +32,28 @@ DECISIONS
 - So, pipeline definitions and code can be updated and will change running pipelines
 - But, a pipeline run can choose to pin its version, causing it to abort if an update is completed
 - Or, upgrades can choose to pause affected pipeline runs ... queue new runs > finish existing runs > upgrade > restart new runs
+
+
+
+
+timestamp
+run_id
+pipeline / step being executed
+output
+
+[ps_abcd1234] README.md
+[ps_abcd1234] test
+[ps_abcd1234] foo
+
+
+[my_pipeline_1.exec_1      ] Command: ls
+[my_pipeline_1.exec_1      ] README.md
+[my_pipeline_1.exec_1      ] test
+[my_pipeline_1.exec_1      ] foo
+[my_pipeline_1.sleep_1     ] Sleeping for 5mins...
+
+2023-02-06T11:18:25.364573 [my_pipeline_1.exec_1      ] README.md
+2023-02-06T11:18:25.364573 [my_pipeline_1.exec_1      ] test
+2023-02-06T11:18:25.364573 [my_pipeline_1.exec_1      ] foo
+2023-02-06T11:18:25.364573 [my_pipeline_1.sleep_1     ] Sleeping for 5mins...
+2023-02-06T11:18:25.364573 [my_pipeline_1.sleep_1     ] Sleeping for 5mins...

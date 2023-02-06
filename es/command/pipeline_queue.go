@@ -28,7 +28,7 @@ func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 		Input:     cmd.Input,
 		RunID:     fmt.Sprintf("%s.%s", cmd.RunID, cmd.SpanID),
 		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now().UTC(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

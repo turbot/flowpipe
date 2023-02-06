@@ -28,7 +28,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			cmd := event.Stop{
 				RunID:     e.RunID,
 				SpanID:    e.SpanID,
-				CreatedAt: time.Now(),
+				CreatedAt: time.Now().UTC(),
 			}
 		return h.CommandBus.Send(ctx, &cmd)
 	*/

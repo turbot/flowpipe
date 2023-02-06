@@ -3,7 +3,9 @@ package fplog
 import (
 	//nolint:depguard // can't get the exclude list to work in the config (not sure why this is easy enough)
 	"context"
+	"fmt"
 
+	"github.com/turbot/steampipe-pipelines/utils"
 	"go.uber.org/zap"
 )
 
@@ -17,8 +19,19 @@ func NewLogger() *zap.Logger {
 	return logger
 }
 
+func NewProcessEventSourceLogger(RunID string) *zap.Logger {
+	cfg := zap.NewProductionConfig()
+	cfg.Sampling = nil
+	cfg.OutputPaths = []string{fmt.Sprintf("logs/%s.jsonl", RunID)}
+	return zap.Must(cfg.Build())
+}
+
 func ContextWithLogger(ctx context.Context) context.Context {
-	return context.WithValue(ctx, loggerContextKey{}, NewLogger())
+	sessionID := utils.Session(ctx)
+	cfg := zap.NewProductionConfig()
+	cfg.Sampling = nil
+	cfg.OutputPaths = []string{fmt.Sprintf("logs/%s.jsonl", sessionID)}
+	return context.WithValue(ctx, loggerContextKey{}, zap.Must(cfg.Build()))
 }
 
 func Logger(ctx context.Context) *zap.Logger {
