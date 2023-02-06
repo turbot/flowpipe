@@ -5,6 +5,7 @@ import (
 )
 
 type CommandHandler struct {
-	CommandBus *cqrs.CommandBus
-	EventBus   *cqrs.EventBus
+	// Command handlers can only send events, they are not even permitted access
+	// to the CommandBus.
+	EventBus *cqrs.EventBus
 }
