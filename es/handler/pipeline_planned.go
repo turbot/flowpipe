@@ -42,26 +42,40 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
-	if e.NextStepIndex == -1 {
-		// Nothing to do!
-		cmd := event.PipelineFinish{
+	for _, stepIndex := range e.NextStepIndexes {
+		cmd := event.PipelineStepExecute{
 			RunID:     e.RunID,
 			SpanID:    e.SpanID,
 			CreatedAt: time.Now().UTC(),
-			StackID:   e.StackID,
+			StackID:   e.StackID + "." + xid.New().String(),
+			StepIndex: stepIndex,
+			Input:     defn.Steps[stepIndex].Input,
 		}
-		return h.CommandBus.Send(ctx, &cmd)
+		if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+			return err
+		}
 	}
 
-	// Run the next step
-	cmd := event.PipelineStepExecute{
-		RunID:     e.RunID,
-		SpanID:    e.SpanID,
-		CreatedAt: time.Now().UTC(),
-		StackID:   e.StackID + "." + xid.New().String(),
-		StepIndex: e.NextStepIndex,
-		Input:     defn.Steps[e.NextStepIndex].Input,
+	// If there are no more steps, and all running steps are complete, then the
+	// pipeline is complete.
+	if len(e.NextStepIndexes) == 0 {
+		complete := true
+		for _, stepStatus := range s.PipelineStepStatus {
+			if stepStatus != "completed" {
+				complete = false
+				break
+			}
+		}
+		if complete {
+			cmd := event.PipelineFinish{
+				RunID:     e.RunID,
+				SpanID:    e.SpanID,
+				CreatedAt: time.Now().UTC(),
+				StackID:   e.StackID,
+			}
+			return h.CommandBus.Send(ctx, &cmd)
+		}
 	}
 
-	return h.CommandBus.Send(ctx, &cmd)
+	return nil
 }

@@ -2839,6 +2839,19 @@ pipeline "my_dedup" {
 ```
 
 
+## Parallel execution flow
+
+START:
+* Find all steps with no pre-reqs
+* Start them running
+
+STEP FINISHED:
+* Add it to the list of completed steps (with their data)
+* Find all steps depending on the completed step
+* If all pre-reqs are now met for the step, start it
+* Otherwise, if there are no more running steps, then the pipeline has finished
+
+
 ## Timeouts, retries and backoff
 
 Basic principles:

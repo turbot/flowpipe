@@ -38,25 +38,16 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	e := event.PipelinePlanned{
-		RunID:     cmd.RunID,
-		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now().UTC(),
+		RunID:           cmd.RunID,
+		SpanID:          cmd.SpanID,
+		CreatedAt:       time.Now().UTC(),
+		NextStepIndexes: []int{},
 	}
 
-	highestCompletedStepIndex := -1
-	for _, stepIndex := range s.PipelineCompletedSteps {
-		if stepIndex > highestCompletedStepIndex {
-			highestCompletedStepIndex = stepIndex
+	for i, _ := range defn.Steps {
+		if s.PipelineStepStatus[i] == "" {
+			e.NextStepIndexes = append(e.NextStepIndexes, i)
 		}
-	}
-	nextStepIndex := highestCompletedStepIndex + 1
-
-	if nextStepIndex < len(defn.Steps) {
-		// Plan to run the next step
-		e.NextStepIndex = nextStepIndex
-	} else {
-		// Nothing more to do!
-		e.NextStepIndex = -1
 	}
 
 	return h.EventBus.Publish(ctx, &e)

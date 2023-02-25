@@ -47,12 +47,12 @@ type PipelineStarted struct {
 }
 
 type PipelinePlanned struct {
-	RunID         string                 `json:"run_id"`
-	SpanID        string                 `json:"span_id"`
-	StackID       string                 `json:"stack_id"`
-	NextStepIndex int                    `json:"next_step_index"`
-	CreatedAt     time.Time              `json:"created_at"`
-	Input         map[string]interface{} `json:"input"`
+	RunID           string                 `json:"run_id"`
+	SpanID          string                 `json:"span_id"`
+	StackID         string                 `json:"stack_id"`
+	NextStepIndexes []int                  `json:"next_step_indexes"`
+	CreatedAt       time.Time              `json:"created_at"`
+	Input           map[string]interface{} `json:"input"`
 }
 
 type PipelineFinished struct {

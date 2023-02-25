@@ -36,9 +36,9 @@ type State struct {
 	// defintions.
 	ModLocation string `json:"mod_location"`
 	// Pipeline information
-	PipelineName           string                 `json:"pipeline_name"`
-	PipelineInput          map[string]interface{} `json:"pipeline_input"`
-	PipelineCompletedSteps []int                  `json:"pipeline_completed_steps"`
+	PipelineName       string                 `json:"pipeline_name"`
+	PipelineInput      map[string]interface{} `json:"pipeline_input"`
+	PipelineStepStatus map[int]string         `json:"pipeline_step_status"`
 	// Current execution stack
 	RunID string `json:"run_id"`
 	Stack Stack  `json:"stack"`
@@ -47,6 +47,7 @@ type State struct {
 func NewState(ctx context.Context, runID string) (*State, error) {
 	s := &State{}
 	s.Stack = Stack{}
+	s.PipelineStepStatus = map[int]string{}
 	err := s.LoadProcess(ctx, runID)
 	if err != nil {
 		return nil, err
@@ -114,16 +115,32 @@ func (s *State) LoadProcess(ctx context.Context, runID string) error {
 				continue
 			}
 
-		/*
-			case "event.PipelineStepExecute":
-				var execute event.PipelineStepExecute
-				err := json.Unmarshal(e.Payload, &execute)
-				if err != nil {
-					// TODO - log and continue?
-					return err
-				}
-				s.Stack[execute.StackID] = StackEntry{PipelineName: execute.PipelineName, StepIndex: execute.StepIndex}
-		*/
+		case "event.PipelinePlanned":
+			// Get the run ID from the payload
+			var plan event.PipelinePlanned
+			err := json.Unmarshal(e.Payload, &plan)
+			if err != nil {
+				// TODO - log and continue?
+				return err
+			}
+			if plan.RunID != runID {
+				continue
+			}
+			for _, stepID := range plan.NextStepIndexes {
+				s.PipelineStepStatus[stepID] = "planned"
+			}
+
+		case "event.PipelineStepExecute":
+			var execute event.PipelineStepExecute
+			err := json.Unmarshal(e.Payload, &execute)
+			if err != nil {
+				// TODO - log and continue?
+				return err
+			}
+			if execute.RunID != runID {
+				continue
+			}
+			s.PipelineStepStatus[execute.StepIndex] = "running"
 
 		case "event.PipelineStepExecuted":
 			var executed event.PipelineStepExecuted
@@ -135,7 +152,7 @@ func (s *State) LoadProcess(ctx context.Context, runID string) error {
 			if executed.RunID != runID {
 				continue
 			}
-			s.PipelineCompletedSteps = append(s.PipelineCompletedSteps, executed.StepIndex)
+			s.PipelineStepStatus[executed.StepIndex] = "completed"
 
 		default:
 			// Ignore unknown types while loading
