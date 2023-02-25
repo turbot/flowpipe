@@ -42,6 +42,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
+	// Start execution of any next steps from the plan.
 	for _, stepIndex := range e.NextStepIndexes {
 		cmd := event.PipelineStepExecute{
 			RunID:     e.RunID,
@@ -60,8 +61,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// pipeline is complete.
 	if len(e.NextStepIndexes) == 0 {
 		complete := true
-		for _, stepStatus := range s.PipelineStepStatus {
-			if stepStatus != "completed" {
+		for stepID := range defn.Steps {
+			if s.PipelineStepStatus[stepID] != "completed" {
 				complete = false
 				break
 			}

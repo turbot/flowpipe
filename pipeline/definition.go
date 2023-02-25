@@ -9,7 +9,8 @@ type Pipeline struct {
 }
 
 type PipelineStep struct {
-	Type  string                 `json:"type"`
-	Name  string                 `json:"name"`
-	Input map[string]interface{} `json:"input"`
+	Type      string                 `json:"type"`
+	Name      string                 `json:"name"`
+	Input     map[string]interface{} `json:"input"`
+	DependsOn []int                  `json:"depends_on"`
 }
