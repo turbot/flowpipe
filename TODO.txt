@@ -38,6 +38,34 @@ DECISIONS
 
 
 
+DESIGN
+
+Flowpipe runs as a service, and consists of:
+* triggers - cron, webhooks, etc to trigger pipeline runs
+* pipelines - sets of actions that can be run (manually or by a trigger)
+
+The service has a single process log for everything it is doing. But, each
+pipeline run has it's own process (and log). A trigger execution is considered
+part of the pipeline run it initiates.
+
+
+trigger "webhook" "my_webhook" {
+    pipeline = pipeline.my_webhook_pipeline
+}
+
+trigger "query" "my_query" {
+    sql = "select id, title from aws_account"
+    pipeline = pipeline.my_account_handler
+}
+
+trigger "cron" "my_cron" {
+    cron = "* * * * * *"
+    pipeline = pipeline.my_scheduled_pipeline
+}
+
+
+
+
 
 timestamp
 run_id
