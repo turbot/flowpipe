@@ -2,8 +2,6 @@ package command
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/state"
@@ -22,9 +20,7 @@ func (h PipelineLoadHandler) NewCommand() interface{} {
 func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineLoad)
 
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
-
-	s, err := state.NewState(ctx, cmd.RunID)
+	s, err := state.NewState(ctx, cmd.Event)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -33,19 +29,15 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
 		e := event.PipelineFailed{
-			RunID:        cmd.RunID,
-			SpanID:       cmd.SpanID,
-			CreatedAt:    time.Now().UTC(),
+			Event:        event.NewFlowEvent(cmd.Event),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
 
 	e := event.PipelineLoaded{
-		RunID:     cmd.RunID,
-		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now().UTC(),
-		Pipeline:  *defn,
+		Event:    cmd.Event,
+		Pipeline: *defn,
 	}
 	return h.EventBus.Publish(ctx, &e)
 }

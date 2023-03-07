@@ -2,8 +2,6 @@ package command
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/turbot/steampipe-pipelines/es/event"
@@ -11,23 +9,21 @@ import (
 	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
-type PipelineStepExecuteHandler CommandHandler
+type PipelineStepStartHandler CommandHandler
 
-func (h PipelineStepExecuteHandler) HandlerName() string {
-	return "command.pipeline_step_execute"
+func (h PipelineStepStartHandler) HandlerName() string {
+	return "command.pipeline_step_start"
 }
 
-func (h PipelineStepExecuteHandler) NewCommand() interface{} {
-	return &event.PipelineStepExecute{}
+func (h PipelineStepStartHandler) NewCommand() interface{} {
+	return &event.PipelineStepStart{}
 }
 
-func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) error {
+func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*event.PipelineStepExecute)
+	cmd := c.(*event.PipelineStepStart)
 
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
-
-	s, err := state.NewState(ctx, cmd.RunID)
+	s, err := state.NewState(ctx, cmd.Event)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -38,9 +34,7 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 	defn, err := PipelineDefinition(s.PipelineName)
 	if err != nil {
 		e := event.Failed{
-			RunID:        cmd.RunID,
-			SpanID:       cmd.SpanID,
-			CreatedAt:    time.Now().UTC(),
+			Event:        event.NewFlowEvent(cmd.Event),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
@@ -57,6 +51,9 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 	case "http_request":
 		p := primitive.HTTPRequest{}
 		output, err = p.Run(ctx, cmd.Input)
+	case "pipeline":
+		p := primitive.RunPipeline{}
+		output, err = p.Run(ctx, cmd.Input)
 	case "query":
 		p := primitive.Query{}
 		output, err = p.Run(ctx, cmd.Input)
@@ -69,20 +66,24 @@ func (h PipelineStepExecuteHandler) Handle(ctx context.Context, c interface{}) e
 
 	if err != nil {
 		e := event.Failed{
-			RunID:        cmd.RunID,
-			SpanID:       cmd.SpanID,
-			CreatedAt:    time.Now().UTC(),
+			Event:        event.NewFlowEvent(cmd.Event),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
 
-	e := event.PipelineStepExecuted{
-		RunID:     cmd.RunID,
-		SpanID:    cmd.SpanID,
-		StackID:   cmd.StackID,
+	if step.Type == "pipeline" {
+		e := event.PipelineStepStarted{
+			Event:     event.NewFlowEvent(cmd.Event),
+			StepIndex: cmd.StepIndex,
+		}
+		return h.EventBus.Publish(ctx, &e)
+	}
+
+	// All other primitives finish immediately.
+	e := event.PipelineStepFinished{
+		Event:     event.NewFlowEvent(cmd.Event),
 		StepIndex: cmd.StepIndex,
-		CreatedAt: time.Now().UTC(),
 		Output:    output,
 	}
 

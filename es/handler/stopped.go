@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
@@ -19,8 +18,7 @@ func (Stopped) NewEvent() interface{} {
 }
 
 func (h Stopped) Handle(ctx context.Context, ei interface{}) error {
-	e := ei.(*event.Stopped)
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
+	//e := ei.(*event.Stopped)
 	os.Exit(1)
 	return nil
 }

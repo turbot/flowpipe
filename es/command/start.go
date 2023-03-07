@@ -2,10 +2,7 @@ package command
 
 import (
 	"context"
-	"fmt"
-	"time"
 
-	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
 
@@ -23,8 +20,6 @@ func (h StartHandler) Handle(ctx context.Context, c interface{}) error {
 
 	cmd := c.(*event.Start)
 
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), c)
-
 	// TODO - Start running handlers for the mod. After this, we should be
 	// capturing and handling events.
 
@@ -37,10 +32,7 @@ func (h StartHandler) Handle(ctx context.Context, c interface{}) error {
 	*/
 
 	e := event.Started{
-		RunID:     cmd.RunID,
-		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now().UTC(),
-		StackID:   xid.New().String(),
+		Event: event.NewFlowEvent(cmd.Event),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

@@ -34,6 +34,9 @@ func (e *Query) Run(ctx context.Context, input Input) (Output, error) {
 	results := []map[string]interface{}{}
 
 	rows, err := db.Queryx(sql)
+	if err != nil {
+		panic(err)
+	}
 	for rows.Next() {
 		row := make(map[string]interface{})
 		err = rows.MapScan(row)

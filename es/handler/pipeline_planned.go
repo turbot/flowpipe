@@ -2,10 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"time"
-
-	"github.com/rs/xid"
 
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
@@ -26,11 +22,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	e := ei.(*event.PipelinePlanned)
 
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
-
 	// PRE: The planner has told us what to run next, our job is to schedule it
 
-	s, err := state.NewState(ctx, e.RunID)
+	s, err := state.NewState(ctx, e.Event)
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
@@ -44,11 +38,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	// Start execution of any next steps from the plan.
 	for _, stepIndex := range e.NextStepIndexes {
-		cmd := event.PipelineStepExecute{
-			RunID:     e.RunID,
-			SpanID:    e.SpanID,
-			CreatedAt: time.Now().UTC(),
-			StackID:   e.StackID + "." + xid.New().String(),
+		cmd := event.PipelineStepStart{
+			Event: event.NewChildEvent(e.Event),
+			//Event:     event.NewFlowEvent(e.Event),
 			StepIndex: stepIndex,
 			Input:     defn.Steps[stepIndex].Input,
 		}
@@ -60,19 +52,22 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// If there are no more steps, and all running steps are complete, then the
 	// pipeline is complete.
 	if len(e.NextStepIndexes) == 0 {
+
+		lastStackID := e.Event.StackIDs[len(e.Event.StackIDs)-1]
+		//lastStackID := e.Event.LastStackID()
+		stack := s.Stacks[lastStackID]
+
 		complete := true
 		for stepID := range defn.Steps {
-			if s.PipelineStepStatus[stepID] != "completed" {
+			if stack.StepStatus[stepID] != "finished" {
+				//if s.PipelineStepStatus[stepID] != "finished" {
 				complete = false
 				break
 			}
 		}
 		if complete {
 			cmd := event.PipelineFinish{
-				RunID:     e.RunID,
-				SpanID:    e.SpanID,
-				CreatedAt: time.Now().UTC(),
-				StackID:   e.StackID,
+				Event: event.NewFlowEvent(e.Event),
 			}
 			return h.CommandBus.Send(ctx, &cmd)
 		}

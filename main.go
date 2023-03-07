@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/rs/xid"
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/handler"
@@ -54,8 +54,20 @@ func main() {
 
 	// Log to file for creation of state
 	router.AddMiddleware(LogEventMiddlewareWithContext(ctx))
+
 	// Dump the state of the event sourcing log with every event
-	// router.AddMiddleware(DumpState(ctx))
+	//router.AddMiddleware(DumpState(ctx))
+
+	// Throttle, if required
+	//router.AddMiddleware(middleware.NewThrottle(4, time.Second).Middleware)
+
+	// Retry, if required
+	/*
+		retry := middleware.Retry{
+			MaxRetries: 3,
+		}
+		router.AddMiddleware(retry.Middleware)
+	*/
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
@@ -75,7 +87,7 @@ func main() {
 				command.PipelineStartHandler{EventBus: eb},
 				command.PipelinePlanHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
-				command.PipelineStepExecuteHandler{EventBus: eb},
+				command.PipelineStepStartHandler{EventBus: eb},
 				command.StopHandler{EventBus: eb},
 			}
 		},
@@ -98,7 +110,8 @@ func main() {
 				handler.PipelineStarted{CommandBus: cb},
 				handler.PipelinePlanned{CommandBus: cb},
 				handler.PipelineFinished{CommandBus: cb},
-				handler.PipelineStepExecuted{CommandBus: cb},
+				handler.PipelineStepStarted{CommandBus: cb},
+				handler.PipelineStepFinished{CommandBus: cb},
 				handler.Failed{CommandBus: cb},
 				handler.Stopped{CommandBus: cb},
 			}
@@ -159,10 +172,10 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Initialize the mod
 	cmd := &event.Queue{
+		Event:     event.NewExecutionEvent(),
 		Workspace: "e-gineer/scratch",
-		SpanID:    sessionID,
-		CreatedAt: time.Now().UTC(),
 	}
+
 	if err := commandBus.Send(ctx, cmd); err != nil {
 		panic(err)
 	}
@@ -172,16 +185,12 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 	for _, i := range []int{2} {
 		time.Sleep(3 * time.Second)
 		fmt.Println()
-		spanID := xid.New().String()
-		cmd := &event.PipelineQueue{
-			RunID:     utils.NewProcessID(),
-			SpanID:    spanID,
-			CreatedAt: time.Now().UTC(),
-			//StackID:      e.StackID,
-			Name: fmt.Sprintf("my_pipeline_%d", i%2),
+		pipelineCmd := &event.PipelineQueue{
+			Event: event.NewChildEvent(cmd.Event),
+			Name:  fmt.Sprintf("my_pipeline_%d", i%2),
 			//Input:        e.Input,
 		}
-		if err := commandBus.Send(ctx, cmd); err != nil {
+		if err := commandBus.Send(ctx, pipelineCmd); err != nil {
 			panic(err)
 		}
 	}
@@ -196,28 +205,32 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 	return func(h message.HandlerFunc) message.HandlerFunc {
 		return func(msg *message.Message) ([]*message.Message, error) {
 
-			var payload map[string]interface{}
-			err := json.Unmarshal(msg.Payload, &payload)
+			var pe event.PayloadWithEvent
+			err := json.Unmarshal(msg.Payload, &pe)
 			if err != nil {
 				panic("TODO - invalid log payload, log me?")
 			}
 
-			stackID := ""
-			if payload["run_id"] != nil {
-				if runID, ok := payload["run_id"].(string); ok {
-					stackID = runID
+			executionID := pe.Event.ExecutionID
+			if executionID == "" {
+				m := fmt.Sprintf("SHOULD NOT HAPPEN - No execution_id found in payload: %s", msg.Payload)
+				return nil, errors.New(m)
+			}
+
+			var payload map[string]interface{}
+			err = json.Unmarshal(msg.Payload, &payload)
+			if err != nil {
+				panic("TODO - invalid log payload, log me?")
+			}
+
+			payloadWithoutEvent := make(map[string]interface{})
+			for key, value := range payload {
+				if key == "event" {
+					continue
 				}
+				payloadWithoutEvent[key] = value
 			}
-			if stackID == "" {
-				if payload["span_id"] != nil {
-					if spanID, ok := payload["span_id"].(string); ok {
-						stackID = spanID
-					}
-				}
-			}
-			if stackID == "" {
-				panic(fmt.Sprintf("TODO - No run_id or span_id found in payload: %s\n", msg.Payload))
-			}
+			fmt.Printf("%s %-24s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), pe.Event.ShortExecutionStackID(), msg.Metadata["name"], payloadWithoutEvent)
 
 			logger := fplog.Logger(ctx)
 			defer logger.Sync()

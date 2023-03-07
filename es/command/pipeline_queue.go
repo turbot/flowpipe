@@ -2,8 +2,6 @@ package command
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
@@ -21,15 +19,10 @@ func (h PipelineQueueHandler) NewCommand() interface{} {
 func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineQueue)
 
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), cmd)
-
 	e := event.PipelineQueued{
+		Event: event.NewFlowEvent(cmd.Event),
 		Name:  cmd.Name,
 		Input: cmd.Input,
-		RunID: cmd.RunID,
-		//RunID:     fmt.Sprintf("%s.%s", cmd.RunID, cmd.SpanID),
-		SpanID:    cmd.SpanID,
-		CreatedAt: time.Now().UTC(),
 	}
 
 	return h.EventBus.Publish(ctx, &e)

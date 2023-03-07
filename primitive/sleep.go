@@ -18,7 +18,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input Input) error {
 	durationString := input["duration"].(string)
 	_, err := time.ParseDuration(durationString)
 	if err != nil {
-		return fmt.Errorf("Invalid sleep duration: %s", durationString)
+		return fmt.Errorf("invalid sleep duration: %s", durationString)
 	}
 
 	return nil

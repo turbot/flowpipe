@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
@@ -21,18 +20,20 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	e := ei.(*event.PipelineFinished)
 
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
-
-	// TODO - this should pop off the stack, not just straight to the top
-	/*
-			cmd := event.Stop{
-				RunID:     e.RunID,
-				SpanID:    e.SpanID,
-				CreatedAt: time.Now().UTC(),
+	if len(e.Event.StackIDs) > 1 {
+		// This is a child pipeline, so trigger the planner for the parent
+		// pipeline.
+		cmd := event.PipelinePlan{
+			Event: event.NewParentEvent(event.NewParentEvent(e.Event)),
+		}
+		/*
+			cmd := event.PipelineStepFinish{
+				Event:     event.NewParentEvent(e.Event),
+				StepIndex: cmd.StepIndex,
 			}
+		*/
 		return h.CommandBus.Send(ctx, &cmd)
-	*/
+	}
 
 	return nil
-
 }

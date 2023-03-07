@@ -1,30 +1,19 @@
 package event
 
-import (
-	"time"
-)
-
 type runEvent struct {
-	RunID     string    `json:"run_id"`
-	SpanID    string    `json:"span_id"`
-	CreatedAt time.Time `json:"created_at"`
+	Event *Event `json:"event"`
 }
 
 type Loaded runEvent
 type Queued runEvent
 
 type Failed struct {
-	RunID        string    `json:"run_id"`
-	SpanID       string    `json:"span_id"`
-	CreatedAt    time.Time `json:"created_at"`
-	ErrorMessage string    `json:"error_message"`
+	Event        *Event `json:"event"`
+	ErrorMessage string `json:"error_message"`
 }
 
 type Started struct {
-	RunID        string                 `json:"run_id"`
-	SpanID       string                 `json:"span_id"`
-	CreatedAt    time.Time              `json:"created_at"`
-	StackID      string                 `json:"stack_id"`
+	Event        *Event                 `json:"event"`
 	PipelineName string                 `json:"pipeline_name"`
 	Input        map[string]interface{} `json:"input"`
 }
@@ -32,50 +21,38 @@ type Started struct {
 type Planned Started
 
 type Stopped struct {
-	RunID     string                 `json:"run_id"`
-	SpanID    string                 `json:"span_id"`
-	CreatedAt time.Time              `json:"created_at"`
-	Output    map[string]interface{} `json:"output"`
+	Event  *Event                 `json:"event"`
+	Output map[string]interface{} `json:"output"`
 }
 
 type PipelineStarted struct {
-	RunID     string                 `json:"run_id"`
-	SpanID    string                 `json:"span_id"`
-	StackID   string                 `json:"stack_id"`
-	CreatedAt time.Time              `json:"created_at"`
-	Input     map[string]interface{} `json:"input"`
+	Event *Event                 `json:"event"`
+	Input map[string]interface{} `json:"input"`
 }
 
 type PipelinePlanned struct {
-	RunID           string                 `json:"run_id"`
-	SpanID          string                 `json:"span_id"`
-	StackID         string                 `json:"stack_id"`
+	Event           *Event                 `json:"event"`
 	NextStepIndexes []int                  `json:"next_step_indexes"`
-	CreatedAt       time.Time              `json:"created_at"`
 	Input           map[string]interface{} `json:"input"`
 }
 
 type PipelineFinished struct {
-	RunID     string                 `json:"run_id"`
-	SpanID    string                 `json:"span_id"`
-	StackID   string                 `json:"stack_id"`
-	CreatedAt time.Time              `json:"created_at"`
-	Output    map[string]interface{} `json:"output"`
+	Event  *Event                 `json:"event"`
+	Output map[string]interface{} `json:"output"`
 }
 
-type PipelineStepExecuted struct {
-	RunID     string                 `json:"run_id"`
-	SpanID    string                 `json:"span_id"`
-	StackID   string                 `json:"stack_id"`
+type PipelineStepStarted struct {
+	Event     *Event `json:"event"`
+	StepIndex int    `json:"step_index"`
+}
+
+type PipelineStepFinished struct {
+	Event     *Event                 `json:"event"`
 	StepIndex int                    `json:"step_index"`
-	CreatedAt time.Time              `json:"created_at"`
 	Output    map[string]interface{} `json:"output"`
 }
 
 type PipelineFailed struct {
-	RunID        string    `json:"run_id"`
-	SpanID       string    `json:"span_id"`
-	StackID      string    `json:"stack_id"`
-	CreatedAt    time.Time `json:"created_at"`
-	ErrorMessage string    `json:"error_message"`
+	Event        *Event `json:"event"`
+	ErrorMessage string `json:"error_message"`
 }

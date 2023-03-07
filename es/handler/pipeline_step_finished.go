@@ -1,0 +1,29 @@
+package handler
+
+import (
+	"context"
+
+	"github.com/turbot/steampipe-pipelines/es/event"
+)
+
+type PipelineStepFinished EventHandler
+
+func (h PipelineStepFinished) HandlerName() string {
+	return "handler.pipeline_step_finished"
+}
+
+func (PipelineStepFinished) NewEvent() interface{} {
+	return &event.PipelineStepFinished{}
+}
+
+func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error {
+
+	e := ei.(*event.PipelineStepFinished)
+
+	cmd := event.PipelinePlan{
+		Event: event.NewParentEvent(e.Event),
+		//Event: event.NewFlowEvent(e.Event),
+	}
+
+	return h.CommandBus.Send(ctx, &cmd)
+}

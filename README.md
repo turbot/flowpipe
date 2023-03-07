@@ -5,7 +5,7 @@ that are performed in a sequence.
 
 Flowpipe consists of:
 * Triggers - A way to initiate a pipeline (e.g. cron, webhook, etc)
-* Pipelines - A sequence of steps to run actions
+* Pipelines - A sequence of steps to do work
 * Service - Manage triggers and execute pipelines
 
 ## Examples
@@ -28,6 +28,7 @@ pipeline "job" {
 ### Run a python function on calls to a webhook [trigger.http, step.function]
 
 ```hcl
+// https://localhost:9000/my_webhook
 trigger "http" "my_webhook" {
     pipeline = pipeline.my_webhook_pipeline
 }
@@ -156,7 +157,7 @@ trigger "query" "recent_mentions_on_twitter" {
             aws_iam_access_key;
     EOQ
 
-    # Only run the pipeline when keys are discovered to be expired
+    # Only run the pipeline when new rows are discovered
     events = [ "insert" ]
 
     # Not needed, would be unique for each row anyway
@@ -244,7 +245,7 @@ pipeline "my_webhook_pipeline" {
     step "pipeline" "run_1" {
         pipeline = pipeline.my_reusable_pipeline
     }
-    step "function" "run_2" {
+    step "pipeline" "run_2" {
         depends_on = [ step.pipeline.run_1 ]
         pipeline = pipeline.my_reusable_pipeline
     }
@@ -263,7 +264,7 @@ pipeline "my_reusable_pipeline" {
 trigger "http" "my_webhook" {
     pipeline = pipeline.my_webhook_pipeline
     args = {
-        event = self.response_body
+        event = self.payload
     }
 }
 
@@ -412,14 +413,14 @@ trigger "query" "recent_mentions_on_twitter" {
 
     pipeline = pipeline.send_tweets_to_slack
     args = {
-        tweets = self.output.rows
+        tweets = self.rows
     }
 }
 
 pipeline "send_tweets_to_slack" {
 
     param "tweets" {
-        type = "list"
+        type = "list(object)"
     }
 
     step "transform" "slack_attachments" {
@@ -628,6 +629,7 @@ pipeline "handle_key" {
 
     step "container" "delete_access_key" {
         # Use the connection for the row
+        depends_on = [step.http_request.send_warning_to_slack]
         connection = param.access_key.connection
         image = "amazon/aws-cli"
         cmd = ["aws", "iam", "delete-access-key", "--user-name", param.user_name, "--access-key-id", param.access_key_id]

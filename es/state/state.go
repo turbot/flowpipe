@@ -18,12 +18,21 @@ type EventLogEntry struct {
 	Payload   json.RawMessage `json:"payload"`
 }
 
+/*
 type StackEntry struct {
 	PipelineName string `json:"pipeline_name"`
 	StepIndex    int    `json:"step_index"`
 }
 
 type Stack map[string]StackEntry
+*/
+
+type Stack struct {
+	ID         string            `json:"id"`
+	Status     string            `json:"status"`
+	StepStatus map[int]string    `json:"pipeline_step_status"`
+	Stacks     map[string]*Stack `json:"children"`
+}
 
 // Queue a mod for running in a given workspace context.
 type State struct {
@@ -40,27 +49,36 @@ type State struct {
 	PipelineInput      map[string]interface{} `json:"pipeline_input"`
 	PipelineStepStatus map[int]string         `json:"pipeline_step_status"`
 	// Current execution stack
-	RunID string `json:"run_id"`
-	Stack Stack  `json:"stack"`
+	ExecutionID string            `json:"run_id"`
+	Stacks      map[string]*Stack `json:"stack"`
 }
 
-func NewState(ctx context.Context, runID string) (*State, error) {
+func NewState(ctx context.Context, e *event.Event) (*State, error) {
 	s := &State{}
-	s.Stack = Stack{}
 	s.PipelineStepStatus = map[int]string{}
-	err := s.LoadProcess(ctx, runID)
+	s.Stacks = map[string]*Stack{}
+	err := s.LoadProcess(ctx, e)
 	if err != nil {
 		return nil, err
 	}
 	return s, nil
 }
 
-func Dump(ctx context.Context) error {
-	s := &State{}
-	return s.Load(ctx)
+func (s *State) LookupStack(e *event.Event) (*Stack, error) {
+	if len(e.StackIDs) == 0 {
+		return nil, fmt.Errorf("event has no stack: %s", e.ExecutionID)
+	}
+	// Lookup the stack
+	stacks := s.Stacks
+	for _, stackID := range e.StackIDs[:len(e.StackIDs)-1] {
+		stacks = stacks[stackID].Stacks
+	}
+	return stacks[e.StackIDs[len(e.StackIDs)-1]], nil
 }
 
-func (s *State) LoadProcess(ctx context.Context, runID string) error {
+func (s *State) LoadProcess(ctx context.Context, e *event.Event) error {
+
+	s.ExecutionID = e.ExecutionID
 
 	logFile := fmt.Sprintf("logs/%s.jsonl", utils.Session(ctx))
 
@@ -86,21 +104,6 @@ func (s *State) LoadProcess(ctx context.Context, runID string) error {
 
 		switch e.EventType {
 
-		case "event.PipelineQueued":
-			// Get the run ID from the payload
-			var queue event.PipelineQueued
-			err := json.Unmarshal(e.Payload, &queue)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			if queue.RunID != runID {
-				continue
-			}
-			s.RunID = queue.RunID
-			s.PipelineName = queue.Name
-			s.PipelineInput = queue.Input
-
 		case "event.Queue":
 			// Get the run ID from the payload
 			var queue event.Queue
@@ -111,48 +114,88 @@ func (s *State) LoadProcess(ctx context.Context, runID string) error {
 			}
 			s.CloudHost = queue.CloudHost
 			s.Workspace = queue.Workspace
-			if queue.SpanID != runID {
-				continue
+
+		case "event.PipelineQueued":
+			// Get the run ID from the payload
+			var et event.PipelineQueued
+			err := json.Unmarshal(e.Payload, &et)
+			if err != nil {
+				// TODO - log and continue?
+				return err
 			}
+			s.PipelineName = et.Name
+			s.PipelineInput = et.Input
+
+			//lastStackID := et.Event.LastStackID()
+			lastStackID := et.Event.StackIDs[len(et.Event.StackIDs)-1]
+			s.Stacks[lastStackID] = &Stack{
+				ID:         lastStackID,
+				Status:     "queued",
+				StepStatus: map[int]string{},
+			}
+
+			/*
+				stack, err := s.LookupStack(et.Event)
+				if err != nil {
+					return err
+				}
+				stack.Status = "queued"
+			*/
 
 		case "event.PipelinePlanned":
 			// Get the run ID from the payload
-			var plan event.PipelinePlanned
-			err := json.Unmarshal(e.Payload, &plan)
+			var et event.PipelinePlanned
+			err := json.Unmarshal(e.Payload, &et)
 			if err != nil {
 				// TODO - log and continue?
 				return err
-			}
-			if plan.RunID != runID {
-				continue
-			}
-			for _, stepID := range plan.NextStepIndexes {
-				s.PipelineStepStatus[stepID] = "planned"
 			}
 
-		case "event.PipelineStepExecute":
-			var execute event.PipelineStepExecute
-			err := json.Unmarshal(e.Payload, &execute)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			if execute.RunID != runID {
-				continue
-			}
-			s.PipelineStepStatus[execute.StepIndex] = "running"
+			/*
+				stack, err := s.LookupStack(et.Event)
+				if err != nil {
+					return err
+				}
+				stack.Status = "planned"
+			*/
 
-		case "event.PipelineStepExecuted":
-			var executed event.PipelineStepExecuted
-			err := json.Unmarshal(e.Payload, &executed)
+			//lastStackID := et.Event.LastStackID()
+			lastStackID := et.Event.StackIDs[len(et.Event.StackIDs)-1]
+			s.Stacks[lastStackID].Status = "planned"
+
+			for _, i := range et.NextStepIndexes {
+				s.Stacks[lastStackID].StepStatus[i] = "planned"
+			}
+
+		case "event.PipelineStepStart":
+			var et event.PipelineStepStart
+			err := json.Unmarshal(e.Payload, &et)
 			if err != nil {
 				// TODO - log and continue?
 				return err
 			}
-			if executed.RunID != runID {
-				continue
+
+			/*
+				s.PipelineStepStatus[et.StepIndex] = "started"
+			*/
+
+			lastStackID := et.Event.LastStackID()
+			s.Stacks[lastStackID].StepStatus[et.StepIndex] = "started"
+
+		case "event.PipelineStepFinished":
+			var et event.PipelineStepFinished
+			err := json.Unmarshal(e.Payload, &et)
+			if err != nil {
+				// TODO - log and continue?
+				return err
 			}
-			s.PipelineStepStatus[executed.StepIndex] = "completed"
+
+			/*
+				s.PipelineStepStatus[et.StepIndex] = "finished"
+			*/
+
+			lastStackID := et.Event.LastStackID()
+			s.Stacks[lastStackID].StepStatus[et.StepIndex] = "finished"
 
 		default:
 			// Ignore unknown types while loading
@@ -172,6 +215,11 @@ func (s *State) LoadProcess(ctx context.Context, runID string) error {
 
 	return nil
 
+}
+
+func Dump(ctx context.Context) error {
+	s := &State{}
+	return s.Load(ctx)
 }
 
 // This is an attempt at Loading the state of a session, including the status of
@@ -214,7 +262,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "queue"
+			pipelineStatus[e.Event.ExecutionID] = "queue"
 
 		case "event.PipelineQueued":
 			// Get the run ID from the payload
@@ -224,7 +272,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "queued"
+			pipelineStatus[e.Event.ExecutionID] = "queued"
 
 		case "event.PipelineLoad":
 			// Get the run ID from the payload
@@ -234,7 +282,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "load"
+			pipelineStatus[e.Event.ExecutionID] = "load"
 
 		case "event.PipelineLoaded":
 			// Get the run ID from the payload
@@ -244,7 +292,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "loaded"
+			pipelineStatus[e.Event.ExecutionID] = "loaded"
 
 		case "event.PipelineStart":
 			// Get the run ID from the payload
@@ -254,7 +302,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "start"
+			pipelineStatus[e.Event.ExecutionID] = "start"
 
 		case "event.PipelineStarted":
 			// Get the run ID from the payload
@@ -264,7 +312,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "started"
+			pipelineStatus[e.Event.ExecutionID] = "started"
 
 		case "event.PipelinePlan":
 			// Get the run ID from the payload
@@ -274,7 +322,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "plan"
+			pipelineStatus[e.Event.ExecutionID] = "plan"
 
 		case "event.PipelinePlanned":
 			// Get the run ID from the payload
@@ -284,25 +332,25 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "planned"
+			pipelineStatus[e.Event.ExecutionID] = "planned"
 
-		case "event.PipelineStepExecute":
-			var e event.PipelineStepExecute
+		case "event.PipelineStepStart":
+			var e event.PipelineStepStart
 			err := json.Unmarshal(entryMetadata.Payload, &e)
 			if err != nil {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "step_execute"
+			pipelineStatus[e.Event.ExecutionID] = "step_start"
 
-		case "event.PipelineStepExecuted":
-			var e event.PipelineStepExecuted
+		case "event.PipelineStepFinished":
+			var e event.PipelineStepFinished
 			err := json.Unmarshal(entryMetadata.Payload, &e)
 			if err != nil {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "step_executed"
+			pipelineStatus[e.Event.ExecutionID] = "step_finished"
 
 		case "event.PipelineFinish":
 			// Get the run ID from the payload
@@ -312,7 +360,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "finish"
+			pipelineStatus[e.Event.ExecutionID] = "finish"
 
 		case "event.PipelineFinished":
 			// Get the run ID from the payload
@@ -322,7 +370,7 @@ func (s *State) Load(ctx context.Context) error {
 				// TODO - log and continue?
 				return err
 			}
-			pipelineStatus[e.RunID] = "finished"
+			pipelineStatus[e.Event.ExecutionID] = "finished"
 
 		default:
 			// Ignore unknown types while loading

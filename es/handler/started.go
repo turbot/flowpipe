@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 )
@@ -19,9 +18,7 @@ func (Started) NewEvent() interface{} {
 
 func (h Started) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.Started)
-
-	fmt.Printf("[%-20s] %v\n", h.HandlerName(), e)
+	//e := ei.(*event.Started)
 
 	// Note: The mod is now listening for trigger events. It is stopped by a
 	// Ctrl-C handler hooked to the Stop command.
