@@ -6,10 +6,11 @@ type Config struct {
 	LogDir string `json:"log_dir,omitempty"`
 }
 
+// ConfigOption is a function that modifies a Config instance.
 type ConfigOption func(*Config)
 
 // NewConfig creates a new Config instance with the given options.
-func NewConfig(opts ...ConfigOption) *Config {
+func NewConfig(opts ...ConfigOption) (*Config, error) {
 	const (
 		defaultLogDir = "logs"
 	)
@@ -26,7 +27,7 @@ func NewConfig(opts ...ConfigOption) *Config {
 	}
 
 	// return the modified config instance
-	return c
+	return c, nil
 }
 
 // WithLogDir returns a ConfigOption that sets the log directory.

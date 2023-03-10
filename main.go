@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/turbot/steampipe-pipelines/config"
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/handler"
-	"github.com/turbot/steampipe-pipelines/es/state"
 	"github.com/turbot/steampipe-pipelines/fplog"
 	"github.com/turbot/steampipe-pipelines/utils"
 	"go.uber.org/zap"
@@ -30,6 +30,12 @@ func main() {
 	ctx := context.Background()
 	ctx = utils.ContextWithSession(ctx)
 	ctx = fplog.ContextWithLogger(ctx)
+
+	cfg, err := config.NewConfig()
+	if err != nil {
+		panic(err)
+	}
+	ctx = config.Set(ctx, cfg)
 
 	logger := watermillzap.NewLogger(fplog.Logger(ctx))
 
@@ -78,16 +84,16 @@ func main() {
 		},
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
-				command.QueueHandler{EventBus: eb},
 				command.LoadHandler{EventBus: eb},
-				command.StartHandler{EventBus: eb},
-				command.PlanHandler{EventBus: eb},
-				command.PipelineQueueHandler{EventBus: eb},
-				command.PipelineLoadHandler{EventBus: eb},
-				command.PipelineStartHandler{EventBus: eb},
-				command.PipelinePlanHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
+				command.PipelineLoadHandler{EventBus: eb},
+				command.PipelinePlanHandler{EventBus: eb},
+				command.PipelineQueueHandler{EventBus: eb},
+				command.PipelineStartHandler{EventBus: eb},
+				command.PipelineStepFinishHandler{EventBus: eb},
 				command.PipelineStepStartHandler{EventBus: eb},
+				command.QueueHandler{EventBus: eb},
+				command.StartHandler{EventBus: eb},
 				command.StopHandler{EventBus: eb},
 			}
 		},
@@ -101,18 +107,18 @@ func main() {
 		},
 		EventHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.EventHandler {
 			return []cqrs.EventHandler{
-				handler.Queued{CommandBus: cb},
-				handler.Loaded{CommandBus: cb},
-				handler.Started{CommandBus: cb},
-				handler.Planned{CommandBus: cb},
-				handler.PipelineQueued{CommandBus: cb},
-				handler.PipelineLoaded{CommandBus: cb},
-				handler.PipelineStarted{CommandBus: cb},
-				handler.PipelinePlanned{CommandBus: cb},
-				handler.PipelineFinished{CommandBus: cb},
-				handler.PipelineStepStarted{CommandBus: cb},
-				handler.PipelineStepFinished{CommandBus: cb},
 				handler.Failed{CommandBus: cb},
+				handler.Loaded{CommandBus: cb},
+				handler.PipelineFailed{CommandBus: cb},
+				handler.PipelineFinished{CommandBus: cb},
+				handler.PipelineLoaded{CommandBus: cb},
+				handler.PipelinePlanned{CommandBus: cb},
+				handler.PipelineQueued{CommandBus: cb},
+				handler.PipelineStarted{CommandBus: cb},
+				handler.PipelineStepFinished{CommandBus: cb},
+				handler.PipelineStepStarted{CommandBus: cb},
+				handler.Queued{CommandBus: cb},
+				handler.Started{CommandBus: cb},
 				handler.Stopped{CommandBus: cb},
 			}
 		},
@@ -172,7 +178,7 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Initialize the mod
 	cmd := &event.Queue{
-		Event:     event.NewExecutionEvent(),
+		Event:     event.NewExecutionEvent(ctx),
 		Workspace: "e-gineer/scratch",
 	}
 
@@ -230,7 +236,7 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 				}
 				payloadWithoutEvent[key] = value
 			}
-			fmt.Printf("%s %-24s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), pe.Event.ShortExecutionStackID(), msg.Metadata["name"], payloadWithoutEvent)
+			fmt.Printf("%s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), msg.Metadata["name"], payloadWithoutEvent)
 
 			logger := fplog.Logger(ctx)
 			defer logger.Sync()
@@ -247,11 +253,13 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 	}
 }
 
+/*
 func DumpState(ctx context.Context) message.HandlerMiddleware {
 	return func(h message.HandlerFunc) message.HandlerFunc {
 		return func(msg *message.Message) ([]*message.Message, error) {
-			state.Dump(ctx)
+			execution.Dump(ctx)
 			return h(msg)
 		}
 	}
 }
+*/

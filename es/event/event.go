@@ -25,33 +25,6 @@ type Stopped struct {
 	Output map[string]interface{} `json:"output"`
 }
 
-type PipelineStarted struct {
-	Event *Event                 `json:"event"`
-	Input map[string]interface{} `json:"input"`
-}
-
-type PipelinePlanned struct {
-	Event           *Event                 `json:"event"`
-	NextStepIndexes []int                  `json:"next_step_indexes"`
-	Input           map[string]interface{} `json:"input"`
-}
-
-type PipelineFinished struct {
-	Event  *Event                 `json:"event"`
-	Output map[string]interface{} `json:"output"`
-}
-
-type PipelineStepStarted struct {
-	Event     *Event `json:"event"`
-	StepIndex int    `json:"step_index"`
-}
-
-type PipelineStepFinished struct {
-	Event     *Event                 `json:"event"`
-	StepIndex int                    `json:"step_index"`
-	Output    map[string]interface{} `json:"output"`
-}
-
 type PipelineFailed struct {
 	Event        *Event `json:"event"`
 	ErrorMessage string `json:"error_message"`

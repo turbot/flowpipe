@@ -10,7 +10,8 @@ import (
 func TestConfigInContext(t *testing.T) {
 	assert := assert.New(t)
 	ctx := context.Background()
-	cfgIn := NewConfig(WithLogDir("/tmp"))
+	cfgIn, err := NewConfig(WithLogDir("/tmp"))
+	assert.Nil(err)
 	configCtx := Set(ctx, cfgIn)
 	assert.Implements((*context.Context)(nil), configCtx)
 	cfgOut := Get(configCtx)

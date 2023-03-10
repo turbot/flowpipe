@@ -8,6 +8,7 @@ import (
 
 func TestDefaultConfig(t *testing.T) {
 	assert := assert.New(t)
-	cfg := NewConfig()
+	cfg, err := NewConfig()
+	assert.Nil(err)
 	assert.Equal(cfg.LogDir, "logs")
 }

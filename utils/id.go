@@ -10,6 +10,14 @@ func NewExecutionID() string {
 	return "exec_" + NewUniqueID()
 }
 
+func NewPipelineExecutionID() string {
+	return "pexec_" + NewUniqueID()
+}
+
+func NewStepExecutionID() string {
+	return "sexec_" + NewUniqueID()
+}
+
 func NewSessionID() string {
 	return "sess_" + NewUniqueID()
 }

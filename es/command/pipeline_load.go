@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/es/state"
+	"github.com/turbot/steampipe-pipelines/es/execution"
 )
 
 type PipelineLoadHandler CommandHandler
@@ -20,13 +20,7 @@ func (h PipelineLoadHandler) NewCommand() interface{} {
 func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineLoad)
 
-	s, err := state.NewState(ctx, cmd.Event)
-	if err != nil {
-		// TODO - should this return a failed event? how are errors caught here?
-		return err
-	}
-
-	defn, err := PipelineDefinition(s.PipelineName)
+	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
 		e := event.PipelineFailed{
 			Event:        event.NewFlowEvent(cmd.Event),
@@ -35,9 +29,21 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, &e)
 	}
 
-	e := event.PipelineLoaded{
-		Event:    cmd.Event,
-		Pipeline: *defn,
+	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+	if err != nil {
+		e := event.PipelineFailed{
+			Event:        event.NewFlowEvent(cmd.Event),
+			ErrorMessage: err.Error(),
+		}
+		return h.EventBus.Publish(ctx, &e)
 	}
+
+	e, err := event.NewPipelineLoaded(
+		event.ForPipelineLoad(cmd),
+		event.WithPipelineDefinition(defn))
+	if err != nil {
+		return err
+	}
+
 	return h.EventBus.Publish(ctx, &e)
 }

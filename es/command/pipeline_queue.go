@@ -18,12 +18,9 @@ func (h PipelineQueueHandler) NewCommand() interface{} {
 
 func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineQueue)
-
-	e := event.PipelineQueued{
-		Event: event.NewFlowEvent(cmd.Event),
-		Name:  cmd.Name,
-		Input: cmd.Input,
+	e, err := event.NewPipelineQueued(event.ForPipelineQueue(cmd))
+	if err != nil {
+		return err
 	}
-
 	return h.EventBus.Publish(ctx, &e)
 }

@@ -5,7 +5,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/es/state"
+	"github.com/turbot/steampipe-pipelines/es/execution"
+	"github.com/turbot/steampipe-pipelines/pipeline"
 	"github.com/turbot/steampipe-pipelines/primitive"
 )
 
@@ -23,45 +24,43 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 	cmd := c.(*event.PipelineStepStart)
 
-	s, err := state.NewState(ctx, cmd.Event)
+	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
 	}
 
-	// Load the pipeline definition
-	// TODO - pipeline name needs to be read from the state
-	defn, err := PipelineDefinition(s.PipelineName)
+	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		e := event.Failed{
+		e := event.PipelineFailed{
 			Event:        event.NewFlowEvent(cmd.Event),
 			ErrorMessage: err.Error(),
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
 
-	step := defn.Steps[cmd.StepIndex]
+	stepDefn := defn.Steps[cmd.StepName]
 
-	var output primitive.Output
+	var output pipeline.StepOutput
 
-	switch step.Type {
+	switch stepDefn.Type {
 	case "exec":
 		p := primitive.Exec{}
-		output, err = p.Run(ctx, cmd.Input)
+		output, err = p.Run(ctx, cmd.StepInput)
 	case "http_request":
 		p := primitive.HTTPRequest{}
-		output, err = p.Run(ctx, cmd.Input)
+		output, err = p.Run(ctx, cmd.StepInput)
 	case "pipeline":
 		p := primitive.RunPipeline{}
-		output, err = p.Run(ctx, cmd.Input)
+		output, err = p.Run(ctx, cmd.StepInput)
 	case "query":
 		p := primitive.Query{}
-		output, err = p.Run(ctx, cmd.Input)
+		output, err = p.Run(ctx, cmd.StepInput)
 	case "sleep":
 		p := primitive.Sleep{}
-		output, err = p.Run(ctx, cmd.Input)
+		output, err = p.Run(ctx, cmd.StepInput)
 	default:
-		return errors.Errorf("step_type_not_found: %s", step.Type)
+		return errors.Errorf("step type primitive not found: %s", stepDefn.Type)
 	}
 
 	if err != nil {
@@ -72,19 +71,27 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		return h.EventBus.Publish(ctx, &e)
 	}
 
-	if step.Type == "pipeline" {
-		e := event.PipelineStepStarted{
-			Event:     event.NewFlowEvent(cmd.Event),
-			StepIndex: cmd.StepIndex,
+	if stepDefn.Type == "pipeline" {
+		input := pipeline.PipelineInput{}
+		if stepDefn.Input["input"] != nil {
+			input = stepDefn.Input["input"].(pipeline.PipelineInput)
+		}
+		e, err := event.NewPipelineStepStarted(
+			event.ForPipelineStepStart(cmd),
+			event.WithNewChildPipelineExecutionID(),
+			event.WithChildPipeline(stepDefn.Input["name"].(string), input))
+		if err != nil {
+			return err
 		}
 		return h.EventBus.Publish(ctx, &e)
 	}
 
 	// All other primitives finish immediately.
-	e := event.PipelineStepFinished{
-		Event:     event.NewFlowEvent(cmd.Event),
-		StepIndex: cmd.StepIndex,
-		Output:    output,
+	e, err := event.NewPipelineStepFinished(
+		event.ForPipelineStepStartToPipelineStepFinished(cmd),
+		event.WithStepOutput(output))
+	if err != nil {
+		return err
 	}
 
 	return h.EventBus.Publish(ctx, &e)

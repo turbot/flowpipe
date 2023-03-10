@@ -3,9 +3,8 @@ package handler
 import (
 	"context"
 
-	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
-	"github.com/turbot/steampipe-pipelines/es/state"
+	"github.com/turbot/steampipe-pipelines/es/execution"
 )
 
 type PipelinePlanned EventHandler
@@ -22,54 +21,58 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	e := ei.(*event.PipelinePlanned)
 
-	// PRE: The planner has told us what to run next, our job is to schedule it
-
-	s, err := state.NewState(ctx, e.Event)
+	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
 		// TODO - should this return a failed event? how are errors caught here?
 		return err
 	}
 
-	defn, err := command.PipelineDefinition(s.PipelineName)
+	defn, err := ex.PipelineDefinition(e.PipelineExecutionID)
 	if err != nil {
-		// TODO - should this return a failed event? how are errors caught here?
-		return err
+		e := event.PipelineFailed{
+			Event:        event.NewFlowEvent(e.Event),
+			ErrorMessage: err.Error(),
+		}
+		return h.CommandBus.Send(ctx, &e)
 	}
 
-	// Start execution of any next steps from the plan.
-	for _, stepIndex := range e.NextStepIndexes {
-		cmd := event.PipelineStepStart{
-			Event: event.NewChildEvent(e.Event),
-			//Event:     event.NewFlowEvent(e.Event),
-			StepIndex: stepIndex,
-			Input:     defn.Steps[stepIndex].Input,
-		}
-		if err := h.CommandBus.Send(ctx, &cmd); err != nil {
-			return err
-		}
-	}
+	// Convenience
+	pe := ex.PipelineExecutions[e.PipelineExecutionID]
 
-	// If there are no more steps, and all running steps are complete, then the
-	// pipeline is complete.
-	if len(e.NextStepIndexes) == 0 {
+	if len(e.NextSteps) == 0 {
 
-		lastStackID := e.Event.StackIDs[len(e.Event.StackIDs)-1]
-		//lastStackID := e.Event.LastStackID()
-		stack := s.Stacks[lastStackID]
+		// PRE: No new steps to execute, so the planner should just check to see if
+		// all existing steps are complete.
 
 		complete := true
-		for stepID := range defn.Steps {
-			if stack.StepStatus[stepID] != "finished" {
-				//if s.PipelineStepStatus[stepID] != "finished" {
+		for _, stepStatus := range pe.StepStatus {
+			if stepStatus.Status != "finished" && stepStatus.Status != "failed" {
 				complete = false
 				break
 			}
 		}
+
 		if complete {
-			cmd := event.PipelineFinish{
-				Event: event.NewFlowEvent(e.Event),
+			cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
+			if err != nil {
+				return err
 			}
 			return h.CommandBus.Send(ctx, &cmd)
+		}
+
+		return nil
+	}
+
+	// PRE: The planner has told us what steps to run next, our job is to start them
+
+	for _, stepName := range e.NextSteps {
+		stepDefn := defn.Steps[stepName]
+		cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, stepDefn.Input))
+		if err != nil {
+			return err
+		}
+		if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+			return err
 		}
 	}
 

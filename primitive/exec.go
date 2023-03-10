@@ -6,18 +6,20 @@ import (
 	"errors"
 	"os/exec"
 	"syscall"
+
+	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
 type Exec struct{}
 
-func (e *Exec) ValidateInput(ctx context.Context, i Input) error {
+func (e *Exec) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
 	if i["command"] == nil {
 		return errors.New("Exec input must define a command")
 	}
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input Input) (Output, error) {
+func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -80,7 +82,7 @@ func (e *Exec) Run(ctx context.Context, input Input) (Output, error) {
 		}
 	}
 
-	output := Output{
+	output := pipeline.StepOutput{
 		"exit_code":    exitCode,
 		"stdout_lines": stdoutLines,
 		"stderr_lines": stderrLines,

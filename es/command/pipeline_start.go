@@ -17,12 +17,10 @@ func (h PipelineStartHandler) NewCommand() interface{} {
 }
 
 func (h PipelineStartHandler) Handle(ctx context.Context, c interface{}) error {
-
 	cmd := c.(*event.PipelineStart)
-
-	e := event.PipelineStarted{
-		Event: event.NewFlowEvent(cmd.Event),
+	e, err := event.NewPipelineStarted(event.ForPipelineStart(cmd))
+	if err != nil {
+		return err
 	}
-
 	return h.EventBus.Publish(ctx, &e)
 }

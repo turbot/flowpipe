@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
 func TestExecOK(t *testing.T) {
 	assert := assert.New(t)
 	hr := Exec{}
-	input := Input(map[string]interface{}{"command": "echo 'test'"})
+	input := pipeline.StepInput(map[string]interface{}{"command": "echo 'test'"})
 	output, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)
@@ -30,7 +31,7 @@ func TestExecOK(t *testing.T) {
 func TestExecProgramNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := Exec{}
-	input := Input(map[string]interface{}{"command": "my_non_existent_cli 'test'"})
+	input := pipeline.StepInput(map[string]interface{}{"command": "my_non_existent_cli 'test'"})
 	output, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)

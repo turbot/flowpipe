@@ -17,12 +17,10 @@ func (h PipelineFinishHandler) NewCommand() interface{} {
 }
 
 func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error {
-
 	cmd := c.(*event.PipelineFinish)
-
-	e := event.PipelineFinished{
-		Event: event.NewFlowEvent(cmd.Event),
+	e, err := event.NewPipelineFinished(event.ForPipelineFinish(cmd))
+	if err != nil {
+		return err
 	}
-
 	return h.EventBus.Publish(ctx, &e)
 }

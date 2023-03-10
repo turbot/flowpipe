@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
+	"github.com/turbot/steampipe-pipelines/es/execution"
 )
 
 type PipelineFinished EventHandler
@@ -20,18 +21,24 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	e := ei.(*event.PipelineFinished)
 
-	if len(e.Event.StackIDs) > 1 {
-		// This is a child pipeline, so trigger the planner for the parent
-		// pipeline.
-		cmd := event.PipelinePlan{
-			Event: event.NewParentEvent(event.NewParentEvent(e.Event)),
+	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
+	if err != nil {
+		// TODO - should this return a failed event? how are errors caught here?
+		return err
+	}
+
+	parentStepExecution, err := ex.ParentStepExecution(e.PipelineExecutionID)
+	if err != nil {
+		return err
+	}
+	if parentStepExecution != nil {
+		cmd, err := event.NewPipelineStepFinish(
+			event.ForPipelineFinished(e),
+			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
+			event.WithStepExecutionID(parentStepExecution.ID))
+		if err != nil {
+			return err
 		}
-		/*
-			cmd := event.PipelineStepFinish{
-				Event:     event.NewParentEvent(e.Event),
-				StepIndex: cmd.StepIndex,
-			}
-		*/
 		return h.CommandBus.Send(ctx, &cmd)
 	}
 

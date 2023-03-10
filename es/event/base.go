@@ -1,6 +1,7 @@
 package event
 
 import (
+	"context"
 	"strings"
 	"time"
 
@@ -30,9 +31,9 @@ type PayloadWithEvent struct {
 	Event *Event `json:"event"`
 }
 
-func NewExecutionEvent() *Event {
+func NewExecutionEvent(ctx context.Context) *Event {
 	return &Event{
-		ExecutionID: utils.NewExecutionID(),
+		ExecutionID: utils.Session(ctx),
 		StackIDs:    []string{},
 		CreatedAt:   time.Now().UTC(),
 	}

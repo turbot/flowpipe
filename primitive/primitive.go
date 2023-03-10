@@ -1,9 +1,7 @@
 package primitive
 
-type Input map[string]interface{}
-
-type Output map[string]interface{}
+import "github.com/turbot/steampipe-pipelines/pipeline"
 
 type Primitive interface {
-	Run(Input) (Output, error)
+	Run(pipeline.StepInput) (pipeline.StepOutput, error)
 }

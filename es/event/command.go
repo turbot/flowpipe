@@ -24,29 +24,3 @@ type Plan Load
 type Start Load
 
 type Stop Load
-
-type PipelineQueue struct {
-	Event *Event `json:"event"`
-	// Pipeline details
-	Name  string                 `json:"name"`
-	Input map[string]interface{} `json:"input"`
-}
-
-type PipelineLoad struct {
-	Event *Event `json:"event"`
-}
-
-type PipelineStart struct {
-	Event        *Event                 `json:"event"`
-	PipelineName string                 `json:"pipeline_name"`
-	StepIndex    int                    `json:"step_index"`
-	Input        map[string]interface{} `json:"input"`
-}
-
-type PipelinePlan PipelineStart
-
-type PipelineFinish struct {
-	Event *Event `json:"event"`
-}
-
-type PipelineStepStart PipelineStart

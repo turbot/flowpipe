@@ -7,18 +7,19 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
 type Query struct{}
 
-func (e *Query) ValidateInput(ctx context.Context, i Input) error {
+func (e *Query) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
 	if i["sql"] == nil {
 		return errors.New("Query input must define sql")
 	}
 	return nil
 }
 
-func (e *Query) Run(ctx context.Context, input Input) (Output, error) {
+func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -50,7 +51,7 @@ func (e *Query) Run(ctx context.Context, input Input) (Output, error) {
 		panic(err)
 	}
 
-	output := Output{
+	output := pipeline.StepOutput{
 		"rows": results,
 	}
 
