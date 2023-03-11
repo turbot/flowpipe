@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/execution"
@@ -40,6 +42,10 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			return err
 		}
 		return h.CommandBus.Send(ctx, &cmd)
+	} else {
+		// Dump the final execution state
+		jsonStr, _ := json.MarshalIndent(ex, "", "  ")
+		fmt.Println(string(jsonStr))
 	}
 
 	return nil

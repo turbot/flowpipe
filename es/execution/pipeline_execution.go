@@ -1,5 +1,7 @@
 package execution
 
+import "github.com/turbot/steampipe-pipelines/pipeline"
+
 // PipelineExecution represents the execution of a single pipeline.
 type PipelineExecution struct {
 	// Unique identifier for this pipeline execution
@@ -55,4 +57,6 @@ type StepExecution struct {
 	Name string `json:"name"`
 	// The status of the step execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
+	// Output of the step
+	Output pipeline.StepOutput `json:"output"`
 }
