@@ -55,8 +55,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	for _, step := range defn.Steps {
 
-		// If the step is already planned, then skip it
-		if pe.StepStatus[step.Name].Status != "" {
+		if pe.StepStatus[step.Name].Total() > 0 {
 			continue
 		}
 
@@ -64,18 +63,17 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		// TODO - this is completely naive and does not handle cycles.
 		dependendenciesMet := true
 		for _, dep := range step.DependsOn {
-			stepDefn, ok := defn.Steps[dep]
-			if !ok {
-				// Dependency is not defined in the pipeline
+			// Cannot depend on yourself
+			if step.Name == dep {
 				// TODO - issue a warning?
 				continue
 			}
-			if stepDefn.Name == dep {
-				// Cannot depend on yourself
+			// Ignore invalid dependencies
+			if _, ok := defn.Steps[dep]; !ok {
 				// TODO - issue a warning?
 				continue
 			}
-			if pe.StepStatus[dep].Status != "finished" {
+			if pe.StepStatus[dep].Progress() < 100 {
 				dependendenciesMet = false
 				break
 			}
@@ -90,38 +88,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	if err := h.EventBus.Publish(ctx, &e); err != nil {
 		return err
 	}
-
-	// The planner also needs to check for any child pipelines that have
-	// finished and trigger the step finished event.
-
-	/*
-		for _, stepExecutionID := range pe.StepExecutions {
-			se := ex.StepExecutions[stepExecutionID]
-			if se.Status != "started" {
-				// Only matters for running child pipelines
-				continue
-			}
-			sd, err := ex.StepDefinition(se.Name)
-			if err != nil {
-				return err
-			}
-			if sd.Type != "pipeline" {
-				// Only matters for pipeline steps
-				continue
-			}
-			if se.Status == "started" {
-				// TODO - this is a bit of a hack. We should be able to
-				// trigger the step finished event directly, but it is
-				// currently not possible to create a StepFinished event
-				// without a PipelineFinished event.
-				cmd, err := event.NewPipelineFinished(event.ForChildPipelineFinished(cmd, se.ID))
-				if err != nil {
-					return err
-				}
-				return h.EventBus.Send(ctx, &cmd)
-			}
-		}
-	*/
 
 	return nil
 

@@ -25,8 +25,24 @@ type PipelineExecution struct {
 // StepStatus represents the status of a single step in a pipeline. It reflects the
 // status of the step as a whole, not the status of each execution of the step.
 type StepStatus struct {
-	// Status of the step as a whole (not per execution)
-	Status string `json:"status"`
+	Queued   int `json:"queued"`
+	Started  int `json:"started"`
+	Finished int `json:"finished"`
+	Failed   int `json:"failed"`
+}
+
+// Progress returns a percentage complete for the executions of the step.
+// It always returns an integer.
+func (s StepStatus) Progress() int {
+	total := s.Queued + s.Started + s.Finished + s.Failed
+	if total == 0 {
+		return 0
+	}
+	return (s.Finished + s.Failed) * 100 / total
+}
+
+func (s StepStatus) Total() int {
+	return s.Queued + s.Started + s.Finished + s.Failed
 }
 
 // StepExecution represents the execution of a single step in a pipeline. A given

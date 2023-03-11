@@ -80,12 +80,8 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 			Type: "pipeline",
 			Name: "my_pipeline_0",
 			Steps: map[string]*pipeline.PipelineStep{
-				"query_accounts": {Type: "query", Name: "query_accounts", Input: map[string]interface{}{"sql": "select account_id, title from aws_account"}},
-				"exec_1":         {Type: "exec", Name: "exec_1", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"command": "ls"}},
-				"sleep_1":        {Type: "sleep", Name: "sleep_1", DependsOn: []string{"query_accounts"}, Input: map[string]interface{}{"duration": "2s"}},
-				//"http_1": {Type: "http_request", Name: "http_1", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
-				"pipeline_a": {Type: "pipeline", Name: "pipeline_a", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"name": "my_pipeline_1"}},
-				"pipeline_b": {Type: "pipeline", Name: "pipeline_b", DependsOn: []string{"pipeline_a"}, Input: map[string]interface{}{"name": "my_pipeline_1"}},
+				"sleep_1": {Type: "sleep", Name: "sleep_1", For: []pipeline.StepInput{{"duration": "1s"}, {"duration": "2s"}, {"duration": "300ms"}, {"duration": "600ms"}}, DependsOn: []string{}, Input: map[string]interface{}{"duration": "2s"}},
+				"http_1":  {Type: "http_request", Name: "http_1", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
 			},
 		},
 		"my_pipeline_1": {
@@ -94,6 +90,18 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 			Steps: map[string]*pipeline.PipelineStep{
 				"http_1":  {Type: "http_request", Name: "http_1", Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
 				"sleep_1": {Type: "sleep", Name: "sleep_1", DependsOn: []string{"query_accounts"}, Input: map[string]interface{}{"duration": "2s"}},
+			},
+		},
+		"my_pipeline_2": {
+			Type: "pipeline",
+			Name: "my_pipeline_2",
+			Steps: map[string]*pipeline.PipelineStep{
+				"query_accounts": {Type: "query", Name: "query_accounts", Input: map[string]interface{}{"sql": "select account_id, title from aws_account"}},
+				"exec_1":         {Type: "exec", Name: "exec_1", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"command": "ls"}},
+				"sleep_1":        {Type: "sleep", Name: "sleep_1", For: []pipeline.StepInput{{"duration": "1s"}, {"duration": "2s"}}, DependsOn: []string{"query_accounts"}, Input: map[string]interface{}{"duration": "2s"}},
+				//"http_1": {Type: "http_request", Name: "http_1", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"}},
+				"pipeline_a": {Type: "pipeline", Name: "pipeline_a", DependsOn: []string{"sleep_1"}, Input: map[string]interface{}{"name": "my_pipeline_1"}},
+				"pipeline_b": {Type: "pipeline", Name: "pipeline_b", DependsOn: []string{"pipeline_a"}, Input: map[string]interface{}{"name": "my_pipeline_1"}},
 			},
 		},
 	}
@@ -205,11 +213,29 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "planned"
-			for _, s := range et.NextSteps {
-				pe.StepStatus[s] = StepStatus{
-					Status: "planned",
+			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
+			if err != nil {
+				return err
+			}
+			for _, nextStep := range et.NextSteps {
+				sd := pd.Steps[nextStep]
+				queueSize := len(sd.For)
+				if queueSize == 0 {
+					queueSize = 1
+				}
+				ex.PipelineExecutions[et.PipelineExecutionID].StepStatus[nextStep] = StepStatus{
+					Queued: queueSize,
 				}
 			}
+
+		case "event.PipelineStarted":
+			var et event.PipelineStarted
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "started"
 
 		case "event.PipelineStepStart":
 			var et event.PipelineStepStart
@@ -223,13 +249,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Name:                et.StepName,
 				Status:              "starting",
 			}
-
-		case "event.PipelineStepStarted":
-			var et event.PipelineStepStarted
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				return err
-			}
 			// Set the overall step status
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
@@ -237,10 +256,18 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			if ss, ok := pe.StepStatus[stepDefn.Name]; ok {
-				ss.Status = "started"
+				ss.Queued = ss.Queued - 1
+				ss.Started = ss.Started + 1
 				pe.StepStatus[stepDefn.Name] = ss
 			} else {
 				return fmt.Errorf("step %s not found in pipeline %s", stepDefn.Name, et.PipelineExecutionID)
+			}
+
+		case "event.PipelineStepStarted":
+			var et event.PipelineStepStarted
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
 			}
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "started"
@@ -257,7 +284,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			if ss, ok := pe.StepStatus[stepDefn.Name]; ok {
-				ss.Status = "finished"
+				ss.Started = ss.Started - 1
+				ss.Finished = ss.Finished + 1
 				pe.StepStatus[stepDefn.Name] = ss
 			} else {
 				return fmt.Errorf("step %s not found in pipeline %s", stepDefn.Name, et.PipelineExecutionID)

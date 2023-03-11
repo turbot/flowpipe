@@ -5,6 +5,7 @@ import (
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/execution"
+	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
 type PipelinePlanned EventHandler
@@ -46,7 +47,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		complete := true
 		for _, stepStatus := range pe.StepStatus {
-			if stepStatus.Status != "finished" && stepStatus.Status != "failed" {
+			if stepStatus.Progress() < 100 {
 				complete = false
 				break
 			}
@@ -67,12 +68,22 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	for _, stepName := range e.NextSteps {
 		stepDefn := defn.Steps[stepName]
-		cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, stepDefn.Input))
-		if err != nil {
-			return err
+
+		// TODO - This is a hack to test for loop behavior. We need to actually
+		// load data from prior objects etc.
+		items := []pipeline.StepInput{stepDefn.Input}
+		if len(stepDefn.For) > 0 {
+			items = stepDefn.For
 		}
-		if err := h.CommandBus.Send(ctx, &cmd); err != nil {
-			return err
+
+		for _, item := range items {
+			cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, item))
+			if err != nil {
+				return err
+			}
+			if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+				return err
+			}
 		}
 	}
 

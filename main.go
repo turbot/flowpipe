@@ -194,7 +194,7 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 	// Manually trigger some pipelines for testing
 	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
 	for _, i := range []int{2} {
-		time.Sleep(3 * time.Second)
+		time.Sleep(0 * time.Second)
 		fmt.Println()
 		pipelineCmd := &event.PipelineQueue{
 			Event: event.NewChildEvent(cmd.Event),
