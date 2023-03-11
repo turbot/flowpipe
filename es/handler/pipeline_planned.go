@@ -77,13 +77,26 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		for _, item := range items {
-			cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, item))
-			if err != nil {
-				return err
-			}
-			if err := h.CommandBus.Send(ctx, &cmd); err != nil {
-				return err
-			}
+			// Start each step in parallel
+			go func(stepName string, item pipeline.StepInput) {
+				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, item))
+				if err != nil {
+					e := event.PipelineFailed{
+						Event:        event.NewFlowEvent(e.Event),
+						ErrorMessage: err.Error(),
+					}
+					h.CommandBus.Send(ctx, &e)
+					return
+				}
+				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+					e := event.PipelineFailed{
+						Event:        event.NewFlowEvent(e.Event),
+						ErrorMessage: err.Error(),
+					}
+					h.CommandBus.Send(ctx, &e)
+					return
+				}
+			}(stepName, item)
 		}
 	}
 
