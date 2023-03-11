@@ -156,6 +156,22 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				},
 			},
 		},
+		"my_pipeline_3": {
+			Type: "pipeline",
+			Name: "my_pipeline_3",
+			Steps: map[string]*pipeline.PipelineStep{
+				"exec_1": {
+					Type: "exec",
+					Name: "exec_1",
+					For: []pipeline.StepInput{
+						{"command": "pwd"},
+						{"command": "ls"},
+						{"command": "ls /"},
+						{"command": "uname -a"},
+					},
+				},
+			},
+		},
 	}
 	if d, ok := definitions[pe.Name]; ok {
 		return d, nil
