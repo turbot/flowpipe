@@ -21,9 +21,9 @@ type Pipeline struct {
 }
 
 type PipelineStep struct {
-	Type      string      `json:"type"`
-	Name      string      `json:"name"`
-	Input     StepInput   `json:"input"`
-	DependsOn []string    `json:"depends_on"`
-	For       []StepInput `json:"for,omitempty"`
+	Type      string    `json:"type"`
+	Name      string    `json:"name"`
+	Input     StepInput `json:"input"`
+	DependsOn []string  `json:"depends_on"`
+	For       string    `json:"for_template,omitempty"`
 }

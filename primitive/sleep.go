@@ -36,7 +36,9 @@ func (e *Sleep) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 	duration, _ := time.ParseDuration(durationString)
 
 	fmt.Println("Sleeping for ", duration, "...")
+	start := time.Now().UTC()
 	time.Sleep(duration)
+	finish := time.Now().UTC()
 
-	return pipeline.StepOutput{}, nil
+	return pipeline.StepOutput{"started_at": start, "finished_at": finish}, nil
 }

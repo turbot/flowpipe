@@ -1,7 +1,11 @@
 package handler
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"html/template"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/execution"
@@ -72,8 +76,49 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// TODO - This is a hack to test for loop behavior. We need to actually
 		// load data from prior objects etc.
 		items := []pipeline.StepInput{stepDefn.Input}
-		if len(stepDefn.For) > 0 {
-			items = stepDefn.For
+
+		/*
+			if len(stepDefn.For) > 0 {
+				items = stepDefn.For
+			}
+		*/
+
+		if stepDefn.For != "" {
+			// Use go template with the step outputs to generate the items
+			stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+			t, err := template.New("for").Parse(stepDefn.For)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+			var itemsBuffer bytes.Buffer
+			err = t.Execute(&itemsBuffer, stepOutputs)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+			fmt.Println(itemsBuffer.String())
+			err = json.Unmarshal(itemsBuffer.Bytes(), &items)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
 		}
 
 		for _, item := range items {

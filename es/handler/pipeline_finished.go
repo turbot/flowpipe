@@ -46,6 +46,14 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		// Dump the final execution state
 		jsonStr, _ := json.MarshalIndent(ex, "", "  ")
 		fmt.Println(string(jsonStr))
+
+		// Dump step outputs
+		stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(stepOutputs)
+		}
 	}
 
 	return nil

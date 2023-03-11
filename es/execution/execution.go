@@ -83,6 +83,31 @@ func (ex *Execution) StepDefinition(stepExecutionID string) (*pipeline.PipelineS
 	return sd, nil
 }
 
+// PipelineStepOutputs returns a single map of all outputs from all steps in
+// the given pipeline execution. The map is keyed by the step name. If a step
+// has a ForTemplate then the result is an array of outputs.
+func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string]interface{}, error) {
+	outputs := map[string]interface{}{}
+	for stepExecutionID, se := range ex.StepExecutions {
+		if se.PipelineExecutionID != pipelineExecutionID {
+			continue
+		}
+		sd, err := ex.StepDefinition(stepExecutionID)
+		if err != nil {
+			return nil, err
+		}
+		if sd.For == "" {
+			outputs[se.Name] = se.Output
+		} else {
+			if _, ok := outputs[se.Name]; !ok {
+				outputs[se.Name] = []interface{}{}
+			}
+			outputs[se.Name] = append(outputs[se.Name].([]interface{}), se.Output)
+		}
+	}
+	return outputs, nil
+}
+
 // ParentStepExecution returns the parent step execution for the given pipeline
 // execution ID.
 func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecution, error) {
@@ -171,16 +196,22 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "planned"
-			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
-			if err != nil {
-				return err
-			}
-			for _, nextStep := range et.NextSteps {
-				sd := pd.Steps[nextStep]
-				queueSize := len(sd.For)
-				if queueSize == 0 {
-					queueSize = 1
+			/*
+				pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
+				if err != nil {
+					return err
 				}
+			*/
+			for _, nextStep := range et.NextSteps {
+				/*
+					// TODO - how to handle for loop size?
+					sd := pd.Steps[nextStep]
+					queueSize := len(sd.For)
+					if queueSize == 0 {
+						queueSize = 1
+					}
+				*/
+				queueSize := 1
 				ex.PipelineExecutions[et.PipelineExecutionID].StepStatus[nextStep] = StepStatus{
 					Queued: queueSize,
 				}

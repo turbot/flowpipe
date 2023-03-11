@@ -18,14 +18,9 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 			Name: "my_pipeline_0",
 			Steps: map[string]*pipeline.PipelineStep{
 				"sleep_1": {
-					Type: "sleep",
-					Name: "sleep_1",
-					For: []pipeline.StepInput{
-						{"duration": "1s"},
-						{"duration": "2s"},
-						{"duration": "300ms"},
-						{"duration": "600ms"},
-					},
+					Type:      "sleep",
+					Name:      "sleep_1",
+					For:       `[{"duration": "1s"}, {"duration": "2s"}, {"duration": "300ms"}, {"duration": "600ms"}]`,
 					DependsOn: []string{},
 					Input:     map[string]interface{}{"duration": "2s"},
 				},
@@ -33,10 +28,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 					Type:      "http_request",
 					Name:      "http_1",
 					DependsOn: []string{"sleep_1"},
-					For: []pipeline.StepInput{
-						{"url": "http://api.open-notify.org/astros.json"},
-						{"url": "http://api.open-notify.org/iss-now.json"},
-					},
+					For:       `[{"url": "http://api.open-notify.org/astros.json"}, {"url": "http://api.open-notify.org/iss-now.json"}]`,
 				},
 			},
 		},
@@ -75,7 +67,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				"sleep_1": {
 					Type:      "sleep",
 					Name:      "sleep_1",
-					For:       []pipeline.StepInput{{"duration": "1s"}, {"duration": "2s"}},
+					For:       `[{"duration": "1s"}, {"duration": "2s"}]`,
 					DependsOn: []string{"query_accounts"},
 					Input:     map[string]interface{}{"duration": "2s"},
 				},
@@ -100,16 +92,29 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				"exec_1": {
 					Type: "exec",
 					Name: "exec_1",
-					For: []pipeline.StepInput{
-						{"command": "pwd"},
-						{"command": "ls"},
-						{"command": "ls /crap"},
-						{"command": "uname -a"},
-					},
+					For:  `[{"command":"pwd"},{"command":"ls"},{"command":"ls /crap"},{"command":"uname -a"}]`,
+				},
+			},
+		},
+		"pass_data_between_steps": {
+			Type: "pipeline",
+			Name: "my_pipeline_3",
+			Steps: map[string]*pipeline.PipelineStep{
+				"list_root_dir": {
+					Type:  "exec",
+					Name:  "list_root_dir",
+					Input: pipeline.StepInput{"command": "ls /"},
+				},
+				"list_each_subdir_of_root_dir": {
+					Type:      "exec",
+					Name:      "list_each_subdir_of_root_dir",
+					DependsOn: []string{"list_root_dir"},
+					For:       `[{{range $i, $e := .list_root_dir.stdout_lines}}{{ if $i }}, {{end}}{"command":"ls /{{$e}}"}{{end}}]`,
 				},
 			},
 		},
 	}
+
 	if d, ok := definitions[pe.Name]; ok {
 		return d, nil
 	}
