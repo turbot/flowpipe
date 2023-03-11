@@ -41,8 +41,13 @@ func main() {
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 
-	commandsPubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	eventsPubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	goChannelConfig := gochannel.Config{
+		// TODO - I really don't understand this and I'm not sure it's necessary.
+		//OutputChannelBuffer: 10000,
+		//Persistent:          true,
+	}
+	commandsPubSub := gochannel.NewGoChannel(goChannelConfig, logger)
+	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, logger)
 
 	// CQRS is built on messages router. Detailed documentation: https://watermill.io/docs/messages-router/
 	router, err := message.NewRouter(message.RouterConfig{}, logger)
