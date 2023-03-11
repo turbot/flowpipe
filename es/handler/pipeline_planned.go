@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"html/template"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
@@ -81,49 +80,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			return h.CommandBus.Send(ctx, &e)
 		}
 
-		items := []pipeline.StepInput{}
+		forInputs := []interface{}{}
 
 		stepDefn := defn.Steps[stepName]
-		if stepDefn.Input != "" {
+		if stepDefn.For != "" {
 			// Use go template with the step outputs to generate the items
-			t, err := template.New("input").Parse(stepDefn.Input)
-			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
-			}
-			var itemsBuffer bytes.Buffer
-			err = t.Execute(&itemsBuffer, stepOutputs)
-			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
-			}
-			fmt.Println(stepName, ".input = ", itemsBuffer.String())
-			var item pipeline.StepInput
-			err = json.Unmarshal(itemsBuffer.Bytes(), &item)
-			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
-			}
-			items = append(items, item)
-		} else if stepDefn.For != "" {
-			// Use go template with the step outputs to generate the items
-			stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
-			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
-			}
 			t, err := template.New("for").Parse(stepDefn.For)
 			if err != nil {
 				e := event.PipelineFailed{
@@ -141,8 +102,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 				return h.CommandBus.Send(ctx, &e)
 			}
-			fmt.Println(stepName, ".for = ", itemsBuffer.String())
-			err = json.Unmarshal(itemsBuffer.Bytes(), &items)
+			err = json.Unmarshal(itemsBuffer.Bytes(), &forInputs)
 			if err != nil {
 				e := event.PipelineFailed{
 					Event:        event.NewFlowEvent(e.Event),
@@ -150,12 +110,100 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 				return h.CommandBus.Send(ctx, &e)
 			}
+			if len(forInputs) == 0 {
+				// A for loop was defined, but it returned no items, so we can
+				// skip this step
+				return nil
+			}
 		}
 
-		for _, item := range items {
+		inputs := []pipeline.StepInput{}
+
+		if stepDefn.Input == "" {
+			// No input, so just use an empty input for each step execution.
+
+			// There is always one input (e.g. no for loop). If the for loop had
+			// no items, then we would have returned above.
+			inputs = append(inputs, pipeline.StepInput{})
+
+			// Add extra items if the for loop required them, skipping the one
+			// we added already above.
+			for i := 0; i < len(forInputs)-1; i++ {
+				inputs = append(inputs, pipeline.StepInput{})
+			}
+		} else {
+			// We have an input
+
+			// Parse the input template once
+			t, err := template.New("input").Parse(stepDefn.Input)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+
+			if stepDefn.For == "" {
+				// No for loop
+
+				var itemsBuffer bytes.Buffer
+				err = t.Execute(&itemsBuffer, stepOutputs)
+				if err != nil {
+					e := event.PipelineFailed{
+						Event:        event.NewFlowEvent(e.Event),
+						ErrorMessage: err.Error(),
+					}
+					return h.CommandBus.Send(ctx, &e)
+				}
+				var input pipeline.StepInput
+				err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+				if err != nil {
+					e := event.PipelineFailed{
+						Event:        event.NewFlowEvent(e.Event),
+						ErrorMessage: err.Error(),
+					}
+					return h.CommandBus.Send(ctx, &e)
+				}
+				inputs = append(inputs, input)
+
+			} else {
+				// Create a step for each input in forInputs
+				for i, forInput := range forInputs {
+
+					// TODO - this updates the same map each time ... is that safe?
+					var stepOutputsWithEach = stepOutputs
+					stepOutputsWithEach["each"] = map[string]interface{}{"key": i, "value": forInput}
+
+					var itemsBuffer bytes.Buffer
+					err = t.Execute(&itemsBuffer, stepOutputsWithEach)
+					if err != nil {
+						e := event.PipelineFailed{
+							Event:        event.NewFlowEvent(e.Event),
+							ErrorMessage: err.Error(),
+						}
+						return h.CommandBus.Send(ctx, &e)
+					}
+					var input pipeline.StepInput
+					err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+					if err != nil {
+						e := event.PipelineFailed{
+							Event:        event.NewFlowEvent(e.Event),
+							ErrorMessage: err.Error(),
+						}
+						return h.CommandBus.Send(ctx, &e)
+					}
+					inputs = append(inputs, input)
+				}
+
+			}
+
+		}
+
+		for _, input := range inputs {
 			// Start each step in parallel
-			go func(stepName string, item pipeline.StepInput) {
-				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, item))
+			go func(stepName string, input pipeline.StepInput) {
+				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input))
 				if err != nil {
 					e := event.PipelineFailed{
 						Event:        event.NewFlowEvent(e.Event),
@@ -172,7 +220,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					h.CommandBus.Send(ctx, &e)
 					return
 				}
-			}(stepName, item)
+			}(stepName, input)
 		}
 	}
 
