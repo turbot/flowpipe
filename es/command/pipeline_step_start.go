@@ -87,13 +87,13 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		if stepDefn.Type == "pipeline" {
 			input := pipeline.PipelineInput{}
-			if stepDefn.Input["input"] != nil {
-				input = stepDefn.Input["input"].(pipeline.PipelineInput)
+			if cmd.StepInput["input"] != nil {
+				input = cmd.StepInput["input"].(pipeline.PipelineInput)
 			}
 			e, err := event.NewPipelineStepStarted(
 				event.ForPipelineStepStart(cmd),
 				event.WithNewChildPipelineExecutionID(),
-				event.WithChildPipeline(stepDefn.Input["name"].(string), input))
+				event.WithChildPipeline(cmd.StepInput["name"].(string), input))
 			if err != nil {
 				e := event.PipelineFailed{
 					Event:        event.NewFlowEvent(cmd.Event),

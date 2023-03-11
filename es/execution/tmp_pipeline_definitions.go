@@ -22,7 +22,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 					Name:      "sleep_1",
 					For:       `[{"duration": "1s"}, {"duration": "2s"}, {"duration": "300ms"}, {"duration": "600ms"}]`,
 					DependsOn: []string{},
-					Input:     map[string]interface{}{"duration": "2s"},
+					Input:     `{"duration": "2s"}`,
 				},
 				"http_1": {
 					Type:      "http_request",
@@ -39,13 +39,13 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				"http_1": {
 					Type:  "http_request",
 					Name:  "http_1",
-					Input: map[string]interface{}{"url": "http://api.open-notify.org/astros.json"},
+					Input: `{"url": "http://api.open-notify.org/astros.json"}`,
 				},
 				"sleep_1": {
 					Type:      "sleep",
 					Name:      "sleep_1",
 					DependsOn: []string{},
-					Input:     map[string]interface{}{"duration": "2s"},
+					Input:     `{"duration": "2s"}`,
 				},
 			},
 		},
@@ -56,32 +56,31 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				"query_accounts": {
 					Type:  "query",
 					Name:  "query_accounts",
-					Input: map[string]interface{}{"sql": "select account_id, title from aws_account"},
+					Input: `{"sql": "select account_id, title from aws_account"}`,
 				},
 				"exec_1": {
 					Type:      "exec",
 					Name:      "exec_1",
 					DependsOn: []string{"sleep_1"},
-					Input:     map[string]interface{}{"command": "ls"},
+					Input:     `{"command": "ls"}`,
 				},
 				"sleep_1": {
 					Type:      "sleep",
 					Name:      "sleep_1",
 					For:       `[{"duration": "1s"}, {"duration": "2s"}]`,
 					DependsOn: []string{"query_accounts"},
-					Input:     map[string]interface{}{"duration": "2s"},
 				},
 				"pipeline_a": {
 					Type:      "pipeline",
 					Name:      "pipeline_a",
 					DependsOn: []string{"sleep_1"},
-					Input:     map[string]interface{}{"name": "my_pipeline_1"},
+					Input:     `{"name": "my_pipeline_1"}`,
 				},
 				"pipeline_b": {
 					Type:      "pipeline",
 					Name:      "pipeline_b",
 					DependsOn: []string{"pipeline_a"},
-					Input:     map[string]interface{}{"name": "my_pipeline_1"},
+					Input:     `{"name": "my_pipeline_1"}`,
 				},
 			},
 		},
@@ -103,13 +102,58 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				"list_root_dir": {
 					Type:  "exec",
 					Name:  "list_root_dir",
-					Input: pipeline.StepInput{"command": "ls /"},
+					Input: `{"command": "ls /"}`,
 				},
 				"list_each_subdir_of_root_dir": {
 					Type:      "exec",
 					Name:      "list_each_subdir_of_root_dir",
 					DependsOn: []string{"list_root_dir"},
 					For:       `[{{range $i, $e := .list_root_dir.stdout_lines}}{{ if $i }}, {{end}}{"command":"ls /{{$e}}"}{{end}}]`,
+				},
+			},
+		},
+		"chained_steampipe_queries": {
+			Type: "pipeline",
+			Name: "chained_steampipe_queries",
+			Steps: map[string]*pipeline.PipelineStep{
+				"accounts": {
+					Type:  "query",
+					Name:  "accounts",
+					Input: `{"sql": "select account_id, title from aws_account"}`,
+				},
+				"account_details": {
+					Type:      "query",
+					Name:      "account_details",
+					DependsOn: []string{"accounts"},
+					For:       `[{{range $i, $row := .accounts.rows}}{{ if $i }}, {{end}}{"sql":"select * from aws_account where account_id = '{{ $row.account_id }}'"}{{end}}]`,
+				},
+			},
+		},
+		"chained_input": {
+			Type: "pipeline",
+			Name: "chained_steampipe_queries",
+			Steps: map[string]*pipeline.PipelineStep{
+				"accounts": {
+					Type:  "query",
+					Name:  "accounts",
+					Input: `{"sql": "select count(*) from aws_account"}`,
+				},
+				"echo_count": {
+					Type:      "exec",
+					Name:      "echo_count",
+					DependsOn: []string{"accounts"},
+					Input:     `{"command": "echo {{ (index .accounts.rows 0).count }}"}`,
+				},
+			},
+		},
+		"call_pipelines_in_for_loop": {
+			Type: "pipeline",
+			Name: "call_pipeline_in_for_loop",
+			Steps: map[string]*pipeline.PipelineStep{
+				"pipeline_caller": {
+					Type: "pipeline",
+					Name: "pipeline_caller",
+					For:  `[{"name": "chained_input"}, {"name": "chained_steampipe_queries"}]`,
 				},
 			},
 		},

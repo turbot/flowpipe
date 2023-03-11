@@ -71,19 +71,50 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// PRE: The planner has told us what steps to run next, our job is to start them
 
 	for _, stepName := range e.NextSteps {
-		stepDefn := defn.Steps[stepName]
 
-		// TODO - This is a hack to test for loop behavior. We need to actually
-		// load data from prior objects etc.
-		items := []pipeline.StepInput{stepDefn.Input}
-
-		/*
-			if len(stepDefn.For) > 0 {
-				items = stepDefn.For
+		stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
+		if err != nil {
+			e := event.PipelineFailed{
+				Event:        event.NewFlowEvent(e.Event),
+				ErrorMessage: err.Error(),
 			}
-		*/
+			return h.CommandBus.Send(ctx, &e)
+		}
 
-		if stepDefn.For != "" {
+		items := []pipeline.StepInput{}
+
+		stepDefn := defn.Steps[stepName]
+		if stepDefn.Input != "" {
+			// Use go template with the step outputs to generate the items
+			t, err := template.New("input").Parse(stepDefn.Input)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+			var itemsBuffer bytes.Buffer
+			err = t.Execute(&itemsBuffer, stepOutputs)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+			fmt.Println(stepName, ".input = ", itemsBuffer.String())
+			var item pipeline.StepInput
+			err = json.Unmarshal(itemsBuffer.Bytes(), &item)
+			if err != nil {
+				e := event.PipelineFailed{
+					Event:        event.NewFlowEvent(e.Event),
+					ErrorMessage: err.Error(),
+				}
+				return h.CommandBus.Send(ctx, &e)
+			}
+			items = append(items, item)
+		} else if stepDefn.For != "" {
 			// Use go template with the step outputs to generate the items
 			stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
 			if err != nil {
@@ -110,7 +141,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 				return h.CommandBus.Send(ctx, &e)
 			}
-			fmt.Println(itemsBuffer.String())
+			fmt.Println(stepName, ".for = ", itemsBuffer.String())
 			err = json.Unmarshal(itemsBuffer.Bytes(), &items)
 			if err != nil {
 				e := event.PipelineFailed{
