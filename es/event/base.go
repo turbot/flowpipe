@@ -47,7 +47,3 @@ func NewParentEvent(child *Event) *Event {
 		CreatedAt:   time.Now().UTC(),
 	}
 }
-
-func (e *Event) ShortExecutionID() string {
-	return e.ExecutionID[len(e.ExecutionID)-4:]
-}
