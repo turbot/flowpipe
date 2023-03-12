@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -60,11 +61,16 @@ func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (pipeli
 		}
 	}
 
+	var bodyJSON interface{}
+	// Just ignore errors
+	json.Unmarshal(body, &bodyJSON)
+
 	output := pipeline.StepOutput{
 		"status":      resp.Status,
 		"status_code": resp.StatusCode,
 		"headers":     headers,
 		"body":        string(body),
+		"body_json":   bodyJSON,
 		"started_at":  start,
 		"finished_at": finish,
 	}
