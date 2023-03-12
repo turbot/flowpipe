@@ -50,10 +50,10 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 		// sqlx doesn't handle jsonb columns, so we need to do it manually
 		// https://github.com/jmoiron/sqlx/issues/225
 		for k, encoded := range row {
-			switch encoded.(type) {
+			switch ba := encoded.(type) {
 			case []byte:
 				var col interface{}
-				json.Unmarshal(encoded.([]byte), &col)
+				json.Unmarshal(ba, &col)
 				row[k] = col
 			}
 		}
