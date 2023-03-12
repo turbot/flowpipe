@@ -172,7 +172,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 		switch ele.EventType {
 
-		case "event.PipelineQueued":
+		case "handler.pipeline_queued":
 			var et event.PipelineQueued
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
@@ -188,7 +188,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				ParentStepExecutionID: et.ParentStepExecutionID,
 			}
 
-		case "event.PipelinePlanned":
+		case "handler.pipeline_planned":
 			var et event.PipelinePlanned
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
@@ -217,7 +217,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				}
 			}
 
-		case "event.PipelineStarted":
+		case "handler.pipeline_started":
 			var et event.PipelineStarted
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
@@ -226,7 +226,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "started"
 
-		case "event.PipelineStepStart":
+		case "command.pipeline_step_start":
 			var et event.PipelineStepStart
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
@@ -253,7 +253,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
 
-		case "event.PipelineStepStarted":
+		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
@@ -262,7 +262,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "started"
 
-		case "event.PipelineStepFinished":
+		case "handler.pipeline_step_finished":
 			var et event.PipelineStepFinished
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {

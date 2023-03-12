@@ -241,13 +241,13 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 				}
 				payloadWithoutEvent[key] = value
 			}
-			fmt.Printf("%s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), msg.Metadata["name"], payloadWithoutEvent)
+			fmt.Printf("%s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), message.HandlerNameFromCtx(msg.Context()), payloadWithoutEvent)
 
 			logger := fplog.Logger(ctx)
 			defer logger.Sync()
 			logger.Info("es",
 				// Structured context as strongly typed Field values.
-				zap.String("event_type", msg.Metadata["name"]),
+				zap.String("event_type", message.HandlerNameFromCtx(msg.Context())),
 				// zap adds ts field automatically, so don't need zap.Time("created_at", time.Now()),
 				zap.Any("payload", payload),
 			)
