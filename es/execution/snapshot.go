@@ -3,6 +3,8 @@ package execution
 import (
 	"fmt"
 	"time"
+
+	"github.com/turbot/steampipe-pipelines/pipeline"
 )
 
 type Snapshot struct {
@@ -60,10 +62,6 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 					Name:      "execution_tree",
 					PanelType: "graph",
 				},
-				{
-					Name:      "step_definitions",
-					PanelType: "table",
-				},
 			},
 		},
 		Panels: map[string]SnapshotPanel{},
@@ -84,38 +82,9 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 		Status:      "complete",
 		Title:       "Execution",
 		DisplayType: "graph",
-		/*
-				Data: SnapshotPanelData{
-					Columns: []SnapshotPanelDataColumn{
-						{Name: "from_id", DataType: "TEXT"},
-						{Name: "to_id", DataType: "TEXT"},
-						{Name: "id", DataType: "TEXT"},
-						{Name: "title", DataType: "TEXT"},
-						{Name: "properties", DataType: "JSONB"},
-					},
-			},
-		*/
 		Properties: map[string]interface{}{
 			"name":      "execution",
 			"direction": "TD",
-		},
-	}
-
-	tablePanel := SnapshotPanel{
-		Dashboard: pe.ID,
-		Name:      "step_definitions",
-		PanelType: "table",
-		Status:    "complete",
-		Title:     "Step Definitions",
-		Data: SnapshotPanelData{
-			Columns: []SnapshotPanelDataColumn{
-				{Name: "name", DataType: "TEXT"},
-				{Name: "type", DataType: "TEXT"},
-				{Name: "depends_on", DataType: "JSONB"},
-			},
-		},
-		Properties: map[string]interface{}{
-			"name": "step_definitions",
 		},
 	}
 
@@ -123,7 +92,6 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	var edgeName string
 	nodeNames := []string{}
 	edgeNames := []string{}
-	tableRows := []SnapshotPanelDataRow{}
 
 	pd, err := ex.PipelineDefinition(pe.ID)
 	if err != nil {
@@ -196,250 +164,35 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	// Check each step definition in the pipeline
 	for _, sd := range pd.Steps {
 
-		// Find all executions for the step
-		executionsForStep := []*StepExecution{}
-		for _, se := range ex.StepExecutions {
-			if se.PipelineExecutionID != pe.ID {
-				continue
-			}
-			if se.Name != sd.Name {
-				continue
-			}
-			executionsForStep = append(executionsForStep, se)
+		stepPanels, err := ex.StepExecutionSnapshotPanels(pe.ID, sd.Name)
+		if err != nil {
+			return nil, err
 		}
 
-		stepToID := sd.Name
-
-		if len(executionsForStep) == 0 {
-
-			nodeNames = append(nodeNames, sd.Name)
-			snapshot.Panels[sd.Name] = SnapshotPanel{
-				Dashboard: pe.ID,
-				Name:      sd.Name,
-				PanelType: "node",
-				Status:    "complete",
-				Title:     sd.Name,
-				Data: SnapshotPanelData{
-					Columns: []SnapshotPanelDataColumn{
-						{Name: "id", DataType: "TEXT"},
-						{Name: "title", DataType: "TEXT"},
-						{Name: "properties", DataType: "JSONB"},
-					},
-					Rows: []SnapshotPanelDataRow{
-						{
-							"id":    sd.Name,
-							"title": sd.Name,
-							"properties": map[string]interface{}{
-								"Type": sd.Type,
-							},
-						},
-					},
-				},
-				Properties: map[string]interface{}{
-					"name":     sd.Name,
-					"category": Category(sd.Type),
-				},
+		for panelName, panel := range stepPanels {
+			// Add the panels to the dashboard
+			snapshot.Panels[panelName] = panel
+			// Gather panel names for the graph details
+			if panel.PanelType == "node" {
+				nodeNames = append(nodeNames, panelName)
+			} else if panel.PanelType == "edge" {
+				edgeNames = append(edgeNames, panelName)
 			}
+		}
 
-		} else if len(executionsForStep) <= 1 {
-			// Single execution
-			se := executionsForStep[0]
-
-			nodeNames = append(nodeNames, sd.Name)
-			snapshot.Panels[sd.Name] = SnapshotPanel{
-				Dashboard: pe.ID,
-				Name:      sd.Name,
-				PanelType: "node",
-				Status:    "complete",
-				Title:     sd.Name,
-				Data: SnapshotPanelData{
-					Columns: []SnapshotPanelDataColumn{
-						{Name: "id", DataType: "TEXT"},
-						{Name: "title", DataType: "TEXT"},
-						{Name: "properties", DataType: "JSONB"},
-					},
-					Rows: []SnapshotPanelDataRow{
-						{
-							"id":    sd.Name,
-							"title": sd.Name,
-							"properties": map[string]interface{}{
-								"Execution ID": se.ID,
-								"Input":        se.Input,
-								"Output":       se.Output,
-								"Status":       se.Status,
-								"Type":         sd.Type,
-							},
-						},
-					},
-				},
-				Properties: map[string]interface{}{
-					"name":     sd.Name,
-					"category": Category(sd.Type),
-				},
-			}
-
-		} else {
-			// Multiple executions. Add a start node for the step, execution nodes
-			// in the middle, all converging back into an end node.
-
-			// Start of step
-			stepToID = "start_" + sd.Name
-
-			// Start of step
-			nodeNames = append(nodeNames, "start_"+sd.Name)
-			snapshot.Panels["start_"+sd.Name] = SnapshotPanel{
-				Dashboard: pe.ID,
-				Name:      "start_" + sd.Name,
-				PanelType: "node",
-				Status:    "complete",
-				Title:     "Start: " + sd.Name,
-				Data: SnapshotPanelData{
-					Columns: []SnapshotPanelDataColumn{
-						{Name: "id", DataType: "TEXT"},
-						{Name: "title", DataType: "TEXT"},
-						{Name: "properties", DataType: "JSONB"},
-					},
-					Rows: []SnapshotPanelDataRow{
-						{
-							"id":    "start_" + sd.Name,
-							"title": "Start: " + sd.Name,
-							"properties": map[string]interface{}{
-								"Type": sd.Type,
-							},
-						},
-					},
-				},
-				Properties: map[string]interface{}{
-					"name":     "start_" + sd.Name,
-					"category": Category(sd.Type),
-				},
-			}
-
-			// End of step
-			nodeNames = append(nodeNames, sd.Name)
-			snapshot.Panels[sd.Name] = SnapshotPanel{
-				Dashboard: pe.ID,
-				Name:      sd.Name,
-				PanelType: "node",
-				Status:    "complete",
-				Title:     "End: " + sd.Name,
-				Data: SnapshotPanelData{
-					Columns: []SnapshotPanelDataColumn{
-						{Name: "id", DataType: "TEXT"},
-						{Name: "title", DataType: "TEXT"},
-						{Name: "properties", DataType: "JSONB"},
-					},
-					Rows: []SnapshotPanelDataRow{
-						{
-							"id":    sd.Name,
-							"title": "End: " + sd.Name,
-							"properties": map[string]interface{}{
-								"Type": sd.Type,
-							},
-						},
-					},
-				},
-				Properties: map[string]interface{}{
-					"name":     sd.Name,
-					"category": Category(sd.Type),
-				},
-			}
-
-			for _, se := range executionsForStep {
-
-				// Node for the step execution
-				nodeNames = append(nodeNames, se.ID)
-				snapshot.Panels[se.ID] = SnapshotPanel{
-					Dashboard: pe.ID,
-					Name:      se.ID,
-					PanelType: "node",
-					Status:    "complete",
-					Title:     sd.Name + ": " + se.ID,
-					Data: SnapshotPanelData{
-						Columns: []SnapshotPanelDataColumn{
-							{Name: "id", DataType: "TEXT"},
-							{Name: "title", DataType: "TEXT"},
-							{Name: "properties", DataType: "JSONB"},
-						},
-						Rows: []SnapshotPanelDataRow{
-							{
-								"id":    se.ID,
-								"title": sd.Name,
-								"properties": map[string]interface{}{
-									"Execution ID": se.ID,
-									"Input":        se.Input,
-									"Output":       se.Output,
-									"Status":       se.Status,
-									"Type":         sd.Type,
-								},
-							},
-						},
-					},
-					Properties: map[string]interface{}{
-						"name":     se.ID,
-						"category": Category(sd.Type),
-					},
-				}
-
-				// Edge from step start to execution
-				edgeName = "start_" + sd.Name + "_to_" + se.ID
-				edgeNames = append(edgeNames, edgeName)
-				snapshot.Panels[edgeName] = SnapshotPanel{
-					Dashboard: pe.ID,
-					Name:      edgeName,
-					PanelType: "edge",
-					Status:    "complete",
-					Data: SnapshotPanelData{
-						Columns: []SnapshotPanelDataColumn{
-							{Name: "from_id", DataType: "TEXT"},
-							{Name: "to_id", DataType: "TEXT"},
-						},
-						Rows: []SnapshotPanelDataRow{
-							{
-								"from_id": "start_" + sd.Name,
-								"to_id":   se.ID,
-							},
-						},
-					},
-					Properties: map[string]interface{}{
-						"name": edgeName,
-					},
-				}
-
-				// Edge from step start to execution
-				edgeName = se.ID + "_to_" + sd.Name
-				edgeNames = append(edgeNames, edgeName)
-				snapshot.Panels[edgeName] = SnapshotPanel{
-					Dashboard: pe.ID,
-					Name:      edgeName,
-					PanelType: "edge",
-					Status:    "complete",
-					Data: SnapshotPanelData{
-						Columns: []SnapshotPanelDataColumn{
-							{Name: "from_id", DataType: "TEXT"},
-							{Name: "to_id", DataType: "TEXT"},
-						},
-						Rows: []SnapshotPanelDataRow{
-							{
-								"from_id": se.ID,
-								"to_id":   sd.Name,
-							},
-						},
-					},
-					Properties: map[string]interface{}{
-						"name": edgeName,
-					},
-				}
-
-			}
+		stepToID := "step_" + sd.Name
+		if len(stepPanels) > 1 {
+			stepToID = "stepstart_" + sd.Name
 		}
 
 		if len(sd.DependsOn) > 0 {
+
+			// Build edges from dependencies to this step
+
 			for _, dep := range sd.DependsOn {
 				dependedOn[dep] = true
 
-				// Edge between dependencies
-				edgeName = dep + "_to_" + stepToID
+				edgeName = "edge_" + dep + "_to_" + stepToID
 				edgeNames = append(edgeNames, edgeName)
 				snapshot.Panels[edgeName] = SnapshotPanel{
 					Dashboard: pe.ID,
@@ -453,7 +206,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 						},
 						Rows: []SnapshotPanelDataRow{
 							{
-								"from_id": dep,
+								"from_id": "step_" + dep,
 								"to_id":   stepToID,
 							},
 						},
@@ -464,10 +217,11 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 				}
 
 			}
+
 		} else {
 
 			// Edge from pipeline start to step
-			edgeName = "start_" + pe.ID + "_to_" + stepToID
+			edgeName = "edge_" + "start_" + pe.ID + "_to_" + stepToID
 			edgeNames = append(edgeNames, edgeName)
 			snapshot.Panels[edgeName] = SnapshotPanel{
 				Dashboard: pe.ID,
@@ -493,11 +247,6 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 
 		}
 
-		tableRows = append(tableRows, SnapshotPanelDataRow{
-			"name":       sd.Name,
-			"type":       sd.Type,
-			"depends_on": sd.DependsOn,
-		})
 	}
 
 	// Add edges from steps that are not depended on to the end
@@ -507,7 +256,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 		}
 
 		// Edge from pipeline start to step
-		edgeName = sd.Name + "_to_" + "end_" + pe.ID
+		edgeName = "edge_" + "step_" + sd.Name + "_to_" + "end_" + pe.ID
 		edgeNames = append(edgeNames, edgeName)
 		snapshot.Panels[edgeName] = SnapshotPanel{
 			Dashboard: pe.ID,
@@ -521,7 +270,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 				},
 				Rows: []SnapshotPanelDataRow{
 					{
-						"from_id": sd.Name,
+						"from_id": "step_" + sd.Name,
 						"to_id":   "end_" + pe.ID,
 					},
 				},
@@ -562,8 +311,6 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	executionPanel.Data.Columns = graphColumns
 	executionPanel.Data.Rows = graphRows
 
-	tablePanel.Data.Rows = tableRows
-
 	executionPanel.Properties["nodes"] = nodeNames
 	executionPanel.Properties["edges"] = edgeNames
 
@@ -571,7 +318,6 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	snapshot.EndTime = time.Now().UTC().Format(time.RFC3339)
 	snapshot.Panels[pe.ID] = dashboardPanel
 	snapshot.Panels["execution_tree"] = executionPanel
-	snapshot.Panels["step_definitions"] = tablePanel
 
 	return snapshot, nil
 }
@@ -618,7 +364,316 @@ func Category(category string) map[string]interface{} {
 			"name":  category,
 			"title": category,
 			"color": "red",
-			"icon":  "info",
+			"icon":  "priority_high",
 		}
 	}
+}
+
+// StepExecutionSnapshotPanels will build and return a set of panels to represent
+// the step execution in a dashboard. The panels includes both nodes and edges,
+// depending on the exection of the step - for example, if the step has a for loop
+// then it will be a start node, fan out to loop items and collapse back to an end node.
+func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, stepName string) (map[string]SnapshotPanel, error) {
+
+	// Get the pipeline execution for this step
+	pe := ex.PipelineExecutions[pipelineExecutionID]
+
+	// Get the pipeline definition that contains the step
+	pd, err := ex.PipelineDefinition(pe.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	sd, ok := pd.Steps[stepName]
+	if !ok {
+		return nil, fmt.Errorf("step %s not found in pipeline %s", stepName, pd.Name)
+	}
+
+	panels := map[string]SnapshotPanel{}
+
+	stepExecutions := ex.PipelineStepExecutions(pe.ID, sd.Name)
+
+	if len(stepExecutions) <= 0 {
+
+		// The step has no actual executions, so should just show a "skipped"
+		// style of node as a placeholder.
+
+		// Single node, so panel name should match the step name with standard
+		// prefix.
+		panelName := "step_" + sd.Name
+
+		panels[panelName] = SnapshotPanel{
+			Dashboard: pe.ID,
+			Name:      panelName,
+			PanelType: "node",
+			Status:    "complete",
+			Title:     sd.Name,
+			Data: SnapshotPanelData{
+				Columns: []SnapshotPanelDataColumn{
+					{Name: "id", DataType: "TEXT"},
+					{Name: "title", DataType: "TEXT"},
+					{Name: "properties", DataType: "JSONB"},
+				},
+				Rows: []SnapshotPanelDataRow{
+					{
+						"id":    panelName,
+						"title": sd.Name,
+						"properties": map[string]interface{}{
+							"Type":   sd.Type,
+							"Status": "Skipped - no executions",
+						},
+					},
+				},
+			},
+			Properties: map[string]interface{}{
+				"name":     panelName,
+				"category": Category(sd.Type),
+			},
+		}
+
+		return panels, nil
+
+	}
+
+	if len(stepExecutions) == 1 {
+
+		// The step has just a single execution (i.e. no for loop). We return
+		// a single node in this case.
+
+		// Convenience
+		se := stepExecutions[0]
+
+		// Single node, so panel name should match the step name with standard
+		// prefix.
+		panelName := "step_" + sd.Name
+
+		panels[panelName] = SnapshotPanel{
+			Dashboard: pe.ID,
+			Name:      panelName,
+			PanelType: "node",
+			Status:    "complete",
+			Title:     sd.Name,
+			Data: SnapshotPanelData{
+				Columns: []SnapshotPanelDataColumn{
+					{Name: "id", DataType: "TEXT"},
+					{Name: "title", DataType: "TEXT"},
+					{Name: "properties", DataType: "JSONB"},
+				},
+				Rows: []SnapshotPanelDataRow{
+					ex.StepExecutionNodeRow(panelName, sd, se),
+				},
+			},
+			Properties: map[string]interface{}{
+				"name":     panelName,
+				"category": Category(sd.Type),
+			},
+		}
+
+		return panels, nil
+
+	}
+
+	// Multiple executions, e.g. a for loop. Add a start node for the step,
+	// execution nodes in the middle, all converging back into an end node.
+
+	// Start of step
+	startNodeName := "stepstart_" + sd.Name
+	panels[startNodeName] = SnapshotPanel{
+		Dashboard: pe.ID,
+		Name:      startNodeName,
+		PanelType: "node",
+		Status:    "complete",
+		Title:     "Start: " + sd.Name,
+		Data: SnapshotPanelData{
+			Columns: []SnapshotPanelDataColumn{
+				{Name: "id", DataType: "TEXT"},
+				{Name: "title", DataType: "TEXT"},
+				{Name: "properties", DataType: "JSONB"},
+			},
+			Rows: []SnapshotPanelDataRow{
+				{
+					"id":    startNodeName,
+					"title": "Start: " + sd.Name,
+					"properties": map[string]interface{}{
+						"Type": sd.Type,
+					},
+				},
+			},
+		},
+		Properties: map[string]interface{}{
+			"name":     startNodeName,
+			"category": Category(sd.Type),
+		},
+	}
+
+	// End of step
+	endNodeName := "step_" + sd.Name
+	panels[endNodeName] = SnapshotPanel{
+		Dashboard: pe.ID,
+		Name:      endNodeName,
+		PanelType: "node",
+		Status:    "complete",
+		Title:     "End: " + sd.Name,
+		Data: SnapshotPanelData{
+			Columns: []SnapshotPanelDataColumn{
+				{Name: "id", DataType: "TEXT"},
+				{Name: "title", DataType: "TEXT"},
+				{Name: "properties", DataType: "JSONB"},
+			},
+			Rows: []SnapshotPanelDataRow{
+				{
+					"id":    endNodeName,
+					"title": "End: " + sd.Name,
+					"properties": map[string]interface{}{
+						"Type": sd.Type,
+					},
+				},
+			},
+		},
+		Properties: map[string]interface{}{
+			"name":     endNodeName,
+			"category": Category(sd.Type),
+		},
+	}
+
+	// Each execution is given a node between the start and end nodes.
+	for _, se := range stepExecutions {
+
+		// Node for the step execution
+		nodeName := se.ID
+		panels[nodeName] = SnapshotPanel{
+			Dashboard: pe.ID,
+			Name:      nodeName,
+			PanelType: "node",
+			Status:    "complete",
+			Title:     sd.Name + ": " + se.ID,
+			Data: SnapshotPanelData{
+				Columns: []SnapshotPanelDataColumn{
+					{Name: "id", DataType: "TEXT"},
+					{Name: "title", DataType: "TEXT"},
+					{Name: "properties", DataType: "JSONB"},
+				},
+				Rows: []SnapshotPanelDataRow{
+					ex.StepExecutionNodeRow(nodeName, sd, se),
+				},
+			},
+			Properties: map[string]interface{}{
+				"name":     nodeName,
+				"category": Category(sd.Type),
+			},
+		}
+
+		// Edge from step start to execution
+		edgeName := "edge_" + startNodeName + "_to_" + nodeName
+		panels[edgeName] = SnapshotPanel{
+			Dashboard: pe.ID,
+			Name:      edgeName,
+			PanelType: "edge",
+			Status:    "complete",
+			Data: SnapshotPanelData{
+				Columns: []SnapshotPanelDataColumn{
+					{Name: "from_id", DataType: "TEXT"},
+					{Name: "to_id", DataType: "TEXT"},
+				},
+				Rows: []SnapshotPanelDataRow{
+					{
+						"from_id": "stepstart_" + sd.Name,
+						"to_id":   se.ID,
+					},
+				},
+			},
+			Properties: map[string]interface{}{
+				"name": edgeName,
+			},
+		}
+
+		// Edge from step start to execution
+		edgeName = "edge_" + nodeName + "_to_ " + startNodeName
+		panels[edgeName] = SnapshotPanel{
+			Dashboard: pe.ID,
+			Name:      edgeName,
+			PanelType: "edge",
+			Status:    "complete",
+			Data: SnapshotPanelData{
+				Columns: []SnapshotPanelDataColumn{
+					{Name: "from_id", DataType: "TEXT"},
+					{Name: "to_id", DataType: "TEXT"},
+				},
+				Rows: []SnapshotPanelDataRow{
+					{
+						"from_id": se.ID,
+						"to_id":   "step_" + sd.Name,
+					},
+				},
+			},
+			Properties: map[string]interface{}{
+				"name": edgeName,
+			},
+		}
+
+	}
+
+	return panels, nil
+}
+
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.PipelineStep, se *StepExecution) SnapshotPanelDataRow {
+
+	var row SnapshotPanelDataRow
+
+	switch sd.Type {
+
+	case "sleep":
+		row = SnapshotPanelDataRow{
+			"id":    panelName,
+			"title": se.Input["duration"],
+			"properties": map[string]interface{}{
+				"Execution ID": se.ID,
+				"Status":       se.Status,
+				"Duration":     se.Input["duration"],
+				"Started At":   se.Output["started_at"],
+				"Finished At":  se.Output["finished_at"],
+			},
+		}
+
+	case "http_request":
+		row = SnapshotPanelDataRow{
+			"id":    panelName,
+			"title": se.Input["url"],
+			"properties": map[string]interface{}{
+				"Execution ID":         se.ID,
+				"Status":               se.Status,
+				"URL":                  se.Input["url"],
+				"Response Status Code": se.Output["status_code"],
+				"Started At":           se.Output["started_at"],
+				"Finished At":          se.Output["finished_at"],
+			},
+		}
+
+	case "query":
+		row = SnapshotPanelDataRow{
+			"id":    panelName,
+			"title": sd.Name + " [" + se.ID[len(se.ID)-4:] + "]",
+			"properties": map[string]interface{}{
+				"Execution ID": se.ID,
+				"Status":       se.Status,
+				"Row Count":    len(se.Output["rows"].([]interface{})),
+				"Started At":   se.Output["started_at"],
+				"Finished At":  se.Output["finished_at"],
+			},
+		}
+
+	default:
+		row = SnapshotPanelDataRow{
+			"id":    panelName,
+			"title": sd.Name + " [" + se.ID[len(se.ID)-4:] + "]",
+			"properties": map[string]interface{}{
+				"Execution ID": se.ID,
+				"Status":       se.Status,
+				"Input":        se.Input,
+				"Output":       se.Output,
+			},
+		}
+	}
+
+	return row
 }

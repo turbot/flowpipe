@@ -125,6 +125,19 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 	return se, nil
 }
 
+// PipelineStepExecutions returns a list of step executions for the given
+// pipeline execution ID and step name.
+func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []*StepExecution {
+	stepExecutions := []*StepExecution{}
+	for _, se := range ex.StepExecutions {
+		if se.PipelineExecutionID == pipelineExecutionID && se.Name == stepName {
+			stepExecutions = append(stepExecutions, se)
+		}
+	}
+	return stepExecutions
+}
+
+// LogFilePath returns the path to the log file for the execution.
 func (ex *Execution) LogFilePath() (string, error) {
 	cfg := config.Get(ex.Context)
 	filename := fmt.Sprintf("%s.jsonl", ex.ID)
