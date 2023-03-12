@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/turbot/steampipe-pipelines/pipeline"
 )
@@ -29,7 +30,9 @@ func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (pipeli
 	// * Test SSL vs non-SSL
 	// * Compare to features in https://www.tines.com/docs/actions/types/http-request#configuration-options
 
+	start := time.Now().UTC()
 	resp, err := http.Get(input["url"].(string))
+	finish := time.Now().UTC()
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +65,8 @@ func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (pipeli
 		"status_code": resp.StatusCode,
 		"headers":     headers,
 		"body":        string(body),
+		"started_at":  start,
+		"finished_at": finish,
 	}
 
 	return output, nil

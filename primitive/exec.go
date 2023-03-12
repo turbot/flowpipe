@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os/exec"
 	"syscall"
+	"time"
 
 	"github.com/turbot/steampipe-pipelines/pipeline"
 )
@@ -58,6 +59,7 @@ func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Step
 		}
 	}()
 
+	start := time.Now().UTC()
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -81,11 +83,14 @@ func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Step
 			exitCode = -1
 		}
 	}
+	finish := time.Now().UTC()
 
 	output := pipeline.StepOutput{
 		"exit_code":    exitCode,
 		"stdout_lines": stdoutLines,
 		"stderr_lines": stderrLines,
+		"started_at":   start,
+		"finished_at":  finish,
 	}
 
 	return output, nil
