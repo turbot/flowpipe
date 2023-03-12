@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 
@@ -43,6 +44,16 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 		err = rows.MapScan(row)
 		if err != nil {
 			panic(err)
+		}
+		// sqlx doesn't handle jsonb columns, so we need to do it manually
+		// https://github.com/jmoiron/sqlx/issues/225
+		for k, encoded := range row {
+			switch encoded.(type) {
+			case []byte:
+				var col interface{}
+				json.Unmarshal(encoded.([]byte), &col)
+				row[k] = col
+			}
 		}
 		results = append(results, row)
 	}
