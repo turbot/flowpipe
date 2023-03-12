@@ -193,11 +193,12 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Manually trigger some pipelines for testing
 	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
-	for _, s := range []string{"chained_steampipe_queries"} {
+	for _, s := range []string{"chained_input", "chained_steampipe_queries"} {
 		time.Sleep(0 * time.Second)
 		fmt.Println()
+
 		pipelineCmd := &event.PipelineQueue{
-			Event: event.NewChildEvent(cmd.Event),
+			Event: event.NewExecutionEvent(ctx),
 			Name:  s,
 			//Input:        e.Input,
 		}
@@ -243,7 +244,7 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 			}
 			fmt.Printf("%s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), message.HandlerNameFromCtx(msg.Context()), payloadWithoutEvent)
 
-			logger := fplog.Logger(ctx)
+			logger := fplog.ExecutionLogger(ctx, executionID)
 			defer logger.Sync()
 			logger.Info("es",
 				// Structured context as strongly typed Field values.

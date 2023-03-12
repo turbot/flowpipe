@@ -37,3 +37,10 @@ func ContextWithLogger(ctx context.Context) context.Context {
 func Logger(ctx context.Context) *zap.Logger {
 	return ctx.Value(loggerContextKey{}).(*zap.Logger)
 }
+
+func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
+	cfg := zap.NewProductionConfig()
+	cfg.Sampling = nil
+	cfg.OutputPaths = []string{fmt.Sprintf("logs/%s.jsonl", executionID)}
+	return zap.Must(cfg.Build())
+}

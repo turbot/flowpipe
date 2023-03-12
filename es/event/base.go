@@ -33,7 +33,7 @@ type PayloadWithEvent struct {
 
 func NewExecutionEvent(ctx context.Context) *Event {
 	return &Event{
-		ExecutionID: utils.Session(ctx),
+		ExecutionID: utils.NewExecutionID(),
 		StackIDs:    []string{},
 		CreatedAt:   time.Now().UTC(),
 	}
