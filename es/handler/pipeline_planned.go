@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"html/template"
+	"reflect"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/execution"
@@ -71,7 +73,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
 
-		forInputs := []interface{}{}
+		var forInputs reflect.Value
+		var forInputsType string
 
 		stepDefn := defn.Steps[stepName]
 		if stepDefn.For != "" {
@@ -85,11 +88,20 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
-			err = json.Unmarshal(itemsBuffer.Bytes(), &forInputs)
+			var rawForInputs interface{}
+			err = json.Unmarshal(itemsBuffer.Bytes(), &rawForInputs)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
-			if len(forInputs) == 0 {
+			switch reflect.TypeOf(rawForInputs).Kind() {
+			case reflect.Map:
+				forInputsType = "map"
+				forInputs = reflect.ValueOf(rawForInputs)
+			case reflect.Slice:
+				forInputsType = "slice"
+				forInputs = reflect.ValueOf(rawForInputs)
+			}
+			if forInputs.Len() == 0 {
 				// A for loop was defined, but it returned no items, so we can
 				// skip this step
 				return nil
@@ -107,7 +119,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			// Add extra items if the for loop required them, skipping the one
 			// we added already above.
-			for i := 0; i < len(forInputs)-1; i++ {
+			for i := 0; i < forInputs.Len()-1; i++ {
 				inputs = append(inputs, pipeline.StepInput{})
 			}
 		} else {
@@ -135,26 +147,51 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				inputs = append(inputs, input)
 
 			} else {
-				// Create a step for each input in forInputs
-				for i, forInput := range forInputs {
 
-					// TODO - this updates the same map each time ... is that safe?
-					var stepOutputsWithEach = stepOutputs
-					stepOutputsWithEach["each"] = map[string]interface{}{"key": i, "value": forInput}
+				switch forInputsType {
+				case "map":
+					// Create a step for each input in forInputs
+					for _, key := range forInputs.MapKeys() {
+						// TODO - this updates the same map each time ... is that safe?
+						var stepOutputsWithEach = stepOutputs
+						stepOutputsWithEach["each"] = map[string]interface{}{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
+						var itemsBuffer bytes.Buffer
+						err = t.Execute(&itemsBuffer, stepOutputsWithEach)
+						if err != nil {
+							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						}
+						var input pipeline.StepInput
+						err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+						if err != nil {
+							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						}
+						inputs = append(inputs, input)
+					}
 
-					var itemsBuffer bytes.Buffer
-					err = t.Execute(&itemsBuffer, stepOutputsWithEach)
-					if err != nil {
-						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				case "slice":
+
+					// Create a step for each input in forInputs
+					for i := 0; i < forInputs.Len(); i++ {
+						// TODO - this updates the same map each time ... is that safe?
+						var stepOutputsWithEach = stepOutputs
+						stepOutputsWithEach["each"] = map[string]interface{}{"key": i, "value": forInputs.Index(i).Interface()}
+						var itemsBuffer bytes.Buffer
+						err = t.Execute(&itemsBuffer, stepOutputsWithEach)
+						if err != nil {
+							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						}
+						var input pipeline.StepInput
+						err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+						if err != nil {
+							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						}
+						inputs = append(inputs, input)
 					}
-					var input pipeline.StepInput
-					err = json.Unmarshal(itemsBuffer.Bytes(), &input)
-					if err != nil {
-						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-					}
-					inputs = append(inputs, input)
+
+				default:
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, fmt.Errorf("for loop must be a map or slice"))))
+
 				}
-
 			}
 
 		}

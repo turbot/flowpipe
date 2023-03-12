@@ -15,7 +15,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 	definitions := map[string]*pipeline.Pipeline{
 		"series_of_for_loop_steps": {
 			Type: "pipeline",
-			Name: "my_pipeline_0",
+			Name: "series_of_for_loop_steps",
 			Steps: map[string]*pipeline.PipelineStep{
 				"sleep_1": {
 					Type:      "sleep",
@@ -35,7 +35,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 		},
 		"simple_parallel": {
 			Type: "pipeline",
-			Name: "my_pipeline_1",
+			Name: "simple_parallel",
 			Steps: map[string]*pipeline.PipelineStep{
 				"http_1": {
 					Type:  "http_request",
@@ -49,9 +49,45 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				},
 			},
 		},
-		"my_pipeline_2": {
+		"for_loop_using_http_request_body_json": {
 			Type: "pipeline",
-			Name: "my_pipeline_2",
+			Name: "for_loop_using_map",
+			Steps: map[string]*pipeline.PipelineStep{
+				"astros": {
+					Type:  "http_request",
+					Name:  "astros",
+					Input: `{"url": "http://api.open-notify.org/astros.json"}`,
+				},
+				"echo_astros": {
+					Type:      "exec",
+					Name:      "echo_astros",
+					DependsOn: []string{"astros"},
+					For:       `[{{ range $i, $person := .astros.body_json.people }}{{if $i}}, {{end}}"{{$person.name}}"{{ end }}]`,
+					Input:     `{"command": "echo '{{.each.value}}'"}`,
+				},
+			},
+		},
+		"for_loop_using_map": {
+			Type: "pipeline",
+			Name: "for_loop_using_map",
+			Steps: map[string]*pipeline.PipelineStep{
+				"echo_map": {
+					Type:  "exec",
+					Name:  "echo_map",
+					For:   `{"foo": 1, "bar": "baz"}`,
+					Input: `{"command": "echo '{{.each.key}}={{.each.value}}'"}`,
+				},
+				"echo_array": {
+					Type:  "exec",
+					Name:  "echo_array",
+					For:   `["foo", "bar"]`,
+					Input: `{"command": "echo '{{.each.key}}={{.each.value}}'"}`,
+				},
+			},
+		},
+		"complex_sequence": {
+			Type: "pipeline",
+			Name: "complex_sequence",
 			Steps: map[string]*pipeline.PipelineStep{
 				"query_accounts": {
 					Type:  "query",
@@ -87,7 +123,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 		},
 		"for_loop_for_parallel_exec": {
 			Type: "pipeline",
-			Name: "my_pipeline_3",
+			Name: "for_loop_for_parallel_exec",
 			Steps: map[string]*pipeline.PipelineStep{
 				"exec_1": {
 					Type:  "exec",
@@ -99,7 +135,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 		},
 		"pass_data_between_steps": {
 			Type: "pipeline",
-			Name: "my_pipeline_3",
+			Name: "pass_data_between_steps",
 			Steps: map[string]*pipeline.PipelineStep{
 				"list_root_dir": {
 					Type:  "exec",
@@ -135,7 +171,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 		},
 		"chained_input": {
 			Type: "pipeline",
-			Name: "chained_steampipe_queries",
+			Name: "chained_input",
 			Steps: map[string]*pipeline.PipelineStep{
 				"accounts": {
 					Type:  "query",
