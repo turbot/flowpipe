@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -28,7 +27,7 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 
 	db, err := sqlx.Connect("postgres", "postgres://steampipe@localhost:9193/steampipe")
 	if err != nil {
-		log.Fatal("Failed to open a DB connection: ", err)
+		return nil, err
 	}
 	defer db.Close()
 
@@ -40,13 +39,13 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 	rows, err := db.Queryx(sql)
 	finish := time.Now().UTC()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	for rows.Next() {
 		row := make(map[string]interface{})
 		err = rows.MapScan(row)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		// sqlx doesn't handle jsonb columns, so we need to do it manually
 		// https://github.com/jmoiron/sqlx/issues/225
@@ -62,7 +61,7 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 	}
 
 	if err = rows.Err(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	output := pipeline.StepOutput{
