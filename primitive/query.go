@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -35,7 +36,9 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 
 	results := []map[string]interface{}{}
 
+	start := time.Now().UTC()
 	rows, err := db.Queryx(sql)
+	finish := time.Now().UTC()
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +66,9 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 	}
 
 	output := pipeline.StepOutput{
-		"rows": results,
+		"rows":        results,
+		"started_at":  start,
+		"finished_at": finish,
 	}
 
 	return output, nil
