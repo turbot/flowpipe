@@ -23,21 +23,17 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
-		return err
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
 
 	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		e := event.PipelineFailed{
-			Event:        event.NewFlowEvent(cmd.Event),
-			ErrorMessage: err.Error(),
-		}
-		return h.EventBus.Publish(ctx, &e)
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
 
 	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(cmd))
 	if err != nil {
-		return err
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
 
 	// Convenience
@@ -86,7 +82,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		e.NextSteps = append(e.NextSteps, step.Name)
 	}
 	if err := h.EventBus.Publish(ctx, &e); err != nil {
-		return err
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
 
 	return nil

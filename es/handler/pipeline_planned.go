@@ -27,17 +27,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
-		// TODO - should this return a failed event? how are errors caught here?
-		return err
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 	}
 
 	defn, err := ex.PipelineDefinition(e.PipelineExecutionID)
 	if err != nil {
-		e := event.PipelineFailed{
-			Event:        event.NewFlowEvent(e.Event),
-			ErrorMessage: err.Error(),
-		}
-		return h.CommandBus.Send(ctx, &e)
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 	}
 
 	// Convenience
@@ -59,7 +54,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		if complete {
 			cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 			if err != nil {
-				return err
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 			return h.CommandBus.Send(ctx, &cmd)
 		}
@@ -73,11 +68,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
 		if err != nil {
-			e := event.PipelineFailed{
-				Event:        event.NewFlowEvent(e.Event),
-				ErrorMessage: err.Error(),
-			}
-			return h.CommandBus.Send(ctx, &e)
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
 
 		forInputs := []interface{}{}
@@ -87,28 +78,16 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			// Use go template with the step outputs to generate the items
 			t, err := template.New("for").Parse(stepDefn.For)
 			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 			var itemsBuffer bytes.Buffer
 			err = t.Execute(&itemsBuffer, stepOutputs)
 			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 			err = json.Unmarshal(itemsBuffer.Bytes(), &forInputs)
 			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 			if len(forInputs) == 0 {
 				// A for loop was defined, but it returned no items, so we can
@@ -137,11 +116,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			// Parse the input template once
 			t, err := template.New("input").Parse(stepDefn.Input)
 			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(e.Event),
-					ErrorMessage: err.Error(),
-				}
-				return h.CommandBus.Send(ctx, &e)
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
 			if stepDefn.For == "" {
@@ -150,20 +125,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				var itemsBuffer bytes.Buffer
 				err = t.Execute(&itemsBuffer, stepOutputs)
 				if err != nil {
-					e := event.PipelineFailed{
-						Event:        event.NewFlowEvent(e.Event),
-						ErrorMessage: err.Error(),
-					}
-					return h.CommandBus.Send(ctx, &e)
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
 				var input pipeline.StepInput
 				err = json.Unmarshal(itemsBuffer.Bytes(), &input)
 				if err != nil {
-					e := event.PipelineFailed{
-						Event:        event.NewFlowEvent(e.Event),
-						ErrorMessage: err.Error(),
-					}
-					return h.CommandBus.Send(ctx, &e)
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
 				inputs = append(inputs, input)
 
@@ -178,20 +145,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					var itemsBuffer bytes.Buffer
 					err = t.Execute(&itemsBuffer, stepOutputsWithEach)
 					if err != nil {
-						e := event.PipelineFailed{
-							Event:        event.NewFlowEvent(e.Event),
-							ErrorMessage: err.Error(),
-						}
-						return h.CommandBus.Send(ctx, &e)
+						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					}
 					var input pipeline.StepInput
 					err = json.Unmarshal(itemsBuffer.Bytes(), &input)
 					if err != nil {
-						e := event.PipelineFailed{
-							Event:        event.NewFlowEvent(e.Event),
-							ErrorMessage: err.Error(),
-						}
-						return h.CommandBus.Send(ctx, &e)
+						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					}
 					inputs = append(inputs, input)
 				}
@@ -205,19 +164,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			go func(stepName string, input pipeline.StepInput) {
 				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input))
 				if err != nil {
-					e := event.PipelineFailed{
-						Event:        event.NewFlowEvent(e.Event),
-						ErrorMessage: err.Error(),
-					}
-					h.CommandBus.Send(ctx, &e)
+					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					return
 				}
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
-					e := event.PipelineFailed{
-						Event:        event.NewFlowEvent(e.Event),
-						ErrorMessage: err.Error(),
-					}
-					h.CommandBus.Send(ctx, &e)
+					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					return
 				}
 			}(stepName, input)

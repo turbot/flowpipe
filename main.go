@@ -89,7 +89,7 @@ func main() {
 		},
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
-				command.LoadHandler{EventBus: eb},
+				command.PipelineFailHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
 				command.PipelineLoadHandler{EventBus: eb},
 				command.PipelinePlanHandler{EventBus: eb},
@@ -193,7 +193,7 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Manually trigger some pipelines for testing
 	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
-	for _, s := range []string{"call_pipelines_in_for_loop"} {
+	for _, s := range []string{"chained_steampipe_queries"} {
 		time.Sleep(0 * time.Second)
 		fmt.Println()
 		pipelineCmd := &event.PipelineQueue{

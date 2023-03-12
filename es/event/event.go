@@ -24,8 +24,3 @@ type Stopped struct {
 	Event  *Event                 `json:"event"`
 	Output map[string]interface{} `json:"output"`
 }
-
-type PipelineFailed struct {
-	Event        *Event `json:"event"`
-	ErrorMessage string `json:"error_message"`
-}

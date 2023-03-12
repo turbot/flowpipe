@@ -20,7 +20,7 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 	e := ei.(*event.PipelineStarted)
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
 	if err != nil {
-		return err
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStartedToPipelineFail(e, err)))
 	}
 	return h.CommandBus.Send(ctx, cmd)
 }

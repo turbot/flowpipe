@@ -22,27 +22,19 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
-		e := event.PipelineFailed{
-			Event:        event.NewFlowEvent(cmd.Event),
-			ErrorMessage: err.Error(),
-		}
-		return h.EventBus.Publish(ctx, &e)
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineLoadToPipelineFailed(cmd, err)))
 	}
 
 	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		e := event.PipelineFailed{
-			Event:        event.NewFlowEvent(cmd.Event),
-			ErrorMessage: err.Error(),
-		}
-		return h.EventBus.Publish(ctx, &e)
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineLoadToPipelineFailed(cmd, err)))
 	}
 
 	e, err := event.NewPipelineLoaded(
 		event.ForPipelineLoad(cmd),
 		event.WithPipelineDefinition(defn))
 	if err != nil {
-		return err
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineLoadToPipelineFailed(cmd, err)))
 	}
 
 	return h.EventBus.Publish(ctx, &e)

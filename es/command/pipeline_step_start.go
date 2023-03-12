@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/execution"
@@ -28,22 +27,13 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 		if err != nil {
-			// TODO - should this return a failed event? how are errors caught here?
-			e := event.PipelineFailed{
-				Event:        event.NewFlowEvent(cmd.Event),
-				ErrorMessage: err.Error(),
-			}
-			h.EventBus.Publish(ctx, &e)
+			h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			return
 		}
 
 		defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 		if err != nil {
-			e := event.PipelineFailed{
-				Event:        event.NewFlowEvent(cmd.Event),
-				ErrorMessage: err.Error(),
-			}
-			h.EventBus.Publish(ctx, &e)
+			h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			return
 		}
 
@@ -68,20 +58,12 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			p := primitive.Sleep{}
 			output, err = p.Run(ctx, cmd.StepInput)
 		default:
-			e := event.PipelineFailed{
-				Event:        event.NewFlowEvent(cmd.Event),
-				ErrorMessage: fmt.Sprintf("step type primitive not found: %s", stepDefn.Type),
-			}
-			h.EventBus.Publish(ctx, &e)
+			h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			return
 		}
 
 		if err != nil {
-			e := event.Failed{
-				Event:        event.NewFlowEvent(cmd.Event),
-				ErrorMessage: err.Error(),
-			}
-			h.EventBus.Publish(ctx, &e)
+			h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			return
 		}
 
@@ -95,11 +77,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				event.WithNewChildPipelineExecutionID(),
 				event.WithChildPipeline(cmd.StepInput["name"].(string), input))
 			if err != nil {
-				e := event.PipelineFailed{
-					Event:        event.NewFlowEvent(cmd.Event),
-					ErrorMessage: err.Error(),
-				}
-				h.EventBus.Publish(ctx, &e)
+				h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 				return
 			}
 			h.EventBus.Publish(ctx, &e)
@@ -111,11 +89,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			event.ForPipelineStepStartToPipelineStepFinished(cmd),
 			event.WithStepOutput(output))
 		if err != nil {
-			e := event.PipelineFailed{
-				Event:        event.NewFlowEvent(cmd.Event),
-				ErrorMessage: err.Error(),
-			}
-			h.EventBus.Publish(ctx, &e)
+			h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			return
 		}
 

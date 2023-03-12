@@ -18,6 +18,7 @@ func (PipelineFailed) NewEvent() interface{} {
 }
 
 func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
-	fmt.Println("pipeline_failed", ei)
+	e := ei.(*event.PipelineFailed)
+	fmt.Println("pipeline_failed", e)
 	return nil
 }

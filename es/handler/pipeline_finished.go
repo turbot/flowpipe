@@ -25,13 +25,12 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
-		// TODO - should this return a failed event? how are errors caught here?
-		return err
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
 	}
 
 	parentStepExecution, err := ex.ParentStepExecution(e.PipelineExecutionID)
 	if err != nil {
-		return err
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
 	}
 	if parentStepExecution != nil {
 		cmd, err := event.NewPipelineStepFinish(
@@ -39,7 +38,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
 			event.WithStepExecutionID(parentStepExecution.ID))
 		if err != nil {
-			return err
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
 		}
 		return h.CommandBus.Send(ctx, &cmd)
 	} else {

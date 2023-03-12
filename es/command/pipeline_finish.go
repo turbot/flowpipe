@@ -20,7 +20,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 	cmd := c.(*event.PipelineFinish)
 	e, err := event.NewPipelineFinished(event.ForPipelineFinish(cmd))
 	if err != nil {
-		return err
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 	return h.EventBus.Publish(ctx, &e)
 }
