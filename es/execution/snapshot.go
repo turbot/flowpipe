@@ -2,6 +2,7 @@ package execution
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/pipeline"
@@ -620,6 +621,26 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.Pipelin
 
 	var row SnapshotPanelDataRow
 
+	var title string
+	if se.ForEach != nil {
+		// TODO - we can do better than this I think?
+		switch k := (*se.ForEach)["key"].(type) {
+		case int:
+			// Don't include integer keys in title
+		case string:
+			title = k + " = "
+		}
+		switch v := (*se.ForEach)["value"].(type) {
+		case string:
+			title += v
+		case int:
+			title += strconv.Itoa(v)
+		}
+	}
+	if title == "" {
+		title = sd.Name + " [" + se.ID[len(se.ID)-4:] + "]"
+	}
+
 	switch sd.Type {
 
 	case "sleep":
@@ -632,6 +653,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.Pipelin
 				"Duration":     se.Input["duration"],
 				"Started At":   se.Output["started_at"],
 				"Finished At":  se.Output["finished_at"],
+				"For Each":     se.ForEach,
 			},
 		}
 
@@ -646,30 +668,33 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.Pipelin
 				"Response Status Code": se.Output["status_code"],
 				"Started At":           se.Output["started_at"],
 				"Finished At":          se.Output["finished_at"],
+				"For Each":             se.ForEach,
 			},
 		}
 
 	case "query":
 		row = SnapshotPanelDataRow{
 			"id":    panelName,
-			"title": sd.Name + " [" + se.ID[len(se.ID)-4:] + "]",
+			"title": title,
 			"properties": map[string]interface{}{
 				"Execution ID": se.ID,
 				"Status":       se.Status,
 				"Row Count":    len(se.Output["rows"].([]interface{})),
 				"Started At":   se.Output["started_at"],
 				"Finished At":  se.Output["finished_at"],
+				"For Each":     se.ForEach,
 			},
 		}
 
 	default:
 		row = SnapshotPanelDataRow{
 			"id":    panelName,
-			"title": sd.Name + " [" + se.ID[len(se.ID)-4:] + "]",
+			"title": title,
 			"properties": map[string]interface{}{
 				"Execution ID": se.ID,
 				"Status":       se.Status,
 				"Input":        se.Input,
+				"For Each":     se.ForEach,
 				"Output":       se.Output,
 			},
 		}

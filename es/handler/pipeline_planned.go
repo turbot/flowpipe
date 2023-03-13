@@ -108,7 +108,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			}
 		}
 
+		// inputs will gather the input data for each step execution
 		inputs := []pipeline.StepInput{}
+
+		// forEaches will record the "each" variable data for each step
+		// execution in the loop
+		forEaches := []*pipeline.StepInput{}
 
 		if stepDefn.Input == "" {
 			// No input, so just use an empty input for each step execution.
@@ -116,12 +121,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			// There is always one input (e.g. no for loop). If the for loop had
 			// no items, then we would have returned above.
 			inputs = append(inputs, pipeline.StepInput{})
+			forEaches = append(forEaches, nil)
 
 			// Add extra items if the for loop required them, skipping the one
 			// we added already above.
 			for i := 0; i < forInputs.Len()-1; i++ {
 				inputs = append(inputs, pipeline.StepInput{})
 			}
+
 		} else {
 			// We have an input
 
@@ -145,6 +152,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
 				inputs = append(inputs, input)
+				forEaches = append(forEaches, nil)
 
 			} else {
 
@@ -154,7 +162,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					for _, key := range forInputs.MapKeys() {
 						// TODO - this updates the same map each time ... is that safe?
 						var stepOutputsWithEach = stepOutputs
-						stepOutputsWithEach["each"] = map[string]interface{}{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
+						forEach := pipeline.StepInput{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
+						stepOutputsWithEach["each"] = forEach
 						var itemsBuffer bytes.Buffer
 						err = t.Execute(&itemsBuffer, stepOutputsWithEach)
 						if err != nil {
@@ -166,6 +175,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 						}
 						inputs = append(inputs, input)
+						forEaches = append(forEaches, &forEach)
 					}
 
 				case "slice":
@@ -174,7 +184,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					for i := 0; i < forInputs.Len(); i++ {
 						// TODO - this updates the same map each time ... is that safe?
 						var stepOutputsWithEach = stepOutputs
-						stepOutputsWithEach["each"] = map[string]interface{}{"key": i, "value": forInputs.Index(i).Interface()}
+						forEach := pipeline.StepInput{"key": i, "value": forInputs.Index(i).Interface()}
+						stepOutputsWithEach["each"] = forEach
 						var itemsBuffer bytes.Buffer
 						err = t.Execute(&itemsBuffer, stepOutputsWithEach)
 						if err != nil {
@@ -186,6 +197,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 						}
 						inputs = append(inputs, input)
+						forEaches = append(forEaches, &forEach)
 					}
 
 				default:
@@ -196,10 +208,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		}
 
-		for _, input := range inputs {
+		for i, input := range inputs {
 			// Start each step in parallel
-			go func(stepName string, input pipeline.StepInput) {
-				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input))
+			go func(stepName string, input pipeline.StepInput, forEach *pipeline.StepInput) {
+				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input, forEach))
 				if err != nil {
 					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					return
@@ -208,7 +220,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					return
 				}
-			}(stepName, input)
+			}(stepName, input, forEaches[i])
 		}
 	}
 

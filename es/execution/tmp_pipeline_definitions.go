@@ -140,14 +140,14 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				"list_root_dir": {
 					Type:  "exec",
 					Name:  "list_root_dir",
-					Input: `{"command": "ls /"}`,
+					Input: `{"command": "ls /Users/nathan/src/steampipe-plugin-aws"}`,
 				},
 				"list_each_subdir_of_root_dir": {
 					Type:      "exec",
 					Name:      "list_each_subdir_of_root_dir",
 					DependsOn: []string{"list_root_dir"},
 					For:       `[{{range $i, $e := .list_root_dir.stdout_lines}}{{ if $i }}, {{end}}"{{$e}}"{{end}}]`,
-					Input:     `{"command": "ls /{{.each.value}}"}`,
+					Input:     `{"command": "ls /Users/nathan/src/steampipe-plugin-aws/{{.each.value}}"}`,
 				},
 			},
 		},

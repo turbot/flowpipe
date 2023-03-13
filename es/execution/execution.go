@@ -265,6 +265,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return fmt.Errorf("step %s not found in pipeline %s", stepDefn.Name, et.PipelineExecutionID)
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
+			ex.StepExecutions[et.StepExecutionID].ForEach = et.ForEach
 
 		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted

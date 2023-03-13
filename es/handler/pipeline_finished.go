@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/turbot/steampipe-pipelines/es/event"
 	"github.com/turbot/steampipe-pipelines/es/execution"
@@ -61,7 +61,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			fmt.Println(err)
 		} else {
 			jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
-			_ = ioutil.WriteFile("/Users/nathan/Downloads/pe.sps", jsonStr, 0644)
+			_ = os.WriteFile("/Users/nathan/Downloads/pe.sps", jsonStr, 0644)
 			fmt.Println(string(jsonStr))
 		}
 
