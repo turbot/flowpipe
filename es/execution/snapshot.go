@@ -537,82 +537,82 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 		},
 	}
 
-	// Each execution is given a node between the start and end nodes.
-	for _, se := range stepExecutions {
-
-		// Node for the step execution
-		nodeName := se.ID
-		panels[nodeName] = SnapshotPanel{
-			Dashboard: pe.ID,
-			Name:      nodeName,
-			PanelType: "node",
-			Status:    "complete",
-			Title:     sd.Name + ": " + se.ID,
-			Data: SnapshotPanelData{
-				Columns: []SnapshotPanelDataColumn{
-					{Name: "id", DataType: "TEXT"},
-					{Name: "title", DataType: "TEXT"},
-					{Name: "properties", DataType: "JSONB"},
-				},
-				Rows: []SnapshotPanelDataRow{
-					ex.StepExecutionNodeRow(nodeName, sd, se),
-				},
+	// Node for the step execution
+	nodeName := "exec_" + sd.Name
+	nodePanel := SnapshotPanel{
+		Dashboard: pe.ID,
+		Name:      nodeName,
+		PanelType: "node",
+		Status:    "complete",
+		Title:     sd.Name,
+		Data: SnapshotPanelData{
+			Columns: []SnapshotPanelDataColumn{
+				{Name: "id", DataType: "TEXT"},
+				{Name: "title", DataType: "TEXT"},
+				{Name: "properties", DataType: "JSONB"},
 			},
-			Properties: map[string]interface{}{
-				"name":     nodeName,
-				"category": Category(sd.Type),
-			},
-		}
-
-		// Edge from step start to execution
-		edgeName := "edge_" + startNodeName + "_to_" + nodeName
-		panels[edgeName] = SnapshotPanel{
-			Dashboard: pe.ID,
-			Name:      edgeName,
-			PanelType: "edge",
-			Status:    "complete",
-			Data: SnapshotPanelData{
-				Columns: []SnapshotPanelDataColumn{
-					{Name: "from_id", DataType: "TEXT"},
-					{Name: "to_id", DataType: "TEXT"},
-				},
-				Rows: []SnapshotPanelDataRow{
-					{
-						"from_id": "stepstart_" + sd.Name,
-						"to_id":   se.ID,
-					},
-				},
-			},
-			Properties: map[string]interface{}{
-				"name": edgeName,
-			},
-		}
-
-		// Edge from step start to execution
-		edgeName = "edge_" + nodeName + "_to_ " + startNodeName
-		panels[edgeName] = SnapshotPanel{
-			Dashboard: pe.ID,
-			Name:      edgeName,
-			PanelType: "edge",
-			Status:    "complete",
-			Data: SnapshotPanelData{
-				Columns: []SnapshotPanelDataColumn{
-					{Name: "from_id", DataType: "TEXT"},
-					{Name: "to_id", DataType: "TEXT"},
-				},
-				Rows: []SnapshotPanelDataRow{
-					{
-						"from_id": se.ID,
-						"to_id":   "step_" + sd.Name,
-					},
-				},
-			},
-			Properties: map[string]interface{}{
-				"name": edgeName,
-			},
-		}
-
+			Rows: []SnapshotPanelDataRow{},
+		},
+		Properties: map[string]interface{}{
+			"name":     nodeName,
+			"category": Category(sd.Type),
+		},
 	}
+
+	// Edge from step start to execution
+	startEdgeName := "edge_" + startNodeName + "_to_" + nodeName
+	startEdgePanel := SnapshotPanel{
+		Dashboard: pe.ID,
+		Name:      startEdgeName,
+		PanelType: "edge",
+		Status:    "complete",
+		Data: SnapshotPanelData{
+			Columns: []SnapshotPanelDataColumn{
+				{Name: "from_id", DataType: "TEXT"},
+				{Name: "to_id", DataType: "TEXT"},
+			},
+			Rows: []SnapshotPanelDataRow{},
+		},
+		Properties: map[string]interface{}{
+			"name": startEdgeName,
+		},
+	}
+
+	// Edge from step start to execution
+	endEdgeName := "edge_" + nodeName + "_to_" + endNodeName
+	endEdgePanel := SnapshotPanel{
+		Dashboard: pe.ID,
+		Name:      endEdgeName,
+		PanelType: "edge",
+		Status:    "complete",
+		Data: SnapshotPanelData{
+			Columns: []SnapshotPanelDataColumn{
+				{Name: "from_id", DataType: "TEXT"},
+				{Name: "to_id", DataType: "TEXT"},
+			},
+			Rows: []SnapshotPanelDataRow{},
+		},
+		Properties: map[string]interface{}{
+			"name": endEdgeName,
+		},
+	}
+
+	// Add row data for each execution to the execution node and its edges
+	for _, se := range stepExecutions {
+		nodePanel.Data.Rows = append(nodePanel.Data.Rows, ex.StepExecutionNodeRow(se.ID, sd, se))
+		startEdgePanel.Data.Rows = append(startEdgePanel.Data.Rows, SnapshotPanelDataRow{
+			"from_id": "stepstart_" + sd.Name,
+			"to_id":   se.ID,
+		})
+		endEdgePanel.Data.Rows = append(endEdgePanel.Data.Rows, SnapshotPanelDataRow{
+			"from_id": se.ID,
+			"to_id":   "step_" + sd.Name,
+		})
+	}
+
+	panels[nodeName] = nodePanel
+	panels[startEdgeName] = startEdgePanel
+	panels[endEdgeName] = endEdgePanel
 
 	return panels, nil
 }

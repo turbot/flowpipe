@@ -21,7 +21,7 @@ func (h PipelineStepStartHandler) NewCommand() interface{} {
 
 func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
-	go func() {
+	go func(ctx context.Context, c interface{}, h PipelineStepStartHandler) {
 
 		cmd := c.(*event.PipelineStepStart)
 
@@ -95,7 +95,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		h.EventBus.Publish(ctx, &e)
 
-	}()
+	}(ctx, c, h)
 
 	return nil
 }

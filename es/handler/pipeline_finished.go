@@ -52,7 +52,8 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			fmt.Println(stepOutputs)
+			jsonStr, _ := json.MarshalIndent(stepOutputs, "", "  ")
+			fmt.Println(string(jsonStr))
 		}
 
 		// Dump the snapshot
@@ -62,7 +63,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		} else {
 			jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
 			_ = os.WriteFile("/Users/nathan/Downloads/pe.sps", jsonStr, 0644)
-			fmt.Println(string(jsonStr))
+			//fmt.Println(string(jsonStr))
 		}
 
 	}
