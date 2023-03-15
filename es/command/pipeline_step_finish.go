@@ -18,7 +18,7 @@ func (h PipelineStepFinishHandler) NewCommand() interface{} {
 
 func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineStepFinish)
-	e, err := event.NewPipelineStepFinished(event.ForPipelineStepFinish(cmd))
+	e, err := event.NewPipelineStepFinished(event.ForPipelineStepFinish(cmd), event.WithStepOutput(cmd.Output))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
 	}

@@ -3,14 +3,15 @@ package pipeline
 // PipelineInput is the input to a pipeline.
 type PipelineInput map[string]interface{}
 
-// PipelineOutput is the output from a pipeline.
-type PipelineOutput map[string]interface{}
+// Output is the output from a pipeline.
+type Output map[string]interface{}
+
+func (o *Output) Get(key string) interface{} {
+	return (*o)[key]
+}
 
 // StepInput is the input to a step.
 type StepInput map[string]interface{}
-
-// StepOutput is the output from a step.
-type StepOutput map[string]interface{}
 
 type Pipeline struct {
 	Type     string                   `json:"type"`

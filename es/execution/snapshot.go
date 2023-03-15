@@ -652,8 +652,8 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.Pipelin
 				"Execution ID": se.ID,
 				"Status":       se.Status,
 				"Duration":     se.Input["duration"],
-				"Started At":   se.Output["started_at"],
-				"Finished At":  se.Output["finished_at"],
+				"Started At":   se.Output.Get("started_at"),
+				"Finished At":  se.Output.Get("finished_at"),
 				"For Each":     se.ForEach,
 			},
 		}
@@ -666,9 +666,9 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.Pipelin
 				"Execution ID":         se.ID,
 				"Status":               se.Status,
 				"URL":                  se.Input["url"],
-				"Response Status Code": se.Output["status_code"],
-				"Started At":           se.Output["started_at"],
-				"Finished At":          se.Output["finished_at"],
+				"Response Status Code": se.Output.Get("status_code"),
+				"Started At":           se.Output.Get("started_at"),
+				"Finished At":          se.Output.Get("finished_at"),
 				"For Each":             se.ForEach,
 			},
 		}
@@ -680,9 +680,9 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *pipeline.Pipelin
 			"properties": map[string]interface{}{
 				"Execution ID": se.ID,
 				"Status":       se.Status,
-				"Row Count":    len(se.Output["rows"].([]interface{})),
-				"Started At":   se.Output["started_at"],
-				"Finished At":  se.Output["finished_at"],
+				"Row Count":    len(se.Output.Get("rows").([]interface{})),
+				"Started At":   se.Output.Get("started_at"),
+				"Finished At":  se.Output.Get("finished_at"),
 				"For Each":     se.ForEach,
 			},
 		}

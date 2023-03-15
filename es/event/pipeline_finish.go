@@ -10,8 +10,8 @@ type PipelineFinish struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Pipeline execution details
-	PipelineExecutionID string                  `json:"pipeline_execution_id"`
-	Output              pipeline.PipelineOutput `json:"output"`
+	PipelineExecutionID string           `json:"pipeline_execution_id"`
+	Output              *pipeline.Output `json:"output,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -43,7 +43,7 @@ func ForPipelinePlannedToPipelineFinish(e *PipelinePlanned) PipelineFinishOption
 	}
 }
 
-func WithPipelineOutput(output pipeline.PipelineOutput) PipelineFinishOption {
+func WithPipelineOutput(output *pipeline.Output) PipelineFinishOption {
 	return func(e *PipelineFinish) error {
 		e.Output = output
 		return nil

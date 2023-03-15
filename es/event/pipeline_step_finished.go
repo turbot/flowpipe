@@ -13,7 +13,7 @@ type PipelineStepFinished struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 	// Output
-	Output pipeline.StepOutput `json:"output"`
+	Output *pipeline.Output `json:"output,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -68,7 +68,7 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output pipeline.StepOutput) PipelineStepFinishedOption {
+func WithStepOutput(output *pipeline.Output) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
 		return nil

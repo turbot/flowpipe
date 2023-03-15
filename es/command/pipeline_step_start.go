@@ -39,7 +39,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		stepDefn := defn.Steps[cmd.StepName]
 
-		var output pipeline.StepOutput
+		var output *pipeline.Output
 
 		switch stepDefn.Type {
 		case "exec":

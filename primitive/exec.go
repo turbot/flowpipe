@@ -20,7 +20,7 @@ func (e *Exec) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
+func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Step
 	}
 	finish := time.Now().UTC()
 
-	output := pipeline.StepOutput{
+	output := &pipeline.Output{
 		"exit_code":    exitCode,
 		"stdout_lines": stdoutLines,
 		"stderr_lines": stderrLines,

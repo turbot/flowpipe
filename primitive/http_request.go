@@ -20,7 +20,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i pipeline.StepInput) e
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (pipeli
 	// Just ignore errors
 	json.Unmarshal(body, &bodyJSON)
 
-	output := pipeline.StepOutput{
+	output := &pipeline.Output{
 		"status":      resp.Status,
 		"status_code": resp.StatusCode,
 		"headers":     headers,

@@ -8,9 +8,9 @@ type PipelineStepFinish struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string              `json:"pipeline_execution_id"`
-	StepExecutionID     string              `json:"step_execution_id"`
-	Output              pipeline.StepOutput `json:"output"`
+	PipelineExecutionID string           `json:"pipeline_execution_id"`
+	StepExecutionID     string           `json:"step_execution_id"`
+	Output              *pipeline.Output `json:"output,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -33,8 +33,7 @@ func NewPipelineStepFinish(opts ...PipelineStepFinishOption) (*PipelineStepFinis
 func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
-		// TODO - output?
-		//cmd.Output = e.Output
+		cmd.Output = e.Output
 		return nil
 	}
 }

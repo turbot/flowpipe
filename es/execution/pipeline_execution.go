@@ -11,7 +11,7 @@ type PipelineExecution struct {
 	// The input to the pipeline
 	Input pipeline.PipelineInput `json:"input"`
 	// Output from the pipeline
-	Output *pipeline.PipelineOutput `json:"output,omitempty"`
+	Output *pipeline.Output `json:"output,omitempty"`
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 	// Status of each step on a per-step basis. Used to determine if dependencies
@@ -146,5 +146,5 @@ type StepExecution struct {
 	Input   pipeline.StepInput  `json:"input"`
 	ForEach *pipeline.StepInput `json:"for_each,omitempty"`
 	// Output of the step
-	Output pipeline.StepOutput `json:"output"`
+	Output *pipeline.Output `json:"output,omtempty"`
 }

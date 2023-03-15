@@ -24,7 +24,7 @@ func (h PipelineFinishHandler) NewCommand() interface{} {
 func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineFinish)
 
-	var output pipeline.PipelineOutput
+	var output pipeline.Output
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {

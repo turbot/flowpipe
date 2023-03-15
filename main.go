@@ -193,7 +193,7 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Manually trigger some pipelines for testing
 	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
-	for _, s := range []string{"for_loop_using_http_request_body_json"} {
+	for _, s := range []string{"complex_sequence"} {
 		time.Sleep(0 * time.Second)
 		fmt.Println()
 

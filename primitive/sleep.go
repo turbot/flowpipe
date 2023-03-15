@@ -26,7 +26,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.StepInput) err
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
+func (e *Sleep) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -40,5 +40,5 @@ func (e *Sleep) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	return pipeline.StepOutput{"started_at": start, "finished_at": finish}, nil
+	return &pipeline.Output{"started_at": start, "finished_at": finish}, nil
 }

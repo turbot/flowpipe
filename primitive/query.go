@@ -20,7 +20,7 @@ func (e *Query) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
 	return nil
 }
 
-func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
+func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (pipeline.Ste
 		return nil, err
 	}
 
-	output := pipeline.StepOutput{
+	output := &pipeline.Output{
 		"rows":        results,
 		"started_at":  start,
 		"finished_at": finish,

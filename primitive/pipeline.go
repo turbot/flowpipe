@@ -24,12 +24,12 @@ func (e *RunPipeline) ValidateInput(ctx context.Context, input pipeline.StepInpu
 	return nil
 }
 
-func (e *RunPipeline) Run(ctx context.Context, input pipeline.StepInput) (pipeline.StepOutput, error) {
+func (e *RunPipeline) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := pipeline.StepOutput{
+	output := &pipeline.Output{
 		"name": input["name"].(string),
 		// TODO - needs to pass the actual input
 		"input": pipeline.PipelineInput{},
