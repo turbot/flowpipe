@@ -9,7 +9,9 @@ type PipelineExecution struct {
 	// The name of the pipeline
 	Name string `json:"name"`
 	// The input to the pipeline
-	Input map[string]interface{} `json:"input"`
+	Input pipeline.PipelineInput `json:"input"`
+	// Output from the pipeline
+	Output *pipeline.PipelineOutput `json:"output,omitempty"`
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 	// Status of each step on a per-step basis. Used to determine if dependencies

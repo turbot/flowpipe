@@ -18,6 +18,7 @@ type Pipeline struct {
 	Steps    map[string]*PipelineStep `json:"steps"`
 	Parallel bool                     `json:"parallel"`
 	Input    PipelineInput            `json:"input"`
+	Output   string                   `json:"output,omitempty"`
 }
 
 type PipelineStep struct {

@@ -48,6 +48,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 					Input: `{"duration": "2s"}`,
 				},
 			},
+			Output: `{"body_json": {{.http_1.body_json.number}}, "sleep_finished_at": "{{.sleep_1.finished_at}}"}`,
 		},
 		"for_loop_using_http_request_body_json": {
 			Type: "pipeline",

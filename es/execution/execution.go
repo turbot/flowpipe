@@ -279,6 +279,16 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
 			pe.FinishStep(stepDefn.Name, et.StepExecutionID)
 
+		case "handler.pipeline_finished":
+			var et event.PipelineFinished
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "finished"
+			pe.Output = et.Output
+
 		default:
 			// Ignore unknown types while loading
 		}
