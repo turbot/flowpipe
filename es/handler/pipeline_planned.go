@@ -45,15 +45,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// PRE: No new steps to execute, so the planner should just check to see if
 		// all existing steps are complete.
 
-		complete := true
-		for _, stepStatus := range pe.StepStatus {
-			if stepStatus.Progress() < 100 {
-				complete = false
-				break
-			}
-		}
-
-		if complete {
+		if pe.IsComplete() {
 			cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))

@@ -196,7 +196,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Name:                  et.Name,
 				Input:                 et.Input,
 				Status:                "queued",
-				StepStatus:            map[string]StepStatus{},
+				StepStatus:            map[string]*StepStatus{},
 				StepExecutions:        []string{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
 			}
@@ -209,25 +209,12 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "planned"
-			/*
-				pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
-				if err != nil {
-					return err
-				}
-			*/
-			for _, nextStep := range et.NextSteps {
-				/*
-					// TODO - how to handle for loop size?
-					sd := pd.Steps[nextStep]
-					queueSize := len(sd.For)
-					if queueSize == 0 {
-						queueSize = 1
-					}
-				*/
-				queueSize := 1
-				ex.PipelineExecutions[et.PipelineExecutionID].StepStatus[nextStep] = StepStatus{
-					Queued: queueSize,
-				}
+			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
+			if err != nil {
+				return err
+			}
+			for _, step := range pd.Steps {
+				pe.InitializeStep(step.Name)
 			}
 
 		case "handler.pipeline_started":
@@ -257,15 +244,9 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			if err != nil {
 				return err
 			}
-			if ss, ok := pe.StepStatus[stepDefn.Name]; ok {
-				ss.Queued = ss.Queued - 1
-				ss.Started = ss.Started + 1
-				pe.StepStatus[stepDefn.Name] = ss
-			} else {
-				return fmt.Errorf("step %s not found in pipeline %s", stepDefn.Name, et.PipelineExecutionID)
-			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
 			ex.StepExecutions[et.StepExecutionID].ForEach = et.ForEach
+			pe.StepStatus[stepDefn.Name].Queue(et.StepExecutionID)
 
 		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted
@@ -275,6 +256,12 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "started"
+			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.StartStep(stepDefn.Name, et.StepExecutionID)
 
 		case "handler.pipeline_step_finished":
 			var et event.PipelineStepFinished
@@ -287,16 +274,10 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			if err != nil {
 				return err
 			}
-			if ss, ok := pe.StepStatus[stepDefn.Name]; ok {
-				ss.Started = ss.Started - 1
-				ss.Finished = ss.Finished + 1
-				pe.StepStatus[stepDefn.Name] = ss
-			} else {
-				return fmt.Errorf("step %s not found in pipeline %s", stepDefn.Name, et.PipelineExecutionID)
-			}
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "finished"
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
+			pe.FinishStep(stepDefn.Name, et.StepExecutionID)
 
 		default:
 			// Ignore unknown types while loading
@@ -327,178 +308,3 @@ func (ex *Execution) LoadJSON(fileName string) error {
 	json.Unmarshal([]byte(byteValue), &ex)
 	return nil
 }
-
-/*
-
-func Dump(ctx context.Context) error {
-	s := &State{}
-	return s.Load(ctx)
-}
-
-// This is an attempt at Loading the state of a session, including the status of
-// any running pipelines. Next steps:
-// * How do we know the flow of states, ex.g. if load goes to failed (instead of loaded)?
-// * How do we inject the right commands / events back into the bus to resume?
-func (s *State) Load(ctx context.Context) error {
-
-	logFile := fmt.Sprintf("logs/%s.jsonl", utils.Session(ctx))
-
-	// Open the event log
-	f, err := os.Open(logFile)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	pipelineStatus := map[string]string{}
-
-	scanner := bufio.NewScanner(f)
-	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
-	for scanner.Scan() {
-
-		ba := scanner.Bytes()
-
-		// Get the run ID from the payload
-		var entryMetadata EventLogEntry
-		err := json.Unmarshal(ba, &entryMetadata)
-		if err != nil {
-			return err
-		}
-
-		switch entryMetadata.EventType {
-
-		case "event.PipelineQueue":
-			// Get the run ID from the payload
-			var ex event.PipelineQueue
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "queue"
-
-		case "event.PipelineQueued":
-			// Get the run ID from the payload
-			var ex event.PipelineQueued
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "queued"
-
-		case "event.PipelineLoad":
-			// Get the run ID from the payload
-			var ex event.PipelineLoaded
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "load"
-
-		case "event.PipelineLoaded":
-			// Get the run ID from the payload
-			var ex event.PipelineLoaded
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "loaded"
-
-		case "event.PipelineStart":
-			// Get the run ID from the payload
-			var ex event.PipelineStarted
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "start"
-
-		case "event.PipelineStarted":
-			// Get the run ID from the payload
-			var ex event.PipelineStarted
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "started"
-
-		case "event.PipelinePlan":
-			// Get the run ID from the payload
-			var ex event.PipelinePlanned
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "plan"
-
-		case "event.PipelinePlanned":
-			// Get the run ID from the payload
-			var ex event.PipelinePlanned
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "planned"
-
-		case "event.PipelineStepStart":
-			var ex event.PipelineStepStart
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "step_start"
-
-		case "event.PipelineStepFinished":
-			var ex event.PipelineStepFinished
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "step_finished"
-
-		case "event.PipelineFinish":
-			// Get the run ID from the payload
-			var ex event.PipelineFinished
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "finish"
-
-		case "event.PipelineFinished":
-			// Get the run ID from the payload
-			var ex event.PipelineFinished
-			err := json.Unmarshal(entryMetadata.Payload, &ex)
-			if err != nil {
-				// TODO - log and continue?
-				return err
-			}
-			pipelineStatus[ex.Event.ExecutionID] = "finished"
-
-		default:
-			// Ignore unknown types while loading
-		}
-
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	fmt.Println(pipelineStatus)
-
-	return nil
-
-}
-
-*/

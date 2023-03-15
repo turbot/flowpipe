@@ -51,7 +51,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	for _, step := range defn.Steps {
 
-		if pe.StepStatus[step.Name].Total() > 0 {
+		if pe.IsStepInitialized(step.Name) {
 			continue
 		}
 
@@ -69,7 +69,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				// TODO - issue a warning?
 				continue
 			}
-			if pe.StepStatus[dep].Progress() < 100 {
+			if !pe.IsStepComplete(dep) {
 				dependendenciesMet = false
 				break
 			}
