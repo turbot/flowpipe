@@ -13,14 +13,14 @@ import (
 
 type Exec struct{}
 
-func (e *Exec) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
+func (e *Exec) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	if i["command"] == nil {
 		return errors.New("Exec input must define a command")
 	}
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
+func (e *Exec) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}

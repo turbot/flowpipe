@@ -11,7 +11,7 @@ import (
 
 type Sleep struct{}
 
-func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.StepInput) error {
+func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.Input) error {
 
 	if input["duration"] == nil {
 		return errors.New("Sleep input must define a duration")
@@ -26,7 +26,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.StepInput) err
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
+func (e *Sleep) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}

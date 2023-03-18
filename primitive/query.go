@@ -13,14 +13,14 @@ import (
 
 type Query struct{}
 
-func (e *Query) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
+func (e *Query) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	if i["sql"] == nil {
 		return errors.New("Query input must define sql")
 	}
 	return nil
 }
 
-func (e *Query) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
+func (e *Query) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}

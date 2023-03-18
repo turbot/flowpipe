@@ -1,6 +1,7 @@
 package event
 
 import (
+	"github.com/turbot/steampipe-pipelines/pipeline"
 	"github.com/turbot/steampipe-pipelines/utils"
 )
 
@@ -9,8 +10,8 @@ type PipelineQueue struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Pipeline details
-	Name  string                 `json:"name"`
-	Input map[string]interface{} `json:"input"`
+	Name string         `json:"name"`
+	Args pipeline.Input `json:"args"`
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent pipeline execution ID
@@ -44,7 +45,7 @@ func ForPipelineStepStartedToPipelineQueue(e *PipelineStepStarted) PipelineQueue
 		cmd.PipelineExecutionID = e.ChildPipelineExecutionID
 		cmd.ParentStepExecutionID = e.StepExecutionID
 		cmd.Name = e.ChildPipelineName
-		cmd.Input = e.ChildPipelineInput
+		cmd.Args = e.ChildPipelineArgs
 		return nil
 	}
 }

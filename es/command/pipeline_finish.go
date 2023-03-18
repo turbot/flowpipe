@@ -44,13 +44,13 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
-		stepOutputs, err := ex.PipelineStepOutputs(cmd.PipelineExecutionID)
+		data, err := ex.PipelineStepOutputs(cmd.PipelineExecutionID)
 		if err != nil {
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
 		var outputBuffer bytes.Buffer
-		err = t.Execute(&outputBuffer, stepOutputs)
+		err = t.Execute(&outputBuffer, data)
 		if err != nil {
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}

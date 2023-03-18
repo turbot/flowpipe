@@ -60,7 +60,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	for _, stepName := range e.NextSteps {
 
-		stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
+		data, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
@@ -76,7 +76,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 			var itemsBuffer bytes.Buffer
-			err = t.Execute(&itemsBuffer, stepOutputs)
+			err = t.Execute(&itemsBuffer, data)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
@@ -101,24 +101,24 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		// inputs will gather the input data for each step execution
-		inputs := []pipeline.StepInput{}
+		inputs := []pipeline.Input{}
 
 		// forEaches will record the "each" variable data for each step
 		// execution in the loop
-		forEaches := []*pipeline.StepInput{}
+		forEaches := []*pipeline.Input{}
 
 		if stepDefn.Input == "" {
 			// No input, so just use an empty input for each step execution.
 
 			// There is always one input (e.g. no for loop). If the for loop had
 			// no items, then we would have returned above.
-			inputs = append(inputs, pipeline.StepInput{})
+			inputs = append(inputs, pipeline.Input{})
 			forEaches = append(forEaches, nil)
 
 			// Add extra items if the for loop required them, skipping the one
 			// we added already above.
 			for i := 0; i < forInputs.Len()-1; i++ {
-				inputs = append(inputs, pipeline.StepInput{})
+				inputs = append(inputs, pipeline.Input{})
 			}
 
 		} else {
@@ -134,11 +134,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				// No for loop
 
 				var itemsBuffer bytes.Buffer
-				err = t.Execute(&itemsBuffer, stepOutputs)
+				err = t.Execute(&itemsBuffer, data)
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
-				var input pipeline.StepInput
+				var input pipeline.Input
 				err = json.Unmarshal(itemsBuffer.Bytes(), &input)
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
@@ -153,15 +153,15 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					// Create a step for each input in forInputs
 					for _, key := range forInputs.MapKeys() {
 						// TODO - this updates the same map each time ... is that safe?
-						var stepOutputsWithEach = stepOutputs
-						forEach := pipeline.StepInput{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
-						stepOutputsWithEach["each"] = forEach
+						var dataWithEach = data
+						forEach := pipeline.Input{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
+						dataWithEach["each"] = forEach
 						var itemsBuffer bytes.Buffer
-						err = t.Execute(&itemsBuffer, stepOutputsWithEach)
+						err = t.Execute(&itemsBuffer, dataWithEach)
 						if err != nil {
 							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 						}
-						var input pipeline.StepInput
+						var input pipeline.Input
 						err = json.Unmarshal(itemsBuffer.Bytes(), &input)
 						if err != nil {
 							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
@@ -175,15 +175,15 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					// Create a step for each input in forInputs
 					for i := 0; i < forInputs.Len(); i++ {
 						// TODO - this updates the same map each time ... is that safe?
-						var stepOutputsWithEach = stepOutputs
-						forEach := pipeline.StepInput{"key": i, "value": forInputs.Index(i).Interface()}
-						stepOutputsWithEach["each"] = forEach
+						var dataWithEach = data
+						forEach := pipeline.Input{"key": i, "value": forInputs.Index(i).Interface()}
+						dataWithEach["each"] = forEach
 						var itemsBuffer bytes.Buffer
-						err = t.Execute(&itemsBuffer, stepOutputsWithEach)
+						err = t.Execute(&itemsBuffer, dataWithEach)
 						if err != nil {
 							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 						}
-						var input pipeline.StepInput
+						var input pipeline.Input
 						err = json.Unmarshal(itemsBuffer.Bytes(), &input)
 						if err != nil {
 							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
@@ -202,7 +202,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		for i, input := range inputs {
 			// Start each step in parallel
-			go func(stepName string, input pipeline.StepInput, forEach *pipeline.StepInput) {
+			go func(stepName string, input pipeline.Input, forEach *pipeline.Input) {
 				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input, forEach))
 				if err != nil {
 					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))

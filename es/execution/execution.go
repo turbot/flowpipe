@@ -83,6 +83,27 @@ func (ex *Execution) StepDefinition(stepExecutionID string) (*pipeline.PipelineS
 	return sd, nil
 }
 
+func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interface{}, error) {
+
+	// Get the outputs from prior steps in the pipeline
+	data, err := ex.PipelineStepOutputs(pipelineExecutionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add arguments data for this pipeline execution
+	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
+	if !ok {
+		return nil, fmt.Errorf("pipeline execution %s not found", pipelineExecutionID)
+	}
+	// Arguments data takes precedence over a step output with the same name
+	data["args"] = pe.Args
+
+	// TODO - Add variables data for this pipeline execution
+
+	return data, nil
+}
+
 // PipelineStepOutputs returns a single map of all outputs from all steps in
 // the given pipeline execution. The map is keyed by the step name. If a step
 // has a ForTemplate then the result is an array of outputs.
@@ -194,27 +215,10 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
 				ID:                    et.PipelineExecutionID,
 				Name:                  et.Name,
-				Input:                 et.Input,
+				Args:                  et.Args,
 				Status:                "queued",
 				StepStatus:            map[string]*StepStatus{},
-				StepExecutions:        []string{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
-			}
-
-		case "handler.pipeline_planned":
-			var et event.PipelinePlanned
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "planned"
-			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
-			if err != nil {
-				return err
-			}
-			for _, step := range pd.Steps {
-				pe.InitializeStep(step.Name)
 			}
 
 		case "handler.pipeline_started":
@@ -225,6 +229,21 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "started"
+
+		case "handler.pipeline_planned":
+			var et event.PipelinePlanned
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			for _, step := range pd.Steps {
+				pe.InitializeStep(step.Name)
+			}
 
 		case "command.pipeline_step_start":
 			var et event.PipelineStepStart
@@ -288,6 +307,15 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "finished"
 			pe.Output = et.Output
+
+		case "handler.pipeline_failed":
+			var et event.PipelineFailed
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "failed"
 
 		default:
 			// Ignore unknown types while loading

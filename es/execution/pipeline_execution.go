@@ -9,7 +9,7 @@ type PipelineExecution struct {
 	// The name of the pipeline
 	Name string `json:"name"`
 	// The input to the pipeline
-	Input pipeline.PipelineInput `json:"input"`
+	Args pipeline.Input `json:"args"`
 	// Output from the pipeline
 	Output *pipeline.Output `json:"output,omitempty"`
 	// The status of the pipeline execution: queued, planned, started, completed, failed
@@ -19,9 +19,6 @@ type PipelineExecution struct {
 	// of which are not tracked here.
 	// dependencies have been met, etc. The step status is on a per-step
 	StepStatus map[string]*StepStatus `json:"step_status"`
-	// An ordered list of the step executions run for this pipeline. Details
-	// of each step execution are available in the StepExecutions map on the Execution.
-	StepExecutions []string `json:"step_executions"`
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 }
@@ -64,8 +61,6 @@ func (pe *PipelineExecution) InitializeStep(stepName string) {
 
 // QueueStep marks the given step execution as queued.
 func (pe *PipelineExecution) QueueStep(stepName string, seID string) {
-	pe.StepExecutions = append(pe.StepExecutions, seID)
-	pe.StepStatus[stepName] = &StepStatus{}
 	pe.StepStatus[stepName].Queue(seID)
 }
 
@@ -143,8 +138,8 @@ type StepExecution struct {
 	// The status of the step execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 	// Input to the step
-	Input   pipeline.StepInput  `json:"input"`
-	ForEach *pipeline.StepInput `json:"for_each,omitempty"`
+	Input   pipeline.Input  `json:"input"`
+	ForEach *pipeline.Input `json:"for_each,omitempty"`
 	// Output of the step
-	Output *pipeline.Output `json:"output,omtempty"`
+	Output *pipeline.Output `json:"output,omitempty"`
 }

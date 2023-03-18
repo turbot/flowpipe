@@ -199,6 +199,40 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				},
 			},
 		},
+		"pipeline_with_args": {
+			Type: "pipeline",
+			Name: "pipeline_with_args",
+			/*
+				Params: map[string]*pipeline.PipelineParam{
+					Name: "url",
+					Type: "string",
+					Required: true,
+				},
+			*/
+			Steps: map[string]*pipeline.PipelineStep{
+				"http_1": {
+					Type:  "http_request",
+					Name:  "http_1",
+					Input: `{"url": "{{.args.url}}"}`,
+				},
+			},
+		},
+		"child_pipeline_args": {
+			Type: "pipeline",
+			Name: "child_pipeline_args",
+			Steps: map[string]*pipeline.PipelineStep{
+				"p1": {
+					Type:  "pipeline",
+					Name:  "p1",
+					Input: `{"name": "pipeline_with_args", "args": {"url": "http://api.open-notify.org/astros.json"}}`,
+				},
+				"p2": {
+					Type:  "pipeline",
+					Name:  "p2",
+					Input: `{"name": "pipeline_with_args", "args": {"url": "http://api.open-notify.org/iss-now.json"}}`,
+				},
+			},
+		},
 	}
 
 	if d, ok := definitions[pe.Name]; ok {

@@ -118,7 +118,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 					"title": "Start: " + pd.Name,
 					"properties": map[string]interface{}{
 						"Execution ID": pe.ID,
-						"Input":        pe.Input,
+						"Args":         pe.Args,
 						"Status":       pe.Status,
 					},
 				},

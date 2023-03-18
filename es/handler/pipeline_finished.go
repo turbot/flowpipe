@@ -48,11 +48,11 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		fmt.Println(string(jsonStr))
 
 		// Dump step outputs
-		stepOutputs, err := ex.PipelineStepOutputs(e.PipelineExecutionID)
+		data, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			jsonStr, _ := json.MarshalIndent(stepOutputs, "", "  ")
+			jsonStr, _ := json.MarshalIndent(data, "", "  ")
 			fmt.Println(string(jsonStr))
 		}
 

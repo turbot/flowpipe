@@ -11,7 +11,7 @@ import (
 func TestHTTPRequestOK(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := pipeline.StepInput(map[string]interface{}{"url": "https://steampipe.io/"})
+	input := pipeline.Input(map[string]interface{}{"url": "https://steampipe.io/"})
 	output, err := hr.Run(context.Background(), input)
 	assert.Nil(err)
 	assert.Equal("200 OK", output.Get("status"))
@@ -24,7 +24,7 @@ func TestHTTPRequestOK(t *testing.T) {
 func TestHTTPRequestNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := pipeline.StepInput(map[string]interface{}{"url": "https://steampipe.io/asdlkfjasdlfkjnotfound/"})
+	input := pipeline.Input(map[string]interface{}{"url": "https://steampipe.io/asdlkfjasdlfkjnotfound/"})
 	output, err := hr.Run(context.Background(), input)
 	assert.Nil(err)
 	assert.Equal("404 Not Found", output.Get("status"))

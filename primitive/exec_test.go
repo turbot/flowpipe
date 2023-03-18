@@ -11,36 +11,36 @@ import (
 func TestExecOK(t *testing.T) {
 	assert := assert.New(t)
 	hr := Exec{}
-	input := pipeline.StepInput(map[string]interface{}{"command": "echo 'test'"})
+	input := pipeline.Input(map[string]interface{}{"command": "echo 'test'"})
 	output, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)
 	// We only return *_lines fields
-	assert.Nil(output["stdout"])
-	assert.Nil(output["stderr"])
+	assert.Nil(output.Get("stdout"))
+	assert.Nil(output.Get("stderr"))
 	// Check stdout
-	assert.NotNil(output["stdout_lines"])
-	assert.Equal("test", output["stdout_lines"].([]string)[0])
+	assert.NotNil(output.Get("stdout_lines"))
+	assert.Equal("test", output.Get("stdout_lines").([]string)[0])
 	// Check stderr
-	assert.NotNil(output["stderr_lines"])
-	assert.Empty(output["stderr_lines"].([]string))
+	assert.NotNil(output.Get("stderr_lines"))
+	assert.Empty(output.Get("stderr_lines").([]string))
 	// Check exit code
-	assert.Equal(0, output["exit_code"])
+	assert.Equal(0, output.Get("exit_code"))
 }
 
 func TestExecProgramNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := Exec{}
-	input := pipeline.StepInput(map[string]interface{}{"command": "my_non_existent_cli 'test'"})
+	input := pipeline.Input(map[string]interface{}{"command": "my_non_existent_cli 'test'"})
 	output, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)
 	// Check stdout
-	assert.NotNil(output["stdout_lines"])
-	assert.Empty(output["stdout_lines"].([]string))
+	assert.NotNil(output.Get("stdout_lines"))
+	assert.Empty(output.Get("stdout_lines").([]string))
 	// Check stderr
-	assert.NotNil(output["stderr_lines"])
-	assert.Contains(output["stderr_lines"].([]string)[0], "command not found")
+	assert.NotNil(output.Get("stderr_lines"))
+	assert.Contains(output.Get("stderr_lines").([]string)[0], "command not found")
 	// Check exit code
-	assert.Equal(127, output["exit_code"])
+	assert.Equal(127, output.Get("exit_code"))
 }

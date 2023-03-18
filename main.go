@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/turbot/steampipe-pipelines/api"
 	"github.com/turbot/steampipe-pipelines/config"
 	"github.com/turbot/steampipe-pipelines/es/command"
 	"github.com/turbot/steampipe-pipelines/es/event"
@@ -173,6 +174,8 @@ func main() {
 	// publish commands every second to simulate incoming traffic
 	go publishCommands(ctx, runID, cqrsFacade.CommandBus())
 
+	go api.StartService(ctx, runID, cqrsFacade.CommandBus())
+
 	// processors are based on router, so they will work when router will start
 	if err := router.Run(ctx); err != nil {
 		panic(err)
@@ -193,14 +196,18 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Manually trigger some pipelines for testing
 	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
-	for _, s := range []string{"complex_sequence"} {
+	for _, s := range []string{"child_pipeline_args"} {
 		time.Sleep(0 * time.Second)
 		fmt.Println()
 
 		pipelineCmd := &event.PipelineQueue{
 			Event: event.NewExecutionEvent(ctx),
 			Name:  s,
-			//Input:        e.Input,
+			/*
+				Args: pipeline.Input{
+					"url": "http://api.open-notify.org/astros.json",
+				},
+			*/
 		}
 		if err := commandBus.Send(ctx, pipelineCmd); err != nil {
 			panic(err)

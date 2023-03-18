@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/turbot/steampipe-pipelines/pipeline"
@@ -13,14 +15,19 @@ import (
 
 type HTTPRequest struct{}
 
-func (h *HTTPRequest) ValidateInput(ctx context.Context, i pipeline.StepInput) error {
+func (h *HTTPRequest) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	if i["url"] == nil {
 		return errors.New("HTTPRequest input must define a url")
+	}
+	u := i["url"].(string)
+	_, err := url.ParseRequestURI(u)
+	if err != nil {
+		return fmt.Errorf("invalid url: %s", u)
 	}
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input pipeline.StepInput) (*pipeline.Output, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}

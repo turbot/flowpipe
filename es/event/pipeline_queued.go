@@ -1,6 +1,9 @@
 package event
 
-import "github.com/turbot/steampipe-pipelines/utils"
+import (
+	"github.com/turbot/steampipe-pipelines/pipeline"
+	"github.com/turbot/steampipe-pipelines/utils"
+)
 
 // PipelineQueued is published when a pipeline is queued
 type PipelineQueued struct {
@@ -9,7 +12,7 @@ type PipelineQueued struct {
 	// Name of the pipeline to be queued
 	Name string `json:"name"`
 	// Input to the pipeline
-	Input map[string]interface{} `json:"input"`
+	Args pipeline.Input `json:"args"`
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent step execution ID
@@ -41,7 +44,7 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 	return func(e *PipelineQueued) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.Name = cmd.Name
-		e.Input = cmd.Input
+		e.Args = cmd.Args
 		if cmd.PipelineExecutionID != "" {
 			// Only overwrite the default execution ID if we've been given one to use
 			e.PipelineExecutionID = cmd.PipelineExecutionID

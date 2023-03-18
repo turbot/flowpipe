@@ -11,11 +11,11 @@ type PipelineStepStart struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string              `json:"pipeline_execution_id"`
-	StepExecutionID     string              `json:"step_execution_id"`
-	StepName            string              `json:"step_name"`
-	StepInput           pipeline.StepInput  `json:"input"`
-	ForEach             *pipeline.StepInput `json:"for_each,omitempty"`
+	PipelineExecutionID string          `json:"pipeline_execution_id"`
+	StepExecutionID     string          `json:"step_execution_id"`
+	StepName            string          `json:"step_name"`
+	StepInput           pipeline.Input  `json:"input"`
+	ForEach             *pipeline.Input `json:"for_each,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -49,7 +49,7 @@ func ForPipelinePlanned(e *PipelinePlanned) PipelineStepStartOption {
 	}
 }
 
-func WithStep(name string, input pipeline.StepInput, forEach *pipeline.StepInput) PipelineStepStartOption {
+func WithStep(name string, input pipeline.Input, forEach *pipeline.Input) PipelineStepStartOption {
 	return func(cmd *PipelineStepStart) error {
 		cmd.StepName = name
 		cmd.StepInput = input
