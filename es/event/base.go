@@ -27,6 +27,13 @@ func NewExecutionEvent(ctx context.Context) *Event {
 	}
 }
 
+func NewEventForExecutionID(executionID string) *Event {
+	return &Event{
+		ExecutionID: executionID,
+		CreatedAt:   time.Now().UTC(),
+	}
+}
+
 func NewChildEvent(parent *Event) *Event {
 	return &Event{
 		ExecutionID: parent.ExecutionID,

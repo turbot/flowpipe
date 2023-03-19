@@ -91,6 +91,17 @@ func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error) PipelineFaile
 	}
 }
 
+// ForPipelineCancelToPipelineFailed returns a PipelineFailedOption that sets the fields of the
+// PipelineFailed event from a PipelineCancel command.
+func ForPipelineCancelToPipelineFailed(cmd *PipelineCancel, err error) PipelineFailedOption {
+	return func(e *PipelineFailed) error {
+		e.Event = NewFlowEvent(cmd.Event)
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+		e.ErrorMessage = err.Error()
+		return nil
+	}
+}
+
 func ForPipelineStepStartToPipelineFailed(cmd *PipelineStepStart, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)

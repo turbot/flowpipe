@@ -233,6 +233,23 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 				},
 			},
 		},
+		"long_sleep_to_test_cancel": {
+			Type: "pipeline",
+			Name: "long_sleep_to_test_cancel",
+			Steps: map[string]*pipeline.PipelineStep{
+				"delay": {
+					Type:  "sleep",
+					Name:  "delay",
+					Input: `{"duration": "20s"}`,
+				},
+				"web": {
+					Type:      "http_request",
+					Name:      "web",
+					DependsOn: []string{"delay"},
+					Input:     `{"url": "http://api.open-notify.org/astros.json"}`,
+				},
+			},
+		},
 	}
 
 	if d, ok := definitions[pe.Name]; ok {

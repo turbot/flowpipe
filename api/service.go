@@ -62,6 +62,22 @@ func StartService(ctx context.Context, runID string, commandBus *cqrs.CommandBus
 		})
 	})
 
+	// curl http://localhost:8080/pipeline_execution/exec_cg9oujlnsevmt3umtas0
+	r.PATCH("/pipeline_execution/:executionID/:id", func(c *gin.Context) {
+		executionID := c.Param("executionID")
+		id := c.Param("id")
+		pipelineCmd := &event.PipelineCancel{
+			Event:               event.NewEventForExecutionID(executionID),
+			PipelineExecutionID: id,
+			Reason:              "because I said so",
+		}
+		if err := commandBus.Send(ctx, pipelineCmd); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"cmd": pipelineCmd})
+	})
+
 	// List all exec_* files from the directory and get the execution details
 	// for each ID (format exec_).
 	// Example request - curl http://localhost:8080/pipeline_execution/exec_cg9oujlnsevmt3umtas0

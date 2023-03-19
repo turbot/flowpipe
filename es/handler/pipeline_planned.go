@@ -40,6 +40,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// Convenience
 	pe := ex.PipelineExecutions[e.PipelineExecutionID]
 
+	// If the pipeline has been canceled, then no planning is required as no
+	// more work should be done.
+	if pe.IsCanceled() {
+		return nil
+	}
+
 	if len(e.NextSteps) == 0 {
 
 		// PRE: No new steps to execute, so the planner should just check to see if

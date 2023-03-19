@@ -26,6 +26,15 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
 
+	// Convenience
+	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
+
+	// If the pipeline has been canceled, then no planning is required as no
+	// more work should be done.
+	if pe.IsCanceled() {
+		return nil
+	}
+
 	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
@@ -35,9 +44,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
-
-	// Convenience
-	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	// Each defined step in the pipeline can be in a few states:
 	// - dependencies not met

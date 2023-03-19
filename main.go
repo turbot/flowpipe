@@ -90,6 +90,7 @@ func main() {
 		},
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
+				command.PipelineCancelHandler{EventBus: eb},
 				command.PipelineFailHandler{EventBus: eb},
 				command.PipelineFinishHandler{EventBus: eb},
 				command.PipelineLoadHandler{EventBus: eb},
@@ -115,6 +116,7 @@ func main() {
 			return []cqrs.EventHandler{
 				handler.Failed{CommandBus: cb},
 				handler.Loaded{CommandBus: cb},
+				handler.PipelineCanceled{CommandBus: cb},
 				handler.PipelineFailed{CommandBus: cb},
 				handler.PipelineFinished{CommandBus: cb},
 				handler.PipelineLoaded{CommandBus: cb},
@@ -196,7 +198,7 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 
 	// Manually trigger some pipelines for testing
 	// TODO - these should be triggered instead (e.g. cron, webhook, etc)
-	for _, s := range []string{"child_pipeline_args"} {
+	for _, s := range []string{"long_sleep_to_test_cancel"} {
 		time.Sleep(0 * time.Second)
 		fmt.Println()
 
@@ -209,6 +211,9 @@ func publishCommands(ctx context.Context, sessionID string, commandBus *cqrs.Com
 				},
 			*/
 		}
+
+		fmt.Printf("Execution ID: %s\n", pipelineCmd.Event.ExecutionID)
+
 		if err := commandBus.Send(ctx, pipelineCmd); err != nil {
 			panic(err)
 		}

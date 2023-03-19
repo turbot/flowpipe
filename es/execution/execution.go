@@ -298,6 +298,15 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
 			pe.FinishStep(stepDefn.Name, et.StepExecutionID)
 
+		case "handler.pipeline_canceled":
+			var et event.PipelineCanceled
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "canceled"
+
 		case "handler.pipeline_finished":
 			var et event.PipelineFinished
 			err := json.Unmarshal(ele.Payload, &et)

@@ -23,6 +23,11 @@ type PipelineExecution struct {
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 }
 
+// IsCanceled returns true if the pipeline has been canceled
+func (pe *PipelineExecution) IsCanceled() bool {
+	return pe.Status == "canceled"
+}
+
 // IsComplete returns true if all steps (that have been initialized) are complete.
 func (pe *PipelineExecution) IsComplete() bool {
 	complete := true
