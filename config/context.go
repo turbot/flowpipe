@@ -1,19 +1,32 @@
 package config
 
-import "context"
+import (
+	"context"
+)
 
-// ConfigContextKey is the key used to store the config in the context.
-type ConfigContextKey struct{}
+type configContextKey struct{}
 
-// Config returns the session ID from the context.
-func Get(ctx context.Context) *Config {
-	if v := ctx.Value(ConfigContextKey{}); v != nil {
-		return v.(*Config)
-	}
-	panic("No config in context")
+/*
+type viperContextKey struct{}
+
+func ContextWithViper(ctx context.Context) context.Context {
+	return context.WithValue(ctx, viperContextKey{}, viper.New())
 }
 
-// ContextWithSession returns a new context with a new session ID.
-func Set(ctx context.Context, c *Config) context.Context {
-	return context.WithValue(ctx, ConfigContextKey{}, c)
+func Viper(ctx context.Context) *viper.Viper {
+	return ctx.Value(viperContextKey{}).(*viper.Viper)
+}
+*/
+
+func ContextWithConfig(ctx context.Context) (context.Context, error) {
+	//cfg, err := NewConfig(ctx, WithFlags())
+	cfg, err := NewConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return context.WithValue(ctx, configContextKey{}, cfg), nil
+}
+
+func Config(ctx context.Context) *Configuration {
+	return ctx.Value(configContextKey{}).(*Configuration)
 }

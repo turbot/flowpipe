@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option go_package = "github.com/Jille/raft-grpc-example/proto";
+
+service Example {
+	rpc AddWord(AddWordRequest) returns (AddWordResponse) {}
+	rpc GetWords(GetWordsRequest) returns (GetWordsResponse) {}
+}
+
+message AddWordRequest {
+	string word = 1;
+}
+
+message AddWordResponse {
+	uint64 commit_index = 1;
+}
+
+message GetWordsRequest {
+}
+
+message GetWordsResponse {
+	uint64 read_at_index = 1;
+	repeated string best_words = 2;
+}

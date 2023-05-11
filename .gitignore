@@ -26,13 +26,10 @@
 /ui/dashboard/.vscode
 /ui/dashboard/build
 /ui/dashboard/node_modules
+/ui/dashboard/src/icons/materialSymbols.ts
 /ui/dashboard/output
 /ui/dashboard/yarn-debug.log*
 /ui/dashboard/yarn-error.log*
 
 # Dist directory is created by goreleaser
 /dist
-
-# Ignore local event log development
-*.log
-/logs
