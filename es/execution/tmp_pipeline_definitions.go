@@ -52,7 +52,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*pipeline.P
 		},
 		"for_loop_using_http_request_body_json": {
 			Type: "pipeline",
-			Name: "for_loop_using_map",
+			Name: "for_loop_using_http_request_body_json",
 			Steps: map[string]*pipeline.PipelineStep{
 				"astros": {
 					Type:  "http_request",
