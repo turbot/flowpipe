@@ -1,11 +1,8 @@
-name: "Lint: Flowpipw"
+name: "Lint: Flowpipe"
 on:
   push:
-    tags:
-      - v*
     branches:
       - main
-      - v*
 jobs:
   golangci:
     name: lint
@@ -13,8 +10,6 @@ jobs:
     steps:
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
-        with:
-          submodules: 'true'
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
