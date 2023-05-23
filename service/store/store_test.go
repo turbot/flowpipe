@@ -2,9 +2,9 @@ package store
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
-	"io/ioutil"
-	"math/rand"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
@@ -17,10 +17,6 @@ import (
 	"github.com/rqlite/rqlite/command/encoding"
 	"github.com/rqlite/rqlite/testdata/chinook"
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func Test_StoreSingleNodeNotOpen(t *testing.T) {
 	s, ln := mustNewStore(t, true)
@@ -508,7 +504,7 @@ COMMIT;
 		t.Fatalf("failed to load simple dump: %s", err.Error())
 	}
 
-	f, err := ioutil.TempFile("", "rqlite-baktest-")
+	f, err := os.CreateTemp("", "rqlite-baktest-")
 	if err != nil {
 		t.Fatalf("Backup Failed: unable to create temp file, %s", err.Error())
 	}
@@ -521,12 +517,12 @@ COMMIT;
 
 	// Check the backed up data by reading back up file, underlying SQLite file,
 	// and comparing the two.
-	bkp, err := ioutil.ReadFile(f.Name())
+	bkp, err := os.ReadFile(f.Name())
 	if err != nil {
 		t.Fatalf("Backup Failed: unable to read backup file, %s", err.Error())
 	}
 
-	dbFile, err := ioutil.ReadFile(filepath.Join(s.Path(), sqliteFile))
+	dbFile, err := os.ReadFile(filepath.Join(s.Path(), sqliteFile))
 	if err != nil {
 		t.Fatalf("Backup Failed: unable to read source SQLite file, %s", err.Error())
 	}
@@ -564,7 +560,7 @@ COMMIT;
 		t.Fatalf("failed to load simple dump: %s", err.Error())
 	}
 
-	f, err := ioutil.TempFile("", "rqlite-baktest-")
+	f, err := os.CreateTemp("", "rqlite-baktest-")
 	if err != nil {
 		t.Fatalf("Backup Failed: unable to create temp file, %s", err.Error())
 	}
@@ -576,7 +572,7 @@ COMMIT;
 	}
 
 	// Check the backed up data
-	bkp, err := ioutil.ReadFile(f.Name())
+	bkp, err := os.ReadFile(f.Name())
 	if err != nil {
 		t.Fatalf("Backup Failed: unable to read backup file, %s", err.Error())
 	}
@@ -2194,14 +2190,14 @@ func (m *mockListener) Close() error { return m.ln.Close() }
 func (m *mockListener) Addr() net.Addr { return m.ln.Addr() }
 
 func mustWriteFile(path, contents string) {
-	err := os.WriteFile(path, []byte(contents), 0644)
+	err := os.WriteFile(path, []byte(contents), 0600)
 	if err != nil {
 		panic("failed to write to file")
 	}
 }
 
 func mustReadFile(path string) []byte {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		panic("failed to read file")
 	}
@@ -2338,8 +2334,13 @@ func randomString() string {
 	chars := "abcdedfghijklmnopqrstABCDEFGHIJKLMNOP"
 
 	for i := 0; i < 20; i++ {
-		random := rand.Intn(len(chars))
-		randomChar := chars[random]
+
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		if err != nil {
+			panic(err)
+		}
+
+		randomChar := chars[n.Int64()]
 		output.WriteString(string(randomChar))
 	}
 	return output.String()

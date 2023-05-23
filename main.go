@@ -20,5 +20,9 @@ func main() {
 	}
 
 	// Run the CLI
-	cmd.RunCLI(ctx)
+	err = cmd.RunCLI(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 }

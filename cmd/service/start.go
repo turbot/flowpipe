@@ -28,12 +28,35 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	serviceStartCmd.Flags().StringVar(&c.RaftNodeID, "raft-node-id", "", "unique ID for the node")
 
 	// Bind flags to config
-	c.Viper.BindPFlag("server.data_path", serviceStartCmd.Flags().Lookup("data-path"))
-	c.Viper.BindPFlag("server.https_address", serviceStartCmd.Flags().Lookup("https-address"))
-	c.Viper.BindPFlag("server.raft_address", serviceStartCmd.Flags().Lookup("raft-address"))
-	c.Viper.BindPFlag("server.join", serviceStartCmd.Flags().Lookup("join"))
-	c.Viper.BindPFlag("server.raft_bootstrap", serviceStartCmd.Flags().Lookup("raft-bootstrap"))
-	c.Viper.BindPFlag("server.raft_node_id", serviceStartCmd.Flags().Lookup("raft-node-id"))
+	err := c.Viper.BindPFlag("server.data_path", serviceStartCmd.Flags().Lookup("data-path"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.Viper.BindPFlag("server.https_address", serviceStartCmd.Flags().Lookup("https-address"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.Viper.BindPFlag("server.raft_address", serviceStartCmd.Flags().Lookup("raft-address"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.Viper.BindPFlag("server.join", serviceStartCmd.Flags().Lookup("join"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.Viper.BindPFlag("server.raft_bootstrap", serviceStartCmd.Flags().Lookup("raft-bootstrap"))
+	if err != nil {
+		panic(err)
+	}
+
+	err = c.Viper.BindPFlag("server.raft_node_id", serviceStartCmd.Flags().Lookup("raft-node-id"))
+	if err != nil {
+		panic(err)
+	}
 
 	return serviceStartCmd, nil
 }

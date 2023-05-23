@@ -172,6 +172,8 @@ func startNodeMux(cfg *config.Configuration, ln net.Listener) (*tcp.Mux, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to create node-to-node mux: %s", err.Error())
 	}
+
+	//nolint:errcheck // TODO: not sure what to do here, initial cleanup, rethink
 	go mux.Serve()
 
 	return mux, nil
@@ -229,7 +231,7 @@ func credentialStore(cfg *config.Configuration) (*auth.CredentialsStore, error) 
 	}
 
 	cs := auth.NewCredentialsStore()
-	if cs.Load(f); err != nil {
+	if err = cs.Load(f); err != nil {
 		return nil, err
 	}
 	return cs, nil
@@ -446,7 +448,10 @@ func createCluster(cfg *config.Configuration, hasPeers bool, str *store.Store,
 			}
 			bs.SetBasicAuth(cfg.JoinAs, pw)
 		}
-		httpServ.RegisterStatus("disco", provider)
+		err := httpServ.RegisterStatus("disco", provider)
+		if err != nil {
+			panic(err)
+		}
 		return bs.Boot(str.ID(), cfg.RaftAdv, isClustered, cfg.BootstrapExpectTimeout)
 
 	case DiscoModeEtcdKV, DiscoModeConsulKV:
@@ -489,7 +494,10 @@ func createCluster(cfg *config.Configuration, hasPeers bool, str *store.Store,
 			log.Println("preexisting node configuration detected, not registering with discovery service")
 		}
 		go discoService.StartReporting(cfg.NodeID, cfg.HTTPURL(), cfg.RaftAdv)
-		httpServ.RegisterStatus("disco", discoService)
+		err = httpServ.RegisterStatus("disco", discoService)
+		if err != nil {
+			panic(err)
+		}
 
 	default:
 		return fmt.Errorf("invalid disco mode %s", cfg.DiscoMode)

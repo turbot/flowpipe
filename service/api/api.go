@@ -164,8 +164,9 @@ func (api *APIService) Start() error {
 	// Server setup with graceful shutdown
 	api.httpServer = &http.Server{
 		//Addr:    fmt.Sprintf(":%d", viper.GetInt("web.http.port")),
-		Addr:    fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPSPort),
-		Handler: router,
+		Addr:              fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPSPort),
+		Handler:           router,
+		ReadHeaderTimeout: 60 * time.Second,
 	}
 
 	/*

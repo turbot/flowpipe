@@ -66,19 +66,47 @@ func (f Frame) Format(s fmt.State, verb rune) {
 	case 's':
 		switch {
 		case s.Flag('+'):
-			io.WriteString(s, f.name())
-			io.WriteString(s, "\n\t")
-			io.WriteString(s, f.file())
+			_, err := io.WriteString(s, f.name())
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.WriteString(s, "\n\t")
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.WriteString(s, f.file())
+			if err != nil {
+				panic(err)
+			}
+
 		default:
-			io.WriteString(s, path.Base(f.file()))
+			_, err := io.WriteString(s, path.Base(f.file()))
+			if err != nil {
+				panic(err)
+			}
+
 		}
 	case 'd':
-		io.WriteString(s, strconv.Itoa(f.line()))
+		_, err := io.WriteString(s, strconv.Itoa(f.line()))
+		if err != nil {
+			panic(err)
+		}
+
 	case 'n':
-		io.WriteString(s, funcname(f.name()))
+		_, err := io.WriteString(s, funcname(f.name()))
+		if err != nil {
+			panic(err)
+		}
+
 	case 'v':
 		f.Format(s, 's')
-		io.WriteString(s, ":")
+		_, err := io.WriteString(s, ":")
+		if err != nil {
+			panic(err)
+		}
+
 		f.Format(s, 'd')
 	}
 }
@@ -110,7 +138,10 @@ func (st StackTrace) Format(s fmt.State, verb rune) {
 		switch {
 		case s.Flag('+'):
 			for _, f := range st {
-				io.WriteString(s, "\n")
+				_, err := io.WriteString(s, "\n")
+				if err != nil {
+					panic(err)
+				}
 				f.Format(s, verb)
 			}
 		case s.Flag('#'):
@@ -126,14 +157,26 @@ func (st StackTrace) Format(s fmt.State, verb rune) {
 // formatSlice will format this StackTrace into the given buffer as a slice of
 // Frame, only valid when called with '%s' or '%v'.
 func (st StackTrace) formatSlice(s fmt.State, verb rune) {
-	io.WriteString(s, "[")
+	_, err := io.WriteString(s, "[")
+	if err != nil {
+		panic(err)
+	}
+
 	for i, f := range st {
 		if i > 0 {
-			io.WriteString(s, " ")
+			_, err := io.WriteString(s, " ")
+			if err != nil {
+				panic(err)
+			}
+
 		}
 		f.Format(s, verb)
 	}
-	io.WriteString(s, "]")
+	_, err = io.WriteString(s, "]")
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 // stack represents a stack of program counters.

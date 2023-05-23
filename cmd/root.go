@@ -37,7 +37,10 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.Flags().StringVar(&c.Workspace, "workspace", "default", "The workspace profile to use")
 
 	// Bind flags to config
-	c.Viper.BindPFlag("workspace.profile", rootCmd.Flags().Lookup("workspace"))
+	err := c.Viper.BindPFlag("workspace.profile", rootCmd.Flags().Lookup("workspace"))
+	if err != nil {
+		panic(err)
+	}
 
 	// flowpipe service
 	serviceCmd, err := service.ServiceCmd(ctx)

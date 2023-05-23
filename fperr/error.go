@@ -125,28 +125,62 @@ func (e *Error) Format(s fmt.State, verb rune) {
 	}
 	switch verb {
 	case 'v':
-		io.WriteString(s, e.Error())
+		_, err := io.WriteString(s, e.Error())
+		if err != nil {
+			panic(err)
+		}
 
 		printStack := s.Flag('#')
 		printDetail := printStack || s.Flag('+')
 
 		if printDetail || printStack {
-			io.WriteString(s, "\n")
+			_, err := io.WriteString(s, "\n")
+			if err != nil {
+				panic(err)
+			}
+
 		}
 
 		if printDetail {
-			io.WriteString(s, "\nDetails:\n")
-			io.WriteString(s, e.Detail())
-			io.WriteString(s, "\n")
+			_, err := io.WriteString(s, "\nDetails:\n")
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.WriteString(s, e.Detail())
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.WriteString(s, "\n")
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		if printStack {
-			io.WriteString(s, "\nStack:")
-			io.WriteString(s, fmt.Sprintf("%+v", e.Stack()))
-			io.WriteString(s, "\n")
+			_, err := io.WriteString(s, "\nStack:")
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.WriteString(s, fmt.Sprintf("%+v", e.Stack()))
+			if err != nil {
+				panic(err)
+			}
+
+			_, err = io.WriteString(s, "\n")
+			if err != nil {
+				panic(err)
+			}
+
 		}
 	case 's':
-		io.WriteString(s, e.Error())
+		_, err := io.WriteString(s, e.Error())
+		if err != nil {
+			panic(err)
+		}
+
 	case 'q':
 		// fallback to the standard %q for consistent escaping
 		fmt.Fprintf(s, "%q", e.Error())

@@ -11,7 +11,6 @@ import (
 	"expvar"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"math"
 	"os"
@@ -584,6 +583,7 @@ func (s *Store) LeaderAddr() (string, error) {
 func (s *Store) LeaderID() (string, error) {
 	addr, err := s.LeaderAddr()
 	if err != nil {
+		//nolint:nilerr // TODO we need to fix this, check the error what type of error
 		return "", nil
 	}
 	configFuture := s.raft.GetConfiguration()
@@ -637,6 +637,7 @@ func (s *Store) WaitForLeader(timeout time.Duration) (string, error) {
 		case <-tck.C:
 			l, err := s.LeaderAddr()
 			if err != nil {
+				//nolint:nilerr // TODO we need to fix this, check the error what type of error
 				return "", nil
 			}
 			if l != "" {
@@ -912,7 +913,7 @@ func (s *Store) Backup(br *command.BackupRequest, dst io.Writer) (retErr error) 
 	}
 
 	if br.Format == command.BackupRequest_BACKUP_REQUEST_FORMAT_BINARY {
-		f, err := ioutil.TempFile("", "rqlilte-snap-")
+		f, err := os.CreateTemp("", "rqlilte-snap-")
 		if err != nil {
 			return err
 		}
@@ -1532,7 +1533,10 @@ func (f *fsmSnapshot) Persist(sink raft.SnapshotSink) error {
 	}()
 
 	if err != nil {
-		sink.Cancel()
+		err2 := sink.Cancel()
+		if err2 != nil {
+			panic(err2)
+		}
 		return err
 	}
 
@@ -1685,7 +1689,7 @@ func dbBytesFromSnapshot(rc io.ReadCloser) ([]byte, error) {
 	// Read all the data into RAM, since we have to decode known-length
 	// chunks of various forms.
 	var offset int64
-	b, err := ioutil.ReadAll(rc)
+	b, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, fmt.Errorf("readall: %s", err)
 	}
@@ -1718,6 +1722,7 @@ func dbBytesFromSnapshot(rc io.ReadCloser) ([]byte, error) {
 				return nil, err
 			}
 
+			//nolint:gosec // TODO:  G110: Potential DoS vulnerability via decompression bomb. Seems dangerous we need to have a look
 			if _, err := io.Copy(buf, gz); err != nil {
 				return nil, fmt.Errorf("SQLite database decompress: %s", err)
 			}
@@ -1841,7 +1846,7 @@ func createOnDisk(b []byte, path string, fkConstraints bool) (*sql.DB, error) {
 		return nil, err
 	}
 	if b != nil {
-		if err := ioutil.WriteFile(path, b, 0660); err != nil {
+		if err := os.WriteFile(path, b, 0600); err != nil {
 			return nil, err
 		}
 	}

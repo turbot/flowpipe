@@ -30,7 +30,10 @@ func NewKeyValue() *KeyValue {
 
 func (f *KeyValue) Apply(l *raft.Log) interface{} {
 	var kvo KeyValueOperation
-	json.Unmarshal(l.Data, &kvo)
+	err := json.Unmarshal(l.Data, &kvo)
+	if err != nil {
+		panic(err)
+	}
 
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
@@ -58,7 +61,11 @@ func (f *KeyValue) Restore(r io.ReadCloser) error {
 	if err != nil {
 		return err
 	}
-	json.Unmarshal(b, &f.dict)
+	err = json.Unmarshal(b, &f.dict)
+	if err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
@@ -79,7 +86,11 @@ func (s *KeyValueSnapshot) Persist(sink raft.SnapshotSink) error {
 	ba, _ := json.Marshal(s.dict)
 	_, err := sink.Write(ba)
 	if err != nil {
-		sink.Cancel()
+		err2 := sink.Cancel()
+		if err2 != nil {
+			panic(err2)
+		}
+
 		return fmt.Errorf("sink.Write(): %v", err)
 	}
 	return sink.Close()

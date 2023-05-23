@@ -139,6 +139,7 @@ func SanitizeLogEntries(keysAndValues []interface{}) []interface{} {
 	for i := 0; i < len(keysAndValues); i += 2 {
 		sanitizeKeyAndValues[i] = keysAndValues[i]
 
+		//nolint:gocritic // TODO: just leave this for now (1 case type swich with asignnment)
 		switch keysAndValues[i].(type) {
 		case string:
 			if reflect.ValueOf(keysAndValues[i+1]).Kind() == reflect.Struct {

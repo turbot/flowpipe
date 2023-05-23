@@ -113,7 +113,10 @@ func (c *FlowpipeLogger) Initialize() error {
 
 	c.Zap = zap.New(core).Sugar()
 
-	zap.RedirectStdLogAt(c.Zap.Desugar(), zapcore.DebugLevel)
+	_, err := zap.RedirectStdLogAt(c.Zap.Desugar(), zapcore.DebugLevel)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

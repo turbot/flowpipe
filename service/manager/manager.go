@@ -129,7 +129,12 @@ func (m *Manager) Stop() error {
 
 	// Ensure any log messages are synced before we exit
 	logger := fplog.Logger(m.ctx)
-	defer logger.Sync()
+	defer func() {
+		err := logger.Sync()
+		if err != nil {
+			panic(err)
+		}
+	}()
 
 	err := m.apiService.Stop()
 	if err != nil {
@@ -155,7 +160,11 @@ func (m *Manager) InterruptHandler() {
 	go func() {
 		sig := <-sigs
 		fplog.Logger(m.ctx).Debug("manager exiting", "signal", sig)
-		m.Stop()
+		err := m.Stop()
+		if err != nil {
+			panic(err)
+		}
+
 		done <- true
 	}()
 	<-done
