@@ -12,7 +12,6 @@ import (
 	"github.com/turbot/flowpipe/service/api/common"
 )
 
-// Initialize the configuration from steampipe.yml
 func Initialize(_ context.Context) {
 
 	//
@@ -82,20 +81,6 @@ func Initialize(_ context.Context) {
 	// Workspace auth
 	viper.SetDefault("api.workspace.jwt.signing.method", "RS256")
 	viper.SetDefault("api.workspace.snapshot.jwt.signing.method", "HS256")
-
-	viper.SetDefault("worker.k8s.log.level", "default")
-	viper.SetDefault("worker.cleanup.connection.limit", 100)
-	viper.SetDefault("worker.cleanup.workspace.limit", 10)
-	viper.SetDefault("worker.cleanup.org.limit", 10)
-	viper.SetDefault("worker.cleanup.user.limit", 10)
-	viper.SetDefault("worker.cleanup.pipeline.limit", 10)
-	viper.SetDefault("worker.cleanup.db.log.delete.rate", 1000)
-	viper.SetDefault("worker.cleanup.process.archive.rate", 100)
-	viper.SetDefault("worker.cleanup.process.log.limit", 200)
-	viper.SetDefault("worker.cleanup.process.log.archive.hour", 1)
-	viper.SetDefault("worker.cleanup.process.log.archive.rate", 100)
-
-	viper.SetDefault("worker.db.log.heap", false)
 
 	//
 	// CONFIG SETUP
