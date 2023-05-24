@@ -1,12 +1,15 @@
 package middleware
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/unrolled/secure"
 )
 
-func SecurityMiddleware() gin.HandlerFunc {
+func SecurityMiddleware(ctx context.Context) gin.HandlerFunc {
 	options := secure.Options{
 		// In development, many options are turned off automatically
 		IsDevelopment: viper.GetString("url.base") == "https://localhost:3000",
@@ -38,6 +41,8 @@ func SecurityMiddleware() gin.HandlerFunc {
 		// they don't really mind what is set. Make a minimal setting for now.
 		PermissionsPolicy: "geolocation 'self'",
 	}
+
+	fplog.Logger(ctx).Debug("Security middleware options", "IsDevelopment", options.IsDevelopment, "SSLHost", options.SSLHost, "STSSeconds", options.STSSeconds, "STSIncludeSubdomains", options.STSIncludeSubdomains, "STSPreload", options.STSPreload, "CustomFrameOptionsValue", options.CustomFrameOptionsValue, "ContentTypeNosniff", options.ContentTypeNosniff, "ReferrerPolicy", options.ReferrerPolicy, "PermissionsPolicy", options.PermissionsPolicy)
 
 	secureMiddleware := secure.New(options)
 

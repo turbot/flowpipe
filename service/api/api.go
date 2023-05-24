@@ -55,6 +55,8 @@ type APIService struct {
 
 	raftService *raft.RaftService
 
+	HTTPPort string `json:"http_port,omitempty"`
+
 	HTTPSHost string `json:"https_host,omitempty"`
 	HTTPSPort string `json:"https_port,omitempty"`
 
@@ -75,6 +77,7 @@ func NewAPIService(ctx context.Context, opts ...APIServiceOption) (*APIService, 
 		Status:    "initialized",
 		HTTPSHost: viper.GetString("web.https.host"),
 		HTTPSPort: fmt.Sprintf("%d", viper.GetInt("web.https.port")),
+		HTTPPort:  fmt.Sprintf("%d", viper.GetInt("web.http.port")),
 	}
 	// Set options
 	for _, opt := range opts {
@@ -167,7 +170,7 @@ func (api *APIService) Start() error {
 	apiLimiter.SetBurst(viper.GetInt("web.rate.burst"))
 	router.Use(middleware.LimitHandler(apiLimiter))
 
-	router.Use(middleware.SecurityMiddleware())
+	router.Use(middleware.SecurityMiddleware(api.ctx))
 
 	service.RegisterPublicAPI(apiPrefixGroup)
 	api.playRegister(apiPrefixGroup)
@@ -202,33 +205,24 @@ func (api *APIService) Start() error {
 
 	// Server setup with graceful shutdown
 	api.httpServer = &http.Server{
-		//Addr:    fmt.Sprintf(":%d", viper.GetInt("web.http.port")),
+		Addr:              fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPPort),
+		Handler:           router,
+		ReadHeaderTimeout: 60 * time.Second,
+	}
+
+	api.httpsServer = &http.Server{
 		Addr:              fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPSPort),
 		Handler:           router,
 		ReadHeaderTimeout: 60 * time.Second,
 	}
 
-	// api.httpsServer = &http.Server{
-	// 	Addr:              fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPSPort),
-	// 	Handler:           router,
-	// 	ReadHeaderTimeout: 60 * time.Second,
-	// }
-
 	// Initializing the server in a goroutine so that
 	// it won't block the graceful shutdown handling below
-	// go func() {
-	// 	if err := api.httpsServer.ListenAndServeTLS("./certificate/server.crt", "./certificate/server.key"); err != nil && err != http.ErrServerClosed {
-	// 		log.Fatalf("listen: %s\n", err)
-	// 	}
-	// }()
-
-	/*
-		api.httpsServer = &http.Server{
-			//Addr:    fmt.Sprintf(":%d", viper.GetInt("web.https.port")),
-			Addr:    fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPSPort),
-			Handler: router,
+	go func() {
+		if err := api.httpsServer.ListenAndServeTLS("./service/certificate/server.crt", "./service/certificate/server.key"); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("listen: %s\n", err)
 		}
-	*/
+	}()
 
 	// Initializing the server in a goroutine so that
 	// it won't block the graceful shutdown handling below
@@ -237,16 +231,6 @@ func (api *APIService) Start() error {
 			log.Fatalf("listen: %s\n", err)
 		}
 	}()
-
-	/*
-		// Initializing the server in a goroutine so that
-		// it won't block the graceful shutdown handling below
-		go func() {
-			if err := api.httpsServer.ListenAndServeTLS("./service/certificate/server.crt", "./service/certificate/server.key"); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("listen: %s\n", err)
-			}
-		}()
-	*/
 
 	api.StartedAt = util.TimeNowPtr()
 	api.Status = "running"
