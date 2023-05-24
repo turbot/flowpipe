@@ -8,10 +8,9 @@ linters:
     - asasalint
     - asciicheck
     - bidichk
-    # - contextcheck -> need investigation
     - depguard
     - durationcheck
-    # - exhaustive -> need investigation
+    # - exhaustive
     - exportloopref
     - forbidigo
     - gocritic
@@ -50,11 +49,19 @@ linters-settings:
     # Can accept both string prefixes and string glob patterns.
     # Default: []
     packages:
-      - go.temporal.io/sdk/log
+      - go.uber.org/zap
 
     # A list of packages for the list type specified.
     # Specify an error message to output when a denied package is used.
     # Default: []
     packages-with-error-message:
-      - go.temporal.io/sdk/log: do not use Temporal log package directly, use the SPC log package instead
+      - go.uber.org/zap: do not use Uber zap directly, use the SPC log package instead
 
+    # Specify rules by which the linter ignores certain files for consideration.
+    # Can accept both string prefixes and string glob patterns.
+    # The ! character in front of the rule is a special character
+    # which signals that the linter should negate the rule.
+    # This allows for more precise control, but it is only available for glob patterns.
+    # Default: []
+    # ignore-file-rules:
+    #   - "!log/*.go"

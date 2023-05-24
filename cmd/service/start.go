@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/turbot/flowpipe/config"
@@ -19,8 +21,15 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 
 	c := config.Config(ctx)
 
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(err)
+	}
+
+	defaultFlowpipeRaftDir := filepath.Join(homeDir, ".flowpipe")
+
 	// Command flags
-	serviceStartCmd.Flags().StringVar(&c.DataPath, "data-path", "/Users/nathan/.flowpipe/raft", "path to data directory")
+	serviceStartCmd.Flags().StringVar(&c.DataPath, "data-path", defaultFlowpipeRaftDir, "path to data directory")
 	serviceStartCmd.Flags().StringVar(&c.HTTPAddr, "https-address", "", "host:port of the HTTPS server")
 	serviceStartCmd.Flags().StringVar(&c.RaftAddr, "raft-address", "", "host:port of the raft server")
 	serviceStartCmd.Flags().StringVar(&c.JoinAddr, "join", "", "comma-delimited list of nodes, through which a cluster can be joined (proto://host:port)")
@@ -28,7 +37,7 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	serviceStartCmd.Flags().StringVar(&c.RaftNodeID, "raft-node-id", "", "unique ID for the node")
 
 	// Bind flags to config
-	err := c.Viper.BindPFlag("server.data_path", serviceStartCmd.Flags().Lookup("data-path"))
+	err = c.Viper.BindPFlag("server.data_path", serviceStartCmd.Flags().Lookup("data-path"))
 	if err != nil {
 		panic(err)
 	}
@@ -70,14 +79,17 @@ func startManagerFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			manager.WithRaftNodeID(c.RaftNodeID),
 			manager.WithRaftBootstrap(c.RaftBootstrap),
 			manager.WithRaftAddress(c.RaftAddr))
+
 		if err != nil {
 			panic(err)
 		}
+
 		// Start the manager
 		err = m.Start()
 		if err != nil {
 			panic(err)
 		}
+
 		// Block until we receive a signal
 		m.InterruptHandler()
 	}

@@ -5,7 +5,10 @@ import (
 	"os"
 	"strings"
 
+	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap"
+
+	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap/zapcore"
 
 	"github.com/turbot/flowpipe/service/sanitize"

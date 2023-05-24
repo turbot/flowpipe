@@ -82,23 +82,24 @@ func WithHTTPAddress(addr string) ManagerOption {
 // Start starts services managed by the Manager.
 func (m *Manager) Start() error {
 
-	fplog.Logger(m.ctx).Debug("manager starting")
-	defer fplog.Logger(m.ctx).Debug("manager started")
+	fplog.Logger(m.ctx).Debug("Manager starting")
+	defer fplog.Logger(m.ctx).Debug("Manager started")
 
-	// Define the Raft service
-	r, err := raft.NewRaftService(m.ctx,
-		raft.WithNodeID(m.RaftNodeID),
-		raft.WithBootstrap(m.RaftBootstrap),
-		raft.WithAddress(m.RaftAddress))
-	if err != nil {
-		panic(err)
-	}
-	m.raftService = r
+	// Define the Raft service (removed RAFT for now)
+	// r, err := raft.NewRaftService(m.ctx,
+	// 	raft.WithNodeID(m.RaftNodeID),
+	// 	raft.WithBootstrap(m.RaftBootstrap),
+	// 	raft.WithAddress(m.RaftAddress))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// m.raftService = r
 
 	// Define the API service
 	a, err := api.NewAPIService(m.ctx,
 		api.WithHTTPSAddress(m.HTTPSAddress),
 		api.WithRaftService(m.raftService))
+
 	if err != nil {
 		return err
 	}
@@ -111,10 +112,10 @@ func (m *Manager) Start() error {
 	}
 
 	// Start raft
-	err = r.Start()
-	if err != nil {
-		return err
-	}
+	// err = r.Start()
+	// if err != nil {
+	// 	return err
+	// }
 
 	m.StartedAt = util.TimeNowPtr()
 	m.Status = "running"
@@ -130,10 +131,9 @@ func (m *Manager) Stop() error {
 	// Ensure any log messages are synced before we exit
 	logger := fplog.Logger(m.ctx)
 	defer func() {
-		err := logger.Sync()
-		if err != nil {
-			panic(err)
-		}
+		// this is causing "inappropriate ioctl for device" error: https://github.com/uber-go/zap/issues/880
+		//nolint:errcheck // we don't care if this fails
+		logger.Sync()
 	}()
 
 	err := m.apiService.Stop()
@@ -142,11 +142,11 @@ func (m *Manager) Stop() error {
 		fplog.Logger(m.ctx).Error("error stopping api service", "error", err)
 	}
 
-	err = m.raftService.Stop()
-	if err != nil {
-		// Log and continue stopping other services
-		fplog.Logger(m.ctx).Error("error stopping raft service", "error", err)
-	}
+	// err = m.raftService.Stop()
+	// if err != nil {
+	// 	// Log and continue stopping other services
+	// 	fplog.Logger(m.ctx).Error("error stopping raft service", "error", err)
+	// }
 
 	m.StoppedAt = util.TimeNowPtr()
 
@@ -159,7 +159,7 @@ func (m *Manager) InterruptHandler() {
 	done := make(chan bool, 1)
 	go func() {
 		sig := <-sigs
-		fplog.Logger(m.ctx).Debug("manager exiting", "signal", sig)
+		fplog.Logger(m.ctx).Debug("Manager exiting", "signal", sig)
 		err := m.Stop()
 		if err != nil {
 			panic(err)
@@ -168,5 +168,5 @@ func (m *Manager) InterruptHandler() {
 		done <- true
 	}()
 	<-done
-	fplog.Logger(m.ctx).Debug("manager exited")
+	fplog.Logger(m.ctx).Debug("Manager exited")
 }

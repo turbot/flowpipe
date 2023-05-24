@@ -33,9 +33,6 @@ func Initialize(_ context.Context) {
 	viper.SetDefault("web.http.port", 7102)
 	viper.SetDefault("web.https.port", 7103)
 
-	viper.SetDefault("snapshot.render.http.port", 9196)
-	viper.SetDefault("snapshot.render.https.port", 9197)
-
 	// Set to single or cluster - default to cluster and envs override this to single as required
 	viper.SetDefault("redis.mode", "redis")
 
@@ -59,7 +56,7 @@ func Initialize(_ context.Context) {
 
 	// Assume development mode by default, using localhost
 	viper.SetDefault("web.secure.allowed_hosts", []string{"localhost"})
-	viper.SetDefault("web.secure.ssl_host", "localhost:8443")
+	viper.SetDefault("web.secure.ssl_host", "localhost:7103")
 
 	// Paging limit default and boundaries
 	viper.SetDefault("api.list.limit.default", 25)
@@ -78,16 +75,6 @@ func Initialize(_ context.Context) {
 	viper.SetDefault("api.experimental.pipeline", false)
 	viper.SetDefault("api.experimental.process", false)
 	viper.SetDefault("api.workspace.experimental.prometheus", false)
-
-	// API Files
-	viper.SetDefault("api.file.bucket", "steampipe-cloud-latest-snapshots-apse1")
-	viper.SetDefault("api.file.provider", "local")
-
-	// API Snapshots
-	viper.SetDefault("api.workspace.snapshot.bucket", "steampipe-cloud-latest-snapshots-apse1")
-	viper.SetDefault("api.workspace.snapshot.provider", "local")
-
-	viper.SetDefault("api.workspace.processLogs.provider", "gcs")
 
 	// The bcrypt cost to use when hashing the token. defaults to 10, which is
 	// the current bcrypt.DefaultCost in https://pkg.go.dev/golang.org/x/crypto/bcrypt#pkg-constants
@@ -138,30 +125,7 @@ func Initialize(_ context.Context) {
 
 	viper.SetDefault("worker.db.log.heap", false)
 
-	// Integrations
-	viper.SetDefault("api.integration.github.app_id", "104915")
-	viper.SetDefault("api.integration.github.client_id", "7519fa097ef9950eaf05")
-	viper.SetDefault("api.integration.gitlab.app_id", "609c2b16a10aebb283b42b65bfdffb931873a60fd4ea4e1e0d715d9e1d7ed4c5")
-	viper.SetDefault("api.integration.google.client_id", "1089654030488-bu2i6rekd1mp9vpfuc46jm9nu08ahuar.apps.googleusercontent.com")
-
 	// Advanced options
-	// Prefix to use for env var configuration, e.g. session.secret becomes STEAMPIPE_CLOUD_SESSION_SECRET
-	viper.SetDefault("advanced.env_var_prefix", "STEAMPIPE_CLOUD")
-
-	// Steampipe Container setup
-	viper.SetDefault("steampipe.safeToEvict", "false")
-	viper.SetDefault("steampipe.log.level", "warn")
-
-	viper.SetDefault("envoy.version", "v1.15-latest")
-
-	// The last 4 digit of a cron schedule. The minute schedule will be automatically
-	// generated so 1 here is the hour schedule.
-	viper.SetDefault("steampipe.update.schedule", "2 * * *")
-	viper.SetDefault("steampipe.update.max_hour", 12)
-
-	// Vault related config
-	viper.SetDefault("vault.token.path", "/tmp/vault-token")
-	viper.SetDefault("vault.address", "http://127.0.0.1:8200")
 
 	viper.SetDefault("temporal.enable", true)
 	viper.SetDefault("temporal.host", "localhost")
