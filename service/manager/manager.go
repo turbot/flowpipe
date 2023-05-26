@@ -9,7 +9,6 @@ import (
 
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api"
-	"github.com/turbot/flowpipe/service/raft"
 	"github.com/turbot/flowpipe/util"
 )
 
@@ -17,8 +16,7 @@ import (
 type Manager struct {
 	ctx context.Context
 
-	apiService  *api.APIService
-	raftService *raft.RaftService
+	apiService *api.APIService
 
 	RaftNodeID    string `json:"raft_node_id,omitempty"`
 	RaftBootstrap bool   `json:"raft_bootstrap"`
@@ -85,20 +83,9 @@ func (m *Manager) Start() error {
 	fplog.Logger(m.ctx).Debug("Manager starting")
 	defer fplog.Logger(m.ctx).Debug("Manager started")
 
-	// Define the Raft service (removed RAFT for now)
-	// r, err := raft.NewRaftService(m.ctx,
-	// 	raft.WithNodeID(m.RaftNodeID),
-	// 	raft.WithBootstrap(m.RaftBootstrap),
-	// 	raft.WithAddress(m.RaftAddress))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// m.raftService = r
-
 	// Define the API service
 	a, err := api.NewAPIService(m.ctx,
-		api.WithHTTPSAddress(m.HTTPSAddress),
-		api.WithRaftService(m.raftService))
+		api.WithHTTPSAddress(m.HTTPSAddress))
 
 	if err != nil {
 		return err
@@ -110,12 +97,6 @@ func (m *Manager) Start() error {
 	if err != nil {
 		return err
 	}
-
-	// Start raft
-	// err = r.Start()
-	// if err != nil {
-	// 	return err
-	// }
 
 	m.StartedAt = util.TimeNowPtr()
 	m.Status = "running"

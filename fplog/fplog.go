@@ -11,7 +11,7 @@ import (
 	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap/zapcore"
 
-	"github.com/turbot/flowpipe/service/sanitize"
+	"github.com/turbot/flowpipe/sanitize"
 )
 
 type FlowpipeLogger struct {

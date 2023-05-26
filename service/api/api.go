@@ -25,8 +25,8 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/service/api/middleware"
+	"github.com/turbot/flowpipe/service/api/pipeline"
 	"github.com/turbot/flowpipe/service/api/service"
-	"github.com/turbot/flowpipe/service/raft"
 	"github.com/turbot/flowpipe/util"
 )
 
@@ -52,8 +52,6 @@ type APIService struct {
 
 	httpServer  *http.Server
 	httpsServer *http.Server
-
-	raftService *raft.RaftService
 
 	HTTPPort string `json:"http_port,omitempty"`
 
@@ -106,13 +104,6 @@ func WithHTTPSAddress(addr string) APIServiceOption {
 		if port != "" {
 			api.HTTPSPort = port
 		}
-		return nil
-	}
-}
-
-func WithRaftService(raftService *raft.RaftService) APIServiceOption {
-	return func(api *APIService) error {
-		api.raftService = raftService
 		return nil
 	}
 }
@@ -174,8 +165,7 @@ func (api *APIService) Start() error {
 	router.Use(middleware.SecurityMiddleware(api.ctx))
 
 	service.RegisterPublicAPI(apiPrefixGroup)
-	api.playRegister(apiPrefixGroup)
-	// join.RegisterAPI(&router.RouterGroup)
+	pipeline.RegisterAPI(apiPrefixGroup)
 
 	// Custom validators for our types
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
