@@ -16,3 +16,7 @@ Findings as of 2023-05-06:
 
 
 For now, we're sticking with `swaggo`. Despite only up to OpenAPI 2.0 this is our best option for now.
+
+```
+oapi-codegen -package flowpipe -generate gin,types,spec,client openapi.yaml > flowpipe.gen.go
+```

@@ -1,0 +1,8 @@
+api/docs/docs.go
+api/docs/swagger.yaml
+api/docs/swagger.json
+api/docs/openapi.json
+api/docs/exp/docs.go
+api/docs/exp/swagger.yaml
+api/docs/exp/swagger.json
+api/docs/exp/openapi.json

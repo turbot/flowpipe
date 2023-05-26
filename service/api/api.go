@@ -30,10 +30,17 @@ import (
 )
 
 // @title Flowpipe
-// @version {{OPEN_API_VERSION}}
+// @version 0.1.0
 // @description Flowpipe is workflow and pipelines for DevSecOps.
 // @contact.name Support
 // @contact.email help@flowpipe.io
+
+// @contact.name   Flowpipe
+// @contact.url    http://www.flowpipe.io
+// @contact.email  info@flowpipe.io
+
+// @license.name  AGPLv3
+// @license.url   https://www.gnu.org/licenses/agpl-3.0.en.html
 
 // @host localhost
 // @schemes https
