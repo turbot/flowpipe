@@ -25,7 +25,6 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/service/api/middleware"
-	"github.com/turbot/flowpipe/service/api/pipeline"
 	"github.com/turbot/flowpipe/service/api/service"
 	"github.com/turbot/flowpipe/util"
 )
@@ -165,7 +164,7 @@ func (api *APIService) Start() error {
 	router.Use(middleware.SecurityMiddleware(api.ctx))
 
 	service.RegisterPublicAPI(apiPrefixGroup)
-	pipeline.RegisterAPI(apiPrefixGroup)
+	api.PipelineRegisterAPI(apiPrefixGroup)
 
 	// Custom validators for our types
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {

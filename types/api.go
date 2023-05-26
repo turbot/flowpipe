@@ -7,5 +7,5 @@ type APIVersionRequestURI struct {
 
 type ListRequestQuery struct {
 	NextToken string `json:"next_token" form:"next_token" binding:"omitempty"`
-	Limit     *int   `json:"limit,omitempty" form:"limit" binding:"omitempty,steampipe_limit"`
+	Limit     *int   `json:"limit,omitempty" form:"limit" binding:"omitempty"`
 }

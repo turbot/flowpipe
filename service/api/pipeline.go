@@ -1,4 +1,4 @@
-package pipeline
+package api
 
 import (
 	"net/http"
@@ -8,11 +8,11 @@ import (
 	"github.com/turbot/flowpipe/service/api/common"
 )
 
-func RegisterAPI(router *gin.RouterGroup) {
-	router.GET("/pipeline", listPipelines)
+func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
+	router.GET("/pipeline", api.listPipelines)
 }
 
-func listPipelines(c *gin.Context) {
+func (api *APIService) listPipelines(c *gin.Context) {
 	// Get paging parameters
 	nextToken, limit, err := common.ListPagingRequest(c)
 	if err != nil {
@@ -20,8 +20,8 @@ func listPipelines(c *gin.Context) {
 		return
 	}
 
-	fplog.Logger(c).Info("received list pipelines request", "next_token", nextToken, "limit", limit)
+	fplog.Logger(api.ctx).Info("received list pipelines request", "next_token", nextToken, "limit", limit)
 
-	result := ""
+	result := "pipelines ..."
 	c.JSON(http.StatusOK, result)
 }
