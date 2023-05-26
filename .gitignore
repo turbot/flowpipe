@@ -1,9 +1,13 @@
 # Editor cache and lock files
 *.swp
 *.swo
-.idea/
-.vscode/
 .DS_Store
+
+# IDE
+.idea/
+.run
+.vscode/launch.json
+.vscode/settings.json
 
 # Binaries for programs and plugins
 *.exe
@@ -21,15 +25,6 @@
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# Dashboard UI
-/ui/dashboard/.idea
-/ui/dashboard/.vscode
-/ui/dashboard/build
-/ui/dashboard/node_modules
-/ui/dashboard/src/icons/materialSymbols.ts
-/ui/dashboard/output
-/ui/dashboard/yarn-debug.log*
-/ui/dashboard/yarn-error.log*
-
 # Dist directory is created by goreleaser
-/dist
+dist/
+
