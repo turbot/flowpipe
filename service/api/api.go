@@ -154,6 +154,7 @@ func (api *APIService) Start() error {
 	// Create compression middleware - exclude process logs as we handle compression within the API itself
 	compressionMiddleware := gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPathsRegexs([]string{"^/api/.+/.*[avatar|\\.jsonl]$"}))
 	apiPrefixGroup.Use(compressionMiddleware)
+	router.Use(compressionMiddleware)
 
 	// Simple rate limiting:
 	// * In memory only, so will not check across web servers
