@@ -15,12 +15,17 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
-	"github.com/fsnotify/fsnotify"
+	"github.com/radovskyb/watcher"
 )
 
 func main() {
 	// Specify the directory containing the Node.js files
 	nodeJSFilesDir := "./lambda-nodejs"
+
+	absPath, err := filepath.Abs(nodeJSFilesDir)
+	if err != nil {
+		log.Fatalf("Failed to resolve absolute path: %v", err)
+	}
 
 	// Build the initial Docker image
 	imageName := "flowpipe-lambda-nodejs"
@@ -28,15 +33,9 @@ func main() {
 		log.Fatalf("Failed to build Docker image: %v", err)
 	}
 
-	// Create a file watcher
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatalf("Failed to create file watcher: %v", err)
-	}
-	defer watcher.Close()
-
-	// Watch the directory for file changes
-	go watchFiles(watcher, nodeJSFilesDir)
+	w := watcher.New()
+	w.SetMaxEvents(1)
+	defer w.Close()
 
 	// Run the Docker container initially
 	containerID, err := runDockerContainer(imageName)
@@ -44,16 +43,11 @@ func main() {
 		log.Fatalf("Failed to run Docker container: %v", err)
 	}
 
-	// Monitor for file changes and rebuild/restart the container
-	for {
-		fmt.Printf("Wait for file change event...\n")
-		select {
-		case event := <-watcher.Events:
-			fmt.Printf("Detected file change: %v\n", event)
-			time.Sleep(100 * time.Millisecond)
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				fmt.Println("Detected file change. Rebuilding Docker image...")
-
+	go func() {
+		for {
+			select {
+			case event := <-w.Event:
+				fmt.Printf("Detected file change: %v\n", event)
 				if err := buildDockerImage(imageName, nodeJSFilesDir); err != nil {
 					log.Printf("Failed to rebuild Docker image: %v", err)
 				} else {
@@ -64,34 +58,23 @@ func main() {
 						fmt.Println("Docker container restarted successfully.")
 					}
 				}
-			}
-		case err := <-watcher.Errors:
-			log.Printf("File watcher error: %v", err)
-		}
-	}
-}
-
-func watchFiles(watcher *fsnotify.Watcher, nodeJSFilesDir string) {
-	err := filepath.Walk(nodeJSFilesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !info.IsDir() {
-			err = watcher.Add(path)
-			if err != nil {
-				log.Printf("Failed to add file to watcher: %v", err)
-			} else {
-				log.Printf("Watching file: %s", path)
+			case err := <-w.Error:
+				log.Printf("File watcher error: %v", err)
+			case <-w.Closed:
+				return
 			}
 		}
+	}()
 
-		return nil
-	})
-
-	if err != nil {
-		log.Printf("Failed to watch files: %v", err)
+	if err := w.AddRecursive(absPath); err != nil {
+		log.Fatalln(err)
 	}
+
+	// Start the watching process - it'll check for changes every 100ms.
+	if err := w.Start(time.Millisecond * 100); err != nil {
+		log.Fatalln(err)
+	}
+
 }
 
 func buildDockerImage(imageName, nodeJSFilesDir string) error {
@@ -114,15 +97,6 @@ func buildDockerImage(imageName, nodeJSFilesDir string) error {
 		return err
 	}
 	cli.NegotiateAPIVersion(ctx)
-
-	/*
-		// Build the Docker image using the Dockerfile
-		buildCtx, err := os.Open(absPath)
-		if err != nil {
-			return err
-		}
-		defer buildCtx.Close()
-	*/
 
 	tar, err := archive.TarWithOptions(absPath, &archive.TarOptions{})
 	if err != nil {
@@ -153,36 +127,6 @@ func buildDockerImage(imageName, nodeJSFilesDir string) error {
 	fmt.Println("Docker image built successfully.")
 	return nil
 }
-
-// ...
-
-/*
-
-func runDockerContainer(imageName string) error {
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return err
-	}
-
-	// Create a container using the specified image
-	resp, err := cli.ContainerCreate(context.Background(), &container.Config{
-		Image: imageName,
-	}, &container.HostConfig{}, &network.NetworkingConfig{}, nil, "")
-	if err != nil {
-		return err
-	}
-
-	// Start the container
-	if err := cli.ContainerStart(context.Background(), resp.ID, types.ContainerStartOptions{}); err != nil {
-		return err
-	}
-
-	fmt.Println("Docker container started successfully.")
-	return nil
-}
-
-*/
 
 func runDockerContainer(imageName string) (string, error) {
 
@@ -264,35 +208,3 @@ func restartDockerContainer(imageName, containerID string) (string, error) {
 
 	return newContainerID, nil
 }
-
-/*
-
-func restartDockerContainer(imageName string) error {
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(client.FromEnv)
-	if err != nil {
-		return err
-	}
-
-	// Stop the container
-	err = cli.ContainerStop(context.Background(), "container-id", container.StopOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Remove the container
-	err = cli.ContainerRemove(context.Background(), "container-id", types.ContainerRemoveOptions{})
-	if err != nil {
-		return err
-	}
-
-	// Run the Docker container again
-	_, err = runDockerContainer(imageName)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-*/
