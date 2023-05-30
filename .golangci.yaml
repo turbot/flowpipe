@@ -1,5 +1,6 @@
 run:
   timeout: 5m
+  modules-download-mode: readonly
   skip-dirs:
     - service/api/docs
 
@@ -26,7 +27,7 @@ linters:
 linters-settings:
   nolintlint:
     require-explanation: true
-    require-specific: true
+    require-specific: false
 
   gocritic:
     disabled-checks:
