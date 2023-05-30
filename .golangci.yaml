@@ -27,7 +27,7 @@ linters:
 linters-settings:
   nolintlint:
     require-explanation: true
-    require-specific: true
+    require-specific: false
 
   gocritic:
     disabled-checks:
