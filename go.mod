@@ -2,6 +2,8 @@ module github.com/turbot/flowpipe
 
 go 1.19
 
+replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
+
 require (
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/didip/tollbooth/v7 v7.0.1
@@ -12,6 +14,7 @@ require (
 	github.com/hashicorp/raft v1.3.11
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.15.0
+	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/unrolled/secure v1.13.0
 )
 

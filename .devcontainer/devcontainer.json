@@ -7,7 +7,12 @@
 	
 	"name": "flowpipe-devcontainer",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "ghcr.io/turbot/flowpipe-devcontainer:latest"
+	"image": "ghcr.io/turbot/flowpipe-devcontainer:latest",
+
+	"mounts": [
+		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached"
+	]
+	
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

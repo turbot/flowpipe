@@ -172,6 +172,7 @@ func (api *APIService) Start() error {
 
 	service.RegisterPublicAPI(apiPrefixGroup)
 	api.PipelineRegisterAPI(apiPrefixGroup)
+	api.DocsRegisterAPI(apiPrefixGroup)
 
 	// Custom validators for our types
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {

@@ -12,4 +12,8 @@ RUN apt update \
 # otherwise the first go install will be as root and the /go/pkg directory will be owned by root!
 USER vscode
 
-RUN go install github.com/swaggo/swag/cmd/swag@v1.8.12
+RUN go install github.com/swaggo/swag/cmd/swag@v1.8.12 \
+    && cd ~ \
+    && mkdir openapi-generator \
+    && cd openapi-generator \
+    && wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/6.6.0/openapi-generator-cli-6.6.0.jar -O openapi-generator-cli.jar
