@@ -21,7 +21,7 @@ jobs:
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: '1.19'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
 
       - name: golangci-lint
@@ -30,4 +30,5 @@ jobs:
         with:
           version: latest
           args: --timeout=15m
-          # working-directory: flowpipe
+          working-directory: flowpipe
+          modules-download-mode: readonly
