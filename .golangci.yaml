@@ -1,7 +1,7 @@
 run:
   timeout: 5m
   skip-dirs:
-    - server_test
+    - service/api/docs
 
 linters:
   enable:
