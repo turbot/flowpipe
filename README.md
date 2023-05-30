@@ -1,6 +1,8 @@
 # Flowpipe
 
+## Developer Setup
 
+([Developer Setup](./docs/development-setup.md))
 
 ## Communication
 

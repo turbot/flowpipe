@@ -16,3 +16,7 @@
 1. In VS Code install `devcontainer` extension.
 
 1. Open `flowpipe` in `Dev Containers: Open Folder in Container...` option. It will automatically open in a dev container where the `flowpipe-sdk-go` directory automatically mounted in the correct file structure.
+
+1. In the terminal, run `go run . service start`
+
+1. Check that API server is running.
