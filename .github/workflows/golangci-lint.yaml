@@ -31,4 +31,3 @@ jobs:
           version: latest
           args: --timeout=15m
           working-directory: flowpipe
-          modules-download-mode: readonly

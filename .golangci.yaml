@@ -1,5 +1,6 @@
 run:
   timeout: 5m
+  modules-download-mode: readonly
   skip-dirs:
     - service/api/docs
 
