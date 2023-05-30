@@ -1,8 +1,11 @@
 name: "Lint: Flowpipe"
 on:
   push:
+    tags:
+      - v*  
     branches:
-      - "*"
+      - main
+      - "v*"
 jobs:
   golangci:
     name: lint
