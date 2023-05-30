@@ -10,11 +10,13 @@ jobs:
     steps:
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
-        path: flowpipe
+        with:
+          path: flowpipe
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v3
-        path: flowpipe-sdk-go
+        with:
+          path: flowpipe-sdk-go
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
