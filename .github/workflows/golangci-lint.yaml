@@ -2,7 +2,7 @@ name: "Lint: Flowpipe"
 on:
   push:
     branches:
-      - *
+      - "*"
 jobs:
   golangci:
     name: lint
