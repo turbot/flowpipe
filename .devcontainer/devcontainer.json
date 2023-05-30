@@ -9,6 +9,10 @@
 		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached"
 	],
 
+	// Automatically remove the container when it is stopped (docker rm <container-name>)
+	// not reliable: https://github.com/microsoft/vscode-remote-release/issues/3512
+	"runArgs": ["--rm"],
+
 	"customizations": {
 		// Configure properties specific to VS Code.
 		"vscode": {

@@ -6,13 +6,9 @@ import (
 	"github.com/turbot/flowpipe/cmd"
 	"github.com/turbot/flowpipe/config"
 	"github.com/turbot/flowpipe/fplog"
-
-	flowpipeapi "github.com/turbot/flowpipe-sdk-go"
 )
 
 func main() {
-
-	flowpipeapi.Hello("you")
 
 	// Create a single, global context for the application
 	ctx := context.Background()

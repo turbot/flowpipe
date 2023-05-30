@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/denisbrodbeck/machineid"
+	"github.com/turbot/flowpipe/constants"
 	"github.com/turbot/flowpipe/fperr"
 )
 
@@ -20,7 +21,7 @@ func NodeID(port string) (string, error) {
 	// on the same machine (e.g. in different terminals).
 	mpid := fmt.Sprintf("%s:%s", mid, port)
 	// Return a short unique ID for the machine/port combination
-	return Base36ID(mpid, ApplicationName(), 8)
+	return Base36ID(mpid, constants.ApplicationName(), 8)
 }
 
 // Base36IDPerMachine returns a base36 hash of the input string, using the
