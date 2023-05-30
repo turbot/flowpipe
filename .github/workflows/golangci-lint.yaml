@@ -16,6 +16,7 @@ jobs:
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v3
         with:
+          repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
 
       # this is required, check golangci-lint-action docs
@@ -30,4 +31,4 @@ jobs:
         with:
           version: latest
           args: --timeout=15m
-          working-directory: flowpipe-sdk-go
+          working-directory: flowpipe
