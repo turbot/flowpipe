@@ -30,4 +30,4 @@ jobs:
         with:
           version: latest
           args: --timeout=15m
-          working-directory: bar
+          working-directory: flowpipe-sdk-go
