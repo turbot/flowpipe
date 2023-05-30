@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/turbot/flowpipe/cmd/pipeline"
 	"github.com/turbot/flowpipe/cmd/service"
 	"github.com/turbot/flowpipe/config"
 	"github.com/turbot/flowpipe/constants"
@@ -48,6 +49,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		return nil, err
 	}
 	rootCmd.AddCommand(serviceCmd)
+
+	pipelineCmd, err := pipeline.PipelineCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rootCmd.AddCommand(pipelineCmd)
 
 	return rootCmd, nil
 }
