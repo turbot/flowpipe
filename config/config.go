@@ -397,7 +397,9 @@ func WithFlags() ConfigOption {
 		flag.StringVar(&c.CPUProfile, "cpu-profile", "", "Path to file for CPU profiling information")
 		flag.StringVar(&c.MemProfile, "mem-profile", "", "Path to file for memory profiling information")
 		flag.Usage = func() {
+			//nolint:forbidigo // TODO
 			fmt.Fprintf(os.Stderr, "\n%s\n\n", "Pipelines and workflows for DevSecOps.")
+			//nolint:forbidigo // TODO
 			fmt.Fprintf(os.Stderr, "Usage: %s [flags] <data directory>\n", "flowpipe")
 			flag.PrintDefaults()
 		}
@@ -451,8 +453,10 @@ func WithFlags() ConfigOption {
 
 func errorExit(code int, msg string) {
 	if code != 0 {
+		//nolint:forbidigo // TODO
 		fmt.Fprintf(os.Stderr, "fatal: ")
 	}
+	//nolint:forbidigo // TODO
 	fmt.Fprintf(os.Stderr, "%s\n", msg)
 	os.Exit(code)
 }

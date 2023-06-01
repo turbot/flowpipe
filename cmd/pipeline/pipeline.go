@@ -3,14 +3,14 @@ package pipeline
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/spf13/cobra"
 	openapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/config"
+	"github.com/turbot/flowpipe/fplog"
+	"github.com/turbot/flowpipe/printers"
 )
 
 func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
@@ -59,10 +59,14 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		apiClient := openapiclient.NewAPIClient(configuration)
 		resp, r, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error when calling `PipelineApi.List``: %v\n", err)
-			fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+			fplog.Logger(ctx).Error("Error when calling `PipelineApi.List`", "error", err, "httpResponse", r)
 		}
-		// response from `List`: ListPipelineResponse
-		fmt.Fprintf(os.Stdout, "Response from `PipelineApi.List`: %v\n", resp)
+
+		fplog.Logger(ctx).Info("Response from `PipelineApi.List`", "response", resp)
+
+		if resp != nil {
+			jsonPrinter := printers.JsonPrinter{}
+			jsonPrinter.PrintObj(ctx, resp, cmd.OutOrStdout())
+		}
 	}
 }

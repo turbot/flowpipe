@@ -145,6 +145,7 @@ func (st StackTrace) Format(s fmt.State, verb rune) {
 				f.Format(s, verb)
 			}
 		case s.Flag('#'):
+			//nolint:forbidigo // This is a special case
 			fmt.Fprintf(s, "%#v", []Frame(st))
 		default:
 			st.formatSlice(s, verb)
@@ -189,6 +190,7 @@ func (s *stack) Format(st fmt.State, verb rune) {
 		case st.Flag('+'):
 			for _, pc := range *s {
 				f := Frame(pc)
+				//nolint:forbidigo // This is a special case
 				fmt.Fprintf(st, "\n%+v", f)
 			}
 		}
