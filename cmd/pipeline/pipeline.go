@@ -7,10 +7,11 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
-	openapiclient "github.com/turbot/flowpipe-sdk-go"
+	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/config"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/printers"
+	"github.com/turbot/flowpipe/types"
 )
 
 func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
@@ -46,7 +47,7 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
-		configuration := openapiclient.NewConfiguration()
+		configuration := flowpipeapiclient.NewConfiguration()
 
 		c := config.Config(ctx)
 		tr := &http.Transport{
@@ -56,17 +57,26 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		configuration.Servers[0].URL = c.Viper.GetString("api.host") + ":" + strconv.Itoa(c.Viper.GetInt("api.port")) + "/api/v0"
 		configuration.HTTPClient = &http.Client{Transport: tr}
 
-		apiClient := openapiclient.NewAPIClient(configuration)
+		apiClient := flowpipeapiclient.NewAPIClient(configuration)
 		resp, r, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
 		if err != nil {
 			fplog.Logger(ctx).Error("Error when calling `PipelineApi.List`", "error", err, "httpResponse", r)
 		}
 
-		fplog.Logger(ctx).Info("Response from `PipelineApi.List`", "response", resp)
-
+		fplog.Logger(ctx).Debug("Pipeline list", "response", resp)
 		if resp != nil {
-			jsonPrinter := printers.JsonPrinter{}
-			jsonPrinter.PrintObj(ctx, resp, cmd.OutOrStdout())
+			printer := printers.GetPrinter(cmd)
+
+			printableResource := types.PrintablePipeline{}
+			printableResource.Items, err = printableResource.Transform(resp)
+			if err != nil {
+				fplog.Logger(ctx).Error("Error when transforming", "error", err)
+			}
+
+			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				fplog.Logger(ctx).Error("Error when printing", "error", err)
+			}
 		}
 	}
 }

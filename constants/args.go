@@ -1,7 +1,8 @@
 package constants
 
 const (
-	ApiHost     = "api-host"
-	ApiPort     = "api-port"
-	TlsInsecure = "insecure"
+	CmdOptionApiHost     = "api-host"
+	CmdOptionApiPort     = "api-port"
+	CmdOptionTlsInsecure = "insecure"
+	CmdOptionsOutput     = "output"
 )

@@ -1,5 +1,12 @@
 package types
 
+import (
+	"fmt"
+
+	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/fperr"
+)
+
 type Input map[string]interface{}
 
 // Output is the output from a pipeline.
@@ -19,8 +26,49 @@ type Pipeline struct {
 	Output   string                   `json:"output,omitempty"`
 }
 
-func (p *Pipeline) GetType() string {
-	return "pipeline"
+type PrintablePipeline struct {
+	Items interface{}
+}
+
+func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
+
+	apiResourceType := r.GetResourceType()
+	if apiResourceType != "ListPipelineResponse" {
+		return nil, fperr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
+	}
+
+	lp, ok := r.(*flowpipeapiclient.ListPipelineResponse)
+	if !ok {
+		return nil, fperr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListPipelineResponse")
+	}
+
+	return lp.Items, nil
+}
+
+func (p PrintablePipeline) GetItems() interface{} {
+	return p.Items
+}
+
+func (p PrintablePipeline) GetTable() (Table, error) {
+	lp, ok := p.Items.([]flowpipeapiclient.Pipeline)
+
+	if !ok {
+		return Table{}, fperr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Pipeline")
+	}
+
+	var tableRows []TableRow
+	for _, item := range lp {
+		cells := []string{
+			fmt.Sprint(*item.Type),
+			fmt.Sprint(*item.Name),
+			fmt.Sprint(*item.Parallel),
+		}
+		tableRows = append(tableRows, TableRow{Cells: cells})
+	}
+
+	return Table{
+		Rows: tableRows,
+	}, nil
 }
 
 type PipelineStep struct {
@@ -35,12 +83,4 @@ type PipelineStep struct {
 type ListPipelineResponse struct {
 	Items     []Pipeline `json:"items"`
 	NextToken *string    `json:"next_token,omitempty"`
-}
-
-func (l *ListPipelineResponse) Transform() *ListPipelineResponse {
-	resources := []FlowpipeResource{}
-	for _, item := range l.Items {
-		resources = append(resources, item)
-	}
-	return resources
 }

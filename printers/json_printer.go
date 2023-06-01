@@ -2,20 +2,24 @@ package printers
 
 import (
 	"context"
-	"fmt"
 	"io"
 
-	"github.com/turbot/flowpipe/types"
-
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/turbot/flowpipe/types"
 )
 
 type JsonPrinter struct {
 }
 
-func (h *JsonPrinter) PrintObj(ctx context.Context, resource types.FlowpipeResources, writer io.Writer) error {
-	s, _ := prettyjson.Marshal(resource)
-	fmt.Println(string(s))
+func (p JsonPrinter) PrintResource(ctx context.Context, r types.PrintableResource, writer io.Writer) error {
+	s, err := prettyjson.Marshal(r.GetItems())
+	if err != nil {
+		return err
+	}
+	_, err = writer.Write(s)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

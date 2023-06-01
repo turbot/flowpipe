@@ -4,6 +4,8 @@ import (
 	"context"
 	"io"
 
+	"github.com/spf13/cobra"
+	"github.com/turbot/flowpipe/constants"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -11,6 +13,23 @@ import (
 //
 // ResourcePrinter is an interface that knows how to print runtime objects.
 type ResourcePrinter interface {
-	// PrintObj receives a runtime object, formats it and prints it to a writer.
-	PrintResource(context.Context, types.FlowpipeResources, io.Writer) error
+	// PrintResource receives a runtime object, formats it and prints it to a writer.
+	PrintResource(context.Context, types.PrintableResource, io.Writer) error
+}
+
+func GetPrinter(cmd *cobra.Command) ResourcePrinter {
+
+	format := cmd.Flags().Lookup(constants.CmdOptionsOutput).Value.String()
+
+	switch format {
+	case "table":
+		return TablePrinter{
+			Delegate: HumanReadableTablePrinter{},
+		}
+	case "json":
+		return JsonPrinter{}
+	case "yaml":
+		return JsonPrinter{}
+	}
+	return nil
 }

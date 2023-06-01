@@ -44,7 +44,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 		Items: []types.Pipeline{},
 	}
 
-	result.Items = append(result.Items, types.Pipeline{Type: "pipeline_sleep"}, types.Pipeline{Type: "pipeline_hello"})
+	result.Items = append(result.Items, types.Pipeline{Type: "pipeline_sleep", Name: "Foo"}, types.Pipeline{Type: "pipeline_hello", Name: "Bar"})
 
 	c.JSON(http.StatusOK, result)
 }
