@@ -28,3 +28,5 @@
 # Dist directory is created by goreleaser
 dist/
 
+
+dist/

@@ -7,15 +7,20 @@ replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
 require (
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/didip/tollbooth/v7 v7.0.1
+	github.com/fatih/color v1.15.0
 	github.com/getkin/kin-openapi v0.117.0
 	github.com/gin-contrib/size v0.0.0-20230212012657-e14a14094dc4
 	github.com/gin-contrib/zap v0.1.0
 	github.com/go-playground/validator/v10 v10.11.2
+	github.com/goccy/go-yaml v1.11.0
 	github.com/hashicorp/raft v1.3.11
+	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
+	github.com/thediveo/enumflag/v2 v2.0.3
 	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/unrolled/secure v1.13.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -27,7 +32,6 @@ require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/bytedance/sonic v1.8.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
@@ -37,14 +41,12 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
-	github.com/goccy/go-yaml v1.11.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/hashicorp/go-hclog v1.4.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f // indirect
 	github.com/invopop/yaml v0.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -58,7 +60,6 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	github.com/thediveo/enumflag/v2 v2.0.3 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
@@ -74,7 +75,6 @@ require (
 	golang.org/x/tools v0.9.1 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
