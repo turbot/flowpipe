@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -41,7 +41,7 @@ func handleHookRequest(c *gin.Context) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(c.Request.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read request body"})
 		return
@@ -55,7 +55,7 @@ func handleHookRequest(c *gin.Context) {
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := ioutil.ReadAll(resp.Body)
+	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read lambda response"})
 		return
@@ -192,7 +192,7 @@ func pullImage(cli *client.Client, imageName string) error {
 	}
 
 	defer resp.Close()
-	_, err = ioutil.ReadAll(resp)
+	_, err = io.ReadAll(resp)
 	if err != nil {
 		return err
 	}
