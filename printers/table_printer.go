@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"text/tabwriter"
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/types"
@@ -40,12 +41,40 @@ func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items type
 		return fperr.BadRequestWithMessage("not a table")
 	}
 
-	for _, r := range table.Rows {
-		for _, c := range r.Cells {
-			fmt.Print(c)
-			fmt.Print(" ")
+	// Create a tabwriter
+	w := tabwriter.NewWriter(writer, 1, 1, 4, ' ', tabwriter.TabIndent)
+
+	// Print the table headers
+	var tableHeaders string
+	var tableFormatter string
+	for i, c := range table.Columns {
+		if i > 0 {
+			tableHeaders += "\t"
+			tableFormatter += "\t"
 		}
-		fmt.Println()
+		tableHeaders += c.Name
+		tableFormatter += c.Formatter()
 	}
+	tableHeaders += "\n"
+	tableFormatter += "\n"
+
+	//nolint:forbidigo // this is how the tabwriter works
+	_, err := fmt.Fprint(w, tableHeaders)
+	if err != nil {
+		return err
+	}
+
+	// Print each struct in the array as a row in the table
+	for _, r := range table.Rows {
+		//nolint:forbidigo // this is how the tabwriter works
+		_, err := fmt.Fprintf(w, tableFormatter, r.Cells...)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Flush and display the table
+	w.Flush()
+
 	return nil
 }

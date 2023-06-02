@@ -29,7 +29,7 @@ func GetPrinter(cmd *cobra.Command) ResourcePrinter {
 	case "json":
 		return JsonPrinter{}
 	case "yaml":
-		return JsonPrinter{}
+		return YamlPrinter{}
 	}
 	return nil
 }

@@ -1,8 +1,6 @@
 package types
 
 import (
-	"fmt"
-
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/fperr"
 )
@@ -58,17 +56,38 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 
 	var tableRows []TableRow
 	for _, item := range lp {
-		cells := []string{
-			fmt.Sprint(*item.Type),
-			fmt.Sprint(*item.Name),
-			fmt.Sprint(*item.Parallel),
+		cells := []interface{}{
+			*item.Type,
+			*item.Name,
+			*item.Parallel,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
 	return Table{
-		Rows: tableRows,
+		Rows:    tableRows,
+		Columns: p.GetColumns(),
 	}, nil
+}
+
+func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
+	return []TableColumnDefinition{
+		{
+			Name:        "TYPE",
+			Type:        "string",
+			Description: "The type of the pipeline",
+		},
+		{
+			Name:        "NAME",
+			Type:        "string",
+			Description: "The name of the pipeline",
+		},
+		{
+			Name:        "PARALLEL",
+			Type:        "boolean",
+			Description: "Whether the pipeline is parallel",
+		},
+	}
 }
 
 type PipelineStep struct {
