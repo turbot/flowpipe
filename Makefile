@@ -4,3 +4,6 @@ run:
 build-open-api:
 	rm -rf service/api/docs
 	./generate-open-api.sh
+
+release-local:
+	goreleaser release --snapshot --clean
