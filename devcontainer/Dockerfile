@@ -6,7 +6,7 @@ RUN apt update \
     && wget https://dlcdn.apache.org/maven/maven-3/3.9.2/binaries/apache-maven-3.9.2-bin.tar.gz \
     && tar xvfz apache-maven-3.9.2-bin.tar.gz \
     && mv apache-maven-3.9.2 /usr/local/bin/ \
-    && echo "export PATH=/usr/local/bin/apache-maven-3.9.2/bin:$PATH" >> /home/vscode/.profile \
+    && echo "export PATH=/usr/local/bin/apache-maven-3.9.2/bin:$PATH" >> /home/vscode/.profile
     
 # IMPORTANT to switch the user before running go install
 # otherwise the first go install will be as root and the /go/pkg directory will be owned by root!
@@ -19,9 +19,3 @@ RUN go install github.com/swaggo/swag/cmd/swag@v1.8.12 \
     && cd openapi-generator \
     && wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/6.6.0/openapi-generator-cli-6.6.0.jar -O openapi-generator-cli.jar
 
-USER root
-
-RUN cd /go \
-    && chown -R vscode:vscode pkg
-
-USER vscode
