@@ -174,6 +174,7 @@ func (api *APIService) Start() error {
 	api.PipelineRegisterAPI(apiPrefixGroup)
 	api.TriggerRegisterAPI(apiPrefixGroup)
 	api.VariableRegisterAPI(apiPrefixGroup)
+	api.ProcessRegisterAPI(apiPrefixGroup)
 	api.DocsRegisterAPI(apiPrefixGroup)
 
 	// Custom validators for our types

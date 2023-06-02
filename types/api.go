@@ -21,3 +21,7 @@ type TriggerRequestURI struct {
 type VariableRequestURI struct {
 	VariableName string `uri:"variable_name" binding:"required" format:"^[a-z]{0,32}$"`
 }
+
+type ProcessRequestURI struct {
+	ProcessId string `uri:"process_id" binding:"required" format:"^p_[0-9a-v]{20}$"`
+}
