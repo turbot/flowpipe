@@ -5,7 +5,7 @@ exports.handler = async (event, context) => {
   const response = {
     statusCode: 200,
     body: {
-      message: `Hi, World! The current time is ${currentTime}`,
+      message: `Hola, World! The current time is ${currentTime}`,
       event,
       context
     },

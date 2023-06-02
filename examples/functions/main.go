@@ -13,12 +13,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
+	"github.com/pkg/errors"
 	"github.com/radovskyb/watcher"
 	"gopkg.in/yaml.v2"
 )
@@ -285,25 +287,52 @@ func buildDockerImage(imageName string, fnConfig FunctionConfig) error {
 		return err
 	}
 
-	tar, err := archive.TarWithOptions(fnConfig.AbsolutePath, &archive.TarOptions{})
+	// Tar up the function code for use in the build
+	buildCtx, err := archive.TarWithOptions(fnConfig.AbsolutePath, &archive.TarOptions{})
 	if err != nil {
 		return err
 	}
-	defer tar.Close()
+	defer buildCtx.Close()
+
+	// Our Dockerfile is runtime specific and stored outside the user-defined function
+	// code.
+	dockerfilePath := fmt.Sprintf("./runtimes/%s/Dockerfile", fnConfig.Runtime)
+	dockerfileCtx, err := os.Open(dockerfilePath)
+	if err != nil {
+		return errors.Errorf("unable to open Dockerfile: %v", err)
+	}
+	defer dockerfileCtx.Close()
+
+	// Add our Dockerfile to the build context (tar stream) that contains the user-defined
+	// function code. The dockerfile gets a unique name, e.g. .dockerfile.64cf467fe12e4c96de83
+	buildCtx, relDockerfile, err := build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
+	if err != nil {
+		return err
+	}
 
 	buildOptions := types.ImageBuildOptions{
-		Tags:           []string{imageName},
-		Dockerfile:     "Dockerfile",
+		Tags: []string{imageName},
+		//Dockerfile:     fmt.Sprintf("/Users/nathan/src/flowpipe/examples/functions/runtimes/%s/Dockerfile", fnConfig.Runtime),
+		// The Dockerfile is relative to the build context. Basically, it's the
+		// unique name for the file that we added to the build context above.
+		Dockerfile:     relDockerfile,
 		SuppressOutput: false,
 		Remove:         true,
+		// This will update the FROM image in the Dockerfile to the latest
+		// version.
+		// TODO - only do this occasionally, e.g. once a day, for faster
+		// performance during development.
+		PullParent: true,
 		Labels: map[string]string{
 			"io.flowpipe.image.type":           "function",
-			"io.flowpipe.image.runtime":        "nodejs:18",
+			"io.flowpipe.image.runtime":        fnConfig.Runtime,
 			"org.opencontainers.image.created": time.Now().Format(time.RFC3339),
 		},
 	}
 
-	resp, err := cli.ImageBuild(ctx, tar, buildOptions)
+	fmt.Println(buildOptions.Dockerfile)
+
+	resp, err := cli.ImageBuild(ctx, buildCtx, buildOptions)
 	if err != nil {
 		return err
 	}

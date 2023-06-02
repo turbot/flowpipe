@@ -1,11 +1,11 @@
 functions:
   hello-js:
-    #runtime: go1.x
+    runtime: nodejs:18
     src: ./lambda-nodejs
     env:
       AWS_ACCESS_KEY_ID: 1234
   hello-python:
-    #runtime: go1.x
+    runtime: python:3.10
     src: ./lambda-python
 containers:
   awstest:
