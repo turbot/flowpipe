@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -210,46 +211,13 @@ func main() {
 		config.Functions[fnName] = fnConfig
 	}
 
+	debouncer := NewDebouncer()
+
 	go func() {
 		for {
 			select {
 			case event := <-w.Event:
-				fmt.Printf("Detected file change: %v\n", event)
-				if event.IsDir() && event.Op == watcher.Write {
-					// Directory write events happen when there is any change to the files
-					// or directories inside a directory. They are just noise and can be
-					// safely ignored - especially since the event for the actual change
-					// will be raised anyway.
-					continue
-				}
-				for fnName, fnConfig := range config.Functions {
-					fmt.Printf("Did this fn change? %s\n", fnName)
-					eventMatchesFn, err := isSubPath(fnConfig.AbsolutePath, event.Path)
-					if err != nil {
-						log.Printf("Failed to check if event path is a subpath of function path: %v", err)
-						continue
-					}
-					if eventMatchesFn {
-						fmt.Printf("Yes, fn changed: %s\n", fnName)
-						fnConfig.SetUpdatedAt()
-						if err := buildDockerImage(fnConfig.GetImageName(), fnConfig); err != nil {
-							log.Printf("Failed to rebuild Docker image: %v", err)
-						} else {
-							fmt.Println("Docker image rebuilt successfully. Restarting containers...")
-							newIDs := []string{}
-							for _, containerID := range fnConfig.ContainerIDs {
-								if newID, err := restartDockerContainer(fnConfig, containerID); err != nil {
-									log.Printf("Failed to restart Docker container: %v", err)
-								} else {
-									fmt.Println("Docker container restarted successfully.")
-									newIDs = append(newIDs, newID)
-								}
-							}
-							fnConfig.ContainerIDs = newIDs
-							config.Functions[fnName] = fnConfig
-						}
-					}
-				}
+				go debouncer.HandleEvent(event)
 			case err := <-w.Error:
 				log.Printf("File watcher error: %v", err)
 			case <-w.Closed:
@@ -471,4 +439,119 @@ func isSubPath(basePath, subPath string) (bool, error) {
 
 func quoteEnvVar(s string) string {
 	return strconv.Quote(s)
+}
+
+type Event struct {
+	Directory string
+	File      string
+}
+
+type Debouncer struct {
+	mu         sync.Mutex
+	queue      map[string]chan struct{}
+	processing map[string]bool
+	timers     map[string]*time.Timer
+}
+
+func NewDebouncer() *Debouncer {
+	return &Debouncer{
+		queue:      make(map[string]chan struct{}),
+		processing: make(map[string]bool),
+		timers:     make(map[string]*time.Timer),
+	}
+}
+
+func (d *Debouncer) HandleEvent(event watcher.Event) error {
+
+	fmt.Printf("Handle event:", event)
+	if event.IsDir() && event.Op == watcher.Write {
+		// Directory write events happen when there is any change to the files
+		// or directories inside a directory. They are just noise and can be
+		// safely ignored - especially since the event for the actual change
+		// will be raised anyway.
+		return nil
+	}
+
+	var eventFn FunctionConfig
+
+	for _, fnConfig := range config.Functions {
+		eventMatchesFn, err := isSubPath(fnConfig.AbsolutePath, event.Path)
+		if err != nil {
+			log.Printf("Failed to check if event path is a subpath of function path: %v", err)
+			continue
+		}
+		if eventMatchesFn {
+			eventFn = fnConfig
+			break
+		}
+	}
+
+	if eventFn.Name == "" {
+		log.Printf("No function found for event path: %s", event.Path)
+		return nil
+	}
+
+	debounceDuration := 250 * time.Millisecond
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	// Check if the directory is already being processed
+	if d.processing[eventFn.AbsolutePath] {
+		// If it is, discard any previously queued events
+		if _, ok := d.queue[eventFn.AbsolutePath]; !ok {
+			d.queue[eventFn.AbsolutePath] = make(chan struct{}, 1)
+		} else {
+			select {
+			case <-d.queue[eventFn.AbsolutePath]:
+			default:
+			}
+		}
+	} else {
+		// Mark the directory as being processed
+		d.processing[eventFn.AbsolutePath] = true
+
+		// Start the timer for the directory
+		d.timers[eventFn.AbsolutePath] = time.AfterFunc(debounceDuration, func() {
+			fmt.Printf("Processing event: %s/%s\n", eventFn.AbsolutePath, event.Path)
+			d.ProcessEvent(eventFn, event)
+		})
+	}
+
+	fmt.Printf("Event handled: %s/%s\n", eventFn.AbsolutePath, event.Path)
+
+	return nil
+}
+
+func (d *Debouncer) ProcessEvent(eventFn FunctionConfig, event watcher.Event) error {
+
+	fmt.Println("Process event:", event)
+
+	eventFn.SetUpdatedAt()
+	if err := buildDockerImage(eventFn.GetImageName(), eventFn); err != nil {
+		log.Printf("Failed to rebuild Docker image: %v", err)
+		return err
+	} else {
+		fmt.Println("Docker image rebuilt successfully. Restarting containers...")
+		newIDs := []string{}
+		for _, containerID := range eventFn.ContainerIDs {
+			if newID, err := restartDockerContainer(eventFn, containerID); err != nil {
+				log.Printf("Failed to restart Docker container: %v", err)
+				return err
+			} else {
+				fmt.Println("Docker container restarted successfully.")
+				newIDs = append(newIDs, newID)
+			}
+		}
+		eventFn.ContainerIDs = newIDs
+		config.Functions[eventFn.Name] = eventFn
+	}
+
+	d.mu.Lock()
+	delete(d.processing, eventFn.AbsolutePath)
+	d.mu.Unlock()
+
+	fmt.Printf("Event processed: %s/%s\n", eventFn.AbsolutePath, event.Path)
+
+	return nil
 }
