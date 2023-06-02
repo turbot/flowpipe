@@ -1,6 +1,6 @@
 import requests
 
-def handler(event, context):
+def my_handler(event, context):
     response = requests.get("https://api.spacexdata.com/v4/launches/upcoming?limit=5")
     launches = response.json()
 

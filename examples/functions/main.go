@@ -28,6 +28,7 @@ import (
 type FunctionConfig struct {
 	Name    string            `mapstructure:"name"`
 	Runtime string            `mapstructure:"runtime"`
+	Handler string            `mapstructure:"handler"`
 	Src     string            `mapstructure:"src"`
 	Env     map[string]string `mapstructure:"env"`
 
@@ -367,8 +368,7 @@ func runDockerContainer(fnConfig FunctionConfig) (string, error) {
 	// But allow any port to be allocated
 	hostPort := "0"
 
-	// Create a container using the specified image
-	resp, err := cli.ContainerCreate(ctx, &container.Config{
+	containerConfig := &container.Config{
 		Image: fnConfig.GetImageName(),
 		ExposedPorts: nat.PortSet{
 			"8080/tcp": struct{}{},
@@ -378,11 +378,20 @@ func runDockerContainer(fnConfig FunctionConfig) (string, error) {
 			"org.opencontainers.container.created": time.Now().Format(time.RFC3339),
 		},
 		Env: fnConfig.GetEnv(),
-	}, &container.HostConfig{
+	}
+	if fnConfig.Handler != "" {
+		// Override the Cmd if they have specified a custom handler location
+		containerConfig.Cmd = []string{fnConfig.Handler}
+	}
+
+	containerHostConfig := &container.HostConfig{
 		PortBindings: nat.PortMap{
 			"8080/tcp": []nat.PortBinding{{HostIP: hostIP, HostPort: hostPort}},
 		},
-	}, &network.NetworkingConfig{}, nil, "")
+	}
+
+	// Create a container using the specified image
+	resp, err := cli.ContainerCreate(ctx, containerConfig, containerHostConfig, &network.NetworkingConfig{}, nil, "")
 	if err != nil {
 		return "", err
 	}
