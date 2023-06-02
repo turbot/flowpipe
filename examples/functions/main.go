@@ -22,6 +22,7 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
 	"github.com/radovskyb/watcher"
+	"github.com/turbot/flowpipe-functions/docker"
 	"gopkg.in/yaml.v2"
 )
 
@@ -85,6 +86,13 @@ var config AppConfig
 
 func main() {
 
+	ctx := context.Background()
+
+	dc, err := docker.New(docker.WithContext(ctx), docker.WithPingTest())
+	if err != nil {
+		log.Fatalf("Failed to connect to Docker: %v", err)
+	}
+
 	// Create a channel to receive OS signals
 	sigCh := make(chan os.Signal, 1)
 
@@ -96,14 +104,10 @@ func main() {
 		// Wait for the signal
 		<-sigCh
 
-		// Delete any containers & images related to flowpipe
-		err := deleteContainersByLabel("io.flowpipe.image.type")
+		// Cleanup docker artifacts
+		err := dc.CleanupArtifacts()
 		if err != nil {
-			log.Fatalf("Failed to cleanup flowpipe containers: %v", err)
-		}
-		err = deleteImagesByLabel("io.flowpipe.image.type")
-		if err != nil {
-			log.Fatalf("Failed to cleanup flowpipe images: %v", err)
+			log.Fatalf("Failed to cleanup flowpipe docker artifacts: %v", err)
 		}
 
 		// Exit the program
@@ -463,75 +467,6 @@ func isSubPath(basePath, subPath string) (bool, error) {
 	}
 	fmt.Printf("relPath: %s + %s = %s\n", basePath, subPath, relPath)
 	return len(relPath) > 0 && !strings.HasPrefix(relPath, ".."), nil
-}
-
-func deleteContainersByLabel(labelKey string) error {
-
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		return err
-	}
-
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		return fmt.Errorf("failed to list containers: %s", err)
-	}
-
-	for _, container := range containers {
-		if container.Labels[labelKey] != "" {
-			err = cli.ContainerRemove(context.Background(), container.ID, types.ContainerRemoveOptions{Force: true})
-			if err != nil {
-				log.Printf("failed to remove container %s: %s\n", container.ID, err)
-			} else {
-				log.Printf("container %s deleted\n", container.ID)
-			}
-		}
-	}
-
-	return nil
-}
-
-func deleteImagesByLabel(labelKey string) error {
-
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		return err
-	}
-
-	images, err := cli.ImageList(context.Background(), types.ImageListOptions{})
-	if err != nil {
-		return fmt.Errorf("failed to list images: %s", err)
-	}
-
-	for _, image := range images {
-		if image.Labels[labelKey] != "" {
-			imgRemoveOpts := types.ImageRemoveOptions{
-				Force: true,
-				// Prevent dangling images from being left around, but this means we have
-				// to rebuild parts of the basic image on each startup (e.g. pip
-				// install, npm install).
-				// TODO - find some way to support this, but also to keep it
-				// fast(er) by default
-				// PruneChildren: true,
-			}
-			_, err = cli.ImageRemove(context.Background(), image.ID, imgRemoveOpts)
-			if err != nil {
-				log.Printf("failed to remove image %s: %s\n", image.ID, err)
-			} else {
-				log.Printf("image %s deleted\n", image.ID)
-			}
-		}
-	}
-
-	return nil
 }
 
 func quoteEnvVar(s string) string {

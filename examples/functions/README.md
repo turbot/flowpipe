@@ -29,6 +29,15 @@ curl -XPOST "http://localhost:9001/2015-03-31/functions/function/invocations" -d
 curl -XPOST "http://localhost:9002/2015-03-31/functions/function/invocations" -d '{"name":"steve2"}'
 ```
 
+## Reading
+
+Great:
+* https://www.bschaatsbergen.com/behind-the-scenes-lambda/
+* https://www.sosnowski.dev/post/anatomy-of-aws-lambda#what-s-under-the-hood-
+
+Also helpful:
+* https://www.dynatrace.com/news/blog/a-look-behind-the-scenes-of-aws-lambda-and-our-new-lambda-monitoring-extension/
+
 ## Architecture
 
 Services:
