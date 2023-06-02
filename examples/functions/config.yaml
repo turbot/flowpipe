@@ -1,0 +1,19 @@
+functions:
+  hello-js:
+    #runtime: go1.x
+    src: ./lambda-nodejs
+    env:
+      AWS_ACCESS_KEY_ID: 1234
+  hello-python:
+    #runtime: go1.x
+    src: ./lambda-python
+containers:
+  awstest:
+    image: amazon/aws-cli
+    #cmd: ["iam", "delete-access-key", "--user-name", "nathan", "--access-key-id", "AKIAfakekey", "--output", "text"]
+    #cmd: ["s3", "ls", "--output", "json"]
+    cmd: ["ec2", "describe-vpcs", "--output", "json"]
+    env:
+      AWS_REGION: us-east-2
+      AWS_ACCESS_KEY_ID: AKIAZGW7IOFILSLPDV6I
+      AWS_SECRET_ACCESS_KEY: 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
