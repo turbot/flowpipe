@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -70,7 +71,11 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output
 
 	var bodyJSON interface{}
 	// Just ignore errors
-	json.Unmarshal(body, &bodyJSON)
+	err = json.Unmarshal(body, &bodyJSON)
+	if err != nil {
+		fplog.Logger(ctx).Error("error unmarshalling body: %s", err)
+		return nil, err
+	}
 
 	output := &types.Output{
 		"status":      resp.Status,

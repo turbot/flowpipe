@@ -35,6 +35,7 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	// Already validated
 	duration, _ := time.ParseDuration(durationString)
 
+	//nolint:forbidigo // just a test, justified use of fmt.Println()
 	fmt.Println("Sleeping for ", duration, "...")
 	start := time.Now().UTC()
 	time.Sleep(duration)

@@ -1,5 +1,7 @@
 package event
 
+import "log"
+
 type PipelineFailed struct {
 	// Event metadata
 	Event *Event `json:"event"`
@@ -20,7 +22,10 @@ func NewPipelineFailed(opts ...PipelineFailedOption) *PipelineFailed {
 	e := &PipelineFailed{}
 	// Set options
 	for _, opt := range opts {
-		opt(e)
+		err := opt(e)
+		if err != nil {
+			log.Fatalf("error creating pipeline failed event: %v", err)
+		}
 	}
 	return e
 }

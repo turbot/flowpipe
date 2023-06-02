@@ -2,9 +2,9 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/turbot/flowpipe/es/event"
+	"github.com/turbot/flowpipe/fplog"
 )
 
 type PipelineCanceled EventHandler
@@ -19,6 +19,6 @@ func (PipelineCanceled) NewEvent() interface{} {
 
 func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 	e := ei.(*event.PipelineCanceled)
-	fmt.Println("pipeline_canceled", e)
+	fplog.Logger(ctx).Info("pipeline_canceled", "error", e)
 	return nil
 }

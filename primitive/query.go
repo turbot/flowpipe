@@ -8,6 +8,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -37,10 +38,12 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, erro
 
 	start := time.Now().UTC()
 	rows, err := db.Queryx(sql)
-	finish := time.Now().UTC()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
+	finish := time.Now().UTC()
 	for rows.Next() {
 		row := make(map[string]interface{})
 		err = rows.MapScan(row)
@@ -53,7 +56,11 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, erro
 			switch ba := encoded.(type) {
 			case []byte:
 				var col interface{}
-				json.Unmarshal(ba, &col)
+				err := json.Unmarshal(ba, &col)
+				if err != nil {
+					fplog.Logger(ctx).Error("error unmarshalling jsonb column %s: %v", k, err)
+					return nil, err
+				}
 				row[k] = col
 			}
 		}

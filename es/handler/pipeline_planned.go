@@ -10,6 +10,7 @@ import (
 
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -211,11 +212,18 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			go func(stepName string, input types.Input, forEach *types.Input) {
 				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input, forEach))
 				if err != nil {
-					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					if err != nil {
+						fplog.Logger(ctx).Error("Error publishing event", "error", err)
+					}
+
 					return
 				}
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
-					h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					if err != nil {
+						fplog.Logger(ctx).Error("Error publishing event", "error", err)
+					}
 					return
 				}
 			}(stepName, input, forEaches[i])

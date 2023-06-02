@@ -395,7 +395,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 
 	stepExecutions := ex.PipelineStepExecutions(pe.ID, sd.Name)
 
-	if len(stepExecutions) <= 0 {
+	if len(stepExecutions) == 0 {
 
 		// The step has no actual executions, so should just show a "skipped"
 		// style of node as a placeholder.

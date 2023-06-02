@@ -27,6 +27,7 @@ func (e *Exec) Run(ctx context.Context, input types.Input) (*types.Output, error
 
 	// TODO - support arguments per https://www.terraform.io/language/resources/provisioners/local-exec#argument-reference
 
+	//nolint:gosec // TODO G204: Subprocess launched with a potential tainted input or cmd arguments (gosec)
 	cmd := exec.Command("sh", "-c", input["command"].(string))
 
 	// Capture stdout in real-time
