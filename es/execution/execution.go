@@ -160,7 +160,7 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 
 // LogFilePath returns the path to the log file for the execution.
 func (ex *Execution) LogFilePath() (string, error) {
-	cfg := config.Config(ex.Context)
+	cfg := config.GetConfigFromContext(ex.Context)
 	filename := fmt.Sprintf("%s.jsonl", ex.ID)
 	p := filepath.Join(cfg.LogDir, filename)
 	return filepath.Abs(p)

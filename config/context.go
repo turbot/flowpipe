@@ -27,6 +27,6 @@ func ContextWithConfig(ctx context.Context) (context.Context, error) {
 	return context.WithValue(ctx, configContextKey{}, cfg), nil
 }
 
-func Config(ctx context.Context) *Configuration {
+func GetConfigFromContext(ctx context.Context) *Configuration {
 	return ctx.Value(configContextKey{}).(*Configuration)
 }

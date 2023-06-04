@@ -28,7 +28,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		Long:    constants.LongDescription,
 		Version: constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			c := config.Config(ctx)
+			c := config.GetConfigFromContext(ctx)
 			// Initialize Viper once we start running the command. That means we've
 			// got all the flags and can use them to override config values. In
 			// particular, we need to know the --config-path (if any) before we
@@ -38,7 +38,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
 
-	c := config.Config(ctx)
+	c := config.GetConfigFromContext(ctx)
 
 	// Command flags
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")

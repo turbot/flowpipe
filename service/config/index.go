@@ -12,7 +12,7 @@ import (
 	"github.com/turbot/flowpipe/service/api/common"
 )
 
-func Initialize(_ context.Context) {
+func Initialize(ctx context.Context) {
 
 	//
 	// DEFAULTS
@@ -114,5 +114,4 @@ func Initialize(_ context.Context) {
 
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
-
 }

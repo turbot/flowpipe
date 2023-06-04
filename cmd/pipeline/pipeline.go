@@ -49,7 +49,7 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 
 		configuration := flowpipeapiclient.NewConfiguration()
 
-		c := config.Config(ctx)
+		c := config.GetConfigFromContext(ctx)
 		tr := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: c.Viper.GetBool("api.tls_insecure")}, //nolint:gosec // user defined
 		}
