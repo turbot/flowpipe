@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
 
 	"github.com/turbot/flowpipe/cmd/pipeline"
@@ -28,12 +29,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		Long:    constants.LongDescription,
 		Version: constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			c := config.GetConfigFromContext(ctx)
-			// Initialize Viper once we start running the command. That means we've
-			// got all the flags and can use them to override config values. In
-			// particular, we need to know the --config-path (if any) before we
-			// can initialize Viper.
-			return c.InitializeViper()
+			return nil
 		},
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
@@ -53,17 +49,17 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		constants.CmdOptionsOutput,
 		"Output format; one of: table, yaml, json")
 
-	err := c.Viper.BindPFlag("api.host", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiHost))
+	err := viper.BindPFlag("api.host", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiHost))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = c.Viper.BindPFlag("api.port", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiPort))
+	err = viper.BindPFlag("api.port", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiPort))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = c.Viper.BindPFlag("api.tls_insecure", rootCmd.PersistentFlags().Lookup(constants.CmdOptionTlsInsecure))
+	err = viper.BindPFlag("api.tls_insecure", rootCmd.PersistentFlags().Lookup(constants.CmdOptionTlsInsecure))
 	if err != nil {
 		log.Fatal(err)
 	}

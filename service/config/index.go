@@ -21,18 +21,11 @@ func Initialize(ctx context.Context) {
 	// Set to debug or release - default to debug and envs override this to release as required
 	viper.SetDefault("environment", "debug")
 
-	viper.SetDefault("url.base", "https://localhost:3000")
-
 	viper.SetDefault("web.http.port", 7102)
 	viper.SetDefault("web.https.port", 7103)
 
 	// Set to single or cluster - default to cluster and envs override this to single as required
 	viper.SetDefault("redis.mode", "redis")
-
-	// Analytics
-	viper.SetDefault("api.analytics.heap.app_id", "2186332868")
-
-	viper.SetDefault("api.admin.user_limit", 1000)
 
 	// Rate limiting defaults to an initial/max balance of 100, refilling
 	// at 10 per second.

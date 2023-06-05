@@ -5,7 +5,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
-	"github.com/turbot/flowpipe/config"
+	"github.com/spf13/viper"
 	serviceConfig "github.com/turbot/flowpipe/service/config"
 	"github.com/turbot/flowpipe/service/manager"
 )
@@ -20,8 +20,7 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 
 	serviceStartCmd.Flags().String("pipeline-dir", "./flowpipe/pipelines", "The directory to load pipelines from")
 
-	c := config.GetConfigFromContext(ctx)
-	err := c.Viper.BindPFlag("pipeline.dir", serviceStartCmd.Flags().Lookup("pipeline-dir"))
+	err := viper.BindPFlag("pipeline.dir", serviceStartCmd.Flags().Lookup("pipeline-dir"))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -5,19 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"strings"
 	"time"
-
-	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/fplog"
 )
 
 // Configuration represents the configuration as set by command-line flags.
 // All variables will be set, unless explicitly noted.
 type Configuration struct {
 	ctx        context.Context
-	Viper      *viper.Viper
 	ConfigPath string
 
 	// TODO: Directory where log files will be written.
@@ -31,8 +25,7 @@ type ConfigOption func(*Configuration) error
 func NewConfig(ctx context.Context, opts ...ConfigOption) (*Configuration, error) {
 	// Defaults
 	c := &Configuration{
-		ctx:   ctx,
-		Viper: viper.New(),
+		ctx: ctx,
 	}
 	// Set options
 	for _, opt := range opts {
@@ -42,56 +35,6 @@ func NewConfig(ctx context.Context, opts ...ConfigOption) (*Configuration, error
 		}
 	}
 	return c, nil
-}
-
-func (c *Configuration) InitializeViper() error {
-
-	// Convenience
-	v := c.Viper
-
-	if c.ConfigPath != "" {
-		// User has provided a specific config file location, so use that.
-		// We do not look in other (default) locations in this case.
-		v.SetConfigFile(c.ConfigPath)
-	} else {
-		// Look for a config file in standard locations.
-		// First, the current working directory.
-		v.AddConfigPath(".")
-		// Second, the user's home directory.
-		v.AddConfigPath("$HOME/.flowpipe")
-
-		// Set the base name of the config file, without the file extension.
-		// This means they can use a variety of formats, like HCL or YAML or JSON.
-		v.SetConfigName("flowpipe")
-	}
-
-	// Attempt to read the config file, gracefully ignoring errors
-	// caused by a config file not being found. Return an error
-	// if we cannot parse the config file.
-	if err := v.ReadInConfig(); err != nil {
-		// It's okay if there isn't a config file
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return fperr.WrapWithMessage(err, "error reading config file")
-		}
-	}
-	fplog.Logger(c.ctx).Debug("Using config file:", v.ConfigFileUsed())
-
-	// When we bind flags to environment variables expect that the
-	// environment variables are prefixed, e.g. a flag like --number
-	// binds to an environment variable FLOWPIPE_NUMBER. This helps
-	// avoid conflicts.
-	v.SetEnvPrefix("FLOWPIPE")
-
-	// Environment variables can't have dashes in them, so bind them to their equivalent
-	// keys with underscores, e.g. --favorite-color to FLOWPIPE_FAVORITE_COLOR
-	v.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-
-	// Bind to environment variables
-	// Works great for simple config names, but needs help for names
-	// like --favorite-color which we fix in the bindFlags function
-	v.AutomaticEnv()
-
-	return nil
 }
 
 // WithFlags parses the command line, and populates the configuration.

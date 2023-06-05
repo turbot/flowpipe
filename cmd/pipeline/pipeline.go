@@ -7,8 +7,8 @@ import (
 	"strconv"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/config"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/printers"
 	"github.com/turbot/flowpipe/types"
@@ -49,12 +49,11 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 
 		configuration := flowpipeapiclient.NewConfiguration()
 
-		c := config.GetConfigFromContext(ctx)
 		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: c.Viper.GetBool("api.tls_insecure")}, //nolint:gosec // user defined
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: viper.GetBool("api.tls_insecure")}, //nolint:gosec // user defined
 		}
 
-		configuration.Servers[0].URL = c.Viper.GetString("api.host") + ":" + strconv.Itoa(c.Viper.GetInt("api.port")) + "/api/v0"
+		configuration.Servers[0].URL = viper.GetString("api.host") + ":" + strconv.Itoa(viper.GetInt("api.port")) + "/api/v0"
 		configuration.HTTPClient = &http.Client{Transport: tr}
 
 		apiClient := flowpipeapiclient.NewAPIClient(configuration)

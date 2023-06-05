@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/turbot/flowpipe/config"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/pipeline"
 )
@@ -33,9 +33,7 @@ func (es *ESService) Start() error {
 	logger.Debug("ES starting")
 	defer logger.Debug("ES started")
 
-	c := config.GetConfigFromContext(es.ctx)
-
-	pipelineDir := c.Viper.GetString("pipeline.dir")
+	pipelineDir := viper.GetString("pipeline.dir")
 
 	logger.Debug("Pipeline dir", "dir", pipelineDir)
 
