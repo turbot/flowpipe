@@ -20,5 +20,4 @@ func ServiceCmd(ctx context.Context) (*cobra.Command, error) {
 	serviceCmd.AddCommand(serviceStartCmd)
 
 	return serviceCmd, nil
-
 }

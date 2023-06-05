@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/cache"
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/types"
@@ -57,7 +59,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 // @Accept json
 // @Produce json
 // / ...
-// @Param pipeline_name path string true "The name of the pipeline" format(^[a-z]{0,32}$)
+// @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
 // @Success 200 {object} types.Pipeline
 // @Failure 400 {object} fperr.ErrorModel
@@ -74,6 +76,12 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	result := types.Pipeline{Type: "pipeline_" + uri.PipelineName, Name: uri.PipelineName}
-	c.JSON(http.StatusOK, result)
+
+	pipeline, found := cache.GetCache().Get(uri.PipelineName)
+	if !found {
+		common.AbortWithError(c, fperr.NotFoundWithMessage("pipeline not found"))
+		return
+	}
+
+	c.JSON(http.StatusOK, pipeline)
 }

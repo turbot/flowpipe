@@ -8,6 +8,6 @@ func TimePtr(t time.Time) *time.Time {
 }
 
 // TimeNowPtr returns a pointer to the current time in UTC.
-func TimeNowPtr() *time.Time {
+func TimeNow() *time.Time {
 	return TimePtr(time.Now().UTC())
 }

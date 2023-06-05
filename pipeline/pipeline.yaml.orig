@@ -1,0 +1,42 @@
+for_loop_using_map:
+  Type: "pipeline"
+  Name: "for_loop_using_map"
+  Steps:
+    echo_map:
+      Type: "exec"
+      Name: "echo_map"
+      For: '{"foo": 1, "bar": "baz"}'
+      Input: '{"command": "echo ''{{.each.key}}={{.each.value}}''"}'
+    echo_array:
+      Type: "exec"
+      Name: "echo_array"
+      For: '["foo", "bar"]'
+      Input: '{"command": "echo ''{{.each.key}}={{.each.value}}''"}'
+
+complex_sequence:
+  Type: "pipeline"
+  Name: "complex_sequence"
+  Steps:
+    query_accounts:
+      Type: "query"
+      Name: "query_accounts"
+      Input: '{"sql": "select account_id, title from aws_account"}'
+    exec_1:
+      Type: "exec"
+      Name: "exec_1"
+      DependsOn: ["sleep_1"]
+      Input: '{"command": "ls"}'
+    sleep_1:
+      Type: "sleep"
+      Name: "sleep_1"
+      DependsOn: ["query_accounts"]
+      For: '["300ms", "600ms"]'
+      Input: '{"duration": "{{.each.value}}"}'
+    pipeline_a:
+      Type: "pipeline"
+      Name: "pipeline_a"
+      DependsOn: ["sleep_1"]
+      Input: '{"name": "simple_parallel"}'
+    pipeline_b:
+      Type: "pipeline"
+      Name:

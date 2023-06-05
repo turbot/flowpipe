@@ -1,0 +1,13 @@
+type: "pipeline"
+name: "for_loop_using_http_request_body_json"
+steps:
+  astros:
+    type: "http_request"
+    name: "astros"
+    input: '{"url": "http://api.open-notify.org/astros.json"}'
+  echo_astros:
+    type: "exec"
+    name: "echo_astros"
+    dependson: ["astros"]
+    for: '[{{ range $i, $person := .astros.body_json.people }}{{if $i}}, {{end}}"{{$person.name}}"{{ end }}]'
+    input: '{"command": "echo ''{{.each.value}}''"}'

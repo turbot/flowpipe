@@ -1,0 +1,12 @@
+type: "pipeline"
+name: "simple_parallel"
+steps:
+  http_1:
+    type: "http_request"
+    name: "http_1"
+    input: '{"url": "http://api.open-notify.org/astros.json"}'
+  sleep_1:
+    type: "sleep"
+    name: "sleep_1"
+    input: '{"duration": "2s"}'
+output: '{"body_json": {{.http_1.body_json.number}}, "sleep_finished_at": "{{.sleep_1.finished_at}}"}'

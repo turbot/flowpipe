@@ -2,6 +2,8 @@ package fplog
 
 import (
 	"context"
+
+	"github.com/gin-gonic/gin"
 )
 
 type loggerContextKey struct{}
@@ -18,9 +20,25 @@ func ContextWithLogger(ctx context.Context) context.Context {
 	if err != nil {
 		panic(err)
 	}
+
+	// Golang context is a parent-child relationship. When we "add" a value in a context, we actually
+	// create a new context with a pointer to the parent contet. When we do a ctx.Value() the code traverses the
+	// parent-child relationship up. We always pass the context at the bottom of the relationship.
 	return context.WithValue(ctx, loggerContextKey{}, lgr)
 }
 
 func Logger(ctx context.Context) *FlowpipeLogger {
-	return ctx.Value(loggerContextKey{}).(*FlowpipeLogger)
+
+	// is it a gin context?
+	ginContext, ok := ctx.(*gin.Context)
+	if !ok {
+		return ctx.Value(loggerContextKey{}).(*FlowpipeLogger)
+	}
+
+	// if it's a gin context we store the logger in the "fplooger" key
+	logger, exists := ginContext.Get("fplogger")
+	if !exists {
+		return nil
+	}
+	return logger.(*FlowpipeLogger)
 }

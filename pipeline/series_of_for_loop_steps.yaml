@@ -1,0 +1,15 @@
+type: "pipeline"
+name: "series_of_for_loop_steps"
+steps:
+  sleep_1:
+    type: "sleep"
+    name: "sleep_1"
+    depends_on: []
+    for: '["1s", "2s", "150ms", "300ms", "450ms", "600ms"]'
+    input: '{"duration": "{{.each.value}}"}'
+  http_1:
+    type: "http_request"
+    name: "http_1"
+    depends_on: ["sleep_1"]
+    for: '["http://api.open-notify.org/astros.json", "http://api.open-notify.org/iss-now.json"]'
+    input: '{"url": "{{.each.value}}"}'

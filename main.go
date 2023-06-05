@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/turbot/flowpipe/cache"
 	"github.com/turbot/flowpipe/cmd"
 	"github.com/turbot/flowpipe/config"
 	"github.com/turbot/flowpipe/fplog"
@@ -18,6 +19,8 @@ func main() {
 		// TODO - don't panic
 		panic(err)
 	}
+
+	cache.InMemoryInitialize(nil)
 
 	// Run the CLI
 	err = cmd.RunCLI(ctx)

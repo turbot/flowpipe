@@ -139,6 +139,11 @@ func (api *APIService) Start() error {
 	//   - stack means whether output the stack info.
 	router.Use(ginzap.RecoveryWithZap(logger.Zap.Desugar(), true))
 
+	// Set the same logger in all the Gin context
+	router.Use(func(c *gin.Context) {
+		c.Set("fplogger", logger)
+	})
+
 	apiPrefixGroup := router.Group(common.APIPrefix())
 	apiPrefixGroup.Use(common.ValidateAPIVersion)
 
@@ -233,7 +238,7 @@ func (api *APIService) Start() error {
 		}
 	}()
 
-	api.StartedAt = util.TimeNowPtr()
+	api.StartedAt = util.TimeNow()
 	api.Status = "running"
 
 	return nil
@@ -265,7 +270,7 @@ func (api *APIService) Stop() error {
 		fplog.Logger(api.ctx).Debug("API HTTPS server stopped")
 	}
 
-	api.StoppedAt = util.TimeNowPtr()
+	api.StoppedAt = util.TimeNow()
 	api.Status = "stopped"
 	return nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api"
+	"github.com/turbot/flowpipe/service/es"
 	"github.com/turbot/flowpipe/util"
 )
 
@@ -98,8 +99,20 @@ func (m *Manager) Start() error {
 		return err
 	}
 
-	m.StartedAt = util.TimeNowPtr()
+	m.StartedAt = util.TimeNow()
 	m.Status = "running"
+
+	e, err := es.NewESService(m.ctx)
+	if err != nil {
+		return err
+	}
+	err = e.Start()
+	if err != nil {
+		return err
+	}
+	e.Status = "running"
+	e.StartedAt = util.TimeNow()
+
 	return nil
 }
 
@@ -129,7 +142,7 @@ func (m *Manager) Stop() error {
 	// 	fplog.Logger(m.ctx).Error("error stopping raft service", "error", err)
 	// }
 
-	m.StoppedAt = util.TimeNowPtr()
+	m.StoppedAt = util.TimeNow()
 
 	return nil
 }
