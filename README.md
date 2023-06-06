@@ -6,8 +6,18 @@
 
 1. Run the following commands to build and start the Flowpipe service:
     ```bash
-    # Starts the service using debug logging
+    # Starts the service, reads pipeline definition from the `pipelines` directory
     $ make
+    FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --pipeline-dir ./pipeline
+    2023-06-06T11:53:49.835Z        DEBUG   Manager starting
+    2023-06-06T11:53:49.835Z        DEBUG   ES starting
+    2023-06-06T11:53:49.835Z        DEBUG   Pipeline dir    {"dir": "./pipeline"}
+    2023-06-06T11:53:49.835Z        DEBUG   Loading pipelines       {"directory": "./pipeline"}
+    2023-06-06T11:53:49.835Z        DEBUG   Loaded pipeline {"name": "for_loop_using_http_request_body_json", "file": "pipeline/for_loop_using_http_request_body_json.yaml"}
+    2023-06-06T11:53:49.847Z        DEBUG   Loaded pipeline {"name": "series_of_for_loop_steps", "file": "pipeline/series_of_for_loop_steps.yaml"}
+    2023-06-06T11:53:49.858Z        DEBUG   Loaded pipeline {"name": "simple_parallel", "file": "pipeline/simple_parallel.yaml"}
+    2023-06-06T11:53:49.879Z        DEBUG   Adding middleware       {"count": "1"}    
+    </snip>
     ```
 
 1. In your API tool of choice (e.g. Postman, Insomnia, etc.) send a `GET` request to the following URL to check that the API server is running:
