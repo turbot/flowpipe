@@ -26,6 +26,8 @@ func LoadPipelines(ctx context.Context, directory string) ([]types.Pipeline, err
 
 	inMemoryCache := cache.GetCache()
 	// Iterate over files
+
+	var pipelineNames []string
 	for _, file := range files {
 		if !file.IsDir() {
 			ext := filepath.Ext(file.Name())
@@ -62,8 +64,10 @@ func LoadPipelines(ctx context.Context, directory string) ([]types.Pipeline, err
 			data = append(data, pipeline)
 
 			inMemoryCache.SetWithTTL(pipeline.Name, pipeline, 24*7*52*99*time.Hour)
+			pipelineNames = append(pipelineNames, pipeline.Name)
 		}
 	}
 
+	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
 	return data, nil
 }

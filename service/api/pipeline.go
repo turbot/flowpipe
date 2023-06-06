@@ -47,11 +47,15 @@ func (api *APIService) listPipelines(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list pipelines request", "next_token", nextToken, "limit", limit)
 
-	result := types.ListPipelineResponse{
-		Items: []types.Pipeline{},
+	pipelines, err := db.ListAllPipelines()
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
-	result.Items = append(result.Items, types.Pipeline{Type: "pipeline_sleep", Name: "Foo"}, types.Pipeline{Type: "pipeline_hello", Name: "Bar"})
+	result := types.ListPipelineResponse{
+		Items: pipelines,
+	}
 
 	c.JSON(http.StatusOK, result)
 }
