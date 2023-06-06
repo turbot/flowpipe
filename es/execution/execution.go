@@ -171,6 +171,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	logger := fplog.Logger(ex.Context)
 
+	logger.Debug("Loading process", "executionID", ex.ID)
+
 	if e.ExecutionID == "" {
 		return fperr.BadRequestWithMessage("event execution ID is empty")
 	}
@@ -206,7 +208,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		ba := scanner.Bytes()
 
 		// Get the run ID from the payload
-		var ele EventLogEntry
+		var ele types.EventLogEntry
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
 			return err

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/turbot/flowpipe/es/event"
 )
@@ -18,9 +17,6 @@ func (PipelineQueued) NewEvent() interface{} {
 }
 
 func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
-	fmt.Println()
-	fmt.Println("XXX here I am handling command for Pipeline_Queued")
-	fmt.Println()
 	e := ei.(*event.PipelineQueued)
 	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(e))
 	if err != nil {

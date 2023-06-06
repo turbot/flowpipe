@@ -103,3 +103,7 @@ type ListPipelineResponse struct {
 	Items     []Pipeline `json:"items"`
 	NextToken *string    `json:"next_token,omitempty"`
 }
+
+type RunPipelineResponse struct {
+	ExecutionID string `json:"execution_id"`
+}

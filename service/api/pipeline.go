@@ -1,11 +1,11 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/cache"
+	"github.com/turbot/flowpipe/es/db"
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
@@ -91,6 +91,19 @@ func (api *APIService) getPipeline(c *gin.Context) {
 }
 
 func (api *APIService) runPipeline(c *gin.Context) {
+
+	var uri types.PipelineRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	pipeline, err := db.GetPipeline(uri.PipelineName)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
 	// Initialize the mod
 	cmd := &event.Queue{
 		Event:     event.NewExecutionEvent(c),
@@ -104,15 +117,16 @@ func (api *APIService) runPipeline(c *gin.Context) {
 
 	pipelineCmd := &event.PipelineQueue{
 		Event: event.NewExecutionEvent(c),
-		Name:  "series_of_for_loop_steps",
+		Name:  pipeline.Name,
 	}
 
-	fmt.Println("")
-	fmt.Println("")
-	fmt.Println("")
-	fmt.Println("XXXX")
 	if err := api.esService.CommandBus.Send(api.esService.Ctx, pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
+
+	response := types.RunPipelineResponse{
+		ExecutionID: pipelineCmd.Event.ExecutionID,
+	}
+	c.JSON(http.StatusOK, response)
 }

@@ -6,7 +6,8 @@ import (
 
 // The definition of a single Flowpipe Process
 type Process struct {
-	Id string `json:"process_id"`
+	ID            string          `json:"process_id"`
+	EventLogEntry []EventLogEntry `json:"event_log_entry"`
 }
 
 type PrintableProcess struct {

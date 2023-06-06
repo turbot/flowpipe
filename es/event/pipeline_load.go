@@ -23,9 +23,6 @@ func NewPipelineLoad(opts ...PipelineLoadOption) (*PipelineLoad, error) {
 			return e, err
 		}
 	}
-	fmt.Println()
-	fmt.Println("NewPipelineLoad event returning e: ", e)
-	fmt.Println()
 	return e, nil
 }
 

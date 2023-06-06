@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/es/execution"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/types"
@@ -45,7 +46,7 @@ func (api *APIService) listProcesss(c *gin.Context) {
 		Items: []types.Process{},
 	}
 
-	result.Items = append(result.Items, types.Process{Id: "123"}, types.Process{Id: "456"})
+	result.Items = append(result.Items, types.Process{ID: "123"}, types.Process{ID: "456"})
 
 	c.JSON(http.StatusOK, result)
 }
@@ -74,6 +75,13 @@ func (api *APIService) getProcess(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	result := types.Process{Id: "123"}
+
+	logEntries, err := execution.LoadEventLogEntries(uri.ProcessId)
+	if err != nil {
+		common.AbortWithError(c, err)
+	}
+
+	result := types.Process{ID: uri.ProcessId, EventLogEntry: logEntries}
+
 	c.JSON(http.StatusOK, result)
 }

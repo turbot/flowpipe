@@ -23,5 +23,5 @@ type VariableRequestURI struct {
 }
 
 type ProcessRequestURI struct {
-	ProcessId string `uri:"process_id" binding:"required" format:"^p_[0-9a-v]{20}$"`
+	ProcessId string `uri:"process_id" binding:"required" format:"^exec_[0-9a-v]{20}$"`
 }
