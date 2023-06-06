@@ -84,8 +84,19 @@ func (m *Manager) Start() error {
 	fplog.Logger(m.ctx).Debug("Manager starting")
 	defer fplog.Logger(m.ctx).Debug("Manager started")
 
+	e, err := es.NewESService(m.ctx)
+	if err != nil {
+		return err
+	}
+	err = e.Start()
+	if err != nil {
+		return err
+	}
+	e.Status = "running"
+	e.StartedAt = util.TimeNow()
+
 	// Define the API service
-	a, err := api.NewAPIService(m.ctx,
+	a, err := api.NewAPIService(m.ctx, e,
 		api.WithHTTPSAddress(m.HTTPSAddress))
 
 	if err != nil {
@@ -101,17 +112,6 @@ func (m *Manager) Start() error {
 
 	m.StartedAt = util.TimeNow()
 	m.Status = "running"
-
-	e, err := es.NewESService(m.ctx)
-	if err != nil {
-		return err
-	}
-	err = e.Start()
-	if err != nil {
-		return err
-	}
-	e.Status = "running"
-	e.StartedAt = util.TimeNow()
 
 	return nil
 }

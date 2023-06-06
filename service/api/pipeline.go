@@ -1,10 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/cache"
+	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
@@ -14,6 +16,8 @@ import (
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/pipeline", api.listPipelines)
 	router.GET("/pipeline/:pipeline_name", api.getPipeline)
+
+	router.POST("/pipeline/:pipeline_name", api.runPipeline)
 }
 
 // @Summary List pipelines
@@ -84,4 +88,31 @@ func (api *APIService) getPipeline(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, pipeline)
+}
+
+func (api *APIService) runPipeline(c *gin.Context) {
+	// Initialize the mod
+	cmd := &event.Queue{
+		Event:     event.NewExecutionEvent(c),
+		Workspace: "e-gineer/scratch",
+	}
+
+	if err := api.esService.CommandBus.Send(api.esService.Ctx, cmd); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	pipelineCmd := &event.PipelineQueue{
+		Event: event.NewExecutionEvent(c),
+		Name:  "series_of_for_loop_steps",
+	}
+
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("")
+	fmt.Println("XXXX")
+	if err := api.esService.CommandBus.Send(api.esService.Ctx, pipelineCmd); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
 }

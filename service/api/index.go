@@ -26,6 +26,7 @@ import (
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/service/api/middleware"
 	"github.com/turbot/flowpipe/service/api/service"
+	"github.com/turbot/flowpipe/service/es"
 	"github.com/turbot/flowpipe/util"
 )
 
@@ -56,6 +57,8 @@ type APIService struct {
 	// Ctx is the context used by the API service.
 	ctx context.Context
 
+	esService *es.ESService
+
 	httpServer  *http.Server
 	httpsServer *http.Server
 
@@ -74,10 +77,11 @@ type APIService struct {
 type APIServiceOption func(*APIService) error
 
 // NewAPIService creates a new APIService.
-func NewAPIService(ctx context.Context, opts ...APIServiceOption) (*APIService, error) {
+func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOption) (*APIService, error) {
 	// Defaults
 	api := &APIService{
 		ctx:       ctx,
+		esService: es,
 		Status:    "initialized",
 		HTTPSHost: viper.GetString("web.https.host"),
 		HTTPSPort: fmt.Sprintf("%d", viper.GetInt("web.https.port")),
@@ -133,11 +137,11 @@ func (api *APIService) Start() error {
 	//   - Logs all requests, like a combined access and error log.
 	//   - Logs to stdout.
 	//   - RFC3339 with UTC time format.
-	router.Use(ginzap.Ginzap(logger.Zap.Desugar(), time.RFC3339, true))
+	router.Use(ginzap.Ginzap(logger.Zap, time.RFC3339, true))
 
 	// Logs all panic to error log
 	//   - stack means whether output the stack info.
-	router.Use(ginzap.RecoveryWithZap(logger.Zap.Desugar(), true))
+	router.Use(ginzap.RecoveryWithZap(logger.Zap, true))
 
 	// Set the same logger in all the Gin context
 	router.Use(func(c *gin.Context) {

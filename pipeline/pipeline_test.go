@@ -6,20 +6,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/config"
 	"github.com/turbot/flowpipe/types"
 	"gopkg.in/yaml.v2"
 )
 
 func TestNewExecution(t *testing.T) {
 	assert := assert.New(t)
-	ctx := context.Background()
-
-	cfg, err := config.NewConfig(ctx)
-	assert.Nil(err)
-
-	cfg.LogDir = "./tmp"
-	assert.Equal(cfg.LogDir, "./tmp")
 
 	data, err := os.ReadFile("./series_of_for_loop_steps.yaml")
 	assert.Nil(err)

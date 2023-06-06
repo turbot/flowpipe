@@ -27,6 +27,9 @@ func Initialize(ctx context.Context) {
 	// Set to single or cluster - default to cluster and envs override this to single as required
 	viper.SetDefault("redis.mode", "redis")
 
+	viper.SetDefault("output.dir", "./tmp")
+	viper.SetDefault("log.dir", "./tmp")
+
 	// Rate limiting defaults to an initial/max balance of 100, refilling
 	// at 10 per second.
 	viper.SetDefault("web.rate.fill", 10)

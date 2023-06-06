@@ -13,9 +13,6 @@ import (
 type Configuration struct {
 	ctx        context.Context
 	ConfigPath string
-
-	// TODO: Directory where log files will be written.
-	LogDir string `json:"log_dir,omitempty"`
 }
 
 // ConfigOption defines a type of function to configures the Config.

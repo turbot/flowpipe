@@ -1,5 +1,5 @@
 run:
-	FLOWPIPE_LOG_LEVEL=DEBUG go run . service start
+	FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --pipeline-dir ./pipeline
 
 build-open-api:
 	rm -rf service/api/docs

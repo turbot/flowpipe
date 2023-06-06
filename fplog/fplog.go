@@ -2,7 +2,9 @@ package fplog
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	//nolint:depguard // Wrapper for Zap
@@ -11,6 +13,7 @@ import (
 	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap/zapcore"
 
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/sanitize"
 )
 
@@ -26,7 +29,8 @@ type FlowpipeLogger struct {
 	Color bool
 
 	// Zap is the Zap logger instance
-	Zap *zap.SugaredLogger
+	Zap   *zap.Logger
+	Sugar *zap.SugaredLogger
 }
 
 // LoggerOption defines a type of function to configures the Logger.
@@ -114,9 +118,12 @@ func (c *FlowpipeLogger) Initialize() error {
 		zapcore.NewCore(encoder, consoleDebugging, atomicLevel),
 	)
 
-	c.Zap = zap.New(core).Sugar()
+	c.Zap = zap.New(core)
+	c.Sugar = c.Zap.Sugar()
 
-	_, err := zap.RedirectStdLogAt(c.Zap.Desugar(), zapcore.DebugLevel)
+	// Do not Desugar() it's expensive (according to Zap themselves)
+	// Zap suggested that we have 2 logger instances
+	_, err := zap.RedirectStdLogAt(c.Zap, zapcore.DebugLevel)
 	if err != nil {
 		return err
 	}
@@ -130,20 +137,27 @@ func (c *FlowpipeLogger) Sync() error {
 
 func (c *FlowpipeLogger) Error(msg string, keysAndValues ...interface{}) {
 	sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
-	c.Zap.Errorw(msg, sanitizedKeysAndValues...)
+	c.Sugar.Errorw(msg, sanitizedKeysAndValues...)
 }
 
 func (c *FlowpipeLogger) Warn(msg string, keysAndValues ...interface{}) {
 	sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
-	c.Zap.Warnw(msg, sanitizedKeysAndValues...)
+	c.Sugar.Warnw(msg, sanitizedKeysAndValues...)
 }
 
 func (c *FlowpipeLogger) Info(msg string, keysAndValues ...interface{}) {
 	sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
-	c.Zap.Infow(msg, sanitizedKeysAndValues...)
+	c.Sugar.Infow(msg, sanitizedKeysAndValues...)
 }
 
 func (c *FlowpipeLogger) Debug(msg string, keysAndValues ...interface{}) {
 	sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
-	c.Zap.Debugw(msg, sanitizedKeysAndValues...)
+	c.Sugar.Debugw(msg, sanitizedKeysAndValues...)
+}
+
+func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
+	cfg := zap.NewProductionConfig()
+	cfg.Sampling = nil
+	cfg.OutputPaths = []string{path.Join(viper.GetString("log.dir"), fmt.Sprintf("%s.jsonl", executionID))}
+	return zap.Must(cfg.Build())
 }

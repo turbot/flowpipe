@@ -113,6 +113,8 @@ github.com/fatih/color v1.15.0/go.mod h1:0h5ZqXfHYED7Bhv2ZJamyIOUej9KtShiJESRwBD
 github.com/frankban/quicktest v1.14.3 h1:FJKSZTDHjyhriyC81FLQ0LY93eSai0ZyR/ZIkd3ZUKE=
 github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4HY=
 github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
+github.com/garsue/watermillzap v1.2.0 h1:IA0zGb5b7mIGLXN9P2/6CmP5+f7Qgb00BdL2VCAk2SA=
+github.com/garsue/watermillzap v1.2.0/go.mod h1:uo3SDSGYaw6RBzUx9jcHMYqypOTqlQ4/vz+8r1olRto=
 github.com/getkin/kin-openapi v0.117.0 h1:QT2DyGujAL09F4NrKDHJGsUoIprlIcFVHWDVDcUFE8A=
 github.com/getkin/kin-openapi v0.117.0/go.mod h1:l5e9PaFUo9fyLJCPGQeXI2ML8c3P8BHOEV2VaAVf/pc=
 github.com/gin-contrib/gzip v0.0.6 h1:NjcunTcGAj5CO1gn4N8jHOSIeRFHIbn51z6K+xaN4d4=

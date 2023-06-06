@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/turbot/flowpipe/config"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/es/event"
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -160,16 +162,17 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 
 // LogFilePath returns the path to the log file for the execution.
 func (ex *Execution) LogFilePath() (string, error) {
-	cfg := config.GetConfigFromContext(ex.Context)
 	filename := fmt.Sprintf("%s.jsonl", ex.ID)
-	p := filepath.Join(cfg.LogDir, filename)
+	p := filepath.Join(viper.GetString("log.dir"), filename)
 	return filepath.Abs(p)
 }
 
 func (ex *Execution) LoadProcess(e *event.Event) error {
 
+	logger := fplog.Logger(ex.Context)
+
 	if e.ExecutionID == "" {
-		return fmt.Errorf("event execution ID is empty: %v", e)
+		return fperr.BadRequestWithMessage("event execution ID is empty")
 	}
 
 	if ex.ID == "" {
@@ -177,16 +180,21 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	if ex.ID != e.ExecutionID {
-		return fmt.Errorf("event execution ID (%s) does not match execution ID (%s)", e.ExecutionID, ex.ID)
+		return fperr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
 	}
 
 	// Open the event log
 	logPath, err := ex.LogFilePath()
+	logger.Debug("Loading file", "execution", ex.ID, "logPath", logPath)
+
 	if err != nil {
+		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
 		return err
 	}
+
 	f, err := os.Open(logPath)
 	if err != nil {
+		logger.Error("Failed to open log file", "execution", ex.ID, "error", err)
 		return err
 	}
 	defer f.Close()
