@@ -105,5 +105,11 @@ type ListPipelineResponse struct {
 }
 
 type RunPipelineResponse struct {
-	ExecutionID string `json:"execution_id"`
+	ExecutionID           string `json:"execution_id"`
+	PipelineExecutionID   string `json:"pipeline_execution_id"`
+	ParentStepExecutionID string `json:"parent_step_execution_id"`
+}
+
+type CmdPipeline struct {
+	Command string `json:"command" binding:"required,oneof=run"`
 }

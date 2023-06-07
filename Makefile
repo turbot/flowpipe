@@ -1,5 +1,5 @@
 run:
-	FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --pipeline-dir ./pipeline
+	FLOWPIPE_LOG_LEVEL=INFO go run . service start --pipeline-dir ./pipeline
 
 clean-tmp:
 	rm -rf ./tmp/*

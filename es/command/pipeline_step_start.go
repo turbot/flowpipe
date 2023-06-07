@@ -24,7 +24,13 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 	go func(ctx context.Context, c interface{}, h PipelineStepStartHandler) {
 
-		cmd := c.(*event.PipelineStepStart)
+		cmd, ok := c.(*event.PipelineStepStart)
+		if !ok {
+			fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineStepStart", "actual", c)
+			return
+		}
+
+		fplog.Logger(ctx).Info("(11) pipeline_step_start command handler", "executionID", cmd.Event.ExecutionID)
 
 		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 		if err != nil {

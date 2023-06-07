@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/es/event"
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 )
 
 type PipelineQueued EventHandler
@@ -16,8 +18,23 @@ func (PipelineQueued) NewEvent() interface{} {
 	return &event.PipelineQueued{}
 }
 
+// Path from here:
+// * PipelineQueued -> PipelineLoad command -> PipelineLoaded event handler
+//
+// ? is this meant to be when something is being picked up from the queue?
+// ? so the PipelineQueue *command* is the one that puts it in a some sort of a queue?
 func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
-	e := ei.(*event.PipelineQueued)
+
+	logger := fplog.Logger(ctx)
+	e, ok := ei.(*event.PipelineQueued)
+
+	if !ok {
+		logger.Error("invalid event type", "expected", "*event.PipelineQueued", "actual", ei)
+		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineQueued")
+	}
+
+	logger.Info("[9] pipeline_queued event handler", "executionID", e.Event.ExecutionID)
+
 	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(e))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineQueuedToPipelineFail(e, err)))

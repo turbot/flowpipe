@@ -3,8 +3,6 @@ package es
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -19,9 +17,6 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/pipeline"
 	"github.com/turbot/flowpipe/util"
-
-	//nolint:depguard // TODO temporary to get things going
-	"go.uber.org/zap"
 )
 
 type ESService struct {
@@ -202,22 +197,26 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 	return func(h message.HandlerFunc) message.HandlerFunc {
 		return func(msg *message.Message) ([]*message.Message, error) {
 
+			logger := fplog.Logger(ctx)
+
 			var pe event.PayloadWithEvent
 			err := json.Unmarshal(msg.Payload, &pe)
 			if err != nil {
-				panic("TODO - invalid log payload, log me?")
+				logger.Error("invalid log payload", "error", err)
+				panic(err)
 			}
 
 			executionID := pe.Event.ExecutionID
 			if executionID == "" {
-				m := fmt.Sprintf("SHOULD NOT HAPPEN - No execution_id found in payload: %s", msg.Payload)
-				return nil, errors.New(m)
+				// m := fmt.Sprintf("SHOULD NOT HAPPEN - No execution_id found in payload: %s", msg.Payload)
+				return nil, fperr.InternalWithMessage("no execution_id found in payload")
 			}
 
 			var payload map[string]interface{}
 			err = json.Unmarshal(msg.Payload, &payload)
 			if err != nil {
-				panic("TODO - invalid log payload, log me?")
+				logger.Error("invalid log payload", "error", err)
+				panic(err)
 			}
 
 			payloadWithoutEvent := make(map[string]interface{})
@@ -227,20 +226,19 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 				}
 				payloadWithoutEvent[key] = value
 			}
-			//nolint:forbidigo // TODO temporary to get things going
-			fmt.Printf("%s %-30s %s\n", pe.Event.CreatedAt.Format("15:04:05.000"), message.HandlerNameFromCtx(msg.Context()), payloadWithoutEvent)
+			logger.Debug("Event log", "createdAt", pe.Event.CreatedAt.Format("15:04:05.000"), "handlerNameFromCtx", message.HandlerNameFromCtx(msg.Context()), "payload", payloadWithoutEvent)
 
-			logger := fplog.ExecutionLogger(ctx, executionID)
-			defer logger.Sync() //nolint:errcheck // TODO temporary to get things going
-			logger.Info("es",
-				// Structured context as strongly typed Field values.
-				zap.String("event_type", message.HandlerNameFromCtx(msg.Context())),
-				// zap adds ts field automatically, so don't need zap.Time("created_at", time.Now()),
-				zap.Any("payload", payload),
-			)
+			// executionLogger writes the event to a file
+			executionLogger := fplog.ExecutionLogger(ctx, executionID)
+			defer func() {
+				err := executionLogger.Sync()
+				if err != nil {
+					logger.Error("failed to sync execution logger", "error", err)
+				}
+				executionLogger.Sugar().Infow("es", "event_type", message.HandlerNameFromCtx(msg.Context()), "payload", payload)
+			}()
 
 			return h(msg)
-
 		}
 	}
 }

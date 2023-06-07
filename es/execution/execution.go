@@ -21,11 +21,14 @@ import (
 // pipelines being executed.
 type Execution struct {
 	Context context.Context `json:"-"`
+
 	// Unique identifier for this execution.
 	ID string `json:"id"`
+
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
+
 	// Steps triggered by pipelines in the execution. We maintain a flat list
 	// of all steps triggered by all pipelines for easy lookup and querying.
 	StepExecutions map[string]*StepExecution `json:"step_executions"`

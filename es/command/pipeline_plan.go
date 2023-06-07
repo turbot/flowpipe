@@ -5,6 +5,8 @@ import (
 
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -19,7 +21,15 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
-	cmd := c.(*event.PipelinePlan)
+	logger := fplog.Logger(ctx)
+
+	cmd, ok := c.(*event.PipelinePlan)
+	if !ok {
+		logger.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
+		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
+	}
+
+	logger.Info("(7) pipeline_plan command handler #1", "executionID", cmd.Event.ExecutionID, "cmd", cmd)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
@@ -40,6 +50,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}
 
+	// Create a new PipelinePlanned event
 	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(cmd))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
@@ -67,12 +78,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		for _, dep := range step.DependsOn {
 			// Cannot depend on yourself
 			if step.Name == dep {
-				// TODO - issue a warning?
+				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
 			// Ignore invalid dependencies
 			if _, ok := defn.Steps[dep]; !ok {
-				// TODO - issue a warning?
+				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
 			if !pe.IsStepComplete(dep) {
@@ -87,6 +98,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		// Plan to run the step.
 		e.NextSteps = append(e.NextSteps, step.Name)
 	}
+
+	logger.Info("(7) pipeline_plan command handler #2", "nextSteps", e.NextSteps, "e", e)
+
+	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.Publish(ctx, &e); err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
 	}

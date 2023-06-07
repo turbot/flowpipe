@@ -11,13 +11,14 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/util"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/pipeline", api.listPipelines)
 	router.GET("/pipeline/:pipeline_name", api.getPipeline)
 
-	router.POST("/pipeline/:pipeline_name", api.runPipeline)
+	router.POST("/pipeline/:pipeline_name/cmd", api.cmdPipeline)
 }
 
 // @Summary List pipelines
@@ -94,7 +95,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 	c.JSON(http.StatusOK, pipeline)
 }
 
-func (api *APIService) runPipeline(c *gin.Context) {
+func (api *APIService) cmdPipeline(c *gin.Context) {
 
 	var uri types.PipelineRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
@@ -108,20 +109,23 @@ func (api *APIService) runPipeline(c *gin.Context) {
 		return
 	}
 
-	// Initialize the mod
-	cmd := &event.Queue{
-		Event:     event.NewExecutionEvent(c),
-		Workspace: "e-gineer/scratch",
-	}
-
-	if err := api.esService.Send(cmd); err != nil {
+	// Validate input data
+	var input types.CmdPipeline
+	if err := c.ShouldBindJSON(&input); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
+	// Execute the command
+	if input.Command != "run" {
+		common.AbortWithError(c, fperr.BadRequestWithMessage("invalid command"))
+		return
+	}
+
 	pipelineCmd := &event.PipelineQueue{
-		Event: event.NewExecutionEvent(c),
-		Name:  pipeline.Name,
+		Event:               event.NewExecutionEvent(c),
+		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Name:                pipeline.Name,
 	}
 
 	if err := api.esService.Send(pipelineCmd); err != nil {
@@ -130,7 +134,9 @@ func (api *APIService) runPipeline(c *gin.Context) {
 	}
 
 	response := types.RunPipelineResponse{
-		ExecutionID: pipelineCmd.Event.ExecutionID,
+		ExecutionID:           pipelineCmd.Event.ExecutionID,
+		PipelineExecutionID:   pipelineCmd.PipelineExecutionID,
+		ParentStepExecutionID: pipelineCmd.ParentStepExecutionID,
 	}
 	c.JSON(http.StatusOK, response)
 }

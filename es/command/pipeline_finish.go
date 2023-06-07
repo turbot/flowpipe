@@ -8,6 +8,8 @@ import (
 
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -22,10 +24,15 @@ func (h PipelineFinishHandler) NewCommand() interface{} {
 }
 
 func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error {
-	cmd := c.(*event.PipelineFinish)
+	cmd, ok := c.(*event.PipelineFinish)
+	if !ok {
+		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineFinish", "actual", c)
+		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
+	}
+
+	fplog.Logger(ctx).Info("(5) pipeline_finish command handler")
 
 	var output types.Output
-
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))

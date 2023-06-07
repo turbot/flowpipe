@@ -10,6 +10,7 @@ import (
 
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
@@ -26,7 +27,14 @@ func (PipelinePlanned) NewEvent() interface{} {
 
 func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.PipelinePlanned)
+	logger := fplog.Logger(ctx)
+	e, ok := ei.(*event.PipelinePlanned)
+	if !ok {
+		logger.Error("invalid event type", "expected", "*event.PipelinePlanned", "actual", ei)
+		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
+	}
+
+	logger.Info("[8] pipeline planned event handler #1", "executionID", e.Event.ExecutionID, "pipelinePlanned", e)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -66,6 +74,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// PRE: The planner has told us what steps to run next, our job is to start them
 
 	for _, stepName := range e.NextSteps {
+
+		logger.Info("[8] pipeline planned event handler #2", "executionID", e.Event.ExecutionID, "stepName", stepName)
 
 		data, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
@@ -219,6 +229,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 					return
 				}
+
+				logger.Info("[8] pipeline planned event handler #3 - sending pipeline step start command", "command", cmd)
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {

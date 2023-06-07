@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
@@ -17,8 +18,10 @@ import (
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process", api.listProcess)
 	router.GET("/process/:process_id", api.getProcess)
+	router.POST("/process/:process_id/cmd", api.cmdProcess)
 	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLog)
 	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
+
 }
 
 // @Summary List processs
@@ -85,6 +88,36 @@ func (api *APIService) getProcess(c *gin.Context) {
 	result := types.Process{ID: uri.ProcessId}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func (api *APIService) cmdProcess(c *gin.Context) {
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	// Validate input data
+	var input types.CmdProcess
+	if err := c.ShouldBindJSON(&input); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	if input.Command != "cancel" {
+		common.AbortWithError(c, fperr.BadRequestWithMessage("invalid command"))
+		return
+	}
+
+	pipelineCmd := &event.PipelineCancel{
+		Event:               event.NewEventForExecutionID(uri.ProcessId),
+		PipelineExecutionID: input.PipelineExecutionID,
+		Reason:              "because I said so",
+	}
+	if err := api.esService.Send(pipelineCmd); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func (api *APIService) listProcessEventLog(c *gin.Context) {

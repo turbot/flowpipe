@@ -78,3 +78,9 @@ type ListProcessLogResponse struct {
 	Items     []EventLogEntry `json:"items"`
 	NextToken *string         `json:"next_token,omitempty"`
 }
+
+type CmdProcess struct {
+	Command             string `json:"command" binding:"required,oneof=run cancel pause"`
+	PipelineExecutionID string `json:"pipeline_execution_id,omitempty" format:"^(pexec|exec)_[0-9a-v]{20}$"`
+	Reason              string `json:"reason,omitempty"`
+}

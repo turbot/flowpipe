@@ -25,10 +25,15 @@ func (PipelineFinished) NewEvent() interface{} {
 
 func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
+	logger := fplog.Logger(ctx)
+
 	e, ok := ei.(*event.PipelineFinished)
 	if !ok {
-		return fperr.BadRequestWithMessage("ei is not a PipelineFinished")
+		logger.Error("invalid event type", "expected", "*event.PipelineFinished", "actual", ei)
+		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
 	}
+
+	logger.Info("[6] pipeline_finished event handler #1", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -39,6 +44,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
 	}
+
 	if parentStepExecution != nil {
 		cmd, err := event.NewPipelineStepFinish(
 			event.ForPipelineFinished(e),
@@ -52,22 +58,22 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		// Dump the final execution state
 		_, err := json.MarshalIndent(ex, "", "  ")
 		if err != nil {
-			fplog.Logger(ctx).Error("pipeline_failed (1)", "error", err)
+			logger.Error("pipeline_failed (1)", "error", err)
 		}
 
 		// Dump step outputs
 		data, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
-			fplog.Logger(ctx).Error("pipeline_failed (2)", "error", err)
+			logger.Error("pipeline_failed (2)", "error", err)
 		} else {
 			jsonStr, _ := json.MarshalIndent(data, "", "  ")
-			fplog.Logger(ctx).Info("json string", "json", string(jsonStr))
+			logger.Debug("json string", "json", string(jsonStr))
 		}
 
 		// Dump the snapshot
 		snapshot, err := ex.Snapshot(e.PipelineExecutionID)
 		if err != nil {
-			fplog.Logger(ctx).Error("pipeline_failed (3)", "error", err)
+			logger.Error("pipeline_failed (3)", "error", err)
 		} else {
 			jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
 

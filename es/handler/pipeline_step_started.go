@@ -6,6 +6,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 )
 
 type PipelineStepStarted EventHandler
@@ -20,7 +22,15 @@ func (PipelineStepStarted) NewEvent() interface{} {
 
 func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.PipelineStepStarted)
+	logger := fplog.Logger(ctx)
+
+	e, ok := ei.(*event.PipelineStepStarted)
+	if !ok {
+		logger.Error("invalid event type", "expected", "*event.PipelineStepStarted", "actual", ei)
+		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStepStarted")
+	}
+
+	logger.Info("[12] pipeline_step_started event handler", "executionID", e.Event.ExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
