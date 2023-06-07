@@ -1,0 +1,31 @@
+package event
+
+type PipelinePause struct {
+	// Event metadata
+	Event *Event `json:"event"`
+	// Pipeline execution details
+	PipelineExecutionID string `json:"pipeline_execution_id"`
+	// Reason for pausing the pipeline execution
+	Reason string `json:"reason,omitempty"`
+}
+
+// ExecutionOption is a function that modifies an Execution instance.
+type PipelinePauseOption func(*PipelinePause) error
+
+// NewPipelineCancel creates a new PipelineCancel event.
+func NewPipelinePause(pipelineExecutionID string, opts ...PipelinePauseOption) (*PipelinePause, error) {
+	// Defaults
+	e := NewEventForExecutionID(pipelineExecutionID)
+	// Defaults
+	cmd := &PipelinePause{
+		Event: e,
+	}
+	// Set options
+	for _, opt := range opts {
+		err := opt(cmd)
+		if err != nil {
+			return cmd, err
+		}
+	}
+	return cmd, nil
+}

@@ -18,6 +18,7 @@ func (h PipelineCancelHandler) NewCommand() interface{} {
 
 func (h PipelineCancelHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineCancel)
+
 	e, err := event.NewPipelineCanceled(event.ForPipelineCancel(cmd))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineCancelToPipelineFailed(cmd, err)))

@@ -107,6 +107,15 @@ func ForPipelineCancelToPipelineFailed(cmd *PipelineCancel, err error) PipelineF
 	}
 }
 
+func ForPipelinePauseToPipelineFailed(cmd *PipelinePause, err error) PipelineFailedOption {
+	return func(e *PipelineFailed) error {
+		e.Event = NewFlowEvent(cmd.Event)
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+		e.ErrorMessage = err.Error()
+		return nil
+	}
+}
+
 func ForPipelineStepStartToPipelineFailed(cmd *PipelineStepStart, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
