@@ -114,7 +114,7 @@ func (api *APIService) runPipeline(c *gin.Context) {
 		Workspace: "e-gineer/scratch",
 	}
 
-	if err := api.esService.CommandBus.Send(api.esService.Ctx, cmd); err != nil {
+	if err := api.esService.Send(cmd); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
@@ -124,7 +124,7 @@ func (api *APIService) runPipeline(c *gin.Context) {
 		Name:  pipeline.Name,
 	}
 
-	if err := api.esService.CommandBus.Send(api.esService.Ctx, pipelineCmd); err != nil {
+	if err := api.esService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}

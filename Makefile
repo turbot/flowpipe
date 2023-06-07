@@ -1,6 +1,14 @@
 run:
 	FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --pipeline-dir ./pipeline
 
+clean-tmp:
+	rm -rf ./tmp/*
+
+clean-dist:
+	rm -rf ./dist/*
+
+clean: clean-tmp clean-dist
+	
 build-open-api:
 	rm -rf service/api/docs
 	./generate-open-api.sh

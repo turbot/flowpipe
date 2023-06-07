@@ -2,17 +2,23 @@ package api
 
 import (
 	"net/http"
+	"os"
+	"path"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/service/api/common"
 	"github.com/turbot/flowpipe/types"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
-	router.GET("/process", api.listProcesss)
+	router.GET("/process", api.listProcess)
 	router.GET("/process/:process_id", api.getProcess)
+	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLog)
+	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
 }
 
 // @Summary List processs
@@ -32,7 +38,7 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 // @Failure 429 {object} fperr.ErrorModel
 // @Failure 500 {object} fperr.ErrorModel
 // @Router /process [get]
-func (api *APIService) listProcesss(c *gin.Context) {
+func (api *APIService) listProcess(c *gin.Context) {
 	// Get paging parameters
 	nextToken, limit, err := common.ListPagingRequest(c)
 	if err != nil {
@@ -76,12 +82,50 @@ func (api *APIService) getProcess(c *gin.Context) {
 		return
 	}
 
+	result := types.Process{ID: uri.ProcessId}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func (api *APIService) listProcessEventLog(c *gin.Context) {
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
 	logEntries, err := execution.LoadEventLogEntries(uri.ProcessId)
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
 
-	result := types.Process{ID: uri.ProcessId, EventLogEntry: logEntries}
+	result := types.ListProcessLogResponse{
+		Items: logEntries,
+	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func (api *APIService) listProcessSps(c *gin.Context) {
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	filePath := path.Join(viper.GetString("log.dir"), uri.ProcessId+".sps")
+
+	jsonBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		fplog.Logger(api.ctx).Error("error reading sps file", "error", err, "file_path", filePath)
+		common.AbortWithError(c, fperr.InternalWithMessage("internal error"))
+		return
+	}
+
+	// Set the appropriate headers
+	c.Header("Content-Type", "application/json")
+	c.Header("Content-Disposition", "attachment; filename=process.sps")
+
+	// Return the JSON content
+	c.Data(http.StatusOK, "application/json", jsonBytes)
 }

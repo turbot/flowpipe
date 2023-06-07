@@ -6,8 +6,7 @@ import (
 
 // The definition of a single Flowpipe Process
 type Process struct {
-	ID            string          `json:"process_id"`
-	EventLogEntry []EventLogEntry `json:"event_log_entry"`
+	ID string `json:"process_id"`
 }
 
 type PrintableProcess struct {
@@ -72,4 +71,10 @@ func (PrintableProcess) GetColumns() (columns []TableColumnDefinition) {
 type ListProcessResponse struct {
 	Items     []Process `json:"items"`
 	NextToken *string   `json:"next_token,omitempty"`
+}
+
+// This type is used by the API to return a list of pipelines.
+type ListProcessLogResponse struct {
+	Items     []EventLogEntry `json:"items"`
+	NextToken *string         `json:"next_token,omitempty"`
 }

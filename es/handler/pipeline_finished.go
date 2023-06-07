@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 )
 
@@ -24,7 +25,10 @@ func (PipelineFinished) NewEvent() interface{} {
 
 func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
-	e := ei.(*event.PipelineFinished)
+	e, ok := ei.(*event.PipelineFinished)
+	if !ok {
+		return fperr.BadRequestWithMessage("ei is not a PipelineFinished")
+	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -67,7 +71,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		} else {
 			jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
 
-			filePath := path.Join(viper.GetString("output.dir"), "pe.sps")
+			filePath := path.Join(viper.GetString("output.dir"), e.Event.ExecutionID+".sps")
 			_ = os.WriteFile(filePath, jsonStr, 0600)
 		}
 

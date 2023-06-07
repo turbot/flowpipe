@@ -25,10 +25,9 @@ import (
 )
 
 type ESService struct {
-	Ctx context.Context
-
-	RunID      string
-	CommandBus *cqrs.CommandBus
+	ctx        context.Context
+	runID      string
+	commandBus *cqrs.CommandBus
 
 	Status    string     `json:"status"`
 	StartedAt *time.Time `json:"started_at,omitempty"`
@@ -38,15 +37,20 @@ type ESService struct {
 func NewESService(ctx context.Context) (*ESService, error) {
 	// Defaults
 	es := &ESService{
-		Ctx:    ctx,
+		ctx:    ctx,
 		Status: "initialized",
 	}
 	return es, nil
 }
 
+func (es *ESService) Send(cmd interface{}) error {
+	err := es.commandBus.Send(es.ctx, cmd)
+	return err
+}
+
 func (es *ESService) Start() error {
 	// Convenience
-	logger := fplog.Logger(es.Ctx)
+	logger := fplog.Logger(es.ctx)
 
 	logger.Debug("ES starting")
 	defer logger.Debug("ES started")
@@ -55,7 +59,7 @@ func (es *ESService) Start() error {
 
 	logger.Debug("Pipeline dir", "dir", pipelineDir)
 
-	_, err := pipeline.LoadPipelines(es.Ctx, pipelineDir)
+	_, err := pipeline.LoadPipelines(es.ctx, pipelineDir)
 	if err != nil {
 		return err
 	}
@@ -63,7 +67,7 @@ func (es *ESService) Start() error {
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 
 	goChannelConfig := gochannel.Config{
-		// TODO - I really don't understand this and I'm not sure it's necessary.
+		//TODO - I really don't understand this and I'm not sure it's necessary.
 		//OutputChannelBuffer: 10000,
 		//Persistent:          true,
 	}
@@ -87,7 +91,7 @@ func (es *ESService) Start() error {
 	//router.AddMiddleware(middleware.Recoverer)
 
 	// Log to file for creation of state
-	router.AddMiddleware(LogEventMiddlewareWithContext(es.Ctx))
+	router.AddMiddleware(LogEventMiddlewareWithContext(es.ctx))
 
 	// Dump the state of the event sourcing log with every event
 	//router.AddMiddleware(DumpState(ctx))
@@ -180,12 +184,12 @@ func (es *ESService) Start() error {
 
 	runID := util.NewProcessID()
 
-	es.RunID = runID
-	es.CommandBus = cqrsFacade.CommandBus()
+	es.runID = runID
+	es.commandBus = cqrsFacade.CommandBus()
 
 	// processors are based on router, so they will work when router will start
 	go func() {
-		err := router.Run(es.Ctx)
+		err := router.Run(es.ctx)
 		if err != nil {
 			panic(err)
 		}
