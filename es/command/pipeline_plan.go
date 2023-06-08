@@ -39,9 +39,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// Convenience
 	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
-	// If the pipeline has been canceled, then no planning is required as no
+	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() {
+	if pe.IsCanceled() || pe.IsPaused() {
 		return nil
 	}
 
@@ -99,7 +99,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		e.NextSteps = append(e.NextSteps, step.Name)
 	}
 
-	logger.Info("(7) pipeline_plan command handler #2", "nextSteps", e.NextSteps, "e", e)
+	logger.Info("(7) pipeline_plan command handler #2", "nextSteps", e.NextSteps)
 
 	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.Publish(ctx, &e); err != nil {

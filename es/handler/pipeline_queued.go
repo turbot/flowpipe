@@ -33,7 +33,7 @@ func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineQueued")
 	}
 
-	logger.Info("[9] pipeline_queued event handler", "executionID", e.Event.ExecutionID)
+	logger.Info("[10] pipeline_queued event handler", "executionID", e.Event.ExecutionID)
 
 	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(e))
 	if err != nil {

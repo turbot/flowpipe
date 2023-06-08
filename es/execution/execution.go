@@ -170,11 +170,13 @@ func (ex *Execution) LogFilePath() (string, error) {
 	return filepath.Abs(p)
 }
 
+// This function loads the event log file (the .jsonl file) continously and update the
+// ex.PipelineExecutions and ex.StepExecutions
 func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	logger := fplog.Logger(ex.Context)
 
-	logger.Debug("Loading process", "executionID", ex.ID)
+	logger.Info("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
 
 	if e.ExecutionID == "" {
 		return fperr.BadRequestWithMessage("event execution ID is empty")
@@ -190,7 +192,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	// Open the event log
 	logPath, err := ex.LogFilePath()
-	logger.Debug("Loading file", "execution", ex.ID, "logPath", logPath)
+	logger.Info("<1> Loading file #2", "execution", ex.ID, "logPath", logPath)
 
 	if err != nil {
 		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
@@ -217,8 +219,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			return err
 		}
 
+		// logger.Info("<1> event type #3", "eventType", ele.EventType)
 		switch ele.EventType {
-
 		case "handler.pipeline_queued":
 			var et event.PipelineQueued
 			err := json.Unmarshal(ele.Payload, &et)
@@ -320,6 +322,15 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "canceled"
 
+		case "handler.pipeline_paused":
+			var et event.PipelinePaused
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "paused"
+
 		case "handler.pipeline_finished":
 			var et event.PipelineFinished
 			err := json.Unmarshal(ele.Payload, &et)
@@ -342,7 +353,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		default:
 			// Ignore unknown types while loading
 		}
-
 	}
 
 	if err := scanner.Err(); err != nil {

@@ -20,6 +20,7 @@ func (h PipelineStepStartHandler) NewCommand() interface{} {
 	return &event.PipelineStepStart{}
 }
 
+// * This is the handler that will actually execute the primitive
 func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 	go func(ctx context.Context, c interface{}, h PipelineStepStartHandler) {

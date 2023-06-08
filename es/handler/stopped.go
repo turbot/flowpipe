@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/turbot/flowpipe/es/event"
+	"github.com/turbot/flowpipe/fplog"
 )
 
 type Stopped EventHandler
@@ -19,6 +20,11 @@ func (Stopped) NewEvent() interface{} {
 
 func (h Stopped) Handle(ctx context.Context, ei interface{}) error {
 	//e := ei.(*event.Stopped)
+
+	logger := fplog.Logger(ctx)
+
+	logger.Info("stopped event handler")
+
 	os.Exit(1)
 	return nil
 }

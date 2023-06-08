@@ -18,6 +18,8 @@ func (h PipelinePauseHandler) NewCommand() interface{} {
 	return &event.PipelinePause{}
 }
 
+// pipeline_pause command handler
+// issue this to pause a pipeline execution
 func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 	logger := fplog.Logger(ctx)
 

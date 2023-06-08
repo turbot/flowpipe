@@ -34,7 +34,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
-	logger.Info("[8] pipeline planned event handler #1", "executionID", e.Event.ExecutionID, "pipelinePlanned", e)
+	logger.Info("[9] pipeline planned event handler #1", "executionID", e.Event.ExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -49,9 +49,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// Convenience
 	pe := ex.PipelineExecutions[e.PipelineExecutionID]
 
-	// If the pipeline has been canceled, then no planning is required as no
+	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() {
+	if pe.IsCanceled() || pe.IsPaused() {
 		return nil
 	}
 
@@ -230,7 +230,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					return
 				}
 
-				logger.Info("[8] pipeline planned event handler #3 - sending pipeline step start command", "command", cmd)
+				logger.Info("[8] pipeline planned event handler #3 - sending pipeline step start command", "command", cmd.StepName)
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {

@@ -104,20 +104,41 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 		return
 	}
 
-	if input.Command != "cancel" {
+	if input.Command != "cancel" && input.Command != "pause" {
 		common.AbortWithError(c, fperr.BadRequestWithMessage("invalid command"))
 		return
 	}
 
-	pipelineCmd := &event.PipelineCancel{
-		Event:               event.NewEventForExecutionID(uri.ProcessId),
-		PipelineExecutionID: input.PipelineExecutionID,
-		Reason:              "because I said so",
+	if input.Command == "cancel" {
+		// Raise the event.PipelineCancel event .. but will actually handled by command.PipelineCancel command handler
+		// the command to event binding is in the NewCommand() function
+		pipelineEvent := &event.PipelineCancel{
+			Event:               event.NewEventForExecutionID(uri.ProcessId),
+			PipelineExecutionID: input.PipelineExecutionID,
+			ExecutionID:         uri.ProcessId,
+			Reason:              "because I said so",
+		}
+
+		if err := api.esService.Send(pipelineEvent); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else if input.Command == "pause" {
+		// Raise the event.PipelinePause event .. but will actually handled by command.PipelinePause command handler
+		// the command to event binding is in the NewCommand() function
+		pipelineEvent := &event.PipelinePause{
+			Event:               event.NewEventForExecutionID(uri.ProcessId),
+			PipelineExecutionID: input.PipelineExecutionID,
+			ExecutionID:         uri.ProcessId,
+			Reason:              "just because",
+		}
+
+		if err := api.esService.Send(pipelineEvent); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
-	if err := api.esService.Send(pipelineCmd); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+
 }
 
 func (api *APIService) listProcessEventLog(c *gin.Context) {

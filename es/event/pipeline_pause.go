@@ -5,6 +5,8 @@ type PipelinePause struct {
 	Event *Event `json:"event"`
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
+	ExecutionID         string `json:"execution_id,omitempty"`
+
 	// Reason for pausing the pipeline execution
 	Reason string `json:"reason,omitempty"`
 }
