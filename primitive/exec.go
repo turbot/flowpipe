@@ -36,6 +36,7 @@ func (e *Exec) Run(ctx context.Context, input types.Input) (*types.Output, error
 		return nil, err
 	}
 	stdoutLines := []string{}
+	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	stdoutScanner := bufio.NewScanner(stdout)
 	go func() {
 		for stdoutScanner.Scan() {
@@ -51,6 +52,7 @@ func (e *Exec) Run(ctx context.Context, input types.Input) (*types.Output, error
 		return nil, err
 	}
 	stderrLines := []string{}
+	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	stderrScanner := bufio.NewScanner(stderr)
 	go func() {
 		for stderrScanner.Scan() {

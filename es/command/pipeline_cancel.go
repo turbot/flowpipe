@@ -20,7 +20,7 @@ func (h PipelineCancelHandler) NewCommand() interface{} {
 
 func (h PipelineCancelHandler) Handle(ctx context.Context, c interface{}) error {
 	logger := fplog.Logger(ctx)
-	cmd, ok := c.(*event.PipelineCancel)
+	evt, ok := c.(*event.PipelineCancel)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelineCancel", "actual", c)
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineCancel")
@@ -28,9 +28,9 @@ func (h PipelineCancelHandler) Handle(ctx context.Context, c interface{}) error 
 
 	logger.Info("(2) pipeline_cancel command handler")
 
-	e, err := event.NewPipelineCanceled(event.ForPipelineCancel(cmd))
+	e, err := event.NewPipelineCanceled(event.ForPipelineCancel(evt))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineCancelToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineCancelToPipelineFailed(evt, err)))
 	}
 	return h.EventBus.Publish(ctx, &e)
 }

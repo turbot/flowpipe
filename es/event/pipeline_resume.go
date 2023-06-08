@@ -1,6 +1,6 @@
 package event
 
-type PipelineCancel struct {
+type PipelineResume struct {
 	// Event metadata
 	Event *Event `json:"event"`
 
@@ -13,14 +13,13 @@ type PipelineCancel struct {
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
-type PipelineCancelOption func(*PipelineCancel) error
+type PipelineResumeOption func(*PipelineResume) error
 
-// NewPipelineCancel creates a new PipelineCancel event.
-func NewPipelineCancel(pipelineExecutionID string, opts ...PipelineCancelOption) (*PipelineCancel, error) {
+func NewPipelineResume(pipelineExecutionID string, opts ...PipelineResumeOption) (*PipelineResume, error) {
 	// Defaults
 	e := NewEventForExecutionID(pipelineExecutionID)
 	// Defaults
-	evt := &PipelineCancel{
+	evt := &PipelineResume{
 		Event: e,
 	}
 	// Set options

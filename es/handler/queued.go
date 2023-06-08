@@ -26,7 +26,7 @@ func (h Queued) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.Queued")
 	}
 
-	fplog.Logger(ctx).Info("[14] queued event handler", "executionID", e.Event.ExecutionID)
+	fplog.Logger(ctx).Info("[15] queued event handler", "executionID", e.Event.ExecutionID)
 
 	// Next step is to load the mod triggers and pipelines.
 	cmd := event.Load{

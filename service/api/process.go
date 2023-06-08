@@ -112,7 +112,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 	if input.Command == "cancel" {
 		// Raise the event.PipelineCancel event .. but will actually handled by command.PipelineCancel command handler
 		// the command to event binding is in the NewCommand() function
-		pipelineEvent := &event.PipelineCancel{
+		pipelineEvent := event.PipelineCancel{
 			Event:               event.NewEventForExecutionID(uri.ProcessId),
 			PipelineExecutionID: input.PipelineExecutionID,
 			ExecutionID:         uri.ProcessId,

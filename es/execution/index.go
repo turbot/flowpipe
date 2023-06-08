@@ -22,6 +22,7 @@ func LoadEventLogEntries(executionID string) ([]types.EventLogEntry, error) {
 	defer file.Close()
 
 	// Create a scanner to read the file line by line
+	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	scanner := bufio.NewScanner(file)
 
 	// Create a slice to hold the parsed eventLogEntries
