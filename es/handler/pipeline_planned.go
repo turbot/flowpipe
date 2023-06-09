@@ -75,18 +75,23 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	for _, stepName := range e.NextSteps {
 
-		logger.Info("[8] pipeline planned event handler #2", "executionID", e.Event.ExecutionID, "stepName", stepName)
+		// logger.Info("[8] pipeline planned event handler #2", "executionID", e.Event.ExecutionID, "stepName", stepName)
 
 		data, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
+		// logger.Info("[8] pipeline planned event handler #3")
 
 		var forInputs reflect.Value
 		var forInputsType string
 
+		// logger.Info("[8] pipeline planned event handler #4")
 		stepDefn := defn.Steps[stepName]
+
 		if stepDefn.For != "" {
+			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.For)
+
 			// Use go template with the step outputs to generate the items
 			t, err := template.New("for").Parse(stepDefn.For)
 			if err != nil {
@@ -117,6 +122,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			}
 		}
 
+		// logger.Info("[8] pipeline planned event handler #6")
+
 		// inputs will gather the input data for each step execution
 		inputs := []types.Input{}
 
@@ -124,6 +131,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// execution in the loop
 		forEaches := []*types.Input{}
 
+		// logger.Info("[8] pipeline planned event handler #7", "stepDefn", stepDefn)
 		if stepDefn.Input == "" {
 			// No input, so just use an empty input for each step execution.
 
@@ -132,21 +140,32 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			inputs = append(inputs, types.Input{})
 			forEaches = append(forEaches, nil)
 
-			// Add extra items if the for loop required them, skipping the one
-			// we added already above.
-			for i := 0; i < forInputs.Len()-1; i++ {
-				inputs = append(inputs, types.Input{})
+			// logger.Info("[8] pipeline planned event handler #8")
+
+			// TODO: what happen if forInputs is invalid? Is this a real issue or not?
+			if forInputs.IsValid() {
+				// Add extra items if the for loop required them, skipping the one
+				// we added already above.
+				for i := 0; i < forInputs.Len()-1; i++ {
+					// logger.Info("[8] pipeline planned event handler #9", "i", i, "inputs", inputs)
+					inputs = append(inputs, types.Input{})
+				}
 			}
+
+			// logger.Info("[8] pipeline planned event handler #10")
 
 		} else {
 			// We have an input
 
+			// logger.Info("[8] pipeline planned event handler #11")
 			// Parse the input template once
 			t, err := template.New("input").Parse(stepDefn.Input)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
+			// TODO: should we check for foInputs.IsValid() here? It was causing a panic before
+			// TODO: when I didn't load the yaml file correctly
 			if stepDefn.For == "" {
 				// No for loop
 

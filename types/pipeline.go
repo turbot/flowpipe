@@ -16,12 +16,12 @@ func (o *Output) Get(key string) interface{} {
 
 // The definition of a single Flowpipe Pipeline
 type Pipeline struct {
-	Type     string                   `json:"type"`
-	Name     string                   `json:"name"`
-	Steps    map[string]*PipelineStep `json:"steps"`
-	Parallel bool                     `json:"parallel"`
-	Args     Input                    `json:"args"`
-	Output   string                   `json:"output,omitempty"`
+	Type     string                   `yaml:"type" json:"type"`
+	Name     string                   `yaml:"name" json:"name"`
+	Steps    map[string]*PipelineStep `yaml:"steps" json:"steps"`
+	Parallel bool                     `yaml:"parallel" json:"parallel"`
+	Args     Input                    `yaml:"args" json:"args"`
+	Output   string                   `yaml:"output,omitempty" json:"output,omitempty"`
 }
 
 type PrintablePipeline struct {
@@ -91,11 +91,11 @@ func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
 }
 
 type PipelineStep struct {
-	Type      string   `json:"type"`
-	Name      string   `json:"name"`
-	Input     string   `json:"input_template"`
-	DependsOn []string `json:"depends_on"`
-	For       string   `json:"for,omitempty"`
+	Type      string   `yaml:"type" json:"type"`
+	Name      string   `yaml:"name" json:"name"`
+	Input     string   `yaml:"input" json:"input_template"`
+	DependsOn []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	For       string   `yaml:"for,omitempty" json:"for,omitempty"`
 }
 
 // This type is used by the API to return a list of pipelines.

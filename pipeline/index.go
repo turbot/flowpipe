@@ -58,8 +58,6 @@ func LoadPipelines(ctx context.Context, directory string) ([]types.Pipeline, err
 				return nil, err
 			}
 
-			fplog.Logger(ctx).Debug("Loaded pipeline", "name", pipeline.Name, "file", filePath)
-
 			// Append to data slice
 			data = append(data, pipeline)
 

@@ -68,6 +68,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	for _, step := range defn.Steps {
 
+		// logger.Info("(7) pipeline_plan command handler #2 processing step", "step", step)
+
 		if pe.IsStepInitialized(step.Name) {
 			continue
 		}
@@ -76,6 +78,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		// TODO - this is completely naive and does not handle cycles.
 		dependendenciesMet := true
 		for _, dep := range step.DependsOn {
+
+			// logger.Info("(7) pipeline_plan command handler #3 processing dep", "step", step, "dep", dep)
+
 			// Cannot depend on yourself
 			if step.Name == dep {
 				// TODO - issue a warning? How do we issue a warning?
