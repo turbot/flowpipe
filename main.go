@@ -16,7 +16,6 @@ func main() {
 	ctx = fplog.ContextWithLogger(ctx)
 	ctx, err := config.ContextWithConfig(ctx)
 	if err != nil {
-		// TODO - don't panic
 		panic(err)
 	}
 
@@ -27,5 +26,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
 }

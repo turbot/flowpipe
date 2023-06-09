@@ -17,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/pipeline"
 
-	// "github.com/turbot/flowpipe/service/es/middleware"
 	esmiddleware "github.com/turbot/flowpipe/service/es/middleware"
 	"github.com/turbot/flowpipe/util"
 )
@@ -102,8 +101,6 @@ func (es *ESService) Start() error {
 		esmiddleware.Recoverer{
 			Ctx: es.ctx,
 		}.Middleware,
-
-		// middleware.Recoverer,
 	)
 
 	// Log to file for creation of state

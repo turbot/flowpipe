@@ -6,6 +6,7 @@ replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.2.0
+	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/didip/tollbooth/v7 v7.0.1
@@ -38,7 +39,6 @@ require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/bytedance/sonic v1.8.0 // indirect
-	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
