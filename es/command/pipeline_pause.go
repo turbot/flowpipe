@@ -46,6 +46,11 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 
 	if pe.Status != "started" && pe.Status != "queued" {
 		logger.Error("Can't pause pipeline execution that is not started or queued", "pipeline_execution_id", evt.PipelineExecutionID, "pipelineStatus", pe.Status)
+
+		// TODO: This is a bit of a hack. We should be able to return an error here, but returning an error is causing
+		// TODO: Watermill retry the message ... infinitely. There's something wrong here, the example clearly shows
+		// TODO: that command can and should return an error if there's a problem.
+		// return fperr.BadRequestWithMessage("Can't pause pipeline execution that is not started or queued")
 		return nil
 	}
 

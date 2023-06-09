@@ -64,8 +64,8 @@ func (es *ESService) Start() error {
 
 	goChannelConfig := gochannel.Config{
 		//TODO - I really don't understand this and I'm not sure it's necessary.
-		//OutputChannelBuffer: 10000,
-		//Persistent:          true,
+		// OutputChannelBuffer: 10000,
+		// Persistent:          true,
 	}
 	wLogger := watermillzap.NewLogger(logger.Zap)
 
@@ -90,7 +90,7 @@ func (es *ESService) Start() error {
 		// The handler function is retried if it returns an error.
 		// After MaxRetries, the message is Nacked and it's up to the PubSub to resend it.
 		middleware.Retry{
-			MaxRetries:      1,
+			MaxRetries:      0,
 			InitialInterval: time.Millisecond * 1000,
 			Logger:          wLogger,
 		}.Middleware,
@@ -110,6 +110,7 @@ func (es *ESService) Start() error {
 			// we are using queue RabbitMQ config, so we need to have topic per command type
 			return commandName
 		},
+
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
 				command.PipelineCancelHandler{EventBus: eb},
@@ -175,11 +176,11 @@ func (es *ESService) Start() error {
 		Logger:                wLogger,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if cqrsFacade == nil {
-		panic(fperr.InternalWithMessage("cqrsFacade is nil"))
+		return fperr.InternalWithMessage("cqrsFacade is nil")
 	}
 
 	runID := util.NewProcessID()
@@ -204,16 +205,17 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 
 			logger := fplog.Logger(ctx)
 
+			logger.Trace("LogEventMiddlewareWithContext", "msg", msg)
+
 			var pe event.PayloadWithEvent
 			err := json.Unmarshal(msg.Payload, &pe)
 			if err != nil {
 				logger.Error("invalid log payload", "error", err)
-				panic(err)
+				return nil, err
 			}
 
 			executionID := pe.Event.ExecutionID
 			if executionID == "" {
-				// m := fmt.Sprintf("SHOULD NOT HAPPEN - No execution_id found in payload: %s", msg.Payload)
 				return nil, fperr.InternalWithMessage("no execution_id found in payload")
 			}
 
@@ -221,7 +223,7 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 			err = json.Unmarshal(msg.Payload, &payload)
 			if err != nil {
 				logger.Error("invalid log payload", "error", err)
-				panic(err)
+				return nil, err
 			}
 
 			payloadWithoutEvent := make(map[string]interface{})
@@ -235,12 +237,12 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 
 			// executionLogger writes the event to a file
 			executionLogger := fplog.ExecutionLogger(ctx, executionID)
+			executionLogger.Sugar().Infow("es", "event_type", message.HandlerNameFromCtx(msg.Context()), "payload", payload)
 			defer func() {
 				err := executionLogger.Sync()
 				if err != nil {
 					logger.Error("failed to sync execution logger", "error", err)
 				}
-				executionLogger.Sugar().Infow("es", "event_type", message.HandlerNameFromCtx(msg.Context()), "payload", payload)
 			}()
 
 			return h(msg)
