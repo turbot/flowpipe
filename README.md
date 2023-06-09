@@ -12,6 +12,9 @@
     $ cd flowpipe
     $ cp ~/Downloads/flowpipe_0.0.1_darwin_amd64.tar.gz .
     $ tar -xzf flowpipe_0.0.1_darwin_amd64.tar.gz
+
+    # Create the output directory (default to ./tmp)
+    $ mkdir tmp
     ```
 
 1. Run flowpipe specifying the pipeline directory
