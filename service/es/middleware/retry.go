@@ -1,18 +1,23 @@
-package es
+package middleware
 
 import (
 	"context"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/cenkalti/backoff/v3"
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 )
 
 // Custom retry middleware. Because we're using Go Channel pub/sub we need to be able to
 // ack the message after the retry > max retry. Otherwise the message will be re-delivered and
 // and we end up in an infinite loop situation
+//
+// This code is based on the Watermill Retry middleware.
 type Retry struct {
+	Ctx context.Context
+
 	// MaxRetries is maximum number of times a retry will be attempted.
 	MaxRetries int
 
@@ -31,8 +36,6 @@ type Retry struct {
 	// OnRetryHook is an optional function that will be executed on each retry attempt.
 	// The number of the current retry is passed as retryNum,
 	OnRetryHook func(retryNum int, delay time.Duration)
-
-	Logger watermill.LoggerAdapter
 }
 
 // Middleware returns the Retry middleware.
@@ -41,6 +44,15 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 		producedMessages, err := h(msg)
 		if err == nil {
 			return producedMessages, nil
+		}
+
+		// Check if the error is a Flowpipe error instance. If it is, check if it's retryable.
+		if flowpipeError, ok := err.(fperr.ErrorModel); ok {
+			if !flowpipeError.Retryable {
+				// IMPORTANT: must do this
+				msg.Ack()
+				return nil, err
+			}
 		}
 
 		expBackoff := backoff.NewExponentialBackOff()
@@ -74,14 +86,13 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 				return producedMessages, nil
 			}
 
-			if r.Logger != nil {
-				r.Logger.Error("Error occurred, retrying", err, watermill.LogFields{
-					"retry_no":     retryNum,
-					"max_retries":  r.MaxRetries,
-					"wait_time":    waitTime,
-					"elapsed_time": expBackoff.GetElapsedTime(),
-				})
-			}
+			logger := fplog.Logger(r.Ctx)
+			logger.Error("Error occurred, retrying", "error", err,
+				"retry_no", retryNum,
+				"max_retries", r.MaxRetries,
+				"wait_time", waitTime,
+				"elapsed_time", expBackoff.GetElapsedTime())
+
 			if r.OnRetryHook != nil {
 				r.OnRetryHook(retryNum, waitTime)
 			}

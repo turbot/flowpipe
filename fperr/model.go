@@ -4,9 +4,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// As per RFC7807 (https://tools.ietf.org/html/rfc7807) define a standard error model with a limited set of Steampipe-specific extensions
+// As per RFC7807 (https://tools.ietf.org/html/rfc7807) define a standard error model with a limited set of Flowpipe-specific extensions
 // Initial inspiration taken from https://github.com/danielgtaylor/huma/blob/master/error.go
-
 type ErrorDetailModel struct {
 	Message  string `json:"message"`
 	Location string `json:"location,omitempty"`
@@ -20,6 +19,9 @@ type ErrorModel struct {
 	Status           int                 `json:"status" binding:"required"`
 	Detail           string              `json:"detail,omitempty"`
 	ValidationErrors []*ErrorDetailModel `json:"validation_errors,omitempty"`
+
+	// All errors are fatal unless specified
+	Retryable bool `json:"retryable,omitempty"`
 }
 
 func (e ErrorModel) Error() string {

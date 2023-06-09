@@ -7,7 +7,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/garsue/watermillzap"
 	"github.com/spf13/viper"
@@ -17,6 +16,9 @@ import (
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/pipeline"
+
+	// "github.com/turbot/flowpipe/service/es/middleware"
+	esmiddleware "github.com/turbot/flowpipe/service/es/middleware"
 	"github.com/turbot/flowpipe/util"
 )
 
@@ -89,15 +91,19 @@ func (es *ESService) Start() error {
 
 		// The handler function is retried if it returns an error.
 		// After MaxRetries, the message is Nacked and it's up to the PubSub to resend it.
-		Retry{
-			MaxRetries:      3,
+		esmiddleware.Retry{
+			MaxRetries:      4,
 			InitialInterval: time.Millisecond * 1000,
-			Logger:          wLogger,
+			Ctx:             es.ctx,
 		}.Middleware,
 
 		// Recoverer handles panics from handlers.
 		// In this case, it passes them as errors to the Retry middleware.
-		middleware.Recoverer,
+		esmiddleware.Recoverer{
+			Ctx: es.ctx,
+		}.Middleware,
+
+		// middleware.Recoverer,
 	)
 
 	// Log to file for creation of state
