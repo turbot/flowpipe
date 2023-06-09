@@ -156,9 +156,9 @@ func (c *FlowpipeLogger) Debug(msg string, keysAndValues ...interface{}) {
 }
 
 func (c *FlowpipeLogger) Trace(msg string, keysAndValues ...interface{}) {
-	sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
-	msg = "**** " + msg
-	c.Sugar.Infow(msg, sanitizedKeysAndValues...)
+	// sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
+	// msg = "**** " + msg
+	// c.Sugar.Infow(msg, sanitizedKeysAndValues...)
 }
 
 func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
