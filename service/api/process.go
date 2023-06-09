@@ -104,7 +104,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 		return
 	}
 
-	if input.Command != "cancel" && input.Command != "pause" {
+	if input.Command != "cancel" && input.Command != "pause" && input.Command != "resume" {
 		common.AbortWithError(c, fperr.BadRequestWithMessage("invalid command"))
 		return
 	}
@@ -127,6 +127,18 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 		// Raise the event.PipelinePause event .. but will actually handled by command.PipelinePause command handler
 		// the command to event binding is in the NewCommand() function
 		pipelineEvent := &event.PipelinePause{
+			Event:               event.NewEventForExecutionID(uri.ProcessId),
+			PipelineExecutionID: input.PipelineExecutionID,
+			ExecutionID:         uri.ProcessId,
+			Reason:              "just because",
+		}
+
+		if err := api.esService.Send(pipelineEvent); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	} else if input.Command == "resume" {
+		pipelineEvent := &event.PipelineResume{
 			Event:               event.NewEventForExecutionID(uri.ProcessId),
 			PipelineExecutionID: input.PipelineExecutionID,
 			ExecutionID:         uri.ProcessId,

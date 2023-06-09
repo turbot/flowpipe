@@ -28,9 +28,9 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 
 	fplog.Logger(ctx).Info("[12] pipeline started event handler", "executionID", e.Event.ExecutionID)
 
-	cmd, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
+	evt, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStartedToPipelineFail(e, err)))
 	}
-	return h.CommandBus.Send(ctx, cmd)
+	return h.CommandBus.Send(ctx, evt)
 }

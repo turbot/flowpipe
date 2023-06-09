@@ -23,21 +23,21 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	logger := fplog.Logger(ctx)
 
-	cmd, ok := c.(*event.PipelinePlan)
+	evt, ok := c.(*event.PipelinePlan)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
 
-	logger.Info("(7) pipeline_plan command handler #1", "executionID", cmd.Event.ExecutionID, "cmd", cmd)
+	logger.Info("(7) pipeline_plan command handler #1", "executionID", evt.Event.ExecutionID, "evt", evt)
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	// Convenience
-	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
+	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
@@ -45,15 +45,15 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return nil
 	}
 
-	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+	defn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	// Create a new PipelinePlanned event
-	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(cmd))
+	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(evt))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	// Each defined step in the pipeline can be in a few states:
@@ -108,7 +108,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.Publish(ctx, &e); err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	return nil

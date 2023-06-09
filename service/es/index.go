@@ -7,6 +7,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/garsue/watermillzap"
 	"github.com/spf13/viper"
@@ -82,25 +83,25 @@ func (es *ESService) Start() error {
 	// https://watermill.io/docs/messages-router/#middleware
 	//
 	// List of available middlewares you can find in message/router/middleware.
-	//router.AddMiddleware(middleware.RandomFail(0.5))
-	//router.AddMiddleware(middleware.Recoverer)
+
+	// Router level middleware are executed for every message sent to the router
+	router.AddMiddleware(
+
+		// The handler function is retried if it returns an error.
+		// After MaxRetries, the message is Nacked and it's up to the PubSub to resend it.
+		middleware.Retry{
+			MaxRetries:      1,
+			InitialInterval: time.Millisecond * 1000,
+			Logger:          wLogger,
+		}.Middleware,
+
+		// Recoverer handles panics from handlers.
+		// In this case, it passes them as errors to the Retry middleware.
+		middleware.Recoverer,
+	)
 
 	// Log to file for creation of state
 	router.AddMiddleware(LogEventMiddlewareWithContext(es.ctx))
-
-	// Dump the state of the event sourcing log with every event
-	//router.AddMiddleware(DumpState(ctx))
-
-	// Throttle, if required
-	//router.AddMiddleware(middleware.NewThrottle(4, time.Second).Middleware)
-
-	// Retry, if required
-	/*
-		retry := middleware.Retry{
-			MaxRetries: 3,
-		}
-		router.AddMiddleware(retry.Middleware)
-	*/
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
@@ -118,6 +119,7 @@ func (es *ESService) Start() error {
 				command.PipelinePauseHandler{EventBus: eb},
 				command.PipelinePlanHandler{EventBus: eb},
 				command.PipelineQueueHandler{EventBus: eb},
+				command.PipelineResumeHandler{EventBus: eb},
 				command.PipelineStartHandler{EventBus: eb},
 				command.PipelineStepFinishHandler{EventBus: eb},
 				command.PipelineStepStartHandler{EventBus: eb},
@@ -145,6 +147,7 @@ func (es *ESService) Start() error {
 				handler.PipelinePaused{CommandBus: cb},
 				handler.PipelinePlanned{CommandBus: cb},
 				handler.PipelineQueued{CommandBus: cb},
+				handler.PipelineResumed{CommandBus: cb},
 				handler.PipelineStarted{CommandBus: cb},
 				handler.PipelineStepFinished{CommandBus: cb},
 				handler.PipelineStepStarted{CommandBus: cb},

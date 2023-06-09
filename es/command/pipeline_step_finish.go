@@ -25,7 +25,7 @@ func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) er
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineStepFinish")
 	}
 
-	fplog.Logger(ctx).Info("(10) pipeline_step_finish command handler", "executionID", cmd.Event.ExecutionID, "cmd", cmd)
+	fplog.Logger(ctx).Info("(11) pipeline_step_finish command handler", "executionID", cmd.Event.ExecutionID, "cmd", cmd)
 
 	e, err := event.NewPipelineStepFinished(event.ForPipelineStepFinish(cmd), event.WithStepOutput(cmd.Output))
 	if err != nil {

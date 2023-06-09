@@ -38,6 +38,18 @@ func ForPipelineStarted(e *PipelineStarted) PipelinePlanOption {
 	}
 }
 
+func ForPipelineResumed(e *PipelineResumed) PipelinePlanOption {
+	return func(cmd *PipelinePlan) error {
+		cmd.Event = NewFlowEvent(e.Event)
+		if e.PipelineExecutionID != "" {
+			cmd.PipelineExecutionID = e.PipelineExecutionID
+		} else {
+			return fmt.Errorf("missing pipeline execution ID in pipeline loaded event: %v", e)
+		}
+		return nil
+	}
+}
+
 func ForPipelineStepFinished(e *PipelineStepFinished) PipelinePlanOption {
 	return func(cmd *PipelinePlan) error {
 		cmd.Event = NewFlowEvent(e.Event)

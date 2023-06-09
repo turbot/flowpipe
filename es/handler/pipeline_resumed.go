@@ -15,7 +15,7 @@ func (h PipelineResumed) HandlerName() string {
 }
 
 func (PipelineResumed) NewEvent() interface{} {
-	return &event.PipelinePaused{}
+	return &event.PipelineResumed{}
 }
 
 func (h PipelineResumed) Handle(ctx context.Context, ei interface{}) error {
@@ -28,5 +28,10 @@ func (h PipelineResumed) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	logger.Info("[11] pipeline_resumed event handler", "eventExecutionID", e.Event.ExecutionID)
-	return nil
+
+	evt, err := event.NewPipelinePlan(event.ForPipelineResumed(e))
+	if err != nil {
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineResumedToPipelineFail(e, err)))
+	}
+	return h.CommandBus.Send(ctx, evt)
 }

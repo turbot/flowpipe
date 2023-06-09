@@ -49,6 +49,14 @@ func ForPipelineStartedToPipelineFail(e *PipelineStarted, err error) PipelineFai
 	}
 }
 
+func ForPipelineResumedToPipelineFail(e *PipelineResumed, err error) PipelineFailOption {
+	return func(cmd *PipelineFail) {
+		cmd.Event = NewFlowEvent(e.Event)
+		cmd.PipelineExecutionID = e.PipelineExecutionID
+		cmd.ErrorMessage = err.Error()
+	}
+}
+
 func ForPipelineStepStartedToPipelineFail(e *PipelineStepStarted, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)

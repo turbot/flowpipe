@@ -31,7 +31,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		fplog.Logger(ctx).Info("(11) pipeline_step_start command handler", "executionID", cmd.Event.ExecutionID)
+		fplog.Logger(ctx).Info("(12) pipeline_step_start command handler", "executionID", cmd.Event.ExecutionID)
 
 		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 		if err != nil {

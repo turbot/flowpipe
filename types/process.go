@@ -80,7 +80,7 @@ type ListProcessLogResponse struct {
 }
 
 type CmdProcess struct {
-	Command             string `json:"command" binding:"required,oneof=run cancel pause"`
+	Command             string `json:"command" binding:"required,oneof=run cancel pause resume"`
 	PipelineExecutionID string `json:"pipeline_execution_id,omitempty" format:"^(pexec|exec)_[0-9a-v]{20}$"`
 	Reason              string `json:"reason,omitempty"`
 }

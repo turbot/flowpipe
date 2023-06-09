@@ -176,7 +176,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	logger := fplog.Logger(ex.Context)
 
-	logger.Info("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
+	logger.Trace("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
 
 	if e.ExecutionID == "" {
 		return fperr.BadRequestWithMessage("event execution ID is empty")
@@ -192,7 +192,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	// Open the event log
 	logPath, err := ex.LogFilePath()
-	logger.Info("<1> Loading file #2", "execution", ex.ID, "logPath", logPath)
+	logger.Trace("<1> Loading file #2", "execution", ex.ID, "logPath", logPath)
 
 	if err != nil {
 		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
@@ -219,7 +219,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			return err
 		}
 
-		// logger.Info("<1> event type #3", "eventType", ele.EventType)
+		logger.Trace("<1> event type #3", "eventType", ele.EventType)
 		switch ele.EventType {
 		case "handler.pipeline_queued":
 			var et event.PipelineQueued
@@ -243,6 +243,16 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "started"
+
+		case "handler.pipeline_resumed":
+			var et event.PipelineStarted
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			// TODO: is this right?
 			pe.Status = "started"
 
 		case "handler.pipeline_planned":
