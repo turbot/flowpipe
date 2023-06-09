@@ -89,8 +89,8 @@ func (es *ESService) Start() error {
 
 		// The handler function is retried if it returns an error.
 		// After MaxRetries, the message is Nacked and it's up to the PubSub to resend it.
-		middleware.Retry{
-			MaxRetries:      0,
+		Retry{
+			MaxRetries:      3,
 			InitialInterval: time.Millisecond * 1000,
 			Logger:          wLogger,
 		}.Middleware,

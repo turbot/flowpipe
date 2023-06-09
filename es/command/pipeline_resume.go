@@ -41,14 +41,12 @@ func (h PipelineResumeHandler) Handle(ctx context.Context, c interface{}) error 
 	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
 	if pe == nil {
 		logger.Error("Can't resume pipeline execution that doesn't exist", "pipeline_execution_id", evt.PipelineExecutionID)
-		return nil
-		// return fperr.BadRequestWithMessage("Can't resume pipeline execution that doesn't exist")
+		return fperr.BadRequestWithMessage("Can't resume pipeline execution that doesn't exist")
 	}
 
 	if !pe.IsPaused() {
 		logger.Error("Can't resume pipeline execution that is not paused", "pipeline_execution_id", evt.PipelineExecutionID, "pipelineStatus", pe.Status)
-		return nil
-		// return fperr.BadRequestWithMessage("Can't resume pipeline execution that is not paused")
+		return fperr.BadRequestWithMessage("Can't resume pipeline execution that is not paused")
 	}
 
 	e, err := event.NewPipelineResumed(event.ForPipelineResume(evt))
