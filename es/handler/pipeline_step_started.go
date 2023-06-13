@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 
-	"github.com/pkg/errors"
 	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/execution"
 	"github.com/turbot/flowpipe/fperr"
@@ -21,7 +20,6 @@ func (PipelineStepStarted) NewEvent() interface{} {
 }
 
 func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
-
 	logger := fplog.Logger(ctx)
 
 	e, ok := ei.(*event.PipelineStepStarted)
@@ -51,10 +49,10 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, &cmd)
 	case "sleep":
 		// TODO - implement
+		err := fperr.BadRequestWithMessage("sleep type is not implemented")
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	default:
-		err := errors.Errorf("step type cannot be started: %s", stepDefn.Type)
+		err := fperr.BadRequestWithMessage("step type cannot be started: " + stepDefn.Type)
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	}
-
-	return nil
 }

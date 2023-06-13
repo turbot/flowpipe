@@ -25,19 +25,21 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 	go func(ctx context.Context, c interface{}, h PipelineStepStartHandler) {
 
+		logger := fplog.Logger(ctx)
+
 		cmd, ok := c.(*event.PipelineStepStart)
 		if !ok {
-			fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineStepStart", "actual", c)
+			logger.Error("invalid command type", "expected", "*event.PipelineStepStart", "actual", c)
 			return
 		}
 
-		fplog.Logger(ctx).Info("(12) pipeline_step_start command handler", "executionID", cmd.Event.ExecutionID)
+		logger.Info("(12) pipeline_step_start command handler", "executionID", cmd.Event.ExecutionID)
 
 		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				fplog.Logger(ctx).Error("Error publishing event", "error", err2)
+				logger.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
@@ -46,7 +48,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				fplog.Logger(ctx).Error("Error publishing event", "error", err2)
+				logger.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
@@ -74,19 +76,22 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		default:
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				fplog.Logger(ctx).Error("Error publishing event", "error", err2)
+				logger.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
 
 		if err != nil {
+			logger.Trace("primitive failed", "error", err)
+
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				fplog.Logger(ctx).Error("Error publishing event", "error", err2)
+				logger.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
 
+		// If it's a pipeline step, we need to do something else
 		if stepDefn.Type == "pipeline" {
 			args := types.Input{}
 			if cmd.StepInput["args"] != nil {
@@ -96,16 +101,17 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				event.ForPipelineStepStart(cmd),
 				event.WithNewChildPipelineExecutionID(),
 				event.WithChildPipeline(cmd.StepInput["name"].(string), args))
+
 			if err != nil {
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
-					fplog.Logger(ctx).Error("Error publishing event", "error", err2)
+					logger.Error("Error publishing event", "error", err2)
 				}
 				return
 			}
 			err = h.EventBus.Publish(ctx, &e)
 			if err != nil {
-				fplog.Logger(ctx).Error("Error publishing event", "error", err)
+				logger.Error("Error publishing event", "error", err)
 			}
 			return
 		}
@@ -117,14 +123,14 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				fplog.Logger(ctx).Error("Error publishing event", "error", err2)
+				logger.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
 
 		err = h.EventBus.Publish(ctx, &e)
 		if err != nil {
-			fplog.Logger(ctx).Error("Error publishing event", "error", err)
+			logger.Error("Error publishing event", "error", err)
 		}
 
 	}(ctx, c, h)

@@ -46,22 +46,22 @@
 
 1. In your API tool of choice (e.g. Postman, Insomnia, etc.) send a `GET` request to the following URL to check that the API server is running:
     ```
-    http://localhost:7102/api/v0/service
+    http://localhost:713/api/v0/service
     ``` 
 
 1. Check the available pipelines by sending a `GET` request to the following URL:
     ```
-    http://localhost:7102/api/v0/pipeline
+    http://localhost:7103/api/v0/pipeline
     ```
 
 1. Now run one of the pipeline by sending a `POST` to the following URL:
     ```
-    http://localhost:7102/api/v0/pipeline/series_of_for_loop_steps
+    http://localhost:7103/api/v0/pipeline/series_of_for_loop_steps
     ```
 
 1. Copy the resulting `exec_<xxx>` ID and do a `GET` to the following URL:
     ```
-    http://localhost:7102/api/v0/process/exec_chvgkvmu69j2b44q3e60
+    http://localhost:7103/api/v0/process/exec_chvgkvmu69j2b44q3e60
     ```
 
 ## Developer Setup

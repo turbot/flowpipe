@@ -21,8 +21,8 @@ func Initialize(ctx context.Context) {
 	// Set to debug or release - default to debug and envs override this to release as required
 	viper.SetDefault("environment", "debug")
 
-	viper.SetDefault("web.http.port", 7102)
-	viper.SetDefault("web.https.port", 7103)
+	viper.SetDefault("web.http.port", 7103)
+	viper.SetDefault("web.https.port", 7104)
 
 	// Set to single or cluster - default to cluster and envs override this to single as required
 	viper.SetDefault("redis.mode", "redis")
