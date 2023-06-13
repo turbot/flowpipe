@@ -11,7 +11,8 @@ import (
 )
 
 // Recover from Go panic middleware. Based on Watermill Recoverer middleware.
-// The panic will be wrapped in a Flowpipe Error and set as a fatal error (non-retryable, this is the default setting).
+//
+// The panic will be wrapped in a Flowpipe Error and set as a fatal error (non-retryable).
 type Recoverer struct {
 	Ctx context.Context
 }

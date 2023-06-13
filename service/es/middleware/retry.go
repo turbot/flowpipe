@@ -10,11 +10,11 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 )
 
-// Custom retry middleware. Because we're using Go Channel pub/sub we need to be able to
+// Custom retry middleware. To be used with Go Channel pub/sub. We need to be able to
 // ack the message after the retry > max retry. Otherwise the message will be re-delivered and
 // and we end up in an infinite loop situation
 //
-// This code is based on the Watermill Retry middleware.
+// The majority of this code is based on the Watermill Retry middleware.
 type Retry struct {
 	Ctx context.Context
 
@@ -38,7 +38,7 @@ type Retry struct {
 	OnRetryHook func(retryNum int, delay time.Duration)
 }
 
-// Middleware returns the Retry middleware.
+// Middleware function returns the Retry middleware.
 func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 		producedMessages, err := h(msg)
@@ -53,6 +53,10 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 				msg.Ack()
 				return nil, err
 			}
+		} else {
+			// All other errors are NOT retryable
+			msg.Ack()
+			return nil, err
 		}
 
 		expBackoff := backoff.NewExponentialBackOff()
@@ -88,10 +92,10 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 
 			logger := fplog.Logger(r.Ctx)
 			logger.Error("Error occurred, retrying", "error", err,
-				"retry_no", retryNum,
-				"max_retries", r.MaxRetries,
-				"wait_time", waitTime,
-				"elapsed_time", expBackoff.GetElapsedTime())
+				"retryNum", retryNum,
+				"maxRetries", r.MaxRetries,
+				"waitTime", waitTime,
+				"elapsedTime", expBackoff.GetElapsedTime())
 
 			if r.OnRetryHook != nil {
 				r.OnRetryHook(retryNum, waitTime)

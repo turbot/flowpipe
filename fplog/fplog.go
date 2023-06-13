@@ -22,6 +22,9 @@ type FlowpipeLogger struct {
 	// Level is the logging level to use for output
 	Level zapcore.Level
 
+	// Special handling for the "trace" level
+	TraceLevel string
+
 	// Format is the logging format to use for output: json or console
 	Format string
 
@@ -67,14 +70,24 @@ func WithColor(enabled bool) LoggerOption {
 
 func WithLevelFromEnvironment() LoggerOption {
 	return func(c *FlowpipeLogger) error {
-		// Get the desired logging level from the FLOWPIPE_LOG_LEVEL environment variable
-		logLevelStr := strings.ToLower(os.Getenv("FLOWPIPE_LOG_LEVEL"))
-		// If the FLOWPIPE_LOG_LEVEL environment variable is set, parse its value to determine the logging level
-		if logLevelStr != "" {
+		traceLevelStr := strings.ToLower(os.Getenv("FLOWPIPE_TRACE_LEVEL"))
+		if traceLevelStr != "" {
 			var err error
-			logLevel, err := zapcore.ParseLevel(logLevelStr)
+			logLevel, err := zapcore.ParseLevel(traceLevelStr)
 			if err == nil {
 				c.Level = logLevel
+				c.TraceLevel = traceLevelStr
+			}
+		} else {
+			// Get the desired logging level from the FLOWPIPE_LOG_LEVEL environment variable
+			logLevelStr := strings.ToLower(os.Getenv("FLOWPIPE_LOG_LEVEL"))
+			// If the FLOWPIPE_LOG_LEVEL environment variable is set, parse its value to determine the logging level
+			if logLevelStr != "" {
+				var err error
+				logLevel, err := zapcore.ParseLevel(logLevelStr)
+				if err == nil {
+					c.Level = logLevel
+				}
 			}
 		}
 		return nil
@@ -156,9 +169,18 @@ func (c *FlowpipeLogger) Debug(msg string, keysAndValues ...interface{}) {
 }
 
 func (c *FlowpipeLogger) Trace(msg string, keysAndValues ...interface{}) {
-	// sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
-	// msg = "**** " + msg
-	// c.Sugar.Infow(msg, sanitizedKeysAndValues...)
+	if c.TraceLevel != "" {
+		sanitizedKeysAndValues := sanitize.SanitizeLogEntries(keysAndValues)
+		msg = "**** " + msg
+		switch c.TraceLevel {
+		case "debug":
+			c.Sugar.Debugw(msg, sanitizedKeysAndValues...)
+		case "info":
+			c.Sugar.Infow(msg, sanitizedKeysAndValues...)
+		case "warn":
+			c.Sugar.Warnw(msg, sanitizedKeysAndValues...)
+		}
+	}
 }
 
 func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
