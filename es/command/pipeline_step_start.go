@@ -55,24 +55,24 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		stepDefn := defn.Steps[cmd.StepName]
 
-		var output *types.Output
-
+		var output *types.StepOutput
+		var primitiveError error
 		switch stepDefn.Type {
 		case "exec":
 			p := primitive.Exec{}
-			output, err = p.Run(ctx, cmd.StepInput)
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "http_request":
 			p := primitive.HTTPRequest{}
-			output, err = p.Run(ctx, cmd.StepInput)
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "pipeline":
 			p := primitive.RunPipeline{}
-			output, err = p.Run(ctx, cmd.StepInput)
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "query":
 			p := primitive.Query{}
-			output, err = p.Run(ctx, cmd.StepInput)
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "sleep":
 			p := primitive.Sleep{}
-			output, err = p.Run(ctx, cmd.StepInput)
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
@@ -81,14 +81,14 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		if err != nil {
-			logger.Trace("primitive failed", "error", err)
+		if primitiveError != nil {
+			logger.Error("primitive failed", "error", primitiveError)
 
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
-			}
-			return
+			// err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			// if err2 != nil {
+			// 	logger.Error("Error publishing event", "error", err2)
+			// }
+			// return
 		}
 
 		// If it's a pipeline step, we need to do something else
@@ -119,7 +119,9 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		// All other primitives finish immediately.
 		e, err := event.NewPipelineStepFinished(
 			event.ForPipelineStepStartToPipelineStepFinished(cmd),
-			event.WithStepOutput(output))
+			event.WithStepOutput(output),
+			event.WithStepError(primitiveError))
+
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {

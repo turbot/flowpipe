@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
@@ -28,10 +29,12 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
+
+	logger := fplog.Logger(ctx)
 
 	// TODO
 	// * POST and other methods
@@ -43,8 +46,16 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output
 	resp, err := http.Get(input["url"].(string))
 	finish := time.Now().UTC()
 	if err != nil {
+		logger.Error("error making request #1", "error", err, "resp", resp)
+		if resp != nil {
+			return nil, fperr.FromHttpError(err, resp.StatusCode)
+		}
 		return nil, err
+	} else if resp != nil && resp.StatusCode != http.StatusOK {
+		logger.Error("error making request #2", "error", err, "resp.StatusCode", resp.StatusCode, "resp.Status", resp.Status)
+		return nil, fperr.FromHttpError(fmt.Errorf("%s", resp.Status), resp.StatusCode)
 	}
+
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
@@ -77,7 +88,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output
 		return nil, err
 	}
 
-	output := &types.Output{
+	output := &types.StepOutput{
 		"status":      resp.Status,
 		"status_code": resp.StatusCode,
 		"headers":     headers,

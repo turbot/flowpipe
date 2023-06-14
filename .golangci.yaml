@@ -60,7 +60,7 @@ linters-settings:
     # Specify an error message to output when a denied package is used.
     # Default: []
     packages-with-error-message:
-      - go.uber.org/zap: do not use Uber zap directly, use the SPC log package instead
+      - go.uber.org/zap: do not use Uber zap directly, use the fplog package instead
 
     # Specify rules by which the linter ignores certain files for consideration.
     # Can accept both string prefixes and string glob patterns.

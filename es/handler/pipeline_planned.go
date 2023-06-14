@@ -72,7 +72,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
-
 	for _, stepName := range e.NextSteps {
 
 		// logger.Info("[8] pipeline planned event handler #2", "executionID", e.Event.ExecutionID, "stepName", stepName)

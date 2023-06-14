@@ -26,7 +26,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -41,5 +41,5 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	return &types.Output{"started_at": start, "finished_at": finish}, nil
+	return &types.StepOutput{"started_at": start, "finished_at": finish}, nil
 }

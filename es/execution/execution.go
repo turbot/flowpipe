@@ -153,11 +153,11 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 
 // PipelineStepExecutions returns a list of step executions for the given
 // pipeline execution ID and step name.
-func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []*StepExecution {
-	stepExecutions := []*StepExecution{}
+func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
+	var stepExecutions []StepExecution
 	for _, se := range ex.StepExecutions {
 		if se.PipelineExecutionID == pipelineExecutionID && se.Name == stepName {
-			stepExecutions = append(stepExecutions, se)
+			stepExecutions = append(stepExecutions, *se)
 		}
 	}
 	return stepExecutions
@@ -321,7 +321,18 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "finished"
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
-			pe.FinishStep(stepDefn.Name, et.StepExecutionID)
+
+			// TODO: ignore error setting -> we need to be able to ignore setting
+			// TODO: is a step failure an immediate end of the pipeline?
+			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
+			if et.Error != nil {
+				ex.StepExecutions[et.StepExecutionID].Error = et.Error
+				logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
+				ex.StepExecutions[et.StepExecutionID].Status = "failed"
+				pe.FailStep(stepDefn.Name, et.StepExecutionID)
+			} else {
+				pe.FinishStep(stepDefn.Name, et.StepExecutionID)
+			}
 
 		case "handler.pipeline_canceled":
 			var et event.PipelineCanceled

@@ -8,8 +8,8 @@ RUN apt update \
     && mv apache-maven-3.9.2 /usr/local/bin/ \
     && echo "export PATH=/usr/local/bin/apache-maven-3.9.2/bin:$PATH" >> /home/vscode/.profile
     
-# IMPORTANT to switch the user before running go install
-# otherwise the first go install will be as root and the /go/pkg directory will be owned by root!
+# IMPORTANT: need to switch the user before running Go package install
+# otherwise the first Go install will be as root and the /go/pkg directory will be owned by root
 USER vscode
 
 RUN go install github.com/swaggo/swag/cmd/swag@v1.8.12 \

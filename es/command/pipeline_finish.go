@@ -32,7 +32,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 
 	fplog.Logger(ctx).Info("(5) pipeline_finish command handler")
 
-	var output types.Output
+	var output types.StepOutput
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))

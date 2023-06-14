@@ -1,0 +1,12 @@
+type: "pipeline"
+name: "parallel_http_with_error"
+steps:
+  # http_1:
+  #   type: "http_request"
+  #   name: "http_1"
+  #   input: '{"url": "http://api.open-notify.orgs/barf.json"}'    
+  http_2:
+    type: "http_request"
+    name: "http_2"
+    input: '{"url": "http://api.open-notify.org/astross.json"}'
+output: '{"body_json": {{.http_1.body_json.number}}}'

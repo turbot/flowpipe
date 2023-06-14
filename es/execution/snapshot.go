@@ -462,7 +462,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 					{Name: "properties", DataType: "JSONB"},
 				},
 				Rows: []SnapshotPanelDataRow{
-					ex.StepExecutionNodeRow(panelName, sd, se),
+					ex.StepExecutionNodeRow(panelName, sd, &se),
 				},
 			},
 			Properties: map[string]interface{}{
@@ -599,8 +599,8 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	}
 
 	// Add row data for each execution to the execution node and its edges
-	for _, se := range stepExecutions {
-		nodePanel.Data.Rows = append(nodePanel.Data.Rows, ex.StepExecutionNodeRow(se.ID, sd, se))
+	for i, se := range stepExecutions {
+		nodePanel.Data.Rows = append(nodePanel.Data.Rows, ex.StepExecutionNodeRow(se.ID, sd, &stepExecutions[i]))
 		startEdgePanel.Data.Rows = append(startEdgePanel.Data.Rows, SnapshotPanelDataRow{
 			"from_id": "stepstart_" + sd.Name,
 			"to_id":   se.ID,

@@ -21,7 +21,7 @@ func (e *Query) ValidateInput(ctx context.Context, i types.Input) error {
 	return nil
 }
 
-func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -71,7 +71,7 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, erro
 		return nil, err
 	}
 
-	output := &types.Output{
+	output := &types.StepOutput{
 		"rows":        results,
 		"started_at":  start,
 		"finished_at": finish,

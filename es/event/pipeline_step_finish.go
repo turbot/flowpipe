@@ -6,9 +6,9 @@ type PipelineStepFinish struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string        `json:"pipeline_execution_id"`
-	StepExecutionID     string        `json:"step_execution_id"`
-	Output              *types.Output `json:"output,omitempty"`
+	PipelineExecutionID string            `json:"pipeline_execution_id"`
+	StepExecutionID     string            `json:"step_execution_id"`
+	Output              *types.StepOutput `json:"output,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

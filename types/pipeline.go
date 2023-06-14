@@ -7,11 +7,16 @@ import (
 
 type Input map[string]interface{}
 
-// Output is the output from a pipeline.
-type Output map[string]interface{}
+// StepOutput is the output from a pipeline.
+type StepOutput map[string]interface{}
 
-func (o *Output) Get(key string) interface{} {
+func (o *StepOutput) Get(key string) interface{} {
 	return (*o)[key]
+}
+
+type StepError struct {
+	// TODO: not sure about this
+	Detail fperr.ErrorModel `json:"detail"`
 }
 
 // The definition of a single Flowpipe Pipeline

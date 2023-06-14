@@ -11,7 +11,7 @@ type PipelineExecution struct {
 	// The input to the pipeline
 	Args types.Input `json:"args"`
 	// Output from the pipeline
-	Output *types.Output `json:"output,omitempty"`
+	Output *types.StepOutput `json:"output,omitempty"`
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 	// Status of each step on a per-step basis. Used to determine if dependencies
@@ -50,6 +50,10 @@ func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
 	return pe.StepStatus[stepName] != nil && pe.StepStatus[stepName].IsComplete()
 }
 
+func (pe *PipelineExecution) IsStepFail(stepName string) bool {
+	return pe.StepStatus[stepName] != nil && pe.StepStatus[stepName].IsFail()
+}
+
 // IsStepInitialized returns true if the step has been initialized.
 func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 	return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].Initializing
@@ -66,6 +70,7 @@ func (pe *PipelineExecution) InitializeStep(stepName string) {
 		Queued:       map[string]bool{},
 		Started:      map[string]bool{},
 		Finished:     map[string]bool{},
+		Failed:       map[string]bool{},
 	}
 }
 
@@ -84,6 +89,10 @@ func (pe *PipelineExecution) FinishStep(stepName string, seID string) {
 	pe.StepStatus[stepName].Finish(seID)
 }
 
+func (pe *PipelineExecution) FailStep(stepName string, seID string) {
+	pe.StepStatus[stepName].Fail(seID)
+}
+
 type StepStatus struct {
 	// When the step is initializing it doesn't yet have any executions.
 	// We track it as initializing until the first execution is queued.
@@ -94,11 +103,18 @@ type StepStatus struct {
 	Started map[string]bool `json:"started"`
 	// Step executions that are finished.
 	Finished map[string]bool `json:"finished"`
+	// Step executions that are failed.
+	Failed map[string]bool `json:"failed"`
 }
 
 // IsComplete returns true if all executions of the step are finished or failed.
 func (s *StepStatus) IsComplete() bool {
 	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0
+}
+
+// IsFail returns true if any executions of the step failed.
+func (s *StepStatus) IsFail() bool {
+	return len(s.Failed) > 0
 }
 
 // Progress returns the percentage of executions of the step that are complete.
@@ -119,6 +135,8 @@ func (s *StepStatus) Queue(seID string) {
 	s.Queued[seID] = true
 	delete(s.Started, seID)
 	delete(s.Finished, seID)
+	// TODO: failed step? What do we do here? Is this correct to remove the delete StepStatus?
+	delete(s.Failed, seID)
 }
 
 // Start marks the given execution as started.
@@ -127,6 +145,8 @@ func (s *StepStatus) Start(seID string) {
 	delete(s.Queued, seID)
 	s.Started[seID] = true
 	delete(s.Finished, seID)
+	// TODO: failed step? What do we do here?
+	delete(s.Failed, seID)
 }
 
 // Finish marks the given execution as finished.
@@ -135,6 +155,15 @@ func (s *StepStatus) Finish(seID string) {
 	delete(s.Queued, seID)
 	delete(s.Started, seID)
 	s.Finished[seID] = true
+	// TODO: failed step? What do we do here?
+	delete(s.Failed, seID)
+}
+
+func (s *StepStatus) Fail(seID string) {
+	s.Initializing = false
+	delete(s.Queued, seID)
+	delete(s.Started, seID)
+	s.Failed[seID] = true
 }
 
 // StepExecution represents the execution of a single step in a types. A given
@@ -151,5 +180,8 @@ type StepExecution struct {
 	Input   types.Input  `json:"input"`
 	ForEach *types.Input `json:"for_each,omitempty"`
 	// Output of the step
-	Output *types.Output `json:"output,omitempty"`
+	Output *types.StepOutput `json:"output,omitempty"`
+
+	// TODO: should we just put fperr.ErrorModel here?
+	Error  *types.StepError  `json:"error,omitempty"`
 }

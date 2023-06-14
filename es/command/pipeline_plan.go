@@ -66,10 +66,25 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// Notably each step may also have multiple executions (e.g. in a for
 	// loop). So, we need to track the overall status of the step separately
 	// from the status of each execution.
+	//
+
+	failure := false
+	var failedStepExecutions []execution.StepExecution
+
 	for _, step := range defn.Steps {
 
-		// logger.Info("(7) pipeline_plan command handler #2 processing step", "step", step)
+		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.Name)
 
+		// TODO: ignore step .. just a naive implementation for now
+		if pe.IsStepFail(step.Name) {
+			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name)
+
+			failure = true
+			failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
+			break
+		}
+
+		// No need to plan if the step has been initialized
 		if pe.IsStepInitialized(step.Name) {
 			continue
 		}
@@ -91,6 +106,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
+
 			if !pe.IsStepComplete(dep) {
 				dependendenciesMet = false
 				break
@@ -104,7 +120,28 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		e.NextSteps = append(e.NextSteps, step.Name)
 	}
 
-	logger.Info("(7) pipeline_plan command handler #2", "nextSteps", e.NextSteps)
+	if failure {
+		logger.Error("(7) pipeline_plan command handler #4 - raise pipeline error", "nextSteps", e.NextSteps)
+
+		logger.Error("ex.StepExecutions", "ex.StepExecutions", ex.StepExecutions)
+
+		// TODO: just a naive implementation for now, find the last error
+		var stepError error
+		for _, se := range failedStepExecutions {
+			if se.Error != nil {
+				stepError = se.Error.Detail
+			}
+		}
+
+		err := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, stepError)))
+		if err != nil {
+			logger.Error("Error publishing event", "error", err)
+			return err
+		}
+		return nil
+	}
+
+	logger.Info("(7) pipeline_plan command handler #5", "nextSteps", e.NextSteps)
 
 	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.Publish(ctx, &e); err != nil {

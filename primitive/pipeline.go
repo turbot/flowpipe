@@ -28,12 +28,12 @@ func (e *RunPipeline) ValidateInput(ctx context.Context, input types.Input) erro
 	return nil
 }
 
-func (e *RunPipeline) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (e *RunPipeline) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := &types.Output{
+	output := &types.StepOutput{
 		"name": input["name"].(string),
 		"args": input["args"].(map[string]interface{}),
 	}

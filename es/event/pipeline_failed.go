@@ -91,7 +91,12 @@ func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error) PipelineFaile
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		if err != nil {
+			e.ErrorMessage = err.Error()
+		} else {
+			e.ErrorMessage = "pipeline plan failed but no error is specified"
+		}
+
 		return nil
 	}
 }

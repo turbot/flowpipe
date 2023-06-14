@@ -1,6 +1,8 @@
 package fperr
 
 import (
+	"net/http"
+
 	"github.com/go-playground/validator/v10"
 )
 
@@ -22,6 +24,35 @@ type ErrorModel struct {
 
 	// All errors are fatal unless specified
 	Retryable bool `json:"retryable,omitempty"`
+}
+
+func FromHttpError(err error, statusCode int) ErrorModel {
+
+	var errorMsg string
+	if err != nil {
+		errorMsg = err.Error()
+	}
+
+	switch statusCode {
+	case http.StatusNotFound:
+		return NotFoundWithMessage(errorMsg)
+	case http.StatusForbidden:
+		return ForbiddenWithMessage(errorMsg)
+	case http.StatusRequestTimeout:
+		return TimeoutWithMessage(errorMsg)
+	case http.StatusBadRequest:
+		return BadRequestWithMessage(errorMsg)
+	case http.StatusConflict:
+		return ConflictWithMessage(errorMsg)
+	case http.StatusPreconditionFailed:
+		return PreconditionFailedWithMessage(errorMsg)
+	case http.StatusPaymentRequired:
+		return UnsupportedPlanValueWithMessage(errorMsg)
+	case http.StatusInternalServerError:
+		return InternalWithMessage(errorMsg)
+	default:
+		return InternalWithMessage(errorMsg)
+	}
 }
 
 func (e ErrorModel) Error() string {
