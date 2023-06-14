@@ -11,6 +11,9 @@ type Input map[string]interface{}
 type StepOutput map[string]interface{}
 
 func (o *StepOutput) Get(key string) interface{} {
+	if o == nil {
+		return nil
+	}
 	return (*o)[key]
 }
 
@@ -96,11 +99,16 @@ func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
 }
 
 type PipelineStep struct {
-	Type      string   `yaml:"type" json:"type"`
-	Name      string   `yaml:"name" json:"name"`
-	Input     string   `yaml:"input" json:"input_template"`
-	DependsOn []string `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
-	For       string   `yaml:"for,omitempty" json:"for,omitempty"`
+	Type      string            `yaml:"type" json:"type"`
+	Name      string            `yaml:"name" json:"name"`
+	Input     string            `yaml:"input" json:"input_template"`
+	DependsOn []string          `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
+	For       string            `yaml:"for,omitempty" json:"for,omitempty"`
+	Error     PipelineStepError `yaml:"error" json:"error"`
+}
+
+type PipelineStepError struct {
+	Ignore bool `yaml:"ignore" json:"ignore"`
 }
 
 // This type is used by the API to return a list of pipelines.

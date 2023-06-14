@@ -75,13 +75,17 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.Name)
 
-		// TODO: ignore step .. just a naive implementation for now
+		// TODO: ignore step
+		// TODO: retry step
 		if pe.IsStepFail(step.Name) {
-			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name)
+			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore)
 
-			failure = true
-			failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
-			break
+			if !step.Error.Ignore {
+				logger.Info("(7) pipeline_plan command handler #4 - step failed and not ignored", "stepName", step.Name)
+				failure = true
+				failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
+				break
+			}
 		}
 
 		// No need to plan if the step has been initialized
