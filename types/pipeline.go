@@ -108,7 +108,8 @@ type PipelineStep struct {
 }
 
 type PipelineStepError struct {
-	Ignore bool `yaml:"ignore" json:"ignore"`
+	Ignore  bool `yaml:"ignore" json:"ignore"`
+	Retries int  `yaml:"retries" json:"retries"`
 }
 
 // This type is used by the API to return a list of pipelines.

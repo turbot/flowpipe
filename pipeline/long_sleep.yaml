@@ -1,5 +1,5 @@
 type: "pipeline"
-name: "simple_long_sleep"
+name: "long_sleep"
 steps:
   sleep_1:
     type: "sleep"

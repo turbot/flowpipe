@@ -1,0 +1,23 @@
+type: "pipeline"
+name: "series_of_sleep"
+steps:
+  sleep_1:
+    type: "sleep"
+    name: "sleep_1"
+    input: '{"duration": "1s"}'
+  sleep_2:
+    type: "sleep"
+    name: "sleep_2"
+    input: '{"duration": "1s"}'
+  sleep_3:
+    type: "sleep"
+    name: "sleep_3"
+    input: '{"duration": "1s"}'
+  sleep_4:
+    type: "sleep"
+    name: "sleep_4"
+    input: '{"duration": "1s"}'
+  sleep_5:
+    type: "sleep"
+    name: "sleep_5"
+    input: '{"duration": "1s"}'                

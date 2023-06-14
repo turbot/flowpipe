@@ -1,6 +1,9 @@
 package execution
 
-import "github.com/turbot/flowpipe/types"
+import (
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/types"
+)
 
 // PipelineExecution represents the execution of a single types.
 type PipelineExecution struct {
@@ -93,6 +96,7 @@ func (pe *PipelineExecution) FailStep(stepName string, seID string) {
 	pe.StepStatus[stepName].Fail(seID)
 }
 
+// This needs to be a map because if we have a for loop, each loop will have a different step execution id
 type StepStatus struct {
 	// When the step is initializing it doesn't yet have any executions.
 	// We track it as initializing until the first execution is queued.
@@ -117,6 +121,10 @@ func (s *StepStatus) IsFail() bool {
 	return len(s.Failed) > 0
 }
 
+func (s *StepStatus) FailCount() int {
+	return len(s.Failed)
+}
+
 // Progress returns the percentage of executions of the step that are complete.
 func (s *StepStatus) Progress() int {
 	if s.Initializing {
@@ -131,6 +139,11 @@ func (s *StepStatus) Progress() int {
 
 // Queue marks the given execution as queued.
 func (s *StepStatus) Queue(seID string) {
+	// Can't queue if the step already finished or started (safety check)
+	if s.Finished[seID] || s.Failed[seID] {
+		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+	}
+
 	s.Initializing = false
 	s.Queued[seID] = true
 	delete(s.Started, seID)
@@ -141,25 +154,36 @@ func (s *StepStatus) Queue(seID string) {
 
 // Start marks the given execution as started.
 func (s *StepStatus) Start(seID string) {
+	// Can't start if the step already finished or started (safety check)
+	if s.Finished[seID] || s.Failed[seID] {
+		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+	}
+
 	s.Initializing = false
 	delete(s.Queued, seID)
 	s.Started[seID] = true
 	delete(s.Finished, seID)
-	// TODO: failed step? What do we do here?
-	delete(s.Failed, seID)
 }
 
 // Finish marks the given execution as finished.
 func (s *StepStatus) Finish(seID string) {
+	// Can't finish if the step already set to fail (safety check)
+	if s.Failed[seID] {
+		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+	}
+
 	s.Initializing = false
 	delete(s.Queued, seID)
 	delete(s.Started, seID)
 	s.Finished[seID] = true
-	// TODO: failed step? What do we do here?
-	delete(s.Failed, seID)
 }
 
 func (s *StepStatus) Fail(seID string) {
+	// Can't fail if the step already finished (safety check)
+	if s.Finished[seID] {
+		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+	}
+
 	s.Initializing = false
 	delete(s.Queued, seID)
 	delete(s.Started, seID)
@@ -183,5 +207,5 @@ type StepExecution struct {
 	Output *types.StepOutput `json:"output,omitempty"`
 
 	// TODO: should we just put fperr.ErrorModel here?
-	Error  *types.StepError  `json:"error,omitempty"`
+	Error *types.StepError `json:"error,omitempty"`
 }

@@ -1,5 +1,5 @@
 type: "pipeline"
-name: "simple_depends"
+name: "depends"
 steps:
   http_1:
     type: "http_request"

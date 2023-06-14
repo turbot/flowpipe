@@ -29,12 +29,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
 
-	logger.Info("(7) pipeline_plan command handler #1", "executionID", evt.Event.ExecutionID, "evt", evt)
-
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
+
+	logger.Info("(7) pipeline_plan command handler #1", "executionID", evt.Event.ExecutionID, "evt", evt, "ex.StepExecutionOrder", ex.StepExecutionOrder)
 
 	// Convenience
 	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
@@ -78,14 +78,27 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		// TODO: ignore step
 		// TODO: retry step
 		if pe.IsStepFail(step.Name) {
-			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore)
+			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
 
-			if !step.Error.Ignore {
-				logger.Info("(7) pipeline_plan command handler #4 - step failed and not ignored", "stepName", step.Name)
+			if step.Error.Retries > 0 && !step.Error.Ignore {
+				if pe.StepStatus[step.Name].FailCount() > step.Error.Retries {
+					logger.Info("(7) pipeline_plan command handler #3.1 - step failed FAIL the pipeline", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
+					failure = true
+					failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
+					break
+				} else {
+					// Retrying the step
+					logger.Info("(7) pipeline_plan command handler #3.2 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
+					e.NextSteps = append(e.NextSteps, step.Name)
+					continue
+				}
+			} else if !step.Error.Ignore {
+				logger.Info("(7) pipeline_plan command handler #3.3 - step failed and not ignored FAIL the pipeline", "stepName", step.Name)
 				failure = true
 				failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
 				break
 			}
+			logger.Info("(7) pipeline_plan command handler #3.4 - step failed IGNORED", "stepName", step.Name)
 		}
 
 		// No need to plan if the step has been initialized

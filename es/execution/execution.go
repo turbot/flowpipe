@@ -32,6 +32,10 @@ type Execution struct {
 	// Steps triggered by pipelines in the execution. We maintain a flat list
 	// of all steps triggered by all pipelines for easy lookup and querying.
 	StepExecutions map[string]*StepExecution `json:"step_executions"`
+
+	// TODO: not sure if we need this, it's a different index of the step executions
+	// TODO: but also a way to track the order of execution for a given step
+	StepExecutionOrder map[string][]string `json:"step_execution_order"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -44,6 +48,7 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 		Context:            ctx,
 		PipelineExecutions: map[string]*PipelineExecution{},
 		StepExecutions:     map[string]*StepExecution{},
+		StepExecutionOrder: map[string][]string{},
 	}
 
 	// Loop through each option
@@ -154,6 +159,8 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 // PipelineStepExecutions returns a list of step executions for the given
 // pipeline execution ID and step name.
 func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
+
+	// TODO: we can optimise this by using StepExecutionOrder
 	var stepExecutions []StepExecution
 	for _, se := range ex.StepExecutions {
 		if se.PipelineExecutionID == pipelineExecutionID && se.Name == stepName {
@@ -282,6 +289,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Name:                et.StepName,
 				Status:              "starting",
 			}
+			ex.StepExecutionOrder[et.StepName] = append(ex.StepExecutionOrder[et.StepName], et.StepExecutionID)
+
 			// Set the overall step status
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			stepDefn, err := ex.StepDefinition(et.StepExecutionID)

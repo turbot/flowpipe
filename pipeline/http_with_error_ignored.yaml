@@ -1,5 +1,5 @@
 type: "pipeline"
-name: "simple_http_with_error_ignored"
+name: "http_with_error_ignored"
 steps:
   http_1:
     type: "http_request"

@@ -87,15 +87,6 @@ func (es *ESService) Start() error {
 
 	// Router level middleware are executed for every message sent to the router
 	router.AddMiddleware(
-
-		// The handler function is retried if it returns an error.
-		// After MaxRetries, the message is Nacked and it's up to the PubSub to resend it.
-		esmiddleware.Retry{
-			MaxRetries:      4,
-			InitialInterval: time.Millisecond * 1000,
-			Ctx:             es.ctx,
-		}.Middleware,
-
 		// Recoverer handles panics from handlers.
 		// In this case, it passes them as errors to the Retry middleware.
 		esmiddleware.Recoverer{
