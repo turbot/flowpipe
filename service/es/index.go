@@ -2,7 +2,6 @@ package es
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -11,12 +10,12 @@ import (
 	"github.com/garsue/watermillzap"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/es/command"
-	"github.com/turbot/flowpipe/es/event"
 	"github.com/turbot/flowpipe/es/handler"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/pipeline"
 
+	"github.com/turbot/flowpipe/service/es/middleware"
 	esmiddleware "github.com/turbot/flowpipe/service/es/middleware"
 	"github.com/turbot/flowpipe/util"
 )
@@ -95,7 +94,8 @@ func (es *ESService) Start() error {
 	)
 
 	// Log to file for creation of state
-	router.AddMiddleware(LogEventMiddlewareWithContext(es.ctx))
+	router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
+	router.AddMiddleware(middleware.CommandDelayMiddlewareWithContext(es.ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
@@ -191,55 +191,4 @@ func (es *ESService) Start() error {
 	}()
 
 	return nil
-}
-
-func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddleware {
-	return func(h message.HandlerFunc) message.HandlerFunc {
-		return func(msg *message.Message) ([]*message.Message, error) {
-
-			logger := fplog.Logger(ctx)
-
-			logger.Trace("LogEventMiddlewareWithContext", "msg", msg)
-
-			var pe event.PayloadWithEvent
-			err := json.Unmarshal(msg.Payload, &pe)
-			if err != nil {
-				logger.Error("invalid log payload", "error", err)
-				return nil, err
-			}
-
-			executionID := pe.Event.ExecutionID
-			if executionID == "" {
-				return nil, fperr.InternalWithMessage("no execution_id found in payload")
-			}
-
-			var payload map[string]interface{}
-			err = json.Unmarshal(msg.Payload, &payload)
-			if err != nil {
-				logger.Error("invalid log payload", "error", err)
-				return nil, err
-			}
-
-			payloadWithoutEvent := make(map[string]interface{})
-			for key, value := range payload {
-				if key == "event" {
-					continue
-				}
-				payloadWithoutEvent[key] = value
-			}
-			logger.Debug("Event log", "createdAt", pe.Event.CreatedAt.Format("15:04:05.000"), "handlerNameFromCtx", message.HandlerNameFromCtx(msg.Context()), "payload", payloadWithoutEvent)
-
-			// executionLogger writes the event to a file
-			executionLogger := fplog.ExecutionLogger(ctx, executionID)
-			executionLogger.Sugar().Infow("es", "event_type", message.HandlerNameFromCtx(msg.Context()), "payload", payload)
-			defer func() {
-				err := executionLogger.Sync()
-				if err != nil {
-					logger.Error("failed to sync execution logger", "error", err)
-				}
-			}()
-
-			return h(msg)
-		}
-	}
 }

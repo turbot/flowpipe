@@ -2,6 +2,8 @@ package event
 
 import (
 	"fmt"
+
+	"github.com/turbot/flowpipe/types"
 )
 
 type PipelinePlanned struct {
@@ -10,7 +12,7 @@ type PipelinePlanned struct {
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// The planner outputs a list of the next steps to be executed in the types.
-	NextSteps []string `json:"next_steps"`
+	NextSteps []types.NextStep `json:"next_steps"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -20,7 +22,7 @@ type PipelinePlannedOption func(*PipelinePlanned) error
 func NewPipelinePlanned(opts ...PipelinePlannedOption) (*PipelinePlanned, error) {
 	// Defaults
 	e := &PipelinePlanned{
-		NextSteps: []string{},
+		NextSteps: []types.NextStep{},
 	}
 	// Set options
 	for _, opt := range opts {

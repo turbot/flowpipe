@@ -17,7 +17,7 @@
 		// Configure properties specific to VS Code.
 		"vscode": {
 		  // Add the IDs of extensions you want installed when the container is created.
-		  "extensions": ["github.copilot", "eamodio.gitlens", "ms-azuretools.vscode-docker", "ms-vscode.makefile-tools"]
+		  "extensions": ["github.copilot", "eamodio.gitlens", "ms-azuretools.vscode-docker", "ms-vscode.makefile-tools", "hashicorp.terraform"]
 		}
 	  }
 

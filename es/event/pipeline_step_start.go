@@ -16,6 +16,7 @@ type PipelineStepStart struct {
 	StepName            string       `json:"step_name"`
 	StepInput           types.Input  `json:"input"`
 	ForEach             *types.Input `json:"for_each,omitempty"`
+	DelayMs             int          `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -45,6 +46,13 @@ func ForPipelinePlanned(e *PipelinePlanned) PipelineStepStartOption {
 		} else {
 			return fmt.Errorf("missing pipeline execution ID in pipeline planned event: %v", e)
 		}
+		return nil
+	}
+}
+
+func WithDelay(delayMs int) PipelineStepStartOption {
+	return func(cmd *PipelineStepStart) error {
+		cmd.DelayMs = delayMs
 		return nil
 	}
 }

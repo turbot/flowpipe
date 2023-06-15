@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/es/execution"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/fplog"
+	"github.com/turbot/flowpipe/types"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -76,7 +77,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 			if !pe.IsStepFinalFailure(step, ex) {
 				logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
-				e.NextSteps = append(e.NextSteps, step.Name)
+				e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.Name, DelayMs: 1000})
 			}
 			continue
 		}
@@ -114,7 +115,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		// Plan to run the step.
-		e.NextSteps = append(e.NextSteps, step.Name)
+		e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.Name})
 	}
 
 	logger.Info("(7) pipeline_plan command handler #5", "nextSteps", e.NextSteps)

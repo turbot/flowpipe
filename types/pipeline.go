@@ -22,6 +22,11 @@ type StepError struct {
 	Detail fperr.ErrorModel `json:"detail"`
 }
 
+type NextStep struct {
+	StepName string `json:"step_name"`
+	DelayMs  int    `json:"delay_ms,omitempty"`
+}
+
 // The definition of a single Flowpipe Pipeline
 type Pipeline struct {
 	Type     string                   `yaml:"type" json:"type"`

@@ -85,7 +85,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
-	for _, stepName := range e.NextSteps {
+	for _, nextStep := range e.NextSteps {
 
 		// logger.Info("[8] pipeline planned event handler #2", "executionID", e.Event.ExecutionID, "stepName", stepName)
 
@@ -99,7 +99,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		var forInputsType string
 
 		// logger.Info("[8] pipeline planned event handler #4")
-		stepDefn := defn.Steps[stepName]
+		stepDefn := defn.Steps[nextStep.StepName]
 
 		if stepDefn.For != "" {
 			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.For)
@@ -250,8 +250,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		for i, input := range inputs {
 			// Start each step in parallel
-			go func(stepName string, input types.Input, forEach *types.Input) {
-				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(stepName, input, forEach))
+			go func(nextStep types.NextStep, input types.Input, forEach *types.Input) {
+				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(nextStep.StepName, input, forEach), event.WithDelay(nextStep.DelayMs))
 				if err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
@@ -261,7 +261,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					return
 				}
 
-				logger.Info("[8] pipeline planned event handler #3 - sending pipeline step start command", "command", cmd.StepName)
+				logger.Info("[8] pipeline planned event handler #3 - sending pipeline step start command", "command", cmd)
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
@@ -269,7 +269,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					}
 					return
 				}
-			}(stepName, input, forEaches[i])
+			}(nextStep, input, forEaches[i])
 		}
 	}
 
