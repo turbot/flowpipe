@@ -241,6 +241,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Status:                "queued",
 				StepStatus:            map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
+				Errors:                map[string]types.StepError{},
 			}
 
 		case "handler.pipeline_started":
@@ -339,6 +340,14 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
 				ex.StepExecutions[et.StepExecutionID].Status = "failed"
 				pe.FailStep(stepDefn.Name, et.StepExecutionID)
+
+				// IMPORTANT: we must call this to check if this step is the final failure
+				// this function also sets the internal error tracker of the pe. Not sure if that's right place
+				// to do it
+				stepFinalFailure := pe.IsStepFinalFailure(stepDefn, ex)
+				if stepFinalFailure {
+					logger.Trace("Step final failure", "step", stepDefn)
+				}
 			} else {
 				pe.FinishStep(stepDefn.Name, et.StepExecutionID)
 			}

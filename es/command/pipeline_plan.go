@@ -68,37 +68,17 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	//
 
-	failure := false
-	var failedStepExecutions []execution.StepExecution
-
 	for _, step := range defn.Steps {
-
 		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.Name)
 
-		// TODO: ignore step
-		// TODO: retry step
 		if pe.IsStepFail(step.Name) {
 			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
 
-			if step.Error.Retries > 0 && !step.Error.Ignore {
-				if pe.StepStatus[step.Name].FailCount() > step.Error.Retries {
-					logger.Info("(7) pipeline_plan command handler #3.1 - step failed FAIL the pipeline", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
-					failure = true
-					failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
-					break
-				} else {
-					// Retrying the step
-					logger.Info("(7) pipeline_plan command handler #3.2 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
-					e.NextSteps = append(e.NextSteps, step.Name)
-					continue
-				}
-			} else if !step.Error.Ignore {
-				logger.Info("(7) pipeline_plan command handler #3.3 - step failed and not ignored FAIL the pipeline", "stepName", step.Name)
-				failure = true
-				failedStepExecutions = ex.PipelineStepExecutions(evt.PipelineExecutionID, step.Name)
-				break
+			if !pe.IsStepFinalFailure(step, ex) {
+				logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
+				e.NextSteps = append(e.NextSteps, step.Name)
 			}
-			logger.Info("(7) pipeline_plan command handler #3.4 - step failed IGNORED", "stepName", step.Name)
+			continue
 		}
 
 		// No need to plan if the step has been initialized
@@ -135,27 +115,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		// Plan to run the step.
 		e.NextSteps = append(e.NextSteps, step.Name)
-	}
-
-	if failure {
-		logger.Error("(7) pipeline_plan command handler #4 - raise pipeline error", "nextSteps", e.NextSteps)
-
-		logger.Error("ex.StepExecutions", "ex.StepExecutions", ex.StepExecutions)
-
-		// TODO: just a naive implementation for now, find the last error
-		var stepError error
-		for _, se := range failedStepExecutions {
-			if se.Error != nil {
-				stepError = se.Error.Detail
-			}
-		}
-
-		err := h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, stepError)))
-		if err != nil {
-			logger.Error("Error publishing event", "error", err)
-			return err
-		}
-		return nil
 	}
 
 	logger.Info("(7) pipeline_plan command handler #5", "nextSteps", e.NextSteps)

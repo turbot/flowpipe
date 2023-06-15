@@ -4,5 +4,4 @@ steps:
   http_1:
     type: "http_request"
     name: "http_1"
-    input: '{"url": "http://api.open-notify.orgs/astros.json"}'    
-output: '{"body_json": {{.http_1.body_json.number}}}'
+    input: '{"url": "http://api.open-notify.orgs/astros.json"}'

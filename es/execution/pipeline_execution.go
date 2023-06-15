@@ -22,8 +22,11 @@ type PipelineExecution struct {
 	// of which are not tracked here.
 	// dependencies have been met, etc. The step status is on a per-step
 	StepStatus map[string]*StepStatus `json:"step_status"`
+
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
+
+	Errors map[string]types.StepError `json:"errors,omitempty"`
 }
 
 // IsCanceled returns true if the pipeline has been canceled
@@ -34,6 +37,14 @@ func (pe *PipelineExecution) IsCanceled() bool {
 // IsPaused returns true if the pipeline has been paused
 func (pe *PipelineExecution) IsPaused() bool {
 	return pe.Status == "paused"
+}
+
+func (pe *PipelineExecution) IsFail() bool {
+	return pe.Status == "failed"
+}
+
+func (pe *PipelineExecution) ShouldFail() bool {
+	return len(pe.Errors) > 0
 }
 
 // IsComplete returns true if all steps (that have been initialized) are complete.
@@ -55,6 +66,35 @@ func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
 
 func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 	return pe.StepStatus[stepName] != nil && pe.StepStatus[stepName].IsFail()
+}
+
+// Calculate if this step needs to be retried, or this is the final failure of the step
+func (pe *PipelineExecution) IsStepFinalFailure(step *types.PipelineStep, ex *Execution) bool {
+	if !pe.IsStepFail(step.Name) {
+		// Step not failed, so no need to calculate, return false
+		return false
+	}
+
+	var failedStepExecutions []StepExecution
+	if step.Error.Retries > 0 && !step.Error.Ignore {
+		if pe.StepStatus[step.Name].FailCount() > step.Error.Retries {
+			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.Name)
+			// Set the
+			pe.Fail(step.Name, *failedStepExecutions[len(failedStepExecutions)-1].Error)
+			return true
+		} else {
+			return false
+		}
+	} else if !step.Error.Ignore {
+		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.Name)
+		pe.Fail(step.Name, *failedStepExecutions[len(failedStepExecutions)-1].Error)
+		return true
+	}
+	return true
+
+}
+func (pe *PipelineExecution) Fail(stepName string, stepError types.StepError) {
+	pe.Errors[stepName] = stepError
 }
 
 // IsStepInitialized returns true if the step has been initialized.
@@ -173,6 +213,8 @@ func (s *StepStatus) Finish(seID string) {
 	}
 
 	s.Initializing = false
+
+	// Important to delete queued and started so we know that the step has "completed"
 	delete(s.Queued, seID)
 	delete(s.Started, seID)
 	s.Finished[seID] = true
@@ -185,6 +227,8 @@ func (s *StepStatus) Fail(seID string) {
 	}
 
 	s.Initializing = false
+
+	// Important to delete queued and started so we know that the step has "completed"
 	delete(s.Queued, seID)
 	delete(s.Started, seID)
 	s.Failed[seID] = true
