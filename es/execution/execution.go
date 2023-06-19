@@ -284,6 +284,9 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				pe.InitializeStep(step.Name)
 			}
 
+		// TODO: I'm not sure if this is the right move. Initially I was using this to introduce the concept of a "queue"
+		// TODO: for the step (just like we're queueing the pipeline). But I'm not sure if it's really required, we could just
+		// TODO: delay the start. We need to evolve this as we go.
 		case "command.pipeline_step_queue":
 			var et event.PipelineStepStart
 			err := json.Unmarshal(ele.Payload, &et)
@@ -385,6 +388,15 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "paused"
+
+		case "command.pipeline_finish":
+			var et event.PipelineFinished
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.Status = "finishing"
 
 		case "handler.pipeline_finished":
 			var et event.PipelineFinished

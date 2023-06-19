@@ -51,7 +51,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() || pe.IsPaused() {
+	if pe.IsCanceled() || pe.IsPaused() || pe.IsFinishing() || pe.IsFinished() {
 		return nil
 	}
 

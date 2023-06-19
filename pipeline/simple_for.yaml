@@ -5,5 +5,5 @@ steps:
     type: "sleep"
     name: "sleep_1"
     depends_on: []
-    for: '["1s", "1s", "1s", "1s", "1s"]'
+    for: '["1s", "1s", "1s", "1s", "1s","1s", "1s", "1s", "1s", "1s"]'
     input: '{"duration": "{{.each.value}}"}'

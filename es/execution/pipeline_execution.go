@@ -43,6 +43,14 @@ func (pe *PipelineExecution) IsFail() bool {
 	return pe.Status == "failed"
 }
 
+func (pe *PipelineExecution) IsFinished() bool {
+	return pe.Status == "finished"
+}
+
+func (pe *PipelineExecution) IsFinishing() bool {
+	return pe.Status == "finishing"
+}
+
 func (pe *PipelineExecution) ShouldFail() bool {
 	return len(pe.Errors) > 0
 }
