@@ -30,7 +30,7 @@ func (h PipelineCancelHandler) Handle(ctx context.Context, c interface{}) error 
 
 	e, err := event.NewPipelineCanceled(event.ForPipelineCancel(evt))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineCancelToPipelineFailed(evt, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineCancelToPipelineFailed(evt, err)))
 	}
 	return h.EventBus.Publish(ctx, &e)
 }

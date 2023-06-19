@@ -25,10 +25,13 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStepFinished")
 	}
 
-	fplog.Logger(ctx).Info("[13] pipeline_step_finished event handler", "executionID", e.Event.ExecutionID)
+	logger := fplog.Logger(ctx)
+	logger.Info("[13] pipeline_step_finished event handler", "executionID", e.Event.ExecutionID)
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 	if err != nil {
+		logger.Error("error creating pipeline_plan command", "error", err)
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
 	}
+	logger.Info("[13] pipeline_step_finished event handler #2", "executionID", e.Event.ExecutionID)
 	return h.CommandBus.Send(ctx, cmd)
 }

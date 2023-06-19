@@ -3,12 +3,11 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/types"
 	"github.com/turbot/flowpipe/util"
 )
 
-type PipelineStepStart struct {
+type PipelineStepQueue struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
@@ -21,12 +20,12 @@ type PipelineStepStart struct {
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
-type PipelineStepStartOption func(*PipelineStepStart) error
+type PipelineStepQueueOption func(*PipelineStepQueue) error
 
-// NewPipelineStepStart creates a new PipelineStepStart event.
-func NewPipelineStepStart(opts ...PipelineStepStartOption) (*PipelineStepStart, error) {
+// NewPipelineStepQueue creates a new PipelineStepQueue event.
+func NewPipelineStepQueue(opts ...PipelineStepQueueOption) (*PipelineStepQueue, error) {
 	// Defaults
-	e := &PipelineStepStart{
+	e := &PipelineStepQueue{
 		StepExecutionID: util.NewStepExecutionID(),
 	}
 	// Set options
@@ -39,8 +38,8 @@ func NewPipelineStepStart(opts ...PipelineStepStartOption) (*PipelineStepStart, 
 	return e, nil
 }
 
-func ForPipelinePlanned(e *PipelinePlanned) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
+func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOption {
+	return func(cmd *PipelineStepQueue) error {
 		cmd.Event = NewChildEvent(e.Event)
 		if e.PipelineExecutionID != "" {
 			cmd.PipelineExecutionID = e.PipelineExecutionID
@@ -51,29 +50,12 @@ func ForPipelinePlanned(e *PipelinePlanned) PipelineStepStartOption {
 	}
 }
 
-func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
-
-		if e.StepExecutionID == "" {
-			return fperr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
-		}
-
-		cmd.Event = NewChildEvent(e.Event)
-		if e.PipelineExecutionID != "" {
-			cmd.PipelineExecutionID = e.PipelineExecutionID
-		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline planned event: %v", e)
-		}
-		cmd.StepExecutionID = e.StepExecutionID
-		return nil
-	}
-}
-
-func WithStep(name string, input types.Input, forEach *types.Input) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
+func PipelineStepQueueWithStep(name string, input types.Input, forEach *types.Input, delayMs int) PipelineStepQueueOption {
+	return func(cmd *PipelineStepQueue) error {
 		cmd.StepName = name
 		cmd.StepInput = input
 		cmd.ForEach = forEach
+		cmd.DelayMs = delayMs
 		return nil
 	}
 }

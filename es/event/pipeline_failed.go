@@ -1,6 +1,12 @@
 package event
 
-import "log"
+import (
+	"context"
+	"log"
+	"runtime/debug"
+
+	"github.com/turbot/flowpipe/fplog"
+)
 
 type PipelineFailed struct {
 	// Event metadata
@@ -17,7 +23,15 @@ type PipelineFailedOption func(*PipelineFailed) error
 // NewPipelineFailed creates a new PipelineFailed event.
 // Unlike other events, creating a pipeline failed event cannot have an
 // error as an option (because we're already handling errors).
-func NewPipelineFailed(opts ...PipelineFailedOption) *PipelineFailed {
+func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *PipelineFailed {
+
+	logger := fplog.Logger(ctx)
+
+	if logger.TraceLevel != "" {
+		stackTrace := string(debug.Stack())
+		logger.Info("New pipeline failed event created", "stack_trace", stackTrace)
+	}
+
 	// Defaults
 	e := &PipelineFailed{}
 	// Set options
@@ -77,6 +91,15 @@ func ForPipelineQueueToPipelineFailed(cmd *PipelineQueue, err error) PipelineFai
 // ForPipelineStartToPipelineFailed returns a PipelineFailedOption that sets the fields of the
 // PipelineFailed event from a PipelineStart command.
 func ForPipelineStartToPipelineFailed(cmd *PipelineStart, err error) PipelineFailedOption {
+	return func(e *PipelineFailed) error {
+		e.Event = NewFlowEvent(cmd.Event)
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+		e.ErrorMessage = err.Error()
+		return nil
+	}
+}
+
+func ForPipelineStepQueueToPipelineFailed(cmd *PipelineStepQueue, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID

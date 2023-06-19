@@ -3,9 +3,10 @@ package primitive
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/fplog"
 	"github.com/turbot/flowpipe/types"
 )
 
@@ -20,7 +21,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
 	durationString := input["duration"].(string)
 	_, err := time.ParseDuration(durationString)
 	if err != nil {
-		return fmt.Errorf("invalid sleep duration: %s", durationString)
+		return fperr.BadRequestWithMessage("invalid sleep duration " + durationString)
 	}
 
 	return nil
@@ -35,8 +36,7 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	// Already validated
 	duration, _ := time.ParseDuration(durationString)
 
-	//nolint:forbidigo // just a test, justified use of fmt.Println()
-	fmt.Println("Sleeping for ", duration, "...")
+	fplog.Logger(ctx).Info("Sleeping for", "duration", duration)
 	start := time.Now().UTC()
 	time.Sleep(duration)
 	finish := time.Now().UTC()

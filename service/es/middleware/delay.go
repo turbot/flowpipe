@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -11,8 +12,10 @@ import (
 	"github.com/turbot/flowpipe/fplog"
 )
 
-// This middleware writes the command and event to the jsonl event log file
-func CommandDelayMiddlewareWithContext(ctx context.Context) message.HandlerMiddleware {
+// Middleware to delay the PipelineStepStart command execution (for backoff purpose)
+//
+// TODO: make it generic?
+func PipelineStepStartCommandDelayMiddlewareWithContext(ctx context.Context) message.HandlerMiddleware {
 	return func(h message.HandlerFunc) message.HandlerFunc {
 		return func(msg *message.Message) ([]*message.Message, error) {
 
@@ -48,13 +51,22 @@ func CommandDelayMiddlewareWithContext(ctx context.Context) message.HandlerMiddl
 				return h(msg)
 			}
 
+			fmt.Println("DDDD")
+			fmt.Println("DDDD")
+			fmt.Println("DDDD", payload.StepExecutionID)
 			waitTime := time.Millisecond * time.Duration(payload.DelayMs)
+
 			select {
 			case <-ctx.Done():
 				return h(msg)
 			case <-time.After(waitTime):
 				// go on
 			}
+
+			//time.Sleep(waitTime)
+			fmt.Println("DDDD - END", payload.StepExecutionID)
+			fmt.Println("DDDD - END")
+			fmt.Println("DDDD - END")
 
 			return h(msg)
 		}

@@ -1,6 +1,8 @@
 package execution
 
 import (
+	"fmt"
+
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/types"
 )
@@ -79,8 +81,19 @@ func (pe *PipelineExecution) IsStepFinalFailure(step *types.PipelineStep, ex *Ex
 	if step.Error.Retries > 0 && !step.Error.Ignore {
 		if pe.StepStatus[step.Name].FailCount() > step.Error.Retries {
 			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.Name)
-			// Set the
-			pe.Fail(step.Name, *failedStepExecutions[len(failedStepExecutions)-1].Error)
+
+			if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
+				fmt.Println()
+				fmt.Println()
+				fmt.Println("ZZZZ should never happen", failedStepExecutions[len(failedStepExecutions)-1])
+				fmt.Println()
+				fmt.Println()
+				pe.Fail(step.Name, types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
+			} else {
+				// Set the error
+				pe.Fail(step.Name, *failedStepExecutions[len(failedStepExecutions)-1].Error)
+			}
+			// pe.Fail(step.Name, types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
 			return true
 		} else {
 			return false
@@ -100,6 +113,12 @@ func (pe *PipelineExecution) Fail(stepName string, stepError types.StepError) {
 // IsStepInitialized returns true if the step has been initialized.
 func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 	return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].Initializing
+}
+
+// TODO: this doesn't work for step execution retry, it assumes that the entire step
+// TODO: must be retried
+func (pe *PipelineExecution) IsStepQueued(stepName string) bool {
+	return pe.StepStatus[stepName] != nil && len(pe.StepStatus[stepName].Queued) > 0
 }
 
 // InitializeStep initializes the step status for the given step.
@@ -188,8 +207,6 @@ func (s *StepStatus) Queue(seID string) {
 	s.Queued[seID] = true
 	delete(s.Started, seID)
 	delete(s.Finished, seID)
-	// TODO: failed step? What do we do here? Is this correct to remove the delete StepStatus?
-	delete(s.Failed, seID)
 }
 
 // Start marks the given execution as started.
@@ -202,7 +219,6 @@ func (s *StepStatus) Start(seID string) {
 	s.Initializing = false
 	delete(s.Queued, seID)
 	s.Started[seID] = true
-	delete(s.Finished, seID)
 }
 
 // Finish marks the given execution as finished.

@@ -34,7 +34,7 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePauseToPipelineFailed(evt, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePauseToPipelineFailed(evt, err)))
 	}
 
 	// Convenience
@@ -51,7 +51,7 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 
 	e, err := event.NewPipelinePaused(event.ForPipelinePause(evt))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePauseToPipelineFailed(evt, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePauseToPipelineFailed(evt, err)))
 	}
 	return h.EventBus.Publish(ctx, &e)
 }

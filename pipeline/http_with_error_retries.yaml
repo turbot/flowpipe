@@ -4,6 +4,6 @@ steps:
   http_1:
     type: "http_request"
     name: "http_1"
-    input: '{"url": "http://api.open-notify.orgs/astros.json"}'    
+    input: '{"url": "http://api.open-notify.orgs/astros.json"}'
     error:
-      retries: 3
+      retries: 2

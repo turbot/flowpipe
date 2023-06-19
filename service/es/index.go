@@ -16,7 +16,6 @@ import (
 	"github.com/turbot/flowpipe/pipeline"
 
 	"github.com/turbot/flowpipe/service/es/middleware"
-	esmiddleware "github.com/turbot/flowpipe/service/es/middleware"
 	"github.com/turbot/flowpipe/util"
 )
 
@@ -84,18 +83,16 @@ func (es *ESService) Start() error {
 	//
 	// List of available middlewares you can find in message/router/middleware.
 
-	// Router level middleware are executed for every message sent to the router
-	router.AddMiddleware(
-		// Recoverer handles panics from handlers.
-		// In this case, it passes them as errors to the Retry middleware.
-		esmiddleware.Recoverer{
-			Ctx: es.ctx,
-		}.Middleware,
-	)
+	// Recoverer handles panics from handlers.
+	router.AddMiddleware(middleware.PanicRecovererMiddleware(es.ctx))
 
 	// Log to file for creation of state
+	// ! Ensure that the log event middleware is the first middleware to be added in the router
+	// ! so the log entry is written ASAP
 	router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
-	router.AddMiddleware(middleware.CommandDelayMiddlewareWithContext(es.ctx))
+
+	// Delay PipelineStepStart command (if required)
+	// router.AddMiddleware(middleware.PipelineStepStartCommandDelayMiddlewareWithContext(es.ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
@@ -117,6 +114,7 @@ func (es *ESService) Start() error {
 				command.PipelineResumeHandler{EventBus: eb},
 				command.PipelineStartHandler{EventBus: eb},
 				command.PipelineStepFinishHandler{EventBus: eb},
+				command.PipelineStepQueueHandler{EventBus: eb},
 				command.PipelineStepStartHandler{EventBus: eb},
 				command.QueueHandler{EventBus: eb},
 				command.StartHandler{EventBus: eb},
@@ -145,6 +143,7 @@ func (es *ESService) Start() error {
 				handler.PipelineResumed{CommandBus: cb},
 				handler.PipelineStarted{CommandBus: cb},
 				handler.PipelineStepFinished{CommandBus: cb},
+				handler.PipelineStepQueued{CommandBus: cb},
 				handler.PipelineStepStarted{CommandBus: cb},
 				handler.Queued{CommandBus: cb},
 				handler.Started{CommandBus: cb},

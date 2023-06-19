@@ -160,14 +160,20 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 // pipeline execution ID and step name.
 func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
 
-	// TODO: we can optimise this by using StepExecutionOrder
-	var stepExecutions []StepExecution
-	for _, se := range ex.StepExecutions {
-		if se.PipelineExecutionID == pipelineExecutionID && se.Name == stepName {
-			stepExecutions = append(stepExecutions, *se)
-		}
+	// Find the step execution order first
+	orders := ex.StepExecutionOrder[stepName]
+	if len(orders) == 0 {
+		// TODO: Error?
+		return nil
 	}
-	return stepExecutions
+
+	results := make([]StepExecution, len(orders))
+
+	for i, stepExecutionID := range orders {
+		se := ex.StepExecutions[stepExecutionID]
+		results[i] = *se
+	}
+	return results
 }
 
 // LogFilePath returns the path to the log file for the execution.
@@ -278,7 +284,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				pe.InitializeStep(step.Name)
 			}
 
-		case "command.pipeline_step_start":
+		case "command.pipeline_step_queue":
 			var et event.PipelineStepStart
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
@@ -296,11 +302,19 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
 			if err != nil {
+				logger.Error("Failed to get step definition - 1", "execution", ex.ID, "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
 			ex.StepExecutions[et.StepExecutionID].ForEach = et.ForEach
 			pe.StepStatus[stepDefn.Name].Queue(et.StepExecutionID)
+
+		case "command.pipeline_step_start":
+			var et event.PipelineStepStart
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				return err
+			}
 
 		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted
@@ -312,6 +326,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			ex.StepExecutions[et.StepExecutionID].Status = "started"
 			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
 			if err != nil {
+				logger.Error("Failed to get step definition - 2", "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -326,6 +341,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
 			if err != nil {
+				logger.Error("Failed to get step definition - 3", "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
 			// Step the specific step execution status

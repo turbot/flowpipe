@@ -18,5 +18,5 @@ func (h PipelineFailHandler) NewCommand() interface{} {
 
 func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd := c.(*event.PipelineFail)
-	return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFail(cmd)))
+	return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFail(cmd)))
 }

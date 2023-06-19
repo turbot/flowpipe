@@ -35,12 +35,12 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 	var output types.StepOutput
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
 	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
 	if defn.Output != "" {
@@ -48,29 +48,29 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		// Parse the input template once
 		t, err := template.New("output").Parse(defn.Output)
 		if err != nil {
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
 		data, err := ex.PipelineStepOutputs(cmd.PipelineExecutionID)
 		if err != nil {
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
 		var outputBuffer bytes.Buffer
 		err = t.Execute(&outputBuffer, data)
 		if err != nil {
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 		err = json.Unmarshal(outputBuffer.Bytes(), &output)
 		if err != nil {
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
 	}
 
 	e, err := event.NewPipelineFinished(event.ForPipelineFinish(cmd, &output))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelineFinishToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
 	return h.EventBus.Publish(ctx, &e)

@@ -32,7 +32,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
+		logger.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	logger.Info("(7) pipeline_plan command handler #1", "executionID", evt.Event.ExecutionID, "evt", evt, "ex.StepExecutionOrder", ex.StepExecutionOrder)
@@ -48,13 +49,14 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	defn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
+		logger.Error("Error loading pipeline definition", "error", err)
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	// Create a new PipelinePlanned event
 	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(evt))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	// Each defined step in the pipeline can be in a few states:
@@ -77,7 +79,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 			if !pe.IsStepFinalFailure(step, ex) {
 				logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
-				e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.Name, DelayMs: 1000})
+
+				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
+				if !pe.IsStepQueued(step.Name) {
+					e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.Name, DelayMs: 3000})
+				}
 			}
 			continue
 		}
@@ -122,7 +128,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.Publish(ctx, &e); err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(event.ForPipelinePlanToPipelineFailed(evt, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
 	return nil

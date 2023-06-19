@@ -251,7 +251,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		for i, input := range inputs {
 			// Start each step in parallel
 			go func(nextStep types.NextStep, input types.Input, forEach *types.Input) {
-				cmd, err := event.NewPipelineStepStart(event.ForPipelinePlanned(e), event.WithStep(nextStep.StepName, input, forEach), event.WithDelay(nextStep.DelayMs))
+				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEach, nextStep.DelayMs))
 				if err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
@@ -261,7 +261,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					return
 				}
 
-				logger.Info("[8] pipeline planned event handler #3 - sending pipeline step start command", "command", cmd)
+				logger.Info("[8] pipeline planned event handler #3.B - sending pipeline step QUEUE command", "command", cmd)
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
