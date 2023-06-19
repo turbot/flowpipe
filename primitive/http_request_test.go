@@ -17,7 +17,6 @@ func TestHTTPRequestOK(t *testing.T) {
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("text/html; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	//fmt.Println(output.Get("headers"))
 	assert.Contains(output.Get("body"), "Steampipe")
 }
 
@@ -30,6 +29,5 @@ func TestHTTPRequestNotFound(t *testing.T) {
 	assert.Equal("404 Not Found", output.Get("status"))
 	assert.Equal(404, output.Get("status_code"))
 	assert.Equal("text/html; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	//fmt.Println(output.Get("headers"))
 	assert.Contains(output.Get("body"), "Steampipe")
 }

@@ -1,8 +1,6 @@
 package execution
 
 import (
-	"fmt"
-
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/types"
 )
@@ -83,11 +81,6 @@ func (pe *PipelineExecution) IsStepFinalFailure(step *types.PipelineStep, ex *Ex
 			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.Name)
 
 			if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-				fmt.Println()
-				fmt.Println()
-				fmt.Println("ZZZZ should never happen", failedStepExecutions[len(failedStepExecutions)-1])
-				fmt.Println()
-				fmt.Println()
 				pe.Fail(step.Name, types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
 			} else {
 				// Set the error

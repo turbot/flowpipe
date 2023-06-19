@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -51,9 +50,6 @@ func PipelineStepStartCommandDelayMiddlewareWithContext(ctx context.Context) mes
 				return h(msg)
 			}
 
-			fmt.Println("DDDD")
-			fmt.Println("DDDD")
-			fmt.Println("DDDD", payload.StepExecutionID)
 			waitTime := time.Millisecond * time.Duration(payload.DelayMs)
 
 			select {
@@ -64,9 +60,6 @@ func PipelineStepStartCommandDelayMiddlewareWithContext(ctx context.Context) mes
 			}
 
 			//time.Sleep(waitTime)
-			fmt.Println("DDDD - END", payload.StepExecutionID)
-			fmt.Println("DDDD - END")
-			fmt.Println("DDDD - END")
 
 			return h(msg)
 		}
