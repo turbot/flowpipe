@@ -14,11 +14,11 @@ func GetPipeline(name string) (*types.Pipeline, error) {
 		return nil, fperr.NotFoundWithMessage("pipeline " + name + " not found")
 	}
 
-	pipeline, ok := pipelineCached.(types.Pipeline)
+	pipeline, ok := pipelineCached.(*types.Pipeline)
 	if !ok {
 		return nil, fperr.InternalWithMessage("invalid pipeline")
 	}
-	return &pipeline, nil
+	return pipeline, nil
 }
 
 func ListAllPipelines() ([]types.Pipeline, error) {
