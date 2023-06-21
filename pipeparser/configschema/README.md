@@ -1,0 +1,1 @@
+Direct copy and paste from Terraform source code
