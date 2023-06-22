@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configschema
 
 import (
@@ -87,13 +90,6 @@ type Object struct {
 	// many instances of the Object are allowed, how many labels it expects, and
 	// how the resulting data will be converted into a data structure.
 	Nesting NestingMode
-
-	// MinItems and MaxItems set, for the NestingList and NestingSet nesting
-	// modes, lower and upper limits on the number of child blocks allowed
-	// of the given type. If both are left at zero, no limit is applied.
-	// These fields are ignored for other nesting modes and must both be left
-	// at zero.
-	MinItems, MaxItems int
 }
 
 // NestedBlock represents the embedding of one block within another.
@@ -127,7 +123,7 @@ type NestingMode int
 //go:generate go run golang.org/x/tools/cmd/stringer -type=NestingMode
 
 const (
-	//nolint:unused // from TF codebase
+	//nolint:unused // Direct import from Terraform code
 	nestingModeInvalid NestingMode = iota
 
 	// NestingSingle indicates that only a single instance of a given
