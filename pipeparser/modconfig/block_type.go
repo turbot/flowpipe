@@ -37,10 +37,10 @@ const (
 	BlockTypeConnection       = "connection"
 	BlockTypeOptions          = "options"
 	BlockTypeWorkspaceProfile = "workspace"
+	BlockTypePipeline         = "pipeline"
 
-	ResourceTypeSnapshot = "snapshot"
-	AttributeArgs        = "args"
-	AttributeQuery       = "query"
+	AttributeArgs  = "args"
+	AttributeQuery = "query"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider
@@ -116,6 +116,7 @@ var ValidResourceItemTypes = []string{
 	BlockTypeConnection,
 	BlockTypeOptions,
 	BlockTypeWorkspaceProfile,
+	BlockTypePipeline,
 	BlockTypeWith,
 	// local is not an actual block name but is a resource type
 	"local",

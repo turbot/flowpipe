@@ -249,8 +249,8 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*PipelineHcl
 	parseCtx.ClearDependencies()
 
 	for _, block := range blocksToDecode {
-		if block.Type == modconfig.BlockTypeWorkspaceProfile {
-			pipelineHcl, res := decodeWorkspaceProfile(block, parseCtx)
+		if block.Type == modconfig.BlockTypePipeline {
+			pipelineHcl, res := decodePipeline(block, parseCtx)
 
 			if res.Success() {
 				// success - add to map
@@ -262,13 +262,13 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*PipelineHcl
 	return profileMap, diags
 }
 
-func decodeWorkspaceProfile(block *hcl.Block, parseCtx *PipelineParseContext) (*PipelineHcl, *pipeparser.DecodeResult) {
+func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*PipelineHcl, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
 	// get shell resource
 	resource := NewPipelineHcl(block)
 
-	// do a partial decode to get options blocks into workspaceProfileOptions, with all other attributes in rest
-	workspaceProfileOptions, rest, diags := block.Body.PartialContent(PipelineBlockSchema)
+	// do a partial decode to get options blocks into pipelineOptions, with all other attributes in rest
+	pipelineOptions, rest, diags := block.Body.PartialContent(PipelineBlockSchema)
 	if diags.HasErrors() {
 		res.HandleDecodeDiags(diags)
 		return nil, res
@@ -282,7 +282,7 @@ func decodeWorkspaceProfile(block *hcl.Block, parseCtx *PipelineParseContext) (*
 	// we use an empty struct as the value type, so that
 	// we don't use up unnecessary memory
 	foundOptions := map[string]struct{}{}
-	for _, block := range workspaceProfileOptions.Blocks {
+	for _, block := range pipelineOptions.Blocks {
 		switch block.Type {
 		case "options":
 			optionsBlockType := block.Labels[0]
@@ -314,11 +314,11 @@ func decodeWorkspaceProfile(block *hcl.Block, parseCtx *PipelineParseContext) (*
 		}
 	}
 
-	handleWorkspaceProfileDecodeResult(resource, res, block, parseCtx)
+	handlePipelineDecodeResult(resource, res, block, parseCtx)
 	return resource, res
 }
 
-func handleWorkspaceProfileDecodeResult(resource *PipelineHcl, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
+func handlePipelineDecodeResult(resource *PipelineHcl, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
@@ -350,7 +350,12 @@ var PipelineBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{},
 
 	// TODO: what's this?
-	Blocks: []hcl.BlockHeaderSchema{},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type:       "pipeline",
+			LabelNames: []string{"name"},
+		},
+	},
 }
 
 type PipelineParseContext struct {
@@ -363,7 +368,7 @@ func (c *PipelineParseContext) buildEvalContext() {
 	// rebuild the eval context
 	// build a map with a single key - workspace
 	vars := map[string]cty.Value{
-		"workspace": cty.ObjectVal(c.valueMap),
+		"pipeline": cty.ObjectVal(c.valueMap),
 	}
 	c.ParseContext.BuildEvalContext(vars)
 

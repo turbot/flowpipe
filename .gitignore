@@ -9,6 +9,9 @@
 .vscode/launch.json
 .vscode/settings.json
 
+# temp debug file (that can sometime fail to delete)
+__debug_bin
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

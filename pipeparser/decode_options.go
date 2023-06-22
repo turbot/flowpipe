@@ -38,13 +38,8 @@ type OptionsBlockMapping = map[string]options.Options
 
 func defaultOptionsBlockMapping() OptionsBlockMapping {
 	mapping := OptionsBlockMapping{
-		options.ConnectionBlock: &options.Connection{},
-		options.DatabaseBlock:   &options.Database{},
-		options.TerminalBlock:   &options.Terminal{},
-		options.GeneralBlock:    &options.General{},
-		options.QueryBlock:      &options.Query{},
-		options.CheckBlock:      &options.Check{},
-		options.DashboardBlock:  &options.GlobalDashboard{},
+		options.TerminalBlock: &options.Terminal{},
+		options.GeneralBlock:  &options.General{},
 	}
 	return mapping
 }
