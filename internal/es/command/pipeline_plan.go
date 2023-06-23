@@ -71,13 +71,13 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	//
 
-	for _, step := range defn.Steps {
+	for i, step := range defn.Steps {
 		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.Name)
 
 		if pe.IsStepFail(step.Name) {
 			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
 
-			if !pe.IsStepFinalFailure(step, ex) {
+			if !pe.IsStepFinalFailure(&defn.Steps[i], ex) {
 				logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
 
 				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
@@ -106,7 +106,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				continue
 			}
 			// Ignore invalid dependencies
-			if _, ok := defn.Steps[dep]; !ok {
+			if defn.GetStep(dep) != nil {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}

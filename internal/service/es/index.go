@@ -10,10 +10,11 @@ import (
 	"github.com/garsue/watermillzap"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/pipeline"
+	"github.com/turbot/flowpipe/internal/pipeline_hcl"
 
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
 	"github.com/turbot/flowpipe/internal/util"
@@ -54,10 +55,27 @@ func (es *ESService) Start() error {
 
 	logger.Debug("Pipeline dir", "dir", pipelineDir)
 
-	_, err := pipeline.LoadPipelines(es.ctx, pipelineDir)
+	// _, err := pipeline.LoadPipelines(es.ctx, pipelineDir)
+	// if err != nil {
+	// 	return err
+	// }
+
+	pipelines, err := pipeline_hcl.LoadPipelines(es.ctx, pipelineDir)
 	if err != nil {
 		return err
 	}
+
+	inMemoryCache := cache.GetCache()
+	var pipelineNames []string
+
+	for pipelineName := range pipelines {
+		pipelineNames = append(pipelineNames, pipelineName)
+
+		// TODO: how do we want to do this?
+		inMemoryCache.SetWithTTL(pipelineName, pipelines[pipelineName], 24*7*52*99*time.Hour)
+	}
+
+	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 

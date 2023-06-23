@@ -57,7 +57,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		stepDefn := defn.Steps[cmd.StepName]
+		stepDefn := defn.GetStep(cmd.StepName)
 
 		var output *types.StepOutput
 		var primitiveError error

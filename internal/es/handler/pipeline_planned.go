@@ -99,7 +99,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		var forInputsType string
 
 		// logger.Info("[8] pipeline planned event handler #4")
-		stepDefn := defn.Steps[nextStep.StepName]
+		stepDefn := defn.GetStep(nextStep.StepName)
 
 		if stepDefn.For != "" {
 			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.For)

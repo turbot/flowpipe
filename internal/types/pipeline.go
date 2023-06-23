@@ -119,8 +119,8 @@ type PipelineStepError struct {
 
 // This type is used by the API to return a list of pipelines.
 type ListPipelineResponse struct {
-	Items     []Pipeline `json:"items"`
-	NextToken *string    `json:"next_token,omitempty"`
+	Items     []PipelineHcl `json:"items"`
+	NextToken *string       `json:"next_token,omitempty"`
 }
 
 type RunPipelineResponse struct {

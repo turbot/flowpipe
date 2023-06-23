@@ -1,166 +1,20 @@
 package pipeline_hcl
 
 import (
+	"context"
 	"fmt"
 	"log"
-	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/zclconf/go-cty/cty"
 )
-
-/*
-	type WorkspaceProfile struct {
-		ProfileName       string            `hcl:"name,label" cty:"name"`
-*/
-type PipelineHcl struct {
-	Name    string            `hcl:"name,label" cty:"name"`
-	Output  *string           `hcl:"output" cty:"output"`
-	Steps   []PipelineHclStep `hcl:"step,block" cty:"step"`
-	RawBody hcl.Body          `hcl:",remain"`
-}
-
-type PipelineHclStep struct {
-	Type string `hcl:"type,label" cty:"type"`
-	Name string `hcl:"name,label" cty:"name"`
-
-	// Unparsed HCL for the step configuration. Each step type has differing structure.
-	Config hcl.Body `hcl:",remain"`
-}
-
-func (p *PipelineHcl) CtyValue() (cty.Value, error) {
-	return pipeparser.GetCtyValue(p)
-}
-
-// SetOptions sets the options on the connection
-// verify the options object is a valid options type (only options.Connection currently supported)
-func (p *PipelineHcl) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {
-
-	var diags hcl.Diagnostics
-	switch o := opts.(type) {
-	// case *options.Query:
-	// 	if p.QueryOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.QueryOptions = o
-	// case *options.Check:
-	// 	if p.CheckOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.CheckOptions = o
-	// case *options.WorkspaceProfileDashboard:
-	// 	if p.DashboardOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.DashboardOptions = o
-	default:
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  fmt.Sprintf("invalid nested option type %s - only 'connection' options blocks are supported for Connections", reflect.TypeOf(o).Name()),
-			Subject:  &block.DefRange,
-		})
-	}
-	return diags
-}
-
-func (p *PipelineHcl) OnDecoded() hcl.Diagnostics {
-	p.setBaseProperties()
-	return nil
-}
-
-func (p *PipelineHcl) setBaseProperties() {
-	// 	if p.Base == nil {
-	// 		return
-	// 	}
-
-	// 	if p.CloudHost == nil {
-	// 		p.CloudHost = p.Base.CloudHost
-	// 	}
-	// 	if p.CloudToken == nil {
-	// 		p.CloudToken = p.Base.CloudToken
-	// 	}
-	// 	if p.InstallDir == nil {
-	// 		p.InstallDir = p.Base.InstallDir
-	// 	}
-	// 	if p.ModLocation == nil {
-	// 		p.ModLocation = p.Base.ModLocation
-	// 	}
-	// 	if p.SnapshotLocation == nil {
-	// 		p.SnapshotLocation = p.Base.SnapshotLocation
-	// 	}
-	// 	if p.WorkspaceDatabase == nil {
-	// 		p.WorkspaceDatabase = p.Base.WorkspaceDatabase
-	// 	}
-	// 	if p.QueryTimeout == nil {
-	// 		p.QueryTimeout = p.Base.QueryTimeout
-	// 	}
-	// 	if p.SearchPath == nil {
-	// 		p.SearchPath = p.Base.SearchPath
-	// 	}
-	// 	if p.SearchPathPrefix == nil {
-	// 		p.SearchPathPrefix = p.Base.SearchPathPrefix
-	// 	}
-	// 	if p.Watch == nil {
-	// 		p.Watch = p.Base.Watch
-	// 	}
-	// 	if p.MaxParallel == nil {
-	// 		p.MaxParallel = p.Base.MaxParallel
-	// 	}
-	// 	if p.Introspection == nil {
-	// 		p.Introspection = p.Base.Introspection
-	// 	}
-	// 	if p.Input == nil {
-	// 		p.Input = p.Base.Input
-	// 	}
-	// 	if p.Progress == nil {
-	// 		p.Progress = p.Base.Progress
-	// 	}
-	// 	if p.Theme == nil {
-	// 		p.Theme = p.Base.Theme
-	// 	}
-	// 	if p.Cache == nil {
-	// 		p.Cache = p.Base.Cache
-	// 	}
-	// 	if p.CacheTTL == nil {
-	// 		p.CacheTTL = p.Base.CacheTTL
-	// 	}
-
-	// 	// nested inheritance strategy:
-	// 	//
-	// 	// if my nested struct is a nil
-	// 	//		-> use the base struct
-	// 	//
-	// 	// if I am not nil (and base is not nil)
-	// 	//		-> only inherit the properties which are nil in me and not in base
-	// 	//
-	// 	if p.QueryOptions == nil {
-	// 		p.QueryOptions = p.Base.QueryOptions
-	// 	} else {
-	// 		p.QueryOptions.SetBaseProperties(p.Base.QueryOptions)
-	// 	}
-	// 	if p.CheckOptions == nil {
-	// 		p.CheckOptions = p.Base.CheckOptions
-	// 	} else {
-	// 		p.CheckOptions.SetBaseProperties(p.Base.CheckOptions)
-	// 	}
-	// 	if p.DashboardOptions == nil {
-	// 		p.DashboardOptions = p.Base.DashboardOptions
-	// 	} else {
-	// 		p.DashboardOptions.SetBaseProperties(p.Base.DashboardOptions)
-	// 	}
-}
-
-func NewPipelineHcl(block *hcl.Block) *PipelineHcl {
-	return &PipelineHcl{
-		Name: block.Labels[0],
-	}
-}
 
 // ToError formats the supplied value as an error (or just returns it if already an error)
 func ToError(val interface{}) error {
@@ -171,10 +25,10 @@ func ToError(val interface{}) error {
 	}
 }
 
-func LoadWorkspacePipelines(pipelinePath string) (pipelineMap map[string]*PipelineHcl, err error) {
+func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[string]*types.PipelineHcl, err error) {
 
 	// create profile map to populate
-	pipelineMap = map[string]*PipelineHcl{}
+	pipelineMap = map[string]*types.PipelineHcl{}
 
 	configPaths, err := filehelpers.ListFiles(pipelinePath, &filehelpers.ListOptions{
 		Flags:   filehelpers.FilesFlat,
@@ -207,11 +61,15 @@ func LoadWorkspacePipelines(pipelinePath string) (pipelineMap map[string]*Pipeli
 	parseCtx.SetDecodeContent(content, fileData)
 
 	// build parse context
-	return parsePipelines(parseCtx)
+	pipelines, err := parsePipelines(parseCtx)
+	if err != nil {
+		return nil, fperr.Internal(err)
+	}
 
+	return pipelines, nil
 }
 
-func parsePipelines(parseCtx *PipelineParseContext) (map[string]*PipelineHcl, error) {
+func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.PipelineHcl, error) {
 	// we may need to decode more than once as we gather dependencies as we go
 	// continue decoding as long as the number of unresolved blocks decreases
 	prevUnresolvedBlocks := 0
@@ -236,12 +94,12 @@ func parsePipelines(parseCtx *PipelineParseContext) (map[string]*PipelineHcl, er
 		prevUnresolvedBlocks = unresolvedBlocks
 	}
 
-	return parseCtx.pipelineHcls, nil
+	return parseCtx.PipelineHcls, nil
 
 }
 
-func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*PipelineHcl, hcl.Diagnostics) {
-	profileMap := map[string]*PipelineHcl{}
+func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.PipelineHcl, hcl.Diagnostics) {
+	profileMap := map[string]*types.PipelineHcl{}
 
 	var diags hcl.Diagnostics
 	blocksToDecode, err := parseCtx.BlocksToDecode()
@@ -271,10 +129,10 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*PipelineHcl
 	return profileMap, diags
 }
 
-func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*PipelineHcl, *pipeparser.DecodeResult) {
+func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.PipelineHcl, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
 	// get shell resource
-	resource := NewPipelineHcl(block)
+	resource := types.NewPipelineHcl(block)
 
 	// do a partial decode to get options blocks into pipelineOptions, with all other attributes in rest
 	pipelineOptions, rest, diags := block.Body.PartialContent(PipelineBlockSchema)
@@ -327,7 +185,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*Pipeline
 	return resource, res
 }
 
-func handlePipelineDecodeResult(resource *PipelineHcl, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
+func handlePipelineDecodeResult(resource *types.PipelineHcl, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
@@ -369,7 +227,7 @@ var PipelineBlockSchema = &hcl.BodySchema{
 
 type PipelineParseContext struct {
 	pipeparser.ParseContext
-	pipelineHcls map[string]*PipelineHcl
+	PipelineHcls map[string]*types.PipelineHcl
 	valueMap     map[string]cty.Value
 }
 
@@ -384,7 +242,7 @@ func (c *PipelineParseContext) buildEvalContext() {
 }
 
 // AddResource stores this resource as a variable to be added to the eval context. It alse
-func (c *PipelineParseContext) AddResource(workspaceProfile *PipelineHcl) hcl.Diagnostics {
+func (c *PipelineParseContext) AddResource(workspaceProfile *types.PipelineHcl) hcl.Diagnostics {
 	ctyVal, err := workspaceProfile.CtyValue()
 	if err != nil {
 		return hcl.Diagnostics{&hcl.Diagnostic{
@@ -397,7 +255,7 @@ func (c *PipelineParseContext) AddResource(workspaceProfile *PipelineHcl) hcl.Di
 		}}
 	}
 
-	c.pipelineHcls[workspaceProfile.Name] = workspaceProfile
+	c.PipelineHcls[workspaceProfile.Name] = workspaceProfile
 	c.valueMap[workspaceProfile.Name] = ctyVal
 
 	// remove this resource from unparsed blocks
@@ -414,7 +272,7 @@ func NewPipelineParseContext(rootEvalPath string) *PipelineParseContext {
 	//parseContext.BlockTypes = []string{modconfig.BlockTypeWorkspaceProfile}
 	c := &PipelineParseContext{
 		ParseContext: parseContext,
-		pipelineHcls: make(map[string]*PipelineHcl),
+		PipelineHcls: make(map[string]*types.PipelineHcl),
 		valueMap:     make(map[string]cty.Value),
 	}
 

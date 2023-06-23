@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
@@ -386,9 +387,9 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 		return nil, err
 	}
 
-	sd, ok := pd.Steps[stepName]
-	if !ok {
-		return nil, fmt.Errorf("step %s not found in pipeline %s", stepName, pd.Name)
+	sd := pd.GetStep(stepName)
+	if sd == nil {
+		return nil, fperr.BadRequestWithMessage("step " + stepName + " not found in pipeline " + pd.Name)
 	}
 
 	panels := map[string]SnapshotPanel{}
@@ -618,7 +619,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	return panels, nil
 }
 
-func (ex *Execution) StepExecutionNodeRow(panelName string, sd *types.PipelineStep, se *StepExecution) SnapshotPanelDataRow {
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd *types.PipelineHclStep, se *StepExecution) SnapshotPanelDataRow {
 
 	var row SnapshotPanelDataRow
 
