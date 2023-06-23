@@ -3,10 +3,10 @@ package main
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/cache"
-	"github.com/turbot/flowpipe/cmd"
-	"github.com/turbot/flowpipe/config"
-	"github.com/turbot/flowpipe/fplog"
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/cmd"
+	"github.com/turbot/flowpipe/internal/config"
+	"github.com/turbot/flowpipe/internal/fplog"
 )
 
 func main() {
