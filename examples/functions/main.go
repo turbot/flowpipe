@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/radovskyb/watcher"
 	"github.com/turbot/flowpipe-functions/docker"
+	"github.com/turbot/flowpipe-functions/function"
 	"gopkg.in/yaml.v2"
 )
 
@@ -93,6 +94,158 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to Docker: %v", err)
 	}
+
+	// Create a channel to receive OS signals
+	sigCh := make(chan os.Signal, 1)
+
+	// Notify the signal channel on SIGINT (Ctrl+C) and SIGTERM
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start a goroutine to handle the signal
+	go func() {
+		// Wait for the signal
+		<-sigCh
+
+		// Cleanup docker artifacts
+		// TODO - Can we remove this since we cleanup per function etc?
+		err := dc.CleanupArtifacts()
+		if err != nil {
+			log.Fatalf("Failed to cleanup flowpipe docker artifacts: %v", err)
+		}
+
+		// Exit the program
+		os.Exit(0)
+	}()
+
+	// Read the YAML file
+	yamlFile, err := os.ReadFile("config.yaml")
+	if err != nil {
+		log.Fatalf("Failed to read YAML file: %v", err)
+	}
+
+	// Parse the YAML file into the config struct
+	err = yaml.Unmarshal(yamlFile, &config)
+	if err != nil {
+		log.Fatalf("Failed to parse YAML: %v", err)
+	}
+
+	functions := map[string]*function.Function{}
+
+	for fnName, fnConfig := range config.Functions {
+
+		fmt.Println(fnConfig)
+
+		fn, err := function.New(
+			function.WithContext(ctx),
+			function.WithDockerClient(dc),
+		)
+		if err != nil {
+			panic(err)
+		}
+		fn.Name = fnName
+		fn.Runtime = fnConfig.Runtime
+		fn.Handler = fnConfig.Handler
+		fn.Src = fnConfig.Src
+		fmt.Println("Loading...")
+		err = fn.Load()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Loaded")
+
+		functions[fnName] = fn
+
+	}
+
+	startWebServer(ctx, functions)
+
+}
+
+func main3() {
+
+	ctx := context.Background()
+
+	dc, err := docker.New(docker.WithContext(ctx), docker.WithPingTest())
+	if err != nil {
+		log.Fatalf("Failed to connect to Docker: %v", err)
+	}
+
+	fn, err := function.New(
+		function.WithContext(ctx),
+		function.WithDockerClient(dc),
+	)
+	if err != nil {
+		panic(err)
+	}
+	fn.Name = "test"
+	fn.Runtime = "nodejs:18"
+	fn.Handler = "app.handler"
+	fn.Src = "./lambda-nodejs"
+	fmt.Println("Loading...")
+	err = fn.Load()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Loaded")
+	/*
+		time.Sleep(10 * time.Second)
+			fn.Unload()
+	*/
+
+	/*
+		_, err = fn.Start(fn.CurrentVersionName)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(fn.Versions)
+	*/
+
+	// Create a channel to receive OS signals
+	sigCh := make(chan os.Signal, 1)
+
+	// Notify the signal channel on SIGINT (Ctrl+C) and SIGTERM
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+
+		// Wait for the signal
+		<-sigCh
+
+		// Cleanup docker artifacts
+		err = fn.Unload()
+		if err != nil {
+			log.Fatalf("Failed to cleanup flowpipe docker artifacts: %v", err)
+		}
+
+		os.Exit(0)
+	}()
+
+	for {
+		output, err := fn.Invoke([]byte(`{"foo": "bar"}`))
+		//output, err := fn.Invoke([]byte(`["foo", "bar"]`))
+		//output, err := fn.Invoke([]byte(`"foo"`))
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println(string(output))
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+}
+
+type DockerClientContext struct{}
+
+func main2() {
+
+	ctx := context.Background()
+
+	dc, err := docker.New(docker.WithContext(ctx), docker.WithPingTest())
+	if err != nil {
+		log.Fatalf("Failed to connect to Docker: %v", err)
+	}
+	ctx = context.WithValue(ctx, DockerClientContext{}, dc)
 
 	// Create a channel to receive OS signals
 	sigCh := make(chan os.Signal, 1)
@@ -236,7 +389,7 @@ func main() {
 		}
 	*/
 
-	go startWebServer()
+	//go startWebServer(ctx)
 
 	// Start the watching process - it'll check for changes every 100ms.
 	if err := w.Start(time.Millisecond * 100); err != nil {
@@ -381,7 +534,7 @@ func runDockerContainer(fnConfig FunctionConfig) (string, error) {
 	port := info.NetworkSettings.Ports["8080/tcp"][0].HostPort
 
 	// Register the function with our API Gateway
-	hookToLambdaEndpoint[fnConfig.Name] = fmt.Sprintf("http://localhost:%s/2015-03-31/functions/function/invocations", port)
+	//hookToLambdaEndpoint[fnConfig.Name] = fmt.Sprintf("http://localhost:%s/2015-03-31/functions/function/invocations", port)
 
 	fmt.Printf("Docker container started successfully. Lambda function exposed on port %s\n", port)
 	return resp.ID, nil
@@ -463,7 +616,7 @@ func NewDebouncer() *Debouncer {
 
 func (d *Debouncer) HandleEvent(event watcher.Event) error {
 
-	fmt.Printf("Handle event:", event)
+	fmt.Println("Handle event:", event)
 	if event.IsDir() && event.Op == watcher.Write {
 		// Directory write events happen when there is any change to the files
 		// or directories inside a directory. They are just noise and can be

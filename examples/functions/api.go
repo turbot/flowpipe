@@ -1,28 +1,33 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe-functions/container"
+	"github.com/turbot/flowpipe-functions/docker"
+	"github.com/turbot/flowpipe-functions/function"
 )
 
-var hookToLambdaEndpoint = map[string]string{}
+var hooks = map[string]*function.Function{}
 
 //"hook_name": "http://lambda_endpoint",
 
-func startWebServer() {
+func startWebServer(ctx context.Context, functions map[string]*function.Function) {
 	router := gin.Default()
+
+	hooks = functions
+
+	// Define your custom middleware to set the context
+	router.Use(func(c *gin.Context) {
+		// Set your custom context as Gin's request context
+		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	})
 
 	router.POST("/api/v0/hooks/:hookName", handleHookRequest)
 	router.POST("/api/v0/containers/:containerName", handleContainerRequest)
@@ -35,8 +40,40 @@ func startWebServer() {
 
 func handleHookRequest(c *gin.Context) {
 	hookName := c.Param("hookName")
-	lambdaEndpoint, ok := hookToLambdaEndpoint[hookName]
+	hook, ok := hooks[hookName]
 	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid hook name"})
+		return
+	}
+
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	result, err := hook.Invoke(body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invocation failed"})
+		return
+	}
+
+	fmt.Println("RESULT: ", string(result))
+
+	// Forward lambda response to client
+	c.Data(200, "application/json", result)
+
+}
+
+/*
+func handleHookRequestOld(c *gin.Context) {
+	hookName := c.Param("hookName")
+	lambdaEndpoint, ok := hookToLambdaEndpoint[hookName]
+
+	log.Printf("HOOK: %s => %s", hookName, lambdaEndpoint)
+
+	if !ok {
+		log.Println(hookToLambdaEndpoint)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid hook name"})
 		return
 	}
@@ -64,7 +101,47 @@ func handleHookRequest(c *gin.Context) {
 	// Forward lambda response to client
 	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), responseBody)
 }
+*/
 
+func handleContainerRequest(gc *gin.Context) {
+	containerName := gc.Param("containerName")
+	containerConfig, ok := config.Containers[containerName]
+	if !ok {
+		gc.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container name"})
+		return
+	}
+
+	dc := gc.Request.Context().Value(DockerClientContext{}).(*docker.DockerClient)
+
+	// TODO - do this once, not every request
+	c, err := container.NewContainer(container.WithContext(gc), container.WithDockerClient(dc))
+	if err != nil {
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Name = containerName
+	c.Image = containerConfig.Image
+	c.Cmd = containerConfig.Cmd
+	c.Env = containerConfig.Env
+
+	err = c.Load()
+	if err != nil {
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	containerID, err := c.Run()
+	if err != nil {
+		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Return the container output as the result of the API call
+	gc.String(http.StatusOK, c.Runs[containerID].Output)
+
+}
+
+/*
 func handleContainerRequest(c *gin.Context) {
 	containerName := c.Param("containerName")
 	containerConfig, ok := config.Containers[containerName]
@@ -199,3 +276,5 @@ func pullImage(cli *client.Client, imageName string) error {
 
 	return nil
 }
+
+*/
