@@ -65,7 +65,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "exec":
 			p := primitive.Exec{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case "http_request":
+		case "http":
 			p := primitive.HTTPRequest{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "pipeline":
