@@ -1,10 +1,12 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/options"
@@ -17,10 +19,6 @@ func NewPipelineHcl(block *hcl.Block) *PipelineHcl {
 	}
 }
 
-/*
-	type WorkspaceProfile struct {
-		ProfileName       string            `hcl:"name,label" cty:"name"`
-*/
 type PipelineHcl struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
@@ -29,7 +27,10 @@ type PipelineHcl struct {
 	// Unparsed HCL body, needed so we can de-code the step HCL into the correct struct
 	RawBody hcl.Body `json:"-" hcl:",remain"`
 
-	ISteps []PipelineHclStepI
+	// Unparsed JSON raw message, needed so we can unmarshall the step JSON into the correct struct
+	Raw json.RawMessage `json:"-"`
+
+	ISteps []PipelineHclStepI `json:"steps"`
 }
 
 func (p *PipelineHcl) GetStep(stepName string) PipelineHclStepI {
@@ -38,6 +39,74 @@ func (p *PipelineHcl) GetStep(stepName string) PipelineHclStepI {
 			return p.ISteps[i]
 		}
 	}
+	return nil
+}
+
+func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
+	// Define an auxiliary type to decode the JSON and capture the value of the 'ISteps' field
+	type Aux struct {
+		Name        string          `json:"name"`
+		Description *string         `json:"description,omitempty"`
+		Output      *string         `json:"output,omitempty"`
+		Raw         json.RawMessage `json:"-"`
+		ISteps      json.RawMessage `json:"steps"`
+	}
+
+	aux := Aux{ISteps: json.RawMessage([]byte("null"))} // Provide a default value for 'ISteps' field
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Assign values to the fields of the main struct
+	ph.Name = aux.Name
+	ph.Description = aux.Description
+	ph.Output = aux.Output
+	ph.Raw = []byte(aux.Raw)
+
+	// Determine the concrete type of 'ISteps' based on the data present in the JSON
+	if aux.ISteps != nil && string(aux.ISteps) != "null" {
+		// Replace the JSON array of 'ISteps' with the desired concrete type
+		var stepSlice []json.RawMessage
+		if err := json.Unmarshal(aux.ISteps, &stepSlice); err != nil {
+			return err
+		}
+
+		// Iterate over the stepSlice and determine the concrete type of each step
+		for _, stepData := range stepSlice {
+			// Extract the 'step_type' field from the stepData
+			var stepType struct {
+				StepType string `json:"step_type"`
+			}
+			if err := json.Unmarshal(stepData, &stepType); err != nil {
+				return err
+			}
+
+			switch stepType.StepType {
+			case configschema.BlockTypePipelineStepHttp:
+				var step PipelineHclStepHttp
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.ISteps = append(ph.ISteps, &step)
+			case configschema.BlockTypePipelineStepSleep:
+				var step PipelineHclStepSleep
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.ISteps = append(ph.ISteps, &step)
+			case configschema.BlockTypePipelineStepEmail:
+				var step PipelineHclStepEmail
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.ISteps = append(ph.ISteps, &step)
+			default:
+				// Handle unrecognized step types or return an error
+				return fperr.BadRequestWithMessage("Unrecognized step type: " + stepType.StepType)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -75,17 +144,20 @@ func (p *PipelineHcl) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostic
 func NewPipelineStep(stepType, stepName string) PipelineHclStepI {
 	switch stepType {
 	case configschema.BlockTypePipelineStepHttp:
-		return &PipelineHclStepHttp{
-			Name: stepName,
-		}
+		s := PipelineHclStepHttp{}
+		s.Name = stepName
+		s.Type = stepType
+		return &s
 	case configschema.BlockTypePipelineStepSleep:
-		return &PipelineHclStepSleep{
-			Name: stepName,
-		}
+		s := PipelineHclStepSleep{}
+		s.Name = stepName
+		s.Type = stepType
+		return &s
 	case configschema.BlockTypePipelineStepEmail:
-		return &PipelineHclStepEmail{
-			Name: stepName,
-		}
+		s := PipelineHclStepEmail{}
+		s.Name = stepName
+		s.Type = stepType
+		return &s
 	default:
 		return nil
 	}
@@ -102,9 +174,14 @@ type PipelineHclStepI interface {
 	SetAttributes(hcl.Attributes) hcl.Diagnostics
 }
 
-type PipelineHclStepHttp struct {
+type PipelineHclStepBase struct {
 	Name string `json:"name"`
-	Url  string `json:"url"`
+	Type string `json:"step_type"`
+}
+
+type PipelineHclStepHttp struct {
+	PipelineHclStepBase
+	Url string `json:"url"`
 }
 
 func (p *PipelineHclStepHttp) GetName() string {
@@ -169,8 +246,8 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 }
 
 type PipelineHclStepSleep struct {
-	Name     string `json:"name"`
-	Duration int    `json:"duration"`
+	PipelineHclStepBase
+	Duration int `json:"duration"`
 }
 
 func (p *PipelineHclStepSleep) GetName() string {
@@ -244,8 +321,8 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 }
 
 type PipelineHclStepEmail struct {
-	Name string `json:"name"`
-	To   string `json:"to"`
+	PipelineHclStepBase
+	To string `json:"to"`
 }
 
 func (p *PipelineHclStepEmail) GetName() string {
@@ -308,19 +385,6 @@ func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 	return diags
 }
 
-type PipelineHclStep struct {
-	Type string `hcl:"type,label" cty:"type"`
-	Name string `hcl:"name,label" cty:"name"`
-
-	Input     string
-	DependsOn []string
-	For       string
-	Error     PipelineStepError
-
-	// Unparsed HCL for the step configuration. Each step type has differing structure.
-	Config hcl.Body `hcl:",remain"`
-}
-
 func (p *PipelineHcl) CtyValue() (cty.Value, error) {
 	return pipeparser.GetCtyValue(p)
 }
@@ -362,83 +426,5 @@ func (p *PipelineHcl) OnDecoded() hcl.Diagnostics {
 }
 
 func (p *PipelineHcl) setBaseProperties() {
-	// 	if p.Base == nil {
-	// 		return
-	// 	}
 
-	// 	if p.CloudHost == nil {
-	// 		p.CloudHost = p.Base.CloudHost
-	// 	}
-	// 	if p.CloudToken == nil {
-	// 		p.CloudToken = p.Base.CloudToken
-	// 	}
-	// 	if p.InstallDir == nil {
-	// 		p.InstallDir = p.Base.InstallDir
-	// 	}
-	// 	if p.ModLocation == nil {
-	// 		p.ModLocation = p.Base.ModLocation
-	// 	}
-	// 	if p.SnapshotLocation == nil {
-	// 		p.SnapshotLocation = p.Base.SnapshotLocation
-	// 	}
-	// 	if p.WorkspaceDatabase == nil {
-	// 		p.WorkspaceDatabase = p.Base.WorkspaceDatabase
-	// 	}
-	// 	if p.QueryTimeout == nil {
-	// 		p.QueryTimeout = p.Base.QueryTimeout
-	// 	}
-	// 	if p.SearchPath == nil {
-	// 		p.SearchPath = p.Base.SearchPath
-	// 	}
-	// 	if p.SearchPathPrefix == nil {
-	// 		p.SearchPathPrefix = p.Base.SearchPathPrefix
-	// 	}
-	// 	if p.Watch == nil {
-	// 		p.Watch = p.Base.Watch
-	// 	}
-	// 	if p.MaxParallel == nil {
-	// 		p.MaxParallel = p.Base.MaxParallel
-	// 	}
-	// 	if p.Introspection == nil {
-	// 		p.Introspection = p.Base.Introspection
-	// 	}
-	// 	if p.Input == nil {
-	// 		p.Input = p.Base.Input
-	// 	}
-	// 	if p.Progress == nil {
-	// 		p.Progress = p.Base.Progress
-	// 	}
-	// 	if p.Theme == nil {
-	// 		p.Theme = p.Base.Theme
-	// 	}
-	// 	if p.Cache == nil {
-	// 		p.Cache = p.Base.Cache
-	// 	}
-	// 	if p.CacheTTL == nil {
-	// 		p.CacheTTL = p.Base.CacheTTL
-	// 	}
-
-	// 	// nested inheritance strategy:
-	// 	//
-	// 	// if my nested struct is a nil
-	// 	//		-> use the base struct
-	// 	//
-	// 	// if I am not nil (and base is not nil)
-	// 	//		-> only inherit the properties which are nil in me and not in base
-	// 	//
-	// 	if p.QueryOptions == nil {
-	// 		p.QueryOptions = p.Base.QueryOptions
-	// 	} else {
-	// 		p.QueryOptions.SetBaseProperties(p.Base.QueryOptions)
-	// 	}
-	// 	if p.CheckOptions == nil {
-	// 		p.CheckOptions = p.Base.CheckOptions
-	// 	} else {
-	// 		p.CheckOptions.SetBaseProperties(p.Base.CheckOptions)
-	// 	}
-	// 	if p.DashboardOptions == nil {
-	// 		p.DashboardOptions = p.Base.DashboardOptions
-	// 	} else {
-	// 		p.DashboardOptions.SetBaseProperties(p.Base.DashboardOptions)
-	// 	}
 }

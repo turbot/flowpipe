@@ -229,6 +229,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		var ele types.EventLogEntry
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
+			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err)
 			return err
 		}
 
@@ -238,6 +239,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineQueued
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
 				return err
 			}
 			ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
@@ -254,6 +256,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineStarted
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -263,6 +266,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineStarted
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -273,6 +277,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelinePlanned
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
@@ -291,6 +296,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineStepStart
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall command.pipeline_step_queue event", "execution", ex.ID, "error", err)
 				return err
 			}
 			ex.StepExecutions[et.StepExecutionID] = &StepExecution{
@@ -316,6 +322,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineStepStart
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall command.pipeline_step_start event", "execution", ex.ID, "error", err)
 				return err
 			}
 
@@ -323,6 +330,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineStepStarted
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_step_started event", "execution", ex.ID, "error", err)
 				return err
 			}
 			// Step the specific step execution status
@@ -339,6 +347,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineStepFinished
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_step_finished event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -375,6 +384,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineCanceled
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -384,6 +394,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelinePaused
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -393,6 +404,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineFinished
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -402,6 +414,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineFinished
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -412,6 +425,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			var et event.PipelineFailed
 			err := json.Unmarshal(ele.Payload, &et)
 			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
