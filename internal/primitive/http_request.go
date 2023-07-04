@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
@@ -18,38 +17,6 @@ import (
 
 type HTTPRequest struct {
 	Input types.Input
-}
-
-func NewHTTPRequest(step *types.PipelineHclStep) (*HTTPRequest, error) {
-
-	if step == nil || step.Config == nil {
-		return nil, fperr.BadRequestWithMessage("Missing config in Step")
-	}
-
-	input := types.Input{}
-	if hclBody, ok := step.Config.(*hclsyntax.Body); ok {
-		// if we can cast to a hcl body, read all the attributes and manually exclude those which are in the schema
-		for name, attr := range hclBody.Attributes {
-			// exclude attributes we have already handled
-			// if _, ok := connectionContent.Attributes[name]; !ok {
-			// 	attrExpressionMap[name] = attr.Expr
-			// }
-			if name == "url" {
-				val, err := attr.Expr.Value(nil)
-				if err != nil {
-					return nil, fperr.Internal(err)
-				}
-				input["url"] = val.AsString()
-			}
-
-		}
-	}
-
-	httpResult := HTTPRequest{
-		Input: input,
-	}
-
-	return &httpResult, nil
 }
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {

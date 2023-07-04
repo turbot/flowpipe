@@ -10,8 +10,7 @@ import (
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/options"
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -30,33 +29,42 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	// create profile map to populate
 	pipelineMap = map[string]*types.PipelineHcl{}
 
-	configPaths, err := filehelpers.ListFiles(pipelinePath, &filehelpers.ListOptions{
+	pipelineFilePaths, err := filehelpers.ListFiles(pipelinePath, &filehelpers.ListOptions{
 		Flags:   filehelpers.FilesFlat,
 		Include: filehelpers.InclusionsFromExtensions([]string{pipeparser.PipelineExtension}),
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(configPaths) == 0 {
+
+	// pipelineFilePaths is the list of all pipeline files found in the pipelinePath
+	if len(pipelineFilePaths) == 0 {
 		return pipelineMap, nil
 	}
 
-	fileData, diags := pipeparser.LoadFileData(configPaths...)
+	fileData, diags := pipeparser.LoadFileData(pipelineFilePaths...)
 	if diags.HasErrors() {
 		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
 	}
 
-	body, diags := pipeparser.ParseHclFiles(fileData)
+	if len(fileData) != len(pipelineFilePaths) {
+		return nil, fperr.InternalWithMessage("Failed to load all pipeline files")
+	}
+
+	// Each file in the pipelineFilePaths is parsed and the result is stored in the bodies variable
+	// bodies.data length should be the same with pipelineFilePaths length
+	bodies, diags := pipeparser.ParseHclFiles(fileData)
 	if diags.HasErrors() {
 		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
 	}
 
 	// do a partial decode
-	content, diags := body.Content(PipelineBlockSchema)
+	content, diags := bodies.Content(PipelineBlockSchema)
 	if diags.HasErrors() {
 		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
 	}
 
+	// content.Blocks is the list of all pipeline blocks found in the pipeline files
 	parseCtx := NewPipelineParseContext(pipelinePath)
 	parseCtx.SetDecodeContent(content, fileData)
 
@@ -115,8 +123,12 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipel
 	// now clear dependencies from run context - they will be rebuilt
 	parseCtx.ClearDependencies()
 
+	// blocksToDecode contains the number of pipeline block we found in all the files
+	// from the given input directory.
+	//
+	// each "block" is the pipeline HCL block that we need to decode into a Go Struct
 	for _, block := range blocksToDecode {
-		if block.Type == modconfig.BlockTypePipeline {
+		if block.Type == configschema.BlockTypePipeline {
 			pipelineHcl, res := decodePipeline(block, parseCtx)
 
 			if res.Success() {
@@ -131,46 +143,71 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipel
 
 func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.PipelineHcl, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
-	// get shell resource
-	resource := types.NewPipelineHcl(block)
+	// get shell pipelineHcl
+	pipelineHcl := types.NewPipelineHcl(block)
 
-	// do a partial decode to get options blocks into pipelineOptions, with all other attributes in rest
+	// do a partial decode so we can parse the step manually, each pipeline step has its own struct, so we can't use
+	// HCL automatic parsing here
 	pipelineOptions, rest, diags := block.Body.PartialContent(PipelineBlockSchema)
 	if diags.HasErrors() {
 		res.HandleDecodeDiags(diags)
 		return nil, res
 	}
 
-	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, resource)
+	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, pipelineHcl)
 	if len(diags) > 0 {
 		res.HandleDecodeDiags(diags)
+		return nil, res
 	}
+
+	diags = pipelineHcl.SetAttributes(pipelineOptions.Attributes)
+	if len(diags) > 0 {
+		res.HandleDecodeDiags(diags)
+		return nil, res
+	}
+
 	// use a map keyed by a string for fast lookup
 	// we use an empty struct as the value type, so that
 	// we don't use up unnecessary memory
-	foundOptions := map[string]struct{}{}
+	// foundOptions := map[string]struct{}{}
 	for _, block := range pipelineOptions.Blocks {
 		switch block.Type {
-		case "options":
-			optionsBlockType := block.Labels[0]
-			if _, found := foundOptions[optionsBlockType]; found {
-				// fail
-				diags = append(diags, &hcl.Diagnostic{
-					Severity: hcl.DiagError,
-					Subject:  &block.DefRange,
-					Summary:  fmt.Sprintf("Duplicate options type '%s'", optionsBlockType),
+		case configschema.BlockTypePipelineStep:
+			stepType := block.Labels[0]
+			stepName := block.Labels[1]
+
+			step := types.NewPipelineStep(stepType, stepName)
+			if step == nil {
+				res.HandleDecodeDiags(hcl.Diagnostics{
+					&hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  fmt.Sprintf("Invalid pipeline step type %s", stepType),
+					},
 				})
+				return nil, res
 			}
-			opts, moreDiags := decodePipelineHclOption(block)
-			if moreDiags.HasErrors() {
-				diags = append(diags, moreDiags...)
-				break
+
+			stepOptions, rest, diags := block.Body.PartialContent(GetPipelineStepBlockSchema(stepType))
+
+			if diags.HasErrors() {
+				res.HandleDecodeDiags(diags)
+				return nil, res
 			}
-			moreDiags = resource.SetOptions(opts, block)
-			if moreDiags.HasErrors() {
-				diags = append(diags, moreDiags...)
+
+			diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, step)
+			if len(diags) > 0 {
+				res.HandleDecodeDiags(diags)
+				return nil, res
 			}
-			foundOptions[optionsBlockType] = struct{}{}
+
+			diags = step.SetAttributes(stepOptions.Attributes)
+			if len(diags) > 0 {
+				res.HandleDecodeDiags(diags)
+				return nil, res
+			}
+
+			pipelineHcl.ISteps = append(pipelineHcl.ISteps, step)
+
 		default:
 			// this should never happen
 			diags = append(diags, &hcl.Diagnostic{
@@ -181,8 +218,8 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 		}
 	}
 
-	handlePipelineDecodeResult(resource, res, block, parseCtx)
-	return resource, res
+	handlePipelineDecodeResult(pipelineHcl, res, block, parseCtx)
+	return pipelineHcl, res
 }
 
 func handlePipelineDecodeResult(resource *types.PipelineHcl, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
@@ -205,24 +242,62 @@ func handlePipelineDecodeResult(resource *types.PipelineHcl, res *pipeparser.Dec
 	}
 }
 
-// decodeWorkspaceProfileOption decodes an options block as a workspace profile property
-// setting the necessary overrides for special handling of the "dashboard" option which is different
-// from the global "dashboard" option
-func decodePipelineHclOption(block *hcl.Block) (options.Options, hcl.Diagnostics) {
-	// return pipeparser.DecodeOptions(block, pipeparser.WithOverride(constants.CmdNameDashboard, &options.WorkspaceProfileDashboard{}))
-	return pipeparser.DecodeOptions(block)
-}
-
 var PipelineBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{},
-
-	// TODO: what's this?
-	Blocks: []hcl.BlockHeaderSchema{
+	Attributes: []hcl.AttributeSchema{
 		{
-			Type:       "pipeline",
-			LabelNames: []string{"name"},
+			Name:     configschema.AttributeTypeDescription,
+			Required: false,
 		},
 	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type:       configschema.BlockTypePipeline,
+			LabelNames: []string{configschema.LabelName},
+		},
+		{
+			Type:       configschema.BlockTypePipelineStep,
+			LabelNames: []string{configschema.LabelType, configschema.LabelName},
+		},
+	},
+}
+
+var PipelineStepHttpBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name:     configschema.AttributeTypeUrl,
+			Required: true,
+		},
+	},
+}
+
+var PipelineStepSleepBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name:     configschema.AttributeTypeDuration,
+			Required: true,
+		},
+	},
+}
+var PipelineStepEmailBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name:     configschema.AttributeTypeTo,
+			Required: true,
+		},
+	},
+}
+
+func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
+	switch stepType {
+	case configschema.BlockTypePipelineStepHttp:
+		return PipelineStepHttpBlockSchema
+	case configschema.BlockTypePipelineStepSleep:
+		return PipelineStepSleepBlockSchema
+	case configschema.BlockTypePipelineStepEmail:
+		return PipelineStepEmailBlockSchema
+	default:
+		return nil
+	}
 }
 
 type PipelineParseContext struct {

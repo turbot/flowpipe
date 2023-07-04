@@ -6,6 +6,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -21,10 +22,15 @@ func NewPipelineHcl(block *hcl.Block) *PipelineHcl {
 		ProfileName       string            `hcl:"name,label" cty:"name"`
 */
 type PipelineHcl struct {
-	Name    string            `hcl:"name,label" cty:"name"`
-	Output  *string           `hcl:"output" cty:"output"`
-	Steps   []PipelineHclStep `hcl:"step,block" cty:"step"`
-	RawBody hcl.Body          `hcl:",remain"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
+	Output      *string `json:"output,omitempty"`
+
+	// Unparsed HCL body, needed so we can de-code the step HCL into the correct struct
+	RawBody hcl.Body `json:"-" hcl:",remain"`
+
+	ISteps []PipelineHclStepI
+	Steps  []PipelineHclStep
 }
 
 func (p *PipelineHcl) GetStep(stepName string) *PipelineHclStep {
@@ -34,6 +40,220 @@ func (p *PipelineHcl) GetStep(stepName string) *PipelineHclStep {
 		}
 	}
 	return nil
+}
+
+func (p *PipelineHcl) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case configschema.AttributeTypeDescription:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse description attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Description = &valString
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for pipeline: " + attr.Name,
+				Subject:  &attr.Range,
+			})
+		}
+	}
+	return diags
+}
+
+func NewPipelineStep(stepType, stepName string) PipelineHclStepI {
+	switch stepType {
+	case configschema.BlockTypePipelineStepHttp:
+		return &PipelineHclStepHttp{
+			Name: stepName,
+		}
+	case configschema.BlockTypePipelineStepSleep:
+		return &PipelineHclStepSleep{
+			Name: stepName,
+		}
+	case configschema.BlockTypePipelineStepEmail:
+		return &PipelineHclStepEmail{
+			Name: stepName,
+		}
+	default:
+		return nil
+	}
+}
+
+type PipelineHclStepI interface {
+	GetName() string
+	GetType() string
+	GetInput() map[string]interface{}
+	SetAttributes(hcl.Attributes) hcl.Diagnostics
+}
+
+type PipelineHclStepHttp struct {
+	Name string `json:"name"`
+	Url  string `json:"url"`
+}
+
+func (p *PipelineHclStepHttp) GetName() string {
+	return p.Name
+}
+
+func (p *PipelineHclStepHttp) GetType() string {
+	return configschema.BlockTypePipelineStepHttp
+}
+
+func (p *PipelineHclStepHttp) GetInput() map[string]interface{} {
+	return map[string]interface{}{
+		"url": p.Url,
+	}
+}
+
+func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case configschema.AttributeTypeUrl:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse url attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Url = valString
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for HTTP Step: " + attr.Name,
+				Subject:  &attr.Range,
+			})
+		}
+	}
+	return diags
+}
+
+type PipelineHclStepSleep struct {
+	Name     string `json:"name"`
+	Duration int    `json:"duration"`
+}
+
+func (p *PipelineHclStepSleep) GetName() string {
+	return p.Name
+}
+
+func (p *PipelineHclStepSleep) GetType() string {
+	return configschema.BlockTypePipelineStepSleep
+}
+
+func (p *PipelineHclStepSleep) GetInput() map[string]interface{} {
+	return map[string]interface{}{
+		"duration": p.Duration,
+	}
+}
+func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case configschema.AttributeTypeDuration:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse duration attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				if !val.AsBigFloat().IsInt() {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse duration attribute, not an integer",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valInt, _ := val.AsBigFloat().Int(nil)
+				p.Duration = int(valInt.Int64())
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
+				Subject:  &attr.Range,
+			})
+		}
+	}
+	return diags
+}
+
+type PipelineHclStepEmail struct {
+	Name string `json:"name"`
+	To   string `json:"to"`
+}
+
+func (p *PipelineHclStepEmail) GetName() string {
+	return p.Name
+}
+
+func (p *PipelineHclStepEmail) GetType() string {
+	return configschema.BlockTypePipelineStepEmail
+}
+
+func (p *PipelineHclStepEmail) GetInput() map[string]interface{} {
+	return map[string]interface{}{
+		"to": p.To,
+	}
+}
+
+func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case configschema.AttributeTypeTo:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse to attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				valString := val.AsString()
+				p.To = valString
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
+				Subject:  &attr.Range,
+			})
+		}
+	}
+	return diags
 }
 
 type PipelineHclStep struct {

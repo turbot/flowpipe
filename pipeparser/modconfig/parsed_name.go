@@ -3,6 +3,8 @@ package modconfig
 import (
 	"fmt"
 	"strings"
+
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 )
 
 type ParsedResourceName struct {
@@ -34,7 +36,7 @@ func ParseResourceName(fullName string) (res *ParsedResourceName, err error) {
 	default:
 		err = fmt.Errorf("invalid name '%s' passed to ParseResourceName", fullName)
 	}
-	if !IsValidResourceItemType(res.ItemType) {
+	if !configschema.IsValidResourceItemType(res.ItemType) {
 		err = fmt.Errorf("invalid name '%s' passed to ParseResourceName", fullName)
 	}
 	return
