@@ -40,7 +40,7 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	}
 
-	switch stepDefn.Type {
+	switch stepDefn.GetType() {
 	case "pipeline":
 		cmd, err := event.NewPipelineQueue(event.ForPipelineStepStartedToPipelineQueue(e))
 		if err != nil {
@@ -52,7 +52,7 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		err := fperr.BadRequestWithMessage("sleep type is not implemented")
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	default:
-		err := fperr.BadRequestWithMessage("step type cannot be started: " + stepDefn.Type)
+		err := fperr.BadRequestWithMessage("step type cannot be started: " + stepDefn.GetType())
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	}
 }

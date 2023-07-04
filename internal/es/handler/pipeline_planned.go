@@ -101,11 +101,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// logger.Info("[8] pipeline planned event handler #4")
 		stepDefn := defn.GetStep(nextStep.StepName)
 
-		if stepDefn.For != "" {
-			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.For)
+		if stepDefn.GetFor() != "" {
+			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.GetFor())
 
 			// Use go template with the step outputs to generate the items
-			t, err := template.New("for").Parse(stepDefn.For)
+			t, err := template.New("for").Parse(stepDefn.GetFor())
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
@@ -144,7 +144,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		forEaches := []*types.Input{}
 
 		// logger.Info("[8] pipeline planned event handler #7", "stepDefn", stepDefn)
-		if stepDefn.Input == "" {
+		if stepDefn.GetDeprecatedInput() == "" {
 			// No input, so just use an empty input for each step execution.
 
 			// There is always one input (e.g. no for loop). If the for loop had
@@ -171,14 +171,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			// logger.Info("[8] pipeline planned event handler #11")
 			// Parse the input template once
-			t, err := template.New("input").Parse(stepDefn.Input)
+			t, err := template.New("input").Parse(stepDefn.GetDeprecatedInput())
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
 			// TODO: should we check for foInputs.IsValid() here? It was causing a panic before
 			// TODO: when I didn't load the yaml file correctly
-			if stepDefn.For == "" {
+			if stepDefn.GetFor() == "" {
 				// No for loop
 
 				var itemsBuffer bytes.Buffer

@@ -77,31 +77,31 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 }
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
-func (pe *PipelineExecution) IsStepFinalFailure(step *types.PipelineHclStep, ex *Execution) bool {
-	if !pe.IsStepFail(step.Name) {
+func (pe *PipelineExecution) IsStepFinalFailure(step types.PipelineHclStepI, ex *Execution) bool {
+	if !pe.IsStepFail(step.GetName()) {
 		// Step not failed, so no need to calculate, return false
 		return false
 	}
 
 	var failedStepExecutions []StepExecution
-	if step.Error.Retries > 0 && !step.Error.Ignore {
-		if pe.StepStatus[step.Name].FailCount() > step.Error.Retries {
-			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.Name)
+	if step.GetError().Retries > 0 && !step.GetError().Ignore {
+		if pe.StepStatus[step.GetName()].FailCount() > step.GetError().Retries {
+			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetName())
 
 			if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-				pe.Fail(step.Name, types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
+				pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
 			} else {
 				// Set the error
-				pe.Fail(step.Name, *failedStepExecutions[len(failedStepExecutions)-1].Error)
+				pe.Fail(step.GetName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
 			}
-			// pe.Fail(step.Name, types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
+			// pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
 			return true
 		} else {
 			return false
 		}
-	} else if !step.Error.Ignore {
-		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.Name)
-		pe.Fail(step.Name, *failedStepExecutions[len(failedStepExecutions)-1].Error)
+	} else if !step.GetError().Ignore {
+		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetName())
+		pe.Fail(step.GetName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
 		return true
 	}
 	return true

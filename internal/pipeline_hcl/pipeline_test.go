@@ -23,7 +23,7 @@ func TestLoadPipelineDir(t *testing.T) {
 		for _, step := range pipelines["simple_http"].ISteps {
 			if step.GetName() == "my_step_1" {
 				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")
-				assert.Equal("http://localhost:8081", step.GetInput()["url"], "wrong step input")
+				assert.Equal("http://localhost:8081", step.GetInputs()["url"], "wrong step input")
 			}
 		}
 	}

@@ -30,13 +30,12 @@ type PipelineHcl struct {
 	RawBody hcl.Body `json:"-" hcl:",remain"`
 
 	ISteps []PipelineHclStepI
-	Steps  []PipelineHclStep
 }
 
-func (p *PipelineHcl) GetStep(stepName string) *PipelineHclStep {
-	for i := 0; i < len(p.Steps); i++ {
-		if p.Steps[i].Name == stepName {
-			return &p.Steps[i]
+func (p *PipelineHcl) GetStep(stepName string) PipelineHclStepI {
+	for i := 0; i < len(p.ISteps); i++ {
+		if p.ISteps[i].GetName() == stepName {
+			return p.ISteps[i]
 		}
 	}
 	return nil
@@ -95,7 +94,11 @@ func NewPipelineStep(stepType, stepName string) PipelineHclStepI {
 type PipelineHclStepI interface {
 	GetName() string
 	GetType() string
-	GetInput() map[string]interface{}
+	GetInputs() map[string]interface{}
+	GetDependsOn() []string
+	GetFor() string
+	GetDeprecatedInput() string
+	GetError() *PipelineStepError
 	SetAttributes(hcl.Attributes) hcl.Diagnostics
 }
 
@@ -112,10 +115,26 @@ func (p *PipelineHclStepHttp) GetType() string {
 	return configschema.BlockTypePipelineStepHttp
 }
 
-func (p *PipelineHclStepHttp) GetInput() map[string]interface{} {
+func (p *PipelineHclStepHttp) GetInputs() map[string]interface{} {
 	return map[string]interface{}{
 		"url": p.Url,
 	}
+}
+
+func (p *PipelineHclStepHttp) GetFor() string {
+	return ""
+}
+
+func (p *PipelineHclStepHttp) GetDependsOn() []string {
+	return []string{}
+}
+
+func (p *PipelineHclStepHttp) GetError() *PipelineStepError {
+	return nil
+}
+
+func (p *PipelineHclStepHttp) GetDeprecatedInput() string {
+	return ""
 }
 
 func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
@@ -162,11 +181,28 @@ func (p *PipelineHclStepSleep) GetType() string {
 	return configschema.BlockTypePipelineStepSleep
 }
 
-func (p *PipelineHclStepSleep) GetInput() map[string]interface{} {
+func (p *PipelineHclStepSleep) GetInputs() map[string]interface{} {
 	return map[string]interface{}{
 		"duration": p.Duration,
 	}
 }
+
+func (p *PipelineHclStepSleep) GetDependsOn() []string {
+	return []string{}
+}
+
+func (p *PipelineHclStepSleep) GetFor() string {
+	return ""
+}
+
+func (p *PipelineHclStepSleep) GetError() *PipelineStepError {
+	return nil
+}
+
+func (p *PipelineHclStepSleep) GetDeprecatedInput() string {
+	return ""
+}
+
 func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
@@ -220,10 +256,26 @@ func (p *PipelineHclStepEmail) GetType() string {
 	return configschema.BlockTypePipelineStepEmail
 }
 
-func (p *PipelineHclStepEmail) GetInput() map[string]interface{} {
+func (p *PipelineHclStepEmail) GetFor() string {
+	return ""
+}
+
+func (p *PipelineHclStepEmail) GetDependsOn() []string {
+	return []string{}
+}
+
+func (p *PipelineHclStepEmail) GetError() *PipelineStepError {
+	return nil
+}
+
+func (p *PipelineHclStepEmail) GetInputs() map[string]interface{} {
 	return map[string]interface{}{
 		"to": p.To,
 	}
+}
+
+func (p *PipelineHclStepEmail) GetDeprecatedInput() string {
+	return ""
 }
 
 func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {

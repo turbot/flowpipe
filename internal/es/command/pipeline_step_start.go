@@ -61,7 +61,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		var output *types.StepOutput
 		var primitiveError error
-		switch stepDefn.Type {
+		switch stepDefn.GetType() {
 		case "exec":
 			p := primitive.Exec{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
@@ -78,7 +78,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			p := primitive.Sleep{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
-			logger.Error("Unknown step type", "type", stepDefn.Type)
+			logger.Error("Unknown step type", "type", stepDefn.GetType())
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
@@ -97,7 +97,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		}
 
 		// If it's a pipeline step, we need to do something else
-		if stepDefn.Type == "pipeline" {
+		if stepDefn.GetType() == "pipeline" {
 			args := types.Input{}
 			if cmd.StepInput["args"] != nil {
 				args = cmd.StepInput["args"].(map[string]interface{})

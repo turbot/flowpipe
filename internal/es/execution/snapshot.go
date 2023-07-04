@@ -165,9 +165,9 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	dependedOn := map[string]bool{}
 
 	// Check each step definition in the pipeline
-	for _, sd := range pd.Steps {
+	for _, sd := range pd.ISteps {
 
-		stepPanels, err := ex.StepExecutionSnapshotPanels(pe.ID, sd.Name)
+		stepPanels, err := ex.StepExecutionSnapshotPanels(pe.ID, sd.GetName())
 		if err != nil {
 			return nil, err
 		}
@@ -183,16 +183,16 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 			}
 		}
 
-		stepToID := "step_" + sd.Name
+		stepToID := "step_" + sd.GetName()
 		if len(stepPanels) > 1 {
-			stepToID = "stepstart_" + sd.Name
+			stepToID = "stepstart_" + sd.GetName()
 		}
 
-		if len(sd.DependsOn) > 0 {
+		if len(sd.GetDependsOn()) > 0 {
 
 			// Build edges from dependencies to this step
 
-			for _, dep := range sd.DependsOn {
+			for _, dep := range sd.GetDependsOn() {
 				dependedOn[dep] = true
 
 				edgeName = "edge_" + dep + "_to_" + stepToID
@@ -253,13 +253,13 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	}
 
 	// Add edges from steps that are not depended on to the end
-	for _, sd := range pd.Steps {
-		if dependedOn[sd.Name] {
+	for _, sd := range pd.ISteps {
+		if dependedOn[sd.GetName()] {
 			continue
 		}
 
 		// Edge from pipeline start to step
-		edgeName = "edge_" + "step_" + sd.Name + "_to_" + "end_" + pe.ID
+		edgeName = "edge_" + "step_" + sd.GetName() + "_to_" + "end_" + pe.ID
 		edgeNames = append(edgeNames, edgeName)
 		snapshot.Panels[edgeName] = SnapshotPanel{
 			Dashboard: pe.ID,
@@ -273,7 +273,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 				},
 				Rows: []SnapshotPanelDataRow{
 					{
-						"from_id": "step_" + sd.Name,
+						"from_id": "step_" + sd.GetName(),
 						"to_id":   "end_" + pe.ID,
 					},
 				},
@@ -394,7 +394,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 
 	panels := map[string]SnapshotPanel{}
 
-	stepExecutions := ex.PipelineStepExecutions(pe.ID, sd.Name)
+	stepExecutions := ex.PipelineStepExecutions(pe.ID, sd.GetName())
 
 	if len(stepExecutions) == 0 {
 
@@ -403,14 +403,14 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 
 		// Single node, so panel name should match the step name with standard
 		// prefix.
-		panelName := "step_" + sd.Name
+		panelName := "step_" + sd.GetName()
 
 		panels[panelName] = SnapshotPanel{
 			Dashboard: pe.ID,
 			Name:      panelName,
 			PanelType: "node",
 			Status:    "complete",
-			Title:     sd.Name,
+			Title:     sd.GetName(),
 			Data: SnapshotPanelData{
 				Columns: []SnapshotPanelDataColumn{
 					{Name: "id", DataType: "TEXT"},
@@ -420,9 +420,9 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 				Rows: []SnapshotPanelDataRow{
 					{
 						"id":    panelName,
-						"title": sd.Name,
+						"title": sd.GetName(),
 						"properties": map[string]interface{}{
-							"Type":   sd.Type,
+							"Type":   sd.GetType(),
 							"Status": "Skipped - no executions",
 						},
 					},
@@ -430,7 +430,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 			},
 			Properties: map[string]interface{}{
 				"name":     panelName,
-				"category": Category(sd.Type),
+				"category": Category(sd.GetType()),
 			},
 		}
 
@@ -448,14 +448,14 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 
 		// Single node, so panel name should match the step name with standard
 		// prefix.
-		panelName := "step_" + sd.Name
+		panelName := "step_" + sd.GetName()
 
 		panels[panelName] = SnapshotPanel{
 			Dashboard: pe.ID,
 			Name:      panelName,
 			PanelType: "node",
 			Status:    "complete",
-			Title:     sd.Name,
+			Title:     sd.GetName(),
 			Data: SnapshotPanelData{
 				Columns: []SnapshotPanelDataColumn{
 					{Name: "id", DataType: "TEXT"},
@@ -468,7 +468,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 			},
 			Properties: map[string]interface{}{
 				"name":     panelName,
-				"category": Category(sd.Type),
+				"category": Category(sd.GetType()),
 			},
 		}
 
@@ -480,13 +480,13 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	// execution nodes in the middle, all converging back into an end node.
 
 	// Start of step
-	startNodeName := "stepstart_" + sd.Name
+	startNodeName := "stepstart_" + sd.GetName()
 	panels[startNodeName] = SnapshotPanel{
 		Dashboard: pe.ID,
 		Name:      startNodeName,
 		PanelType: "node",
 		Status:    "complete",
-		Title:     "Start: " + sd.Name,
+		Title:     "Start: " + sd.GetName(),
 		Data: SnapshotPanelData{
 			Columns: []SnapshotPanelDataColumn{
 				{Name: "id", DataType: "TEXT"},
@@ -496,27 +496,27 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 			Rows: []SnapshotPanelDataRow{
 				{
 					"id":    startNodeName,
-					"title": "Start: " + sd.Name,
+					"title": "Start: " + sd.GetName(),
 					"properties": map[string]interface{}{
-						"Type": sd.Type,
+						"Type": sd.GetType(),
 					},
 				},
 			},
 		},
 		Properties: map[string]interface{}{
 			"name":     startNodeName,
-			"category": Category(sd.Type),
+			"category": Category(sd.GetType()),
 		},
 	}
 
 	// End of step
-	endNodeName := "step_" + sd.Name
+	endNodeName := "step_" + sd.GetName()
 	panels[endNodeName] = SnapshotPanel{
 		Dashboard: pe.ID,
 		Name:      endNodeName,
 		PanelType: "node",
 		Status:    "complete",
-		Title:     "End: " + sd.Name,
+		Title:     "End: " + sd.GetName(),
 		Data: SnapshotPanelData{
 			Columns: []SnapshotPanelDataColumn{
 				{Name: "id", DataType: "TEXT"},
@@ -526,27 +526,27 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 			Rows: []SnapshotPanelDataRow{
 				{
 					"id":    endNodeName,
-					"title": "End: " + sd.Name,
+					"title": "End: " + sd.GetName(),
 					"properties": map[string]interface{}{
-						"Type": sd.Type,
+						"Type": sd.GetType(),
 					},
 				},
 			},
 		},
 		Properties: map[string]interface{}{
 			"name":     endNodeName,
-			"category": Category(sd.Type),
+			"category": Category(sd.GetType()),
 		},
 	}
 
 	// Node for the step execution
-	nodeName := "exec_" + sd.Name
+	nodeName := "exec_" + sd.GetName()
 	nodePanel := SnapshotPanel{
 		Dashboard: pe.ID,
 		Name:      nodeName,
 		PanelType: "node",
 		Status:    "complete",
-		Title:     sd.Name,
+		Title:     sd.GetName(),
 		Data: SnapshotPanelData{
 			Columns: []SnapshotPanelDataColumn{
 				{Name: "id", DataType: "TEXT"},
@@ -557,7 +557,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 		},
 		Properties: map[string]interface{}{
 			"name":     nodeName,
-			"category": Category(sd.Type),
+			"category": Category(sd.GetType()),
 		},
 	}
 
@@ -603,12 +603,12 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	for i, se := range stepExecutions {
 		nodePanel.Data.Rows = append(nodePanel.Data.Rows, ex.StepExecutionNodeRow(se.ID, sd, &stepExecutions[i]))
 		startEdgePanel.Data.Rows = append(startEdgePanel.Data.Rows, SnapshotPanelDataRow{
-			"from_id": "stepstart_" + sd.Name,
+			"from_id": "stepstart_" + sd.GetName(),
 			"to_id":   se.ID,
 		})
 		endEdgePanel.Data.Rows = append(endEdgePanel.Data.Rows, SnapshotPanelDataRow{
 			"from_id": se.ID,
-			"to_id":   "step_" + sd.Name,
+			"to_id":   "step_" + sd.GetName(),
 		})
 	}
 
@@ -619,7 +619,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	return panels, nil
 }
 
-func (ex *Execution) StepExecutionNodeRow(panelName string, sd *types.PipelineHclStep, se *StepExecution) SnapshotPanelDataRow {
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.PipelineHclStepI, se *StepExecution) SnapshotPanelDataRow {
 
 	var row SnapshotPanelDataRow
 
@@ -640,10 +640,10 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd *types.PipelineHc
 		}
 	}
 	if title == "" {
-		title = sd.Name + " [" + se.ID[len(se.ID)-4:] + "]"
+		title = sd.GetName() + " [" + se.ID[len(se.ID)-4:] + "]"
 	}
 
-	switch sd.Type {
+	switch sd.GetType() {
 
 	case "sleep":
 		row = SnapshotPanelDataRow{

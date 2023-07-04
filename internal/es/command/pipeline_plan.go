@@ -71,37 +71,37 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	//
 
-	for i, step := range defn.Steps {
-		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.Name)
+	for i, step := range defn.ISteps {
+		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.GetName())
 
-		if pe.IsStepFail(step.Name) {
-			logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
+		if pe.IsStepFail(step.GetName()) {
+			// logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.GetName(), "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
 
-			if !pe.IsStepFinalFailure(&defn.Steps[i], ex) {
-				logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.Name, "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.Name].FailCount()", pe.StepStatus[step.Name].FailCount())
+			if !pe.IsStepFinalFailure(defn.ISteps[i], ex) {
+				// logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.GetName(), "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.GetName()].FailCount()", pe.StepStatus[step.GetName()].FailCount())
 
 				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
-				if !pe.IsStepQueued(step.Name) {
-					e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.Name, DelayMs: 3000})
+				if !pe.IsStepQueued(step.GetName()) {
+					e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetName(), DelayMs: 3000})
 				}
 			}
 			continue
 		}
 
 		// No need to plan if the step has been initialized
-		if pe.IsStepInitialized(step.Name) {
+		if pe.IsStepInitialized(step.GetName()) {
 			continue
 		}
 
 		// If the steps dependencies are not met, then skip it.
 		// TODO - this is completely naive and does not handle cycles.
 		dependendenciesMet := true
-		for _, dep := range step.DependsOn {
+		for _, dep := range step.GetDependsOn() {
 
 			// logger.Info("(7) pipeline_plan command handler #3 processing dep", "step", step, "dep", dep)
 
 			// Cannot depend on yourself
-			if step.Name == dep {
+			if step.GetName() == dep {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
@@ -121,7 +121,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		// Plan to run the step.
-		e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.Name})
+		e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetName()})
 	}
 
 	logger.Info("(7) pipeline_plan command handler #5", "nextSteps", e.NextSteps)

@@ -80,7 +80,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(stepExecutionID string) (*types.PipelineHclStep, error) {
+func (ex *Execution) StepDefinition(stepExecutionID string) (types.PipelineHclStepI, error) {
 	se, ok := ex.StepExecutions[stepExecutionID]
 	if !ok {
 		return nil, fmt.Errorf("step execution %s not found", stepExecutionID)
@@ -127,7 +127,7 @@ func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string
 		if err != nil {
 			return nil, err
 		}
-		if sd.For == "" {
+		if sd.GetFor() == "" {
 			outputs[se.Name] = se.Output
 		} else {
 			if _, ok := outputs[se.Name]; !ok {
@@ -280,8 +280,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			for _, step := range pd.Steps {
-				pe.InitializeStep(step.Name)
+			for _, step := range pd.ISteps {
+				pe.InitializeStep(step.GetName())
 			}
 
 		// TODO: I'm not sure if this is the right move. Initially I was using this to introduce the concept of a "queue"
@@ -310,7 +310,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
 			ex.StepExecutions[et.StepExecutionID].ForEach = et.ForEach
-			pe.StepStatus[stepDefn.Name].Queue(et.StepExecutionID)
+			pe.StepStatus[stepDefn.GetName()].Queue(et.StepExecutionID)
 
 		case "command.pipeline_step_start":
 			var et event.PipelineStepStart
@@ -333,7 +333,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.StartStep(stepDefn.Name, et.StepExecutionID)
+			pe.StartStep(stepDefn.GetName(), et.StepExecutionID)
 
 		case "handler.pipeline_step_finished":
 			var et event.PipelineStepFinished
@@ -358,7 +358,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				ex.StepExecutions[et.StepExecutionID].Error = et.Error
 				logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
 				ex.StepExecutions[et.StepExecutionID].Status = "failed"
-				pe.FailStep(stepDefn.Name, et.StepExecutionID)
+				pe.FailStep(stepDefn.GetName(), et.StepExecutionID)
 
 				// IMPORTANT: we must call this to check if this step is the final failure
 				// this function also sets the internal error tracker of the pe. Not sure if that's right place
@@ -368,7 +368,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 					logger.Trace("Step final failure", "step", stepDefn)
 				}
 			} else {
-				pe.FinishStep(stepDefn.Name, et.StepExecutionID)
+				pe.FinishStep(stepDefn.GetName(), et.StepExecutionID)
 			}
 
 		case "handler.pipeline_canceled":
