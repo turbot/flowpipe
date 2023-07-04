@@ -43,10 +43,10 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
-	if defn.Output != "" {
+	if defn.Output != nil {
 
 		// Parse the input template once
-		t, err := template.New("output").Parse(defn.Output)
+		t, err := template.New("output").Parse(*defn.Output)
 		if err != nil {
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}

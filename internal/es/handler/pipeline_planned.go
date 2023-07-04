@@ -99,13 +99,13 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		var forInputsType string
 
 		// logger.Info("[8] pipeline planned event handler #4")
-		stepDefn := defn.Steps[nextStep.StepName]
+		stepDefn := defn.GetStep(nextStep.StepName)
 
-		if stepDefn.For != "" {
-			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.For)
+		if stepDefn.GetFor() != "" {
+			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.GetFor())
 
 			// Use go template with the step outputs to generate the items
-			t, err := template.New("for").Parse(stepDefn.For)
+			t, err := template.New("for").Parse(stepDefn.GetFor())
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
@@ -144,7 +144,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		forEaches := []*types.Input{}
 
 		// logger.Info("[8] pipeline planned event handler #7", "stepDefn", stepDefn)
-		if stepDefn.Input == "" {
+		if len(stepDefn.GetInputs()) == 0 {
 			// No input, so just use an empty input for each step execution.
 
 			// There is always one input (e.g. no for loop). If the for loop had
@@ -171,26 +171,23 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			// logger.Info("[8] pipeline planned event handler #11")
 			// Parse the input template once
-			t, err := template.New("input").Parse(stepDefn.Input)
-			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-			}
+
+			// TODO: parse the input?
+			// t, err := template.New("input").Parse(stepDefn.GetDeprecatedInput())
+			// if err != nil {
+			// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			// }
 
 			// TODO: should we check for foInputs.IsValid() here? It was causing a panic before
 			// TODO: when I didn't load the yaml file correctly
-			if stepDefn.For == "" {
+			if stepDefn.GetFor() == "" {
 				// No for loop
 
-				var itemsBuffer bytes.Buffer
-				err = t.Execute(&itemsBuffer, data)
-				if err != nil {
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-				}
-				var input types.Input
-				err = json.Unmarshal(itemsBuffer.Bytes(), &input)
-				if err != nil {
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-				}
+				// TODO: parse the input for each step execution ... do we need to do it here?
+
+				// var input types.Input
+				input := stepDefn.GetInputs()
+
 				inputs = append(inputs, input)
 				forEaches = append(forEaches, nil)
 
@@ -204,19 +201,23 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						var dataWithEach = data
 						forEach := types.Input{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
 						dataWithEach["each"] = forEach
-						var itemsBuffer bytes.Buffer
-						err = t.Execute(&itemsBuffer, dataWithEach)
-						if err != nil {
-							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-						}
-						var input types.Input
-						err = json.Unmarshal(itemsBuffer.Bytes(), &input)
-						if err != nil {
-							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-						}
-						inputs = append(inputs, input)
-						forEaches = append(forEaches, &forEach)
+						// TODO: implement for
 					}
+
+					// var itemsBuffer bytes.Buffer
+
+					// 	err = t.Execute(&itemsBuffer, dataWithEach)
+					// 	if err != nil {
+					// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					// 	}
+					// 	var input types.Input
+					// 	err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+					// 	if err != nil {
+					// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					// 	}
+					// 	inputs = append(inputs, input)
+					// 	forEaches = append(forEaches, &forEach)
+					// }
 
 				case "slice":
 
@@ -226,18 +227,21 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						var dataWithEach = data
 						forEach := types.Input{"key": i, "value": forInputs.Index(i).Interface()}
 						dataWithEach["each"] = forEach
-						var itemsBuffer bytes.Buffer
-						err = t.Execute(&itemsBuffer, dataWithEach)
-						if err != nil {
-							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-						}
-						var input types.Input
-						err = json.Unmarshal(itemsBuffer.Bytes(), &input)
-						if err != nil {
-							return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-						}
-						inputs = append(inputs, input)
-						forEaches = append(forEaches, &forEach)
+
+						// TODO: implement foreach
+
+						// var itemsBuffer bytes.Buffer
+						// err = t.Execute(&itemsBuffer, dataWithEach)
+						// if err != nil {
+						// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						// }
+						// var input types.Input
+						// err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+						// if err != nil {
+						// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						// }
+						// inputs = append(inputs, input)
+						// forEaches = append(forEaches, &forEach)
 					}
 
 				default:

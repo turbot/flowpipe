@@ -3,6 +3,8 @@ package modconfig
 import (
 	"fmt"
 	"strings"
+
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 )
 
 type ParsedPropertyPath struct {
@@ -56,7 +58,7 @@ func ParseResourcePropertyPath(propertyPath string) (*ParsedPropertyPath, error)
 	// }
 	// TODO: end dashboard specific block
 
-	if IsValidResourceItemType(parts[0]) {
+	if configschema.IsValidResourceItemType(parts[0]) {
 		// put empty mod as first part
 		parts = append([]string{""}, parts...)
 	}
@@ -73,7 +75,7 @@ func ParseResourcePropertyPath(propertyPath string) (*ParsedPropertyPath, error)
 		res.PropertyPath = parts[3:]
 	}
 
-	if !IsValidResourceItemType(res.ItemType) {
+	if !configschema.IsValidResourceItemType(res.ItemType) {
 		return nil, fmt.Errorf("invalid property path '%s' passed to ParseResourcePropertyPath", propertyPath)
 	}
 

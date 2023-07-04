@@ -12,14 +12,11 @@ import (
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/pipeline_hcl"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
-type HTTPRequest struct{}
-
-func NewHTTPRequest(step *pipeline_hcl.PipelineHclStep) *HTTPRequest {
-	return &HTTPRequest{}
+type HTTPRequest struct {
+	Input types.Input
 }
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {

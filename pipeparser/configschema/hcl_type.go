@@ -1,4 +1,4 @@
-package modconfig
+package configschema
 
 import "github.com/turbot/go-kit/helpers"
 
@@ -38,9 +38,21 @@ const (
 	BlockTypeOptions          = "options"
 	BlockTypeWorkspaceProfile = "workspace"
 	BlockTypePipeline         = "pipeline"
+	BlockTypePipelineStep     = "step"
 
-	AttributeArgs  = "args"
-	AttributeQuery = "query"
+	AttributeArgs            = "args"
+	AttributeQuery           = "query"
+	AttributeTypeDescription = "description"
+	AttributeTypeUrl         = "url"
+	AttributeTypeDuration    = "duration"
+	AttributeTypeTo          = "to"
+
+	LabelName = "name"
+	LabelType = "type"
+
+	BlockTypePipelineStepHttp  = "http"
+	BlockTypePipelineStepSleep = "sleep"
+	BlockTypePipelineStepEmail = "email"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider
