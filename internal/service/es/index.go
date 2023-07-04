@@ -14,7 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/pipeline_hcl"
+	"github.com/turbot/flowpipe/internal/pipeline"
 
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
 	"github.com/turbot/flowpipe/internal/util"
@@ -60,7 +60,7 @@ func (es *ESService) Start() error {
 	// 	return err
 	// }
 
-	pipelines, err := pipeline_hcl.LoadPipelines(es.ctx, pipelineDir)
+	pipelines, err := pipeline.LoadPipelines(es.ctx, pipelineDir)
 	if err != nil {
 		return err
 	}

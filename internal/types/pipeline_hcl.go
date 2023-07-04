@@ -13,6 +13,49 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+type Input map[string]interface{}
+
+// StepOutput is the output from a pipeline.
+type StepOutput map[string]interface{}
+
+func (o *StepOutput) Get(key string) interface{} {
+	if o == nil {
+		return nil
+	}
+	return (*o)[key]
+}
+
+type StepError struct {
+	// TODO: not sure about this
+	Detail fperr.ErrorModel `json:"detail"`
+}
+
+type NextStep struct {
+	StepName string `json:"step_name"`
+	DelayMs  int    `json:"delay_ms,omitempty"`
+}
+
+type PipelineStepError struct {
+	Ignore  bool `yaml:"ignore" json:"ignore"`
+	Retries int  `yaml:"retries" json:"retries"`
+}
+
+// This type is used by the API to return a list of pipelines.
+type ListPipelineResponse struct {
+	Items     []PipelineHcl `json:"items"`
+	NextToken *string       `json:"next_token,omitempty"`
+}
+
+type RunPipelineResponse struct {
+	ExecutionID           string `json:"execution_id"`
+	PipelineExecutionID   string `json:"pipeline_execution_id"`
+	ParentStepExecutionID string `json:"parent_step_execution_id"`
+}
+
+type CmdPipeline struct {
+	Command string `json:"command" binding:"required,oneof=run"`
+}
+
 func NewPipelineHcl(block *hcl.Block) *PipelineHcl {
 	return &PipelineHcl{
 		Name: block.Labels[0],
