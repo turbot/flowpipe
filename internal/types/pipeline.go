@@ -3,11 +3,14 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/addrs"
 	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	"github.com/zclconf/go-cty/cty"
@@ -71,15 +74,15 @@ type PipelineHcl struct {
 	RawBody hcl.Body `json:"-" hcl:",remain"`
 
 	// Unparsed JSON raw message, needed so we can unmarshall the step JSON into the correct struct
-	Raw json.RawMessage `json:"-"`
+	StepsRawJson json.RawMessage `json:"-"`
 
-	ISteps []PipelineHclStepI `json:"steps"`
+	Steps []IPipelineHclStep `json:"steps"`
 }
 
-func (p *PipelineHcl) GetStep(stepName string) PipelineHclStepI {
-	for i := 0; i < len(p.ISteps); i++ {
-		if p.ISteps[i].GetName() == stepName {
-			return p.ISteps[i]
+func (p *PipelineHcl) GetStep(stepName string) IPipelineHclStep {
+	for i := 0; i < len(p.Steps); i++ {
+		if p.Steps[i].GetName() == stepName {
+			return p.Steps[i]
 		}
 	}
 	return nil
@@ -104,7 +107,7 @@ func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 	ph.Name = aux.Name
 	ph.Description = aux.Description
 	ph.Output = aux.Output
-	ph.Raw = []byte(aux.Raw)
+	ph.StepsRawJson = []byte(aux.Raw)
 
 	// Determine the concrete type of 'ISteps' based on the data present in the JSON
 	if aux.ISteps != nil && string(aux.ISteps) != "null" {
@@ -130,19 +133,19 @@ func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
-				ph.ISteps = append(ph.ISteps, &step)
+				ph.Steps = append(ph.Steps, &step)
 			case configschema.BlockTypePipelineStepSleep:
 				var step PipelineHclStepSleep
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
-				ph.ISteps = append(ph.ISteps, &step)
+				ph.Steps = append(ph.Steps, &step)
 			case configschema.BlockTypePipelineStepEmail:
 				var step PipelineHclStepEmail
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
-				ph.ISteps = append(ph.ISteps, &step)
+				ph.Steps = append(ph.Steps, &step)
 			default:
 				// Handle unrecognized step types or return an error
 				return fperr.BadRequestWithMessage("Unrecognized step type: " + stepType.StepType)
@@ -184,7 +187,7 @@ func (p *PipelineHcl) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostic
 	return diags
 }
 
-func NewPipelineStep(stepType, stepName string) PipelineHclStepI {
+func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 	switch stepType {
 	case configschema.BlockTypePipelineStepHttp:
 		s := PipelineHclStepHttp{}
@@ -206,7 +209,7 @@ func NewPipelineStep(stepType, stepName string) PipelineHclStepI {
 	}
 }
 
-type PipelineHclStepI interface {
+type IPipelineHclStep interface {
 	GetName() string
 	GetType() string
 	GetInputs() map[string]interface{}
@@ -217,8 +220,10 @@ type PipelineHclStepI interface {
 }
 
 type PipelineHclStepBase struct {
-	Name string `json:"name"`
-	Type string `json:"step_type"`
+	Name         string          `json:"name"`
+	Type         string          `json:"step_type"`
+	DependsOn    []string        `json:"depends_on,omitempty"`
+	HclDependsOn []hcl.Traversal `json:"-"`
 }
 
 func (p *PipelineHclStepBase) GetName() string {
@@ -227,6 +232,147 @@ func (p *PipelineHclStepBase) GetName() string {
 
 func (p *PipelineHclStepBase) GetType() string {
 	return p.Type
+}
+
+// Direct copy from Terraform source code
+func decodeDependsOn(attr *hcl.Attribute) ([]hcl.Traversal, hcl.Diagnostics) {
+	var ret []hcl.Traversal
+	exprs, diags := hcl.ExprList(attr.Expr)
+
+	for _, expr := range exprs {
+		expr, shimDiags := shimTraversalInString(expr, false)
+		diags = append(diags, shimDiags...)
+
+		traversal, travDiags := hcl.AbsTraversalForExpr(expr)
+		diags = append(diags, travDiags...)
+		if len(traversal) != 0 {
+			ret = append(ret, traversal)
+		}
+	}
+
+	return ret, diags
+}
+
+// Direct copy from Terraform source code
+//
+// shimTraversalInString takes any arbitrary expression and checks if it is
+// a quoted string in the native syntax. If it _is_, then it is parsed as a
+// traversal and re-wrapped into a synthetic traversal expression and a
+// warning is generated. Otherwise, the given expression is just returned
+// verbatim.
+//
+// This function has no effect on expressions from the JSON syntax, since
+// traversals in strings are the required pattern in that syntax.
+//
+// If wantKeyword is set, the generated warning diagnostic will talk about
+// keywords rather than references. The behavior is otherwise unchanged, and
+// the caller remains responsible for checking that the result is indeed
+// a keyword, e.g. using hcl.ExprAsKeyword.
+func shimTraversalInString(expr hcl.Expression, wantKeyword bool) (hcl.Expression, hcl.Diagnostics) {
+	// ObjectConsKeyExpr is a special wrapper type used for keys on object
+	// constructors to deal with the fact that naked identifiers are normally
+	// handled as "bareword" strings rather than as variable references. Since
+	// we know we're interpreting as a traversal anyway (and thus it won't
+	// matter whether it's a string or an identifier) we can safely just unwrap
+	// here and then process whatever we find inside as normal.
+	if ocke, ok := expr.(*hclsyntax.ObjectConsKeyExpr); ok {
+		expr = ocke.Wrapped
+	}
+
+	if !exprIsNativeQuotedString(expr) {
+		return expr, nil
+	}
+
+	strVal, diags := expr.Value(nil)
+	if diags.HasErrors() || strVal.IsNull() || !strVal.IsKnown() {
+		// Since we're not even able to attempt a shim here, we'll discard
+		// the diagnostics we saw so far and let the caller's own error
+		// handling take care of reporting the invalid expression.
+		return expr, nil
+	}
+
+	// The position handling here isn't _quite_ right because it won't
+	// take into account any escape sequences in the literal string, but
+	// it should be close enough for any error reporting to make sense.
+	srcRange := expr.Range()
+	startPos := srcRange.Start // copy
+	startPos.Column++          // skip initial quote
+	startPos.Byte++            // skip initial quote
+
+	traversal, tDiags := hclsyntax.ParseTraversalAbs(
+		[]byte(strVal.AsString()),
+		srcRange.Filename,
+		startPos,
+	)
+	diags = append(diags, tDiags...)
+
+	if wantKeyword {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagWarning,
+			Summary:  "Quoted keywords are deprecated",
+			Detail:   "In this context, keywords are expected literally rather than in quotes. Terraform 0.11 and earlier required quotes, but quoted keywords are now deprecated and will be removed in a future version of Terraform. Remove the quotes surrounding this keyword to silence this warning.",
+			Subject:  &srcRange,
+		})
+	} else {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagWarning,
+			Summary:  "Quoted references are deprecated",
+			Detail:   "In this context, references are expected literally rather than in quotes. Terraform 0.11 and earlier required quotes, but quoted references are now deprecated and will be removed in a future version of Terraform. Remove the quotes surrounding this reference to silence this warning.",
+			Subject:  &srcRange,
+		})
+	}
+
+	return &hclsyntax.ScopeTraversalExpr{
+		Traversal: traversal,
+		SrcRange:  srcRange,
+	}, diags
+}
+
+// Direct copy from Terraform
+//
+// exprIsNativeQuotedString determines whether the given expression looks like
+// it's a quoted string in the HCL native syntax.
+//
+// This should be used sparingly only for situations where our legacy HCL
+// decoding would've expected a keyword or reference in quotes but our new
+// decoding expects the keyword or reference to be provided directly as
+// an identifier-based expression.
+func exprIsNativeQuotedString(expr hcl.Expression) bool {
+	_, ok := expr.(*hclsyntax.TemplateExpr)
+	return ok
+}
+
+func (p *PipelineHclStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	if attr, exists := hclAttributes["depends_on"]; exists {
+		deps, depsDiags := decodeDependsOn(attr)
+		diags = append(diags, depsDiags...)
+		p.HclDependsOn = append(p.HclDependsOn, deps...)
+	}
+
+	var result []*addrs.Reference
+
+	for _, traversal := range p.HclDependsOn {
+		ref, diags := addrs.ParseRef(traversal)
+		if diags.HasErrors() {
+			// We ignore this here, because this isn't a suitable place to return
+			// errors. This situation should be caught and rejected during
+			// validation.
+			log.Printf("[ERROR] Can't parse %#v from depends_on as reference: %s", traversal, diags.Err())
+			continue
+		}
+
+		result = append(result, ref)
+	}
+	//nolint:forbidigo // TODO: remove this for debugging only
+	fmt.Println(result)
+
+	return diags
+}
+
+func (p *PipelineHclStepBase) GetDependsOn() []string {
+	return p.DependsOn
 }
 
 type PipelineHclStepHttp struct {
@@ -244,16 +390,12 @@ func (p *PipelineHclStepHttp) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepHttp) GetDependsOn() []string {
-	return []string{}
-}
-
 func (p *PipelineHclStepHttp) GetError() *PipelineStepError {
 	return nil
 }
 
 func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
-	var diags hcl.Diagnostics
+	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
@@ -294,10 +436,6 @@ func (p *PipelineHclStepSleep) GetInputs() map[string]interface{} {
 	}
 }
 
-func (p *PipelineHclStepSleep) GetDependsOn() []string {
-	return []string{}
-}
-
 func (p *PipelineHclStepSleep) GetFor() string {
 	return ""
 }
@@ -307,7 +445,8 @@ func (p *PipelineHclStepSleep) GetError() *PipelineStepError {
 }
 
 func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
-	var diags hcl.Diagnostics
+
+	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
@@ -335,12 +474,6 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 				valInt, _ := val.AsBigFloat().Int64()
 				p.Duration = valInt
 			}
-		default:
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
-				Subject:  &attr.Range,
-			})
 		}
 	}
 	return diags
@@ -355,10 +488,6 @@ func (p *PipelineHclStepEmail) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepEmail) GetDependsOn() []string {
-	return []string{}
-}
-
 func (p *PipelineHclStepEmail) GetError() *PipelineStepError {
 	return nil
 }
@@ -370,7 +499,7 @@ func (p *PipelineHclStepEmail) GetInputs() map[string]interface{} {
 }
 
 func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
-	var diags hcl.Diagnostics
+	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {

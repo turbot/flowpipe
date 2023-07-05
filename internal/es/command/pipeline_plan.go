@@ -71,13 +71,13 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	//
 
-	for i, step := range defn.ISteps {
+	for i, step := range defn.Steps {
 		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.GetName())
 
 		if pe.IsStepFail(step.GetName()) {
 			// logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.GetName(), "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
 
-			if !pe.IsStepFinalFailure(defn.ISteps[i], ex) {
+			if !pe.IsStepFinalFailure(defn.Steps[i], ex) {
 				// logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.GetName(), "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.GetName()].FailCount()", pe.StepStatus[step.GetName()].FailCount())
 
 				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)

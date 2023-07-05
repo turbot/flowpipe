@@ -46,6 +46,7 @@ const (
 	AttributeTypeUrl         = "url"
 	AttributeTypeDuration    = "duration"
 	AttributeTypeTo          = "to"
+	AttributeTypeDependsOn   = "depends_on"
 
 	LabelName = "name"
 	LabelType = "type"

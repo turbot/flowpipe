@@ -2,7 +2,12 @@ run:
   timeout: 5m
   modules-download-mode: readonly
   skip-dirs:
-    - service/api/docs
+    # auto generated code
+    - internal/service/api/docs
+    # Direct copy from Terraform codebase
+    - pipeparser/copy
+    - pipeparser/addrs
+    - pipeparser/tfdiags
 
 linters:
   enable:

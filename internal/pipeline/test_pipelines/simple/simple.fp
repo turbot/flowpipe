@@ -19,3 +19,4 @@ pipeline "simple_http_2" {
         url = "http://localhost:8081"
     }
 }
+

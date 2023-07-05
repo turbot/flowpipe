@@ -206,7 +206,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				return nil, res
 			}
 
-			pipelineHcl.ISteps = append(pipelineHcl.ISteps, step)
+			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
 
 		default:
 			// this should never happen
@@ -267,6 +267,9 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 			Name:     configschema.AttributeTypeUrl,
 			Required: true,
 		},
+		{
+			Name: configschema.AttributeTypeDependsOn,
+		},
 	},
 }
 
@@ -276,6 +279,9 @@ var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 			Name:     configschema.AttributeTypeDuration,
 			Required: true,
 		},
+		{
+			Name: configschema.AttributeTypeDependsOn,
+		},
 	},
 }
 var PipelineStepEmailBlockSchema = &hcl.BodySchema{
@@ -283,6 +289,9 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 		{
 			Name:     configschema.AttributeTypeTo,
 			Required: true,
+		},
+		{
+			Name: configschema.AttributeTypeDependsOn,
 		},
 	},
 }

@@ -77,7 +77,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 }
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
-func (pe *PipelineExecution) IsStepFinalFailure(step types.PipelineHclStepI, ex *Execution) bool {
+func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineHclStep, ex *Execution) bool {
 	if !pe.IsStepFail(step.GetName()) {
 		// Step not failed, so no need to calculate, return false
 		return false

@@ -166,7 +166,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	dependedOn := map[string]bool{}
 
 	// Check each step definition in the pipeline
-	for _, sd := range pd.ISteps {
+	for _, sd := range pd.Steps {
 
 		stepPanels, err := ex.StepExecutionSnapshotPanels(pe.ID, sd.GetName())
 		if err != nil {
@@ -254,7 +254,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	}
 
 	// Add edges from steps that are not depended on to the end
-	for _, sd := range pd.ISteps {
+	for _, sd := range pd.Steps {
 		if dependedOn[sd.GetName()] {
 			continue
 		}
@@ -620,7 +620,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	return panels, nil
 }
 
-func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.PipelineHclStepI, se *StepExecution) SnapshotPanelDataRow {
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineHclStep, se *StepExecution) SnapshotPanelDataRow {
 
 	var row SnapshotPanelDataRow
 

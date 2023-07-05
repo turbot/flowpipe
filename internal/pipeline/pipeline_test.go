@@ -13,7 +13,7 @@ import (
 func TestLoadPipelineDir(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := LoadPipelines(context.TODO(), "./simple")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple")
 	assert.Nil(err, "error found")
 
 	assert.Greater(len(pipelines), 1, "wrong number of pipelines")
@@ -22,7 +22,28 @@ func TestLoadPipelineDir(t *testing.T) {
 		assert.NotNil(pipelines["simple_http"], "pipeline not found")
 		assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
 
-		for _, step := range pipelines["simple_http"].ISteps {
+		for _, step := range pipelines["simple_http"].Steps {
+			if step.GetName() == "my_step_1" {
+				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")
+				assert.Equal("http://localhost:8081", step.GetInputs()["url"], "wrong step input")
+			}
+		}
+	}
+}
+
+func TestLoadPipelineDepends(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/depends_on")
+	assert.Nil(err, "error found")
+
+	assert.Greater(len(pipelines), 0, "wrong number of pipelines")
+
+	if len(pipelines) > 0 {
+		assert.NotNil(pipelines["simple_http"], "pipeline not found")
+		assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+
+		for _, step := range pipelines["simple_http"].Steps {
 			if step.GetName() == "my_step_1" {
 				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")
 				assert.Equal("http://localhost:8081", step.GetInputs()["url"], "wrong step input")
@@ -33,7 +54,7 @@ func TestLoadPipelineDir(t *testing.T) {
 
 func TestMarshallUnmarshal(t *testing.T) {
 	assert := assert.New(t)
-	pipelines, err := LoadPipelines(context.TODO(), "./simple")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple")
 	assert.Nil(err, "error found")
 
 	assert.Greater(len(pipelines), 1, "wrong number of pipelines")
@@ -50,7 +71,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 		assert.Nil(err, "error found, can't unmarshall")
 
 		found := false
-		for _, step := range pipelines["simple_http"].ISteps {
+		for _, step := range pipelines["simple_http"].Steps {
 			if step.GetName() == "my_step_1" {
 				found = true
 				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")

@@ -80,7 +80,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(stepExecutionID string) (types.PipelineHclStepI, error) {
+func (ex *Execution) StepDefinition(stepExecutionID string) (types.IPipelineHclStep, error) {
 	se, ok := ex.StepExecutions[stepExecutionID]
 	if !ok {
 		return nil, fmt.Errorf("step execution %s not found", stepExecutionID)
@@ -285,7 +285,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			for _, step := range pd.ISteps {
+			for _, step := range pd.Steps {
 				pe.InitializeStep(step.GetName())
 			}
 
