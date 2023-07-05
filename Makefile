@@ -1,6 +1,6 @@
 
 run:
-	FLOWPIPE_LOG_LEVEL=INFO go run . service start --pipeline-dir ./internal/pipeline/simple
+	FLOWPIPE_LOG_LEVEL=INFO go run . service start --pipeline-dir ./internal/pipeline/collections
 
 run-trace:
 	FLOWPIPE_LOG_LEVEL=INFO FLOWPIPE_TRACE_LEVEL=INFO go run . service start --pipeline-dir ./internal/pipeline

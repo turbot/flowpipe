@@ -3,11 +3,11 @@ package primitive
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 )
@@ -16,7 +16,7 @@ type Query struct{}
 
 func (e *Query) ValidateInput(ctx context.Context, i types.Input) error {
 	if i["sql"] == nil {
-		return errors.New("Query input must define sql")
+		return fperr.BadRequestWithMessage("Query input must define sql")
 	}
 	return nil
 }

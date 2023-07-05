@@ -3,11 +3,11 @@ package primitive
 import (
 	"bufio"
 	"context"
-	"errors"
 	"os/exec"
 	"syscall"
 	"time"
 
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
@@ -15,7 +15,7 @@ type Exec struct{}
 
 func (e *Exec) ValidateInput(ctx context.Context, i types.Input) error {
 	if i["command"] == nil {
-		return errors.New("Exec input must define a command")
+		return fperr.BadRequestWithMessage("Exec input must define a command")
 	}
 	return nil
 }

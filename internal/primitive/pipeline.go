@@ -2,9 +2,8 @@ package primitive
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
+	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
@@ -13,16 +12,16 @@ type RunPipeline struct{}
 func (e *RunPipeline) ValidateInput(ctx context.Context, input types.Input) error {
 
 	if input["name"] == nil {
-		return errors.New("pipeline input must define a name")
+		return fperr.BadRequestWithMessage("pipeline input must define a name")
 	}
 
 	pipelineName := input["name"].(string)
 	if pipelineName == "" {
-		return fmt.Errorf("invalid pipeline name: %s", pipelineName)
+		return fperr.BadRequestWithMessage("invalid pipeline name: " + pipelineName)
 	}
 
-	if args, ok := input["args"].(map[string]interface{}); !ok {
-		return fmt.Errorf("pipeline args must be a map of values to arg name: %s", args)
+	if _, ok := input["args"].(map[string]interface{}); !ok {
+		return fperr.BadRequestWithMessage("pipeline args must be a map of values to arg name")
 	}
 
 	return nil

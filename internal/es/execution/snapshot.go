@@ -7,6 +7,7 @@ import (
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 )
 
 type Snapshot struct {
@@ -334,7 +335,7 @@ func Category(category string) map[string]interface{} {
 			"color": "green",
 			"icon":  "valve",
 		}
-	case "sleep":
+	case configschema.BlockTypePipelineStepSleep:
 		return map[string]interface{}{
 			"name":  "sleep",
 			"title": "Sleep",
@@ -348,7 +349,7 @@ func Category(category string) map[string]interface{} {
 			"color": "red",
 			"icon":  "terminal",
 		}
-	case "http_request":
+	case configschema.BlockTypePipelineStepHttp:
 		return map[string]interface{}{
 			"name":  "http_request",
 			"title": "HTTP Request",

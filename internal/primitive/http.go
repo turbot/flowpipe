@@ -3,7 +3,6 @@ package primitive
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -21,7 +20,7 @@ type HTTPRequest struct {
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
 	if i["url"] == nil {
-		return errors.New("HTTPRequest input must define a url")
+		return fperr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
 	u := i["url"].(string)
 	_, err := url.ParseRequestURI(u)

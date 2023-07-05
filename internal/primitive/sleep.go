@@ -2,26 +2,28 @@ package primitive
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 )
 
 type Sleep struct{}
 
 func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
 
-	if input["duration"] == nil {
-		return errors.New("Sleep input must define a duration")
+	if input[configschema.AttributeTypeDuration] == nil {
+		return fperr.BadRequestWithMessage("Sleep input must define a duration")
 	}
 
-	durationString := input["duration"].(string)
-	_, err := time.ParseDuration(durationString)
-	if err != nil {
-		return fperr.BadRequestWithMessage("invalid sleep duration " + durationString)
+	// json umarshalling converts numbers to float64
+	_, ok := input[configschema.AttributeTypeDuration].(float64)
+
+	if !ok {
+		fplog.Logger(ctx).Error("invalid sleep duration", "duration", input[configschema.AttributeTypeDuration])
+		return fperr.BadRequestWithMessage("invalid sleep duration")
 	}
 
 	return nil
@@ -32,9 +34,9 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 		return nil, err
 	}
 
-	durationString := input["duration"].(string)
+	durationSecond := input["duration"].(float64)
 	// Already validated
-	duration, _ := time.ParseDuration(durationString)
+	duration := time.Duration(durationSecond * float64(time.Second))
 
 	fplog.Logger(ctx).Info("Sleeping for", "duration", duration)
 	start := time.Now().UTC()

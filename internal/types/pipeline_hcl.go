@@ -212,7 +212,6 @@ type PipelineHclStepI interface {
 	GetInputs() map[string]interface{}
 	GetDependsOn() []string
 	GetFor() string
-	GetDeprecatedInput() string
 	GetError() *PipelineStepError
 	SetAttributes(hcl.Attributes) hcl.Diagnostics
 }
@@ -222,17 +221,17 @@ type PipelineHclStepBase struct {
 	Type string `json:"step_type"`
 }
 
-type PipelineHclStepHttp struct {
-	PipelineHclStepBase
-	Url string `json:"url"`
-}
-
-func (p *PipelineHclStepHttp) GetName() string {
+func (p *PipelineHclStepBase) GetName() string {
 	return p.Name
 }
 
-func (p *PipelineHclStepHttp) GetType() string {
-	return configschema.BlockTypePipelineStepHttp
+func (p *PipelineHclStepBase) GetType() string {
+	return p.Type
+}
+
+type PipelineHclStepHttp struct {
+	PipelineHclStepBase
+	Url string `json:"url"`
 }
 
 func (p *PipelineHclStepHttp) GetInputs() map[string]interface{} {
@@ -251,10 +250,6 @@ func (p *PipelineHclStepHttp) GetDependsOn() []string {
 
 func (p *PipelineHclStepHttp) GetError() *PipelineStepError {
 	return nil
-}
-
-func (p *PipelineHclStepHttp) GetDeprecatedInput() string {
-	return ""
 }
 
 func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
@@ -290,15 +285,7 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 
 type PipelineHclStepSleep struct {
 	PipelineHclStepBase
-	Duration int `json:"duration"`
-}
-
-func (p *PipelineHclStepSleep) GetName() string {
-	return p.Name
-}
-
-func (p *PipelineHclStepSleep) GetType() string {
-	return configschema.BlockTypePipelineStepSleep
+	Duration int64 `json:"duration"`
 }
 
 func (p *PipelineHclStepSleep) GetInputs() map[string]interface{} {
@@ -317,10 +304,6 @@ func (p *PipelineHclStepSleep) GetFor() string {
 
 func (p *PipelineHclStepSleep) GetError() *PipelineStepError {
 	return nil
-}
-
-func (p *PipelineHclStepSleep) GetDeprecatedInput() string {
-	return ""
 }
 
 func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
@@ -349,8 +332,8 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 					continue
 				}
 
-				valInt, _ := val.AsBigFloat().Int(nil)
-				p.Duration = int(valInt.Int64())
+				valInt, _ := val.AsBigFloat().Int64()
+				p.Duration = valInt
 			}
 		default:
 			diags = append(diags, &hcl.Diagnostic{
@@ -366,14 +349,6 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 type PipelineHclStepEmail struct {
 	PipelineHclStepBase
 	To string `json:"to"`
-}
-
-func (p *PipelineHclStepEmail) GetName() string {
-	return p.Name
-}
-
-func (p *PipelineHclStepEmail) GetType() string {
-	return configschema.BlockTypePipelineStepEmail
 }
 
 func (p *PipelineHclStepEmail) GetFor() string {
@@ -392,10 +367,6 @@ func (p *PipelineHclStepEmail) GetInputs() map[string]interface{} {
 	return map[string]interface{}{
 		"to": p.To,
 	}
-}
-
-func (p *PipelineHclStepEmail) GetDeprecatedInput() string {
-	return ""
 }
 
 func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
