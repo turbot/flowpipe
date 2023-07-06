@@ -39,6 +39,7 @@ const (
 	BlockTypeWorkspaceProfile = "workspace"
 	BlockTypePipeline         = "pipeline"
 	BlockTypePipelineStep     = "step"
+	BlockTypePipelineOutput   = "output"
 
 	AttributeArgs            = "args"
 	AttributeQuery           = "query"

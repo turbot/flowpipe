@@ -3,8 +3,8 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -12,7 +12,10 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/addrs"
 	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/options"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -77,11 +80,30 @@ type PipelineHcl struct {
 	StepsRawJson json.RawMessage `json:"-"`
 
 	Steps []IPipelineHclStep `json:"steps"`
+
+	HclOutputs []*Output
 }
 
-func (p *PipelineHcl) GetStep(stepName string) IPipelineHclStep {
+// Copied from Terraform
+// Output represents an "output" block in a pipeline
+type Output struct {
+	Name        string
+	Description string
+	Expr        hcl.Expression
+	DependsOn   []hcl.Traversal
+	Sensitive   bool
+
+	// Preconditions []*CheckRule
+
+	DescriptionSet bool
+	SensitiveSet   bool
+
+	DeclRange hcl.Range
+}
+
+func (p *PipelineHcl) GetStep(stepFullyQualifiedName string) IPipelineHclStep {
 	for i := 0; i < len(p.Steps); i++ {
-		if p.Steps[i].GetName() == stepName {
+		if p.Steps[i].GetFullyQualifiedName() == stepFullyQualifiedName {
 			return p.Steps[i]
 		}
 	}
@@ -210,6 +232,7 @@ func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 }
 
 type IPipelineHclStep interface {
+	GetFullyQualifiedName() string
 	GetName() string
 	GetType() string
 	GetInputs() map[string]interface{}
@@ -220,10 +243,9 @@ type IPipelineHclStep interface {
 }
 
 type PipelineHclStepBase struct {
-	Name         string          `json:"name"`
-	Type         string          `json:"step_type"`
-	DependsOn    []string        `json:"depends_on,omitempty"`
-	HclDependsOn []hcl.Traversal `json:"-"`
+	Name      string   `json:"name"`
+	Type      string   `json:"step_type"`
+	DependsOn []string `json:"depends_on,omitempty"`
 }
 
 func (p *PipelineHclStepBase) GetName() string {
@@ -232,6 +254,14 @@ func (p *PipelineHclStepBase) GetName() string {
 
 func (p *PipelineHclStepBase) GetType() string {
 	return p.Type
+}
+
+func (p *PipelineHclStepBase) GetDependsOn() []string {
+	return p.DependsOn
+}
+
+func (p *PipelineHclStepBase) GetFullyQualifiedName() string {
+	return p.Type + "." + p.Name
 }
 
 // Direct copy from Terraform source code
@@ -344,35 +374,81 @@ func exprIsNativeQuotedString(expr hcl.Expression) bool {
 
 func (p *PipelineHclStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 	var diags hcl.Diagnostics
-
-	if attr, exists := hclAttributes["depends_on"]; exists {
+	var hclDependsOn []hcl.Traversal
+	if attr, exists := hclAttributes[configschema.AttributeTypeDependsOn]; exists {
 		deps, depsDiags := decodeDependsOn(attr)
 		diags = append(diags, depsDiags...)
-		p.HclDependsOn = append(p.HclDependsOn, deps...)
+		hclDependsOn = append(hclDependsOn, deps...)
 	}
 
-	var result []*addrs.Reference
+	if len(diags) > 0 {
+		return diags
+	}
 
-	for _, traversal := range p.HclDependsOn {
-		ref, diags := addrs.ParseRef(traversal)
-		if diags.HasErrors() {
+	var dependsOn []string
+	for _, traversal := range hclDependsOn {
+		_, addrDiags := addrs.ParseRef(traversal)
+		if addrDiags.HasErrors() {
 			// We ignore this here, because this isn't a suitable place to return
 			// errors. This situation should be caught and rejected during
 			// validation.
-			log.Printf("[ERROR] Can't parse %#v from depends_on as reference: %s", traversal, diags.Err())
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  constants.BadDependsOn,
+				Detail:   fmt.Sprintf("The depends_on argument must be a reference to another step, but the given value %q is not a valid reference.", traversal),
+			})
+		}
+		parts := TraversalAsString(traversal)
+		if len(parts) != 3 {
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  constants.BadDependsOn,
+				Detail:   "Invalid depends_on format " + strings.Join(parts, "."),
+			})
 			continue
 		}
 
-		result = append(result, ref)
+		dependsOn = append(dependsOn, parts[1]+"."+parts[2])
 	}
-	//nolint:forbidigo // TODO: remove this for debugging only
-	fmt.Println(result)
 
+	p.DependsOn = dependsOn
 	return diags
 }
 
-func (p *PipelineHclStepBase) GetDependsOn() []string {
-	return p.DependsOn
+// TraversalAsString converts a traversal to a path string
+// (if an absolute traversal is passed - convert to relative)
+func TraversalAsString(traversal hcl.Traversal) []string {
+	var parts = make([]string, len(traversal))
+	offset := 0
+
+	if !traversal.IsRelative() {
+		s := traversal.SimpleSplit()
+		parts[0] = s.Abs.RootName()
+		offset++
+		traversal = s.Rel
+	}
+	for i, r := range traversal {
+		switch t := r.(type) {
+		case hcl.TraverseAttr:
+			parts[i+offset] = t.Name
+		case hcl.TraverseIndex:
+			idx, err := hclhelpers.CtyToString(t.Key)
+			if err != nil {
+				// we do not expect this to fail
+				continue
+			}
+			parts[i+offset] = idx
+		}
+	}
+	return parts
+}
+
+var ValidResourceItemTypes = []string{
+	configschema.AttributeTypeDependsOn,
+}
+
+func (p *PipelineHclStepBase) IsBaseAttributes(name string) bool {
+	return helpers.StringSliceContains(ValidResourceItemTypes, name)
 }
 
 type PipelineHclStepHttp struct {
@@ -415,11 +491,13 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 				p.Url = valString
 			}
 		default:
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unsupported attribute for HTTP Step: " + attr.Name,
-				Subject:  &attr.Range,
-			})
+			if !p.IsBaseAttributes(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for HTTP Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
 	return diags
@@ -474,8 +552,17 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 				valInt, _ := val.AsBigFloat().Int64()
 				p.Duration = valInt
 			}
+		default:
+			if !p.IsBaseAttributes(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
+
 	return diags
 }
 

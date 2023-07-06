@@ -78,21 +78,21 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineHclStep, ex *Execution) bool {
-	if !pe.IsStepFail(step.GetName()) {
+	if !pe.IsStepFail(step.GetFullyQualifiedName()) {
 		// Step not failed, so no need to calculate, return false
 		return false
 	}
 
 	var failedStepExecutions []StepExecution
 	if step.GetError().Retries > 0 && !step.GetError().Ignore {
-		if pe.StepStatus[step.GetName()].FailCount() > step.GetError().Retries {
-			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetName())
+		if pe.StepStatus[step.GetFullyQualifiedName()].FailCount() > step.GetError().Retries {
+			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
 
 			if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-				pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
+				pe.Fail(step.GetFullyQualifiedName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
 			} else {
 				// Set the error
-				pe.Fail(step.GetName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
+				pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
 			}
 			// pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
 			return true
@@ -100,8 +100,8 @@ func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineHclStep, ex 
 			return false
 		}
 	} else if !step.GetError().Ignore {
-		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetName())
-		pe.Fail(step.GetName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
+		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
+		pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
 		return true
 	}
 	return true
@@ -138,22 +138,22 @@ func (pe *PipelineExecution) InitializeStep(stepName string) {
 }
 
 // QueueStep marks the given step execution as queued.
-func (pe *PipelineExecution) QueueStep(stepName string, seID string) {
-	pe.StepStatus[stepName].Queue(seID)
+func (pe *PipelineExecution) QueueStep(stepFullyQualifiedName string, seID string) {
+	pe.StepStatus[stepFullyQualifiedName].Queue(seID)
 }
 
 // StartStep marks the given step execution as started.
-func (pe *PipelineExecution) StartStep(stepName string, seID string) {
-	pe.StepStatus[stepName].Start(seID)
+func (pe *PipelineExecution) StartStep(stepFullyQualifiedName string, seID string) {
+	pe.StepStatus[stepFullyQualifiedName].Start(seID)
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepName string, seID string) {
-	pe.StepStatus[stepName].Finish(seID)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName string, seID string) {
+	pe.StepStatus[stepFullyQualifiedName].Finish(seID)
 }
 
-func (pe *PipelineExecution) FailStep(stepName string, seID string) {
-	pe.StepStatus[stepName].Fail(seID)
+func (pe *PipelineExecution) FailStep(stepFullyQualifiedName string, seID string) {
+	pe.StepStatus[stepFullyQualifiedName].Fail(seID)
 }
 
 // This needs to be a map because if we have a for loop, each loop will have a different step execution id

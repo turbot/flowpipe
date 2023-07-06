@@ -31,6 +31,20 @@ func TestLoadPipelineDir(t *testing.T) {
 	}
 }
 
+func TestSleepWithOutput(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/sleep_with_output")
+	assert.Nil(err, "error found")
+
+	assert.Equal(len(pipelines), 1, "wrong number of pipelines")
+
+	if len(pipelines) > 0 {
+		assert.NotNil(pipelines["sleep_with_output"], "pipeline not found")
+		assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name, "wrong pipeline name")
+	}
+}
+
 func TestLoadPipelineDepends(t *testing.T) {
 	assert := assert.New(t)
 
@@ -40,13 +54,13 @@ func TestLoadPipelineDepends(t *testing.T) {
 	assert.Greater(len(pipelines), 0, "wrong number of pipelines")
 
 	if len(pipelines) > 0 {
-		assert.NotNil(pipelines["simple_http"], "pipeline not found")
-		assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+		assert.NotNil(pipelines["http_and_sleep_depends"], "pipeline not found")
+		assert.Equal("http_and_sleep_depends", pipelines["http_and_sleep_depends"].Name, "wrong pipeline name")
 
-		for _, step := range pipelines["simple_http"].Steps {
-			if step.GetName() == "my_step_1" {
-				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")
-				assert.Equal("http://localhost:8081", step.GetInputs()["url"], "wrong step input")
+		for _, step := range pipelines["http_and_sleep_depends"].Steps {
+			if step.GetName() == "sleep_1" {
+				assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
+				assert.Equal("http.my_step_1", step.GetDependsOn()[0], "wrong step depends on")
 			}
 		}
 	}

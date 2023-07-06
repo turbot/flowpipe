@@ -72,24 +72,24 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	//
 
 	for i, step := range defn.Steps {
-		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.GetName())
+		logger.Info("(7) pipeline_plan command handler #2", "stepName", step.GetFullyQualifiedName())
 
-		if pe.IsStepFail(step.GetName()) {
+		if pe.IsStepFail(step.GetFullyQualifiedName()) {
 			// logger.Info("(7) pipeline_plan command handler #3 - step failed", "stepName", step.GetName(), "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries)
 
 			if !pe.IsStepFinalFailure(defn.Steps[i], ex) {
 				// logger.Info("(7) pipeline_plan command handler #3.2 - step failed RETRY the step", "stepName", step.GetName(), "ignore", step.Error.Ignore, " step.Error.Retries", step.Error.Retries, "pe.StepStatus[step.GetName()].FailCount()", pe.StepStatus[step.GetName()].FailCount())
 
 				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
-				if !pe.IsStepQueued(step.GetName()) {
-					e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetName(), DelayMs: 3000})
+				if !pe.IsStepQueued(step.GetFullyQualifiedName()) {
+					e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetFullyQualifiedName(), DelayMs: 3000})
 				}
 			}
 			continue
 		}
 
 		// No need to plan if the step has been initialized
-		if pe.IsStepInitialized(step.GetName()) {
+		if pe.IsStepInitialized(step.GetFullyQualifiedName()) {
 			continue
 		}
 
@@ -101,7 +101,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			// logger.Info("(7) pipeline_plan command handler #3 processing dep", "step", step, "dep", dep)
 
 			// Cannot depend on yourself
-			if step.GetName() == dep {
+			if step.GetFullyQualifiedName() == dep {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
@@ -121,7 +121,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		// Plan to run the step.
-		e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetName()})
+		e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetFullyQualifiedName()})
 	}
 
 	logger.Info("(7) pipeline_plan command handler #5", "nextSteps", e.NextSteps)

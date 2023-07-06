@@ -6,7 +6,7 @@ pipeline "http_and_sleep_depends" {
 
     step "sleep" "sleep_1" {
         depends_on = [
-            http.my_step_1
+            step.http.my_step_1
         ]
         duration = 2
     }
