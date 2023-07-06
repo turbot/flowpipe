@@ -213,6 +213,11 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				return nil, res
 			}
 
+			if len(step.GetDependsOn()) > 0 {
+				uniqueDependencies := helpers.StringSliceDistinct(step.GetDependsOn())
+				step.SetDependsOn(uniqueDependencies)
+			}
+
 			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
 
 		case configschema.BlockTypePipelineOutput:

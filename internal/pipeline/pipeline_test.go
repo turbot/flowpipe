@@ -66,6 +66,33 @@ func TestLoadPipelineDepends(t *testing.T) {
 	}
 }
 
+func TestLoadPipelineImplicitDepends(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/implicit_depends")
+	assert.Nil(err, "error found")
+
+	assert.Greater(len(pipelines), 0, "wrong number of pipelines")
+
+	if len(pipelines) > 0 {
+
+		if !assert.NotNil(pipelines["implicit_depends"], "pipeline not found") {
+			return
+		}
+
+		if !assert.Equal("implicit_depends", pipelines["implicit_depends"].Name, "wrong pipeline name") {
+			return
+		}
+
+		for _, step := range pipelines["http_and_sleep_depends"].Steps {
+			if step.GetName() == "sleep_1" {
+				assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
+				assert.Equal("http.http_1", step.GetDependsOn()[0], "wrong step depends on")
+			}
+		}
+	}
+}
+
 func TestLoadPipelineInvalidDepends(t *testing.T) {
 	assert := assert.New(t)
 
