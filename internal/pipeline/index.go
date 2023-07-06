@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	filehelpers "github.com/turbot/go-kit/files"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -238,7 +239,37 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 	}
 
 	handlePipelineDecodeResult(pipelineHcl, res, block, parseCtx)
+	diags = validatePipelineDependencies(pipelineHcl)
+	if len(diags) > 0 {
+		res.HandleDecodeDiags(diags)
+		return nil, res
+	}
+
 	return pipelineHcl, res
+}
+
+func validatePipelineDependencies(pipelineHcl *types.PipelineHcl) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	var stepRegisters []string
+	for _, step := range pipelineHcl.Steps {
+		stepRegisters = append(stepRegisters, step.GetFullyQualifiedName())
+	}
+
+	for _, step := range pipelineHcl.Steps {
+		dependsOn := step.GetDependsOn()
+
+		for _, dep := range dependsOn {
+			if !helpers.StringSliceContains(stepRegisters, dep) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  fmt.Sprintf("invalid depends_on '%s' - step '%s' does not exist", dep, step.GetFullyQualifiedName()),
+				})
+			}
+		}
+	}
+
+	return diags
 }
 
 func decodeOutputBlock(block *hcl.Block, override bool) (*types.Output, hcl.Diagnostics) {

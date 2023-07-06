@@ -60,10 +60,20 @@ func TestLoadPipelineDepends(t *testing.T) {
 		for _, step := range pipelines["http_and_sleep_depends"].Steps {
 			if step.GetName() == "sleep_1" {
 				assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-				assert.Equal("http.my_step_1", step.GetDependsOn()[0], "wrong step depends on")
+				assert.Equal("http.http_1", step.GetDependsOn()[0], "wrong step depends on")
 			}
 		}
 	}
+}
+
+func TestLoadPipelineInvalidDepends(t *testing.T) {
+	assert := assert.New(t)
+
+	_, err := LoadPipelines(context.TODO(), "./test_pipelines/invalid_depends_on")
+	assert.NotNil(err, "error not found")
+
+	// TODO: need to improve the error here, need more context? sub-code?
+	assert.Contains(err.Error(), "invalid depends_on", "wrong error message")
 }
 
 func TestMarshallUnmarshal(t *testing.T) {
