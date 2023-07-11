@@ -6,7 +6,6 @@
 # IDE
 .idea/
 .run
-.vscode/launch.json
 .vscode/settings.json
 
 # temp debug file (that can sometime fail to delete)
