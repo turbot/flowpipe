@@ -8,6 +8,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/configschema"
 )
 
 type PipelineStepStartHandler CommandHandler
@@ -65,7 +66,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "exec":
 			p := primitive.Exec{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case "http":
+		case configschema.BlockTypePipelineStepHttp:
 			p := primitive.HTTPRequest{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "pipeline":
@@ -74,8 +75,12 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "query":
 			p := primitive.Query{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case "sleep":
+		case configschema.BlockTypePipelineStepSleep:
 			p := primitive.Sleep{}
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
+		// TODO: remove this debug primitive (?)
+		case "text":
+			p := primitive.Text{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			logger.Error("Unknown step type", "type", stepDefn.GetType())

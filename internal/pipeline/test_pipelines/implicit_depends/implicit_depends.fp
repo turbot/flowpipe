@@ -17,21 +17,29 @@ pipeline "implicit_depends" {
 }
 
 
+
+
+
+
+
+
 pipeline "implicit_depends_text" {
     description = "http and sleep pipeline"
     step "http" "http_1" {
         url = "http://api.open-notify.org/astros.json"
     }
 
-    step "sleep" "sleep_1" {
-        depends_on = [
-            step.http.http_1
-        ]
-        duration = 2
+    step "text" "my_text" {
+        text = "5"
     }
 
-    step "sleep" "sleep_2" {
-        duration = step.sleep.sleep_1.duration
+    step "sleep" "sleep_1" {
+        description = "bar ${step.text.my_text.output} baz"
+        duration = foo("${step.text.my_text.output}m")
+    }
+
+    step "baz" "my_baz" {
+        input = step.sleep.sleep_1.description
     }
 }
 
