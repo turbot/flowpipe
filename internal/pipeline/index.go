@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -32,9 +33,21 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	// create profile map to populate
 	pipelineMap = map[string]*types.PipelineHcl{}
 
-	pipelineFilePaths, err := filehelpers.ListFiles(pipelinePath, &filehelpers.ListOptions{
-		Flags:   filehelpers.FilesFlat,
-		Include: filehelpers.InclusionsFromExtensions([]string{pipeparser.PipelineExtension}),
+	// check whether sourcePath is a glob with a root location which exists in the file system
+	localSourcePath, globPattern, err := filehelpers.GlobRoot(pipelinePath)
+	if err != nil {
+		return nil, err
+	}
+
+	if localSourcePath == globPattern {
+		// if the path is a folder,
+		// append '*' to the glob explicitly, to match all files in that folder.
+		globPattern = path.Join(globPattern, fmt.Sprintf("*%s", pipeparser.PipelineExtension))
+	}
+
+	pipelineFilePaths, err := filehelpers.ListFiles(localSourcePath, &filehelpers.ListOptions{
+		Flags:   filehelpers.AllRecursive,
+		Include: []string{globPattern},
 	})
 	if err != nil {
 		return nil, err

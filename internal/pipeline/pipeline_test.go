@@ -31,6 +31,27 @@ func TestLoadPipelineDir(t *testing.T) {
 	}
 }
 
+func TestLoadPipelineUsingGlob(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple/*.fp")
+	assert.Nil(err, "error found")
+
+	assert.Greater(len(pipelines), 1, "wrong number of pipelines")
+
+	if len(pipelines) > 0 {
+		assert.NotNil(pipelines["simple_http"], "pipeline not found")
+		assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+
+		for _, step := range pipelines["simple_http"].Steps {
+			if step.GetName() == "my_step_1" {
+				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")
+				assert.Equal("http://localhost:8081", step.GetInputs()["url"], "wrong step input")
+			}
+		}
+	}
+}
+
 func TestSleepWithOutput(t *testing.T) {
 	assert := assert.New(t)
 
