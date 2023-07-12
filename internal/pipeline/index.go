@@ -100,7 +100,7 @@ func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.PipelineH
 	for attempts := 0; ; attempts++ {
 		_, diags := decodePipelineHcls(parseCtx)
 		if diags.HasErrors() {
-			return nil, pipeparser.DiagsToError("Failed to decode all workspace profile files", diags)
+			return nil, pipeparser.DiagsToError("Failed to decode pipelines", diags)
 		}
 
 		// if there are no unresolved blocks, we are done
@@ -201,13 +201,24 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				res.HandleDecodeDiags(hcl.Diagnostics{
 					&hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  fmt.Sprintf("Invalid pipeline step type %s", stepType),
+						Summary:  "Invalid pipeline step type " + stepType,
 					},
 				})
 				return nil, res
 			}
 
-			stepOptions, rest, diags := block.Body.PartialContent(GetPipelineStepBlockSchema(stepType))
+			pipelineStepBlockSchema := GetPipelineStepBlockSchema(stepType)
+			if pipelineStepBlockSchema == nil {
+				res.HandleDecodeDiags(hcl.Diagnostics{
+					&hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Pipeline step block schema not found for step " + stepType,
+					},
+				})
+				return nil, res
+			}
+
+			stepOptions, rest, diags := block.Body.PartialContent(pipelineStepBlockSchema)
 
 			if diags.HasErrors() {
 				res.HandleDecodeDiags(diags)
@@ -224,6 +235,11 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 			if len(diags) > 0 {
 				res.HandleDecodeDiags(diags)
 				return nil, res
+			}
+
+			if len(step.GetDependsOn()) > 0 {
+				uniqueDependencies := helpers.StringSliceDistinct(step.GetDependsOn())
+				step.SetDependsOn(uniqueDependencies)
 			}
 
 			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
@@ -457,6 +473,18 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 	},
 }
 
+var PipelineStepTextBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name:     "text",
+			Required: true,
+		},
+		{
+			Name: configschema.AttributeTypeDependsOn,
+		},
+	},
+}
+
 func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 	switch stepType {
 	case configschema.BlockTypePipelineStepHttp:
@@ -465,6 +493,8 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 		return PipelineStepSleepBlockSchema
 	case configschema.BlockTypePipelineStepEmail:
 		return PipelineStepEmailBlockSchema
+	case configschema.BlockTypePipelineStepText:
+		return PipelineStepTextBlockSchema
 	default:
 		return nil
 	}

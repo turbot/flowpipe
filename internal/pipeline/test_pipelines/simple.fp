@@ -5,7 +5,7 @@ pipeline "simple_http" {
     }
 
     step "sleep" "sleep_1" {
-        duration = 20
+        duration = "5s"
     }
 
     step "email" "send_it" {
@@ -23,7 +23,7 @@ pipeline "simple_http_2" {
 
 pipeline "sleep_with_output" {
     step "sleep" "sleep_1" {
-        duration = 1
+        duration = "1s"
     }
 
     output "sleep_duration" {
