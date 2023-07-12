@@ -43,5 +43,6 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	return &types.StepOutput{"started_at": start, "finished_at": finish}, nil
+	// TODO: remove the "duration" output, it's not needed, I added to help with debugging
+	return &types.StepOutput{"started_at": start, "finished_at": finish, "duration": duration}, nil
 }

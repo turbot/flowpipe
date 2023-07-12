@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/addrs"
@@ -110,6 +109,50 @@ func (p *PipelineHcl) GetStep(stepFullyQualifiedName string) IPipelineHclStep {
 	return nil
 }
 
+func (p *PipelineHcl) CtyValue() (cty.Value, error) {
+	return pipeparser.GetCtyValue(p)
+}
+
+// SetOptions sets the options on the connection
+// verify the options object is a valid options type (only options.Connection currently supported)
+func (p *PipelineHcl) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {
+
+	var diags hcl.Diagnostics
+	switch o := opts.(type) {
+	// case *options.Query:
+	// 	if p.QueryOptions != nil {
+	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
+	// 	}
+	// 	p.QueryOptions = o
+	// case *options.Check:
+	// 	if p.CheckOptions != nil {
+	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
+	// 	}
+	// 	p.CheckOptions = o
+	// case *options.WorkspaceProfileDashboard:
+	// 	if p.DashboardOptions != nil {
+	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
+	// 	}
+	// 	p.DashboardOptions = o
+	default:
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  fmt.Sprintf("invalid nested option type %s - only 'connection' options blocks are supported for Connections", reflect.TypeOf(o).Name()),
+			Subject:  &block.DefRange,
+		})
+	}
+	return diags
+}
+
+func (p *PipelineHcl) OnDecoded() hcl.Diagnostics {
+	p.setBaseProperties()
+	return nil
+}
+
+func (p *PipelineHcl) setBaseProperties() {
+
+}
+
 func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 	// Define an auxiliary type to decode the JSON and capture the value of the 'ISteps' field
 	type Aux struct {
@@ -164,6 +207,12 @@ func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 				ph.Steps = append(ph.Steps, &step)
 			case configschema.BlockTypePipelineStepEmail:
 				var step PipelineHclStepEmail
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			case "text":
+				var step PipelineHclStepText
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
@@ -226,6 +275,11 @@ func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 		s.Name = stepName
 		s.Type = stepType
 		return &s
+	case configschema.BlockTypePipelineStepText:
+		s := PipelineHclStepText{}
+		s.Name = stepName
+		s.Type = stepType
+		return &s
 	default:
 		return nil
 	}
@@ -237,6 +291,7 @@ type IPipelineHclStep interface {
 	GetType() string
 	GetInputs() map[string]interface{}
 	GetDependsOn() []string
+	SetDependsOn([]string)
 	GetFor() string
 	GetError() *PipelineStepError
 	SetAttributes(hcl.Attributes) hcl.Diagnostics
@@ -264,14 +319,21 @@ func (p *PipelineHclStepBase) GetFullyQualifiedName() string {
 	return p.Type + "." + p.Name
 }
 
+func (p *PipelineHclStepBase) SetDependsOn(dependsOn []string) {
+	p.DependsOn = dependsOn
+}
+
 // Direct copy from Terraform source code
 func decodeDependsOn(attr *hcl.Attribute) ([]hcl.Traversal, hcl.Diagnostics) {
 	var ret []hcl.Traversal
 	exprs, diags := hcl.ExprList(attr.Expr)
 
 	for _, expr := range exprs {
-		expr, shimDiags := shimTraversalInString(expr, false)
-		diags = append(diags, shimDiags...)
+		// expr, shimDiags := shimTraversalInString(expr, false)
+		// diags = append(diags, shimDiags...)
+
+		// TODO: should we support legacy "expression in string" syntax here?
+		// TODO: terraform supports it by calling shimTraversalInString
 
 		traversal, travDiags := hcl.AbsTraversalForExpr(expr)
 		diags = append(diags, travDiags...)
@@ -281,95 +343,6 @@ func decodeDependsOn(attr *hcl.Attribute) ([]hcl.Traversal, hcl.Diagnostics) {
 	}
 
 	return ret, diags
-}
-
-// Direct copy from Terraform source code
-//
-// shimTraversalInString takes any arbitrary expression and checks if it is
-// a quoted string in the native syntax. If it _is_, then it is parsed as a
-// traversal and re-wrapped into a synthetic traversal expression and a
-// warning is generated. Otherwise, the given expression is just returned
-// verbatim.
-//
-// This function has no effect on expressions from the JSON syntax, since
-// traversals in strings are the required pattern in that syntax.
-//
-// If wantKeyword is set, the generated warning diagnostic will talk about
-// keywords rather than references. The behavior is otherwise unchanged, and
-// the caller remains responsible for checking that the result is indeed
-// a keyword, e.g. using hcl.ExprAsKeyword.
-func shimTraversalInString(expr hcl.Expression, wantKeyword bool) (hcl.Expression, hcl.Diagnostics) {
-	// ObjectConsKeyExpr is a special wrapper type used for keys on object
-	// constructors to deal with the fact that naked identifiers are normally
-	// handled as "bareword" strings rather than as variable references. Since
-	// we know we're interpreting as a traversal anyway (and thus it won't
-	// matter whether it's a string or an identifier) we can safely just unwrap
-	// here and then process whatever we find inside as normal.
-	if ocke, ok := expr.(*hclsyntax.ObjectConsKeyExpr); ok {
-		expr = ocke.Wrapped
-	}
-
-	if !exprIsNativeQuotedString(expr) {
-		return expr, nil
-	}
-
-	strVal, diags := expr.Value(nil)
-	if diags.HasErrors() || strVal.IsNull() || !strVal.IsKnown() {
-		// Since we're not even able to attempt a shim here, we'll discard
-		// the diagnostics we saw so far and let the caller's own error
-		// handling take care of reporting the invalid expression.
-		return expr, nil
-	}
-
-	// The position handling here isn't _quite_ right because it won't
-	// take into account any escape sequences in the literal string, but
-	// it should be close enough for any error reporting to make sense.
-	srcRange := expr.Range()
-	startPos := srcRange.Start // copy
-	startPos.Column++          // skip initial quote
-	startPos.Byte++            // skip initial quote
-
-	traversal, tDiags := hclsyntax.ParseTraversalAbs(
-		[]byte(strVal.AsString()),
-		srcRange.Filename,
-		startPos,
-	)
-	diags = append(diags, tDiags...)
-
-	if wantKeyword {
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagWarning,
-			Summary:  "Quoted keywords are deprecated",
-			Detail:   "In this context, keywords are expected literally rather than in quotes. Terraform 0.11 and earlier required quotes, but quoted keywords are now deprecated and will be removed in a future version of Terraform. Remove the quotes surrounding this keyword to silence this warning.",
-			Subject:  &srcRange,
-		})
-	} else {
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagWarning,
-			Summary:  "Quoted references are deprecated",
-			Detail:   "In this context, references are expected literally rather than in quotes. Terraform 0.11 and earlier required quotes, but quoted references are now deprecated and will be removed in a future version of Terraform. Remove the quotes surrounding this reference to silence this warning.",
-			Subject:  &srcRange,
-		})
-	}
-
-	return &hclsyntax.ScopeTraversalExpr{
-		Traversal: traversal,
-		SrcRange:  srcRange,
-	}, diags
-}
-
-// Direct copy from Terraform
-//
-// exprIsNativeQuotedString determines whether the given expression looks like
-// it's a quoted string in the HCL native syntax.
-//
-// This should be used sparingly only for situations where our legacy HCL
-// decoding would've expected a keyword or reference in quotes but our new
-// decoding expects the keyword or reference to be provided directly as
-// an identifier-based expression.
-func exprIsNativeQuotedString(expr hcl.Expression) bool {
-	_, ok := expr.(*hclsyntax.TemplateExpr)
-	return ok
 }
 
 func (p *PipelineHclStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
@@ -398,7 +371,7 @@ func (p *PipelineHclStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hc
 				Detail:   fmt.Sprintf("The depends_on argument must be a reference to another step, but the given value %q is not a valid reference.", traversal),
 			})
 		}
-		parts := TraversalAsString(traversal)
+		parts := TraversalAsStringSlice(traversal)
 		if len(parts) != 3 {
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,
@@ -411,13 +384,13 @@ func (p *PipelineHclStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hc
 		dependsOn = append(dependsOn, parts[1]+"."+parts[2])
 	}
 
-	p.DependsOn = dependsOn
+	p.DependsOn = append(p.DependsOn, dependsOn...)
 	return diags
 }
 
-// TraversalAsString converts a traversal to a path string
+// TraversalAsStringSlice converts a traversal to a path string
 // (if an absolute traversal is passed - convert to relative)
-func TraversalAsString(traversal hcl.Traversal) []string {
+func TraversalAsStringSlice(traversal hcl.Traversal) []string {
 	var parts = make([]string, len(traversal))
 	offset := 0
 
@@ -530,27 +503,43 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 		switch name {
 		case configschema.AttributeTypeDuration:
 			if attr.Expr != nil {
-				val, err := attr.Expr.Value(nil)
-				if err != nil {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse duration attribute",
-						Subject:  &attr.Range,
-					})
-					continue
-				}
+				// expr, sDiags := shimTraversalInString(attr.Expr, false)
+				// diags = append(diags, sDiags...)
 
-				if !val.AsBigFloat().IsInt() {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse duration attribute, not an integer",
-						Subject:  &attr.Range,
-					})
-					continue
-				}
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					traversals := expr.Variables()
+					// TODO: just a hack here
+					parts := TraversalAsStringSlice(traversals[0])
+					if len(parts) > 0 {
+						if parts[0] == configschema.BlockTypePipelineStep {
+							dependsOn := parts[1] + "." + parts[2]
+							p.DependsOn = append(p.DependsOn, dependsOn)
+						}
+					}
+				} else {
+					val, err := expr.Value(nil)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse duration attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
 
-				valInt, _ := val.AsBigFloat().Int64()
-				p.Duration = valInt
+					if !val.AsBigFloat().IsInt() {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse duration attribute, not an integer",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					valInt, _ := val.AsBigFloat().Int64()
+					p.Duration = valInt
+				}
 			}
 		default:
 			if !p.IsBaseAttributes(name) {
@@ -615,46 +604,71 @@ func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 	return diags
 }
 
-func (p *PipelineHcl) CtyValue() (cty.Value, error) {
-	return pipeparser.GetCtyValue(p)
+type PipelineHclStepText struct {
+	PipelineHclStepBase
+	Text string `json:"text"`
 }
 
-// SetOptions sets the options on the connection
-// verify the options object is a valid options type (only options.Connection currently supported)
-func (p *PipelineHcl) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {
-
-	var diags hcl.Diagnostics
-	switch o := opts.(type) {
-	// case *options.Query:
-	// 	if p.QueryOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.QueryOptions = o
-	// case *options.Check:
-	// 	if p.CheckOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.CheckOptions = o
-	// case *options.WorkspaceProfileDashboard:
-	// 	if p.DashboardOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.DashboardOptions = o
-	default:
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  fmt.Sprintf("invalid nested option type %s - only 'connection' options blocks are supported for Connections", reflect.TypeOf(o).Name()),
-			Subject:  &block.DefRange,
-		})
+func (p *PipelineHclStepText) GetInputs() map[string]interface{} {
+	return map[string]interface{}{
+		"text": p.Text,
 	}
-	return diags
 }
 
-func (p *PipelineHcl) OnDecoded() hcl.Diagnostics {
-	p.setBaseProperties()
+func (p *PipelineHclStepText) GetFor() string {
+	return ""
+}
+
+func (p *PipelineHclStepText) GetError() *PipelineStepError {
 	return nil
 }
 
-func (p *PipelineHcl) setBaseProperties() {
+func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 
+	diags := p.SetBaseAttributes(hclAttributes)
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case "text":
+			if attr.Expr != nil {
+				// expr, sDiags := shimTraversalInString(attr.Expr, false)
+				// diags = append(diags, sDiags...)
+
+				expr := attr.Expr
+				// if len(expr.Variables()) > 0 {
+				// 	traversals := expr.Variables()
+				// 	// TODO: just a hack here
+				// 	parts := TraversalAsStringSlice(traversals[0])
+				// 	if len(parts) > 0 {
+				// 		if parts[0] == configschema.BlockTypePipelineStep {
+				// 			dependsOn := parts[1] + "." + parts[2]
+				// 			p.DependsOn = append(p.DependsOn, dependsOn)
+				// 		}
+				// 	}
+				// } else {
+				val, err := expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse duration attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				p.Text = val.AsString()
+				// }
+			}
+		default:
+			if !p.IsBaseAttributes(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Text Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
+		}
+	}
+
+	return diags
 }
