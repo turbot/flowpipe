@@ -463,7 +463,7 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 var PipelineStepTextBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name:     configschema.AttributeTypeTo,
+			Name:     "text",
 			Required: true,
 		},
 		{
