@@ -31,23 +31,38 @@ func TestLoadPipelineDir(t *testing.T) {
 	}
 }
 
-func TestLoadPipelineUsingGlob(t *testing.T) {
+func TestLoadPipelineSpecificFile(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple/*.fp")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple/simple.fp")
 	assert.Nil(err, "error found")
 
 	assert.Greater(len(pipelines), 1, "wrong number of pipelines")
 
 	if len(pipelines) > 0 {
-		assert.NotNil(pipelines["simple_http"], "pipeline not found")
-		assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+		assert.Equal(len(pipelines), 3, "pipelines are not loaded correctly")
 
-		for _, step := range pipelines["simple_http"].Steps {
-			if step.GetName() == "my_step_1" {
-				assert.Equal(configschema.BlockTypePipelineStepHttp, step.GetType(), "wrong step type")
-				assert.Equal("http://localhost:8081", step.GetInputs()["url"], "wrong step input")
-			}
+		for pipeline := range pipelines {
+			assert.NotNil(pipelines[pipeline], "pipeline not found")
+			assert.Equal(pipeline, pipelines[pipeline].Name, "wrong pipeline name")
+		}
+	}
+}
+
+func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple/simple*.fp")
+	assert.Nil(err, "error found")
+
+	assert.Greater(len(pipelines), 1, "wrong number of pipelines")
+
+	if len(pipelines) > 0 {
+		assert.Equal(len(pipelines), 4, "pipelines are not loaded correctly")
+
+		for pipeline := range pipelines {
+			assert.NotNil(pipelines[pipeline], "pipeline not found")
+			assert.Equal(pipeline, pipelines[pipeline].Name, "wrong pipeline name")
 		}
 	}
 }
@@ -55,7 +70,7 @@ func TestLoadPipelineUsingGlob(t *testing.T) {
 func TestSleepWithOutput(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/sleep_with_output")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/sleep_with_output/simple.fp")
 	assert.Nil(err, "error found")
 
 	assert.Equal(len(pipelines), 1, "wrong number of pipelines")
@@ -69,7 +84,7 @@ func TestSleepWithOutput(t *testing.T) {
 func TestLoadPipelineDepends(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/depends_on")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/depends_on/depends.fp")
 	assert.Nil(err, "error found")
 
 	assert.Greater(len(pipelines), 0, "wrong number of pipelines")
@@ -90,7 +105,7 @@ func TestLoadPipelineDepends(t *testing.T) {
 func TestLoadPipelineInvalidDepends(t *testing.T) {
 	assert := assert.New(t)
 
-	_, err := LoadPipelines(context.TODO(), "./test_pipelines/invalid_depends_on")
+	_, err := LoadPipelines(context.TODO(), "./test_pipelines/invalid_depends_on/invalid.fp")
 	assert.NotNil(err, "error not found")
 
 	// TODO: need to improve the error here, need more context? sub-code?
@@ -99,7 +114,7 @@ func TestLoadPipelineInvalidDepends(t *testing.T) {
 
 func TestMarshallUnmarshal(t *testing.T) {
 	assert := assert.New(t)
-	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple/simple.fp")
 	assert.Nil(err, "error found")
 
 	assert.Greater(len(pipelines), 1, "wrong number of pipelines")
