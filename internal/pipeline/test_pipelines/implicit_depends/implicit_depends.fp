@@ -8,7 +8,7 @@ pipeline "implicit_depends" {
         depends_on = [
             step.http.http_1
         ]
-        duration = 2
+        duration = "2s"
     }
 
     step "sleep" "sleep_2" {

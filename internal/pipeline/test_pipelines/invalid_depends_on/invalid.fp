@@ -8,6 +8,6 @@ pipeline "invalid_depends" {
         depends_on = [
             step.http.my_step_1
         ]
-        duration = 2
+        duration = "2s"
     }
 }

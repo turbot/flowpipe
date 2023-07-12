@@ -5,7 +5,7 @@ pipeline "http_and_sleep" {
     }
 
     step "sleep" "sleep_1" {
-        duration = 2
+        duration = "2s"
     }
 }
 
@@ -17,7 +17,7 @@ pipeline "http_and_sleep_depends" {
 
     step "sleep" "sleep_1" {
         depends_on = [step.http.http_1]
-        duration = 2
+        duration = "2s"
     }
 }
 
@@ -29,7 +29,7 @@ pipeline "http_and_sleep_multiple_depends" {
 
     step "sleep" "sleep_1" {
         depends_on = [step.http.http_1]
-        duration = 2
+        duration = "2s"
     }
 
     step "http" "http_2" {
@@ -53,10 +53,10 @@ pipeline "http_and_sleep_multiple_depends" {
 
 pipeline "two_sleeps" {
     step "sleep" "sleep_1" {
-        duration = 1
+        duration = "1s"
     }
 
     step "sleep" "sleep_2" {
-        duration = 1
+        duration = "1s"
     }
 }

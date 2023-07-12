@@ -478,7 +478,7 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 
 type PipelineHclStepSleep struct {
 	PipelineHclStepBase
-	Duration int64 `json:"duration"`
+	Duration string `json:"duration"`
 }
 
 func (p *PipelineHclStepSleep) GetInputs() map[string]interface{} {
@@ -528,17 +528,7 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 						continue
 					}
 
-					if !val.AsBigFloat().IsInt() {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse duration attribute, not an integer",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-
-					valInt, _ := val.AsBigFloat().Int64()
-					p.Duration = valInt
+					p.Duration = val.AsString()
 				}
 			}
 		default:

@@ -18,12 +18,10 @@ func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
 		return fperr.BadRequestWithMessage("Sleep input must define a duration")
 	}
 
-	// json umarshalling converts numbers to float64
-	_, ok := input[configschema.AttributeTypeDuration].(float64)
-
-	if !ok {
-		fplog.Logger(ctx).Error("invalid sleep duration", "duration", input[configschema.AttributeTypeDuration])
-		return fperr.BadRequestWithMessage("invalid sleep duration")
+	durationString := input[configschema.AttributeTypeDuration].(string)
+	_, err := time.ParseDuration(durationString)
+	if err != nil {
+		return fperr.BadRequestWithMessage("invalid sleep duration " + durationString)
 	}
 
 	return nil
@@ -34,9 +32,9 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 		return nil, err
 	}
 
-	durationSecond := input["duration"].(float64)
+	durationString := input[configschema.AttributeTypeDuration].(string)
 	// Already validated
-	duration := time.Duration(durationSecond * float64(time.Second))
+	duration, _ := time.ParseDuration(durationString)
 
 	fplog.Logger(ctx).Info("Sleeping for", "duration", duration)
 	start := time.Now().UTC()
