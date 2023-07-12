@@ -18,7 +18,15 @@ func GetPipeline(name string) (*types.PipelineHcl, error) {
 	if !ok {
 		return nil, fperr.InternalWithMessage("invalid pipeline")
 	}
-	return pipeline, nil
+
+	// When we start the API server we load the entire pipelines given in the start up command line and store it in memory.
+	// And, the GET /pipeline operation just dump the content in the response.
+	// For now just return the name and description of the pipeline, not even the steps and we'll start adding what else should we return in the API.
+	getPipelineOutput := &types.PipelineHcl{
+		Name:        pipeline.Name,
+		Description: pipeline.Description,
+	}
+	return getPipelineOutput, nil
 }
 
 func ListAllPipelines() ([]types.PipelineHcl, error) {

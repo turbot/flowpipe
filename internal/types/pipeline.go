@@ -79,7 +79,7 @@ type PipelineHcl struct {
 	// Unparsed JSON raw message, needed so we can unmarshall the step JSON into the correct struct
 	StepsRawJson json.RawMessage `json:"-"`
 
-	Steps []IPipelineHclStep `json:"steps"`
+	Steps []IPipelineHclStep `json:"steps,omitempty"`
 
 	HclOutputs []*Output
 }
