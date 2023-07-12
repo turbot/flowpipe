@@ -275,6 +275,11 @@ func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 		s.Name = stepName
 		s.Type = stepType
 		return &s
+	case configschema.BlockTypePipelineStepText:
+		s := PipelineHclStepText{}
+		s.Name = stepName
+		s.Type = stepType
+		return &s
 	default:
 		return nil
 	}
@@ -658,7 +663,7 @@ func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 			if !p.IsBaseAttributes(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
-					Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
+					Summary:  "Unsupported attribute for Text Step: " + attr.Name,
 					Subject:  &attr.Range,
 				})
 			}
