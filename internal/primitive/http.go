@@ -52,9 +52,6 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 			return nil, fperr.FromHttpError(err, resp.StatusCode)
 		}
 		return nil, err
-	} else if resp != nil && resp.StatusCode != http.StatusOK {
-		logger.Error("error making request #2", "error", err, "resp.StatusCode", resp.StatusCode, "resp.Status", resp.Status)
-		return nil, fperr.FromHttpError(fmt.Errorf("%s", resp.Status), resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
@@ -71,7 +68,13 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
 	// in array form
 	headersAsArrays := map[string]bool{"Set-Cookie": true}
-	for k, v := range resp.Header {
+
+	// Safety measure t prevent potential runtime errors
+	var respHeaders map[string][]string
+	if resp.Header != nil {
+		respHeaders = resp.Header
+	}
+	for k, v := range respHeaders {
 		if headersAsArrays[k] {
 			// It's a known multi-value header
 			headers[k] = v
@@ -84,14 +87,19 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	var bodyJSON interface{}
 	// Just ignore errors
 
-	// The unmarshalling is only done if the content type is JSON,
-	// otherwise the unmashalling will fail.
-	// Hence, the body_json field will only be populated if the content type is JSON.
-	if resp.Header.Get("Content-Type") == "application/json" {
-		err = json.Unmarshal(body, &bodyJSON)
-		if err != nil {
-			logger.Error("error unmarshalling body: %s", err)
-			return nil, err
+	// Process the response body only if the status code is 200
+	if resp != nil && resp.StatusCode == http.StatusOK {
+		logger.Error("error making request #2", "error", err, "resp.StatusCode", resp.StatusCode, "resp.Status", resp.Status)
+
+		// The unmarshalling is only done if the content type is JSON,
+		// otherwise the unmashalling will fail.
+		// Hence, the body_json field will only be populated if the content type is JSON.
+		if resp.Header.Get("Content-Type") == "application/json" {
+			err = json.Unmarshal(body, &bodyJSON)
+			if err != nil {
+				logger.Error("error unmarshalling body: %s", err)
+				return nil, err
+			}
 		}
 	}
 
