@@ -24,6 +24,6 @@ func (e *Text) Run(ctx context.Context, input types.Input) (*types.StepOutput, e
 	}
 
 	return &types.StepOutput{
-		"result": input["text"],
+		"text": input["text"],
 	}, nil
 }
