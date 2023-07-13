@@ -1,3 +1,28 @@
+pipeline "two_text" {
+    step "text" "text_1" {
+        text = "foo"
+    }
+
+    step "text" "text_2" {
+        text = "baz ${step.text.text_1.text}"
+    }
+}
+
+pipeline "three_text" {
+    step "text" "text_1" {
+        text = "foo"
+    }
+
+    step "text" "text_2" {
+        text = "baz ${step.text.text_1.text}"
+    }
+
+    step "text" "text_3" {
+        text = "text_2 output ${step.text.text_2.text} text_1 outputt ${step.text.text_1.text}"
+    }
+}
+
+
 pipeline "http_and_sleep" {
     description = "http and sleep pipeline"
     step "http" "http_1" {

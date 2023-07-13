@@ -106,7 +106,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				continue
 			}
 			// Ignore invalid dependencies
-			if defn.GetStep(dep) != nil {
+			if defn.GetStep(dep) == nil {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}

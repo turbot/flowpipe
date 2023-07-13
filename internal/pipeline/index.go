@@ -237,11 +237,6 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				return nil, res
 			}
 
-			if len(step.GetDependsOn()) > 0 {
-				uniqueDependencies := helpers.StringSliceDistinct(step.GetDependsOn())
-				step.SetDependsOn(uniqueDependencies)
-			}
-
 			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
 
 		case configschema.BlockTypePipelineOutput:
@@ -517,12 +512,12 @@ func (c *PipelineParseContext) buildEvalContext() {
 }
 
 // AddResource stores this resource as a variable to be added to the eval context. It alse
-func (c *PipelineParseContext) AddResource(workspaceProfile *types.PipelineHcl) hcl.Diagnostics {
-	ctyVal, err := workspaceProfile.CtyValue()
+func (c *PipelineParseContext) AddResource(pipelineHcl *types.PipelineHcl) hcl.Diagnostics {
+	ctyVal, err := pipelineHcl.CtyValue()
 	if err != nil {
 		return hcl.Diagnostics{&hcl.Diagnostic{
 			Severity: hcl.DiagError,
-			Summary:  fmt.Sprintf("failed to convert workspaceProfile '%s' to its cty value", workspaceProfile.Name),
+			Summary:  fmt.Sprintf("failed to convert Pipeline '%s' to its cty value", pipelineHcl.Name),
 			Detail:   err.Error(),
 			// TODO: fix this
 			// Subject:  &workspaceProfile.DeclRange,
@@ -530,11 +525,11 @@ func (c *PipelineParseContext) AddResource(workspaceProfile *types.PipelineHcl) 
 		}}
 	}
 
-	c.PipelineHcls[workspaceProfile.Name] = workspaceProfile
-	c.valueMap[workspaceProfile.Name] = ctyVal
+	c.PipelineHcls[pipelineHcl.Name] = pipelineHcl
+	c.valueMap[pipelineHcl.Name] = ctyVal
 
 	// remove this resource from unparsed blocks
-	delete(c.UnresolvedBlocks, workspaceProfile.Name)
+	delete(c.UnresolvedBlocks, pipelineHcl.Name)
 
 	c.buildEvalContext()
 

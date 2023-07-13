@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"reflect"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -144,7 +145,18 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		forEaches := []*types.Input{}
 
 		// logger.Info("[8] pipeline planned event handler #7", "stepDefn", stepDefn)
-		if len(stepDefn.GetInputs()) == 0 {
+
+		evalContext := hcl.EvalContext{
+			Variables: ex.ExecutionVariables,
+		}
+
+		stepInputs, err := stepDefn.GetInputs(&evalContext)
+		if err != nil {
+			logger.Error("Error resolving step inputs", "error", err)
+			return err
+		}
+
+		if len(stepInputs) == 0 {
 			// No input, so just use an empty input for each step execution.
 
 			// There is always one input (e.g. no for loop). If the for loop had
@@ -185,10 +197,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 				// TODO: parse the input for each step execution ... do we need to do it here?
 
-				// var input types.Input
-				input := stepDefn.GetInputs()
-
-				inputs = append(inputs, input)
+				// stepInputs, err := stepDefn.GetInputs(nil)
+				// if err != nil {
+				// 	return err
+				// }
+				inputs = append(inputs, stepInputs)
 				forEaches = append(forEaches, nil)
 
 			} else {
