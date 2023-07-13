@@ -33,7 +33,7 @@ func TestLoadPipelineSpecificFile(t *testing.T) {
 		}
 		if step.GetName() == "sleep_1" {
 			assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-			assert.Equal(int64(20), step.GetInputs()["duration"], "wrong step input")
+			assert.Equal("5s", step.GetInputs()["duration"], "wrong step input")
 		}
 		if step.GetName() == "send_it" {
 			assert.Equal(configschema.BlockTypePipelineStepEmail, step.GetType(), "wrong step type")
@@ -59,7 +59,7 @@ func TestLoadPipelineSpecificFile(t *testing.T) {
 	for _, step := range pipelines["sleep_with_output"].Steps {
 		if step.GetName() == "sleep_1" {
 			assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-			assert.Equal(int64(1), step.GetInputs()["duration"], "wrong step input")
+			assert.Equal("1s", step.GetInputs()["duration"], "wrong step input")
 		}
 	}
 }
@@ -87,7 +87,7 @@ func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
 		}
 		if step.GetName() == "sleep_1" {
 			assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-			assert.Equal(int64(20), step.GetInputs()["duration"], "wrong step input")
+			assert.Equal("5s", step.GetInputs()["duration"], "wrong step input")
 		}
 		if step.GetName() == "send_it" {
 			assert.Equal(configschema.BlockTypePipelineStepEmail, step.GetType(), "wrong step type")
@@ -113,7 +113,7 @@ func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
 	for _, step := range pipelines["sleep_with_output"].Steps {
 		if step.GetName() == "sleep_1" {
 			assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-			assert.Equal(int64(1), step.GetInputs()["duration"], "wrong step input")
+			assert.Equal("1s", step.GetInputs()["duration"], "wrong step input")
 		}
 	}
 
@@ -144,7 +144,7 @@ func TestSleepWithOutput(t *testing.T) {
 	for _, step := range pipelines["sleep_with_output"].Steps {
 		if step.GetName() == "sleep_1" {
 			assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-			assert.Equal(int64(1), step.GetInputs()["duration"], "wrong step input")
+			assert.Equal("1s", step.GetInputs()["duration"], "wrong step input")
 		}
 	}
 }
@@ -240,7 +240,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 				}
 				if step.GetName() == "sleep_1" {
 					assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-					assert.Equal(int64(20), step.GetInputs()["duration"], "wrong step input")
+					assert.Equal("5s", step.GetInputs()["duration"], "wrong step input")
 				}
 				if step.GetName() == "send_it" {
 					assert.Equal(configschema.BlockTypePipelineStepEmail, step.GetType(), "wrong step type")
@@ -268,7 +268,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 			for _, step := range p.Steps {
 				if step.GetName() == "sleep_1" {
 					assert.Equal(configschema.BlockTypePipelineStepSleep, step.GetType(), "wrong step type")
-					assert.Equal(int64(1), step.GetInputs()["duration"], "wrong step input")
+					assert.Equal("1s", step.GetInputs()["duration"], "wrong step input")
 				}
 			}
 		}
