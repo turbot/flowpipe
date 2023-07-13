@@ -83,10 +83,16 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 
 	var bodyJSON interface{}
 	// Just ignore errors
-	err = json.Unmarshal(body, &bodyJSON)
-	if err != nil {
-		fplog.Logger(ctx).Error("error unmarshalling body: %s", err)
-		return nil, err
+
+	// The unmarshalling is only done if the content type is JSON,
+	// otherwise the unmashalling will fail.
+	// Hence, the body_json field will only be populated if the content type is JSON.
+	if resp.Header.Get("Content-Type") == "application/json" {
+		err = json.Unmarshal(body, &bodyJSON)
+		if err != nil {
+			logger.Error("error unmarshalling body: %s", err)
+			return nil, err
+		}
 	}
 
 	output := &types.StepOutput{
