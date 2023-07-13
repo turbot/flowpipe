@@ -14,6 +14,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // Execution represents the current state of an execution. A single execution
@@ -36,6 +38,9 @@ type Execution struct {
 	// TODO: not sure if we need this, it's a different index of the step executions
 	// TODO: but also a way to track the order of execution for a given step
 	StepExecutionOrder map[string][]string `json:"step_execution_order"`
+
+	// This is not serializable
+	ExecutionVariables map[string]cty.Value `json:"-"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -49,6 +54,7 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 		PipelineExecutions: map[string]*PipelineExecution{},
 		StepExecutions:     map[string]*StepExecution{},
 		StepExecutionOrder: map[string][]string{},
+		ExecutionVariables: map[string]cty.Value{},
 	}
 
 	// Loop through each option
@@ -359,6 +365,38 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "finished"
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
+
+			if ex.ExecutionVariables[configschema.BlockTypePipelineStep] == cty.NilVal {
+				ex.ExecutionVariables[configschema.BlockTypePipelineStep] = cty.ObjectVal(map[string]cty.Value{})
+			}
+
+			stepVariable := ex.ExecutionVariables[configschema.BlockTypePipelineStep]
+
+			stepTypeVariableValueMap := stepVariable.AsValueMap()
+			if stepTypeVariableValueMap == nil {
+				stepTypeVariableValueMap = map[string]cty.Value{}
+			}
+
+			if stepTypeVariableValueMap[stepDefn.GetType()] == cty.NilVal {
+				stepTypeVariableValueMap[stepDefn.GetType()] = cty.ObjectVal(map[string]cty.Value{})
+			}
+
+			vm := stepTypeVariableValueMap[stepDefn.GetType()].AsValueMap()
+			if vm == nil {
+				vm = map[string]cty.Value{}
+			}
+
+			vm[stepDefn.GetName()], err = et.Output.AsHclVariables()
+			if err != nil {
+				return err
+			}
+			stepTypeVariableValueMap[stepDefn.GetType()] = cty.ObjectVal(vm)
+
+			ex.ExecutionVariables[configschema.BlockTypePipelineStep] = cty.ObjectVal(stepTypeVariableValueMap)
+
+			// if stepVariable[stepDefn.GetType()] == cty.NilVal {
+			// 	stepVariable[stepDefn.GetType()] = cty.ObjectVal(map[string]cty.Value{})
+			// }
 
 			// TODO: ignore error setting -> we need to be able to ignore setting
 			// TODO: is a step failure an immediate end of the pipeline?
