@@ -48,8 +48,9 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 			variables[key] = cty.NumberFloatVal(v)
 		case bool:
 			variables[key] = cty.BoolVal(v)
-		default:
-			return cty.NilVal, fperr.InternalWithMessage("unsupported type for variable: " + reflect.TypeOf(v).Name())
+			// TODO: warning?
+			// default:
+			// 	return cty.NilVal, fperr.InternalWithMessage("unsupported type for variable: " + key)
 		}
 
 	}
@@ -503,8 +504,20 @@ type PipelineHclStepHttp struct {
 }
 
 func (p *PipelineHclStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+
+	var urlInput string
+
+	if p.UnresolvedAttributes[configschema.AttributeTypeUrl] == nil {
+		urlInput = p.Url
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[configschema.AttributeTypeUrl], evalContext, &urlInput)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(configschema.BlockTypePipelineStep, diags)
+		}
+	}
+
 	return map[string]interface{}{
-		"url": p.Url,
+		configschema.AttributeTypeUrl: urlInput,
 	}, nil
 }
 
@@ -523,18 +536,21 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 		switch name {
 		case configschema.AttributeTypeUrl:
 			if attr.Expr != nil {
-				val, err := attr.Expr.Value(nil)
-				if err != nil {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse url attribute",
-						Subject:  &attr.Range,
-					})
-					continue
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := attr.Expr.Value(nil)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse url attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+					p.Url = val.AsString()
 				}
-
-				valString := val.AsString()
-				p.Url = valString
 			}
 		default:
 			if !p.IsBaseAttributes(name) {
@@ -555,8 +571,19 @@ type PipelineHclStepSleep struct {
 }
 
 func (p *PipelineHclStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+	var durationInput string
+
+	if p.UnresolvedAttributes[configschema.AttributeTypeDuration] == nil {
+		durationInput = p.Duration
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[configschema.AttributeTypeDuration], evalContext, &durationInput)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(configschema.BlockTypePipelineStep, diags)
+		}
+	}
+
 	return map[string]interface{}{
-		"duration": p.Duration,
+		configschema.AttributeTypeDuration: durationInput,
 	}, nil
 }
 
@@ -576,9 +603,6 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 		switch name {
 		case configschema.AttributeTypeDuration:
 			if attr.Expr != nil {
-				// expr, sDiags := shimTraversalInString(attr.Expr, false)
-				// diags = append(diags, sDiags...)
-
 				expr := attr.Expr
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
@@ -592,7 +616,6 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 						})
 						continue
 					}
-
 					p.Duration = val.AsString()
 				}
 			}
@@ -636,17 +659,22 @@ func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 		switch name {
 		case configschema.AttributeTypeTo:
 			if attr.Expr != nil {
-				val, err := attr.Expr.Value(nil)
-				if err != nil {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse to attribute",
-						Subject:  &attr.Range,
-					})
-					continue
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+
+					val, err := attr.Expr.Value(nil)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse to attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+					p.To = val.AsString()
 				}
-				valString := val.AsString()
-				p.To = valString
 			}
 		default:
 			diags = append(diags, &hcl.Diagnostic{
