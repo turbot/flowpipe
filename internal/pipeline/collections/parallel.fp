@@ -1,44 +1,44 @@
 pipeline "two_text" {
-    step "text" "text_1" {
+    step "echo" "text_1" {
         text = "foo"
     }
 
-    step "text" "text_2" {
-        text = "baz ${step.text.text_1.text}"
+    step "echo" "text_2" {
+        text = "baz ${step.echo.text_1.text}"
     }
 }
 
 pipeline "three_text" {
-    step "text" "text_1" {
+    step "echo" "text_1" {
         text = "foo"
     }
 
-    step "text" "text_2" {
-        text = "baz ${step.text.text_1.text}"
+    step "echo" "text_2" {
+        text = "baz ${step.echo.text_1.text}"
     }
 
-    step "text" "text_3" {
-        text = "text_1: ${step.text.text_1.text} text_2: ${step.text.text_2.text}"
+    step "echo" "text_3" {
+        text = "text_1: ${step.echo.text_1.text} text_2: ${step.echo.text_2.text}"
     }
 }
 
 pipeline "http_depends" {
-    step "text" "text_1" {
+    step "echo" "text_1" {
         text = "astros.json"
     }
 
     step "http" "http_1" {
-        url = "http://api.open-notify.org/${step.text.text_1.text}"
+        url = "http://api.open-notify.org/${step.echo.text_1.text}"
     }
 }
 
 pipeline "sleep_depends" {
-    step "text" "text_1" {
+    step "echo" "text_1" {
         text = "1s"
     }
 
     step "sleep" "sleep_1" {
-        duration = step.text.text_1.text
+        duration = step.echo.text_1.text
     }
 }
 

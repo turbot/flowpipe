@@ -5,7 +5,7 @@ pipeline "for_loop" {
         default = ["jerry","Janis", "Jimi"]
     }
 
-    step "text" "text_1" {
+    step "echo" "text_1" {
         for_each = param.users
         text = "user if ${each.value}"
     }

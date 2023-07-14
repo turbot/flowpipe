@@ -181,8 +181,8 @@ func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
-			case "text":
-				var step PipelineHclStepText
+			case configschema.BlockTypePipelineStepEcho:
+				var step PipelineHclStepEcho
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}

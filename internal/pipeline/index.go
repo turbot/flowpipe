@@ -396,7 +396,7 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 	case configschema.BlockTypePipelineStepEmail:
 		return PipelineStepEmailBlockSchema
 	case configschema.BlockTypePipelineStepEcho:
-		return PipelineStepTextBlockSchema
+		return PipelineStepEchoBlockSchema
 	default:
 		return nil
 	}

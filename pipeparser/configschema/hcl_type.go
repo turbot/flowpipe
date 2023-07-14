@@ -57,7 +57,7 @@ const (
 	BlockTypePipelineStepHttp  = "http"
 	BlockTypePipelineStepSleep = "sleep"
 	BlockTypePipelineStepEmail = "email"
-	BlockTypePipelineStepEcho  = "text"
+	BlockTypePipelineStepEcho  = "echo"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider

@@ -29,7 +29,7 @@ func TestExpression(t *testing.T) {
 	expr := pipelines["text_expr"].Steps[1].GetUnresolvedAttributes()["text"]
 
 	objectVal := cty.ObjectVal(map[string]cty.Value{
-		"text": cty.ObjectVal(map[string]cty.Value{
+		"echo": cty.ObjectVal(map[string]cty.Value{
 			"text_1": cty.ObjectVal(map[string]cty.Value{
 				"text": cty.StringVal("hello"),
 			}),
@@ -60,9 +60,9 @@ func TestExprFunc(t *testing.T) {
 	}
 
 	pipelineHcl := pipelines["expr_func"]
-	step := pipelineHcl.GetStep("text.text_title")
+	step := pipelineHcl.GetStep("echo.text_title")
 	if step == nil {
-		assert.Fail("text.text_title step not found")
+		assert.Fail("echo.text_title step not found")
 		return
 	}
 
@@ -91,9 +91,9 @@ func TestExprWithinVariable(t *testing.T) {
 	}
 
 	pipelineHcl := pipelines["expr_within_text"]
-	step := pipelineHcl.GetStep("text.text_title")
+	step := pipelineHcl.GetStep("echo.text_title")
 	if step == nil {
-		assert.Fail("text.text_title step not found")
+		assert.Fail("echo.text_title step not found")
 	}
 
 	// There's no unresolved variable, the function is just ${title("world")}
@@ -124,23 +124,26 @@ func TestExprDependAndFunction(t *testing.T) {
 	}
 
 	pipelineHcl := pipelines["expr_depend_and_function"]
-	stepOne := pipelineHcl.GetStep("text.text_1")
+	stepOne := pipelineHcl.GetStep("echo.text_1")
 	if stepOne == nil {
-		assert.Fail("text.text_1 step not found")
+		assert.Fail("echo.text_1 step not found")
+		return
 	}
 
 	assert.True(stepOne.IsResolved(), "step should be resolved")
 
-	stepTwo := pipelineHcl.GetStep("text.text_2")
+	stepTwo := pipelineHcl.GetStep("echo.text_2")
 	if stepTwo == nil {
-		assert.Fail("text.text_1 step not found")
+		assert.Fail("echo.text_1 step not found")
+		return
 	}
 
 	assert.False(stepTwo.IsResolved(), "step 2 should NOT be resolved")
 
-	stepThree := pipelineHcl.GetStep("text.text_3")
+	stepThree := pipelineHcl.GetStep("echo.text_3")
 	if stepThree == nil {
 		assert.Fail("text.text_3 step not found")
+		return
 	}
 
 	assert.False(stepThree.IsResolved(), "step 2 should NOT be resolved")

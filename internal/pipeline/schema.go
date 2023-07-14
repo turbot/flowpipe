@@ -85,11 +85,13 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 	},
 }
 
-var PipelineStepTextBlockSchema = &hcl.BodySchema{
+var PipelineStepEchoBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name:     "text",
-			Required: true,
+			Name: "text",
+		},
+		{
+			Name: "list_text",
 		},
 		{
 			Name: "for_each",
