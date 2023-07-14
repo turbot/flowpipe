@@ -47,17 +47,14 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	resp, err := http.Get(input["url"].(string))
 	finish := time.Now().UTC()
 	if err != nil {
-		logger.Error("error making request #1", "error", err, "resp", resp)
-		if resp != nil {
-			return nil, fperr.FromHttpError(err, resp.StatusCode)
-		}
+		logger.Error("error making request", "error", err, "response", resp)
 		return nil, err
-	} else if resp != nil && resp.StatusCode != http.StatusOK {
-		logger.Error("error making request #2", "error", err, "resp.StatusCode", resp.StatusCode, "resp.Status", resp.Status)
-		return nil, fperr.FromHttpError(fmt.Errorf("%s", resp.Status), resp.StatusCode)
 	}
-
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -71,6 +68,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
 	// in array form
 	headersAsArrays := map[string]bool{"Set-Cookie": true}
+
 	for k, v := range resp.Header {
 		if headersAsArrays[k] {
 			// It's a known multi-value header
@@ -81,23 +79,35 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 		}
 	}
 
-	var bodyJSON interface{}
-	// Just ignore errors
-	err = json.Unmarshal(body, &bodyJSON)
-	if err != nil {
-		fplog.Logger(ctx).Error("error unmarshalling body: %s", err)
-		return nil, err
-	}
-
-	output := &types.StepOutput{
+	output := types.StepOutput{
 		"status":      resp.Status,
 		"status_code": resp.StatusCode,
 		"headers":     headers,
-		"body":        string(body),
-		"body_json":   bodyJSON,
 		"started_at":  start,
 		"finished_at": finish,
 	}
 
-	return output, nil
+	if body != nil {
+		output["body"] = string(body)
+	}
+
+	var bodyJSON interface{}
+	// Just ignore errors
+
+	// Process the response body only if the status code is 200
+	if resp != nil && resp.StatusCode == http.StatusOK {
+		// The unmarshalling is only done if the content type is JSON,
+		// otherwise the unmashalling will fail.
+		// Hence, the body_json field will only be populated if the content type is JSON.
+		if resp.Header.Get("Content-Type") == "application/json" {
+			err = json.Unmarshal(body, &bodyJSON)
+			if err != nil {
+				logger.Error("error unmarshalling body: %s", err)
+				return nil, err
+			}
+			output["body_json"] = bodyJSON
+		}
+	}
+
+	return &output, nil
 }
