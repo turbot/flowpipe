@@ -69,12 +69,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	// in array form
 	headersAsArrays := map[string]bool{"Set-Cookie": true}
 
-	// Safety measure t prevent potential runtime errors
-	var respHeaders map[string][]string
-	if resp.Header != nil {
-		respHeaders = resp.Header
-	}
-	for k, v := range respHeaders {
+	for k, v := range resp.Header {
 		if headersAsArrays[k] {
 			// It's a known multi-value header
 			headers[k] = v
@@ -82,6 +77,18 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 			// Otherwise, just use the first value for simplicity
 			headers[k] = v[0]
 		}
+	}
+
+	output := types.StepOutput{
+		"status":      resp.Status,
+		"status_code": resp.StatusCode,
+		"headers":     headers,
+		"started_at":  start,
+		"finished_at": finish,
+	}
+
+	if body != nil {
+		output["body"] = string(body)
 	}
 
 	var bodyJSON interface{}
@@ -100,18 +107,9 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 				logger.Error("error unmarshalling body: %s", err)
 				return nil, err
 			}
+			output["body_json"] = bodyJSON
 		}
 	}
 
-	output := &types.StepOutput{
-		"status":      resp.Status,
-		"status_code": resp.StatusCode,
-		"headers":     headers,
-		"body":        string(body),
-		"body_json":   bodyJSON,
-		"started_at":  start,
-		"finished_at": finish,
-	}
-
-	return output, nil
+	return &output, nil
 }
