@@ -9,11 +9,13 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser"
 )
 
 type PipelinePlanned EventHandler
@@ -148,6 +150,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		evalContext := hcl.EvalContext{
 			Variables: ex.ExecutionVariables,
+			Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
 		}
 
 		stepInputs, err := stepDefn.GetInputs(&evalContext)

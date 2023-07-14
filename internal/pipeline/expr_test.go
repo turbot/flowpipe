@@ -13,16 +13,17 @@ import (
 func TestExpression(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/expressions")
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
 	assert.Nil(err, "error found")
 
-	assert.Equal(len(pipelines), 1, "wrong number of pipelines")
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["text_expr"] == nil {
+		assert.Fail("text_expr pipeline not found")
+	}
 
 	var output string
 	expr := pipelines["text_expr"].Steps[1].GetUnresolvedAttributes()["text"]
-
-	// ctyVal := cty.StringVal("hello")
-	// fooVal := cty.StringVal("foo")
 
 	objectVal := cty.ObjectVal(map[string]cty.Value{
 		"text": cty.ObjectVal(map[string]cty.Value{
@@ -34,14 +35,39 @@ func TestExpression(t *testing.T) {
 	evalContext := &hcl.EvalContext{}
 	evalContext.Variables = map[string]cty.Value{}
 	evalContext.Variables["step"] = objectVal
-	// evalContext.Variables["step"] = fooVal
 
 	diag := gohcl.DecodeExpression(expr, evalContext, &output)
 	if diag.HasErrors() {
-		t.Fatal(diag)
+		assert.Fail("error decoding expression")
+	}
+}
+
+func TestExprFunc(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	assert.Nil(err, "error found")
+
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["expr_func"] == nil {
+		assert.Fail("expr_func pipeline not found")
 	}
 
-	if len(pipelines) > 0 {
-		assert.NotNil(pipelines["text_expr"], "pipeline not found")
+	pipelineHcl := pipelines["expr_func"]
+	step := pipelineHcl.GetStep("text.text_title")
+	if step == nil {
+		assert.Fail("text.text_title step not found")
 	}
+
+	stepInputs, err := step.GetInputs(nil)
+	assert.Nil(err, "error found")
+	assert.GreaterOrEqual(len(stepInputs), 1, "wrong number of inputs")
+
+	textInput := stepInputs["text"]
+	assert.NotNil(textInput, "text input not found")
+
+	// test the title function is working as expected
+	assert.Equal("Hello World", textInput, "wrong input format")
+	assert.NotEqual("hello world", textInput, "wrong input format")
 }

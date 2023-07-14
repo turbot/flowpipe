@@ -11,3 +11,9 @@ pipeline "text_expr" {
         text = "bar ${step.text.text_2.text} baz ${step.text.text_1.text}"
     }
 }
+
+pipeline "expr_func" {
+    step "text" "text_title" {
+        text = title("Hello World")
+    }
+}

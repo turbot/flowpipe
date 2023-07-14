@@ -3,7 +3,6 @@ package pipeline
 import (
 	"context"
 	"fmt"
-	"log"
 	"path"
 
 	"github.com/hashicorp/hcl/v2"
@@ -106,7 +105,7 @@ func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.PipelineH
 		// if there are no unresolved blocks, we are done
 		unresolvedBlocks := len(parseCtx.UnresolvedBlocks)
 		if unresolvedBlocks == 0 {
-			log.Printf("[TRACE] parse complete after %d decode passes", attempts+1)
+			// log.Printf("[TRACE] parse complete after %d decode passes", attempts+1)
 			break
 		}
 		// if the number of unresolved blocks has NOT reduced, fail
@@ -231,7 +230,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				return nil, res
 			}
 
-			diags = step.SetAttributes(stepOptions.Attributes)
+			diags = step.SetAttributes(stepOptions.Attributes, &parseCtx.ParseContext)
 			if len(diags) > 0 {
 				res.HandleDecodeDiags(diags)
 				return nil, res
@@ -502,13 +501,8 @@ type PipelineParseContext struct {
 }
 
 func (c *PipelineParseContext) buildEvalContext() {
-	// rebuild the eval context
-	// build a map with a single key - workspace
-	vars := map[string]cty.Value{
-		"pipeline": cty.ObjectVal(c.valueMap),
-	}
+	vars := map[string]cty.Value{}
 	c.ParseContext.BuildEvalContext(vars)
-
 }
 
 // AddResource stores this resource as a variable to be added to the eval context. It alse
