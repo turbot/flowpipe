@@ -10,6 +10,8 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+// TODO: * Implicit depends test
+
 func TestExpression(t *testing.T) {
 	assert := assert.New(t)
 
@@ -20,6 +22,7 @@ func TestExpression(t *testing.T) {
 
 	if pipelines["text_expr"] == nil {
 		assert.Fail("text_expr pipeline not found")
+		return
 	}
 
 	var output string
@@ -39,6 +42,7 @@ func TestExpression(t *testing.T) {
 	diag := gohcl.DecodeExpression(expr, evalContext, &output)
 	if diag.HasErrors() {
 		assert.Fail("error decoding expression")
+		return
 	}
 }
 
@@ -52,12 +56,14 @@ func TestExprFunc(t *testing.T) {
 
 	if pipelines["expr_func"] == nil {
 		assert.Fail("expr_func pipeline not found")
+		return
 	}
 
 	pipelineHcl := pipelines["expr_func"]
 	step := pipelineHcl.GetStep("text.text_title")
 	if step == nil {
 		assert.Fail("text.text_title step not found")
+		return
 	}
 
 	stepInputs, err := step.GetInputs(nil)
@@ -70,4 +76,72 @@ func TestExprFunc(t *testing.T) {
 	// test the title function is working as expected
 	assert.Equal("Hello World", textInput, "wrong input format")
 	assert.NotEqual("hello world", textInput, "wrong input format")
+}
+
+func TestExprWithinVariable(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	assert.Nil(err, "error found")
+
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["expr_within_text"] == nil {
+		assert.Fail("expr_func pipeline not found")
+	}
+
+	pipelineHcl := pipelines["expr_within_text"]
+	step := pipelineHcl.GetStep("text.text_title")
+	if step == nil {
+		assert.Fail("text.text_title step not found")
+	}
+
+	// There's no unresolved variable, the function is just ${title("world")}
+	assert.True(step.IsResolved(), "step should be resolved")
+
+	stepInputs, err := step.GetInputs(nil)
+	assert.Nil(err, "error found")
+	assert.GreaterOrEqual(len(stepInputs), 1, "wrong number of inputs")
+
+	textInput := stepInputs["text"]
+	assert.NotNil(textInput, "text input not found")
+
+	// test the title function is working as expected
+	assert.Equal("Hello World", textInput, "wrong input format")
+	assert.NotEqual("hello world", textInput, "wrong input format")
+}
+
+func TestExprDependAndFunction(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	assert.Nil(err, "error found")
+
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["expr_depend_and_function"] == nil {
+		assert.Fail("expr_depend_and_function pipeline not found")
+	}
+
+	pipelineHcl := pipelines["expr_depend_and_function"]
+	stepOne := pipelineHcl.GetStep("text.text_1")
+	if stepOne == nil {
+		assert.Fail("text.text_1 step not found")
+	}
+
+	assert.True(stepOne.IsResolved(), "step should be resolved")
+
+	stepTwo := pipelineHcl.GetStep("text.text_2")
+	if stepTwo == nil {
+		assert.Fail("text.text_1 step not found")
+	}
+
+	assert.False(stepTwo.IsResolved(), "step 2 should NOT be resolved")
+
+	stepThree := pipelineHcl.GetStep("text.text_3")
+	if stepThree == nil {
+		assert.Fail("text.text_3 step not found")
+	}
+
+	assert.False(stepThree.IsResolved(), "step 2 should NOT be resolved")
 }
