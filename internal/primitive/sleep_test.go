@@ -23,9 +23,9 @@ func TestSleepOK(t *testing.T) {
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
 
-	starTime := output.Get("started_at").(time.Time)
+	startTime := output.Get("started_at").(time.Time)
 	finishTime := output.Get("finished_at").(time.Time)
-	diff := finishTime.Sub(starTime)
+	diff := finishTime.Sub(startTime)
 	assert.Equal(float64(5), math.Floor(diff.Seconds()), "output does not match the provided duration")
 }
 
