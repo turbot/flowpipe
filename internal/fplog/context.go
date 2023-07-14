@@ -22,7 +22,7 @@ func ContextWithLogger(ctx context.Context) context.Context {
 	}
 
 	// Golang context is a parent-child relationship. When we "add" a value in a context, we actually
-	// create a new context with a pointer to the parent contet. When we do a ctx.Value() the code traverses the
+	// create a new context with a pointer to the parent context. When we do a ctx.Value() the code traverses the
 	// parent-child relationship up. We always pass the context at the bottom of the relationship.
 	return context.WithValue(ctx, loggerContextKey{}, lgr)
 }
@@ -35,7 +35,7 @@ func Logger(ctx context.Context) *FlowpipeLogger {
 		return ctx.Value(loggerContextKey{}).(*FlowpipeLogger)
 	}
 
-	// if it's a gin context we store the logger in the "fplooger" key
+	// if it's a gin context we store the logger in the "fplogger" key
 	logger, exists := ginContext.Get("fplogger")
 	if !exists {
 		return nil

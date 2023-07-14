@@ -8,6 +8,8 @@ run:
     - pipeparser/copy
     - pipeparser/addrs
     - pipeparser/tfdiags
+    - pipeparser/ipaddr
+    - pipeparser/lang
 
 linters:
   enable:

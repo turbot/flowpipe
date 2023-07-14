@@ -328,7 +328,7 @@ type IPipelineHclStep interface {
 	AppendDependsOn(...string)
 	GetFor() string
 	GetError() *PipelineStepError
-	SetAttributes(hcl.Attributes) hcl.Diagnostics
+	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
 }
 
 type PipelineHclStepBase struct {
@@ -529,7 +529,7 @@ func (p *PipelineHclStepHttp) GetError() *PipelineStepError {
 	return nil
 }
 
-func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
@@ -540,7 +540,7 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					val, err := attr.Expr.Value(nil)
+					val, err := attr.Expr.Value(parseContext.EvalCtx)
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
@@ -595,7 +595,7 @@ func (p *PipelineHclStepSleep) GetError() *PipelineStepError {
 	return nil
 }
 
-func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
@@ -607,7 +607,7 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					val, err := expr.Value(nil)
+					val, err := expr.Value(parseContext.EvalCtx)
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
@@ -652,7 +652,7 @@ func (p *PipelineHclStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[stri
 	}, nil
 }
 
-func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
@@ -664,7 +664,7 @@ func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes) hcl.D
 					dependsOnFromExpressions(name, expr, p)
 				} else {
 
-					val, err := attr.Expr.Value(nil)
+					val, err := attr.Expr.Value(parseContext.EvalCtx)
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
@@ -734,7 +734,7 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineHclSt
 	p.AddUnresolvedAttribute(name, expr)
 }
 
-func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
@@ -746,11 +746,11 @@ func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes) hcl.Di
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					val, err := expr.Value(nil)
+					val, err := expr.Value(parseContext.EvalCtx)
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
-							Summary:  "Unable to parse duration attribute",
+							Summary:  "Unable to parse text attribute",
 							Subject:  &attr.Range,
 						})
 						continue
