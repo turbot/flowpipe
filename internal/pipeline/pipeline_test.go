@@ -305,3 +305,45 @@ func TestMarshallUnmarshal(t *testing.T) {
 		}
 	}
 }
+
+func TestEchoListText(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/simple_text.fp")
+	assert.Nil(err, "error found")
+
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["simple_list"] == nil {
+		assert.Fail("simple_list pipeline not found")
+		return
+	}
+
+	pipelineHcl := pipelines["simple_list"]
+	step := pipelineHcl.GetStep("echo.text_1")
+	if step == nil {
+		assert.Fail("echo.text_1 step not found")
+		return
+	}
+	stepInputs, err := step.GetInputs(nil)
+	assert.Nil(err, "error found")
+
+	stepInputsList, ok := stepInputs["list_text"].([]string)
+	if !ok {
+		assert.Fail("list_text input not found")
+	}
+	assert.Equal(stepInputsList[0], "foo", "wrong input format")
+	assert.Equal(stepInputsList[1], "bar", "wrong input format")
+	assert.Equal(stepInputsList[2], "baz", "wrong input format")
+
+	// stepInputs, err := step.GetInputs(nil)
+	// assert.Nil(err, "error found")
+	// assert.GreaterOrEqual(len(stepInputs), 1, "wrong number of inputs")
+
+	// textInput := stepInputs["text"]
+	// assert.NotNil(textInput, "text input not found")
+
+	// // test the title function is working as expected
+	// assert.Equal("Hello World", textInput, "wrong input format")
+	// assert.NotEqual("hello world", textInput, "wrong input format")
+}

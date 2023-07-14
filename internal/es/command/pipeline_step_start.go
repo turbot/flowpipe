@@ -79,8 +79,8 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			p := primitive.Sleep{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		// TODO: remove this debug primitive (?)
-		case "text":
-			p := primitive.Text{}
+		case configschema.BlockTypePipelineStepEcho:
+			p := primitive.Echo{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			logger.Error("Unknown step type", "type", stepDefn.GetType())

@@ -29,13 +29,13 @@ pipeline "implicit_depends_text" {
         url = "http://api.open-notify.org/astros.json"
     }
 
-    step "text" "my_text" {
+    step "echo" "my_text" {
         text = "5"
     }
 
     step "sleep" "sleep_1" {
-        description = "bar ${step.text.my_text.output} baz"
-        duration = foo("${step.text.my_text.output}m")
+        description = "bar ${step.echo.my_text.output} baz"
+        duration = foo("${step.echo.my_text.output}m")
     }
 
     step "baz" "my_baz" {

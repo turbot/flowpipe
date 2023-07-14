@@ -45,6 +45,52 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 			variables[key] = cty.NumberFloatVal(v)
 		case bool:
 			variables[key] = cty.BoolVal(v)
+		case []string:
+			stringValues, ok := value.([]string)
+			if !ok {
+				// should never happen
+				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []string. Should never happen")
+			}
+
+			var vals []cty.Value
+			for _, v := range stringValues {
+				vals = append(vals, cty.StringVal(v))
+			}
+			variables[key] = cty.ListVal(vals)
+		case []int:
+			intValues, ok := value.([]int)
+			if !ok {
+				// should never happen
+				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []int. Should never happen")
+			}
+			var vals []cty.Value
+			for _, v := range intValues {
+				vals = append(vals, cty.NumberIntVal(int64(v)))
+			}
+			variables[key] = cty.ListVal(vals)
+		case []float64:
+			floatValues, ok := value.([]float64)
+			if !ok {
+				// should never happen
+				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []float64. Should never happen")
+			}
+			var vals []cty.Value
+			for _, v := range floatValues {
+				vals = append(vals, cty.NumberFloatVal(v))
+			}
+			variables[key] = cty.ListVal(vals)
+		case []bool:
+			boolValues, ok := value.([]bool)
+			if !ok {
+				// should never happen
+				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []bool. Should never happen")
+			}
+			var vals []cty.Value
+			for _, v := range boolValues {
+				vals = append(vals, cty.BoolVal(v))
+			}
+			variables[key] = cty.ListVal(vals)
+
 			// TODO: warning?
 			// default:
 			// 	return cty.NilVal, fperr.InternalWithMessage("unsupported type for variable: " + key)
@@ -84,8 +130,8 @@ func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 		s := &PipelineHclStepEmail{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
-	case configschema.BlockTypePipelineStepText:
-		s := &PipelineHclStepText{}
+	case configschema.BlockTypePipelineStepEcho:
+		s := &PipelineHclStepEcho{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
 	default:
@@ -471,33 +517,45 @@ func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes, parse
 	return diags
 }
 
-type PipelineHclStepText struct {
+type PipelineHclStepEcho struct {
 	PipelineHclStepBase
-	Text string `json:"text"`
+	Text     string   `json:"text"`
+	ListText []string `json:"list_text"`
 }
 
-func (p *PipelineHclStepText) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+func (p *PipelineHclStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	var textInput string
+	var listTextInput []string
 
-	if p.UnresolvedAttributes["text"] == nil {
+	if p.UnresolvedAttributes[configschema.AttributeTypeText] == nil {
 		textInput = p.Text
 	} else {
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes["text"], evalContext, &textInput)
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[configschema.AttributeTypeText], evalContext, &textInput)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError("step", diags)
+		}
+	}
+
+	if p.UnresolvedAttributes["list_text"] == nil {
+		listTextInput = p.ListText
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes["list_text"], evalContext, &listTextInput)
 		if diags.HasErrors() {
 			return nil, pipeparser.DiagsToError("step", diags)
 		}
 	}
 
 	return map[string]interface{}{
-		"text": textInput,
+		configschema.AttributeTypeText: textInput,
+		"list_text":                    listTextInput,
 	}, nil
 }
 
-func (p *PipelineHclStepText) GetFor() string {
+func (p *PipelineHclStepEcho) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepText) GetError() *PipelineStepError {
+func (p *PipelineHclStepEcho) GetError() *PipelineStepError {
 	return nil
 }
 
@@ -518,13 +576,13 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineHclSt
 	p.AddUnresolvedAttribute(name, expr)
 }
 
-func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineHclStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case "text":
+		case configschema.AttributeTypeText:
 			if attr.Expr != nil {
 				expr := attr.Expr
 				if len(expr.Variables()) > 0 {
@@ -534,7 +592,7 @@ func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes, parseC
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
-							Summary:  "Unable to parse text attribute",
+							Summary:  "Unable to parse " + configschema.AttributeTypeText + " attribute",
 							Subject:  &attr.Range,
 						})
 						continue
@@ -543,11 +601,31 @@ func (p *PipelineHclStepText) SetAttributes(hclAttributes hcl.Attributes, parseC
 					p.Text = val.AsString()
 				}
 			}
+		case "list_text":
+			if attr.Expr != nil {
+				expr := attr.Expr
+				val, err := expr.Value(parseContext.EvalCtx)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + "liext_text" + " attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valueSlice := val.AsValueSlice()
+				var stringSlice []string
+				for _, v := range valueSlice {
+					stringSlice = append(stringSlice, v.AsString())
+				}
+				p.ListText = stringSlice
+			}
 		default:
 			if !p.IsBaseAttributes(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
-					Summary:  "Unsupported attribute for Text Step: " + attr.Name,
+					Summary:  "Unsupported attribute for Echo Step: " + attr.Name,
 					Subject:  &attr.Range,
 				})
 			}
