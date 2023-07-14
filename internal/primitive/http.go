@@ -47,14 +47,14 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	resp, err := http.Get(input["url"].(string))
 	finish := time.Now().UTC()
 	if err != nil {
-		logger.Error("error making request #1", "error", err, "resp", resp)
-		if resp != nil {
-			return nil, fperr.FromHttpError(err, resp.StatusCode)
-		}
+		logger.Error("error making request", "error", err, "response", resp)
 		return nil, err
 	}
-
-	defer resp.Body.Close()
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -96,8 +96,6 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 
 	// Process the response body only if the status code is 200
 	if resp != nil && resp.StatusCode == http.StatusOK {
-		logger.Error("error making request #2", "error", err, "resp.StatusCode", resp.StatusCode, "resp.Status", resp.Status)
-
 		// The unmarshalling is only done if the content type is JSON,
 		// otherwise the unmashalling will fail.
 		// Hence, the body_json field will only be populated if the content type is JSON.
