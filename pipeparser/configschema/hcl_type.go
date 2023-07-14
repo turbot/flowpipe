@@ -48,6 +48,8 @@ const (
 	AttributeTypeDuration    = "duration"
 	AttributeTypeTo          = "to"
 	AttributeTypeDependsOn   = "depends_on"
+	AttributeTypeForEach     = "for_each"
+	AttributeTypeText        = "text"
 
 	LabelName = "name"
 	LabelType = "type"
@@ -55,7 +57,7 @@ const (
 	BlockTypePipelineStepHttp  = "http"
 	BlockTypePipelineStepSleep = "sleep"
 	BlockTypePipelineStepEmail = "email"
-	BlockTypePipelineStepText  = "text"
+	BlockTypePipelineStepEcho  = "text"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider

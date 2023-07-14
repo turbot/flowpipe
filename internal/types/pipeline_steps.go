@@ -84,7 +84,7 @@ func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 		s := &PipelineHclStepEmail{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
-	case configschema.BlockTypePipelineStepText:
+	case configschema.BlockTypePipelineStepEcho:
 		s := &PipelineHclStepText{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s

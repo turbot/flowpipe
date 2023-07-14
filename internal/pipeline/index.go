@@ -387,98 +387,6 @@ func handlePipelineDecodeResult(resource *types.PipelineHcl, res *pipeparser.Dec
 	}
 }
 
-var PipelineBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     configschema.AttributeTypeDescription,
-			Required: false,
-		},
-	},
-	Blocks: []hcl.BlockHeaderSchema{
-		{
-			Type:       configschema.BlockTypePipeline,
-			LabelNames: []string{configschema.LabelName},
-		},
-		{
-			Type:       configschema.BlockTypePipelineStep,
-			LabelNames: []string{configschema.LabelType, configschema.LabelName},
-		},
-		{
-			Type:       configschema.BlockTypePipelineOutput,
-			LabelNames: []string{configschema.LabelName},
-		},
-	},
-}
-
-var PipelineOutputBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name: "description",
-		},
-		{
-			Name:     "value",
-			Required: true,
-		},
-		{
-			Name: "depends_on",
-		},
-		{
-			Name: "sensitive",
-		},
-	},
-	Blocks: []hcl.BlockHeaderSchema{
-		{Type: "precondition"},
-		{Type: "postcondition"},
-	},
-}
-
-var PipelineStepHttpBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     configschema.AttributeTypeUrl,
-			Required: true,
-		},
-		{
-			Name: configschema.AttributeTypeDependsOn,
-		},
-	},
-}
-
-var PipelineStepSleepBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     configschema.AttributeTypeDuration,
-			Required: true,
-		},
-		{
-			Name: configschema.AttributeTypeDependsOn,
-		},
-	},
-}
-var PipelineStepEmailBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     configschema.AttributeTypeTo,
-			Required: true,
-		},
-		{
-			Name: configschema.AttributeTypeDependsOn,
-		},
-	},
-}
-
-var PipelineStepTextBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     "text",
-			Required: true,
-		},
-		{
-			Name: configschema.AttributeTypeDependsOn,
-		},
-	},
-}
-
 func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 	switch stepType {
 	case configschema.BlockTypePipelineStepHttp:
@@ -487,7 +395,7 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 		return PipelineStepSleepBlockSchema
 	case configschema.BlockTypePipelineStepEmail:
 		return PipelineStepEmailBlockSchema
-	case configschema.BlockTypePipelineStepText:
+	case configschema.BlockTypePipelineStepEcho:
 		return PipelineStepTextBlockSchema
 	default:
 		return nil
