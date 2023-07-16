@@ -27,10 +27,10 @@ func ToError(val interface{}) error {
 	}
 }
 
-func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[string]*types.PipelineHcl, err error) {
+func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[string]*types.Pipeline, err error) {
 
 	// create profile map to populate
-	pipelineMap = map[string]*types.PipelineHcl{}
+	pipelineMap = map[string]*types.Pipeline{}
 
 	// check whether sourcePath is a glob with a root location which exists in the file system
 	localSourcePath, globPattern, err := filehelpers.GlobRoot(pipelinePath)
@@ -92,7 +92,7 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	return pipelines, nil
 }
 
-func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.PipelineHcl, error) {
+func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.Pipeline, error) {
 	// we may need to decode more than once as we gather dependencies as we go
 	// continue decoding as long as the number of unresolved blocks decreases
 	prevUnresolvedBlocks := 0
@@ -121,8 +121,8 @@ func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.PipelineH
 
 }
 
-func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.PipelineHcl, hcl.Diagnostics) {
-	profileMap := map[string]*types.PipelineHcl{}
+func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipeline, hcl.Diagnostics) {
+	profileMap := map[string]*types.Pipeline{}
 
 	var diags hcl.Diagnostics
 	blocksToDecode, err := parseCtx.BlocksToDecode()
@@ -158,7 +158,7 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipel
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.PipelineHcl, *pipeparser.DecodeResult) {
+func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pipeline, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
 	// get shell pipelineHcl
 	pipelineHcl := types.NewPipelineHcl(block)
@@ -271,7 +271,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 	return pipelineHcl, res
 }
 
-func validatePipelineDependencies(pipelineHcl *types.PipelineHcl) hcl.Diagnostics {
+func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	var stepRegisters []string
@@ -367,7 +367,7 @@ func decodeOutputBlock(block *hcl.Block, override bool) (*types.Output, hcl.Diag
 	return o, diags
 }
 
-func handlePipelineDecodeResult(resource *types.PipelineHcl, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
+func handlePipelineDecodeResult(resource *types.Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
@@ -404,7 +404,7 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 
 type PipelineParseContext struct {
 	pipeparser.ParseContext
-	PipelineHcls map[string]*types.PipelineHcl
+	PipelineHcls map[string]*types.Pipeline
 	valueMap     map[string]cty.Value
 }
 
@@ -414,7 +414,7 @@ func (c *PipelineParseContext) buildEvalContext() {
 }
 
 // AddResource stores this resource as a variable to be added to the eval context. It alse
-func (c *PipelineParseContext) AddResource(pipelineHcl *types.PipelineHcl) hcl.Diagnostics {
+func (c *PipelineParseContext) AddResource(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 	ctyVal, err := pipelineHcl.CtyValue()
 	if err != nil {
 		return hcl.Diagnostics{&hcl.Diagnostic{
@@ -444,7 +444,7 @@ func NewPipelineParseContext(rootEvalPath string) *PipelineParseContext {
 	//parseContext.BlockTypes = []string{modconfig.BlockTypeWorkspaceProfile}
 	c := &PipelineParseContext{
 		ParseContext: parseContext,
-		PipelineHcls: make(map[string]*types.PipelineHcl),
+		PipelineHcls: make(map[string]*types.Pipeline),
 		valueMap:     make(map[string]cty.Value),
 	}
 

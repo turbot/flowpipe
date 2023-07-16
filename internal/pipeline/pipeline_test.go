@@ -256,7 +256,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 		data, err := json.Marshal(pipelines[pipeline])
 		assert.Nil(err, "error found, can't marshall")
 
-		var p types.PipelineHcl
+		var p types.Pipeline
 		err = json.Unmarshal(data, &p)
 		assert.Nil(err, "error found, can't unmarshall")
 

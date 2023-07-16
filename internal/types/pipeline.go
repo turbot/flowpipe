@@ -17,8 +17,8 @@ import (
 
 // This type is used by the API to return a list of pipelines.
 type ListPipelineResponse struct {
-	Items     []PipelineHcl `json:"items"`
-	NextToken *string       `json:"next_token,omitempty"`
+	Items     []Pipeline `json:"items"`
+	NextToken *string    `json:"next_token,omitempty"`
 }
 
 type RunPipelineResponse struct {
@@ -31,13 +31,14 @@ type CmdPipeline struct {
 	Command string `json:"command" binding:"required,oneof=run"`
 }
 
-func NewPipelineHcl(block *hcl.Block) *PipelineHcl {
-	return &PipelineHcl{
+func NewPipelineHcl(block *hcl.Block) *Pipeline {
+	return &Pipeline{
 		Name: block.Labels[0],
 	}
 }
 
-type PipelineHcl struct {
+// Pipeline represents a "pipeline" block in an flowpipe HCL (*.fp) file
+type Pipeline struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
 	Output      *string `json:"output,omitempty"`
@@ -48,7 +49,7 @@ type PipelineHcl struct {
 	// Unparsed JSON raw message, needed so we can unmarshall the step JSON into the correct struct
 	StepsRawJson json.RawMessage `json:"-"`
 
-	Steps []IPipelineHclStep `json:"steps"`
+	Steps []IPipelineStep `json:"steps"`
 
 	HclOutputs []*Output
 }
@@ -70,7 +71,7 @@ type Output struct {
 	DeclRange hcl.Range
 }
 
-func (p *PipelineHcl) GetStep(stepFullyQualifiedName string) IPipelineHclStep {
+func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
 	for i := 0; i < len(p.Steps); i++ {
 		if p.Steps[i].GetFullyQualifiedName() == stepFullyQualifiedName {
 			return p.Steps[i]
@@ -79,13 +80,13 @@ func (p *PipelineHcl) GetStep(stepFullyQualifiedName string) IPipelineHclStep {
 	return nil
 }
 
-func (p *PipelineHcl) CtyValue() (cty.Value, error) {
+func (p *Pipeline) CtyValue() (cty.Value, error) {
 	return pipeparser.GetCtyValue(p)
 }
 
 // SetOptions sets the options on the connection
 // verify the options object is a valid options type (only options.Connection currently supported)
-func (p *PipelineHcl) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {
+func (p *Pipeline) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {
 
 	var diags hcl.Diagnostics
 	switch o := opts.(type) {
@@ -114,16 +115,16 @@ func (p *PipelineHcl) SetOptions(opts options.Options, block *hcl.Block) hcl.Dia
 	return diags
 }
 
-func (p *PipelineHcl) OnDecoded() hcl.Diagnostics {
+func (p *Pipeline) OnDecoded() hcl.Diagnostics {
 	p.setBaseProperties()
 	return nil
 }
 
-func (p *PipelineHcl) setBaseProperties() {
+func (p *Pipeline) setBaseProperties() {
 
 }
 
-func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
+func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 	// Define an auxiliary type to decode the JSON and capture the value of the 'ISteps' field
 	type Aux struct {
 		Name        string          `json:"name"`
@@ -164,25 +165,25 @@ func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 
 			switch stepType.StepType {
 			case configschema.BlockTypePipelineStepHttp:
-				var step PipelineHclStepHttp
+				var step PipelineStepHttp
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
 			case configschema.BlockTypePipelineStepSleep:
-				var step PipelineHclStepSleep
+				var step PipelineStepSleep
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
 			case configschema.BlockTypePipelineStepEmail:
-				var step PipelineHclStepEmail
+				var step PipelineStepEmail
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
 			case configschema.BlockTypePipelineStepEcho:
-				var step PipelineHclStepEcho
+				var step PipelineStepEcho
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
@@ -197,7 +198,7 @@ func (ph *PipelineHcl) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (p *PipelineHcl) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	for name, attr := range hclAttributes {

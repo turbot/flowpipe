@@ -627,7 +627,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	return panels, nil
 }
 
-func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineHclStep, se *StepExecution) SnapshotPanelDataRow {
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineStep, se *StepExecution) SnapshotPanelDataRow {
 
 	var row SnapshotPanelDataRow
 
