@@ -19,6 +19,13 @@ jobs:
         # with:
         #   path: flowpipe
       
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
+      
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
