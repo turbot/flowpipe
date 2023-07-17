@@ -125,22 +125,22 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 // has a ForTemplate then the result is an array of outputs.
 func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string]interface{}, error) {
 	outputs := map[string]interface{}{}
-	for stepExecutionID, se := range ex.StepExecutions {
+	for _, se := range ex.StepExecutions {
 		if se.PipelineExecutionID != pipelineExecutionID {
 			continue
 		}
-		sd, err := ex.StepDefinition(stepExecutionID)
-		if err != nil {
-			return nil, err
+		// sd, err := ex.StepDefinition(stepExecutionID)
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// if sd.GetFor() == "" {
+		// 	outputs[se.Name] = se.Output
+		// } else {
+		if _, ok := outputs[se.Name]; !ok {
+			outputs[se.Name] = []interface{}{}
 		}
-		if sd.GetFor() == "" {
-			outputs[se.Name] = se.Output
-		} else {
-			if _, ok := outputs[se.Name]; !ok {
-				outputs[se.Name] = []interface{}{}
-			}
-			outputs[se.Name] = append(outputs[se.Name].([]interface{}), se.Output)
-		}
+		outputs[se.Name] = append(outputs[se.Name].([]interface{}), se.Output)
+		// }
 	}
 	return outputs, nil
 }

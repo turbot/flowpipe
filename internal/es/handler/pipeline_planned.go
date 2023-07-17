@@ -1,11 +1,7 @@
 package handler
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"html/template"
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
@@ -90,54 +86,47 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// PRE: The planner has told us what steps to run next, our job is to start them
 	for _, nextStep := range e.NextSteps {
 
-		// logger.Info("[8] pipeline planned event handler #2", "executionID", e.Event.ExecutionID, "stepName", stepName)
-
-		data, err := ex.PipelineData(e.PipelineExecutionID)
+		// data, err := ex.PipelineData(e.PipelineExecutionID)
+		_, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
-		// logger.Info("[8] pipeline planned event handler #3")
 
 		var forInputs reflect.Value
-		var forInputsType string
+		// var forInputsType string
 
-		// logger.Info("[8] pipeline planned event handler #4")
 		stepDefn := defn.GetStep(nextStep.StepName)
 
-		if stepDefn.GetFor() != "" {
-			// logger.Info("[8] pipeline planned event handler #5", "for", stepDefn.GetFor())
-
-			// Use go template with the step outputs to generate the items
-			t, err := template.New("for").Parse(stepDefn.GetFor())
-			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-			}
-			var itemsBuffer bytes.Buffer
-			err = t.Execute(&itemsBuffer, data)
-			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-			}
-			var rawForInputs interface{}
-			err = json.Unmarshal(itemsBuffer.Bytes(), &rawForInputs)
-			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-			}
-			switch reflect.TypeOf(rawForInputs).Kind() {
-			case reflect.Map:
-				forInputsType = "map"
-				forInputs = reflect.ValueOf(rawForInputs)
-			case reflect.Slice:
-				forInputsType = "slice"
-				forInputs = reflect.ValueOf(rawForInputs)
-			}
-			if forInputs.Len() == 0 {
-				// A for loop was defined, but it returned no items, so we can
-				// skip this step
-				return nil
-			}
-		}
-
-		// logger.Info("[8] pipeline planned event handler #6")
+		// if stepDefn.GetFor() != "" {
+		// 	// Use go template with the step outputs to generate the items
+		// 	t, err := template.New("for").Parse(stepDefn.GetFor())
+		// 	if err != nil {
+		// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		// 	}
+		// 	var itemsBuffer bytes.Buffer
+		// 	err = t.Execute(&itemsBuffer, data)
+		// 	if err != nil {
+		// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		// 	}
+		// 	var rawForInputs interface{}
+		// 	err = json.Unmarshal(itemsBuffer.Bytes(), &rawForInputs)
+		// 	if err != nil {
+		// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		// 	}
+		// 	switch reflect.TypeOf(rawForInputs).Kind() {
+		// 	case reflect.Map:
+		// 		forInputsType = "map"
+		// 		forInputs = reflect.ValueOf(rawForInputs)
+		// 	case reflect.Slice:
+		// 		forInputsType = "slice"
+		// 		forInputs = reflect.ValueOf(rawForInputs)
+		// 	}
+		// 	if forInputs.Len() == 0 {
+		// 		// A for loop was defined, but it returned no items, so we can
+		// 		// skip this step
+		// 		return nil
+		// 	}
+		// }
 
 		// inputs will gather the input data for each step execution
 		inputs := []types.Input{}
@@ -146,13 +135,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// execution in the loop
 		forEaches := []*types.Input{}
 
-		// logger.Info("[8] pipeline planned event handler #7", "stepDefn", stepDefn)
-
 		evalContext := hcl.EvalContext{
 			Variables: ex.ExecutionVariables,
 			Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
 		}
 
+		// Get input needs the Eval Context to resolve references
 		stepInputs, err := stepDefn.GetInputs(&evalContext)
 		if err != nil {
 			logger.Error("Error resolving step inputs", "error", err)
@@ -179,12 +167,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 			}
 
-			// logger.Info("[8] pipeline planned event handler #10")
-
 		} else {
 			// We have an input
 
-			// logger.Info("[8] pipeline planned event handler #11")
+			// TODO: remove this line after ForEach is implemented, it should be done as part of the for_each calculation
+			inputs = append(inputs, stepInputs)
+
 			// Parse the input template once
 
 			// TODO: parse the input?
@@ -195,76 +183,76 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			// TODO: should we check for foInputs.IsValid() here? It was causing a panic before
 			// TODO: when I didn't load the yaml file correctly
-			if stepDefn.GetFor() == "" {
-				// No for loop
+			// if stepDefn.GetFor() == "" {
+			// 	// No for loop
 
-				// TODO: parse the input for each step execution ... do we need to do it here?
+			// 	// TODO: parse the input for each step execution ... do we need to do it here?
 
-				// stepInputs, err := stepDefn.GetInputs(nil)
-				// if err != nil {
-				// 	return err
-				// }
-				inputs = append(inputs, stepInputs)
-				forEaches = append(forEaches, nil)
+			// 	// stepInputs, err := stepDefn.GetInputs(nil)
+			// 	// if err != nil {
+			// 	// 	return err
+			// 	// }
+			// 	inputs = append(inputs, stepInputs)
+			// 	forEaches = append(forEaches, nil)
 
-			} else {
+			// } else {
 
-				switch forInputsType {
-				case "map":
-					// Create a step for each input in forInputs
-					for _, key := range forInputs.MapKeys() {
-						// TODO - this updates the same map each time ... is that safe?
-						var dataWithEach = data
-						forEach := types.Input{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
-						dataWithEach["each"] = forEach
-						// TODO: implement for
-					}
+			// 	switch forInputsType {
+			// 	case "map":
+			// 		// Create a step for each input in forInputs
+			// 		for _, key := range forInputs.MapKeys() {
+			// 			// TODO - this updates the same map each time ... is that safe?
+			// 			var dataWithEach = data
+			// 			forEach := types.Input{"key": key.Interface(), "value": forInputs.MapIndex(key).Interface()}
+			// 			dataWithEach["each"] = forEach
+			// 			// TODO: implement for
+			// 		}
 
-					// var itemsBuffer bytes.Buffer
+			// 		// var itemsBuffer bytes.Buffer
 
-					// 	err = t.Execute(&itemsBuffer, dataWithEach)
-					// 	if err != nil {
-					// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-					// 	}
-					// 	var input types.Input
-					// 	err = json.Unmarshal(itemsBuffer.Bytes(), &input)
-					// 	if err != nil {
-					// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-					// 	}
-					// 	inputs = append(inputs, input)
-					// 	forEaches = append(forEaches, &forEach)
-					// }
+			// 		// 	err = t.Execute(&itemsBuffer, dataWithEach)
+			// 		// 	if err != nil {
+			// 		// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			// 		// 	}
+			// 		// 	var input types.Input
+			// 		// 	err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+			// 		// 	if err != nil {
+			// 		// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			// 		// 	}
+			// 		// 	inputs = append(inputs, input)
+			// 		// 	forEaches = append(forEaches, &forEach)
+			// 		// }
 
-				case "slice":
+			// 	case "slice":
 
-					// Create a step for each input in forInputs
-					for i := 0; i < forInputs.Len(); i++ {
-						// TODO - this updates the same map each time ... is that safe?
-						var dataWithEach = data
-						forEach := types.Input{"key": i, "value": forInputs.Index(i).Interface()}
-						dataWithEach["each"] = forEach
+			// 		// Create a step for each input in forInputs
+			// 		for i := 0; i < forInputs.Len(); i++ {
+			// 			// TODO - this updates the same map each time ... is that safe?
+			// 			var dataWithEach = data
+			// 			forEach := types.Input{"key": i, "value": forInputs.Index(i).Interface()}
+			// 			dataWithEach["each"] = forEach
 
-						// TODO: implement foreach
+			// 			// TODO: implement foreach
 
-						// var itemsBuffer bytes.Buffer
-						// err = t.Execute(&itemsBuffer, dataWithEach)
-						// if err != nil {
-						// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-						// }
-						// var input types.Input
-						// err = json.Unmarshal(itemsBuffer.Bytes(), &input)
-						// if err != nil {
-						// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-						// }
-						// inputs = append(inputs, input)
-						// forEaches = append(forEaches, &forEach)
-					}
+			// 			// var itemsBuffer bytes.Buffer
+			// 			// err = t.Execute(&itemsBuffer, dataWithEach)
+			// 			// if err != nil {
+			// 			// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			// 			// }
+			// 			// var input types.Input
+			// 			// err = json.Unmarshal(itemsBuffer.Bytes(), &input)
+			// 			// if err != nil {
+			// 			// 	return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			// 			// }
+			// 			// inputs = append(inputs, input)
+			// 			// forEaches = append(forEaches, &forEach)
+			// 		}
 
-				default:
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, fmt.Errorf("for loop must be a map or slice"))))
+			// 	default:
+			// 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, fmt.Errorf("for loop must be a map or slice"))))
 
-				}
-			}
+			// 	}
+			// }
 
 		}
 

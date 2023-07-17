@@ -14,7 +14,7 @@ var PipelineBlockSchema = &hcl.BodySchema{
 	},
 	Blocks: []hcl.BlockHeaderSchema{
 		{
-			Type:       schema.BlockTypeVariable,
+			Type:       schema.BlockTypeParam,
 			LabelNames: []string{schema.LabelName},
 		},
 		{

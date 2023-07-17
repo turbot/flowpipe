@@ -34,7 +34,8 @@ type CmdPipeline struct {
 
 func NewPipelineHcl(block *hcl.Block) *Pipeline {
 	return &Pipeline{
-		Name: block.Labels[0],
+		Name:   block.Labels[0],
+		Params: map[string]*configs.Variable{},
 	}
 }
 
@@ -54,7 +55,7 @@ type Pipeline struct {
 
 	HclOutputs []*configs.Output
 
-	Variables map[string]*configs.Variable
+	Params map[string]*configs.Variable
 }
 
 func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {

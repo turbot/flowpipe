@@ -157,7 +157,6 @@ type IPipelineStep interface {
 	GetInputs(*hcl.EvalContext) (map[string]interface{}, error)
 	GetDependsOn() []string
 	AppendDependsOn(...string)
-	GetFor() string
 	GetForEach() hcl.Expression
 	GetError() *PipelineStepError
 	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
@@ -365,10 +364,6 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	}, nil
 }
 
-func (p *PipelineStepHttp) GetFor() string {
-	return ""
-}
-
 func (p *PipelineStepHttp) GetError() *PipelineStepError {
 	return nil
 }
@@ -431,10 +426,6 @@ func (p *PipelineStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	}, nil
 }
 
-func (p *PipelineStepSleep) GetFor() string {
-	return ""
-}
-
 func (p *PipelineStepSleep) GetError() *PipelineStepError {
 	return nil
 }
@@ -480,10 +471,6 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseCon
 type PipelineStepEmail struct {
 	PipelineStepBase
 	To string `json:"to"`
-}
-
-func (p *PipelineStepEmail) GetFor() string {
-	return ""
 }
 
 func (p *PipelineStepEmail) GetError() *PipelineStepError {
@@ -563,10 +550,6 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		schema.AttributeTypeText: textInput,
 		"list_text":              listTextInput,
 	}, nil
-}
-
-func (p *PipelineStepEcho) GetFor() string {
-	return ""
 }
 
 func (p *PipelineStepEcho) GetError() *PipelineStepError {

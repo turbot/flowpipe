@@ -56,7 +56,7 @@ func TestSimpleForAndParam(t *testing.T) {
 
 	evalContext := &hcl.EvalContext{}
 	evalContext.Variables = map[string]cty.Value{}
-	evalContext.Variables["var"] = objectVal
+	evalContext.Variables["param"] = objectVal
 
 	var output []string
 
@@ -72,4 +72,24 @@ func TestSimpleForAndParam(t *testing.T) {
 	}
 
 	assert.Equal("foo bar", strings.Join(output, " "), "wrong output")
+
+	textAttribute := step.GetUnresolvedAttributes()["text"]
+	if textAttribute == nil {
+		assert.Fail("text attribute not found")
+	}
+
+	eachVal := cty.ObjectVal(map[string]cty.Value{
+		"value": cty.StringVal("foozball"),
+	})
+
+	var stringOutput string
+	evalContext.Variables["each"] = eachVal
+
+	diag = gohcl.DecodeExpression(textAttribute, evalContext, &stringOutput)
+	if diag.HasErrors() {
+		assert.Fail("error decoding expression")
+		return
+	}
+
+	assert.Equal("user if foozball", stringOutput, "wrong output")
 }

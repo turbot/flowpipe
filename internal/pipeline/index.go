@@ -250,17 +250,17 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				pipelineHcl.HclOutputs = append(pipelineHcl.HclOutputs, output)
 			}
 
-		case schema.BlockTypeVariable:
+		case schema.BlockTypeParam:
 			override := false
-			variable, varDiags := configs.DecodeVariableBlock(block, override)
+			param, varDiags := configs.DecodeVariableBlock(block, override)
 			diags = append(diags, varDiags...)
 			if len(diags) > 0 {
 				res.HandleDecodeDiags(diags)
 				return nil, res
 			}
 
-			if variable != nil {
-				pipelineHcl.Variables[variable.Name] = variable
+			if param != nil {
+				pipelineHcl.Params[param.Name] = param
 			}
 
 		default:

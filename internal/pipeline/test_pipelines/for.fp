@@ -1,12 +1,12 @@
 pipeline "for_loop" {
 
-    var "users" {
+    param "users" {
         type = list(string)
         default = ["jerry","Janis", "Jimi"]
     }
 
     step "echo" "text_1" {
-        for_each = var.users
+        for_each = param.users
         text = "user if ${each.value}"
     }
 
