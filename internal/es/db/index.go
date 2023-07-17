@@ -8,20 +8,20 @@ import (
 
 // Ristretto backed pipeline datatabase
 
-func GetPipeline(name string) (*types.PipelineHcl, error) {
+func GetPipeline(name string) (*types.Pipeline, error) {
 	pipelineCached, found := cache.GetCache().Get(name)
 	if !found {
 		return nil, fperr.NotFoundWithMessage("pipeline " + name + " not found")
 	}
 
-	pipeline, ok := pipelineCached.(*types.PipelineHcl)
+	pipeline, ok := pipelineCached.(*types.Pipeline)
 	if !ok {
 		return nil, fperr.InternalWithMessage("invalid pipeline")
 	}
 	return pipeline, nil
 }
 
-func ListAllPipelines() ([]types.PipelineHcl, error) {
+func ListAllPipelines() ([]types.Pipeline, error) {
 
 	pipelineNamesCached, found := cache.GetCache().Get("#pipeline.names")
 	if !found {
@@ -33,7 +33,7 @@ func ListAllPipelines() ([]types.PipelineHcl, error) {
 		return nil, fperr.InternalWithMessage("invalid pipeline names")
 	}
 
-	var pipelines []types.PipelineHcl
+	var pipelines []types.Pipeline
 	for _, name := range pipelineNames {
 		pipeline, err := GetPipeline(name)
 		if err != nil {

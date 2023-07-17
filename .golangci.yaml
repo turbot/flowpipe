@@ -5,11 +5,7 @@ run:
     # auto generated code
     - internal/service/api/docs
     # Direct copy from Terraform codebase
-    - pipeparser/copy
-    - pipeparser/addrs
-    - pipeparser/tfdiags
-    - pipeparser/ipaddr
-    - pipeparser/lang
+    - pipeparser/terraform/*
 
 linters:
   enable:

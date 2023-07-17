@@ -2,7 +2,7 @@ package pipeparser
 
 import (
 	"github.com/hashicorp/hcl/v2/ext/tryfunc"
-	"github.com/turbot/flowpipe/pipeparser/lang/funcs"
+	"github.com/turbot/flowpipe/pipeparser/terraform/lang/funcs"
 	ctyyaml "github.com/zclconf/go-cty-yaml"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
