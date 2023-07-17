@@ -6,7 +6,7 @@ package funcs
 import (
 	"testing"
 
-	"github.com/turbot/flowpipe/pipeparser/lang/marks"
+	"github.com/turbot/flowpipe/pipeparser/terraform/lang/marks"
 	"github.com/zclconf/go-cty/cty"
 )
 

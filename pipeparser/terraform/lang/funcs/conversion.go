@@ -6,8 +6,8 @@ package funcs
 import (
 	"strconv"
 
-	"github.com/turbot/flowpipe/pipeparser/lang/marks"
-	"github.com/turbot/flowpipe/pipeparser/lang/types"
+	"github.com/turbot/flowpipe/pipeparser/terraform/lang/marks"
+	"github.com/turbot/flowpipe/pipeparser/terraform/lang/types"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/convert"
 	"github.com/zclconf/go-cty/cty/function"

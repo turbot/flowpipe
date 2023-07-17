@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/terraform/configs/configschema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"

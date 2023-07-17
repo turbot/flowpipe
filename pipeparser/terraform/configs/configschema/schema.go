@@ -123,7 +123,6 @@ type NestingMode int
 //go:generate go run golang.org/x/tools/cmd/stringer -type=NestingMode
 
 const (
-	//nolint:unused // Direct import from Terraform code
 	nestingModeInvalid NestingMode = iota
 
 	// NestingSingle indicates that only a single instance of a given
