@@ -16,20 +16,14 @@ jobs:
     steps:
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
-        with:
-          path: flowpipe
-  
-      - name: Checkout Flowpipe SDK Go repository
-        uses: actions/checkout@v3
-        with:
-          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
-          repository: turbot/flowpipe-sdk-go
-          path: flowpipe-sdk-go
+        # with:
+        #   path: flowpipe
       
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
           go-version: 1.20
+          cache: false
   
       - name: Run tests
-        run: go test $(go list ./flowpipe/... | grep -v /pipeparser/terraform)
+        run: go test $(go list ./... | grep -v /pipeparser/terraform)
