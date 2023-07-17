@@ -6,7 +6,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 )
 
-func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*types.PipelineHcl, error) {
+func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*types.Pipeline, error) {
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
 		return nil, fperr.BadRequestWithMessage("pipeline execution " + pipelineExecutionID + " not found")

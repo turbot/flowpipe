@@ -11,7 +11,7 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
-	"github.com/turbot/flowpipe/internal/types_legacy"
+	"github.com/turbot/flowpipe/internal/types"
 )
 
 func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
@@ -66,7 +66,7 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		if resp != nil {
 			printer := printers.GetPrinter(cmd)
 
-			printableResource := types_legacy.PrintablePipeline{}
+			printableResource := types.PrintablePipeline{}
 			printableResource.Items, err = printableResource.Transform(resp)
 			if err != nil {
 				fplog.Logger(ctx).Error("Error when transforming", "error", err)

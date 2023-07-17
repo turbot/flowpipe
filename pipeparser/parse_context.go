@@ -1,6 +1,7 @@
 package pipeparser
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -13,8 +14,11 @@ import (
 )
 
 type ParseContext struct {
+	// This is the running application context
+	RunCtx           context.Context
 	UnresolvedBlocks map[string]*unresolvedBlock
 	FileData         map[string][]byte
+
 	// the eval context used to decode references in HCL
 	EvalCtx *hcl.EvalContext
 
@@ -29,10 +33,11 @@ type ParseContext struct {
 	blocks          hcl.Blocks
 }
 
-func NewParseContext(rootEvalPath string) ParseContext {
+func NewParseContext(ctx context.Context, rootEvalPath string) ParseContext {
 	c := ParseContext{
 		UnresolvedBlocks: make(map[string]*unresolvedBlock),
 		RootEvalPath:     rootEvalPath,
+		RunCtx:           ctx,
 	}
 	// add root node - this will depend on all other nodes
 	c.dependencyGraph = c.newDependencyGraph()

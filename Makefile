@@ -19,3 +19,8 @@ build-open-api:
 
 release-local:
 	goreleaser release --snapshot --clean
+
+test:
+	go clean -testcache
+	# Tests under /pipeparser/terraform are external tests. So exclude them for now.
+	go test $$(go list ./... | grep -v /pipeparser/terraform) -timeout 30s

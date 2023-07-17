@@ -7,7 +7,7 @@ import (
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Snapshot struct {
@@ -335,7 +335,7 @@ func Category(category string) map[string]interface{} {
 			"color": "green",
 			"icon":  "valve",
 		}
-	case configschema.BlockTypePipelineStepSleep:
+	case schema.BlockTypePipelineStepSleep:
 		return map[string]interface{}{
 			"name":  "sleep",
 			"title": "Sleep",
@@ -349,7 +349,7 @@ func Category(category string) map[string]interface{} {
 			"color": "red",
 			"icon":  "terminal",
 		}
-	case configschema.BlockTypePipelineStepHttp:
+	case schema.BlockTypePipelineStepHttp:
 		return map[string]interface{}{
 			"name":  "http_request",
 			"title": "HTTP Request",
@@ -362,6 +362,13 @@ func Category(category string) map[string]interface{} {
 			"title": "Query",
 			"color": "blue",
 			"icon":  "table",
+		}
+	case "text":
+		return map[string]interface{}{
+			"name":  "text",
+			"title": "Text",
+			"color": "blue",
+			"icon":  "description",
 		}
 	default:
 		return map[string]interface{}{
@@ -620,7 +627,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	return panels, nil
 }
 
-func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineHclStep, se *StepExecution) SnapshotPanelDataRow {
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineStep, se *StepExecution) SnapshotPanelDataRow {
 
 	var row SnapshotPanelDataRow
 
