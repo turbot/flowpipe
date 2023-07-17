@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/turbot/flowpipe/pipeparser/tfdiags"
+	"github.com/turbot/flowpipe/pipeparser/terraform/tfdiags"
 	"github.com/zclconf/go-cty/cty"
 
 	"github.com/hashicorp/hcl/v2"

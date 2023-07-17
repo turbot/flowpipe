@@ -12,7 +12,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 
-	"github.com/turbot/flowpipe/pipeparser/tfdiags"
+	"github.com/turbot/flowpipe/pipeparser/terraform/tfdiags"
 )
 
 // ModuleInstance is an address for a particular module instance within the

@@ -5,10 +5,7 @@ run:
     # auto generated code
     - internal/service/api/docs
     # Direct copy from Terraform codebase
-    - pipeparser/copy
-    - pipeparser/terraform/addrs
-    - pipeparser/tfdiags
-    - pipeparser/ipaddr
+    - pipeparser/terraform/*
     - pipeparser/lang
 
 linters:

@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/turbot/flowpipe/pipeparser/tfdiags"
+	"github.com/turbot/flowpipe/pipeparser/terraform/tfdiags"
 )
 
 // Checkable is an interface implemented by all address types that can contain

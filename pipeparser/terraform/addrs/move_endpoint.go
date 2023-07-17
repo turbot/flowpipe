@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/pipeparser/tfdiags"
+	"github.com/turbot/flowpipe/pipeparser/terraform/tfdiags"
 )
 
 // MoveEndpoint is to AbsMoveable and ConfigMoveable what Target is to

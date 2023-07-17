@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/pipeparser/tfdiags"
+	"github.com/turbot/flowpipe/pipeparser/terraform/tfdiags"
 )
 
 // Target describes a targeted address with source location information.

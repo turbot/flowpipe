@@ -10,7 +10,7 @@ import (
 
 	"github.com/zclconf/go-cty/cty"
 
-	"github.com/turbot/flowpipe/pipeparser/tfdiags"
+	"github.com/turbot/flowpipe/pipeparser/terraform/tfdiags"
 )
 
 // anyKeyImpl is the InstanceKey representation indicating a wildcard, which
