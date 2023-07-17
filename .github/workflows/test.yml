@@ -1,13 +1,11 @@
 name: Flowpipe Unit Tests
-# on:
-#   push:
-#     tags:
-#       - v*  
-#     branches:
-#       - main
-#       - "v*"
 on:
-  pull_request:
+  push:
+    tags:
+      - v*  
+    branches:
+      - main
+      - "v*"
 
 jobs:
   unit_test:
