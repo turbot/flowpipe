@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type PipelineStepStartHandler CommandHandler
@@ -66,7 +66,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "exec":
 			p := primitive.Exec{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case configschema.BlockTypePipelineStepHttp:
+		case schema.BlockTypePipelineStepHttp:
 			p := primitive.HTTPRequest{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case "pipeline":
@@ -75,11 +75,11 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "query":
 			p := primitive.Query{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case configschema.BlockTypePipelineStepSleep:
+		case schema.BlockTypePipelineStepSleep:
 			p := primitive.Sleep{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		// TODO: remove this debug primitive (?)
-		case configschema.BlockTypePipelineStepEcho:
+		case schema.BlockTypePipelineStepEcho:
 			p := primitive.Echo{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:

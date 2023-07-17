@@ -1,4 +1,4 @@
-package configschema
+package schema
 
 import "github.com/turbot/go-kit/helpers"
 

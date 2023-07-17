@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/options"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -164,25 +164,25 @@ func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 			}
 
 			switch stepType.StepType {
-			case configschema.BlockTypePipelineStepHttp:
+			case schema.BlockTypePipelineStepHttp:
 				var step PipelineStepHttp
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
-			case configschema.BlockTypePipelineStepSleep:
+			case schema.BlockTypePipelineStepSleep:
 				var step PipelineStepSleep
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
-			case configschema.BlockTypePipelineStepEmail:
+			case schema.BlockTypePipelineStepEmail:
 				var step PipelineStepEmail
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
 				}
 				ph.Steps = append(ph.Steps, &step)
-			case configschema.BlockTypePipelineStepEcho:
+			case schema.BlockTypePipelineStepEcho:
 				var step PipelineStepEcho
 				if err := json.Unmarshal(stepData, &step); err != nil {
 					return err
@@ -203,7 +203,7 @@ func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case configschema.AttributeTypeDescription:
+		case schema.AttributeTypeDescription:
 			if attr.Expr != nil {
 				val, err := attr.Expr.Value(nil)
 				if err != nil {

@@ -11,8 +11,8 @@ import (
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
@@ -143,7 +143,7 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipel
 	//
 	// each "block" is the pipeline HCL block that we need to decode into a Go Struct
 	for _, block := range blocksToDecode {
-		if block.Type == configschema.BlockTypePipeline {
+		if block.Type == schema.BlockTypePipeline {
 			pipelineHcl, res := decodePipeline(block, parseCtx)
 
 			if res.Success() {
@@ -191,7 +191,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 	// foundOptions := map[string]struct{}{}
 	for _, block := range pipelineOptions.Blocks {
 		switch block.Type {
-		case configschema.BlockTypePipelineStep:
+		case schema.BlockTypePipelineStep:
 			stepType := block.Labels[0]
 			stepName := block.Labels[1]
 
@@ -238,7 +238,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 
 			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
 
-		case configschema.BlockTypePipelineOutput:
+		case schema.BlockTypePipelineOutput:
 			override := false
 			output, cfgDiags := decodeOutputBlock(block, override)
 			diags = append(diags, cfgDiags...)
@@ -389,13 +389,13 @@ func handlePipelineDecodeResult(resource *types.Pipeline, res *pipeparser.Decode
 
 func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 	switch stepType {
-	case configschema.BlockTypePipelineStepHttp:
+	case schema.BlockTypePipelineStepHttp:
 		return PipelineStepHttpBlockSchema
-	case configschema.BlockTypePipelineStepSleep:
+	case schema.BlockTypePipelineStepSleep:
 		return PipelineStepSleepBlockSchema
-	case configschema.BlockTypePipelineStepEmail:
+	case schema.BlockTypePipelineStepEmail:
 		return PipelineStepEmailBlockSchema
-	case configschema.BlockTypePipelineStepEcho:
+	case schema.BlockTypePipelineStepEcho:
 		return PipelineStepEchoBlockSchema
 	default:
 		return nil

@@ -6,7 +6,6 @@ run:
     - internal/service/api/docs
     # Direct copy from Terraform codebase
     - pipeparser/terraform/*
-    - pipeparser/lang
 
 linters:
   enable:
