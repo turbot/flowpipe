@@ -8,10 +8,10 @@ import (
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/addrs"
 	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/terraform/addrs"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 )

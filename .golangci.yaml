@@ -6,7 +6,7 @@ run:
     - internal/service/api/docs
     # Direct copy from Terraform codebase
     - pipeparser/copy
-    - pipeparser/addrs
+    - pipeparser/terraform/addrs
     - pipeparser/tfdiags
     - pipeparser/ipaddr
     - pipeparser/lang
