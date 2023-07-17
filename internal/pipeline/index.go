@@ -13,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/turbot/flowpipe/pipeparser/terraform/configs"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
@@ -251,6 +252,19 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 				pipelineHcl.HclOutputs = append(pipelineHcl.HclOutputs, output)
 			}
 
+		case schema.BlockTypeVariable:
+			override := false
+			variable, varDiags := configs.DecodeVariableBlock(block, override)
+			diags = append(diags, varDiags...)
+			if len(diags) > 0 {
+				res.HandleDecodeDiags(diags)
+				return nil, res
+			}
+
+			if variable != nil {
+				pipelineHcl.Variables[variable.Name] = variable
+			}
+
 		default:
 			// this should never happen
 			diags = append(diags, &hcl.Diagnostic{
@@ -295,6 +309,7 @@ func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 	return diags
 }
 
+// TODO: strip this out and use the one from Terraform
 func decodeOutputBlock(block *hcl.Block, override bool) (*types.Output, hcl.Diagnostics) {
 	var diags hcl.Diagnostics
 

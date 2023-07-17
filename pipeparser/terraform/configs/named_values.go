@@ -48,7 +48,7 @@ type Variable struct {
 	DeclRange hcl.Range
 }
 
-func decodeVariableBlock(block *hcl.Block, override bool) (*Variable, hcl.Diagnostics) {
+func DecodeVariableBlock(block *hcl.Block, override bool) (*Variable, hcl.Diagnostics) {
 	v := &Variable{
 		Name:      block.Labels[0],
 		DeclRange: block.DefRange,
