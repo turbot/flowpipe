@@ -22,4 +22,5 @@ release-local:
 
 test:
 	go clean -testcache
-	go test ./... -timeout 30s
+	# Tests under /pipeparser/terraform are external tests. So exclude them for now.
+	go test $$(go list ./... | grep -v /pipeparser/terraform) -timeout 30s
