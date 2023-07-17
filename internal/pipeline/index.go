@@ -80,7 +80,7 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	}
 
 	// content.Blocks is the list of all pipeline blocks found in the pipeline files
-	parseCtx := NewPipelineParseContext(pipelinePath)
+	parseCtx := NewPipelineParseContext(ctx, pipelinePath)
 	parseCtx.SetDecodeContent(content, fileData)
 
 	// build parse context
@@ -438,8 +438,8 @@ func (c *PipelineParseContext) AddResource(pipelineHcl *types.Pipeline) hcl.Diag
 	return nil
 }
 
-func NewPipelineParseContext(rootEvalPath string) *PipelineParseContext {
-	parseContext := pipeparser.NewParseContext(rootEvalPath)
+func NewPipelineParseContext(ctx context.Context, rootEvalPath string) *PipelineParseContext {
+	parseContext := pipeparser.NewParseContext(ctx, rootEvalPath)
 	// TODO uncomment once https://github.com/turbot/steampipe/issues/2640 is done
 	//parseContext.BlockTypes = []string{modconfig.BlockTypeWorkspaceProfile}
 	c := &PipelineParseContext{

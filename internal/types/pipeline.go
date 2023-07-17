@@ -52,6 +52,8 @@ type Pipeline struct {
 	Steps []IPipelineStep `json:"steps"`
 
 	HclOutputs []*Output
+
+	Variables map[string]*Variable
 }
 
 // Copied from Terraform
