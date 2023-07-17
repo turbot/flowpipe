@@ -394,10 +394,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 			ex.ExecutionVariables[schema.BlockTypePipelineStep] = cty.ObjectVal(stepTypeVariableValueMap)
 
-			// if stepVariable[stepDefn.GetType()] == cty.NilVal {
-			// 	stepVariable[stepDefn.GetType()] = cty.ObjectVal(map[string]cty.Value{})
-			// }
-
 			// TODO: ignore error setting -> we need to be able to ignore setting
 			// TODO: is a step failure an immediate end of the pipeline?
 			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?

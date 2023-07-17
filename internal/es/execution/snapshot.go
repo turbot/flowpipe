@@ -363,7 +363,7 @@ func Category(category string) map[string]interface{} {
 			"color": "blue",
 			"icon":  "table",
 		}
-	case "text":
+	case "echo":
 		return map[string]interface{}{
 			"name":  "text",
 			"title": "Text",

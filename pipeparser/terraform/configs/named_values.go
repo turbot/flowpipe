@@ -406,7 +406,7 @@ type Output struct {
 	DeclRange hcl.Range
 }
 
-func decodeOutputBlock(block *hcl.Block, override bool) (*Output, hcl.Diagnostics) {
+func DecodeOutputBlock(block *hcl.Block, override bool) (*Output, hcl.Diagnostics) {
 	var diags hcl.Diagnostics
 
 	o := &Output{

@@ -52,26 +52,9 @@ type Pipeline struct {
 
 	Steps []IPipelineStep `json:"steps"`
 
-	HclOutputs []*Output
+	HclOutputs []*configs.Output
 
 	Variables map[string]*configs.Variable
-}
-
-// Copied from Terraform
-// Output represents an "output" block in a pipeline
-type Output struct {
-	Name        string
-	Description string
-	Expr        hcl.Expression
-	DependsOn   []hcl.Traversal
-	Sensitive   bool
-
-	// Preconditions []*CheckRule
-
-	DescriptionSet bool
-	SensitiveSet   bool
-
-	DeclRange hcl.Range
 }
 
 func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {

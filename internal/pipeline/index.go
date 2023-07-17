@@ -7,11 +7,9 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/terraform/configs"
 	filehelpers "github.com/turbot/go-kit/files"
@@ -241,7 +239,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 
 		case schema.BlockTypePipelineOutput:
 			override := false
-			output, cfgDiags := decodeOutputBlock(block, override)
+			output, cfgDiags := configs.DecodeOutputBlock(block, override)
 			diags = append(diags, cfgDiags...)
 			if len(diags) > 0 {
 				res.HandleDecodeDiags(diags)
@@ -307,79 +305,6 @@ func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 	}
 
 	return diags
-}
-
-// TODO: strip this out and use the one from Terraform
-func decodeOutputBlock(block *hcl.Block, override bool) (*types.Output, hcl.Diagnostics) {
-	var diags hcl.Diagnostics
-
-	o := &types.Output{
-		Name:      block.Labels[0],
-		DeclRange: block.DefRange,
-	}
-
-	schema := PipelineOutputBlockSchema
-	// if override {
-	// 	schema = schemaForOverrides(schema)
-	// }
-
-	content, moreDiags := block.Body.Content(schema)
-	diags = append(diags, moreDiags...)
-
-	if !hclsyntax.ValidIdentifier(o.Name) {
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  "Invalid output name",
-			Detail:   constants.BadIdentifierDetail,
-			Subject:  &block.LabelRanges[0],
-		})
-	}
-
-	if attr, exists := content.Attributes["description"]; exists {
-		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Description)
-		diags = append(diags, valDiags...)
-		o.DescriptionSet = true
-	}
-
-	if attr, exists := content.Attributes["value"]; exists {
-		o.Expr = attr.Expr
-	}
-
-	if attr, exists := content.Attributes["sensitive"]; exists {
-		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Sensitive)
-		diags = append(diags, valDiags...)
-		o.SensitiveSet = true
-	}
-
-	// TODO: depends_on for output?
-	// if attr, exists := content.Attributes["depends_on"]; exists {
-	// 	deps, depsDiags := decodeDependsOn(attr)
-	// 	diags = append(diags, depsDiags...)
-	// 	o.DependsOn = append(o.DependsOn, deps...)
-	// }
-
-	// TODO: do we need this? The code is lifted from Terraform
-	// for _, block := range content.Blocks {
-	// 	switch block.Type {
-	// 	case "precondition":
-	// 		cr, moreDiags := decodeCheckRuleBlock(block, override)
-	// 		diags = append(diags, moreDiags...)
-	// 		o.Preconditions = append(o.Preconditions, cr)
-	// 	case "postcondition":
-	// 		diags = append(diags, &hcl.Diagnostic{
-	// 			Severity: hcl.DiagError,
-	// 			Summary:  "Postconditions are not allowed",
-	// 			Detail:   "Output values can only have preconditions, not postconditions.",
-	// 			Subject:  block.TypeRange.Ptr(),
-	// 		})
-	// 	default:
-	// 		// The cases above should be exhaustive for all block types
-	// 		// defined in the block type schema, so this shouldn't happen.
-	// 		panic(fmt.Sprintf("unexpected lifecycle sub-block type %q", block.Type))
-	// 	}
-	// }
-
-	return o, diags
 }
 
 func handlePipelineDecodeResult(resource *types.Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
