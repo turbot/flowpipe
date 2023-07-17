@@ -158,6 +158,7 @@ type IPipelineStep interface {
 	GetDependsOn() []string
 	AppendDependsOn(...string)
 	GetFor() string
+	GetForEach() hcl.Expression
 	GetError() *PipelineStepError
 	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
 }
@@ -171,6 +172,11 @@ type PipelineStepBase struct {
 
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
+	ForEach              hcl.Expression            `json:"-"`
+}
+
+func (p *PipelineStepBase) GetForEach() hcl.Expression {
+	return p.ForEach
 }
 
 func (p *PipelineStepBase) AddUnresolvedAttribute(name string, expr hcl.Expression) {
@@ -291,6 +297,11 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 	}
 
 	p.DependsOn = append(p.DependsOn, dependsOn...)
+
+	if attr, exists := hclAttributes[schema.AttributeTypeForEach]; exists {
+		p.ForEach = attr.Expr
+	}
+
 	return diags
 }
 
@@ -324,6 +335,7 @@ func TraversalAsStringSlice(traversal hcl.Traversal) []string {
 
 var ValidResourceItemTypes = []string{
 	schema.AttributeTypeDependsOn,
+	schema.AttributeTypeForEach,
 }
 
 func (p *PipelineStepBase) IsBaseAttributes(name string) bool {

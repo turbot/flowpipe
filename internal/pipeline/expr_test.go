@@ -44,6 +44,7 @@ func TestExpression(t *testing.T) {
 		assert.Fail("error decoding expression")
 		return
 	}
+	assert.Equal("bar hello baz", output, "wrong output")
 }
 
 func TestExprFunc(t *testing.T) {
