@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	tfaddr "github.com/hashicorp/terraform-registry-address"
-	"github.com/turbot/flowpipe/pipeparser/getmodules"
+	"github.com/turbot/flowpipe/pipeparser/terraform/getmodules"
 )
 
 // ModuleSource is the general type for all three of the possible module source

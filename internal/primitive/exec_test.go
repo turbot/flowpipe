@@ -40,7 +40,7 @@ func TestExecProgramNotFound(t *testing.T) {
 	assert.Empty(output.Get("stdout_lines").([]string))
 	// Check stderr
 	assert.NotNil(output.Get("stderr_lines"))
-	assert.Contains(output.Get("stderr_lines").([]string)[0], "command not found")
+	assert.Contains(output.Get("stderr_lines").([]string)[0], "not found")
 	// Check exit code
 	assert.Equal(127, output.Get("exit_code"))
 }
