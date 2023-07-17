@@ -19,3 +19,7 @@ build-open-api:
 
 release-local:
 	goreleaser release --snapshot --clean
+
+test:
+	go clean -testcache
+	go test ./... -timeout 30s
