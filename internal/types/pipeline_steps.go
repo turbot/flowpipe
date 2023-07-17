@@ -8,10 +8,10 @@ import (
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/addrs"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/turbot/flowpipe/pipeparser/terraform/addrs"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -115,23 +115,23 @@ type PipelineStepError struct {
 	Retries int  `yaml:"retries" json:"retries"`
 }
 
-func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
-	var step IPipelineHclStep
+func NewPipelineStep(stepType, stepName string) IPipelineStep {
+	var step IPipelineStep
 	switch stepType {
-	case configschema.BlockTypePipelineStepHttp:
-		s := &PipelineHclStepHttp{}
+	case schema.BlockTypePipelineStepHttp:
+		s := &PipelineStepHttp{}
 		step = s
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
-	case configschema.BlockTypePipelineStepSleep:
-		s := &PipelineHclStepSleep{}
+	case schema.BlockTypePipelineStepSleep:
+		s := &PipelineStepSleep{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
-	case configschema.BlockTypePipelineStepEmail:
-		s := &PipelineHclStepEmail{}
+	case schema.BlockTypePipelineStepEmail:
+		s := &PipelineStepEmail{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
-	case configschema.BlockTypePipelineStepEcho:
-		s := &PipelineHclStepEcho{}
+	case schema.BlockTypePipelineStepEcho:
+		s := &PipelineStepEcho{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
 	default:
@@ -144,7 +144,8 @@ func NewPipelineStep(stepType, stepName string) IPipelineHclStep {
 	return step
 }
 
-type IPipelineHclStep interface {
+// A common interface that all pipeline steps must implement
+type IPipelineStep interface {
 	GetFullyQualifiedName() string
 	GetName() string
 	SetName(string)
@@ -161,7 +162,8 @@ type IPipelineHclStep interface {
 	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
 }
 
-type PipelineHclStepBase struct {
+// A common base struct that all pipeline steps must embed
+type PipelineStepBase struct {
 	Name      string   `json:"name"`
 	Type      string   `json:"step_type"`
 	DependsOn []string `json:"depends_on,omitempty"`
@@ -171,47 +173,47 @@ type PipelineHclStepBase struct {
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
 }
 
-func (p *PipelineHclStepBase) AddUnresolvedAttribute(name string, expr hcl.Expression) {
+func (p *PipelineStepBase) AddUnresolvedAttribute(name string, expr hcl.Expression) {
 	p.UnresolvedAttributes[name] = expr
 }
 
-func (p *PipelineHclStepBase) GetUnresolvedAttributes() map[string]hcl.Expression {
+func (p *PipelineStepBase) GetUnresolvedAttributes() map[string]hcl.Expression {
 	return p.UnresolvedAttributes
 }
 
-func (p *PipelineHclStepBase) SetName(name string) {
+func (p *PipelineStepBase) SetName(name string) {
 	p.Name = name
 }
 
-func (p *PipelineHclStepBase) GetName() string {
+func (p *PipelineStepBase) GetName() string {
 	return p.Name
 }
 
-func (p *PipelineHclStepBase) SetType(stepType string) {
+func (p *PipelineStepBase) SetType(stepType string) {
 	p.Type = stepType
 }
 
-func (p *PipelineHclStepBase) GetType() string {
+func (p *PipelineStepBase) GetType() string {
 	return p.Type
 }
 
-func (p *PipelineHclStepBase) GetDependsOn() []string {
+func (p *PipelineStepBase) GetDependsOn() []string {
 	return p.DependsOn
 }
 
-func (p *PipelineHclStepBase) IsResolved() bool {
+func (p *PipelineStepBase) IsResolved() bool {
 	return len(p.UnresolvedAttributes) == 0
 }
 
-func (p *PipelineHclStepBase) SetResolved(resolved bool) {
+func (p *PipelineStepBase) SetResolved(resolved bool) {
 	p.Resolved = resolved
 }
 
-func (p *PipelineHclStepBase) GetFullyQualifiedName() string {
+func (p *PipelineStepBase) GetFullyQualifiedName() string {
 	return p.Type + "." + p.Name
 }
 
-func (p *PipelineHclStepBase) AppendDependsOn(dependsOn ...string) {
+func (p *PipelineStepBase) AppendDependsOn(dependsOn ...string) {
 	// Use map to track existing DependsOn, this will make the lookup below much faster
 	// rather than using nested loops
 	existingDeps := make(map[string]bool)
@@ -249,10 +251,10 @@ func decodeDependsOn(attr *hcl.Attribute) ([]hcl.Traversal, hcl.Diagnostics) {
 	return ret, diags
 }
 
-func (p *PipelineHclStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 	var hclDependsOn []hcl.Traversal
-	if attr, exists := hclAttributes[configschema.AttributeTypeDependsOn]; exists {
+	if attr, exists := hclAttributes[schema.AttributeTypeDependsOn]; exists {
 		deps, depsDiags := decodeDependsOn(attr)
 		diags = append(diags, depsDiags...)
 		hclDependsOn = append(hclDependsOn, deps...)
@@ -321,50 +323,50 @@ func TraversalAsStringSlice(traversal hcl.Traversal) []string {
 }
 
 var ValidResourceItemTypes = []string{
-	configschema.AttributeTypeDependsOn,
+	schema.AttributeTypeDependsOn,
 }
 
-func (p *PipelineHclStepBase) IsBaseAttributes(name string) bool {
+func (p *PipelineStepBase) IsBaseAttributes(name string) bool {
 	return helpers.StringSliceContains(ValidResourceItemTypes, name)
 }
 
-type PipelineHclStepHttp struct {
-	PipelineHclStepBase
+type PipelineStepHttp struct {
+	PipelineStepBase
 	Url string `json:"url"`
 }
 
-func (p *PipelineHclStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 
 	var urlInput string
 
-	if p.UnresolvedAttributes[configschema.AttributeTypeUrl] == nil {
+	if p.UnresolvedAttributes[schema.AttributeTypeUrl] == nil {
 		urlInput = p.Url
 	} else {
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[configschema.AttributeTypeUrl], evalContext, &urlInput)
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeUrl], evalContext, &urlInput)
 		if diags.HasErrors() {
-			return nil, pipeparser.DiagsToError(configschema.BlockTypePipelineStep, diags)
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
 		}
 	}
 
 	return map[string]interface{}{
-		configschema.AttributeTypeUrl: urlInput,
+		schema.AttributeTypeUrl: urlInput,
 	}, nil
 }
 
-func (p *PipelineHclStepHttp) GetFor() string {
+func (p *PipelineStepHttp) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepHttp) GetError() *PipelineStepError {
+func (p *PipelineStepHttp) GetError() *PipelineStepError {
 	return nil
 }
 
-func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case configschema.AttributeTypeUrl:
+		case schema.AttributeTypeUrl:
 			if attr.Expr != nil {
 				expr := attr.Expr
 				if len(expr.Variables()) > 0 {
@@ -395,43 +397,43 @@ func (p *PipelineHclStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseC
 	return diags
 }
 
-type PipelineHclStepSleep struct {
-	PipelineHclStepBase
+type PipelineStepSleep struct {
+	PipelineStepBase
 	Duration string `json:"duration"`
 }
 
-func (p *PipelineHclStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+func (p *PipelineStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	var durationInput string
 
-	if p.UnresolvedAttributes[configschema.AttributeTypeDuration] == nil {
+	if p.UnresolvedAttributes[schema.AttributeTypeDuration] == nil {
 		durationInput = p.Duration
 	} else {
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[configschema.AttributeTypeDuration], evalContext, &durationInput)
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeDuration], evalContext, &durationInput)
 		if diags.HasErrors() {
-			return nil, pipeparser.DiagsToError(configschema.BlockTypePipelineStep, diags)
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
 		}
 	}
 
 	return map[string]interface{}{
-		configschema.AttributeTypeDuration: durationInput,
+		schema.AttributeTypeDuration: durationInput,
 	}, nil
 }
 
-func (p *PipelineHclStepSleep) GetFor() string {
+func (p *PipelineStepSleep) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepSleep) GetError() *PipelineStepError {
+func (p *PipelineStepSleep) GetError() *PipelineStepError {
 	return nil
 }
 
-func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case configschema.AttributeTypeDuration:
+		case schema.AttributeTypeDuration:
 			if attr.Expr != nil {
 				expr := attr.Expr
 				if len(expr.Variables()) > 0 {
@@ -463,31 +465,31 @@ func (p *PipelineHclStepSleep) SetAttributes(hclAttributes hcl.Attributes, parse
 	return diags
 }
 
-type PipelineHclStepEmail struct {
-	PipelineHclStepBase
+type PipelineStepEmail struct {
+	PipelineStepBase
 	To string `json:"to"`
 }
 
-func (p *PipelineHclStepEmail) GetFor() string {
+func (p *PipelineStepEmail) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepEmail) GetError() *PipelineStepError {
+func (p *PipelineStepEmail) GetError() *PipelineStepError {
 	return nil
 }
 
-func (p *PipelineHclStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"to": p.To,
 	}, nil
 }
 
-func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case configschema.AttributeTypeTo:
+		case schema.AttributeTypeTo:
 			if attr.Expr != nil {
 				expr := attr.Expr
 				if len(expr.Variables()) > 0 {
@@ -517,20 +519,20 @@ func (p *PipelineHclStepEmail) SetAttributes(hclAttributes hcl.Attributes, parse
 	return diags
 }
 
-type PipelineHclStepEcho struct {
-	PipelineHclStepBase
+type PipelineStepEcho struct {
+	PipelineStepBase
 	Text     string   `json:"text"`
 	ListText []string `json:"list_text"`
 }
 
-func (p *PipelineHclStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	var textInput string
 	var listTextInput []string
 
-	if p.UnresolvedAttributes[configschema.AttributeTypeText] == nil {
+	if p.UnresolvedAttributes[schema.AttributeTypeText] == nil {
 		textInput = p.Text
 	} else {
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[configschema.AttributeTypeText], evalContext, &textInput)
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeText], evalContext, &textInput)
 		if diags.HasErrors() {
 			return nil, pipeparser.DiagsToError("step", diags)
 		}
@@ -546,20 +548,20 @@ func (p *PipelineHclStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[strin
 	}
 
 	return map[string]interface{}{
-		configschema.AttributeTypeText: textInput,
-		"list_text":                    listTextInput,
+		schema.AttributeTypeText: textInput,
+		"list_text":              listTextInput,
 	}, nil
 }
 
-func (p *PipelineHclStepEcho) GetFor() string {
+func (p *PipelineStepEcho) GetFor() string {
 	return ""
 }
 
-func (p *PipelineHclStepEcho) GetError() *PipelineStepError {
+func (p *PipelineStepEcho) GetError() *PipelineStepError {
 	return nil
 }
 
-func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineHclStep) {
+func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep) {
 	if len(expr.Variables()) == 0 {
 		return
 	}
@@ -567,7 +569,7 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineHclSt
 	for _, traversal := range traversals {
 		parts := TraversalAsStringSlice(traversal)
 		if len(parts) > 0 {
-			if parts[0] == configschema.BlockTypePipelineStep {
+			if parts[0] == schema.BlockTypePipelineStep {
 				dependsOn := parts[1] + "." + parts[2]
 				p.AppendDependsOn(dependsOn)
 			}
@@ -576,13 +578,13 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineHclSt
 	p.AddUnresolvedAttribute(name, expr)
 }
 
-func (p *PipelineHclStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case configschema.AttributeTypeText:
+		case schema.AttributeTypeText:
 			if attr.Expr != nil {
 				expr := attr.Expr
 				if len(expr.Variables()) > 0 {
@@ -592,7 +594,7 @@ func (p *PipelineHclStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseC
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + configschema.AttributeTypeText + " attribute",
+							Summary:  "Unable to parse " + schema.AttributeTypeText + " attribute",
 							Subject:  &attr.Range,
 						})
 						continue

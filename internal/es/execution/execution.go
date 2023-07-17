@@ -14,7 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -86,7 +86,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(stepExecutionID string) (types.IPipelineHclStep, error) {
+func (ex *Execution) StepDefinition(stepExecutionID string) (types.IPipelineStep, error) {
 	se, ok := ex.StepExecutions[stepExecutionID]
 	if !ok {
 		return nil, fmt.Errorf("step execution %s not found", stepExecutionID)
@@ -366,11 +366,11 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			ex.StepExecutions[et.StepExecutionID].Status = "finished"
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
 
-			if ex.ExecutionVariables[configschema.BlockTypePipelineStep] == cty.NilVal {
-				ex.ExecutionVariables[configschema.BlockTypePipelineStep] = cty.ObjectVal(map[string]cty.Value{})
+			if ex.ExecutionVariables[schema.BlockTypePipelineStep] == cty.NilVal {
+				ex.ExecutionVariables[schema.BlockTypePipelineStep] = cty.ObjectVal(map[string]cty.Value{})
 			}
 
-			stepVariable := ex.ExecutionVariables[configschema.BlockTypePipelineStep]
+			stepVariable := ex.ExecutionVariables[schema.BlockTypePipelineStep]
 
 			stepTypeVariableValueMap := stepVariable.AsValueMap()
 			if stepTypeVariableValueMap == nil {
@@ -392,7 +392,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			stepTypeVariableValueMap[stepDefn.GetType()] = cty.ObjectVal(vm)
 
-			ex.ExecutionVariables[configschema.BlockTypePipelineStep] = cty.ObjectVal(stepTypeVariableValueMap)
+			ex.ExecutionVariables[schema.BlockTypePipelineStep] = cty.ObjectVal(stepTypeVariableValueMap)
 
 			// if stepVariable[stepDefn.GetType()] == cty.NilVal {
 			// 	stepVariable[stepDefn.GetType()] = cty.ObjectVal(map[string]cty.Value{})

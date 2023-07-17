@@ -2,28 +2,28 @@ package pipeline
 
 import (
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 var PipelineBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name:     configschema.AttributeTypeDescription,
+			Name:     schema.AttributeTypeDescription,
 			Required: false,
 		},
 	},
 	Blocks: []hcl.BlockHeaderSchema{
 		{
-			Type:       configschema.BlockTypePipeline,
-			LabelNames: []string{configschema.LabelName},
+			Type:       schema.BlockTypePipeline,
+			LabelNames: []string{schema.LabelName},
 		},
 		{
-			Type:       configschema.BlockTypePipelineStep,
-			LabelNames: []string{configschema.LabelType, configschema.LabelName},
+			Type:       schema.BlockTypePipelineStep,
+			LabelNames: []string{schema.LabelType, schema.LabelName},
 		},
 		{
-			Type:       configschema.BlockTypePipelineOutput,
-			LabelNames: []string{configschema.LabelName},
+			Type:       schema.BlockTypePipelineOutput,
+			LabelNames: []string{schema.LabelName},
 		},
 	},
 }
@@ -53,11 +53,11 @@ var PipelineOutputBlockSchema = &hcl.BodySchema{
 var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name:     configschema.AttributeTypeUrl,
+			Name:     schema.AttributeTypeUrl,
 			Required: true,
 		},
 		{
-			Name: configschema.AttributeTypeDependsOn,
+			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }
@@ -65,22 +65,22 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name:     configschema.AttributeTypeDuration,
+			Name:     schema.AttributeTypeDuration,
 			Required: true,
 		},
 		{
-			Name: configschema.AttributeTypeDependsOn,
+			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }
 var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name:     configschema.AttributeTypeTo,
+			Name:     schema.AttributeTypeTo,
 			Required: true,
 		},
 		{
-			Name: configschema.AttributeTypeDependsOn,
+			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }
@@ -97,7 +97,7 @@ var PipelineStepEchoBlockSchema = &hcl.BodySchema{
 			Name: "for_each",
 		},
 		{
-			Name: configschema.AttributeTypeDependsOn,
+			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }

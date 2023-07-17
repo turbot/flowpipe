@@ -7,18 +7,18 @@ import (
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/configschema"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Sleep struct{}
 
 func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
 
-	if input[configschema.AttributeTypeDuration] == nil {
+	if input[schema.AttributeTypeDuration] == nil {
 		return fperr.BadRequestWithMessage("Sleep input must define a duration")
 	}
 
-	durationString := input[configschema.AttributeTypeDuration].(string)
+	durationString := input[schema.AttributeTypeDuration].(string)
 	_, err := time.ParseDuration(durationString)
 	if err != nil {
 		return fperr.BadRequestWithMessage("invalid sleep duration " + durationString)
@@ -32,7 +32,7 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 		return nil, err
 	}
 
-	durationString := input[configschema.AttributeTypeDuration].(string)
+	durationString := input[schema.AttributeTypeDuration].(string)
 	// Already validated
 	duration, _ := time.ParseDuration(durationString)
 
