@@ -1,12 +1,11 @@
 name: Go Lint and Test
 on:
-  pull_request:
-  # push:
-  #   tags:
-  #     - v*  
-  #   branches:
-  #     - main
-  #     - "v*"
+  push:
+    tags:
+      - v*  
+    branches:
+      - main
+      - "v*"
 
 jobs:
   golangci:
