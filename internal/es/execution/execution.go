@@ -321,7 +321,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
-			ex.StepExecutions[et.StepExecutionID].ForEach = et.ForEach
+			ex.StepExecutions[et.StepExecutionID].Index = et.Index
+			ex.StepExecutions[et.StepExecutionID].ForEachOutput = et.ForEachOutput
 			pe.StepStatus[stepDefn.GetFullyQualifiedName()].Queue(et.StepExecutionID)
 
 		case "command.pipeline_step_start":

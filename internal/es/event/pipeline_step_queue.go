@@ -11,12 +11,13 @@ type PipelineStepQueue struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string       `json:"pipeline_execution_id"`
-	StepExecutionID     string       `json:"step_execution_id"`
-	StepName            string       `json:"step_name"`
-	StepInput           types.Input  `json:"input"`
-	ForEach             *types.Input `json:"for_each,omitempty"`
-	DelayMs             int          `json:"delay_ms,omitempty"` // delay start in milliseconds
+	PipelineExecutionID string            `json:"pipeline_execution_id"`
+	StepExecutionID     string            `json:"step_execution_id"`
+	StepName            string            `json:"step_name"`
+	StepInput           types.Input       `json:"input"`
+	Index               *int              `json:"index,omitempty"`
+	ForEachOutput       *types.StepOutput `json:"for_each_output,omitempty"`
+	DelayMs             int               `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -50,11 +51,12 @@ func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOp
 	}
 }
 
-func PipelineStepQueueWithStep(name string, input types.Input, forEach *types.Input, delayMs int) PipelineStepQueueOption {
+func PipelineStepQueueWithStep(name string, input types.Input, index *int, forEachOutput *types.StepOutput, delayMs int) PipelineStepQueueOption {
 	return func(cmd *PipelineStepQueue) error {
 		cmd.StepName = name
 		cmd.StepInput = input
-		cmd.ForEach = forEach
+		cmd.Index = index
+		cmd.ForEachOutput = forEachOutput
 		cmd.DelayMs = delayMs
 		return nil
 	}
