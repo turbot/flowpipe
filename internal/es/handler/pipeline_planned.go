@@ -60,7 +60,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// PRE: No new steps to execute, so the planner should just check to see if
 		// all existing steps are complete.
 		if pe.IsComplete() {
-			logger.Info("[9] pipeline planned event handler #3 - pipeline completed", "executionID", e.Event.ExecutionID)
 			if pe.ShouldFail() {
 				logger.Info("[9] pipeline planned event handler #4 - should fail", "executionID", e.Event.ExecutionID)
 
@@ -71,6 +70,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 				return h.CommandBus.Send(ctx, &cmd)
 			} else {
+
 				logger.Info("[9] pipeline planned event handler #5 - complete", "executionID", e.Event.ExecutionID)
 				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 				if err != nil {
@@ -96,6 +96,31 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// var forInputsType string
 
 		stepDefn := defn.GetStep(nextStep.StepName)
+
+		evalContext := hcl.EvalContext{
+			Variables: ex.ExecutionVariables,
+			Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
+		}
+
+		stepForEach := stepDefn.GetForEach()
+		if stepForEach != nil {
+			paramsCtyVal, err := defn.ParamsAsCty()
+			if err != nil {
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			}
+			evalContext.Variables["param"] = paramsCtyVal
+
+			val, diags := stepForEach.Value(&evalContext)
+
+			// resolve ForEach
+			// var foreach interface{}
+			// diags := gohcl.DecodeExpression(stepForEach, &evalContext, &foreach)
+			if diags.HasErrors() {
+				err := pipeparser.DiagsToError("execution", diags)
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			}
+			logger.Info("Val is", "val", val)
+		}
 
 		// if stepDefn.GetFor() != "" {
 		// 	// Use go template with the step outputs to generate the items
@@ -135,11 +160,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// execution in the loop
 		forEaches := []*types.Input{}
 
-		evalContext := hcl.EvalContext{
-			Variables: ex.ExecutionVariables,
-			Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
-		}
-
 		// Get input needs the Eval Context to resolve references
 		stepInputs, err := stepDefn.GetInputs(&evalContext)
 		if err != nil {
@@ -154,8 +174,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			// no items, then we would have returned above.
 			inputs = append(inputs, types.Input{})
 			forEaches = append(forEaches, nil)
-
-			// logger.Info("[8] pipeline planned event handler #8")
 
 			// TODO: what happen if forInputs is invalid? Is this a real issue or not?
 			if forInputs.IsValid() {

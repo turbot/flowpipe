@@ -71,6 +71,19 @@ func (p *Pipeline) CtyValue() (cty.Value, error) {
 	return pipeparser.GetCtyValue(p)
 }
 
+// TODO: this only works with default value, we need to modify this
+// TODO: so it takes external parameter
+func (p *Pipeline) ParamsAsCty() (cty.Value, error) {
+
+	params := map[string]cty.Value{}
+
+	for k, v := range p.Params {
+		params[k] = v.Default
+	}
+
+	return cty.ObjectVal(params), nil
+}
+
 // SetOptions sets the options on the connection
 // verify the options object is a valid options type (only options.Connection currently supported)
 func (p *Pipeline) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {

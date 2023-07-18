@@ -93,3 +93,162 @@ func TestSimpleForAndParam(t *testing.T) {
 
 	assert.Equal("user if foozball", stringOutput, "wrong output")
 }
+
+func TestParamsProcessing(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	pipelines, err := LoadPipelines(ctx, "./test_pipelines/for.fp")
+	assert.Nil(err, "error found ")
+
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["for_loop"] == nil {
+		assert.Fail("for_loop pipeline not found")
+		return
+	}
+
+	pipeline := pipelines["for_loop"]
+
+	step := pipeline.GetStep("echo.text_1")
+	if step == nil {
+		assert.Fail("echo.text_1 step not found")
+		return
+	}
+
+	if step.GetForEach() == nil {
+		assert.Fail("echo.text_1 should have a for_each")
+		return
+	}
+
+	variable := pipeline.Params["users"]
+	if variable == nil {
+		assert.Fail("users variable not found")
+		return
+	}
+
+	evalContext := &hcl.EvalContext{}
+	evalContext.Variables = map[string]cty.Value{}
+	evalContext.Variables["param"], err = pipeline.ParamsAsCty()
+
+	if err != nil {
+		assert.Fail("found error")
+		return
+	}
+
+	var output []string
+
+	diag := gohcl.DecodeExpression(step.GetForEach(), evalContext, &output)
+	if diag.HasErrors() {
+		assert.Fail("error decoding expression")
+		return
+	}
+
+	assert.Equal("jerry Janis Jimi", strings.Join(output, " "), "wrong output")
+
+	// use Value function
+	ctyOutput, diags := step.GetForEach().Value(evalContext)
+	if diags.HasErrors() {
+		assert.Fail("error in getting step value")
+		return
+	}
+
+	// TODO: test for actual value, I just check the value in the debugger for now
+	assert.NotNil(ctyOutput, "cty output not nil")
+
+	forEachCtyVals := []map[string]cty.Value{}
+	if ctyOutput.Type().IsListType() {
+		listVal := ctyOutput.AsValueSlice()
+		assert.Equal(3, len(listVal), "wrong number of values")
+
+		for _, v := range listVal {
+			forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
+				"value": v,
+			})
+		}
+	} else {
+		assert.Fail("cty output is not a list type")
+	}
+
+	expected := []string{"jerry", "Janis", "Jimi"}
+
+	for i, v := range forEachCtyVals {
+		evalContext.Variables["each"] = cty.ObjectVal(v)
+		stepInput, err := step.GetInputs(evalContext)
+		assert.Nil(err, "error getting step inputs")
+		assert.Equal(stepInput["text"], "user if "+expected[i], "wrong input")
+	}
+}
+
+// func TestForDependObject(t *testing.T) {
+// 	assert := assert.New(t)
+
+// 	ctx := context.Background()
+// 	ctx = fplog.ContextWithLogger(ctx)
+
+// 	pipelines, err := LoadPipelines(ctx, "./test_pipelines/for.fp")
+// 	assert.Nil(err, "error found ")
+
+// 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+// 	if pipelines["for_depend_object"] == nil {
+// 		assert.Fail("for_depend_object pipeline not found")
+// 		return
+// 	}
+
+// 	pipeline := pipelines["for_depend_object"]
+
+// 	step := pipeline.GetStep("echo.text_1")
+
+// 	if step == nil {
+// 		assert.Fail("echo.text_1 step not found")
+// 		return
+// 	}
+
+// 	objectVal := cty.ObjectVal(map[string]cty.Value{
+// 		"users": cty.ListVal([]cty.Value{
+// 			cty.StringVal("foo"),
+// 			cty.StringVal("bar"),
+// 		})})
+
+// 	evalContext := &hcl.EvalContext{}
+// 	evalContext.Variables = map[string]cty.Value{}
+// 	evalContext.Variables["param"] = objectVal
+
+// 	var output []string
+
+// 	if step.GetForEach() == nil {
+// 		assert.Fail("echo.text_1 should have a for_each")
+// 		return
+// 	}
+
+// 	diag := gohcl.DecodeExpression(step.GetForEach(), evalContext, &output)
+// 	if diag.HasErrors() {
+// 		assert.Fail("error decoding expression")
+// 		return
+// 	}
+
+// 	assert.Equal("foo bar", strings.Join(output, " "), "wrong output")
+
+// 	textAttribute := step.GetUnresolvedAttributes()["text"]
+// 	if textAttribute == nil {
+// 		assert.Fail("text attribute not found")
+// 	}
+
+// 	eachVal := cty.ObjectVal(map[string]cty.Value{
+// 		"value": cty.StringVal("foozball"),
+// 	})
+
+// 	var stringOutput string
+// 	evalContext.Variables["each"] = eachVal
+
+// 	diag = gohcl.DecodeExpression(textAttribute, evalContext, &stringOutput)
+// 	if diag.HasErrors() {
+// 		assert.Fail("error decoding expression")
+// 		return
+// 	}
+
+// 	assert.Equal("user if foozball", stringOutput, "wrong output")
+// }
