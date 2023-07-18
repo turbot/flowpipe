@@ -1,4 +1,4 @@
-name: "Lint: Flowpipe"
+name: Go Lint and Test
 on:
   push:
     tags:
@@ -37,3 +37,7 @@ jobs:
           version: v1.52.2
           args: --timeout=15m
           working-directory: flowpipe
+
+      - name: Run tests
+        run: make test
+        working-directory: flowpipe
