@@ -66,8 +66,9 @@ func (es *ESService) Start() error {
 	logger.Debug("Output dir", "dir", pipelineDir)
 
 	logDir := viper.GetString("log.dir")
-	logger.Debug("Log dir", "logDir", pipelineDir)
+	logger.Debug("Log dir", "dir", pipelineDir)
 
+	// Check if the provided output dir exists, if not create it
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err := os.Mkdir(outputDir, 0755)
 		if err != nil {
@@ -75,6 +76,7 @@ func (es *ESService) Start() error {
 		}
 	}
 
+	// Check if the provided executin log dir exists, if not create it
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		err := os.Mkdir(logDir, 0755)
 		if err != nil {
