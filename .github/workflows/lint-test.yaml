@@ -2,14 +2,14 @@ name: Go Lint and Test
 on:
   push:
     tags:
-      - v*  
+      - v*
     branches:
       - main
       - "v*"
 
 jobs:
   golangci:
-    name: lint
+    name: Lint and Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Flowpipe repository
