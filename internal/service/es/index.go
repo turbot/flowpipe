@@ -2,6 +2,8 @@ package es
 
 import (
 	"context"
+	"log"
+	"os"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -59,6 +61,26 @@ func (es *ESService) Start() error {
 	// if err != nil {
 	// 	return err
 	// }
+
+	outputDir := viper.GetString("output.dir")
+	logger.Debug("Output dir", "dir", pipelineDir)
+
+	logDir := viper.GetString("log.dir")
+	logger.Debug("Log dir", "logDir", pipelineDir)
+
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		err := os.Mkdir(outputDir, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		err := os.Mkdir(logDir, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 
 	pipelines, err := pipeline.LoadPipelines(es.ctx, pipelineDir)
 	if err != nil {
