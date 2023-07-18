@@ -190,6 +190,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			// TODO: remove this line after ForEach is implemented, it should be done as part of the for_each calculation
 			inputs = append(inputs, stepInputs)
+			forEaches = append(forEaches, nil)
 
 			// Parse the input template once
 
