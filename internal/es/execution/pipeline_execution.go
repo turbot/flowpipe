@@ -262,8 +262,12 @@ type StepExecution struct {
 	// The status of the step execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 	// Input to the step
-	Input   types.Input  `json:"input"`
-	ForEach *types.Input `json:"for_each,omitempty"`
+	Input types.Input `json:"input"`
+
+	// Index within the for_each loop
+	Index         *int              `json:"index,omitempty"`
+	ForEachOutput *types.StepOutput `json:"for_each_output,omitempty"`
+
 	// Output of the step
 	Output *types.StepOutput `json:"output,omitempty"`
 

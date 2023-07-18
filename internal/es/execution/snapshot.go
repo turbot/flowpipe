@@ -632,20 +632,17 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 	var row SnapshotPanelDataRow
 
 	var title string
-	if se.ForEach != nil {
-		// TODO - we can do better than this I think?
-		switch k := (*se.ForEach)["key"].(type) {
-		case int:
-			// Don't include integer keys in title
-		case string:
-			title = k + " = "
+	if se.Index != nil && se.ForEachOutput != nil {
+		title = strconv.Itoa(*se.Index) + " = "
+
+		// TODO: this is a bit yuck
+		forEachOutput, ok := se.ForEachOutput.Get("value").(string)
+		if !ok {
+			title += sd.GetFullyQualifiedName()
+		} else {
+			title += forEachOutput
 		}
-		switch v := (*se.ForEach)["value"].(type) {
-		case string:
-			title += v
-		case int:
-			title += strconv.Itoa(v)
-		}
+
 	}
 	if title == "" {
 		title = sd.GetFullyQualifiedName() + " [" + se.ID[len(se.ID)-4:] + "]"
@@ -663,7 +660,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 				"Duration":     se.Input["duration"],
 				"Started At":   se.Output.Get("started_at"),
 				"Finished At":  se.Output.Get("finished_at"),
-				"For Each":     se.ForEach,
+				// "For Each":     se.ForEach,
 			},
 		}
 
@@ -678,7 +675,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 				"Response Status Code": se.Output.Get("status_code"),
 				"Started At":           se.Output.Get("started_at"),
 				"Finished At":          se.Output.Get("finished_at"),
-				"For Each":             se.ForEach,
+				// "For Each":             se.ForEach,
 			},
 		}
 
@@ -692,7 +689,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 				"Row Count":    len(se.Output.Get("rows").([]interface{})),
 				"Started At":   se.Output.Get("started_at"),
 				"Finished At":  se.Output.Get("finished_at"),
-				"For Each":     se.ForEach,
+				// "For Each":     se.ForEach,
 			},
 		}
 
@@ -704,8 +701,8 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 				"Execution ID": se.ID,
 				"Status":       se.Status,
 				"Input":        se.Input,
-				"For Each":     se.ForEach,
-				"Output":       se.Output,
+				// "For Each":     se.ForEach,
+				"Output": se.Output,
 			},
 		}
 	}
