@@ -40,7 +40,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 	}
 
-	defn, err := ex.PipelineDefinition(e.PipelineExecutionID)
+	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 	}
@@ -92,26 +92,45 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
 
-		stepDefn := defn.GetStep(nextStep.StepName)
+		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
 
-		evalContext := hcl.EvalContext{
-			Variables: ex.ExecutionVariables,
-			Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
-		}
+		var evalContext *hcl.EvalContext
 
 		// ! This is a slice of map. Each slice represent a step execution, an element of the for_each
 		forEachCtyVals := []map[string]cty.Value{}
 		stepForEach := stepDefn.GetForEach()
 		if stepForEach != nil {
+
+			executionVariables, err := ex.GetExecutionVariables()
+			if err != nil {
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			}
+
+			evalContext = &hcl.EvalContext{
+				Variables: executionVariables,
+				Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
+			}
+
 			// TODO: this only works for default params - we need to implement the parameter passing when
 			// TODO: running the pipeline
-			paramsCtyVal, err := defn.ParamsAsCty()
+			paramsCtyVal, err := pipelineDefn.ParamsAsCty()
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 			evalContext.Variables["param"] = paramsCtyVal
 
-			val, diags := stepForEach.Value(&evalContext)
+			// First we want to evaluate the content of for_each
+			// Given the following:
+			//
+			// params = ["brian", "freddie"]
+			// for_each = params.users
+			//
+			// The result of "val" should be a CTY List of 2 elements: brian and freddie.
+			//
+			// Each element in the array represent a "new" step execution. A non-for_each step execution will just have one input
+			// so if a step has a for_each we need to build the list if input. Each element in the list represents a step execution.
+
+			val, diags := stepForEach.Value(evalContext)
 
 			if diags.HasErrors() {
 				err := pipeparser.DiagsToError("param", diags)
@@ -136,9 +155,21 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		//
 		inputs := []types.Input{}
 
+		if evalContext == nil {
+			executionVariables, err := ex.GetExecutionVariables()
+			if err != nil {
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			}
+
+			evalContext = &hcl.EvalContext{
+				Variables: executionVariables,
+				Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
+			}
+		}
+
 		// now resolve the inputs, if there's no for_each then there's just one input
 		if len(forEachCtyVals) == 0 {
-			stepInputs, err := stepDefn.GetInputs(&evalContext)
+			stepInputs, err := stepDefn.GetInputs(evalContext)
 			if err != nil {
 				logger.Error("Error resolving step inputs", "error", err)
 				return err
@@ -146,8 +177,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			inputs = append(inputs, stepInputs)
 		} else {
 			for _, v := range forEachCtyVals {
+
+				// "each" is the magic keyword that will be used to access the current element in the for_each
+				//
+				// flowpipe's step must use the "each" keyword to access the for_each element that it's currently running
 				evalContext.Variables["each"] = cty.ObjectVal(v)
-				stepInputs, err := stepDefn.GetInputs(&evalContext)
+				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
 					logger.Error("Error resolving step inputs", "error", err)
 					return err
@@ -159,16 +194,15 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		for i, input := range inputs {
 			// Start each step in parallel
 			go func(nextStep types.NextStep, input types.Input, index int) {
-				var forEachIndex *int
-				var forEachOutput *types.StepOutput
+
+				var forEachControl *types.StepForEach
 
 				// TODO: this is not very nice and the only reason we do this is for the snapshot, we should
 				// TODO: refactor this
 				if stepForEach == nil {
-					forEachIndex = nil
-					forEachOutput = nil
+					forEachControl = nil
 				} else {
-					forEachIndex = &index
+					forEachIndex := index
 					forEachCtyVal := forEachCtyVals[index]["value"]
 
 					var title string
@@ -178,13 +212,18 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					} else {
 						title += nextStep.StepName
 					}
-
-					forEachOutput = &types.StepOutput{
+					forEachOutput := &types.StepOutput{
 						"value": title,
+					}
+
+					forEachControl = &types.StepForEach{
+						Index:             forEachIndex,
+						ForEachOutput:     forEachOutput,
+						ForEachTotalCount: len(inputs),
 					}
 				}
 
-				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachIndex, forEachOutput, nextStep.DelayMs))
+				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs))
 				if err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {

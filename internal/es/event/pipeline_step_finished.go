@@ -13,9 +13,14 @@ type PipelineStepFinished struct {
 	// Step execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
+
 	// Output
 	Output *types.StepOutput `json:"output,omitempty"`
-	Error  *types.StepError  `json:"error,omitempty"`
+
+	// for_each controls
+	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
+
+	Error *types.StepError `json:"error,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -48,6 +53,7 @@ func ForPipelineStepStartToPipelineStepFinished(cmd *PipelineStepStart) Pipeline
 		} else {
 			return fmt.Errorf("missing step execution ID in pipeline step start command: %v", e)
 		}
+		e.StepForEach = cmd.StepForEach
 		return nil
 	}
 }
@@ -66,6 +72,7 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 			return fmt.Errorf("missing step execution ID in pipeline step finish command: %v", e)
 		}
 		e.Output = cmd.Output
+		e.StepForEach = cmd.StepForEach
 		return nil
 	}
 }

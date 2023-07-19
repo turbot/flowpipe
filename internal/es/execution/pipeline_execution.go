@@ -264,9 +264,8 @@ type StepExecution struct {
 	// Input to the step
 	Input types.Input `json:"input"`
 
-	// Index within the for_each loop
-	Index         *int              `json:"index,omitempty"`
-	ForEachOutput *types.StepOutput `json:"for_each_output,omitempty"`
+	// for_each controls
+	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
 
 	// Output of the step
 	Output *types.StepOutput `json:"output,omitempty"`

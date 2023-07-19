@@ -632,11 +632,11 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 	var row SnapshotPanelDataRow
 
 	var title string
-	if se.Index != nil && se.ForEachOutput != nil {
-		title = strconv.Itoa(*se.Index) + " = "
+	if se.StepForEach != nil {
+		title = strconv.Itoa(se.StepForEach.Index) + " = "
 
 		// TODO: this is a bit yuck
-		forEachOutput, ok := se.ForEachOutput.Get("value").(string)
+		forEachOutput, ok := se.StepForEach.ForEachOutput.Get("value").(string)
 		if !ok {
 			title += sd.GetFullyQualifiedName()
 		} else {

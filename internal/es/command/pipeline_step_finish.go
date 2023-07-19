@@ -27,7 +27,7 @@ func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	fplog.Logger(ctx).Info("(11) pipeline_step_finish command handler", "executionID", cmd.Event.ExecutionID, "cmd", cmd)
 
-	e, err := event.NewPipelineStepFinished(event.ForPipelineStepFinish(cmd), event.WithStepOutput(cmd.Output))
+	e, err := event.NewPipelineStepFinished(event.ForPipelineStepFinish(cmd))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
 	}

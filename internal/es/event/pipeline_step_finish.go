@@ -9,6 +9,9 @@ type PipelineStepFinish struct {
 	PipelineExecutionID string            `json:"pipeline_execution_id"`
 	StepExecutionID     string            `json:"step_execution_id"`
 	Output              *types.StepOutput `json:"output,omitempty"`
+
+	// for_each controls
+	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

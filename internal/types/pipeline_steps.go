@@ -16,6 +16,12 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+type StepForEach struct {
+	Index             int         `json:"index" binding:"required"`
+	ForEachOutput     *StepOutput `json:"for_each_output,omitempty"`
+	ForEachTotalCount int         `json:"for_each_total_count" binding:"required"`
+}
+
 type Input map[string]interface{}
 
 // StepOutput is the output from a pipeline.
@@ -284,6 +290,8 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 		}
 		parts := TraversalAsStringSlice(traversal)
 		if len(parts) != 3 {
+			// TODO: won't work with indices, i.e. text = "foo ${step.echo[1].text}"
+			// TODO: ^^ only when we have for_each working properly
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,
 				Summary:  constants.BadDependsOn,
@@ -295,11 +303,24 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 		dependsOn = append(dependsOn, parts[1]+"."+parts[2])
 	}
 
-	p.DependsOn = append(p.DependsOn, dependsOn...)
-
 	if attr, exists := hclAttributes[schema.AttributeTypeForEach]; exists {
 		p.ForEach = attr.Expr
+
+		traversals := attr.Expr.Variables()
+
+		for _, t := range traversals {
+			parts := TraversalAsStringSlice(t)
+			if len(parts) >= 3 {
+				if helpers.StringSliceContains(ValidDependsOnTypes, parts[0]) {
+					if len(parts) >= 3 {
+						dependsOn = append(dependsOn, parts[1]+"."+parts[2])
+					}
+				}
+			}
+		}
 	}
+
+	p.DependsOn = append(p.DependsOn, dependsOn...)
 
 	return diags
 }
@@ -335,6 +356,10 @@ func TraversalAsStringSlice(traversal hcl.Traversal) []string {
 var ValidResourceItemTypes = []string{
 	schema.AttributeTypeDependsOn,
 	schema.AttributeTypeForEach,
+}
+
+var ValidDependsOnTypes = []string{
+	schema.BlockTypePipelineStep,
 }
 
 func (p *PipelineStepBase) IsBaseAttributes(name string) bool {
