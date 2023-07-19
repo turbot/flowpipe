@@ -2,7 +2,6 @@ package es
 
 import (
 	"context"
-	"log"
 	"os"
 	"time"
 
@@ -72,15 +71,15 @@ func (es *ESService) Start() error {
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err := os.Mkdir(outputDir, 0755)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
-	// Check if the provided executin log dir exists, if not create it
+	// Check if the provided execution log dir exists, if not create it
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		err := os.Mkdir(logDir, 0755)
 		if err != nil {
-			log.Fatal(err)
+			return err
 		}
 	}
 
