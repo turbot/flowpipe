@@ -58,68 +58,17 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 
 	var output *types.StepOutput
 	var err error
-
 	switch method {
 	case "get":
 		output, err = Get(ctx, inputURL)
-
 	case "post":
-		// Get the inputs from the pipeline
-		inputParams := HTTPPOSTInput{
-			URL: inputURL,
+		// build the input for the POST request
+		postInput, inputErr := buildHTTPPostInput(input)
+		if inputErr != nil {
+			return nil, inputErr
 		}
 
-		// Set the request timeput, if provided
-		if input["request_timeout_ms"] != nil {
-			inputParams.RequestTimeoutMs = input["request_timeout_ms"].(int)
-		}
-
-		// Set the certificate, if provided
-		if input["ca_cert_pem"] != nil {
-			inputParams.CaCertPem = input["ca_cert_pem"].(string)
-		}
-
-		// Set value for insecureSkipVerify, if provided
-		if input["insecure"] != nil {
-			inputParams.Insecure = input["insecure"].(bool)
-		}
-
-		// Set the request headers, if provided
-		requestHeaders := map[string]interface{}{}
-		if input["request_headers"] != nil {
-			requestHeaders = input["request_headers"].(map[string]interface{})
-		}
-
-		// Get the request body
-		requestBody := input["body"].(string)
-
-		// Try to unmarshal the request body into JSON
-		var requestBodyJSON map[string]interface{}
-		unmarshalErr := json.Unmarshal([]byte(requestBody), &requestBodyJSON)
-		if unmarshalErr != nil {
-			// If unmarshaling fails, assume it's a plain string
-			requestBodyJSON = nil
-
-			// Set the request body as a string
-			inputParams.RequestBody = requestBody
-
-			// Also, set the content type header to plain text
-			requestHeaders["Content-Type"] = "text/plain"
-		}
-
-		// If the request body is a JSON object
-		if requestBodyJSON != nil {
-			requestBodyJSONBytes, marshalErr := json.Marshal(requestBodyJSON)
-			if marshalErr != nil {
-				return nil, fmt.Errorf("error marshaling request body JSON: %v", err)
-			}
-
-			// Set the JSON encoding of the request body
-			inputParams.RequestBody = string(requestBodyJSONBytes)
-		}
-		inputParams.RequestHeaders = requestHeaders
-
-		output, err = Post(ctx, inputParams)
+		output, err = Post(ctx, postInput)
 	}
 
 	if err != nil {
@@ -201,7 +150,7 @@ func Get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	return &output, nil
 }
 
-func Post(ctx context.Context, inputParams HTTPPOSTInput) (*types.StepOutput, error) {
+func Post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, error) {
 	logger := fplog.Logger(ctx)
 
 	// Create the HTTP client
@@ -299,4 +248,64 @@ func Post(ctx context.Context, inputParams HTTPPOSTInput) (*types.StepOutput, er
 	}
 
 	return &output, nil
+}
+
+// builsHTTPPostInput builds the HTTPPOSTInput struct from the input parameters
+func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
+	// Get the inputs from the pipeline
+	inputParams := &HTTPPOSTInput{
+		URL: input["url"].(string),
+	}
+
+	// Set the request timeput, if provided
+	if input["request_timeout_ms"] != nil {
+		inputParams.RequestTimeoutMs = input["request_timeout_ms"].(int)
+	}
+
+	// Set the certificate, if provided
+	if input["ca_cert_pem"] != nil {
+		inputParams.CaCertPem = input["ca_cert_pem"].(string)
+	}
+
+	// Set value for insecureSkipVerify, if provided
+	if input["insecure"] != nil {
+		inputParams.Insecure = input["insecure"].(bool)
+	}
+
+	// Set the request headers, if provided
+	requestHeaders := map[string]interface{}{}
+	if input["request_headers"] != nil {
+		requestHeaders = input["request_headers"].(map[string]interface{})
+	}
+
+	// Get the request body
+	requestBody := input["body"].(string)
+
+	// Try to unmarshal the request body into JSON
+	var requestBodyJSON map[string]interface{}
+	unmarshalErr := json.Unmarshal([]byte(requestBody), &requestBodyJSON)
+	if unmarshalErr != nil {
+		// If unmarshaling fails, assume it's a plain string
+		requestBodyJSON = nil
+
+		// Set the request body as a string
+		inputParams.RequestBody = requestBody
+
+		// Also, set the content type header to plain text
+		requestHeaders["Content-Type"] = "text/plain"
+	}
+
+	// If the request body is a JSON object
+	if requestBodyJSON != nil {
+		requestBodyJSONBytes, marshalErr := json.Marshal(requestBodyJSON)
+		if marshalErr != nil {
+			return nil, fmt.Errorf("error marshaling request body JSON: %v", marshalErr)
+		}
+
+		// Set the JSON encoding of the request body
+		inputParams.RequestBody = string(requestBodyJSONBytes)
+	}
+	inputParams.RequestHeaders = requestHeaders
+
+	return inputParams, nil
 }
