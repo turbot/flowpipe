@@ -65,8 +65,18 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 				if err != nil {
 					return nil, err
 				}
+			} else if indexedStepOutput, ok := stepOutput.([]*types.StepOutput); ok {
+				var err error
+
+				ctyValList := make([]cty.Value, len(indexedStepOutput))
+				for i, stepOutput := range indexedStepOutput {
+					ctyValList[i], err = stepOutput.AsHclVariables()
+					if err != nil {
+						return nil, err
+					}
+				}
+				vm[stepName] = cty.ListVal(ctyValList)
 			}
-			// TODO for indexed step output (supports for_each)
 		}
 
 		stepVariables[stepType] = cty.ObjectVal(vm)

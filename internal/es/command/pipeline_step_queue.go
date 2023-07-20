@@ -28,11 +28,12 @@ func (h PipelineStepQueueHandler) Handle(ctx context.Context, c interface{}) err
 	}
 
 	logger := fplog.Logger(ctx)
-	logger.Info("(10) pipeline_step_queue command handler", "executionID", cmd.Event.ExecutionID, "cmd", cmd)
 
-	logger.Info("Sleeping for delay_ms", "delayMs", cmd.DelayMs)
-	time.Sleep(time.Duration(cmd.DelayMs) * time.Millisecond)
-	logger.Info("Sleeping for delay_ms complete", "delayMs", cmd.DelayMs)
+	if cmd.DelayMs > 0 {
+		logger.Info("Sleeping for delay_ms", "delayMs", cmd.DelayMs)
+		time.Sleep(time.Duration(cmd.DelayMs) * time.Millisecond)
+		logger.Info("Sleeping for delay_ms complete", "delayMs", cmd.DelayMs)
+	}
 
 	e, err := event.NewPipelineStepQueued(event.ForPipelineStepQueue(cmd))
 	if err != nil {

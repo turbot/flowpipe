@@ -28,8 +28,6 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStepQueued")
 	}
 
-	logger.Info("[10] pipeline_step_queued event handler", "executionID", e.Event.ExecutionID, "e", e)
-
 	// Step has been queued (but not yet started), so here we just need to start the step
 	// the code should be the same as the pipeline_planned event handler
 	cmd, err := event.NewPipelineStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.StepForEach))
@@ -42,7 +40,6 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	logger.Info("[10] pipeline_step_queued event handler #3.A - sending pipeline step START command", "command", cmd)
 	if err := h.CommandBus.Send(ctx, &cmd); err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {

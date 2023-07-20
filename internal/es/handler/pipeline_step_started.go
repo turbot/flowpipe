@@ -28,8 +28,6 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStepStarted")
 	}
 
-	logger.Info("[14] pipeline_step_started event handler", "executionID", e.Event.ExecutionID)
-
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
