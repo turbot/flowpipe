@@ -18,7 +18,7 @@ func TestSleepOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := types.Input(map[string]interface{}{"duration": "5s"})
+	input := types.Input(map[string]interface{}{"duration": "1s"})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
@@ -26,7 +26,7 @@ func TestSleepOK(t *testing.T) {
 	startTime := output.Get("started_at").(time.Time)
 	finishTime := output.Get("finished_at").(time.Time)
 	diff := finishTime.Sub(startTime)
-	assert.Equal(float64(5), math.Floor(diff.Seconds()), "output does not match the provided duration")
+	assert.Equal(float64(1), math.Floor(diff.Seconds()), "output does not match the provided duration")
 }
 
 func TestSleepInvalidDuration(t *testing.T) {
