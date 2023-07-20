@@ -32,7 +32,7 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	// Step has been queued (but not yet started), so here we just need to start the step
 	// the code should be the same as the pipeline_planned event handler
-	cmd, err := event.NewPipelineStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.Index, e.ForEachOutput))
+	cmd, err := event.NewPipelineStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.StepForEach))
 	if err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {

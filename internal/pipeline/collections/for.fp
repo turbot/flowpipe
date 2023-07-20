@@ -47,6 +47,7 @@ pipeline "for_loop_depend" {
     }
 
     step "echo" "text_2" {
+        // text = output is user is jerry
         text = "output is ${step.echo.text_1[0].text}"
     }
 

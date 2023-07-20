@@ -19,7 +19,7 @@ pipeline "for_depend_object" {
 
     param "users" {
         type = list(string)
-        default = ["jerry", "Janis", "Jimi"]
+        default = ["brian", "freddie", "john", "roger"]
     }
 
     step "echo" "text_1" {

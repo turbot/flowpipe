@@ -14,7 +14,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -39,9 +38,66 @@ type Execution struct {
 	// TODO: but also a way to track the order of execution for a given step
 	StepExecutionOrder map[string][]string `json:"step_execution_order"`
 
-	// This is not serializable
-	ExecutionVariables map[string]cty.Value `json:"-"`
+	// Later in the "execution" part where we are building the execution details, as we read the jsonl events
+	// there will be an execution variables that is in an array form.
+	AllStepOutputs ExecutionStepOutputs `json:"-"`
 }
+
+func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
+
+	stepVariables := make(map[string]cty.Value)
+
+	for stepType, v := range ex.AllStepOutputs {
+
+		if stepVariables[stepType] == cty.NilVal {
+			stepVariables[stepType] = cty.ObjectVal(map[string]cty.Value{})
+		}
+
+		vm := stepVariables[stepType].AsValueMap()
+		if vm == nil {
+			vm = map[string]cty.Value{}
+		}
+
+		for stepName, stepOutput := range v {
+			if nonIndexStepOutput, ok := stepOutput.(*types.StepOutput); ok {
+				var err error
+				vm[stepName], err = nonIndexStepOutput.AsHclVariables()
+				if err != nil {
+					return nil, err
+				}
+			}
+			// TODO for indexed step output (supports for_each)
+		}
+
+		stepVariables[stepType] = cty.ObjectVal(vm)
+	}
+
+	executionVariables := map[string]cty.Value{
+		"step": cty.ObjectVal(stepVariables),
+	}
+
+	return executionVariables, nil
+
+}
+
+// ExecutionStepOutputs is a map for all the step execution. It's stored in this format:
+//
+// ExecutionStepOutputs = {
+//    "echo" = {
+//			"echo_1": {},
+//          "my_other_echo": {},
+//     },
+
+//	  "http" = {
+//	     "http_1": {},
+//	     "http_2": {},
+//	  }
+//	}
+//
+// The first level is grouping the output by the step type
+// The next level group the output by the step name
+// The value can be a StepOutput OR a slice of StepOutput
+type ExecutionStepOutputs map[string]map[string]interface{}
 
 // ExecutionOption is a function that modifies an Execution instance.
 type ExecutionOption func(*Execution) error
@@ -54,7 +110,7 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 		PipelineExecutions: map[string]*PipelineExecution{},
 		StepExecutions:     map[string]*StepExecution{},
 		StepExecutionOrder: map[string][]string{},
-		ExecutionVariables: map[string]cty.Value{},
+		AllStepOutputs:     ExecutionStepOutputs{},
 	}
 
 	// Loop through each option
@@ -321,8 +377,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
-			ex.StepExecutions[et.StepExecutionID].Index = et.Index
-			ex.StepExecutions[et.StepExecutionID].ForEachOutput = et.ForEachOutput
+			ex.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
 			pe.StepStatus[stepDefn.GetFullyQualifiedName()].Queue(et.StepExecutionID)
 
 		case "command.pipeline_step_start":
@@ -363,37 +418,37 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				logger.Error("Failed to get step definition - 3", "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
+
+			shouldBeIndexed := false
+			if stepDefn.GetForEach() != nil {
+				shouldBeIndexed = true
+			}
+
 			// Step the specific step execution status
 			ex.StepExecutions[et.StepExecutionID].Status = "finished"
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
 
-			if ex.ExecutionVariables[schema.BlockTypePipelineStep] == cty.NilVal {
-				ex.ExecutionVariables[schema.BlockTypePipelineStep] = cty.ObjectVal(map[string]cty.Value{})
+			if ex.AllStepOutputs[stepDefn.GetType()] == nil {
+				ex.AllStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
 			}
 
-			stepVariable := ex.ExecutionVariables[schema.BlockTypePipelineStep]
+			if !shouldBeIndexed {
+				// non for_each step. The step will be accessed such as:
+				// text = step.echo.text_1.text
+				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
+				if err != nil {
+					return err
+				}
+			} else {
+				// for indexed step, you want to be able to access the step as
+				// text = step.echo.text_1[1].text
 
-			stepTypeVariableValueMap := stepVariable.AsValueMap()
-			if stepTypeVariableValueMap == nil {
-				stepTypeVariableValueMap = map[string]cty.Value{}
+				if ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+					ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*types.StepOutput, et.StepForEach.ForEachTotalCount)
+				}
+
+				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.StepOutput)[et.StepForEach.Index] = et.Output
 			}
-
-			if stepTypeVariableValueMap[stepDefn.GetType()] == cty.NilVal {
-				stepTypeVariableValueMap[stepDefn.GetType()] = cty.ObjectVal(map[string]cty.Value{})
-			}
-
-			vm := stepTypeVariableValueMap[stepDefn.GetType()].AsValueMap()
-			if vm == nil {
-				vm = map[string]cty.Value{}
-			}
-
-			vm[stepDefn.GetName()], err = et.Output.AsHclVariables()
-			if err != nil {
-				return err
-			}
-			stepTypeVariableValueMap[stepDefn.GetType()] = cty.ObjectVal(vm)
-
-			ex.ExecutionVariables[schema.BlockTypePipelineStep] = cty.ObjectVal(stepTypeVariableValueMap)
 
 			// TODO: ignore error setting -> we need to be able to ignore setting
 			// TODO: is a step failure an immediate end of the pipeline?

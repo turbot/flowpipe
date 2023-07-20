@@ -12,12 +12,14 @@ type PipelineStepQueued struct {
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 
-	StepExecutionID string            `json:"step_execution_id"`
-	StepName        string            `json:"step_name"`
-	StepInput       types.Input       `json:"input"`
-	Index           *int              `json:"index,omitempty"`
-	ForEachOutput   *types.StepOutput `json:"for_each_output,omitempty"`
-	DelayMs         int               `json:"delay_ms,omitempty"` // delay start in milliseconds
+	StepExecutionID string      `json:"step_execution_id"`
+	StepName        string      `json:"step_name"`
+	StepInput       types.Input `json:"input"`
+
+	// for_each controls
+	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
+
+	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -48,8 +50,7 @@ func ForPipelineStepQueue(cmd *PipelineStepQueue) PipelineStepQueuedOption {
 		e.StepExecutionID = cmd.StepExecutionID
 		e.StepName = cmd.StepName
 		e.StepInput = cmd.StepInput
-		e.Index = cmd.Index
-		e.ForEachOutput = cmd.ForEachOutput
+		e.StepForEach = cmd.StepForEach
 		e.DelayMs = cmd.DelayMs
 		return nil
 	}
