@@ -53,6 +53,10 @@ pipeline "for_loop_nested_with_sleep_and_index" {
     step "echo" "echo_1" {
         text = "sleep 2 output: ${step.sleep.sleep_2[1].duration}"
     }
+
+    step "echo" "echo_2" {
+        text = "sleep 1 output: ${step.sleep.sleep_1[0].duration}"
+    }
 }
 
 pipeline "for_loop_nested" {
