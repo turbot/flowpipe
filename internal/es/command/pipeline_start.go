@@ -25,8 +25,6 @@ func (h PipelineStartHandler) Handle(ctx context.Context, c interface{}) error {
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineStart")
 	}
 
-	fplog.Logger(ctx).Info("(10) pipeline_start command handler", "executionID", cmd.Event.ExecutionID)
-
 	e, err := event.NewPipelineStarted(event.ForPipelineStart(cmd))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStartToPipelineFailed(cmd, err)))

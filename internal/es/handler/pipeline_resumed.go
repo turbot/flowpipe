@@ -27,8 +27,6 @@ func (h PipelineResumed) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineResumed")
 	}
 
-	logger.Info("[11] pipeline_resumed event handler", "eventExecutionID", e.Event.ExecutionID)
-
 	evt, err := event.NewPipelinePlan(event.ForPipelineResumed(e))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineResumedToPipelineFail(e, err)))

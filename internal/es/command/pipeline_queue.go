@@ -25,8 +25,6 @@ func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineQueue")
 	}
 
-	fplog.Logger(ctx).Info("(8) pipeline_queue command handler", "executionID", cmd.Event.ExecutionID)
-
 	e, err := event.NewPipelineQueued(event.ForPipelineQueue(cmd))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineQueueToPipelineFailed(cmd, err)))

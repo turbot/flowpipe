@@ -173,6 +173,8 @@ type StepStatus struct {
 
 // IsComplete returns true if all executions of the step are finished or failed.
 func (s *StepStatus) IsComplete() bool {
+	// One step can have more than 1 execution, for example if a step has a for_each directive
+	// or retries
 	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0
 }
 

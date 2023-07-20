@@ -28,8 +28,6 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineLoad")
 	}
 
-	fplog.Logger(ctx).Info("(6) pipeline_load command handler #1", "executionID", cmd.Event.ExecutionID)
-
 	// ? new execution here? is it because I'm finally running the pipeline?
 	// ? doesn't look like the execution is used for anything else apart from loading a pipeline definition
 	// ? and we need the execution "instance" so we can get the pipeline name from the pipeline execution id

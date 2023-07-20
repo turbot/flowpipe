@@ -132,6 +132,12 @@ func (es *ESService) Start() error {
 	// ! so the log entry is written ASAP
 	router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
 
+	plannerControl := middleware.PlannerControl{
+		Ctx: es.ctx,
+	}
+
+	router.AddMiddleware(plannerControl.Middleware)
+
 	// Delay PipelineStepStart command (if required)
 	// router.AddMiddleware(middleware.PipelineStepStartCommandDelayMiddlewareWithContext(es.ctx))
 

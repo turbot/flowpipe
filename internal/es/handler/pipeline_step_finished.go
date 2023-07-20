@@ -27,7 +27,6 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 	}
 
 	logger := fplog.Logger(ctx)
-	logger.Info("[13] pipeline_step_finished event handler", "executionID", e.Event.ExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -50,6 +49,5 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
 	}
 
-	logger.Info("[13] pipeline_step_finished event handler #2", "executionID", e.Event.ExecutionID)
 	return h.CommandBus.Send(ctx, cmd)
 }

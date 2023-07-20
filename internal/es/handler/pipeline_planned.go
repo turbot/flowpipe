@@ -33,8 +33,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
-	logger.Info("[9] pipeline planned event handler #1", "executionID", e.Event.ExecutionID)
-
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
@@ -55,14 +53,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if len(e.NextSteps) == 0 {
-		logger.Info("[9] pipeline planned event handler #2", "executionID", e.Event.ExecutionID)
 
 		// PRE: No new steps to execute, so the planner should just check to see if
 		// all existing steps are complete.
 		if pe.IsComplete() {
 			if pe.ShouldFail() {
-				logger.Info("[9] pipeline planned event handler #4 - should fail", "executionID", e.Event.ExecutionID)
-
 				// TODO: what is the error on the pipeline?
 				cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, fperr.InternalWithMessage("pipeline failed")))
 				if err != nil {
@@ -70,8 +65,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 				return h.CommandBus.Send(ctx, &cmd)
 			} else {
-
-				logger.Info("[9] pipeline planned event handler #5 - complete", "executionID", e.Event.ExecutionID)
 				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
@@ -227,17 +220,16 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				if err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
-						fplog.Logger(ctx).Error("Error publishing event", "error", err)
+						logger.Error("Error publishing event", "error", err)
 					}
 
 					return
 				}
 
-				logger.Info("[8] pipeline planned event handler #3.B - sending pipeline step QUEUE command", "command", cmd)
 				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
-						fplog.Logger(ctx).Error("Error publishing event", "error", err)
+						logger.Error("Error publishing event", "error", err)
 					}
 					return
 				}

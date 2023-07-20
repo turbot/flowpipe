@@ -15,6 +15,24 @@ pipeline "for_loop" {
     }
 }
 
+pipeline "for_loop_nested" {
+
+    param "users" {
+        type = list(string)
+        default = ["brian", "freddie"]
+    }
+
+    step "echo" "text_1" {
+        for_each = param.users
+        text = "user is ${each.value}"
+    }
+
+    step "echo" "text_2" {
+        for_each = step.echo.text_1
+        text = "output is ${each.value.text}"
+    }
+}
+
 pipeline "for_depend_object" {
 
     param "users" {
@@ -34,7 +52,7 @@ pipeline "for_depend_object" {
 }
 
 
-pipeline "for_loop_depend" {
+pipeline "for_loop_depends" {
 
     param "users" {
         type = list(string)

@@ -34,8 +34,6 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		logger.Info("(12) pipeline_step_start command handler", "executionID", cmd.Event.ExecutionID)
-
 		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 		if err != nil {
 			logger.Error("Error loading pipeline execution", "error", err)

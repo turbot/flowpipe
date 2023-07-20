@@ -30,8 +30,6 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelinePause")
 	}
 
-	logger.Info("(7) pipeline_pause command handler")
-
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePauseToPipelineFailed(evt, err)))
