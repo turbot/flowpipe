@@ -127,5 +127,4 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	return nil
-
 }

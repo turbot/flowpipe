@@ -57,6 +57,9 @@ var PipelineOutputBlockSchema = &hcl.BodySchema{
 var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
 			Name:     schema.AttributeTypeUrl,
 			Required: true,
 		},
@@ -69,6 +72,9 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
 			Name:     schema.AttributeTypeDuration,
 			Required: true,
 		},
@@ -79,6 +85,9 @@ var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 }
 var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeForEach,
+		},
 		{
 			Name:     schema.AttributeTypeTo,
 			Required: true,

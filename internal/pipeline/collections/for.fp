@@ -15,6 +15,46 @@ pipeline "for_loop" {
     }
 }
 
+pipeline "for_loop_nested_with_sleep" {
+
+    param "time" {
+        type = list(string)
+        default = ["1s", "2s"]
+    }
+
+    step "sleep" "sleep_1" {
+        for_each = param.time
+        duration = each.value
+    }
+
+    step "sleep" "sleep_2" {
+        for_each = step.sleep.sleep_1
+        duration = each.value.duration
+    }
+}
+
+pipeline "for_loop_nested_with_sleep_and_index" {
+
+    param "time" {
+        type = list(string)
+        default = ["1s", "2s"]
+    }
+
+    step "sleep" "sleep_1" {
+        for_each = param.time
+        duration = each.value
+    }
+
+    step "sleep" "sleep_2" {
+        for_each = step.sleep.sleep_1
+        duration = each.value.duration
+    }
+
+    step "echo" "echo_1" {
+        text = "sleep 2 output: ${step.sleep.sleep_2[1].duration}"
+    }
+}
+
 pipeline "for_loop_nested" {
 
     param "users" {
