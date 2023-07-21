@@ -58,8 +58,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	}
 
 	// TODO
-	// * POST and other methods
-	// * Handle server not found errors - https://steampipe.notfound/
+	// * Currently the primitive only supports GET and POST requests. Add support for other methods.
 	// * Test SSL vs non-SSL
 	// * Compare to features in https://www.tines.com/docs/actions/types/http-request#configuration-options
 

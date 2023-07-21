@@ -96,6 +96,20 @@ func TestHTTPPOSTRequestOKWithTextBody(t *testing.T) {
 	assert.Contains(output.Get("body"), "id")
 }
 
+func TestHTTPPOSTRequestNotFound(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+	input := types.Input(map[string]interface{}{"url": "https://jsonplaceholder.typicode.com/notfound", "body": "", "method": "post"})
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("404 Not Found", output.Get("status"))
+	assert.Equal(404, output.Get("status_code"))
+	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
+}
+
 func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
