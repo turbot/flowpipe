@@ -30,7 +30,7 @@ linters:
 linters-settings:
   nolintlint:
     require-explanation: true
-    require-specific: false
+    require-specific: true
 
   forbidigo:
     forbid:

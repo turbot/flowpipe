@@ -109,7 +109,7 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	logger := fplog.Logger(ctx)
 
 	start := time.Now().UTC()
-	resp, err := http.Get(inputURL) //nolint // As per https://securego.io/docs/rules/g107.html url should mentioned in const.
+	resp, err := http.Get(inputURL) //nolint:gosec // https://securego.io/docs/rules/g107.html url should mentioned in const. We need this to be fully configurable since we are executing user's setting.
 	finish := time.Now().UTC()
 	if err != nil {
 		logger.Error("error making request", "error", err, "response", resp)
