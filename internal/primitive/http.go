@@ -24,7 +24,7 @@ const (
 	// HTTPRequestDefaultTimeoutMs is the default timeout for HTTP requests
 	// For now the value is hardcoded to 3000 milliseconds
 	// TODO: Make this configurable
-	HTTPRequestDefaultTimeoutMs = 5000
+	HTTPRequestDefaultTimeoutMs = 3000
 )
 
 type HTTPRequest struct {
