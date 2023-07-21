@@ -24,7 +24,7 @@ const (
 	// HTTPRequestDefaultTimeoutMs is the default timeout for HTTP requests
 	// For now the value is hardcoded to 3000 milliseconds
 	// TODO: Make this configurable
-	HTTPRequestDefaultTimeoutMs = 3000
+	HTTPRequestDefaultTimeoutMs = 5000
 )
 
 type HTTPRequest struct {
@@ -168,11 +168,6 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 		return nil, fperr.BadRequestWithMessage("Error creating request" + err.Error())
 	}
 
-	// Set the timeout, if provided
-	if inputParams.RequestTimeoutMs > 0 {
-		client.Timeout = time.Duration(inputParams.RequestTimeoutMs) * time.Millisecond
-	}
-
 	// Set the request headers
 	for k, v := range inputParams.RequestHeaders {
 		req.Header.Set(k, v.(string))
@@ -285,31 +280,33 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 	}
 
 	// Get the request body
-	requestBody := input["body"].(string)
+	requestBody := input["body"]
 
-	// Try to unmarshal the request body into JSON
-	var requestBodyJSON map[string]interface{}
-	unmarshalErr := json.Unmarshal([]byte(requestBody), &requestBodyJSON)
-	if unmarshalErr != nil {
-		// If unmarshaling fails, assume it's a plain string
-		requestBodyJSON = nil
+	if requestBody != nil {
+		// Try to unmarshal the request body into JSON
+		var requestBodyJSON map[string]interface{}
+		unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
+		if unmarshalErr != nil {
+			// If unmarshaling fails, assume it's a plain string
+			requestBodyJSON = nil
 
-		// Set the request body as a string
-		inputParams.RequestBody = requestBody
+			// Set the request body as a string
+			inputParams.RequestBody = requestBody.(string)
 
-		// Also, set the content type header to plain text
-		requestHeaders["Content-Type"] = "text/plain"
-	}
-
-	// If the request body is a JSON object
-	if requestBodyJSON != nil {
-		requestBodyJSONBytes, marshalErr := json.Marshal(requestBodyJSON)
-		if marshalErr != nil {
-			return nil, fperr.BadRequestWithMessage("Error marshaling request body JSON" + marshalErr.Error())
+			// Also, set the content type header to plain text
+			requestHeaders["Content-Type"] = "text/plain"
 		}
 
-		// Set the JSON encoding of the request body
-		inputParams.RequestBody = string(requestBodyJSONBytes)
+		// If the request body is a JSON object
+		if requestBodyJSON != nil {
+			requestBodyJSONBytes, marshalErr := json.Marshal(requestBodyJSON)
+			if marshalErr != nil {
+				return nil, fperr.BadRequestWithMessage("Error marshaling request body JSON" + marshalErr.Error())
+			}
+
+			// Set the JSON encoding of the request body
+			inputParams.RequestBody = string(requestBodyJSONBytes)
+		}
 	}
 	inputParams.RequestHeaders = requestHeaders
 

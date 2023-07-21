@@ -102,12 +102,12 @@ func TestHTTPPOSTRequestNotFound(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := types.Input(map[string]interface{}{"url": "https://jsonplaceholder.typicode.com/notfound", "body": "", "method": "post"})
+	input := types.Input(map[string]interface{}{"url": "https://httpbin.org/status/404", "method": "post"})
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	assert.Equal("404 Not Found", output.Get("status"))
 	assert.Equal(404, output.Get("status_code"))
-	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
+	assert.Equal("text/html; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
 }
 
 func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
