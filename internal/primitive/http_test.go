@@ -125,8 +125,9 @@ func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
 			"title": "Test 1001"
 		}`,
 		"request_headers": map[string]interface{}{
-			"Accept":     "application/json",
-			"User-Agent": "flowpipe",
+			"Accept":       "*/*",
+			"User-Agent":   "flowpipe",
+			"Content-Type": "application/json",
 		},
 	})
 	output, err := hr.Run(ctx, input)
@@ -134,6 +135,8 @@ func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
 	assert.Equal("201 Created", output.Get("status"))
 	assert.Equal(201, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
+
+	// TODO: check for body_json
 	assert.Contains(output.Get("body"), "id")
 }
 

@@ -9,11 +9,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 const (
@@ -40,16 +42,16 @@ type HTTPPOSTInput struct {
 }
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
-	if i["url"] == nil {
+	if i[schema.AttributeTypeUrl] == nil {
 		return fperr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
-	u := i["url"].(string)
+	u := i[schema.AttributeTypeUrl].(string)
 	_, err := url.ParseRequestURI(u)
 	if err != nil {
 		return fperr.BadRequestWithMessage("invalid url: " + u)
 	}
 
-	requestBody := i["body"]
+	requestBody := i[schema.AttributeTypeRequestBody]
 	if requestBody != nil {
 		// Try to unmarshal the request body into JSON
 		var requestBodyJSON map[string]interface{}
@@ -80,7 +82,11 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	// * Test SSL vs non-SSL
 	// * Compare to features in https://www.tines.com/docs/actions/types/http-request#configuration-options
 
-	method := input["method"].(string)
+	method, ok := input[schema.AttributeTypeMethod].(string)
+	if !ok {
+		method = HTTPRequestGet
+	}
+
 	inputURL := input["url"].(string)
 
 	var output *types.StepOutput
@@ -158,15 +164,14 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 
 	var bodyJSON interface{}
 
-	// Process the response body only if the status code is 200
-	if resp != nil && resp.StatusCode == http.StatusOK {
+	if resp != nil && body != nil {
 		// The unmarshalling is only done if the content type is JSON,
 		// otherwise the unmashalling will fail.
 		// Hence, the body_json field will only be populated if the content type is JSON.
 		if resp.Header.Get("Content-Type") == "application/json" {
 			err = json.Unmarshal(body, &bodyJSON)
 			if err != nil {
-				logger.Error("error unmarshalling body: %s", err)
+				logger.Error("error unmarshalling body", "error", err)
 				return nil, err
 			}
 			output["body_json"] = bodyJSON
@@ -254,15 +259,20 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	var bodyJSON interface{}
 	// Just ignore errors
 
-	// Process the response body only if the status code is 200
-	if resp != nil && resp.StatusCode == http.StatusOK {
+	if resp != nil && body != nil {
 		// The unmarshalling is only done if the content type is JSON,
 		// otherwise the unmashalling will fail.
 		// Hence, the body_json field will only be populated if the content type is JSON.
-		if resp.Header.Get("Content-Type") == "application/json" {
+		var contentType string
+		contentType = resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = resp.Header.Get("content-type")
+		}
+
+		if strings.Contains(contentType, "application/json") {
 			err = json.Unmarshal(body, &bodyJSON)
 			if err != nil {
-				logger.Error("error unmarshalling body: %s", err)
+				logger.Error("error unmarshalling body", "error", err)
 				return nil, err
 			}
 			output["body_json"] = bodyJSON
@@ -283,23 +293,23 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 	}
 
 	// Set the certificate, if provided
-	if input["ca_cert_pem"] != nil {
-		inputParams.CaCertPem = input["ca_cert_pem"].(string)
+	if input[schema.AttributeTypeCaCertPem] != nil {
+		inputParams.CaCertPem = input[schema.AttributeTypeCaCertPem].(string)
 	}
 
 	// Set value for insecureSkipVerify, if provided
-	if input["insecure"] != nil {
-		inputParams.Insecure = input["insecure"].(bool)
+	if input[schema.AttributeTypeInsecure] != nil {
+		inputParams.Insecure = input[schema.AttributeTypeInsecure].(bool)
 	}
 
 	// Set the request headers, if provided
 	requestHeaders := map[string]interface{}{}
-	if input["request_headers"] != nil {
-		requestHeaders = input["request_headers"].(map[string]interface{})
+	if input[schema.AttributeTypeRequestHeaders] != nil {
+		requestHeaders = input[schema.AttributeTypeRequestHeaders].(map[string]interface{})
 	}
 
 	// Get the request body
-	requestBody := input["body"]
+	requestBody := input[schema.AttributeTypeRequestBody]
 
 	if requestBody != nil {
 		// Try to unmarshal the request body into JSON
