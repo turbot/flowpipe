@@ -17,6 +17,11 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 )
 
+const (
+	HTTPRequestGet  = "get"
+	HttpRequestPost = "post"
+)
+
 type HTTPRequest struct {
 	Input types.Input
 }
@@ -59,9 +64,9 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	var output *types.StepOutput
 	var err error
 	switch method {
-	case "get":
+	case HTTPRequestGet:
 		output, err = get(ctx, inputURL)
-	case "post":
+	case HttpRequestPost:
 		// build the input for the POST request
 		postInput, inputErr := buildHTTPPostInput(input)
 		if inputErr != nil {
