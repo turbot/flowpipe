@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -47,7 +46,26 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
 	u := i["url"].(string)
 	_, err := url.ParseRequestURI(u)
 	if err != nil {
-		return fmt.Errorf("invalid url: %s", u)
+		return fperr.BadRequestWithMessage("invalid url: " + u)
+	}
+
+	requestBody := i["body"]
+	if requestBody != nil {
+		// Try to unmarshal the request body into JSON
+		var requestBodyJSON map[string]interface{}
+		unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
+		if unmarshalErr != nil {
+			// If unmarshaling fails, assume it's a plain string
+			requestBodyJSON = nil
+		}
+
+		// If the request body is a JSON object
+		if requestBodyJSON != nil {
+			_, marshalErr := json.Marshal(requestBodyJSON)
+			if marshalErr != nil {
+				return fperr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
+			}
+		}
 	}
 	return nil
 }
@@ -165,7 +183,7 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
-		return nil, fperr.BadRequestWithMessage("Error creating request" + err.Error())
+		return nil, fperr.BadRequestWithMessage("Error creating request: " + err.Error())
 	}
 
 	// Set the request headers
@@ -299,12 +317,8 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 
 		// If the request body is a JSON object
 		if requestBodyJSON != nil {
-			requestBodyJSONBytes, marshalErr := json.Marshal(requestBodyJSON)
-			if marshalErr != nil {
-				return nil, fperr.BadRequestWithMessage("Error marshaling request body JSON" + marshalErr.Error())
-			}
-
 			// Set the JSON encoding of the request body
+			requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
 			inputParams.RequestBody = string(requestBodyJSONBytes)
 		}
 	}
