@@ -135,7 +135,6 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	}
 
 	var bodyJSON interface{}
-	// Just ignore errors
 
 	// Process the response body only if the status code is 200
 	if resp != nil && resp.StatusCode == http.StatusOK {
@@ -162,7 +161,7 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
-		return nil, fmt.Errorf("error creating request: %s", err)
+		return nil, fperr.BadRequestWithMessage("Error creating request" + err.Error())
 	}
 
 	// Set the timeout, if provided
@@ -304,7 +303,7 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 	if requestBodyJSON != nil {
 		requestBodyJSONBytes, marshalErr := json.Marshal(requestBodyJSON)
 		if marshalErr != nil {
-			return nil, fmt.Errorf("error marshaling request body JSON: %v", marshalErr)
+			return nil, fperr.BadRequestWithMessage("Error marshaling request body JSON" + marshalErr.Error())
 		}
 
 		// Set the JSON encoding of the request body
