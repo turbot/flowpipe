@@ -41,15 +41,33 @@ const (
 	BlockTypePipelineStep     = "step"
 	BlockTypePipelineOutput   = "output"
 
-	AttributeArgs            = "args"
-	AttributeQuery           = "query"
-	AttributeTypeDescription = "description"
-	AttributeTypeUrl         = "url"
-	AttributeTypeDuration    = "duration"
-	AttributeTypeTo          = "to"
+	// Common step attributes
+	AttributeTypeTitle       = "title"
 	AttributeTypeDependsOn   = "depends_on"
 	AttributeTypeForEach     = "for_each"
-	AttributeTypeText        = "text"
+	AttributeTypeDescription = "description"
+
+	// Used by query step
+	AttributeTypeSql              = "sql"
+	AttributeTypeConnectionString = "connection_string"
+
+	// Used by email step
+	AttributeTypeTo = "to"
+
+	// Used by sleep step
+	AttributeTypeDuration = "duration"
+
+	// Used by http step
+	AttributeTypeUrl              = "url"
+	AttributeTypeMethod           = "method"
+	AttributeTypeRequestBody      = "request_body"
+	AttributeTypeRequestHeaders   = "request_headers"
+	AttributeTypeRequestTimeoutMs = "request_timeout_ms"
+	AttributeTypeCaCertPem        = "ca_cert_pem"
+	AttributeTypeInsecure         = "insecure"
+
+	// Used by echo step
+	AttributeTypeText = "text"
 
 	LabelName = "name"
 	LabelType = "type"

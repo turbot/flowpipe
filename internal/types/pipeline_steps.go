@@ -170,10 +170,12 @@ type IPipelineStep interface {
 
 // A common base struct that all pipeline steps must embed
 type PipelineStepBase struct {
-	Name      string   `json:"name"`
-	Type      string   `json:"step_type"`
-	DependsOn []string `json:"depends_on,omitempty"`
-	Resolved  bool     `json:"resolved,omitempty"`
+	Title       *string  `json:"title,omitempty"`
+	Description *string  `json:"description,omitempty"`
+	Name        string   `json:"name"`
+	Type        string   `json:"step_type"`
+	DependsOn   []string `json:"depends_on,omitempty"`
+	Resolved    bool     `json:"resolved,omitempty"`
 
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
@@ -322,6 +324,24 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 
 	p.DependsOn = append(p.DependsOn, dependsOn...)
 
+	if attr, exists := hclAttributes[schema.AttributeTypeTitle]; exists {
+		title, diag := hclhelpers.AttributeToString(attr, nil, false)
+		if diag != nil && diag.Severity == hcl.DiagError {
+			diags = append(diags, diag)
+		} else {
+			p.Title = title
+		}
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
+		description, diag := hclhelpers.AttributeToString(attr, nil, false)
+		if diag != nil && diag.Severity == hcl.DiagError {
+			diags = append(diags, diag)
+		} else {
+			p.Description = description
+		}
+	}
+
 	return diags
 }
 
@@ -353,7 +373,9 @@ func TraversalAsStringSlice(traversal hcl.Traversal) []string {
 	return parts
 }
 
-var ValidResourceItemTypes = []string{
+var ValidBaseStepAttributes = []string{
+	schema.AttributeTypeTitle,
+	schema.AttributeTypeDescription,
 	schema.AttributeTypeDependsOn,
 	schema.AttributeTypeForEach,
 }
@@ -362,21 +384,28 @@ var ValidDependsOnTypes = []string{
 	schema.BlockTypePipelineStep,
 }
 
-func (p *PipelineStepBase) IsBaseAttributes(name string) bool {
-	return helpers.StringSliceContains(ValidResourceItemTypes, name)
+func (p *PipelineStepBase) IsBaseAttribute(name string) bool {
+	return helpers.StringSliceContains(ValidBaseStepAttributes, name)
 }
 
 type PipelineStepHttp struct {
 	PipelineStepBase
-	Url string `json:"url"`
+
+	Url              *string                `json:"url" binding:"required"`
+	RequestTimeoutMs *int64                 `json:"request_timeout_ms,omitempty"`
+	Method           *string                `json:"method,omitempty"`
+	Insecure         *bool                  `json:"insecure,omitempty"`
+	RequestBody      *string                `json:"request_body,omitempty"`
+	RequestHeaders   map[string]interface{} `json:"request_headers,omitempty"`
 }
 
 func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
-
 	var urlInput string
-
 	if p.UnresolvedAttributes[schema.AttributeTypeUrl] == nil {
-		urlInput = p.Url
+		if p.Url == nil {
+			return nil, fperr.InternalWithMessage("Url must be supplied")
+		}
+		urlInput = *p.Url
 	} else {
 		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeUrl], evalContext, &urlInput)
 		if diags.HasErrors() {
@@ -384,9 +413,31 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		}
 	}
 
-	return map[string]interface{}{
+	inputs := map[string]interface{}{
 		schema.AttributeTypeUrl: urlInput,
-	}, nil
+	}
+
+	if p.Method != nil {
+		inputs[schema.AttributeTypeMethod] = *p.Method
+	}
+
+	if p.RequestTimeoutMs != nil {
+		inputs[schema.AttributeTypeRequestTimeoutMs] = *p.RequestTimeoutMs
+	}
+
+	if p.Insecure != nil {
+		inputs[schema.AttributeTypeInsecure] = *p.Insecure
+	}
+
+	if p.RequestBody != nil {
+		inputs[schema.AttributeTypeRequestBody] = *p.RequestBody
+	}
+
+	if p.RequestHeaders != nil {
+		inputs[schema.AttributeTypeRequestHeaders] = p.RequestHeaders
+	}
+
+	return inputs, nil
 }
 
 func (p *PipelineStepHttp) GetError() *PipelineStepError {
@@ -404,20 +455,87 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseCont
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					val, err := attr.Expr.Value(parseContext.EvalCtx)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse url attribute",
-							Subject:  &attr.Range,
-						})
+					urlString, diag := hclhelpers.AttributeToString(attr, parseContext.EvalCtx, false)
+					if diag != nil && diag.Severity == hcl.DiagError {
+						diags = append(diags, diag)
 						continue
 					}
-					p.Url = val.AsString()
+					p.Url = urlString
+				}
+			}
+		case schema.AttributeTypeRequestTimeoutMs:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					requestTimeoutMs, diag := hclhelpers.AttributeToInt(attr, parseContext.EvalCtx, false)
+					if diag != nil && diag.Severity == hcl.DiagError {
+						diags = append(diags, diag)
+						continue
+					}
+					p.RequestTimeoutMs = requestTimeoutMs
+				}
+			}
+		case schema.AttributeTypeMethod:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					method, diag := hclhelpers.AttributeToString(attr, parseContext.EvalCtx, false)
+					if diag != nil && diag.Severity == hcl.DiagError {
+						diags = append(diags, diag)
+						continue
+					}
+					p.Method = method
+				}
+			}
+		case schema.AttributeTypeInsecure:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					insecure, diag := hclhelpers.AttributeToBool(attr, parseContext.EvalCtx, false)
+					if diag != nil && diag.Severity == hcl.DiagError {
+						diags = append(diags, diag)
+						continue
+					}
+					p.Insecure = insecure
+				}
+			}
+		case schema.AttributeTypeRequestBody:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					requestBody, diag := hclhelpers.AttributeToString(attr, parseContext.EvalCtx, false)
+					if diag != nil && diag.Severity == hcl.DiagError {
+						diags = append(diags, diag)
+						continue
+					}
+					p.RequestBody = requestBody
+				}
+			}
+		case schema.AttributeTypeRequestHeaders:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					mapAttrib, diag := hclhelpers.AttributeToMap(attr, parseContext.EvalCtx, false)
+					if diag != nil && diag.Severity == hcl.DiagError {
+						diags = append(diags, diag)
+						continue
+					}
+
+					p.RequestHeaders = mapAttrib
 				}
 			}
 		default:
-			if !p.IsBaseAttributes(name) {
+			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Unsupported attribute for HTTP Step: " + attr.Name,
@@ -426,6 +544,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseCont
 			}
 		}
 	}
+
 	return diags
 }
 
@@ -480,7 +599,7 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseCon
 				}
 			}
 		default:
-			if !p.IsBaseAttributes(name) {
+			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
@@ -644,7 +763,7 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseCont
 				p.ListText = stringSlice
 			}
 		default:
-			if !p.IsBaseAttributes(name) {
+			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Unsupported attribute for Echo Step: " + attr.Name,

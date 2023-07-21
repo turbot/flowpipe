@@ -66,9 +66,9 @@ func (p *PlannerControl) Middleware(h message.HandlerFunc) message.HandlerFunc {
 		// Just do a simple lock for now
 		if eventName == "event.PipelinePlan" {
 			p.mu.Lock()
-			logger.Warn("Before calling h " + eventName + " - " + executionID)
+			logger.Info("Before calling h " + eventName + " - " + executionID)
 			a, b := h(msg)
-			logger.Warn("After calling h " + eventName + " - " + executionID)
+			logger.Info("After calling h " + eventName + " - " + executionID)
 			p.mu.Unlock()
 			return a, b
 		}
