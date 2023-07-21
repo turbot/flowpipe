@@ -60,7 +60,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	var err error
 	switch method {
 	case "get":
-		output, err = Get(ctx, inputURL)
+		output, err = get(ctx, inputURL)
 	case "post":
 		// build the input for the POST request
 		postInput, inputErr := buildHTTPPostInput(input)
@@ -68,7 +68,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 			return nil, inputErr
 		}
 
-		output, err = Post(ctx, postInput)
+		output, err = post(ctx, postInput)
 	}
 
 	if err != nil {
@@ -78,7 +78,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	return output, nil
 }
 
-func Get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
+func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	logger := fplog.Logger(ctx)
 
 	start := time.Now().UTC()
@@ -150,7 +150,7 @@ func Get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	return &output, nil
 }
 
-func Post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, error) {
+func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, error) {
 	logger := fplog.Logger(ctx)
 
 	// Create the HTTP client
