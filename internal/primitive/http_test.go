@@ -201,7 +201,6 @@ func TestHTTPPOSTRequestWithVerifyCertificate(t *testing.T) {
 			"title": "Test 1001"
 		}`,
 		"request_timeout_ms": 3000,
-		"insecure":           false,
 		"ca_cert_pem":        "test",
 	})
 	_, err := hr.Run(ctx, input)

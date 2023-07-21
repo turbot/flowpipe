@@ -109,7 +109,7 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	logger := fplog.Logger(ctx)
 
 	start := time.Now().UTC()
-	resp, err := http.Get(inputURL)
+	resp, err := http.Get(inputURL) //nolint // As per https://securego.io/docs/rules/g107.html url should mentioned in const.
 	finish := time.Now().UTC()
 	if err != nil {
 		logger.Error("error making request", "error", err, "response", resp)
@@ -196,6 +196,7 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 		caCertPool.AppendCertsFromPEM([]byte(inputParams.CaCertPem))
 
 		client.Transport = &http.Transport{
+			// #nosec G402
 			TLSClientConfig: &tls.Config{
 				RootCAs:            caCertPool,
 				InsecureSkipVerify: inputParams.Insecure,
