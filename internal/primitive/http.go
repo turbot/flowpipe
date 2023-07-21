@@ -20,6 +20,11 @@ import (
 const (
 	HTTPRequestGet  = "get"
 	HttpRequestPost = "post"
+
+	// HTTPRequestDefaultTimeoutMs is the default timeout for HTTP requests
+	// For now the value is hardcoded to 3000 milliseconds
+	// TODO: Make this configurable
+	HTTPRequestDefaultTimeoutMs = 3000
 )
 
 type HTTPRequest struct {
@@ -259,11 +264,9 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 	// Get the inputs from the pipeline
 	inputParams := &HTTPPOSTInput{
 		URL: input["url"].(string),
-	}
 
-	// Set the request timeput, if provided
-	if input["request_timeout_ms"] != nil {
-		inputParams.RequestTimeoutMs = input["request_timeout_ms"].(int)
+		// TODO: Make it configurable
+		RequestTimeoutMs: HTTPRequestDefaultTimeoutMs,
 	}
 
 	// Set the certificate, if provided
