@@ -38,7 +38,7 @@ type HTTPPOSTInput struct {
 	Insecure         bool
 }
 
-type HTTPDeleteInput struct {
+type HTTPStandardInput struct {
 	URL            string
 	RequestBody    string
 	RequestHeaders map[string]interface{}
@@ -101,20 +101,26 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	case types.HttpMethodGet:
 		output, err = get(ctx, inputURL)
 	case types.HttpMethodPost:
-		// build the input for the POST request
+		// build the input
 		postInput, inputErr := buildHTTPPostInput(input)
 		if inputErr != nil {
 			return nil, inputErr
 		}
-
 		output, err = post(ctx, postInput)
 	case types.HttpMethodDelete:
-		// build the input for the POST request
-		deleteInput, inputErr := buildHTTPDeleteInput(input)
+		// build the input
+		deleteInput, inputErr := buildHTTPStandardInput(input)
 		if inputErr != nil {
 			return nil, inputErr
 		}
 		output, err = delete(ctx, deleteInput)
+	case types.HttpMethodPut:
+		// build the input
+		putInput, inputErr := buildHTTPStandardInput(input)
+		if inputErr != nil {
+			return nil, inputErr
+		}
+		output, err = put(ctx, putInput)
 	}
 
 	if err != nil {
@@ -148,20 +154,7 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	// Golang Response.Header is a map[string][]string, which is accurate
 	// but complicated for users. We map it to a simpler key-value pair
 	// approach.
-	headers := map[string]interface{}{}
-	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
-	// in array form
-	headersAsArrays := map[string]bool{"Set-Cookie": true}
-
-	for k, v := range resp.Header {
-		if headersAsArrays[k] {
-			// It's a known multi-value header
-			headers[k] = v
-		} else {
-			// Otherwise, just use the first value for simplicity
-			headers[k] = v[0]
-		}
-	}
+	headers := mapResponseHeaders(resp)
 
 	output := types.StepOutput{
 		schema.AttributeTypeStatus:          resp.Status,
@@ -199,7 +192,7 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 
 	// Create the HTTP client
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
+	req, err := http.NewRequest(http.MethodPost, inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
 		return nil, fperr.BadRequestWithMessage("Error creating request: " + err.Error())
 	}
@@ -242,20 +235,7 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	// Golang Response.Header is a map[string][]string, which is accurate
 	// but complicated for users. We map it to a simpler key-value pair
 	// approach.
-	headers := map[string]interface{}{}
-	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
-	// in array form
-	headersAsArrays := map[string]bool{"Set-Cookie": true}
-
-	for k, v := range resp.Header {
-		if headersAsArrays[k] {
-			// It's a known multi-value header
-			headers[k] = v
-		} else {
-			// Otherwise, just use the first value for simplicity
-			headers[k] = v[0]
-		}
-	}
+	headers := mapResponseHeaders(resp)
 
 	output := types.StepOutput{
 		schema.AttributeTypeStatus:          resp.Status,
@@ -295,12 +275,12 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	return &output, nil
 }
 
-func delete(ctx context.Context, inputParams *HTTPDeleteInput) (*types.StepOutput, error) {
+func delete(ctx context.Context, inputParams *HTTPStandardInput) (*types.StepOutput, error) {
 	logger := fplog.Logger(ctx)
 
 	// Create the HTTP client
 	client := &http.Client{}
-	req, err := http.NewRequest("DELETE", inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
+	req, err := http.NewRequest(http.MethodDelete, inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
 		return nil, fperr.BadRequestWithMessage("Error creating request: " + err.Error())
 	}
@@ -330,20 +310,7 @@ func delete(ctx context.Context, inputParams *HTTPDeleteInput) (*types.StepOutpu
 	// Golang Response.Header is a map[string][]string, which is accurate
 	// but complicated for users. We map it to a simpler key-value pair
 	// approach.
-	headers := map[string]interface{}{}
-	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
-	// in array form
-	headersAsArrays := map[string]bool{"Set-Cookie": true}
-
-	for k, v := range resp.Header {
-		if headersAsArrays[k] {
-			// It's a known multi-value header
-			headers[k] = v
-		} else {
-			// Otherwise, just use the first value for simplicity
-			headers[k] = v[0]
-		}
-	}
+	headers := mapResponseHeaders(resp)
 
 	output := types.StepOutput{
 		schema.AttributeTypeStatus:          resp.Status,
@@ -383,7 +350,82 @@ func delete(ctx context.Context, inputParams *HTTPDeleteInput) (*types.StepOutpu
 	return &output, nil
 }
 
-// builsHTTPPostInput builds the HTTPPOSTInput struct from the input parameters
+func put(ctx context.Context, inputParams *HTTPStandardInput) (*types.StepOutput, error) {
+	logger := fplog.Logger(ctx)
+
+	// Create the HTTP client
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPut, inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
+	if err != nil {
+		return nil, fperr.BadRequestWithMessage("Error creating request: " + err.Error())
+	}
+
+	// Set the request headers
+	for k, v := range inputParams.RequestHeaders {
+		req.Header.Set(k, v.(string))
+	}
+
+	start := time.Now().UTC()
+	resp, err := client.Do(req)
+	finish := time.Now().UTC()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Golang Response.Header is a map[string][]string, which is accurate
+	// but complicated for users. We map it to a simpler key-value pair
+	// approach.
+	headers := mapResponseHeaders(resp)
+
+	output := types.StepOutput{
+		schema.AttributeTypeStatus:          resp.Status,
+		schema.AttributeTypeStatusCode:      resp.StatusCode,
+		schema.AttributeTypeResponseHeaders: headers,
+		schema.AttributeTypeStartedAt:       start,
+		schema.AttributeTypeFinishedAt:      finish,
+	}
+
+	if body != nil {
+		output[schema.AttributeTypeResponseBody] = string(body)
+	}
+
+	var bodyJSON interface{}
+	// Just ignore errors
+
+	if resp != nil && body != nil {
+		// The unmarshalling is only done if the content type is JSON,
+		// otherwise the unmashalling will fail.
+		// Hence, the body_json field will only be populated if the content type is JSON.
+		var contentType string
+		contentType = resp.Header.Get("Content-Type")
+		if contentType == "" {
+			contentType = resp.Header.Get("content-type")
+		}
+
+		if strings.Contains(contentType, "application/json") {
+			err = json.Unmarshal(body, &bodyJSON)
+			if err != nil {
+				logger.Error("error unmarshalling body", "error", err)
+				return nil, err
+			}
+			output[schema.AttributeTypeResponseBodyJson] = bodyJSON
+		}
+	}
+
+	return &output, nil
+}
+
+// buildHTTPPostInput builds the HTTPPOSTInput struct from the input parameters
 func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 	// Get the inputs from the pipeline
 	inputParams := &HTTPPOSTInput{
@@ -439,10 +481,10 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 	return inputParams, nil
 }
 
-// builsHTTPPostInput builds the HTTPPOSTInput struct from the input parameters
-func buildHTTPDeleteInput(input types.Input) (*HTTPDeleteInput, error) {
+// buildHTTPStandardInput reads the standard inputs (i.e. URL, requestHeaders, requestBody) and bulds the input struct for the HTTP request
+func buildHTTPStandardInput(input types.Input) (*HTTPStandardInput, error) {
 	// Get the inputs from the pipeline
-	inputParams := &HTTPDeleteInput{
+	inputParams := &HTTPStandardInput{
 		URL: input["url"].(string),
 	}
 
@@ -474,9 +516,31 @@ func buildHTTPDeleteInput(input types.Input) (*HTTPDeleteInput, error) {
 			// Set the JSON encoding of the request body
 			requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
 			inputParams.RequestBody = string(requestBodyJSONBytes)
+
+			// Also, set the content type header to application/json
+			requestHeaders["Content-Type"] = "application/json"
 		}
 	}
 	inputParams.RequestHeaders = requestHeaders
 
 	return inputParams, nil
+}
+
+// mapResponseHeaders maps the response headers to a simpler key-value pair
+func mapResponseHeaders(resp *http.Response) map[string]interface{} {
+	headers := map[string]interface{}{}
+	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
+	// in array form
+	headersAsArrays := map[string]bool{"Set-Cookie": true}
+
+	for k, v := range resp.Header {
+		if headersAsArrays[k] {
+			// It's a known multi-value header
+			headers[k] = v
+		} else {
+			// Otherwise, just use the first value for simplicity
+			headers[k] = v[0]
+		}
+	}
+	return headers
 }
