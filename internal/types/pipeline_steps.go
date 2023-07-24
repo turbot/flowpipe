@@ -16,6 +16,22 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+const (
+	HttpMethodGet    = "get"
+	HttpMethodPost   = "post"
+	HttpMethodPut    = "put"
+	HttpMethodDelete = "delete"
+	HttpMethodPatch  = "patch"
+)
+
+var ValidHttpMethods = []string{
+	HttpMethodGet,
+	HttpMethodPost,
+	HttpMethodPut,
+	HttpMethodDelete,
+	HttpMethodPatch,
+}
+
 type StepForEach struct {
 	Index             int         `json:"index" binding:"required"`
 	ForEachOutput     *StepOutput `json:"for_each_output,omitempty"`
@@ -488,7 +504,18 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseCont
 						diags = append(diags, diag)
 						continue
 					}
-					p.Method = method
+
+					if method != nil {
+						if !helpers.StringSliceContains(ValidHttpMethods, strings.ToLower(*method)) {
+							diags = append(diags, &hcl.Diagnostic{
+								Severity: hcl.DiagError,
+								Summary:  "Invalid HTTP method: " + *method,
+								Subject:  &attr.Range,
+							})
+							continue
+						}
+						p.Method = method
+					}
 				}
 			}
 		case schema.AttributeTypeInsecure:

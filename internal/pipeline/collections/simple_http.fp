@@ -9,7 +9,7 @@ pipeline "jsonplaceholder" {
     description = "my simple http pipeline"
     step "http" "my_step_1" {
         url = "https://jsonplaceholder.typicode.com/posts"
-        method = "post"
+        method = "Post"
         request_body = jsonencode({
             userId = 12345
             title = "brian may"

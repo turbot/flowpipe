@@ -19,9 +19,6 @@ import (
 )
 
 const (
-	HTTPRequestGet  = "get"
-	HttpRequestPost = "post"
-
 	// HTTPRequestDefaultTimeoutMs is the default timeout for HTTP requests
 	// For now the value is hardcoded to 3000 milliseconds
 	// TODO: Make this configurable
@@ -84,17 +81,20 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 
 	method, ok := input[schema.AttributeTypeMethod].(string)
 	if !ok {
-		method = HTTPRequestGet
+		method = types.HttpMethodGet
 	}
 
-	inputURL := input["url"].(string)
+	// Method should be case insensitive
+	method = strings.ToLower(method)
+
+	inputURL := input[schema.AttributeTypeUrl].(string)
 
 	var output *types.StepOutput
 	var err error
 	switch method {
-	case HTTPRequestGet:
+	case types.HttpMethodGet:
 		output, err = get(ctx, inputURL)
-	case HttpRequestPost:
+	case types.HttpMethodPost:
 		// build the input for the POST request
 		postInput, inputErr := buildHTTPPostInput(input)
 		if inputErr != nil {
