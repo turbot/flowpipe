@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 func TestHTTPRequestOK(t *testing.T) {
@@ -20,8 +21,8 @@ func TestHTTPRequestOK(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
-	assert.Equal("text/html; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "Steampipe")
+	assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
 }
 
 func TestHTTPRequestJSONResponseOK(t *testing.T) {
@@ -35,8 +36,8 @@ func TestHTTPRequestJSONResponseOK(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
-	assert.Equal("application/json", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "success")
+	assert.Equal("application/json", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "success")
 }
 
 func TestHTTPRequestNotFound(t *testing.T) {
@@ -50,8 +51,8 @@ func TestHTTPRequestNotFound(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("404 Not Found", output.Get("status"))
 	assert.Equal(404, output.Get("status_code"))
-	assert.Equal("text/html; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "Steampipe")
+	assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
 }
 
 func TestHTTPPOSTRequestOK(t *testing.T) {
@@ -63,7 +64,7 @@ func TestHTTPPOSTRequestOK(t *testing.T) {
 	input := types.Input(map[string]interface{}{
 		"url":    "https://jsonplaceholder.typicode.com/posts",
 		"method": "post",
-		"body": `{
+		schema.AttributeTypeResponseBody: `{
 			"userId": 1001,
 			"it": 1001,
 			"title": "Test 1001"
@@ -71,10 +72,10 @@ func TestHTTPPOSTRequestOK(t *testing.T) {
 	})
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("201 Created", output.Get("status"))
+	assert.Equal("201 Created", output.Get(schema.AttributeTypeStatus))
 	assert.Equal(201, output.Get("status_code"))
-	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "id")
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
 func TestHTTPPOSTRequestOKWithTextBody(t *testing.T) {
@@ -84,16 +85,16 @@ func TestHTTPPOSTRequestOKWithTextBody(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 	input := types.Input(map[string]interface{}{
-		"url":    "https://jsonplaceholder.typicode.com/posts",
-		"method": "post",
-		"body":   "Test",
+		"url":                            "https://jsonplaceholder.typicode.com/posts",
+		"method":                         "post",
+		schema.AttributeTypeResponseBody: "Test",
 	})
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	assert.Equal("201 Created", output.Get("status"))
 	assert.Equal(201, output.Get("status_code"))
-	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "id")
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
 func TestHTTPPOSTRequestNotFound(t *testing.T) {
@@ -107,7 +108,7 @@ func TestHTTPPOSTRequestNotFound(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("404 Not Found", output.Get("status"))
 	assert.Equal(404, output.Get("status_code"))
-	assert.Equal("text/html; charset=UTF-8", output.Get("headers").(map[string]interface{})["Content-Type"])
+	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
 
 func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
@@ -119,7 +120,7 @@ func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
 	input := types.Input(map[string]interface{}{
 		"url":    "https://jsonplaceholder.typicode.com/posts",
 		"method": "post",
-		"body": `{
+		schema.AttributeTypeResponseBody: `{
 			"userId": 1001,
 			"it": 1001,
 			"title": "Test 1001"
@@ -134,10 +135,10 @@ func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("201 Created", output.Get("status"))
 	assert.Equal(201, output.Get("status_code"))
-	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 
 	// TODO: check for body_json
-	assert.Contains(output.Get("body"), "id")
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
 func TestHTTPPOSTRequestOKWithTimeout(t *testing.T) {
@@ -149,7 +150,7 @@ func TestHTTPPOSTRequestOKWithTimeout(t *testing.T) {
 	input := types.Input(map[string]interface{}{
 		"url":    "https://jsonplaceholder.typicode.com/posts",
 		"method": "post",
-		"body": `{
+		schema.AttributeTypeResponseBody: `{
 			"userId": 1001,
 			"it": 1001,
 			"title": "Test 1001"
@@ -160,8 +161,8 @@ func TestHTTPPOSTRequestOKWithTimeout(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("201 Created", output.Get("status"))
 	assert.Equal(201, output.Get("status_code"))
-	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "id")
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
 func TestHTTPPOSTRequestOKWithNoVerifyCertificate(t *testing.T) {
@@ -173,7 +174,7 @@ func TestHTTPPOSTRequestOKWithNoVerifyCertificate(t *testing.T) {
 	input := types.Input(map[string]interface{}{
 		"url":    "https://jsonplaceholder.typicode.com/posts",
 		"method": "post",
-		"body": `{
+		schema.AttributeTypeResponseBody: `{
 			"userId": 1001,
 			"it": 1001,
 			"title": "Test 1001"
@@ -185,8 +186,8 @@ func TestHTTPPOSTRequestOKWithNoVerifyCertificate(t *testing.T) {
 	assert.Nil(err)
 	assert.Equal("201 Created", output.Get("status"))
 	assert.Equal(201, output.Get("status_code"))
-	assert.Equal("application/json; charset=utf-8", output.Get("headers").(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get("body"), "id")
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
 func TestHTTPPOSTRequestWithVerifyCertificate(t *testing.T) {
@@ -198,7 +199,7 @@ func TestHTTPPOSTRequestWithVerifyCertificate(t *testing.T) {
 	input := types.Input(map[string]interface{}{
 		"url":    "https://jsonplaceholder.typicode.com/posts",
 		"method": "post",
-		"body": `{
+		schema.AttributeTypeResponseBody: `{
 			"userId": 1001,
 			"it": 1001,
 			"title": "Test 1001"

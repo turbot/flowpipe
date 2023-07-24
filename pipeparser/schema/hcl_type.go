@@ -47,6 +47,9 @@ const (
 	AttributeTypeForEach     = "for_each"
 	AttributeTypeDescription = "description"
 
+	AttributeTypeStartedAt  = "started_at"
+	AttributeTypeFinishedAt = "finished_at"
+
 	// Used by query step
 	AttributeTypeSql              = "sql"
 	AttributeTypeConnectionString = "connection_string"
@@ -65,6 +68,12 @@ const (
 	AttributeTypeRequestTimeoutMs = "request_timeout_ms"
 	AttributeTypeCaCertPem        = "ca_cert_pem"
 	AttributeTypeInsecure         = "insecure"
+	AttributeTypeResponseHeaders  = "response_headers"
+	AttributeTypeResponseBody     = "response_body"
+	AttributeTypeStatusCode       = "status_code"
+	AttributeTypeStatus           = "status"
+	AttrkbuteTypeResponseBody     = "response_body"
+	AttributeTypeResponseBodyJson = "response_body_json"
 
 	// Used by echo step
 	AttributeTypeText = "text"

@@ -151,15 +151,15 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	}
 
 	output := types.StepOutput{
-		"status":      resp.Status,
-		"status_code": resp.StatusCode,
-		"headers":     headers,
-		"started_at":  start,
-		"finished_at": finish,
+		schema.AttributeTypeStatus:          resp.Status,
+		schema.AttributeTypeStatusCode:      resp.StatusCode,
+		schema.AttributeTypeResponseHeaders: headers,
+		schema.AttributeTypeStartedAt:       start,
+		schema.AttributeTypeFinishedAt:      finish,
 	}
 
 	if body != nil {
-		output["body"] = string(body)
+		output[schema.AttributeTypeResponseBody] = string(body)
 	}
 
 	var bodyJSON interface{}
@@ -174,7 +174,7 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 				logger.Error("error unmarshalling body", "error", err)
 				return nil, err
 			}
-			output["body_json"] = bodyJSON
+			output[schema.AttributeTypeResponseBodyJson] = bodyJSON
 		}
 	}
 
@@ -245,15 +245,15 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	}
 
 	output := types.StepOutput{
-		"status":      resp.Status,
-		"status_code": resp.StatusCode,
-		"headers":     headers,
-		"started_at":  start,
-		"finished_at": finish,
+		schema.AttributeTypeStatus:          resp.Status,
+		schema.AttributeTypeStatusCode:      resp.StatusCode,
+		schema.AttributeTypeResponseHeaders: headers,
+		schema.AttributeTypeStartedAt:       start,
+		schema.AttributeTypeFinishedAt:      finish,
 	}
 
 	if body != nil {
-		output["body"] = string(body)
+		output[schema.AttributeTypeResponseBody] = string(body)
 	}
 
 	var bodyJSON interface{}
@@ -275,7 +275,7 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 				logger.Error("error unmarshalling body", "error", err)
 				return nil, err
 			}
-			output["body_json"] = bodyJSON
+			output[schema.AttributeTypeResponseBodyJson] = bodyJSON
 		}
 	}
 
