@@ -112,6 +112,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				dependendenciesMet = false
 				break
 			}
+
+			if pe.IsStepFail(dep) {
+				dependendenciesMet = false
+				break
+			}
 		}
 		if !dependendenciesMet {
 			continue

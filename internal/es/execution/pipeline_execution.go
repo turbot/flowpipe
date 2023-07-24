@@ -78,33 +78,34 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Execution) bool {
-	if !pe.IsStepFail(step.GetFullyQualifiedName()) {
-		// Step not failed, so no need to calculate, return false
-		return false
-	}
-
-	var failedStepExecutions []StepExecution
-	if step.GetError().Retries > 0 && !step.GetError().Ignore {
-		if pe.StepStatus[step.GetFullyQualifiedName()].FailCount() > step.GetError().Retries {
-			failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
-
-			if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-				pe.Fail(step.GetFullyQualifiedName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
-			} else {
-				// Set the error
-				pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
-			}
-			// pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
-			return true
-		} else {
-			return false
-		}
-	} else if !step.GetError().Ignore {
-		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
-		pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
-		return true
-	}
 	return true
+	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
+	// 	// Step not failed, so no need to calculate, return false
+	// 	return false
+	// }
+
+	// var failedStepExecutions []StepExecution
+	// if step.GetError().Retries > 0 && !step.GetError().Ignore {
+	// 	if pe.StepStatus[step.GetFullyQualifiedName()].FailCount() > step.GetError().Retries {
+	// 		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
+
+	// 		if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
+	// 			pe.Fail(step.GetFullyQualifiedName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
+	// 		} else {
+	// 			// Set the error
+	// 			pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
+	// 		}
+	// 		// pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
+	// 		return true
+	// 	} else {
+	// 		return false
+	// 	}
+	// } else if !step.GetError().Ignore {
+	// 	failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
+	// 	pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
+	// 	return true
+	// }
+	// return true
 
 }
 func (pe *PipelineExecution) Fail(stepName string, stepError types.StepError) {

@@ -21,4 +21,9 @@ pipeline "jsonplaceholder" {
         }
         request_timeout_ms = 3000
     }
+
+
+    step "echo" "output" {
+        text = step.http.my_step_1.status_code
+    }
 }

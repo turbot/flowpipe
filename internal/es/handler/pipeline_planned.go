@@ -164,7 +164,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		if len(forEachCtyVals) == 0 {
 			stepInputs, err := stepDefn.GetInputs(evalContext)
 			if err != nil {
-				logger.Error("Error resolving step inputs", "error", err)
+				logger.Error("Error resolving step inputs for single step", "error", err)
 				return err
 			}
 			inputs = append(inputs, stepInputs)
@@ -177,7 +177,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				evalContext.Variables["each"] = cty.ObjectVal(v)
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
-					logger.Error("Error resolving step inputs", "error", err)
+					logger.Error("Error resolving step inputs for for_each step", "error", err)
 					return err
 				}
 				inputs = append(inputs, stepInputs)

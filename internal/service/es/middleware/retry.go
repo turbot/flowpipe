@@ -46,6 +46,10 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 			return producedMessages, nil
 		}
 
+		// Short circuit for now
+		msg.Ack()
+		return nil, err
+
 		// Check if the error is a Flowpipe error instance. If it is, check if it's retryable.
 		if flowpipeError, ok := err.(fperr.ErrorModel); ok {
 			if !flowpipeError.Retryable {
