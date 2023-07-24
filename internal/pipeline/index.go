@@ -191,46 +191,8 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 	for _, block := range pipelineOptions.Blocks {
 		switch block.Type {
 		case schema.BlockTypePipelineStep:
-			stepType := block.Labels[0]
-			stepName := block.Labels[1]
-
-			step := types.NewPipelineStep(stepType, stepName)
-			if step == nil {
-				res.HandleDecodeDiags(hcl.Diagnostics{
-					&hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Invalid pipeline step type " + stepType,
-					},
-				})
-				return nil, res
-			}
-
-			pipelineStepBlockSchema := GetPipelineStepBlockSchema(stepType)
-			if pipelineStepBlockSchema == nil {
-				res.HandleDecodeDiags(hcl.Diagnostics{
-					&hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Pipeline step block schema not found for step " + stepType,
-					},
-				})
-				return nil, res
-			}
-
-			stepOptions, rest, diags := block.Body.PartialContent(pipelineStepBlockSchema)
-
+			step, diags := decodeStep(block, parseCtx)
 			if diags.HasErrors() {
-				res.HandleDecodeDiags(diags)
-				return nil, res
-			}
-
-			diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, step)
-			if len(diags) > 0 {
-				res.HandleDecodeDiags(diags)
-				return nil, res
-			}
-
-			diags = step.SetAttributes(stepOptions.Attributes, &parseCtx.ParseContext)
-			if len(diags) > 0 {
 				res.HandleDecodeDiags(diags)
 				return nil, res
 			}
@@ -238,8 +200,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
 
 		case schema.BlockTypePipelineOutput:
-			override := false
-			output, cfgDiags := configs.DecodeOutputBlock(block, override)
+			output, cfgDiags := decodeOutput(block, parseCtx)
 			diags = append(diags, cfgDiags...)
 			if len(diags) > 0 {
 				res.HandleDecodeDiags(diags)
@@ -247,7 +208,7 @@ func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pi
 			}
 
 			if output != nil {
-				pipelineHcl.HclOutputs = append(pipelineHcl.HclOutputs, output)
+				pipelineHcl.Outputs = append(pipelineHcl.Outputs, *output)
 			}
 
 		case schema.BlockTypeParam:

@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 func TestHttpStepLoad(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := LoadPipelines(context.TODO(), "./test_pipelines/http.fp")
+	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/http.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

@@ -53,7 +53,7 @@ type Pipeline struct {
 
 	Steps []IPipelineStep `json:"steps"`
 
-	HclOutputs []*configs.Output
+	Outputs []PipelineOutput `json:"outputs"`
 
 	Params map[string]*configs.Variable
 }
@@ -227,6 +227,31 @@ func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 		}
 	}
 	return diags
+}
+
+type PipelineOutput struct {
+	Name            string         `json:"name"`
+	DependsOn       []string       `json:"depends_on,omitempty"`
+	Resolved        bool           `json:"resolved,omitempty"`
+	Sensitive       bool           `json:"sensitive,omitempty"`
+	Value           interface{}    `json:"value,omitempty"`
+	UnresolvedValue hcl.Expression `json:"-"`
+}
+
+func (o *PipelineOutput) AppendDependsOn(dependsOn ...string) {
+	// Use map to track existing DependsOn, this will make the lookup below much faster
+	// rather than using nested loops
+	existingDeps := make(map[string]bool)
+	for _, dep := range o.DependsOn {
+		existingDeps[dep] = true
+	}
+
+	for _, dep := range dependsOn {
+		if !existingDeps[dep] {
+			o.DependsOn = append(o.DependsOn, dep)
+			existingDeps[dep] = true
+		}
+	}
 }
 
 type PrintablePipeline struct {

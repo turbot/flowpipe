@@ -34,6 +34,34 @@ func TraversalAsString(traversal hcl.Traversal) string {
 	return strings.Join(parts, ".")
 }
 
+// TraversalAsStringSlice converts a traversal to a path string
+// (if an absolute traversal is passed - convert to relative)
+func TraversalAsStringSlice(traversal hcl.Traversal) []string {
+	var parts = make([]string, len(traversal))
+	offset := 0
+
+	if !traversal.IsRelative() {
+		s := traversal.SimpleSplit()
+		parts[0] = s.Abs.RootName()
+		offset++
+		traversal = s.Rel
+	}
+	for i, r := range traversal {
+		switch t := r.(type) {
+		case hcl.TraverseAttr:
+			parts[i+offset] = t.Name
+		case hcl.TraverseIndex:
+			idx, err := CtyToString(t.Key)
+			if err != nil {
+				// we do not expect this to fail
+				continue
+			}
+			parts[i+offset] = idx
+		}
+	}
+	return parts
+}
+
 func TraversalsEqual(t1, t2 hcl.Traversal) bool {
 	return TraversalAsString(t1) == TraversalAsString(t2)
 }

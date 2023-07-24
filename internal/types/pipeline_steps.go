@@ -306,7 +306,7 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 				Detail:   fmt.Sprintf("The depends_on argument must be a reference to another step, but the given value %q is not a valid reference.", traversal),
 			})
 		}
-		parts := TraversalAsStringSlice(traversal)
+		parts := hclhelpers.TraversalAsStringSlice(traversal)
 		if len(parts) != 3 {
 			// TODO: won't work with indices, i.e. text = "foo ${step.echo[1].text}"
 			// TODO: ^^ only when we have for_each working properly
@@ -327,7 +327,7 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 		traversals := attr.Expr.Variables()
 
 		for _, t := range traversals {
-			parts := TraversalAsStringSlice(t)
+			parts := hclhelpers.TraversalAsStringSlice(t)
 			if len(parts) >= 3 {
 				if helpers.StringSliceContains(ValidDependsOnTypes, parts[0]) {
 					if len(parts) >= 3 {
@@ -359,34 +359,6 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 	}
 
 	return diags
-}
-
-// TraversalAsStringSlice converts a traversal to a path string
-// (if an absolute traversal is passed - convert to relative)
-func TraversalAsStringSlice(traversal hcl.Traversal) []string {
-	var parts = make([]string, len(traversal))
-	offset := 0
-
-	if !traversal.IsRelative() {
-		s := traversal.SimpleSplit()
-		parts[0] = s.Abs.RootName()
-		offset++
-		traversal = s.Rel
-	}
-	for i, r := range traversal {
-		switch t := r.(type) {
-		case hcl.TraverseAttr:
-			parts[i+offset] = t.Name
-		case hcl.TraverseIndex:
-			idx, err := hclhelpers.CtyToString(t.Key)
-			if err != nil {
-				// we do not expect this to fail
-				continue
-			}
-			parts[i+offset] = idx
-		}
-	}
-	return parts
 }
 
 var ValidBaseStepAttributes = []string{
@@ -733,7 +705,7 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep)
 	}
 	traversals := expr.Variables()
 	for _, traversal := range traversals {
-		parts := TraversalAsStringSlice(traversal)
+		parts := hclhelpers.TraversalAsStringSlice(traversal)
 		if len(parts) > 0 {
 			if parts[0] == schema.BlockTypePipelineStep {
 				dependsOn := parts[1] + "." + parts[2]
