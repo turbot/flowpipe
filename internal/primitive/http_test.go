@@ -13,7 +13,7 @@ import (
 
 // GET
 
-func TestHTTPRequestOK(t *testing.T) {
+func TestHTTPMethodGET(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -32,7 +32,7 @@ func TestHTTPRequestOK(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
 }
 
-func TestHTTPRequestJSONResponseOK(t *testing.T) {
+func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -52,7 +52,7 @@ func TestHTTPRequestJSONResponseOK(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "success")
 }
 
-func TestHTTPRequestNotFound(t *testing.T) {
+func TestHTTPMethodGETNotFound(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -74,7 +74,7 @@ func TestHTTPRequestNotFound(t *testing.T) {
 
 // POST
 
-func TestHTTPPOSTRequestOK(t *testing.T) {
+func TestHTTPMethodPOST(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -99,7 +99,7 @@ func TestHTTPPOSTRequestOK(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
-func TestHTTPPOSTRequestOKWithTextBody(t *testing.T) {
+func TestHTTPMethodPOSTWithTextBody(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -119,7 +119,7 @@ func TestHTTPPOSTRequestOKWithTextBody(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
-func TestHTTPPOSTRequestNotFound(t *testing.T) {
+func TestHTTPMethodPOSTNotFound(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -138,7 +138,7 @@ func TestHTTPPOSTRequestNotFound(t *testing.T) {
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
 
-func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
+func TestHTTPMethodPOSTWithRequestHeaders(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -170,7 +170,7 @@ func TestHTTPPOSTRequestOKWithRequestHeaders(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
-func TestHTTPPOSTRequestOKWithTimeout(t *testing.T) {
+func TestHTTPMethodPOSTWithTimeout(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -196,7 +196,7 @@ func TestHTTPPOSTRequestOKWithTimeout(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
-func TestHTTPPOSTRequestOKWithNoVerifyCertificate(t *testing.T) {
+func TestHTTPMethodPOSTWithNoVerifyCertificate(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -223,7 +223,7 @@ func TestHTTPPOSTRequestOKWithNoVerifyCertificate(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
-func TestHTTPPOSTRequestWithVerifyCertificate(t *testing.T) {
+func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -249,7 +249,7 @@ func TestHTTPPOSTRequestWithVerifyCertificate(t *testing.T) {
 
 // DELETE
 
-func TestHTTPDELETERequestOK(t *testing.T) {
+func TestHTTPMethodDELETE(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -269,7 +269,7 @@ func TestHTTPDELETERequestOK(t *testing.T) {
 	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{}")
 }
 
-func TestHTTPDELETERequestNotFound(t *testing.T) {
+func TestHTTPMethodDELETENotFound(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -290,7 +290,7 @@ func TestHTTPDELETERequestNotFound(t *testing.T) {
 
 // PUT
 
-func TestHTTPPUTRequestOK(t *testing.T) {
+func TestHTTPMethodPUT(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -315,7 +315,7 @@ func TestHTTPPUTRequestOK(t *testing.T) {
 	reflect.DeepEqual(output.Get(schema.AttributeTypeResponseBodyJson), map[string]interface{}{"body": "bar", "id": 1, "title": "foo", "userId": 1})
 }
 
-func TestHTTPPUTRequestWithTextBodyOK(t *testing.T) {
+func TestHTTPMethodPUTWithTextBody(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
@@ -337,7 +337,7 @@ func TestHTTPPUTRequestWithTextBodyOK(t *testing.T) {
 	reflect.DeepEqual(output.Get(schema.AttributeTypeResponseBodyJson), map[string]interface{}{"id": 1})
 }
 
-func TestHTTPPUTRequestNotFound(t *testing.T) {
+func TestHTTPMethodPUTNotFound(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
