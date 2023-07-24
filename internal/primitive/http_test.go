@@ -10,6 +10,8 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
+// GET
+
 func TestHTTPRequestOK(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
@@ -54,6 +56,8 @@ func TestHTTPRequestNotFound(t *testing.T) {
 	assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
 }
+
+// POST
 
 func TestHTTPPOSTRequestOK(t *testing.T) {
 	ctx := context.Background()
@@ -210,4 +214,36 @@ func TestHTTPPOSTRequestWithVerifyCertificate(t *testing.T) {
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err, "no error found")
 	assert.Contains(err.Error(), "unknown authority")
+}
+
+
+// DELETE
+
+func TestHTTPDELETERequestOK(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+	input := types.Input(map[string]interface{}{"url": "https://jsonplaceholder.typicode.com/posts/1", "method": "delete"})
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("200 OK", output.Get("status"))
+	assert.Equal(200, output.Get("status_code"))
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{}")
+}
+
+func TestHTTPDELETERequestNotFound(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+	input := types.Input(map[string]interface{}{"url": "http://www.example.com/notfound", "method": "delete"})
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("404 Not Found", output.Get("status"))
+	assert.Equal(404, output.Get("status_code"))
+	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
