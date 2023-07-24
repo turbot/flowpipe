@@ -15,6 +15,7 @@ type PipelineExecution struct {
 	Args types.Input `json:"args"`
 	// Output from the pipeline
 	Output *types.StepOutput `json:"output,omitempty"`
+
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 	// Status of each step on a per-step basis. Used to determine if dependencies

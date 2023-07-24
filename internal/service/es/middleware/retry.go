@@ -5,9 +5,6 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/cenkalti/backoff/v3"
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/fplog"
 )
 
 // Custom retry middleware. To be used with Go Channel pub/sub. We need to be able to
@@ -50,69 +47,69 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 		msg.Ack()
 		return nil, err
 
-		// Check if the error is a Flowpipe error instance. If it is, check if it's retryable.
-		if flowpipeError, ok := err.(fperr.ErrorModel); ok {
-			if !flowpipeError.Retryable {
-				// IMPORTANT: must do this
-				msg.Ack()
-				return nil, err
-			}
-		} else {
-			// All other errors are NOT retryable
-			msg.Ack()
-			return nil, err
-		}
+		// 	// Check if the error is a Flowpipe error instance. If it is, check if it's retryable.
+		// 	if flowpipeError, ok := err.(fperr.ErrorModel); ok {
+		// 		if !flowpipeError.Retryable {
+		// 			// IMPORTANT: must do this
+		// 			msg.Ack()
+		// 			return nil, err
+		// 		}
+		// 	} else {
+		// 		// All other errors are NOT retryable
+		// 		msg.Ack()
+		// 		return nil, err
+		// 	}
 
-		expBackoff := backoff.NewExponentialBackOff()
-		expBackoff.InitialInterval = r.InitialInterval
-		expBackoff.MaxInterval = r.MaxInterval
-		expBackoff.Multiplier = r.Multiplier
-		expBackoff.MaxElapsedTime = r.MaxElapsedTime
-		expBackoff.RandomizationFactor = r.RandomizationFactor
+		// 	expBackoff := backoff.NewExponentialBackOff()
+		// 	expBackoff.InitialInterval = r.InitialInterval
+		// 	expBackoff.MaxInterval = r.MaxInterval
+		// 	expBackoff.Multiplier = r.Multiplier
+		// 	expBackoff.MaxElapsedTime = r.MaxElapsedTime
+		// 	expBackoff.RandomizationFactor = r.RandomizationFactor
 
-		ctx := msg.Context()
-		if r.MaxElapsedTime > 0 {
-			var cancel func()
-			ctx, cancel = context.WithTimeout(ctx, r.MaxElapsedTime)
-			defer cancel()
-		}
+		// 	ctx := msg.Context()
+		// 	if r.MaxElapsedTime > 0 {
+		// 		var cancel func()
+		// 		ctx, cancel = context.WithTimeout(ctx, r.MaxElapsedTime)
+		// 		defer cancel()
+		// 	}
 
-		retryNum := 1
-		expBackoff.Reset()
-	retryLoop:
-		for {
-			waitTime := expBackoff.NextBackOff()
-			select {
-			case <-ctx.Done():
-				return producedMessages, err
-			case <-time.After(waitTime):
-				// go on
-			}
+		// 	retryNum := 1
+		// 	expBackoff.Reset()
+		// retryLoop:
+		// 	for {
+		// 		waitTime := expBackoff.NextBackOff()
+		// 		select {
+		// 		case <-ctx.Done():
+		// 			return producedMessages, err
+		// 		case <-time.After(waitTime):
+		// 			// go on
+		// 		}
 
-			producedMessages, err = h(msg)
-			if err == nil {
-				return producedMessages, nil
-			}
+		// 		producedMessages, err = h(msg)
+		// 		if err == nil {
+		// 			return producedMessages, nil
+		// 		}
 
-			logger := fplog.Logger(r.Ctx)
-			logger.Error("Error occurred, retrying", "error", err,
-				"retryNum", retryNum,
-				"maxRetries", r.MaxRetries,
-				"waitTime", waitTime,
-				"elapsedTime", expBackoff.GetElapsedTime())
+		// 		logger := fplog.Logger(r.Ctx)
+		// 		logger.Error("Error occurred, retrying", "error", err,
+		// 			"retryNum", retryNum,
+		// 			"maxRetries", r.MaxRetries,
+		// 			"waitTime", waitTime,
+		// 			"elapsedTime", expBackoff.GetElapsedTime())
 
-			if r.OnRetryHook != nil {
-				r.OnRetryHook(retryNum, waitTime)
-			}
+		// 		if r.OnRetryHook != nil {
+		// 			r.OnRetryHook(retryNum, waitTime)
+		// 		}
 
-			retryNum++
-			if retryNum > r.MaxRetries {
-				// IMPORTANT: must do this
-				msg.Ack()
-				break retryLoop
-			}
-		}
+		// 		retryNum++
+		// 		if retryNum > r.MaxRetries {
+		// 			// IMPORTANT: must do this
+		// 			msg.Ack()
+		// 			break retryLoop
+		// 		}
+		// 	}
 
-		return nil, err
+		// 	return nil, err
 	}
 }

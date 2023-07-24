@@ -41,6 +41,9 @@ const (
 	BlockTypePipelineStep     = "step"
 	BlockTypePipelineOutput   = "output"
 
+	AttributeTypeValue     = "value"
+	AttributeTypeSensitive = "sensitive"
+
 	// Common step attributes
 	AttributeTypeTitle       = "title"
 	AttributeTypeDependsOn   = "depends_on"

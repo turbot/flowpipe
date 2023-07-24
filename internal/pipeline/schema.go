@@ -35,22 +35,18 @@ var PipelineBlockSchema = &hcl.BodySchema{
 var PipelineOutputBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name: "description",
+			Name: schema.AttributeTypeDescription,
 		},
 		{
-			Name:     "value",
+			Name:     schema.AttributeTypeValue,
 			Required: true,
 		},
 		{
-			Name: "depends_on",
+			Name: schema.AttributeTypeDependsOn,
 		},
 		{
-			Name: "sensitive",
+			Name: schema.AttributeTypeSensitive,
 		},
-	},
-	Blocks: []hcl.BlockHeaderSchema{
-		{Type: "precondition"},
-		{Type: "postcondition"},
 	},
 }
 
