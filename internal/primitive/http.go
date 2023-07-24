@@ -474,6 +474,9 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 			// Set the JSON encoding of the request body
 			requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
 			inputParams.RequestBody = string(requestBodyJSONBytes)
+
+			// Also, set the content type header to application/json
+			requestHeaders["Content-Type"] = "application/json"
 		}
 	}
 	inputParams.RequestHeaders = requestHeaders
