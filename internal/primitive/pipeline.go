@@ -33,9 +33,11 @@ func (e *RunPipeline) Run(ctx context.Context, input types.Input) (*types.StepOu
 	}
 
 	output := &types.StepOutput{
-		"name": input["name"].(string),
-		"args": input["args"].(map[string]interface{}),
+		OutputVariables: map[string]interface{}{},
 	}
+
+	output.OutputVariables["name"] = input["name"].(string)
+	output.OutputVariables["args"] = input["args"].(map[string]interface{})
 
 	return output, nil
 }

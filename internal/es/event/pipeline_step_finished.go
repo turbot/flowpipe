@@ -3,7 +3,6 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
@@ -19,8 +18,6 @@ type PipelineStepFinished struct {
 
 	// for_each controls
 	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
-
-	Error *types.StepError `json:"error,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -80,25 +77,6 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 func WithStepOutput(output *types.StepOutput) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
-		return nil
-	}
-}
-
-func WithStepError(err error) PipelineStepFinishedOption {
-	return func(e *PipelineStepFinished) error {
-		if err == nil {
-			return nil
-		}
-
-		e.Error = &types.StepError{}
-
-		if fpError, ok := err.(fperr.ErrorModel); ok {
-			e.Error.Detail = fpError
-		} else {
-			e.Error.Detail = fperr.Internal(err)
-		}
-
-		// TODO: how do we know how many times we retried it?
 		return nil
 	}
 }

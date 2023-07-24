@@ -11,6 +11,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -206,8 +207,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						title += nextStep.StepName
 					}
 					forEachOutput := &types.StepOutput{
-						"value": title,
+						OutputVariables: map[string]interface{}{},
 					}
+					forEachOutput.OutputVariables[schema.AttributeTypeValue] = title
 
 					forEachControl = &types.StepForEach{
 						Index:             forEachIndex,

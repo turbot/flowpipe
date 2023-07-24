@@ -20,7 +20,10 @@ func (e *Echo) Run(ctx context.Context, input types.Input) (*types.StepOutput, e
 		return nil, err
 	}
 
-	return &types.StepOutput{
-		schema.AttributeTypeText: input[schema.AttributeTypeText],
-	}, nil
+	o := types.StepOutput{
+		OutputVariables: map[string]interface{}{},
+	}
+	o.OutputVariables[schema.AttributeTypeText] = input[schema.AttributeTypeText]
+
+	return &o, nil
 }

@@ -151,38 +151,23 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 	}
 
 	output := types.StepOutput{
-		schema.AttributeTypeStatus:          resp.Status,
-		schema.AttributeTypeStatusCode:      resp.StatusCode,
-		schema.AttributeTypeResponseHeaders: headers,
-		schema.AttributeTypeStartedAt:       start,
-		schema.AttributeTypeFinishedAt:      finish,
+		OutputVariables: map[string]interface{}{},
 	}
+
+	output.OutputVariables[schema.AttributeTypeStatus] = resp.Status
+	output.OutputVariables[schema.AttributeTypeStatusCode] = resp.StatusCode
+	output.OutputVariables[schema.AttributeTypeResponseHeaders] = headers
+	output.OutputVariables[schema.AttributeTypeStartedAt] = start
+	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
 
 	if body != nil {
-		output[schema.AttributeTypeResponseBody] = string(body)
-	}
-
-	var bodyJSON interface{}
-
-	if resp != nil && body != nil {
-		// The unmarshalling is only done if the content type is JSON,
-		// otherwise the unmashalling will fail.
-		// Hence, the body_json field will only be populated if the content type is JSON.
-		if resp.Header.Get("Content-Type") == "application/json" {
-			err = json.Unmarshal(body, &bodyJSON)
-			if err != nil {
-				logger.Error("error unmarshalling body", "error", err)
-				return nil, err
-			}
-			output[schema.AttributeTypeResponseBodyJson] = bodyJSON
-		}
+		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
 	}
 
 	return &output, nil
 }
 
 func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, error) {
-	logger := fplog.Logger(ctx)
 
 	// Create the HTTP client
 	client := &http.Client{}
@@ -245,38 +230,16 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	}
 
 	output := types.StepOutput{
-		schema.AttributeTypeStatus:          resp.Status,
-		schema.AttributeTypeStatusCode:      resp.StatusCode,
-		schema.AttributeTypeResponseHeaders: headers,
-		schema.AttributeTypeStartedAt:       start,
-		schema.AttributeTypeFinishedAt:      finish,
+		OutputVariables: map[string]interface{}{},
 	}
+	output.OutputVariables[schema.AttributeTypeStatus] = resp.Status
+	output.OutputVariables[schema.AttributeTypeStatusCode] = resp.StatusCode
+	output.OutputVariables[schema.AttributeTypeResponseHeaders] = headers
+	output.OutputVariables[schema.AttributeTypeStartedAt] = start
+	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
 
 	if body != nil {
-		output[schema.AttributeTypeResponseBody] = string(body)
-	}
-
-	var bodyJSON interface{}
-	// Just ignore errors
-
-	if resp != nil && body != nil {
-		// The unmarshalling is only done if the content type is JSON,
-		// otherwise the unmashalling will fail.
-		// Hence, the body_json field will only be populated if the content type is JSON.
-		var contentType string
-		contentType = resp.Header.Get("Content-Type")
-		if contentType == "" {
-			contentType = resp.Header.Get("content-type")
-		}
-
-		if strings.Contains(contentType, "application/json") {
-			err = json.Unmarshal(body, &bodyJSON)
-			if err != nil {
-				logger.Error("error unmarshalling body", "error", err)
-				return nil, err
-			}
-			output[schema.AttributeTypeResponseBodyJson] = bodyJSON
-		}
+		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
 	}
 
 	return &output, nil

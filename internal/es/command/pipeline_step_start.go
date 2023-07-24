@@ -127,8 +127,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		// All other primitives finish immediately.
 		e, err := event.NewPipelineStepFinished(
 			event.ForPipelineStepStartToPipelineStepFinished(cmd),
-			event.WithStepOutput(output),
-			event.WithStepError(primitiveError))
+			event.WithStepOutput(output))
 
 		if err != nil {
 			logger.Error("Error creating Pipeline Step Finished event", "error", err)

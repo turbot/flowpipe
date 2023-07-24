@@ -305,7 +305,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			return err
 		}
 
-		logger.Trace("<1> event type #3", "eventType", ele.EventType)
 		switch ele.EventType {
 		case "handler.pipeline_queued":
 			var et event.PipelineQueued
@@ -460,13 +459,14 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.StepOutput)[et.StepForEach.Index] = et.Output
 			}
 
+			// TODO: Error handling
 			// TODO: ignore error setting -> we need to be able to ignore setting
 			// TODO: is a step failure an immediate end of the pipeline?
 			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
-			if et.Error != nil {
-				ex.StepExecutions[et.StepExecutionID].Error = et.Error
-				logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
-				ex.StepExecutions[et.StepExecutionID].Status = "failed"
+			if et.Output.HasErrors() {
+				// ex.StepExecutions[et.StepExecutionID].Error = et.Error
+				// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
+				// ex.StepExecutions[et.StepExecutionID].Status = "failed"
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
 
 				// IMPORTANT: we must call this to check if this step is the final failure

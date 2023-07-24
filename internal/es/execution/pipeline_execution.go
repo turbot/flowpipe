@@ -273,7 +273,4 @@ type StepExecution struct {
 
 	// Output of the step
 	Output *types.StepOutput `json:"output,omitempty"`
-
-	// TODO: should we just put fperr.ErrorModel here?
-	Error *types.StepError `json:"error,omitempty"`
 }

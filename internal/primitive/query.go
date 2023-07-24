@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Query struct{}
@@ -72,10 +73,12 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 
 	output := &types.StepOutput{
-		"rows":        results,
-		"started_at":  start,
-		"finished_at": finish,
+		OutputVariables: map[string]interface{}{},
 	}
+
+	output.OutputVariables[schema.AttributeTypeQuery] = results
+	output.OutputVariables[schema.AttributeTypeStartedAt] = start
+	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
 
 	return output, nil
 }
