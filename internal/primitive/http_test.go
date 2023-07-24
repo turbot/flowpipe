@@ -354,3 +354,67 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 	assert.Equal(404, output.Get("status_code"))
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
+
+// PATCH
+
+func TestHTTPMethodPATCH(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
+		schema.AttributeTypeMethod: types.HttpMethodPatch,
+		schema.AttributeTypeRequestBody: `{
+			"title": "foo",
+			"body": "Updating the body of the target resource"
+		}`,
+	})
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("200 OK", output.Get("status"))
+	assert.Equal(200, output.Get("status_code"))
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Updating the body of the target resource")
+	reflect.DeepEqual(output.Get(schema.AttributeTypeResponseBodyJson), map[string]interface{}{"body": "Updating the body of the target resource", "id": 1, "title": "foo", "userId": 1})
+}
+
+func TestHTTPMethodPATCHWithTextBody(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts/1",
+		schema.AttributeTypeMethod:      types.HttpMethodPatch,
+		schema.AttributeTypeRequestBody: "test",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("200 OK", output.Get("status"))
+	assert.Equal(200, output.Get("status_code"))
+	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
+}
+
+func TestHTTPMethodPATCHNotFound(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
+		schema.AttributeTypeMethod: types.HttpMethodPatch})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("404 Not Found", output.Get("status"))
+	assert.Equal(404, output.Get("status_code"))
+	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+}
