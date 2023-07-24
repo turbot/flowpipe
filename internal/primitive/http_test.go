@@ -32,6 +32,25 @@ func TestHTTPMethodGET(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
 }
 
+func TestHTTPMethodGETWithQueryString(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeUrl: "https://hub.steampipe.io/plugins?categories=saas",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal("200 OK", output.Get("status"))
+	assert.Equal(200, output.Get("status_code"))
+	assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe Cloud")
+}
+
 func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
