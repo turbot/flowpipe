@@ -148,9 +148,14 @@ type StepError struct {
 	Pipeline            string `json:"pipeline"`
 	Step                string `json:"step"`
 	Message             string `json:"message"`
+	ErrorCode           int    `json:"error_code"`
 }
 
 type StepErrors []StepError
+
+func (s *StepErrors) Add(err StepError) {
+	*s = append(*s, err)
+}
 
 type NextStep struct {
 	StepName string `json:"step_name"`

@@ -164,6 +164,16 @@ func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
 		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
 	}
 
+	if resp.StatusCode >= 400 {
+		message := resp.Status
+		output.Errors = &types.StepErrors{
+			types.StepError{
+				Message:   message,
+				ErrorCode: resp.StatusCode,
+			},
+		}
+	}
+
 	return &output, nil
 }
 

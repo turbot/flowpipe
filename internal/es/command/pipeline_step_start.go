@@ -45,7 +45,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+		pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 		if err != nil {
 			logger.Error("Error loading pipeline definition", "error", err)
 
@@ -56,7 +56,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		stepDefn := defn.GetStep(cmd.StepName)
+		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
 		var output *types.StepOutput
 		var primitiveError error
@@ -91,12 +91,26 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		if primitiveError != nil {
 			logger.Error("primitive failed", "error", primitiveError)
+			if output == nil {
+				output = &types.StepOutput{}
+			}
+			if output.Errors == nil {
+				output.Errors = &types.StepErrors{}
+			}
+			output.Errors.Add(types.StepError{
+				Message: primitiveError.Error(),
+			})
+		}
 
-			// err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-			// if err2 != nil {
-			// 	logger.Error("Error publishing event", "error", err2)
-			// }
-			// return
+		// Decorate the errors
+		if output.HasErrors() {
+			for i := 0; i < len(*output.Errors); i++ {
+				err := (*output.Errors)[i]
+				err.Step = cmd.StepName
+				err.PipelineExecutionID = cmd.PipelineExecutionID
+				err.StepExecutionID = cmd.StepExecutionID
+				err.Pipeline = pipelineDefn.Name
+			}
 		}
 
 		// If it's a pipeline step, we need to do something else
