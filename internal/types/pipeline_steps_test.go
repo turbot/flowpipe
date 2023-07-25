@@ -41,7 +41,11 @@ func TestStepAsHclVariables(t *testing.T) {
 	assert.Equal(true, hclVariablesMap["int"].AsBigFloat().IsInt())
 
 	var intVal int
-	gocty.FromCtyValue(hclVariablesMap["int"], &intVal)
+	err = gocty.FromCtyValue(hclVariablesMap["int"], &intVal)
+	if err != nil {
+		assert.Fail("Unable to convert cty value to int")
+		return
+	}
 
 	assert.Equal(25, intVal)
 	assert.Equal(cty.True, hclVariablesMap["bool"])
