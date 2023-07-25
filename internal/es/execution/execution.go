@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -43,6 +44,34 @@ type Execution struct {
 	AllStepOutputs ExecutionStepOutputs `json:"-"`
 }
 
+/*
+*
+
+	Arrange the step outputs in a way that it can be used for HCL Expression evaluation
+
+	The expressions look something like: step.echo.text_1.text
+
+	So we need to arrange the output as such:
+
+	"step": {
+		"echo": {
+			"text_1": {
+				"text": "hello world" <-- this is the output from the step
+			},
+			"text_2": {
+				"text": "hello world" <-- this is the output from the step
+			},
+		},
+		"http": {
+			"my_http": {
+				"response_body": "hello world" <-- this is the output from the step
+			},
+		},
+	},
+	"param": {
+		"my_param": "hello world" <-- this is set by the calling function, but maybe we should do it here?
+	}
+*/
 func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 
 	stepVariables := make(map[string]cty.Value)
@@ -83,7 +112,7 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 	}
 
 	executionVariables := map[string]cty.Value{
-		"step": cty.ObjectVal(stepVariables),
+		schema.BlockTypePipelineStep: cty.ObjectVal(stepVariables),
 	}
 
 	return executionVariables, nil

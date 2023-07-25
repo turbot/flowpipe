@@ -40,6 +40,10 @@ func NewPipelineHcl(block *hcl.Block) *Pipeline {
 }
 
 // Pipeline represents a "pipeline" block in an flowpipe HCL (*.fp) file
+//
+// Note that this Pipeline definition is different that the pipeline that is running. This definition
+// contains unresolved expressions (mostly in steps), how to handle errors etc but not the actual Pipeline
+// execution data.
 type Pipeline struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`

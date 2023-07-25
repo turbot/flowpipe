@@ -45,7 +45,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return nil
 	}
 
-	defn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
+	pipelineDefn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
 	if err != nil {
 		logger.Error("Error loading pipeline definition", "error", err)
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
@@ -69,11 +69,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	//
 
-	for i, step := range defn.Steps {
+	for i, step := range pipelineDefn.Steps {
 		// TODO: this entire failure handling doesn't work since we've moved to HCL.
 		if pe.IsStepFail(step.GetFullyQualifiedName()) {
 
-			if !pe.IsStepFinalFailure(defn.Steps[i], ex) {
+			if !pe.IsStepFinalFailure(pipelineDefn.Steps[i], ex) {
 
 				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
 				if !pe.IsStepQueued(step.GetFullyQualifiedName()) {
@@ -103,7 +103,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				continue
 			}
 			// Ignore invalid dependencies
-			if defn.GetStep(dep) == nil {
+			depStepDefn := pipelineDefn.GetStep(dep)
+			if depStepDefn == nil {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
@@ -113,10 +114,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				break
 			}
 
-			if pe.IsStepFail(dep) {
+			if pe.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
 				dependendenciesMet = false
 				break
 			}
+
 		}
 		if !dependendenciesMet {
 			continue

@@ -53,6 +53,10 @@ var PipelineOutputBlockSchema = &hcl.BodySchema{
 var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
+			Name:     schema.AttributeTypeUrl,
+			Required: true,
+		},
+		{
 			Name: schema.AttributeTypeTitle,
 		},
 		{
@@ -63,10 +67,6 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 		},
 		{
 			Name: schema.AttributeTypeDependsOn,
-		},
-		{
-			Name:     schema.AttributeTypeUrl,
-			Required: true,
 		},
 		{
 			Name: schema.AttributeTypeMethod,
@@ -82,6 +82,11 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 		},
 		{
 			Name: schema.AttributeTypeRequestHeaders,
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
 		},
 	},
 }

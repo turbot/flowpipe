@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/terraform/addrs"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 const (
@@ -139,6 +140,40 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 		}
 
 	}
+
+	if o.Errors != nil {
+		errList := []cty.Value{}
+		for _, stepErr := range *o.Errors {
+			ctyMap := map[string]cty.Value{}
+			var err error
+			ctyMap["message"], err = gocty.ToCtyValue(stepErr.Message, cty.String)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			ctyMap["error_code"], err = gocty.ToCtyValue(stepErr.ErrorCode, cty.Number)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			ctyMap["pipeline_execution_id"], err = gocty.ToCtyValue(stepErr.PipelineExecutionID, cty.String)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			ctyMap["step_execution_id"], err = gocty.ToCtyValue(stepErr.StepExecutionID, cty.String)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			ctyMap["pipeline"], err = gocty.ToCtyValue(stepErr.Pipeline, cty.String)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			ctyMap["step"], err = gocty.ToCtyValue(stepErr.Step, cty.String)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			errList = append(errList, cty.ObjectVal(ctyMap))
+		}
+		variables["errors"] = cty.ListVal(errList)
+	}
 	return cty.ObjectVal(variables), nil
 }
 
@@ -206,20 +241,35 @@ type IPipelineStep interface {
 	AppendDependsOn(...string)
 	GetForEach() hcl.Expression
 	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
+	SetErrorConfig(*ErrorConfig)
+	GetErrorConfig() *ErrorConfig
+}
+
+type ErrorConfig struct {
+	Ignore bool `json:"ignore"`
 }
 
 // A common base struct that all pipeline steps must embed
 type PipelineStepBase struct {
-	Title       *string  `json:"title,omitempty"`
-	Description *string  `json:"description,omitempty"`
-	Name        string   `json:"name"`
-	Type        string   `json:"step_type"`
-	DependsOn   []string `json:"depends_on,omitempty"`
-	Resolved    bool     `json:"resolved,omitempty"`
+	Title       *string      `json:"title,omitempty"`
+	Description *string      `json:"description,omitempty"`
+	Name        string       `json:"name"`
+	Type        string       `json:"step_type"`
+	DependsOn   []string     `json:"depends_on,omitempty"`
+	Resolved    bool         `json:"resolved,omitempty"`
+	ErrorConfig *ErrorConfig `json:"error_configs,omitempty"`
 
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
 	ForEach              hcl.Expression            `json:"-"`
+}
+
+func (p *PipelineStepBase) SetErrorConfig(errorConfig *ErrorConfig) {
+	p.ErrorConfig = errorConfig
+}
+
+func (p *PipelineStepBase) GetErrorConfig() *ErrorConfig {
+	return p.ErrorConfig
 }
 
 func (p *PipelineStepBase) GetForEach() hcl.Expression {

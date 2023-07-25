@@ -135,7 +135,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				listVal := val.AsValueSlice()
 				for _, v := range listVal {
 					forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
-						"value": v,
+						schema.AttributeTypeValue: v,
 					})
 				}
 			} else {

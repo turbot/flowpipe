@@ -6,11 +6,14 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipelineStep, hcl.Diagnostics) {
 	stepType := block.Labels[0]
 	stepName := block.Labels[1]
+
+	// TODO: collect all diags?
 
 	step := types.NewPipelineStep(stepType, stepName)
 	if step == nil {
@@ -42,6 +45,47 @@ func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipeli
 	diags = step.SetAttributes(stepOptions.Attributes, &parseCtx.ParseContext)
 	if len(diags) > 0 {
 		return nil, diags
+	}
+
+	if errorBlocks := stepOptions.Blocks.ByType()[schema.BlockTypeError]; len(errorBlocks) > 0 {
+		if len(errorBlocks) > 1 {
+			return nil, hcl.Diagnostics{&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Multiple error blocks found for step " + stepName,
+			}}
+		}
+		errorBlock := errorBlocks[0]
+
+		attributes, diags := errorBlock.Body.JustAttributes()
+		if len(diags) > 0 {
+			return nil, diags
+		}
+
+		ignore := false
+
+		if attr, exists := attributes[schema.AttributeTypeIgnore]; exists {
+			val, diags := attr.Expr.Value(nil)
+			if len(diags) > 0 {
+				return nil, diags
+			}
+
+			var target bool
+			if err := gocty.FromCtyValue(val, &target); err != nil {
+				return nil, hcl.Diagnostics{&hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Error decoding ignore attribute",
+					Detail:   err.Error(),
+				}}
+			}
+			ignore = target
+
+		}
+
+		errorConfig := &types.ErrorConfig{
+			Ignore: ignore,
+		}
+
+		step.SetErrorConfig(errorConfig)
 	}
 
 	return step, hcl.Diagnostics{}

@@ -32,6 +32,7 @@ const (
 	BlockTypeLegacyRequires = "requires"
 	BlockTypeCategory       = "category"
 	BlockTypeWith           = "with"
+	BlockTypeError          = "error"
 
 	// config blocks
 	BlockTypeConnection       = "connection"
@@ -43,6 +44,9 @@ const (
 
 	AttributeTypeValue     = "value"
 	AttributeTypeSensitive = "sensitive"
+
+	// error block
+	AttributeTypeIgnore = "ignore"
 
 	// Common step attributes
 	AttributeTypeTitle       = "title"
