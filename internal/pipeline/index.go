@@ -259,7 +259,7 @@ func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 			if !helpers.StringSliceContains(stepRegisters, dep) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
-					Summary:  fmt.Sprintf("invalid depends_on '%s' - step '%s' does not exist", dep, step.GetFullyQualifiedName()),
+					Summary:  fmt.Sprintf("invalid depends_on '%s' - step '%s' does not exist for pipeline %s", dep, step.GetFullyQualifiedName(), pipelineHcl.Name),
 				})
 			}
 		}

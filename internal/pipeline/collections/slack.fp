@@ -4,7 +4,7 @@ pipeline "send_slack_message" {
 
     param "webhook_url" {
         description = "Slack webhook URL"
-        default = "https://hooks.slack.com/services/<change me>"
+        default = "https://hooks.slack.com/services/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"
     }
     param "message" {
         description = "message to send"
@@ -18,6 +18,6 @@ pipeline "send_slack_message" {
     }
 
     output "response" {
-        value = step.send_message.body_json
+        value = step.send_message.response_body
     }
 }

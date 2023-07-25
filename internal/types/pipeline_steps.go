@@ -477,20 +477,44 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		schema.AttributeTypeUrl: urlInput,
 	}
 
-	if p.Method != nil {
-		inputs[schema.AttributeTypeMethod] = *p.Method
+	if p.UnresolvedAttributes[schema.AttributeTypeMethod] == nil {
+		if p.Method != nil {
+			inputs[schema.AttributeTypeMethod] = *p.Method
+		}
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeMethod], evalContext, &p.Method)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
 	}
 
-	if p.RequestTimeoutMs != nil {
-		inputs[schema.AttributeTypeRequestTimeoutMs] = *p.RequestTimeoutMs
+	if p.UnresolvedAttributes[schema.AttributeTypeRequestTimeoutMs] == nil {
+		if p.RequestTimeoutMs != nil {
+			inputs[schema.AttributeTypeRequestTimeoutMs] = *p.RequestTimeoutMs
+		}
+	} else {
+		var timeoutMs float64
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeRequestTimeoutMs], evalContext, &timeoutMs)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+		inputs[schema.AttributeTypeRequestTimeoutMs] = int64(timeoutMs)
 	}
 
 	if p.Insecure != nil {
 		inputs[schema.AttributeTypeInsecure] = *p.Insecure
 	}
 
-	if p.RequestBody != nil {
-		inputs[schema.AttributeTypeRequestBody] = *p.RequestBody
+	if p.UnresolvedAttributes[schema.AttributeTypeRequestBody] == nil {
+		if p.RequestBody != nil {
+			inputs[schema.AttributeTypeRequestBody] = *p.RequestBody
+		}
+
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeRequestBody], evalContext, &p.RequestBody)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
 	}
 
 	if p.RequestHeaders != nil {
