@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
@@ -29,8 +28,9 @@ type HTTPRequest struct {
 	Input types.Input
 }
 
-type HTTPPOSTInput struct {
+type HTTPInput struct {
 	URL              string
+	Method           string
 	RequestBody      string
 	RequestHeaders   map[string]interface{}
 	RequestTimeoutMs int
@@ -70,40 +70,23 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
 }
 
 func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
+	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
 	// TODO
-	// * Currently the primitive only supports GET and POST requests. Add support for other methods.
 	// * Test SSL vs non-SSL
 	// * Compare to features in https://www.tines.com/docs/actions/types/http-request#configuration-options
 
-	method, ok := input[schema.AttributeTypeMethod].(string)
-	if !ok {
-		method = types.HttpMethodGet
+	// Constuct the input structure from the input parameters
+	httpInput, err := buildHTTPInput(input)
+	if err != nil {
+		return nil, err
 	}
 
-	// Method should be case insensitive
-	method = strings.ToLower(method)
-
-	inputURL := input[schema.AttributeTypeUrl].(string)
-
-	var output *types.StepOutput
-	var err error
-	switch method {
-	case types.HttpMethodGet:
-		output, err = get(ctx, inputURL)
-	case types.HttpMethodPost:
-		// build the input for the POST request
-		postInput, inputErr := buildHTTPPostInput(input)
-		if inputErr != nil {
-			return nil, inputErr
-		}
-
-		output, err = post(ctx, postInput)
-	}
-
+	// Make the HTTP request
+	output, err := doRequest(ctx, httpInput)
 	if err != nil {
 		return nil, err
 	}
@@ -111,77 +94,11 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 	return output, nil
 }
 
-func get(ctx context.Context, inputURL string) (*types.StepOutput, error) {
-	logger := fplog.Logger(ctx)
-
-	start := time.Now().UTC()
-	resp, err := http.Get(inputURL) //nolint:gosec // https://securego.io/docs/rules/g107.html url should mentioned in const. We need this to be fully configurable since we are executing user's setting.
-	finish := time.Now().UTC()
-	if err != nil {
-		logger.Error("error making request", "error", err, "response", resp)
-		return nil, err
-	}
-	defer func() {
-		if resp != nil && resp.Body != nil {
-			resp.Body.Close()
-		}
-	}()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	// Golang Response.Header is a map[string][]string, which is accurate
-	// but complicated for users. We map it to a simpler key-value pair
-	// approach.
-	headers := map[string]interface{}{}
-	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
-	// in array form
-	headersAsArrays := map[string]bool{"Set-Cookie": true}
-
-	for k, v := range resp.Header {
-		if headersAsArrays[k] {
-			// It's a known multi-value header
-			headers[k] = v
-		} else {
-			// Otherwise, just use the first value for simplicity
-			headers[k] = v[0]
-		}
-	}
-
-	output := types.StepOutput{
-		OutputVariables: map[string]interface{}{},
-	}
-
-	output.OutputVariables[schema.AttributeTypeStatus] = resp.Status
-	output.OutputVariables[schema.AttributeTypeStatusCode] = resp.StatusCode
-	output.OutputVariables[schema.AttributeTypeResponseHeaders] = headers
-	output.OutputVariables[schema.AttributeTypeStartedAt] = start
-	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
-
-	if body != nil {
-		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
-	}
-
-	if resp.StatusCode >= 400 {
-		message := resp.Status
-		output.Errors = &types.StepErrors{
-			types.StepError{
-				Message:   message,
-				ErrorCode: resp.StatusCode,
-			},
-		}
-	}
-
-	return &output, nil
-}
-
-func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, error) {
-
-	// Create the HTTP client
+// doRequest performs the HTTP request based on the inputs provided and returns the output
+func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.StepOutput, error) {
+	// Create the HTTP request
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
+	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
 		return nil, fperr.BadRequestWithMessage("Error creating request: " + err.Error())
 	}
@@ -224,21 +141,9 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 	// Golang Response.Header is a map[string][]string, which is accurate
 	// but complicated for users. We map it to a simpler key-value pair
 	// approach.
-	headers := map[string]interface{}{}
-	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
-	// in array form
-	headersAsArrays := map[string]bool{"Set-Cookie": true}
+	headers := mapResponseHeaders(resp)
 
-	for k, v := range resp.Header {
-		if headersAsArrays[k] {
-			// It's a known multi-value header
-			headers[k] = v
-		} else {
-			// Otherwise, just use the first value for simplicity
-			headers[k] = v[0]
-		}
-	}
-
+	// Construct the output
 	output := types.StepOutput{
 		OutputVariables: map[string]interface{}{},
 	}
@@ -252,14 +157,35 @@ func post(ctx context.Context, inputParams *HTTPPOSTInput) (*types.StepOutput, e
 		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
 	}
 
+	if resp.StatusCode >= 400 {
+		message := resp.Status
+		output.Errors = &types.StepErrors{
+			types.StepError{
+				Message:   message,
+				ErrorCode: resp.StatusCode,
+			},
+		}
+	}
+
 	return &output, nil
 }
 
-// builsHTTPPostInput builds the HTTPPOSTInput struct from the input parameters
-func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
-	// Get the inputs from the pipeline
-	inputParams := &HTTPPOSTInput{
-		URL: input["url"].(string),
+// buildHTTPInput builds the HTTPInput struct from the input parameters
+func buildHTTPInput(input types.Input) (*HTTPInput, error) {
+	// Check for method
+	method, ok := input[schema.AttributeTypeMethod].(string)
+	if !ok {
+		// If not provided, default to GET
+		method = types.HttpMethodGet
+	}
+
+	// Method should be case insensitive
+	method = strings.ToLower(method)
+
+	// Build the input parameters
+	inputParams := &HTTPInput{
+		URL:    input["url"].(string),
+		Method: method,
 
 		// TODO: Make it configurable
 		RequestTimeoutMs: HTTPRequestDefaultTimeoutMs,
@@ -283,7 +209,6 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 
 	// Get the request body
 	requestBody := input[schema.AttributeTypeRequestBody]
-
 	if requestBody != nil {
 		// Try to unmarshal the request body into JSON
 		var requestBodyJSON map[string]interface{}
@@ -304,9 +229,31 @@ func buildHTTPPostInput(input types.Input) (*HTTPPOSTInput, error) {
 			// Set the JSON encoding of the request body
 			requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
 			inputParams.RequestBody = string(requestBodyJSONBytes)
+
+			// Also, set the content type header to application/json
+			requestHeaders["Content-Type"] = "application/json"
 		}
 	}
 	inputParams.RequestHeaders = requestHeaders
 
 	return inputParams, nil
+}
+
+// mapResponseHeaders maps the response headers to a simpler key-value pair
+func mapResponseHeaders(resp *http.Response) map[string]interface{} {
+	headers := map[string]interface{}{}
+	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
+	// in array form
+	headersAsArrays := map[string]bool{"Set-Cookie": true}
+
+	for k, v := range resp.Header {
+		if headersAsArrays[k] {
+			// It's a known multi-value header
+			headers[k] = v
+		} else {
+			// Otherwise, just use the first value for simplicity
+			headers[k] = v[0]
+		}
+	}
+	return headers
 }
