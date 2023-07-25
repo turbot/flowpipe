@@ -11,8 +11,6 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-// TODO: * Implicit depends test
-
 func TestExpression(t *testing.T) {
 	assert := assert.New(t)
 

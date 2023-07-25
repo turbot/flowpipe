@@ -381,9 +381,7 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 			})
 		}
 		parts := hclhelpers.TraversalAsStringSlice(traversal)
-		if len(parts) != 3 {
-			// TODO: won't work with indices, i.e. text = "foo ${step.echo[1].text}"
-			// TODO: ^^ only when we have for_each working properly
+		if len(parts) < 3 {
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,
 				Summary:  constants.BadDependsOn,
@@ -765,6 +763,8 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep)
 	for _, traversal := range traversals {
 		parts := hclhelpers.TraversalAsStringSlice(traversal)
 		if len(parts) > 0 {
+			// When the expression/traversal is referencing an index, the index is also included in the parts
+			// for example: []string len: 5, cap: 5, ["step","sleep","sleep_1","0","duration"]
 			if parts[0] == schema.BlockTypePipelineStep {
 				dependsOn := parts[1] + "." + parts[2]
 				p.AppendDependsOn(dependsOn)
