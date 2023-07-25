@@ -2,7 +2,6 @@ package primitive
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -330,8 +329,7 @@ func TestHTTPMethodPUT(t *testing.T) {
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "foo")
-	reflect.DeepEqual(output.Get(schema.AttributeTypeResponseBodyJson), map[string]interface{}{"body": "bar", "id": 1, "title": "foo", "userId": 1})
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{\n  \"body\": \"bar\",\n  \"id\": 1,\n  \"title\": \"foo\",\n  \"userId\": 1\n}")
 }
 
 func TestHTTPMethodPUTWithTextBody(t *testing.T) {
@@ -353,7 +351,6 @@ func TestHTTPMethodPUTWithTextBody(t *testing.T) {
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
-	reflect.DeepEqual(output.Get(schema.AttributeTypeResponseBodyJson), map[string]interface{}{"id": 1})
 }
 
 func TestHTTPMethodPUTNotFound(t *testing.T) {
@@ -396,7 +393,7 @@ func TestHTTPMethodPATCH(t *testing.T) {
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Updating the body of the target resource")
-	reflect.DeepEqual(output.Get(schema.AttributeTypeResponseBodyJson), map[string]interface{}{"body": "Updating the body of the target resource", "id": 1, "title": "foo", "userId": 1})
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{\n  \"userId\": 1,\n  \"id\": 1,\n  \"title\": \"foo\",\n  \"body\": \"Updating the body of the target resource\"\n}")
 }
 
 func TestHTTPMethodPATCHWithTextBody(t *testing.T) {

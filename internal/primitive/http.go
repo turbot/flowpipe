@@ -157,6 +157,16 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.StepOutput, 
 		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
 	}
 
+	if resp.StatusCode >= 400 {
+		message := resp.Status
+		output.Errors = &types.StepErrors{
+			types.StepError{
+				Message:   message,
+				ErrorCode: resp.StatusCode,
+			},
+		}
+	}
+
 	return &output, nil
 }
 
