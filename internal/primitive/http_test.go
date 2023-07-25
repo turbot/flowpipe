@@ -84,10 +84,37 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("404 Not Found", output.Get("status"))
-	assert.Equal(404, output.Get("status_code"))
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(404, e.ErrorCode)
+		assert.Equal("404 Not Found", e.Message)
+	}
 	assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
+}
+
+func TestHTTPMethodGETUnauthorized(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:    "https://cloud.steampipe.io/api/v0/user/flowpipe/connection",
+		schema.AttributeTypeMethod: types.HttpMethodGet,
+		schema.AttributeTypeRequestBody: `{
+			"Authorization": "Bearer spt_flo3pipe00g0t1nvali_3test0axy78ic8h6http77o24"
+		}`,
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(401, e.ErrorCode)
+		assert.Equal("401 Unauthorized", e.Message)
+	}
 }
 
 // POST
@@ -151,8 +178,11 @@ func TestHTTPMethodPOSTNotFound(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("404 Not Found", output.Get("status"))
-	assert.Equal(404, output.Get("status_code"))
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(404, e.ErrorCode)
+		assert.Equal("404 Not Found", e.Message)
+	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
 
@@ -301,8 +331,11 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("404 Not Found", output.Get("status"))
-	assert.Equal(404, output.Get("status_code"))
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(404, e.ErrorCode)
+		assert.Equal("404 Not Found", e.Message)
+	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
 
@@ -362,12 +395,16 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 
 	input := types.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: types.HttpMethodPut})
+		schema.AttributeTypeMethod: types.HttpMethodPut,
+	})
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("404 Not Found", output.Get("status"))
-	assert.Equal(404, output.Get("status_code"))
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(404, e.ErrorCode)
+		assert.Equal("404 Not Found", e.Message)
+	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
 
@@ -430,7 +467,10 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("404 Not Found", output.Get("status"))
-	assert.Equal(404, output.Get("status_code"))
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(404, e.ErrorCode)
+		assert.Equal("404 Not Found", e.Message)
+	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
