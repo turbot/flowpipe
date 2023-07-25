@@ -111,7 +111,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
-			evalContext.Variables["param"] = paramsCtyVal
+			evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 
 			// First we want to evaluate the content of for_each
 			// Given the following:
@@ -159,6 +159,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				Variables: executionVariables,
 				Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
 			}
+
+			paramsCtyVal, err := pipelineDefn.ParamsAsCty()
+			if err != nil {
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			}
+			evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 		}
 
 		// now resolve the inputs, if there's no for_each then there's just one input
