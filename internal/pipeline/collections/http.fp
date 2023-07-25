@@ -40,6 +40,16 @@ pipeline "jsonplaceholder_expr" {
         default = 1000
     }
 
+    param "user_agent" {
+        type = string
+        default = "flowpipe"
+    }
+
+    param "insecure" {
+        type = bool
+        default = true
+    }
+
     step "http" "http_1" {
         url = "https://jsonplaceholder.typicode.com/posts"
 
@@ -49,13 +59,16 @@ pipeline "jsonplaceholder_expr" {
             userId = 12345
             title = "brian may"
         })
+
         request_headers = {
             Accept = "*/*"
             Content-Type = "application/json"
-            User-Agent = "flowpipe"
+            User-Agent = param.user_agent
         }
-        # this doesn't work yet
-        # request_timeout_ms = param.timeout.value
+
+        request_timeout_ms = param.timeout
+
+        insecure = param.insecure
     }
 
     step "echo" "output" {
