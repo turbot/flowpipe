@@ -41,13 +41,33 @@ type StepForEach struct {
 type Input map[string]interface{}
 
 // StepOutput is the output from a pipeline.
-type StepOutput map[string]interface{}
+type OutputVariables map[string]interface{}
+
+type StepOutput struct {
+	OutputVariables OutputVariables `json:"output_variables,omitempty"`
+	Errors          *StepErrors     `json:"errors,omitempty"`
+}
 
 func (o *StepOutput) Get(key string) interface{} {
 	if o == nil {
 		return nil
 	}
-	return (*o)[key]
+	return o.OutputVariables[key]
+}
+
+func (o *StepOutput) Set(key string, value interface{}) {
+	if o == nil {
+		return
+	}
+	o.OutputVariables[key] = value
+}
+
+func (o *StepOutput) HasErrors() bool {
+	if o == nil {
+		return false
+	}
+
+	return o.Errors != nil && len(*o.Errors) > 0
 }
 
 func (o *StepOutput) AsHclVariables() (cty.Value, error) {
@@ -56,7 +76,7 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 	}
 
 	variables := make(map[string]cty.Value)
-	for key, value := range *o {
+	for key, value := range o.OutputVariables {
 		// Check if the value is a Go native data type
 		switch v := value.(type) {
 		case string:
@@ -123,18 +143,23 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 }
 
 type StepError struct {
-	// TODO: not sure about this
-	Detail fperr.ErrorModel `json:"detail"`
+	PipelineExecutionID string `json:"pipeline_execution_id"`
+	StepExecutionID     string `json:"step_execution_id"`
+	Pipeline            string `json:"pipeline"`
+	Step                string `json:"step"`
+	Message             string `json:"message"`
+	ErrorCode           int    `json:"error_code"`
+}
+
+type StepErrors []StepError
+
+func (s *StepErrors) Add(err StepError) {
+	*s = append(*s, err)
 }
 
 type NextStep struct {
 	StepName string `json:"step_name"`
 	DelayMs  int    `json:"delay_ms,omitempty"`
-}
-
-type PipelineStepError struct {
-	Ignore  bool `yaml:"ignore" json:"ignore"`
-	Retries int  `yaml:"retries" json:"retries"`
 }
 
 func NewPipelineStep(stepType, stepName string) IPipelineStep {
@@ -180,7 +205,6 @@ type IPipelineStep interface {
 	GetDependsOn() []string
 	AppendDependsOn(...string)
 	GetForEach() hcl.Expression
-	GetError() *PipelineStepError
 	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
 }
 
@@ -428,10 +452,6 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	return inputs, nil
 }
 
-func (p *PipelineStepHttp) GetError() *PipelineStepError {
-	return nil
-}
-
 func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
@@ -569,10 +589,6 @@ func (p *PipelineStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	}, nil
 }
 
-func (p *PipelineStepSleep) GetError() *PipelineStepError {
-	return nil
-}
-
 func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
@@ -614,10 +630,6 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseCon
 type PipelineStepEmail struct {
 	PipelineStepBase
 	To string `json:"to"`
-}
-
-func (p *PipelineStepEmail) GetError() *PipelineStepError {
-	return nil
 }
 
 func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -693,10 +705,6 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		schema.AttributeTypeText: textInput,
 		"list_text":              listTextInput,
 	}, nil
-}
-
-func (p *PipelineStepEcho) GetError() *PipelineStepError {
-	return nil
 }
 
 func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep) {

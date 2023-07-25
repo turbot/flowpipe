@@ -9,6 +9,7 @@ import (
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Exec struct{}
@@ -88,13 +89,15 @@ func (e *Exec) Run(ctx context.Context, input types.Input) (*types.StepOutput, e
 	}
 	finish := time.Now().UTC()
 
-	output := &types.StepOutput{
-		"exit_code":    exitCode,
-		"stdout_lines": stdoutLines,
-		"stderr_lines": stderrLines,
-		"started_at":   start,
-		"finished_at":  finish,
+	o := types.StepOutput{
+		OutputVariables: map[string]interface{}{},
 	}
 
-	return output, nil
+	o.OutputVariables["exit_code"] = exitCode
+	o.OutputVariables["stdout_lines"] = stdoutLines
+	o.OutputVariables["stderr_lines"] = stderrLines
+	o.OutputVariables[schema.AttributeTypeStartedAt] = start
+	o.OutputVariables[schema.AttributeTypeFinishedAt] = finish
+
+	return &o, nil
 }

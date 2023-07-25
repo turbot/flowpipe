@@ -37,6 +37,11 @@ func PanicRecovererMiddleware(ctx context.Context) message.HandlerMiddleware {
 					// Flowpipe error by default is not retryable
 					internalErr := fperr.Internal(recoveredPanicErr)
 					err = internalErr
+
+					// Must ack here otherwise Watermill will go to an infinite loop
+
+					// TODO: how do we retry? Should we do this in the router / Watermill? Or should we handle it in Flowpipe ES?
+					msg.Ack()
 				}
 			}()
 

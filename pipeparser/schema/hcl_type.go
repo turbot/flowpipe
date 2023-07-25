@@ -55,6 +55,7 @@ const (
 
 	// Used by query step
 	AttributeTypeSql              = "sql"
+	AttributeTypeQuery            = "query"
 	AttributeTypeConnectionString = "connection_string"
 
 	// Used by email step
@@ -75,8 +76,6 @@ const (
 	AttributeTypeResponseBody     = "response_body"
 	AttributeTypeStatusCode       = "status_code"
 	AttributeTypeStatus           = "status"
-	AttrkbuteTypeResponseBody     = "response_body"
-	AttributeTypeResponseBodyJson = "response_body_json"
 
 	// Used by echo step
 	AttributeTypeText = "text"

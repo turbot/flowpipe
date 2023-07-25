@@ -5,6 +5,20 @@ pipeline "simple_http" {
     }
 }
 
+pipeline "bad_http" {
+    description = "my simple http pipeline"
+    step "http" "my_step_1" {
+        url = "http://api.open-notify.org/astros.jsons"
+    }
+
+
+    step "echo" "bad_http" {
+        for_each = step.http.my_step_1.errors
+        text = each.message
+    }
+}
+
+
 pipeline "jsonplaceholder" {
     description = "my simple http pipeline"
     step "http" "my_step_1" {

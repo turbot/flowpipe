@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
@@ -97,8 +96,6 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
 func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.StepOutput, error) {
-	logger := fplog.Logger(ctx)
-
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -148,36 +145,16 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.StepOutput, 
 
 	// Construct the output
 	output := types.StepOutput{
-		schema.AttributeTypeStatus:          resp.Status,
-		schema.AttributeTypeStatusCode:      resp.StatusCode,
-		schema.AttributeTypeResponseHeaders: headers,
-		schema.AttributeTypeStartedAt:       start,
-		schema.AttributeTypeFinishedAt:      finish,
+		OutputVariables: map[string]interface{}{},
 	}
+	output.OutputVariables[schema.AttributeTypeStatus] = resp.Status
+	output.OutputVariables[schema.AttributeTypeStatusCode] = resp.StatusCode
+	output.OutputVariables[schema.AttributeTypeResponseHeaders] = headers
+	output.OutputVariables[schema.AttributeTypeStartedAt] = start
+	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
 
 	if body != nil {
-		output[schema.AttributeTypeResponseBody] = string(body)
-	}
-
-	var bodyJSON interface{}
-	if resp != nil && body != nil {
-		// The unmarshalling is only done if the content type is JSON,
-		// otherwise the unmashalling will fail.
-		// Hence, the body_json field will only be populated if the content type is JSON.
-		var contentType string
-		contentType = resp.Header.Get("Content-Type")
-		if contentType == "" {
-			contentType = resp.Header.Get("content-type")
-		}
-
-		if strings.Contains(contentType, "application/json") {
-			err = json.Unmarshal(body, &bodyJSON)
-			if err != nil {
-				logger.Error("error unmarshalling body", "error", err)
-				return nil, err
-			}
-			output[schema.AttributeTypeResponseBodyJson] = bodyJSON
-		}
+		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
 	}
 
 	return &output, nil

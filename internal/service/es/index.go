@@ -124,19 +124,25 @@ func (es *ESService) Start() error {
 	//
 	// List of available middlewares you can find in message/router/middleware.
 
+	//
+	// IMPORTANT: middleware order:
+	// 1. panic recoverer
+	// 2. retry (to ack message after panic recoverer)
+	// 3. log event (?)
+	//
 	// Recoverer handles panics from handlers.
 	router.AddMiddleware(middleware.PanicRecovererMiddleware(es.ctx))
-
-	// Log to file for creation of state
-	// ! Ensure that the log event middleware is the first middleware to be added in the router
-	// ! so the log entry is written ASAP
-	router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
 
 	retryer := middleware.Retry{
 		MaxRetries: 0,
 	}
 
 	router.AddMiddleware(retryer.Middleware)
+
+	// Log to file for creation of state
+	// ! Ensure that the log event middleware is the first middleware to be added in the router
+	// ! so the log entry is written ASAP
+	router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
 
 	plannerControl := middleware.NewPlannerControl(es.ctx)
 	router.AddMiddleware(plannerControl.Middleware)

@@ -41,6 +41,13 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	// TODO: remove the "duration" output, it's not needed, I added to help with debugging
-	return &types.StepOutput{"started_at": start, "finished_at": finish, "duration": durationString}, nil
+	output := &types.StepOutput{
+		OutputVariables: map[string]interface{}{},
+	}
+
+	output.OutputVariables[schema.AttributeTypeStartedAt] = start
+	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
+	output.OutputVariables[schema.AttributeTypeDuration] = durationString
+
+	return output, nil
 }
