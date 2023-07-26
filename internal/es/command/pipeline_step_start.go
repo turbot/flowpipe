@@ -8,6 +8,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -58,10 +59,46 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
+		// Check if the step is an "if" condition
+		if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
+			var err error
+			expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
+
+			// Evaluate the expression
+			evalContext, err := ex.BuildEvalContext(pipelineDefn)
+			if err != nil {
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return
+			}
+
+			val, diags := expr.Value(evalContext)
+			if len(diags) > 0 {
+				err = pipeparser.DiagsToError("diags", diags)
+
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return
+			}
+
+			if val.False() {
+				logger.Info("if condition not met for step", "step", stepDefn.GetName())
+
+				output := &types.StepOutput{}
+
+				endStep(cmd, output, logger, h, ctx)
+				return
+			}
+		}
+
 		var output *types.StepOutput
 		var primitiveError error
 		switch stepDefn.GetType() {
-		case "exec":
+		case schema.BlockTypePipelineExec:
 			p := primitive.Exec{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepHttp:
@@ -70,7 +107,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "pipeline":
 			p := primitive.RunPipeline{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case "query":
+		case schema.BlockTypePipelineQuery:
 			p := primitive.Query{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepSleep:
@@ -139,26 +176,30 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		}
 
 		// All other primitives finish immediately.
-		e, err := event.NewPipelineStepFinished(
-			event.ForPipelineStepStartToPipelineStepFinished(cmd),
-			event.WithStepOutput(output))
-
-		if err != nil {
-			logger.Error("Error creating Pipeline Step Finished event", "error", err)
-
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
-			}
-			return
-		}
-
-		err = h.EventBus.Publish(ctx, &e)
-		if err != nil {
-			logger.Error("Error publishing event", "error", err)
-		}
+		endStep(cmd, output, logger, h, ctx)
 
 	}(ctx, c, h)
 
 	return nil
+}
+
+func endStep(cmd *event.PipelineStepStart, output *types.StepOutput, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
+	e, err := event.NewPipelineStepFinished(
+		event.ForPipelineStepStartToPipelineStepFinished(cmd),
+		event.WithStepOutput(output))
+
+	if err != nil {
+		logger.Error("Error creating Pipeline Step Finished event", "error", err)
+
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			logger.Error("Error publishing event", "error", err2)
+		}
+		return
+	}
+
+	err = h.EventBus.Publish(ctx, &e)
+	if err != nil {
+		logger.Error("Error publishing event", "error", err)
+	}
 }

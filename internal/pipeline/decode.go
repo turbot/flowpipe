@@ -62,6 +62,7 @@ func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipeli
 		}
 
 		ignore := false
+		retries := 0
 
 		if attr, exists := attributes[schema.AttributeTypeIgnore]; exists {
 			val, diags := attr.Expr.Value(nil)
@@ -78,11 +79,29 @@ func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipeli
 				}}
 			}
 			ignore = target
+		}
+
+		if attr, exists := attributes[schema.AttributeTypeRetries]; exists {
+			val, diags := attr.Expr.Value(nil)
+			if len(diags) > 0 {
+				return nil, diags
+			}
+
+			var target int
+			if err := gocty.FromCtyValue(val, &target); err != nil {
+				return nil, hcl.Diagnostics{&hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Error decoding retries attribute",
+					Detail:   err.Error(),
+				}}
+			}
+			retries = target
 
 		}
 
 		errorConfig := &types.ErrorConfig{
-			Ignore: ignore,
+			Ignore:  ignore,
+			Retries: retries,
 		}
 
 		step.SetErrorConfig(errorConfig)

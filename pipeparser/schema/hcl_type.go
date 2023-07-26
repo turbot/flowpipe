@@ -50,9 +50,12 @@ const (
 	BlockTypePipelineStepSleep = "sleep"
 	BlockTypePipelineStepEmail = "email"
 	BlockTypePipelineStepEcho  = "echo"
+	BlockTypePipelineQuery     = "query"
+	BlockTypePipelineExec      = "exec"
 
 	// error block
-	AttributeTypeIgnore = "ignore"
+	AttributeTypeIgnore  = "ignore"
+	AttributeTypeRetries = "retries"
 
 	// Common step attributes
 	AttributeTypeTitle       = "title"

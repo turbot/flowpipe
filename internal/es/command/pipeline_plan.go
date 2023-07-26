@@ -8,8 +8,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -69,8 +67,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// Notably each step may also have multiple executions (e.g. in a for
 	// loop). So, we need to track the overall status of the step separately
 	// from the status of each execution.
-	//
-
 	for i, step := range pipelineDefn.Steps {
 		// TODO: this entire failure handling doesn't work since we've moved to HCL.
 		if pe.IsStepFail(step.GetFullyQualifiedName()) {
@@ -125,26 +121,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		if !dependendenciesMet {
 			continue
-		}
-
-		// Check if the step is an "if" condition
-		if step.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
-			expr := step.GetUnresolvedAttributes()[schema.AttributeTypeIf]
-
-			// Evaluate the expression
-			evalContext, err := ex.BuildEvalContext(pipelineDefn)
-			if err != nil {
-				return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
-			}
-			val, diags := expr.Value(evalContext)
-			if len(diags) > 0 {
-				err = pipeparser.DiagsToError("diags", diags)
-				return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
-			}
-
-			if val.False() {
-				continue
-			}
 		}
 
 		// Plan to run the step.

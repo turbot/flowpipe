@@ -246,7 +246,8 @@ type IPipelineStep interface {
 }
 
 type ErrorConfig struct {
-	Ignore bool `json:"ignore"`
+	Ignore  bool `json:"ignore"`
+	Retries int  `json:"retries"`
 }
 
 // A common base struct that all pipeline steps must embed

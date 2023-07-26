@@ -1,3 +1,16 @@
+
+pipeline "bad_http_not_ignored" {
+    description = "my simple http pipeline"
+    step "http" "my_step_1" {
+        url = "http://api.open-notify.org/astros.jsons"
+    }
+    step "echo" "bad_http" {
+        depends_on = [step.http.my_step_1]
+        text = "foo"
+    }
+}
+
+
 pipeline "bad_http_ignored" {
     description = "my simple http pipeline"
     step "http" "my_step_1" {
@@ -32,7 +45,7 @@ pipeline "bad_http_ignored_for_each" {
         }
     }
     step "echo" "bad_http" {
-        for_each = step.http.my_step_1.errors
+        for_each = step.http.my_step_1
         text = each.value.message
     }
 }

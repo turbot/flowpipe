@@ -263,8 +263,10 @@ type StepExecution struct {
 	ID                  string `json:"id"`
 	// The name of the step in the pipeline definition
 	Name string `json:"name"`
-	// The status of the step execution: queued, planned, started, completed, failed
+
+	// The status of the step execution: "started", "finished", "failed"
 	Status string `json:"status"`
+
 	// Input to the step
 	Input types.Input `json:"input"`
 
