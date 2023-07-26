@@ -396,21 +396,10 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 	if attr, exists := hclAttributes[schema.AttributeTypeForEach]; exists {
 		p.ForEach = attr.Expr
 
-		traversals := attr.Expr.Variables()
-
-		for _, t := range traversals {
-			parts := hclhelpers.TraversalAsStringSlice(t)
-			if len(parts) >= 3 {
-				if helpers.StringSliceContains(ValidDependsOnTypes, parts[0]) {
-					if len(parts) >= 3 {
-						dependsOn = append(dependsOn, parts[1]+"."+parts[2])
-					}
-				}
-			}
-		}
+		do, dgs := hclhelpers.ExpressionToDepends(attr.Expr, ValidDependsOnTypes)
+		diags = append(diags, dgs...)
+		dependsOn = append(dependsOn, do...)
 	}
-
-	p.DependsOn = append(p.DependsOn, dependsOn...)
 
 	if attr, exists := hclAttributes[schema.AttributeTypeTitle]; exists {
 		title, diag := hclhelpers.AttributeToString(attr, nil, false)
@@ -430,6 +419,17 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 		}
 	}
 
+	if attr, exists := hclAttributes[schema.AttributeTypeIf]; exists {
+		// If is always treated as an unresolved attribute
+		p.AddUnresolvedAttribute(schema.AttributeTypeIf, attr.Expr)
+
+		do, dgs := hclhelpers.ExpressionToDepends(attr.Expr, ValidDependsOnTypes)
+		diags = append(diags, dgs...)
+		dependsOn = append(dependsOn, do...)
+	}
+
+	p.DependsOn = append(p.DependsOn, dependsOn...)
+
 	return diags
 }
 
@@ -438,6 +438,7 @@ var ValidBaseStepAttributes = []string{
 	schema.AttributeTypeDescription,
 	schema.AttributeTypeDependsOn,
 	schema.AttributeTypeForEach,
+	schema.AttributeTypeIf,
 }
 
 var ValidDependsOnTypes = []string{

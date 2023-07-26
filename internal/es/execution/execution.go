@@ -9,11 +9,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -73,7 +75,6 @@ type Execution struct {
 	}
 */
 func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
-
 	stepVariables := make(map[string]cty.Value)
 
 	for stepType, v := range ex.AllStepOutputs {
@@ -116,7 +117,29 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 	}
 
 	return executionVariables, nil
+}
 
+func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline) (*hcl.EvalContext, error) {
+
+	executionVariables, err := ex.GetExecutionVariables()
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
+	}
+
+	// TODO: this only works for default params - we need to implement the parameter passing when
+	// TODO: running the pipeline
+	paramsCtyVal, err := pipelineDefn.ParamsAsCty()
+	if err != nil {
+		return nil, err
+	}
+	evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
+
+	return evalContext, nil
 }
 
 // ExecutionStepOutputs is a map for all the step execution. It's stored in this format:

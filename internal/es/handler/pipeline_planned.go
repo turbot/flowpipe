@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -54,7 +53,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if len(e.NextSteps) == 0 {
-
 		// PRE: No new steps to execute, so the planner should just check to see if
 		// all existing steps are complete.
 		if pe.IsComplete() {
@@ -94,24 +92,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		forEachCtyVals := []map[string]cty.Value{}
 		stepForEach := stepDefn.GetForEach()
 		if stepForEach != nil {
-
-			executionVariables, err := ex.GetExecutionVariables()
+			var err error
+			evalContext, err = ex.BuildEvalContext(pipelineDefn)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
-
-			evalContext = &hcl.EvalContext{
-				Variables: executionVariables,
-				Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
-			}
-
-			// TODO: this only works for default params - we need to implement the parameter passing when
-			// TODO: running the pipeline
-			paramsCtyVal, err := pipelineDefn.ParamsAsCty()
-			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-			}
-			evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 
 			// First we want to evaluate the content of for_each
 			// Given the following:
@@ -150,21 +135,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		inputs := []types.Input{}
 
 		if evalContext == nil {
-			executionVariables, err := ex.GetExecutionVariables()
+			var err error
+			evalContext, err = ex.BuildEvalContext(pipelineDefn)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
-
-			evalContext = &hcl.EvalContext{
-				Variables: executionVariables,
-				Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
-			}
-
-			paramsCtyVal, err := pipelineDefn.ParamsAsCty()
-			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-			}
-			evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 		}
 
 		// now resolve the inputs, if there's no for_each then there's just one input

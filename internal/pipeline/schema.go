@@ -35,14 +35,20 @@ var PipelineBlockSchema = &hcl.BodySchema{
 var PipelineOutputBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
 			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
 		},
 		{
 			Name:     schema.AttributeTypeValue,
 			Required: true,
-		},
-		{
-			Name: schema.AttributeTypeDependsOn,
 		},
 		{
 			Name: schema.AttributeTypeSensitive,
@@ -52,10 +58,6 @@ var PipelineOutputBlockSchema = &hcl.BodySchema{
 
 var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     schema.AttributeTypeUrl,
-			Required: true,
-		},
 		{
 			Name: schema.AttributeTypeTitle,
 		},
@@ -67,6 +69,13 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 		},
 		{
 			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name:     schema.AttributeTypeUrl,
+			Required: true,
 		},
 		{
 			Name: schema.AttributeTypeMethod,
@@ -94,28 +103,46 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
 			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
 		},
 		{
 			Name:     schema.AttributeTypeDuration,
 			Required: true,
-		},
-		{
-			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }
 var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
 			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
 		},
 		{
 			Name:     schema.AttributeTypeTo,
 			Required: true,
-		},
-		{
-			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }
@@ -123,16 +150,29 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 var PipelineStepEchoBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
-			Name: "text",
+			Name: schema.AttributeTypeTitle,
 		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name: schema.AttributeTypeText,
+		},
+
 		{
 			Name: "list_text",
 		},
 		{
 			Name: "for_each",
-		},
-		{
-			Name: schema.AttributeTypeDependsOn,
 		},
 	},
 }
