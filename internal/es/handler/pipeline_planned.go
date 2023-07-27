@@ -75,6 +75,28 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
+	// Check if there is a step that is "inaccessible", if so then we terminate the pipeline
+	// since there's no possibility of it ever completing
+	// TODO: there's optimisation here, we could potentially run all the other steps that can run
+	// TODO: but for now take the simplest route
+	pipelineInaccessible := false
+	for _, nextStep := range e.NextSteps {
+		if nextStep.Action == types.NextStepActionInaccessible {
+			pipelineInaccessible = true
+			break
+		}
+	}
+
+	if pipelineInaccessible {
+		logger.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
+		// TODO: what is the error on the pipeline?
+		cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, fperr.InternalWithMessage("pipeline failed")))
+		if err != nil {
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		}
+		return h.CommandBus.Send(ctx, &cmd)
+	}
+
 	// PRE: The planner has told us what steps to run next, our job is to start them
 	for _, nextStep := range e.NextSteps {
 

@@ -76,7 +76,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 			val, diags := expr.Value(evalContext)
 			if len(diags) > 0 {
-				err = pipeparser.DiagsToError("diags", diags)
+				err := pipeparser.DiagsToError("diags", diags)
 
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
@@ -88,7 +88,9 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			if val.False() {
 				logger.Info("if condition not met for step", "step", stepDefn.GetName())
 
-				output := &types.StepOutput{}
+				output := &types.StepOutput{
+					Status: "skipped",
+				}
 
 				endStep(cmd, output, logger, h, ctx)
 				return
@@ -134,6 +136,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			if output.Errors == nil {
 				output.Errors = &types.StepErrors{}
 			}
+
 			output.Errors.Add(types.StepError{
 				Message: primitiveError.Error(),
 			})
@@ -141,6 +144,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		// Decorate the errors
 		if output.HasErrors() {
+			output.Status = "failed"
 			for i := 0; i < len(*output.Errors); i++ {
 				err := (*output.Errors)[i]
 				err.Step = cmd.StepName
@@ -148,6 +152,8 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				err.StepExecutionID = cmd.StepExecutionID
 				err.Pipeline = pipelineDefn.Name
 			}
+		} else {
+			output.Status = "finished"
 		}
 
 		// If it's a pipeline step, we need to do something else

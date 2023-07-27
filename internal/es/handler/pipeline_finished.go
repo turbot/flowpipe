@@ -33,7 +33,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
 	}
 
-	logger.Info("[6] pipeline_finished event handler #1", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
+	logger.Info("[6] pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {

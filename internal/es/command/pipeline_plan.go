@@ -114,6 +114,16 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 			if pe.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
 				dependendenciesMet = false
+
+				// TODO: final failure is always TRUE for now
+				if pe.IsStepFinalFailure(depStepDefn, ex) {
+					// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
+					// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
+					// be ended in the handler/pipeline_planned stage
+					e.NextSteps = append(e.NextSteps, types.NextStep{
+						StepName: step.GetFullyQualifiedName(),
+						Action:   types.NextStepActionInaccessible})
+				}
 				break
 			}
 
@@ -124,7 +134,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		// Plan to run the step.
-		e.NextSteps = append(e.NextSteps, types.NextStep{StepName: step.GetFullyQualifiedName()})
+		e.NextSteps = append(e.NextSteps, types.NextStep{
+			StepName: step.GetFullyQualifiedName(),
+			Action:   types.NextStepActionStart})
 	}
 
 	// Pipeline has been planned, now publish this event
