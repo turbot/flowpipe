@@ -100,7 +100,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		var output *types.StepOutput
 		var primitiveError error
 		switch stepDefn.GetType() {
-		case schema.BlockTypePipelineExec:
+		case schema.BlockTypePipelineStepExec:
 			p := primitive.Exec{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepHttp:
@@ -109,7 +109,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case "pipeline":
 			p := primitive.RunPipeline{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case schema.BlockTypePipelineQuery:
+		case schema.BlockTypePipelineStepQuery:
 			p := primitive.Query{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepSleep:

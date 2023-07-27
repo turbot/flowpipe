@@ -79,6 +79,53 @@ func CtyToString(v cty.Value) (valStr string, err error) {
 	return valStr, err
 }
 
+func CtyToGoInterfaceSlice(v cty.Value) (val []interface{}, err error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsListType() && !ty.IsTupleType() {
+		return nil, fmt.Errorf("expected list type")
+	}
+
+	var res []interface{}
+	it := v.ElementIterator()
+	for it.Next() {
+		_, v := it.Element()
+		switch v.Type() {
+		case cty.Bool:
+			var target bool
+			err = gocty.FromCtyValue(v, &target)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, target)
+		case cty.String:
+			var target string
+			err = gocty.FromCtyValue(v, &target)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, target)
+		case cty.Number:
+			var target int
+			if err = gocty.FromCtyValue(v, &target); err == nil {
+				res = append(res, target)
+			} else {
+				var targetf float64
+				if err = gocty.FromCtyValue(v, &targetf); err == nil {
+					res = append(res, target)
+				} else {
+					return nil, err
+				}
+			}
+		default:
+			return nil, fmt.Errorf("unsupported type %s", v.Type().FriendlyName())
+		}
+	}
+	return res, nil
+}
+
 func CtyToGo(v cty.Value) (val interface{}, err error) {
 	if v.IsNull() {
 		return nil, nil
