@@ -72,12 +72,18 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 	defer db.Close()
 
+	// Get the inputs
 	sql := input["sql"].(string)
+
+	var args []interface{}
+	if input[schema.AttributeTypeArgs] != nil {
+		args = input[schema.AttributeTypeArgs].([]interface{})
+	}
 
 	results := []map[string]interface{}{}
 
 	start := time.Now().UTC()
-	rows, err := db.Query(sql)
+	rows, err := db.Query(sql, args...)
 	if err != nil {
 		return nil, err
 	}

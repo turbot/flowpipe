@@ -85,6 +85,117 @@ func TestQueryListAll(t *testing.T) {
 	assert.Equal(expectedResult, expectedRow)
 }
 
+func TestQueryWithArgs(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{
+		Setting: "go-sqlmock",
+	}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where instance_id = $1",
+		schema.AttributeTypeArgs: []interface{}{"i-000a000b0000c00d1"},
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+	mock := *hr.Mock
+
+	// Add the rows to the table
+	rows := sqlmock.NewRows([]string{"instance_id", "arn", "type", "state"}).
+		AddRow("i-000a000b0000c00d1", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1", "t2.micro", "stopped")
+
+	mock.ExpectQuery("^SELECT \\* from aws_ec2_instance where instance_id = \\$1$").WillReturnRows(rows).WithArgs("i-000a000b0000c00d1")
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(1, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1",
+			"instance_id": "i-000a000b0000c00d1",
+			"state":       "stopped",
+			"type":        "t2.micro",
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeQuery).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{
+		Setting: "go-sqlmock",
+	}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where type like $1",
+		schema.AttributeTypeArgs: []interface{}{"t2%"},
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+	mock := *hr.Mock
+
+	// Add the rows to the table
+	rows := sqlmock.NewRows([]string{"instance_id", "arn", "type", "state"}).
+		AddRow("i-000a000b0000c00d1", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1", "t2.micro", "stopped").
+		AddRow("i-000a000b0000c00d2", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d2", "t2.micro", "stopped").
+		AddRow("i-000a000b0000c00d3", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d3", "t2.micro", "running").
+		AddRow("i-000a000b0000c00d4", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d4", "t2.micro", "running")
+
+	mock.ExpectQuery("^SELECT \\* from aws_ec2_instance where type like \\$1$").WillReturnRows(rows).WithArgs("t2%")
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(4, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1",
+			"instance_id": "i-000a000b0000c00d1",
+			"state":       "stopped",
+			"type":        "t2.micro",
+		},
+		{
+			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d2",
+			"instance_id": "i-000a000b0000c00d2",
+			"state":       "stopped",
+			"type":        "t2.micro",
+		},
+		{
+			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d3",
+			"instance_id": "i-000a000b0000c00d3",
+			"state":       "running",
+			"type":        "t2.micro",
+		},
+		{
+			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d4",
+			"instance_id": "i-000a000b0000c00d4",
+			"state":       "running",
+			"type":        "t2.micro",
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeQuery).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
 func TestQueryTableNotFound(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)

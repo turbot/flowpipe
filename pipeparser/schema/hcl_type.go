@@ -68,6 +68,7 @@ const (
 	AttributeTypeFinishedAt = "finished_at"
 
 	// Used by query step
+	AttributeTypeArgs             = "args"
 	AttributeTypeSql              = "sql"
 	AttributeTypeQuery            = "query"
 	AttributeTypeConnectionString = "connection_string"
