@@ -11,8 +11,8 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
-	"github.com/turbot/flowpipe/pipeparser/terraform/addrs"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/terraform-components/addrs"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )

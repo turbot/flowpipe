@@ -3,7 +3,8 @@
 	"image": "ghcr.io/turbot/flowpipe-devcontainer:latest",
 
 	"mounts": [
-		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached"
+		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached",
+		"source=${localWorkspaceFolder}/../terraform-components,target=/workspaces/terraform-components,type=bind,consistency=cached"
 	],
 
 	// Automatically remove the container when it is stopped (docker rm <container-name>)

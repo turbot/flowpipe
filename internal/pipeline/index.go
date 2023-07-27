@@ -11,9 +11,9 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/schema"
-	"github.com/turbot/flowpipe/pipeparser/terraform/configs"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/terraform-components/configs"
 	"github.com/zclconf/go-cty/cty"
 )
 

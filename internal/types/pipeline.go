@@ -12,7 +12,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	"github.com/turbot/flowpipe/pipeparser/schema"
-	"github.com/turbot/flowpipe/pipeparser/terraform/configs"
+	"github.com/turbot/terraform-components/configs"
 	"github.com/zclconf/go-cty/cty"
 )
 
