@@ -352,3 +352,33 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 	assert.Equal("Query input must define sql", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
+
+func TestQueryMissingArgs(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{
+		Setting: "go-sqlmock",
+	}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql: "SELECT * from aws_ec2_instance where instance_id = $1",
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+	mock := *hr.Mock
+
+	mock.ExpectQuery("^SELECT \\* from aws_ec2_instance where instance_id = \\$1$").WillReturnError(fperr.BadRequestWithMessage("Query input must define args if the sql has placeholders"))
+
+	_, err = hr.Run(ctx, input)
+	assert.NotNil(err)
+
+	fpErr := err.(fperr.ErrorModel)
+	assert.Equal("Query input must define args if the sql has placeholders", fpErr.Detail)
+	assert.Equal(400, fpErr.Status)
+}
