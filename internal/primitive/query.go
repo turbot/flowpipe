@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -38,7 +37,7 @@ func (e *Query) InitializeDB(ctx context.Context, i types.Input) (*sql.DB, error
 	if e.Setting == "go-sqlmock" {
 		db, mock, err := sqlmock.New()
 		if err != nil {
-			return nil, fmt.Errorf("an error '%s' was not expected when opening a stub database connection", err)
+			return nil, fperr.BadRequestWithMessage("Failed to open stub database connection: " + err.Error())
 		}
 		e.Mock = &mock
 		e.DB = db

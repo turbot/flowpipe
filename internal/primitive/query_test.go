@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+	"database/sql"
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -82,6 +83,89 @@ func TestQueryListAll(t *testing.T) {
 
 	expectedRow := output.Get(schema.AttributeTypeQuery).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestQueryTableNotFound(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{
+		Setting: "go-sqlmock",
+	}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql: "SELECT * from instance",
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+	mock := *hr.Mock
+
+	mock.ExpectQuery("^SELECT (.+) from instance$").WillReturnError(sql.ErrNoRows)
+
+	output, err := hr.Run(ctx, input)
+	assert.NotNil(err)                                       // Expect an error since the table does not exist
+	assert.Equal(nil, output.Get(schema.AttributeTypeQuery)) // Expect no rows to be returned
+}
+
+func TestQueryNoRows(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{
+		Setting: "go-sqlmock",
+	}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql: "SELECT * from aws_ec2_instance",
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+	mock := *hr.Mock
+
+	rows := sqlmock.NewRows([]string{"instance_id", "arn", "type", "state"})
+
+	mock.ExpectQuery("^SELECT (.+) from aws_ec2_instance$").WillReturnRows(rows)
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(0, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+}
+
+func TestQueryBadQueryStatement(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{
+		Setting: "go-sqlmock",
+	}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql: "SELECT * instance",
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+	mock := *hr.Mock
+
+	mock.ExpectQuery("^SELECT (.+) instance$").WillReturnError(fperr.BadRequestWithMessage("syntax error at or near \"instance\""))
+
+	_, err = hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "syntax error at or near \"instance\"")
 }
 
 func TestQueryWithMissingAttributeSql(t *testing.T) {
