@@ -169,6 +169,9 @@ var PipelineStepQueryBlockSchema = &hcl.BodySchema{
 			Name: schema.AttributeTypeSql,
 		},
 		{
+			Name: schema.AttributeTypeConnectionString,
+		},
+		{
 			Name: schema.AttributeTypeArgs,
 		},
 	},

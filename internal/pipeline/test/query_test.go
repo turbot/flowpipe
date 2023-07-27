@@ -61,6 +61,8 @@ func TestQueryStepWithArgs(t *testing.T) {
 	}
 	assert.Equal("select * from foo where bar = $1 and baz = $2", inputs["sql"])
 
+	assert.Equal("this is a connection string", inputs["connection_string"])
+
 	args, ok := inputs["args"].([]interface{})
 	if !ok {
 		assert.Fail("args not found")

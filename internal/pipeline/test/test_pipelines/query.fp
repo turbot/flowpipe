@@ -8,7 +8,7 @@ pipeline "query" {
 pipeline "query_with_args" {
     step "query" "query_1" {
         sql = "select * from foo where bar = $1 and baz = $2"
-
+        connection_string = "this is a connection string"
         args = [
             "two",
             10

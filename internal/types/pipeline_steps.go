@@ -900,8 +900,9 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseCont
 
 type PipelineStepQuery struct {
 	PipelineStepBase
-	Sql  *string       `json:"sql"`
-	Args []interface{} `json:"args"`
+	ConnnectionString *string       `json:"connection_string"`
+	Sql               *string       `json:"sql"`
+	Args              []interface{} `json:"args"`
 }
 
 func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -919,10 +920,27 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 		}
 	}
 
+	var connectionString *string
+	if p.UnresolvedAttributes[schema.AttributeTypeConnectionString] == nil {
+		if p.ConnnectionString == nil {
+			return nil, fperr.InternalWithMessage("Url must be supplied")
+		}
+		connectionString = p.ConnnectionString
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeConnectionString], evalContext, &connectionString)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
 	results := map[string]interface{}{}
 
 	if sql != nil {
 		results[schema.AttributeTypeSql] = *sql
+	}
+
+	if connectionString != nil {
+		results[schema.AttributeTypeConnectionString] = *connectionString
 	}
 
 	if p.Args != nil {
@@ -955,6 +973,26 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 					sql := val.AsString()
 					p.Sql = &sql
+				}
+			}
+		case schema.AttributeTypeConnectionString:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeConnectionString + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					connectionString := val.AsString()
+					p.ConnnectionString = &connectionString
 				}
 			}
 		case schema.AttributeTypeArgs:
