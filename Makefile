@@ -22,4 +22,4 @@ release-local:
 
 test:
 	go clean -testcache
-	go test -timeout 120s -v
+	go test ./... -timeout 120s -v
