@@ -50,8 +50,8 @@ const (
 	BlockTypePipelineStepSleep = "sleep"
 	BlockTypePipelineStepEmail = "email"
 	BlockTypePipelineStepEcho  = "echo"
-	BlockTypePipelineQuery     = "query"
-	BlockTypePipelineExec      = "exec"
+	BlockTypePipelineStepQuery = "query"
+	BlockTypePipelineStepExec  = "exec"
 
 	// error block
 	AttributeTypeIgnore  = "ignore"
@@ -70,6 +70,7 @@ const (
 	// Used by query step
 	AttributeTypeArgs             = "args"
 	AttributeTypeSql              = "sql"
+	AttributeTypeArgs             = "args"
 	AttributeTypeQuery            = "query"
 	AttributeTypeConnectionString = "connection_string"
 

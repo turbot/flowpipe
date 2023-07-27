@@ -123,6 +123,7 @@ var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 		},
 	},
 }
+
 var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
@@ -143,6 +144,35 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 		{
 			Name:     schema.AttributeTypeTo,
 			Required: true,
+		},
+	},
+}
+
+var PipelineStepQueryBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name: schema.AttributeTypeSql,
+		},
+		{
+			Name: schema.AttributeTypeConnectionString,
+		},
+		{
+			Name: schema.AttributeTypeArgs,
 		},
 	},
 }
