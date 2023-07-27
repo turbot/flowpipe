@@ -47,7 +47,6 @@ func NewPipelineHcl(block *hcl.Block) *Pipeline {
 type Pipeline struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
-	Output      *string `json:"output,omitempty"`
 
 	// Unparsed HCL body, needed so we can de-code the step HCL into the correct struct
 	RawBody hcl.Body `json:"-" hcl:",remain"`
@@ -146,7 +145,6 @@ func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 	// Assign values to the fields of the main struct
 	ph.Name = aux.Name
 	ph.Description = aux.Description
-	ph.Output = aux.Output
 	ph.StepsRawJson = []byte(aux.Raw)
 
 	// Determine the concrete type of 'ISteps' based on the data present in the JSON

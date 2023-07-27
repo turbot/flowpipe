@@ -33,7 +33,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
 	}
 
-	logger.Info("[6] pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
+	logger.Info("pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -55,16 +55,16 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		}
 		return h.CommandBus.Send(ctx, &cmd)
 	} else {
-		// Dump the final execution state
-		_, err := json.MarshalIndent(ex, "", "  ")
-		if err != nil {
-			logger.Error("pipeline_failed (1)", "error", err)
-		}
+		// // Dump the final execution state
+		// _, err := json.MarshalIndent(ex, "", "  ")
+		// if err != nil {
+		// 	logger.Error("pipeline_finished (1)", "error", err)
+		// }
 
-		// Dump step outputs
+		// // Dump step outputs
 		data, err := ex.PipelineData(e.PipelineExecutionID)
 		if err != nil {
-			logger.Error("pipeline_failed (2)", "error", err)
+			logger.Error("pipeline_finished (2)", "error", err)
 		} else {
 			jsonStr, _ := json.MarshalIndent(data, "", "  ")
 			logger.Debug("json string", "json", string(jsonStr))
@@ -73,7 +73,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		// Dump the snapshot
 		snapshot, err := ex.Snapshot(e.PipelineExecutionID)
 		if err != nil {
-			logger.Error("pipeline_failed (3)", "error", err)
+			logger.Error("pipeline_finished (3)", "error", err)
 		} else {
 			jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
 
