@@ -74,4 +74,8 @@ pipeline "jsonplaceholder_expr" {
     step "echo" "output" {
         text = step.http.http_1.status_code
     }
+
+    output "foo" {
+        value = step.http.http_1.response_body
+    }
 }

@@ -41,9 +41,9 @@ type StepForEach struct {
 
 type Input map[string]interface{}
 
-// StepOutput is the output from a pipeline.
 type OutputVariables map[string]interface{}
 
+// StepOutput is the output from a pipeline.
 type StepOutput struct {
 	Status          string          `json:"status"`
 	OutputVariables OutputVariables `json:"output_variables,omitempty"`
