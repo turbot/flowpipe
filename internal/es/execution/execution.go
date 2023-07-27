@@ -486,12 +486,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 
 			// Step the specific step execution status
-			ex.StepExecutions[et.StepExecutionID].Status = "finished"
+			ex.StepExecutions[et.StepExecutionID].Status = et.Output.Status
 			ex.StepExecutions[et.StepExecutionID].Output = et.Output
-
-			if et.Output.HasErrors() {
-				ex.StepExecutions[et.StepExecutionID].Status = "failed"
-			}
 
 			if ex.AllStepOutputs[stepDefn.GetType()] == nil {
 				ex.AllStepOutputs[stepDefn.GetType()] = map[string]interface{}{}

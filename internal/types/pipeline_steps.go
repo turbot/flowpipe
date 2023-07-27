@@ -11,8 +11,8 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
-	"github.com/turbot/flowpipe/pipeparser/terraform/addrs"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/terraform-components/addrs"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
@@ -45,6 +45,7 @@ type Input map[string]interface{}
 type OutputVariables map[string]interface{}
 
 type StepOutput struct {
+	Status          string          `json:"status"`
 	OutputVariables OutputVariables `json:"output_variables,omitempty"`
 	Errors          *StepErrors     `json:"errors,omitempty"`
 }
@@ -192,9 +193,22 @@ func (s *StepErrors) Add(err StepError) {
 	*s = append(*s, err)
 }
 
+type NextStepAction string
+
+const (
+	// Default Next Step action which is just to start them, note that
+	// the step may yet be "skipped" if the IF clause is preventing the step
+	// to actually start, but at the very least we can "start" the step.
+	NextStepActionStart NextStepAction = "start"
+
+	// This happens if the step can't be started because one of it's dependency as failed
+	NextStepActionInaccessible NextStepAction = "inaccessible"
+)
+
 type NextStep struct {
-	StepName string `json:"step_name"`
-	DelayMs  int    `json:"delay_ms,omitempty"`
+	StepName string         `json:"step_name"`
+	DelayMs  int            `json:"delay_ms,omitempty"`
+	Action   NextStepAction `json:"action"`
 }
 
 func NewPipelineStep(stepType, stepName string) IPipelineStep {

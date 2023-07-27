@@ -2,13 +2,15 @@
 
 ## Local Development
 
-1. Clone both `flowpipe` and `flowpipe-sdk-go` in the following directory structure:
+1. Clone both `flowpipe`, `flowpipe-sdk-go` and `terraform-components` in the following directory structure:
     ```
     workspace
        |
        |-- flowpipe
        |
        |-- flowpipe-sdk-go
+       |
+       |-- terraform-components
     ```
 
 1. In `flowpipe\devcontainer` run the Makefile. It will build the local dev container.

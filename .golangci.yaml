@@ -4,8 +4,6 @@ run:
   skip-dirs:
     # auto generated code
     - internal/service/api/docs
-    # Direct copy from Terraform codebase
-    - pipeparser/terraform/*
 
 linters:
   enable:
