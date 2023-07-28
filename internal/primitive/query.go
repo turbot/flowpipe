@@ -84,7 +84,7 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	defer db.Close()
 
 	// Get the inputs
-	sql := input["sql"].(string)
+	sql := input[schema.AttributeTypeSql].(string)
 
 	var args []interface{}
 	if input[schema.AttributeTypeArgs] != nil {

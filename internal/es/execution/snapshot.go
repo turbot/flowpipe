@@ -699,7 +699,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 			"properties": map[string]interface{}{
 				"Execution ID": se.ID,
 				"Status":       se.Status,
-				"Row Count":    len(se.Output.Get("rows").([]interface{})),
+				"Row Count":    len(se.Output.Get("query").([]interface{})),
 				"Started At":   se.Output.Get("started_at"),
 				"Finished At":  se.Output.Get("finished_at"),
 				// "For Each":     se.ForEach,
