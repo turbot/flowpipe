@@ -284,30 +284,13 @@ func TestQueryWithMissingAttributeSql(t *testing.T) {
 	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
-	hr := Query{
-		Setting: "go-sqlmock",
-	}
+	hr := Query{}
 
-	input := types.Input(map[string]interface{}{})
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "this is a connection string",
+	})
 
-	// Initialize the DB connection
-	_, err := hr.InitializeDB(ctx, input)
-	if err != nil {
-		return
-	}
-	mock := *hr.Mock
-
-	// Add the rows to the table
-	rows := sqlmock.NewRows([]string{"instance_id", "arn", "type", "state"}).
-		AddRow("i-000a000b0000c00d1", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1", "t2.micro", "stopped").
-		AddRow("i-000a000b0000c00d2", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d2", "t2.micro", "stopped").
-		AddRow("i-000a000b0000c00d3", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d3", "t2.micro", "running").
-		AddRow("i-000a000b0000c00d4", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d4", "t2.micro", "running").
-		AddRow("i-000a000b0000c00d5", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d5", "m5.xlarge", "stopped")
-
-	mock.ExpectQuery("^SELECT (.+) from aws_ec2_instance order by instance_id$").WillReturnRows(rows)
-
-	_, err = hr.Run(ctx, input)
+	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
 	fpErr := err.(fperr.ErrorModel)
@@ -358,27 +341,37 @@ func TestQueryMissingArgs(t *testing.T) {
 	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
-	hr := Query{
-		Setting: "go-sqlmock",
-	}
+	hr := Query{}
 
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeSql: "SELECT * from aws_ec2_instance where instance_id = $1",
+		schema.AttributeTypeConnectionString: "this is a connection string",
+		schema.AttributeTypeSql:              "SELECT * from aws_ec2_instance where instance_id = $1",
 	})
 
-	// Initialize the DB connection
-	_, err := hr.InitializeDB(ctx, input)
-	if err != nil {
-		return
-	}
-	mock := *hr.Mock
-
-	mock.ExpectQuery("^SELECT \\* from aws_ec2_instance where instance_id = \\$1$").WillReturnError(fperr.BadRequestWithMessage("Query input must define args if the sql has placeholders"))
-
-	_, err = hr.Run(ctx, input)
+	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
 	fpErr := err.(fperr.ErrorModel)
 	assert.Equal("Query input must define args if the sql has placeholders", fpErr.Detail)
+	assert.Equal(400, fpErr.Status)
+}
+
+func TestQueryMissingConnectionString(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where instance_id = $1",
+		schema.AttributeTypeArgs: []interface{}{"i-000a000b0000c00d1"},
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+
+	fpErr := err.(fperr.ErrorModel)
+	assert.Equal("Query input must define connection_string", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }

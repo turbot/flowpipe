@@ -23,6 +23,11 @@ type Query struct {
 }
 
 func (e *Query) ValidateInput(ctx context.Context, i types.Input) error {
+	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
+	if e.Setting != "go-sqlmock" && i[schema.AttributeTypeConnectionString] == nil {
+		return fperr.BadRequestWithMessage("Query input must define connection_string")
+	}
+
 	if i[schema.AttributeTypeSql] == nil {
 		return fperr.BadRequestWithMessage("Query input must define sql")
 	}
