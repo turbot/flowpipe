@@ -17,7 +17,8 @@ type PipelineStepQueued struct {
 	StepInput       types.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach    *types.StepForEach   `json:"step_for_each,omitempty"`
+	NextStepAction types.NextStepAction `json:"next_step_action,omitempty"`
 
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
@@ -51,6 +52,7 @@ func ForPipelineStepQueue(cmd *PipelineStepQueue) PipelineStepQueuedOption {
 		e.StepName = cmd.StepName
 		e.StepInput = cmd.StepInput
 		e.StepForEach = cmd.StepForEach
+		e.NextStepAction = cmd.NextStepAction
 		e.DelayMs = cmd.DelayMs
 		return nil
 	}

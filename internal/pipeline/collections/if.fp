@@ -21,3 +21,19 @@ pipeline "if_negative" {
         if = param.condition
     }
 }
+
+pipeline "if_depends" {
+    step "echo" "text_1" {
+        text = "foo"
+    }
+
+    step "echo" "text_2" {
+        text = "bar"
+        if = step.echo.text_1.text == "foo"
+    }
+
+    step "echo" "text_3" {
+        text = "baz"
+        if = step.echo.text_1.text == "bar"
+    }
+}

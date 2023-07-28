@@ -118,3 +118,22 @@ pipeline "for_loop_depends" {
         text = "output one value is ${each.value.text}"
     }
 }
+
+pipeline "for_loop_with_if" {
+
+    param "time" {
+        type = list(string)
+        default = ["1s", "2s", "3s"]
+    }
+
+    step "sleep" "sleep_1" {
+        for_each = param.time
+        duration = each.value
+    }
+
+    step "echo" "echo_1" {
+        for_each = step.sleep.sleep_1
+        text = "sleep 1 output: ${each.value.duration}"
+        if = each.value.duration == "1s"
+    }
+}

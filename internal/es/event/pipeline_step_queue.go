@@ -20,6 +20,8 @@ type PipelineStepQueue struct {
 	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
 
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
+
+	NextStepAction types.NextStepAction `json:"action,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -53,12 +55,13 @@ func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOp
 	}
 }
 
-func PipelineStepQueueWithStep(name string, input types.Input, stepForEach *types.StepForEach, delayMs int) PipelineStepQueueOption {
+func PipelineStepQueueWithStep(name string, input types.Input, stepForEach *types.StepForEach, delayMs int, nextStepAction types.NextStepAction) PipelineStepQueueOption {
 	return func(cmd *PipelineStepQueue) error {
 		cmd.StepName = name
 		cmd.StepInput = input
 		cmd.StepForEach = stepForEach
 		cmd.DelayMs = delayMs
+		cmd.NextStepAction = nextStepAction
 		return nil
 	}
 }

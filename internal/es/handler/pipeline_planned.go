@@ -112,7 +112,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		// ! This is a slice of map. Each slice represent a step execution, an element of the for_each
 		forEachCtyVals := []map[string]cty.Value{}
+		forEachNextStepAction := []types.NextStepAction{}
 		stepForEach := stepDefn.GetForEach()
+
+		// if we have for_each build the list of inputs for the for_each
 		if stepForEach != nil {
 			var err error
 			evalContext, err = ex.BuildEvalContext(pipelineDefn)
@@ -130,7 +133,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			//
 			// Each element in the array represent a "new" step execution. A non-for_each step execution will just have one input
 			// so if a step has a for_each we need to build the list if input. Each element in the list represents a step execution.
-
 			val, diags := stepForEach.Value(evalContext)
 
 			if diags.HasErrors() {
@@ -166,13 +168,36 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		// now resolve the inputs, if there's no for_each then there's just one input
 		if len(forEachCtyVals) == 0 {
+			// There's no for_each
 			stepInputs, err := stepDefn.GetInputs(evalContext)
 			if err != nil {
 				logger.Error("Error resolving step inputs for single step", "error", err)
 				return err
 			}
 			inputs = append(inputs, stepInputs)
+
+			if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
+				expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
+
+				val, diags := expr.Value(evalContext)
+				if len(diags) > 0 {
+					err := pipeparser.DiagsToError("diags", diags)
+					logger.Error("Error evaluating if condition", "error", err)
+					return err
+				}
+
+				if val.False() {
+					logger.Info("if condition not met for step", "step", stepDefn.GetName())
+					forEachNextStepAction = append(forEachNextStepAction, types.NextStepActionSkip)
+				} else {
+					forEachNextStepAction = append(forEachNextStepAction, types.NextStepActionStart)
+				}
+			} else {
+				forEachNextStepAction = append(forEachNextStepAction, types.NextStepActionStart)
+			}
 		} else {
+
+			// We have for_each!
 			for _, v := range forEachCtyVals {
 
 				// "each" is the magic keyword that will be used to access the current element in the for_each
@@ -185,10 +210,35 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					return err
 				}
 				inputs = append(inputs, stepInputs)
+
+				// check the "IF" block to see if the step should be skipped?
+				// I used to do this in the "step_start" section, but if the IF attribute uses the "each" element, this is the place
+				// to do it
+				if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
+					expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
+
+					val, diags := expr.Value(evalContext)
+					if len(diags) > 0 {
+						err := pipeparser.DiagsToError("diags", diags)
+						logger.Error("Error evaluating if condition", "error", err)
+						return err
+					}
+
+					if val.False() {
+						logger.Info("if condition not met for step", "step", stepDefn.GetName())
+						forEachNextStepAction = append(forEachNextStepAction, types.NextStepActionSkip)
+					} else {
+						forEachNextStepAction = append(forEachNextStepAction, types.NextStepActionStart)
+					}
+				} else {
+					forEachNextStepAction = append(forEachNextStepAction, types.NextStepActionStart)
+				}
 			}
 		}
 
+		// If we have a for_each then the input will be expanded to the number of elements in the for_each
 		for i, input := range inputs {
+
 			// Start each step in parallel
 			go func(nextStep types.NextStep, input types.Input, index int) {
 
@@ -221,7 +271,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					}
 				}
 
-				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs))
+				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs, forEachNextStepAction[index]))
 				if err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {

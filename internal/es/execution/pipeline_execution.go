@@ -76,6 +76,7 @@ func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
 func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 	return pe.StepStatus[stepName] != nil && pe.StepStatus[stepName].IsFail()
 }
+
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Execution) bool {
 	return true
@@ -264,7 +265,7 @@ type StepExecution struct {
 	// The name of the step in the pipeline definition
 	Name string `json:"name"`
 
-	// The status of the step execution: "started", "finished", "failed"
+	// The status of the step execution: "started", "finished", "failed", "skipped"
 	Status string `json:"status"`
 
 	// Input to the step
@@ -272,6 +273,8 @@ type StepExecution struct {
 
 	// for_each controls
 	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
+
+	NextStepAction types.NextStepAction `json:"next_step_action,omitempty"`
 
 	// Output of the step
 	Output *types.StepOutput `json:"output,omitempty"`

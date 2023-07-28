@@ -439,6 +439,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
 			ex.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
+			ex.StepExecutions[et.StepExecutionID].NextStepAction = et.NextStepAction
 			pe.StepStatus[stepDefn.GetFullyQualifiedName()].Queue(et.StepExecutionID)
 
 		case "command.pipeline_step_start":

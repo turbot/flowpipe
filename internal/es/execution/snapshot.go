@@ -441,6 +441,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 				"category": Category(sd.GetType()),
 			},
 		}
+		panels[panelName].Properties["category"].(map[string]interface{})["color"] = "grey"
 
 		return panels, nil
 
@@ -478,6 +479,10 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 				"name":     panelName,
 				"category": Category(sd.GetType()),
 			},
+		}
+
+		if se.Status == "skipped" {
+			panels[panelName].Properties["category"].(map[string]interface{})["color"] = "grey"
 		}
 
 		return panels, nil
@@ -607,9 +612,12 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 		},
 	}
 
+	// TODO: I don't know how to do multiple executions with different colour (grey for skipped). Seems like there's only 1 nodePanel for all data rows??
+
 	// Add row data for each execution to the execution node and its edges
 	for i, se := range stepExecutions {
 		nodePanel.Data.Rows = append(nodePanel.Data.Rows, ex.StepExecutionNodeRow(se.ID, sd, &stepExecutions[i]))
+
 		startEdgePanel.Data.Rows = append(startEdgePanel.Data.Rows, SnapshotPanelDataRow{
 			"from_id": "stepstart_" + sd.GetFullyQualifiedName(),
 			"to_id":   se.ID,
@@ -632,6 +640,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 	var row SnapshotPanelDataRow
 
 	var title string
+
 	if se.StepForEach != nil {
 		title = strconv.Itoa(se.StepForEach.Index) + " = "
 
@@ -646,6 +655,10 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 	}
 	if title == "" {
 		title = sd.GetFullyQualifiedName() + " [" + se.ID[len(se.ID)-4:] + "]"
+	}
+
+	if se.Status == "skipped" {
+		title = "[skipped] " + title
 	}
 
 	switch sd.GetType() {

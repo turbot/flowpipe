@@ -203,6 +203,8 @@ const (
 
 	// This happens if the step can't be started because one of it's dependency as failed
 	NextStepActionInaccessible NextStepAction = "inaccessible"
+
+	NextStepActionSkip NextStepAction = "skip"
 )
 
 type NextStep struct {

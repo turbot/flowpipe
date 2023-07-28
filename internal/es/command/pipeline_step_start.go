@@ -8,7 +8,6 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -59,42 +58,15 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
-		// Check if the step is an "if" condition
-		if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
-			var err error
-			expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
-
-			// Evaluate the expression
-			evalContext, err := ex.BuildEvalContext(pipelineDefn)
-			if err != nil {
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
-				}
-				return
+		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
+		// pipeline_plan phase
+		if cmd.NextStepAction == types.NextStepActionSkip {
+			output := &types.StepOutput{
+				Status: "skipped",
 			}
 
-			val, diags := expr.Value(evalContext)
-			if len(diags) > 0 {
-				err := pipeparser.DiagsToError("diags", diags)
-
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
-				}
-				return
-			}
-
-			if val.False() {
-				logger.Info("if condition not met for step", "step", stepDefn.GetName())
-
-				output := &types.StepOutput{
-					Status: "skipped",
-				}
-
-				endStep(cmd, output, logger, h, ctx)
-				return
-			}
+			endStep(cmd, output, logger, h, ctx)
+			return
 		}
 
 		var output *types.StepOutput
