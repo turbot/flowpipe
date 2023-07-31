@@ -76,3 +76,26 @@ func TestExplicitDependsOnIndex(t *testing.T) {
 	dependsOn := step.GetDependsOn()
 	assert.Contains(dependsOn, "sleep.sleep_1")
 }
+
+func TestImplicitQueryDepends(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/query_depends.fp")
+	assert.Nil(err, "error found")
+
+	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
+
+	if pipelines["query"] == nil {
+		assert.Fail("query pipeline not found")
+		return
+	}
+
+	step := pipelines["query"].GetStep("echo.result")
+	if step == nil {
+		assert.Fail("echo.result step not found")
+		return
+	}
+
+	dependsOn := step.GetDependsOn()
+	assert.Contains(dependsOn, "query.query_1")
+}

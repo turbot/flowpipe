@@ -693,13 +693,22 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd types.IPipelineSt
 		}
 
 	case "query":
+
+		rowCount := 0
+		if se.Output.Get("rows") != nil {
+			rows, ok := se.Output.Get("rows").([]interface{})
+			if ok {
+				rowCount = len(rows)
+			}
+		}
+
 		row = SnapshotPanelDataRow{
 			"id":    panelName,
 			"title": title,
 			"properties": map[string]interface{}{
 				"Execution ID": se.ID,
 				"Status":       se.Status,
-				"Row Count":    len(se.Output.Get("query").([]interface{})),
+				"Row Count":    rowCount,
 				"Started At":   se.Output.Get("started_at"),
 				"Finished At":  se.Output.Get("finished_at"),
 				// "For Each":     se.ForEach,

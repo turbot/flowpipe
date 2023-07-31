@@ -40,13 +40,4 @@ func TestHttpStepLoad(t *testing.T) {
 	assert.Equal(true, stepInputs[schema.AttributeTypeInsecure], "wrong insecure")
 	assert.Equal("{\"app\":\"flowpipe\",\"name\":\"turbie\"}", stepInputs[schema.AttributeTypeRequestBody], "wrong request_body")
 	assert.Equal("flowpipe", stepInputs[schema.AttributeTypeRequestHeaders].(map[string]interface{})["User-Agent"], "wrong header")
-
-	// stepInputsList, ok := stepInputs["list_text"].([]string)
-	// if !ok {
-	// 	assert.Fail("list_text input not found")
-	// }
-	// assert.Equal(stepInputsList[0], "foo", "wrong input format")
-	// assert.Equal(stepInputsList[1], "bar", "wrong input format")
-	// assert.Equal(stepInputsList[2], "baz", "wrong input format")
-
 }

@@ -79,66 +79,24 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 	}
 
 	variables := make(map[string]cty.Value)
+
 	for key, value := range o.OutputVariables {
+		if value == nil {
+			continue
+		}
+
 		// Check if the value is a Go native data type
 		switch v := value.(type) {
-		case string:
-			variables[key] = cty.StringVal(v)
-		case int:
-			variables[key] = cty.NumberIntVal(int64(v))
-		case float64:
-			variables[key] = cty.NumberFloatVal(v)
-		case bool:
-			variables[key] = cty.BoolVal(v)
-		case []string:
-			stringValues, ok := value.([]string)
-			if !ok {
-				// should never happen
-				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []string. Should never happen")
+		case string, int, float32, float64, int8, int16, int32, int64, bool, []string, []int, []float32, []float64, []int8, []int16, []int32, []int64, []bool:
+			ctyType, err := gocty.ImpliedType(v)
+			if err != nil {
+				return cty.NilVal, err
 			}
 
-			var vals []cty.Value
-			for _, v := range stringValues {
-				vals = append(vals, cty.StringVal(v))
+			variables[key], err = gocty.ToCtyValue(v, ctyType)
+			if err != nil {
+				return cty.NilVal, err
 			}
-			variables[key] = cty.ListVal(vals)
-		case []int:
-			intValues, ok := value.([]int)
-			if !ok {
-				// should never happen
-				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []int. Should never happen")
-			}
-			var vals []cty.Value
-			for _, v := range intValues {
-				vals = append(vals, cty.NumberIntVal(int64(v)))
-			}
-			variables[key] = cty.ListVal(vals)
-		case []float64:
-			floatValues, ok := value.([]float64)
-			if !ok {
-				// should never happen
-				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []float64. Should never happen")
-			}
-			var vals []cty.Value
-			for _, v := range floatValues {
-				vals = append(vals, cty.NumberFloatVal(v))
-			}
-			variables[key] = cty.ListVal(vals)
-		case []bool:
-			boolValues, ok := value.([]bool)
-			if !ok {
-				// should never happen
-				return cty.NilVal, fperr.InternalWithMessage("Failed to cast to []bool. Should never happen")
-			}
-			var vals []cty.Value
-			for _, v := range boolValues {
-				vals = append(vals, cty.BoolVal(v))
-			}
-			variables[key] = cty.ListVal(vals)
-
-			// TODO: warning?
-			// default:
-			// 	return cty.NilVal, fperr.InternalWithMessage("unsupported type for variable: " + key)
 		}
 
 	}
@@ -791,14 +749,13 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepEcho struct {
 	PipelineStepBase
-	Text     string               `json:"text"`
-	Json     json.SimpleJSONValue `json:"json"`
-	ListText []string             `json:"list_text"`
+	Text    string               `json:"text"`
+	Json    json.SimpleJSONValue `json:"json"`
+	Dynamic cty.Value            `json:"dynamic"`
 }
 
 func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	var textInput string
-	var listTextInput []string
 
 	if p.UnresolvedAttributes[schema.AttributeTypeText] == nil {
 		textInput = p.Text
@@ -821,19 +778,9 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		jsonInput = json.SimpleJSONValue{Value: ctyOutput}
 	}
 
-	if p.UnresolvedAttributes["list_text"] == nil {
-		listTextInput = p.ListText
-	} else {
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes["list_text"], evalContext, &listTextInput)
-		if diags.HasErrors() {
-			return nil, pipeparser.DiagsToError("step", diags)
-		}
-	}
-
 	return map[string]interface{}{
 		schema.AttributeTypeText: textInput,
 		schema.AttributeTypeJson: jsonInput,
-		"list_text":              listTextInput,
 	}, nil
 }
 
@@ -897,26 +844,6 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseCont
 				}
 
 				p.Json = json.SimpleJSONValue{Value: val}
-			}
-		case "list_text":
-			if attr.Expr != nil {
-				expr := attr.Expr
-				val, err := expr.Value(parseContext.EvalCtx)
-				if err != nil {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + "liext_text" + " attribute",
-						Subject:  &attr.Range,
-					})
-					continue
-				}
-
-				valueSlice := val.AsValueSlice()
-				var stringSlice []string
-				for _, v := range valueSlice {
-					stringSlice = append(stringSlice, v.AsString())
-				}
-				p.ListText = stringSlice
 			}
 		default:
 			if !p.IsBaseAttribute(name) {
