@@ -97,6 +97,12 @@ func (o *StepOutput) AsHclVariables() (cty.Value, error) {
 			if err != nil {
 				return cty.NilVal, err
 			}
+		case []interface{}, map[string]interface{}:
+			val, err := hclhelpers.ConvertMapOrSliceToCtyValue(v)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			variables[key] = val
 		}
 
 	}

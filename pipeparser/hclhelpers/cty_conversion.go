@@ -2,6 +2,7 @@ package hclhelpers
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/zclconf/go-cty/cty"
@@ -260,4 +261,81 @@ func ctyTupleToArrayOfStrings(val cty.Value) ([]string, error) {
 		res = append(res, valStr)
 	}
 	return res, nil
+}
+
+func ConvertMapOrSliceToCtyValue(data interface{}) (cty.Value, error) {
+	// Convert the input data to cty.Value based on its type
+	switch reflect.TypeOf(data).Kind() {
+	case reflect.Slice:
+		return convertSliceToCtyValue(data)
+	case reflect.Map:
+		return convertMapToCtyValue(data)
+	default:
+		// For other types, convert it as a single value using convertInterfaceToCtyValue
+		return convertInterfaceToCtyValue(data)
+	}
+}
+
+func convertInterfaceToCtyValue(v interface{}) (cty.Value, error) {
+	// Use reflection to determine the underlying type and convert it to cty.Value
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Int, reflect.Float64, reflect.String, reflect.Bool:
+		ctyType, err := gocty.ImpliedType(v)
+		if err != nil {
+			return cty.NilVal, err
+		}
+
+		val, err := gocty.ToCtyValue(v, ctyType)
+		if err != nil {
+			return cty.NilVal, err
+		}
+		return val, nil
+	case reflect.Slice:
+		return convertSliceToCtyValue(v)
+	case reflect.Map:
+		return convertMapToCtyValue(v)
+
+	// Add more cases here for other types as needed.
+	default:
+		// If the type is not recognized, return a cty.NilVal as a placeholder
+		return cty.NilVal, nil
+	}
+}
+
+func convertSliceToCtyValue(v interface{}) (cty.Value, error) {
+	// Convert the slice to a []interface{} and recursively convert it to cty values
+	slice := v.([]interface{})
+	ctyValues := make([]cty.Value, len(slice))
+	for i, item := range slice {
+		var err error
+		ctyValues[i], err = convertInterfaceToCtyValue(item)
+		if err != nil {
+			return cty.NilVal, err
+		}
+	}
+
+	// Create a cty.TupleVal from the cty values
+	tupleVal := cty.TupleVal(ctyValues)
+
+	// Return the cty.TupleVal as a cty.Value
+	return tupleVal, nil
+}
+
+func convertMapToCtyValue(v interface{}) (cty.Value, error) {
+	// Convert the map to a map[string]interface{} and recursively convert it to cty values
+	mapData := v.(map[string]interface{})
+	ctyValues := make(map[string]cty.Value, len(mapData))
+	for key, value := range mapData {
+		var err error
+		ctyValues[key], err = convertInterfaceToCtyValue(value)
+		if err != nil {
+			return cty.NilVal, err
+		}
+	}
+
+	// Create a cty.ObjectVal from the cty values
+	objectVal := cty.ObjectVal(ctyValues)
+
+	// Return the cty.ObjectVal as a cty.Value
+	return objectVal, nil
 }
