@@ -45,7 +45,7 @@ func TestQueryListAll(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(5, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+	assert.Equal(5, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
 	// Expected output from the query
 	expectedResult := []map[string]interface{}{
@@ -81,7 +81,7 @@ func TestQueryListAll(t *testing.T) {
 		},
 	}
 
-	expectedRow := output.Get(schema.AttributeTypeQuery).([]map[string]interface{})
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
 }
 
@@ -114,7 +114,7 @@ func TestQueryWithArgs(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(1, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+	assert.Equal(1, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
 	// Expected output from the query
 	expectedResult := []map[string]interface{}{
@@ -126,7 +126,7 @@ func TestQueryWithArgs(t *testing.T) {
 		},
 	}
 
-	expectedRow := output.Get(schema.AttributeTypeQuery).([]map[string]interface{})
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
 }
 
@@ -162,7 +162,7 @@ func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(4, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+	assert.Equal(4, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
 	// Expected output from the query
 	expectedResult := []map[string]interface{}{
@@ -192,7 +192,7 @@ func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 		},
 	}
 
-	expectedRow := output.Get(schema.AttributeTypeQuery).([]map[string]interface{})
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
 }
 
@@ -219,8 +219,8 @@ func TestQueryTableNotFound(t *testing.T) {
 	mock.ExpectQuery("^SELECT (.+) from instance$").WillReturnError(sql.ErrNoRows)
 
 	output, err := hr.Run(ctx, input)
-	assert.NotNil(err)                                       // Expect an error since the table does not exist
-	assert.Equal(nil, output.Get(schema.AttributeTypeQuery)) // Expect no rows to be returned
+	assert.NotNil(err)                                      // Expect an error since the table does not exist
+	assert.Equal(nil, output.Get(schema.AttributeTypeRows)) // Expect no rows to be returned
 }
 
 func TestQueryNoRows(t *testing.T) {
@@ -249,7 +249,7 @@ func TestQueryNoRows(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(0, len(output.Get(schema.AttributeTypeQuery).([]map[string]interface{})))
+	assert.Equal(0, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 }
 
 func TestQueryBadQueryStatement(t *testing.T) {

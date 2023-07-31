@@ -15,6 +15,14 @@ pipeline "for_loop" {
     }
 }
 
+pipeline "for_static" {
+    step "echo" "text_1" {
+        for_each = ["one", "two", "three"]
+        text = "user if ${each.value}"
+    }
+}
+
+
 pipeline "for_loop_nested_with_sleep" {
 
     param "time" {
@@ -135,5 +143,52 @@ pipeline "for_loop_with_if" {
         for_each = step.sleep.sleep_1
         text = "sleep 1 output: ${each.value.duration}"
         if = each.value.duration == "1s"
+    }
+}
+
+pipeline "for_rows_in_http" {
+    step "http" "my_step_1" {
+        url = "https://jsonplaceholder.typicode.com/posts"
+        method = "Post"
+        request_body = jsonencode({
+            userId = 12345
+            users = [
+                {
+                    name = "billy joe armstrong"
+                },
+                {
+                    name = "mike dirnt"
+                },
+                {
+                    name = "tre cool"
+                }
+            ]
+        })
+        request_headers = {
+            Accept = "*/*"
+            Content-Type = "application/json"
+            User-Agent = "flowpipe"
+        }
+        request_timeout_ms = 3000
+    }
+
+    step "echo" "extract_users" {
+       text = jsonencode(step.http.my_step_1.response_body)
+       // text = "${ join("", [for row in jsondecode(step.http.my_step_1.response_body): "\n- ${row.name}"]) }"
+    }
+}
+
+pipeline "list_for" {
+    param "user_data" {
+        type = map(list(string))
+        default = {
+            Users = ["jim", "jeff", "jerry"]
+        }
+    }
+
+    step "echo" "example" {
+        for_each = { for user in param.user_data.Users : user => user }
+        # Other resource attributes here, if needed
+        text = each.value
     }
 }

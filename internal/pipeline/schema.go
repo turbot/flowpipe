@@ -197,7 +197,9 @@ var PipelineStepEchoBlockSchema = &hcl.BodySchema{
 		{
 			Name: schema.AttributeTypeText,
 		},
-
+		{
+			Name: schema.AttributeTypeJson,
+		},
 		{
 			Name: "list_text",
 		},

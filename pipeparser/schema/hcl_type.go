@@ -71,6 +71,7 @@ const (
 	AttributeTypeSql              = "sql"
 	AttributeTypeArgs             = "args"
 	AttributeTypeQuery            = "query"
+	AttributeTypeRows             = "rows"
 	AttributeTypeConnectionString = "connection_string"
 
 	// Used by email step
@@ -94,6 +95,7 @@ const (
 
 	// Used by echo step
 	AttributeTypeText = "text"
+	AttributeTypeJson = "json"
 
 	LabelName = "name"
 	LabelType = "type"

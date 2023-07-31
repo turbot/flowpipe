@@ -24,6 +24,7 @@ func (e *Echo) Run(ctx context.Context, input types.Input) (*types.StepOutput, e
 		OutputVariables: map[string]interface{}{},
 	}
 	o.OutputVariables[schema.AttributeTypeText] = input[schema.AttributeTypeText]
+	o.OutputVariables[schema.AttributeTypeJson] = input[schema.AttributeTypeJson]
 
 	return &o, nil
 }

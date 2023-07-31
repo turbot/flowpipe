@@ -132,7 +132,7 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 		OutputVariables: map[string]interface{}{},
 	}
 
-	output.OutputVariables[schema.AttributeTypeQuery] = results
+	output.OutputVariables[schema.AttributeTypeRows] = results
 	output.OutputVariables[schema.AttributeTypeStartedAt] = start
 	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
 

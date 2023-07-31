@@ -15,6 +15,7 @@ import (
 	"github.com/turbot/terraform-components/addrs"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
+	"github.com/zclconf/go-cty/cty/json"
 )
 
 const (
@@ -790,8 +791,9 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepEcho struct {
 	PipelineStepBase
-	Text     string   `json:"text"`
-	ListText []string `json:"list_text"`
+	Text     string               `json:"text"`
+	Json     json.SimpleJSONValue `json:"json"`
+	ListText []string             `json:"list_text"`
 }
 
 func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -807,6 +809,18 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		}
 	}
 
+	var jsonInput json.SimpleJSONValue
+	if p.UnresolvedAttributes[schema.AttributeTypeJson] == nil {
+		jsonInput = p.Json
+	} else {
+		var ctyOutput cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeJson], evalContext, &ctyOutput)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError("step", diags)
+		}
+		jsonInput = json.SimpleJSONValue{Value: ctyOutput}
+	}
+
 	if p.UnresolvedAttributes["list_text"] == nil {
 		listTextInput = p.ListText
 	} else {
@@ -818,6 +832,7 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 
 	return map[string]interface{}{
 		schema.AttributeTypeText: textInput,
+		schema.AttributeTypeJson: jsonInput,
 		"list_text":              listTextInput,
 	}, nil
 }
@@ -865,6 +880,23 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseCont
 
 					p.Text = val.AsString()
 				}
+			}
+		case schema.AttributeTypeJson:
+			expr := attr.Expr
+			if len(expr.Variables()) > 0 {
+				dependsOnFromExpressions(name, expr, p)
+			} else {
+				val, err := expr.Value(parseContext.EvalCtx)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeJson + " attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				p.Json = json.SimpleJSONValue{Value: val}
 			}
 		case "list_text":
 			if attr.Expr != nil {
