@@ -136,6 +136,12 @@ func (m *Manager) Stop() error {
 		fplog.Logger(m.ctx).Error("error stopping api service", "error", err)
 	}
 
+	err = m.esService.Stop()
+	if err != nil {
+		// Log and continue stopping other services
+		fplog.Logger(m.ctx).Error("error stopping es service", "error", err)
+	}
+
 	// err = m.raftService.Stop()
 	// if err != nil {
 	// 	// Log and continue stopping other services

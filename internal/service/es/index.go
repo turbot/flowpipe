@@ -25,6 +25,7 @@ type ESService struct {
 	ctx        context.Context
 	runID      string
 	commandBus *cqrs.CommandBus
+	router     *message.Router
 
 	Status    string     `json:"status"`
 	StartedAt *time.Time `json:"started_at,omitempty"`
@@ -236,6 +237,7 @@ func (es *ESService) Start() error {
 
 	es.runID = runID
 	es.commandBus = cqrsFacade.CommandBus()
+	es.router = router
 
 	// processors are based on router, so they will work when router will start
 	go func() {
@@ -245,5 +247,15 @@ func (es *ESService) Start() error {
 		}
 	}()
 
+	return nil
+}
+
+func (es *ESService) Stop() error {
+	logger := fplog.Logger(es.ctx)
+
+	logger.Debug("ES stopping")
+	defer logger.Debug("ES stopped")
+
+	es.router.Close()
 	return nil
 }

@@ -41,8 +41,19 @@ func (suite *EsTestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	// clear the tmp dir (output dir) before each test
+	// clear the output dir before each test
 	outputPath := path.Join(cwd, "output")
+
+	// Check if the directory exists
+	_, err = os.Stat(outputPath)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(outputPath)
+		if err != nil {
+			panic(err)
+		}
+
+	}
 
 	pipelineDirPath := path.Join(cwd, "pipelines")
 
@@ -77,6 +88,9 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	suite.esService = esService
 
+	// Give some time for Watermill to fully start
+	time.Sleep(2 * time.Second)
+
 	suite.SetupSuiteRunCount++
 }
 
@@ -84,40 +98,13 @@ func (suite *EsTestSuite) SetupSuite() {
 // end of the testing suite, after all tests have been run.
 func (suite *EsTestSuite) TearDownSuite() {
 	// Wait for a bit to allow the Watermill to finish running the pipelines
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
+
+	suite.esService.Stop()
 	suite.TearDownSuiteRunCount++
 }
 
 func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {
-	// Get the current working directory
-	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
-
-	// clear the tmp dir (output dir) before each test
-	dirPath := path.Join(cwd, "output")
-
-	// Check if the directory exists
-	_, err = os.Stat(dirPath)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(dirPath)
-		if err != nil {
-			panic(err)
-		}
-
-	}
-
-	// Check if the directory already exists
-	_, err = os.Stat(dirPath)
-	if os.IsNotExist(err) {
-		// Create the directory if it doesn't exist
-		err := os.Mkdir(dirPath, 0755) // 0755 sets read-write-execute permissions for owner and read-execute permissions for group and others
-		if err != nil {
-			panic(err)
-		}
-	}
 
 }
 
