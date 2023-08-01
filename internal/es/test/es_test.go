@@ -3,7 +3,6 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -83,11 +82,8 @@ func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {
 	// Get the current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
-		fmt.Println("Error:", err)
-		return
+		panic(err)
 	}
-
-	fmt.Println("Current working directory:", cwd)
 
 	// clear the tmp dir (output dir) before each test
 	dirPath := path.Join(cwd, "output")
