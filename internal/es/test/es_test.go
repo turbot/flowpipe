@@ -3,7 +3,6 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -44,7 +43,6 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	// clear the tmp dir (output dir) before each test
 	outputPath := path.Join(cwd, "output")
-	fmt.Println("dir path", outputPath)
 
 	pipelineDirPath := path.Join(cwd, "pipelines")
 
@@ -146,12 +144,18 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	// give it a moment to let Watermill does its thing
 	time.Sleep(100 * time.Millisecond)
 
-	// check if the execution id has been completed
+	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(suite.ctx)
+	for i := 0; i < 3 && err != nil; i++ {
+		time.Sleep(100 * time.Millisecond)
+		ex, err = execution.NewExecution(suite.ctx)
+	}
+
 	if err != nil {
 		assert.Fail(suite.T(), "Error creating execution", err)
 		return
 	}
+
 	err = ex.LoadProcess(pipelineCmd.Event)
 	if err != nil {
 		assert.Fail(suite.T(), "Error loading process", err)
@@ -167,6 +171,13 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < 3 && !pex.IsComplete(); i++ {
 		time.Sleep(100 * time.Millisecond)
+
+		err = ex.LoadProcess(pipelineCmd.Event)
+		if err != nil {
+			assert.Fail(suite.T(), "Error loading process", err)
+			return
+		}
+		pex = ex.PipelineExecutions[pipelineExecutionID]
 	}
 
 	if !pex.IsComplete() {
