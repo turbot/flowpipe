@@ -14,7 +14,8 @@ import (
 )
 
 type Email struct {
-	Input types.Input
+	Input   types.Input
+	Setting string
 }
 
 func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
@@ -41,10 +42,18 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 
 	// Read sender credential
-	senderEmail := os.Getenv("SMTP_SENDER_EMAIL") // Check for other options. What email should we use?
-	senderCredential := os.Getenv("SMTP_SENDER_CREDENTIAL")
-	host := "smtp.gmail.com" // Should be dynamic. Can we determine from the domain of the email?
-	port := "587"
+	var senderEmail, senderCredential, host, port string
+	if h.Setting == "mailhog" { // For testing purposes
+		senderEmail = "sender@example.com"
+		senderCredential = "" // Empty for Mailhog
+		host = "localhost"
+		port = "1025"
+	} else {
+		senderEmail = os.Getenv("SMTP_SENDER_EMAIL") // Check for other options. What email should we use?
+		senderCredential = os.Getenv("SMTP_SENDER_CREDENTIAL")
+		host = "smtp.gmail.com" // Should be dynamic? Or should be a fixed value since the sender will be always flowpipe?
+		port = "587"
+	}
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
 
 	// Get the inputs
@@ -56,10 +65,6 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	if input[schema.AttributeTypeBcc] != nil {
 		bccRecipients = input[schema.AttributeTypeBcc].([]string)
 	}
-
-	// Convert recipients to a slice of strings
-	allRecipients := append(recipients, ccRecipients...)
-	allRecipients = append(allRecipients, bccRecipients...)
 
 	var body string
 	if input[schema.AttributeTypeBody] != nil {
@@ -74,6 +79,7 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	// Construct the MIME header
 	header := make(map[string]string)
 	header["From"] = from.String()
+	header["Subject"] = "Flowpipe pipeline completion notification" // What should be the subject? Should we assume that it would be in the input?
 	header["To"] = strings.Join(recipients, ", ")
 
 	if len(ccRecipients) > 0 {
@@ -90,7 +96,7 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 	message += "\r\n" + body
 
-	err := smtp.SendMail(host+":"+port, auth, senderEmail, allRecipients, []byte(message))
+	err := smtp.SendMail(host+":"+port, auth, senderEmail, recipients, []byte(message))
 	if err != nil {
 		return nil, err
 	}
