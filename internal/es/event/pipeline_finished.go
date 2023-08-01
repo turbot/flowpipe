@@ -2,16 +2,15 @@ package event
 
 import (
 	"fmt"
-
-	"github.com/turbot/flowpipe/internal/types"
 )
 
 type PipelineFinished struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Unique identifier for this pipeline execution
-	PipelineExecutionID string            `json:"pipeline_execution_id"`
-	Output              *types.StepOutput `json:"output,omitempty"`
+	PipelineExecutionID string `json:"pipeline_execution_id"`
+
+	PipelineOutput map[string]interface{} `json:"pipeline_output"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -33,7 +32,7 @@ func NewPipelineFinished(opts ...PipelineFinishedOption) (*PipelineFinished, err
 
 // ForPipelineFinish returns a PipelineFinishedOption that sets the fields of the
 // PipelineFinished event from a PipelineFinish command.
-func ForPipelineFinish(cmd *PipelineFinish, output *types.StepOutput) PipelineFinishedOption {
+func ForPipelineFinish(cmd *PipelineFinish, pipelineOutput map[string]interface{}) PipelineFinishedOption {
 	return func(e *PipelineFinished) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {
@@ -41,7 +40,7 @@ func ForPipelineFinish(cmd *PipelineFinish, output *types.StepOutput) PipelineFi
 		} else {
 			return fmt.Errorf("missing pipeline execution ID in pipeline start command: %v", cmd)
 		}
-		e.Output = output
+		e.PipelineOutput = pipelineOutput
 		return nil
 	}
 }

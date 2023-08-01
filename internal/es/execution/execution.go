@@ -108,7 +108,7 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 						return nil, err
 					}
 				}
-				vm[stepName] = cty.ListVal(ctyValList)
+				vm[stepName] = cty.TupleVal(ctyValList)
 			}
 		}
 
@@ -575,7 +575,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "finished"
-			pe.Output = et.Output
+			pe.PipelineOutput = et.PipelineOutput
 
 		case "handler.pipeline_failed":
 			var et event.PipelineFailed

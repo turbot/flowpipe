@@ -18,6 +18,7 @@ type Manager struct {
 	ctx context.Context
 
 	apiService *api.APIService
+	esService  *es.ESService
 
 	RaftNodeID    string `json:"raft_node_id,omitempty"`
 	RaftBootstrap bool   `json:"raft_bootstrap"`
@@ -95,6 +96,8 @@ func (m *Manager) Start() error {
 	esService.Status = "running"
 	esService.StartedAt = util.TimeNow()
 
+	m.esService = esService
+
 	// Define the API service
 	a, err := api.NewAPIService(m.ctx, esService,
 		api.WithHTTPSAddress(m.HTTPSAddress))
@@ -134,6 +137,12 @@ func (m *Manager) Stop() error {
 	if err != nil {
 		// Log and continue stopping other services
 		fplog.Logger(m.ctx).Error("error stopping api service", "error", err)
+	}
+
+	err = m.esService.Stop()
+	if err != nil {
+		// Log and continue stopping other services
+		fplog.Logger(m.ctx).Error("error stopping es service", "error", err)
 	}
 
 	// err = m.raftService.Stop()

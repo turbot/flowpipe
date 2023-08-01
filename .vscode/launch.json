@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
-            "args": ["service", "start", "--pipeline-dir", "./internal/pipeline/collections"]
+            "args": ["service", "start", "--pipeline-dir", "./internal/es/test/pipelines"]
         }
     ]
 }
