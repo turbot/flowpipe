@@ -14,6 +14,7 @@ USER vscode
 
 RUN go install github.com/swaggo/swag/cmd/swag@v1.8.12 \
     && go install github.com/goreleaser/goreleaser@v1.18.2 \
+    && go install github.com/mailhog/MailHog@v1.0.1 \
     && cd ~ \
     && mkdir openapi-generator \
     && cd openapi-generator \
