@@ -100,7 +100,10 @@ func (suite *EsTestSuite) TearDownSuite() {
 	// Wait for a bit to allow the Watermill to finish running the pipelines
 	time.Sleep(3 * time.Second)
 
-	suite.esService.Stop()
+	err := suite.esService.Stop()
+	if err != nil {
+		panic(err)
+	}
 	suite.TearDownSuiteRunCount++
 }
 
