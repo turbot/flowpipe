@@ -43,6 +43,9 @@ type Execution struct {
 
 	// Later in the "execution" part where we are building the execution details, as we read the jsonl events
 	// there will be an execution variables that is in an array form.
+	//
+	// TODO: I'm not convinced this is the correct place to store this.
+	// TODO: it is convenient, but it probably should live in the PipelineExecution rather than the Execution
 	AllStepOutputs ExecutionStepOutputs `json:"-"`
 }
 

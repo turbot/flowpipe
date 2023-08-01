@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - "v*"
+  workflow_dispatch:
 
 jobs:
   golangci:
