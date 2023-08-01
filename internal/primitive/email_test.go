@@ -18,14 +18,18 @@ import (
 
 func TestSendEmail(t *testing.T) {
 	assert := assert.New(t)
-	hr := Email{
-		Setting: "mailhog",
-	}
+	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeTo:   []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeBody: "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:       "Flowpipe",
+		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderCredential: "",
+		schema.AttributeTypeHost:             "localhost",
+		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeSubject:          "Flowpipe mail test",
+		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
 	})
 
 	// Start the MailHog server as a child process.
@@ -68,15 +72,18 @@ func TestSendEmail(t *testing.T) {
 
 func TestSendEmailWithCc(t *testing.T) {
 	assert := assert.New(t)
-	hr := Email{
-		Setting: "mailhog",
-	}
+	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeTo:   []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeCc:   []string{"ccrecipient@example.com"},
-		schema.AttributeTypeBody: "This is a test email sent from Golang with Cc.",
+		schema.AttributeTypeSenderName:       "Flowpipe",
+		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderCredential: "",
+		schema.AttributeTypeHost:             "localhost",
+		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeCc:               []string{"ccrecipient@example.com"},
+		schema.AttributeTypeBody:             "This is a test email sent from Golang with Cc.",
 	})
 
 	// Start the MailHog server as a child process.
@@ -122,15 +129,18 @@ func TestSendEmailWithCc(t *testing.T) {
 
 func TestSendEmailWithBcc(t *testing.T) {
 	assert := assert.New(t)
-	hr := Email{
-		Setting: "mailhog",
-	}
+	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeTo:   []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeBcc:  []string{"bccrecipient@example.com"},
-		schema.AttributeTypeBody: "This is a test email sent from Golang with Bcc.",
+		schema.AttributeTypeSenderName:       "Flowpipe",
+		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderCredential: "",
+		schema.AttributeTypeHost:             "localhost",
+		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeBcc:              []string{"bccrecipient@example.com"},
+		schema.AttributeTypeBody:             "This is a test email sent from Golang with Bcc.",
 	})
 
 	// Start the MailHog server as a child process.
@@ -180,7 +190,12 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeBody: "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:       "Flowpipe",
+		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderCredential: "",
+		schema.AttributeTypeHost:             "localhost",
+		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -188,7 +203,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 	assert.NotNil(err)
 
 	fpErr := err.(fperr.ErrorModel)
-	assert.Equal("Email input must define a recipients", fpErr.Detail)
+	assert.Equal("Email input must define to", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
 
@@ -198,8 +213,13 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeTo:   []string{},
-		schema.AttributeTypeBody: "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:       "Flowpipe",
+		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderCredential: "",
+		schema.AttributeTypeHost:             "localhost",
+		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypeTo:               []string{},
+		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
 	})
 
 	_, err := hr.Run(context.Background(), input)

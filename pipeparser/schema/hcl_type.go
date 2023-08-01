@@ -75,10 +75,16 @@ const (
 	AttributeTypeConnectionString = "connection_string"
 
 	// Used by email step
-	AttributeTypeBody = "body"
-	AttributeTypeTo   = "to"
-	AttributeTypeCc   = "cc"
-	AttributeTypeBcc  = "bcc"
+	AttributeTypeBody             = "body"
+	AttributeTypeTo               = "to"
+	AttributeTypeCc               = "cc"
+	AttributeTypeBcc              = "bcc"
+	AttributeTypeFrom             = "from"
+	AttributeTypeSenderName       = "sender_name"
+	AttributeTypeSenderCredential = "sender_credential"
+	AttributeTypeHost             = "host"
+	AttributeTypePort             = "port"
+	AttributeTypeSubject          = "subject"
 
 	// Used by sleep step
 	AttributeTypeDuration = "duration"

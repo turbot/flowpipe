@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/mail"
 	"net/smtp"
-	"os"
 	"strings"
 
 	"github.com/turbot/flowpipe/fperr"
@@ -14,22 +13,67 @@ import (
 )
 
 type Email struct {
-	Input   types.Input
-	Setting string
+	Input types.Input
 }
 
 func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
-	if i[schema.AttributeTypeTo] == nil {
-		return fperr.BadRequestWithMessage("Email input must define a recipients")
+
+	// Validate sender's information
+	if i[schema.AttributeTypeFrom] == nil {
+		return fperr.BadRequestWithMessage("Email input must define from")
+	}
+	if i[schema.AttributeTypeSenderCredential] == nil {
+		return fperr.BadRequestWithMessage("Email input must define sender_credential")
+	}
+	if i[schema.AttributeTypeHost] == nil {
+		return fperr.BadRequestWithMessage("Email input must define a SMTP host")
+	}
+	if i[schema.AttributeTypePort] == nil {
+		return fperr.BadRequestWithMessage("Email input must define a port")
+	}
+	if i[schema.AttributeTypeSenderName] != nil {
+		if _, ok := i[schema.AttributeTypeSenderName].(string); !ok {
+			return fperr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
+		}
 	}
 
+	// Validate the recipients
+	if i[schema.AttributeTypeTo] == nil {
+		return fperr.BadRequestWithMessage("Email input must define to")
+	}
+	if _, ok := i[schema.AttributeTypeTo].([]string); !ok {
+		return fperr.BadRequestWithMessage("Email attribute 'to' must be an array")
+	}
 	if len(i[schema.AttributeTypeTo].([]string)) == 0 {
 		return fperr.BadRequestWithMessage("Recipients must not be empty")
 	}
 
-	// A body is required as we will be sending the output of the previous step as the body of the email, and in that case, the body will never be empty
-	if i[schema.AttributeTypeBody] == nil {
-		return fperr.BadRequestWithMessage("Email input must define a body")
+	// Validate the Cc recipients
+	if i[schema.AttributeTypeCc] != nil {
+		if _, ok := i[schema.AttributeTypeCc].([]string); !ok {
+			return fperr.BadRequestWithMessage("Email attribute 'cc' must be an array")
+		}
+	}
+
+	// Validate the Bcc recipients
+	if i[schema.AttributeTypeBcc] != nil {
+		if _, ok := i[schema.AttributeTypeBcc].([]string); !ok {
+			return fperr.BadRequestWithMessage("Email attribute 'bcc' must be an array")
+		}
+	}
+
+	// Validate the email body
+	if i[schema.AttributeTypeBody] != nil {
+		if _, ok := i[schema.AttributeTypeBody].(string); !ok {
+			return fperr.BadRequestWithMessage("Email attribute 'body' must be a string")
+		}
+	}
+
+	// validate the subject
+	if i[schema.AttributeTypeSubject] != nil {
+		if _, ok := i[schema.AttributeTypeSubject].(string); !ok {
+			return fperr.BadRequestWithMessage("Email attribute 'subject' must be a string")
+		}
 	}
 
 	return nil
@@ -42,51 +86,45 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 
 	// Read sender credential
-	var senderEmail, senderCredential, host, port string
-	if h.Setting == "mailhog" { // For testing purposes
-		senderEmail = "sender@example.com"
-		senderCredential = "" // Empty for Mailhog
-		host = "localhost"
-		port = "1025"
-	} else {
-		senderEmail = os.Getenv("SMTP_SENDER_EMAIL") // Check for other options. What email should we use?
-		senderCredential = os.Getenv("SMTP_SENDER_CREDENTIAL")
-		host = "smtp.gmail.com" // Should be dynamic? Or should be a fixed value since the sender will be always flowpipe?
-		port = "587"
-	}
+	senderEmail := input[schema.AttributeTypeFrom].(string)
+	senderCredential := input[schema.AttributeTypeSenderCredential].(string)
+	host := input[schema.AttributeTypeHost].(string)
+	port := input[schema.AttributeTypePort].(string)
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
 
 	// Get the inputs
-	var ccRecipients, bccRecipients []string
 	recipients := input[schema.AttributeTypeTo].([]string)
-	if input[schema.AttributeTypeCc] != nil {
-		ccRecipients = input[schema.AttributeTypeCc].([]string)
-	}
-	if input[schema.AttributeTypeBcc] != nil {
-		bccRecipients = input[schema.AttributeTypeBcc].([]string)
-	}
 
 	var body string
 	if input[schema.AttributeTypeBody] != nil {
 		body = input[schema.AttributeTypeBody].(string)
 	}
 
+	var senderName string
+	if input[schema.AttributeTypeSenderName] != nil {
+		senderName = input[schema.AttributeTypeSenderName].(string)
+	}
+
 	from := mail.Address{
-		Name:    "Flowpipe",
+		Name:    senderName,
 		Address: senderEmail,
 	}
 
 	// Construct the MIME header
 	header := make(map[string]string)
 	header["From"] = from.String()
-	header["Subject"] = "Flowpipe pipeline completion notification" // What should be the subject? Should we assume that it would be in the input?
 	header["To"] = strings.Join(recipients, ", ")
 
-	if len(ccRecipients) > 0 {
-		header["Cc"] = strings.Join(ccRecipients, ", ")
+	if input[schema.AttributeTypeCc] != nil && len(input[schema.AttributeTypeCc].([]string)) > 0 {
+		header["Cc"] = strings.Join(input[schema.AttributeTypeCc].([]string), ", ")
 	}
-	if len(bccRecipients) > 0 {
-		header["Bcc"] = strings.Join(bccRecipients, ", ")
+
+	if input[schema.AttributeTypeBcc] != nil && len(input[schema.AttributeTypeBcc].([]string)) > 0 {
+		header["Bcc"] = strings.Join(input[schema.AttributeTypeBcc].([]string), ", ")
+	}
+
+	if input[schema.AttributeTypeSubject] != nil && len(input[schema.AttributeTypeSubject].(string)) > 0 {
+		header["Subject"] = input[schema.AttributeTypeSubject].(string)
 	}
 
 	// Build the full email message
