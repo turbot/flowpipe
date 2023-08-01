@@ -48,4 +48,16 @@ pipeline "expr_depend_and_function" {
         text = "sleep 1 output: ${each.value.duration}"
         if = each.value.duration == "1s"
     }
+
+    output "one" {
+        value = step.echo.echo_sleep_2.text
+    }
+
+    output "one_function" {
+        value = title(step.echo.echo_sleep_2.text)
+    }
+
+    output "indexed" {
+        value = step.echo.echo_sleep_for[1].text
+    }
 }

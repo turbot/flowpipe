@@ -231,6 +231,10 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal("finished", echoStepsOutput["echo_for_if"].([]*types.StepOutput)[0].Status)
 	assert.Equal("skipped", echoStepsOutput["echo_for_if"].([]*types.StepOutput)[1].Status)
 
+	assert.Equal(3, len(pex.PipelineOutput))
+	assert.Equal("sleep 1 output: 1s", pex.PipelineOutput["one"])
+	assert.Equal("Sleep 1 Output: 1s", pex.PipelineOutput["one_function"])
+	assert.Equal("2s", pex.PipelineOutput["indexed"])
 }
 
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {

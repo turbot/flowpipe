@@ -34,7 +34,7 @@ func NewPipelineStepFinish(opts ...PipelineStepFinishOption) (*PipelineStepFinis
 func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
-		cmd.Output = e.Output
+		// cmd.Output = e.Output
 		return nil
 	}
 }

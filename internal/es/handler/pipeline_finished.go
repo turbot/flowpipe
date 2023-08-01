@@ -11,8 +11,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -73,45 +71,8 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			return err
 		}
 
-		pe := ex.PipelineExecutions[e.PipelineExecutionID]
-
 		if len(pipelineDefn.Outputs) > 0 {
-			outputBlock := map[string]interface{}{}
-			data[schema.BlockTypePipelineOutput] = outputBlock
-
-			// If all dependencies met, we then calculate the value of this output
-			evalContext, err := ex.BuildEvalContext(pipelineDefn)
-			if err != nil {
-				logger.Error("Error building eval context while calculating output", "error", err)
-				return err
-			}
-
-			for _, output := range pipelineDefn.Outputs {
-				// check if its dependencies have been met
-				dependenciesMet := true
-				for _, dep := range output.DependsOn {
-					if !pe.IsStepComplete(dep) {
-						dependenciesMet = false
-						break
-					}
-				}
-				// Dependencies not met, skip this output
-				if !dependenciesMet {
-					continue
-				}
-				ctyValue, diags := output.UnresolvedValue.Value(evalContext)
-				if len(diags) > 0 {
-					err := pipeparser.DiagsToError("output", diags)
-					logger.Error("Error calculating output", "error", err)
-					return err
-				}
-				val, err := hclhelpers.CtyToGo(ctyValue)
-				if err != nil {
-					logger.Error("Error converting cty value to Go value", "error", err)
-					return err
-				}
-				outputBlock[output.Name] = val
-			}
+			data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 		}
 
 		// Dump the output

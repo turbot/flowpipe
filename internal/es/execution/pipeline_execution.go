@@ -13,8 +13,9 @@ type PipelineExecution struct {
 	Name string `json:"name"`
 	// The input to the pipeline
 	Args types.Input `json:"args"`
-	// Output from the pipeline
-	Output *types.StepOutput `json:"output,omitempty"`
+
+	// The output of the pipeline
+	PipelineOutput map[string]interface{} `json:"pipeline_output,omitempty"`
 
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`

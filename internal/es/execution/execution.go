@@ -575,7 +575,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "finished"
-			pe.Output = et.Output
+			pe.PipelineOutput = et.PipelineOutput
 
 		case "handler.pipeline_failed":
 			var et event.PipelineFailed
