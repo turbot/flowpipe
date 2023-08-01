@@ -35,16 +35,26 @@ type EsTestSuite struct {
 // The SetupSuite method will be run by testify once, at the very
 // start of the testing suite, before any tests are run.
 func (suite *EsTestSuite) SetupSuite() {
-	viper.GetViper().Set("pipeline.dir", "./pipelines")
-	viper.GetViper().Set("output.dir", "./output")
-	viper.GetViper().Set("log.dir", "./output")
-	// viper.GetViper().Set("pipeline.dir", "./tmp")
+	// Get the current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(err)
+	}
+
+	// clear the tmp dir (output dir) before each test
+	outputPath := path.Join(cwd, "output")
+
+	pipelineDirPath := path.Join(cwd, "pipelines")
+
+	viper.GetViper().Set("pipeline.dir", pipelineDirPath)
+	viper.GetViper().Set("output.dir", outputPath)
+	viper.GetViper().Set("log.dir", outputPath)
 
 	// Create a single, global context for the application
 	ctx := context.Background()
 
 	ctx = fplog.ContextWithLogger(ctx)
-	ctx, err := config.ContextWithConfig(ctx)
+	ctx, err = config.ContextWithConfig(ctx)
 	if err != nil {
 		panic(err)
 	}
@@ -134,12 +144,18 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	// give it a moment to let Watermill does its thing
 	time.Sleep(100 * time.Millisecond)
 
-	// check if the execution id has been completed
+	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(suite.ctx)
+	for i := 0; i < 3 && err != nil; i++ {
+		time.Sleep(100 * time.Millisecond)
+		ex, err = execution.NewExecution(suite.ctx)
+	}
+
 	if err != nil {
 		assert.Fail(suite.T(), "Error creating execution", err)
 		return
 	}
+
 	err = ex.LoadProcess(pipelineCmd.Event)
 	if err != nil {
 		assert.Fail(suite.T(), "Error loading process", err)
@@ -155,6 +171,13 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < 3 && !pex.IsComplete(); i++ {
 		time.Sleep(100 * time.Millisecond)
+
+		err = ex.LoadProcess(pipelineCmd.Event)
+		if err != nil {
+			assert.Fail(suite.T(), "Error loading process", err)
+			return
+		}
+		pex = ex.PipelineExecutions[pipelineExecutionID]
 	}
 
 	if !pex.IsComplete() {
