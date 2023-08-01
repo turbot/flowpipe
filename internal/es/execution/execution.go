@@ -108,7 +108,7 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 						return nil, err
 					}
 				}
-				vm[stepName] = cty.ListVal(ctyValList)
+				vm[stepName] = cty.TupleVal(ctyValList)
 			}
 		}
 

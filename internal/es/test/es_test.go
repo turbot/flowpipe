@@ -134,7 +134,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	pipelineExecutionID := pipelineCmd.PipelineExecutionID
 
 	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
-	time.Sleep(2200 * time.Millisecond)
+	time.Sleep(2300 * time.Millisecond)
 
 	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(suite.ctx)
@@ -200,7 +200,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 		return
 	}
 
-	assert.Equal(7, len(echoStepsOutput))
+	assert.Equal(8, len(echoStepsOutput))
 	assert.Equal("foo bar", echoStepsOutput["text_1"].(*types.StepOutput).OutputVariables["text"])
 	assert.Equal("lower case Bar Foo Bar Baz and here", echoStepsOutput["text_2"].(*types.StepOutput).OutputVariables["text"])
 	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", echoStepsOutput["text_3"].(*types.StepOutput).OutputVariables["text"])
@@ -225,6 +225,11 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal(2, len(sleep1StepOutputs))
 	assert.Equal("1s", sleep1StepOutputs[0].OutputVariables["duration"])
 	assert.Equal("2s", sleep1StepOutputs[1].OutputVariables["duration"])
+
+	assert.Equal(2, len(echoStepsOutput["echo_for_if"].([]*types.StepOutput)))
+	// First one is OK, the second step should be skipped
+	assert.Equal("finished", echoStepsOutput["echo_for_if"].([]*types.StepOutput)[0].Status)
+	assert.Equal("skipped", echoStepsOutput["echo_for_if"].([]*types.StepOutput)[1].Status)
 
 }
 

@@ -42,4 +42,10 @@ pipeline "expr_depend_and_function" {
     step "echo" "echo_sleep_2" {
         text = "sleep 1 output: ${step.sleep.sleep_1[0].duration}"
     }
+
+    step "echo" "echo_for_if" {
+        for_each = step.sleep.sleep_1
+        text = "sleep 1 output: ${each.value.duration}"
+        if = each.value.duration == "1s"
+    }
 }
