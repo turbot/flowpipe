@@ -107,6 +107,8 @@ const (
 	AttributeTypeText = "text"
 	AttributeTypeJson = "json"
 
+	AttributeTypeMessage = "message"
+
 	LabelName = "name"
 	LabelType = "type"
 )

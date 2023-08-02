@@ -19,6 +19,21 @@ pipeline "bad_http_ignored" {
             ignore = true
         }
     }
+
+    step "echo" "bad_http_if_error_true" {
+        text = "bar"
+        if = is_error(step.http.my_step_1)
+    }
+
+    step "echo" "bad_http_if_error_false" {
+        text = "baz"
+        if = !is_error(step.http.my_step_1)
+    }
+
+    step "echo" "error_message" {
+        text = error_message(step.http.my_step_1)
+    }
+
     step "echo" "bad_http" {
         depends_on = [step.http.my_step_1]
         text = "foo"

@@ -278,7 +278,7 @@ type StepExecution struct {
 	NextStepAction types.NextStepAction `json:"next_step_action,omitempty"`
 
 	// Output of the step
-	Output *types.StepOutput `json:"output,omitempty"`
+	Output *types.Output `json:"output,omitempty"`
 }
 
 func (se *StepExecution) Index() *int {

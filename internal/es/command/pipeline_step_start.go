@@ -61,7 +61,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
 		// pipeline_plan phase
 		if cmd.NextStepAction == types.NextStepActionSkip {
-			output := &types.StepOutput{
+			output := &types.Output{
 				Status: "skipped",
 			}
 
@@ -69,7 +69,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		var output *types.StepOutput
+		var output *types.Output
 		var primitiveError error
 		switch stepDefn.GetType() {
 		case schema.BlockTypePipelineStepExec:
@@ -103,7 +103,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		if primitiveError != nil {
 			logger.Error("primitive failed", "error", primitiveError)
 			if output == nil {
-				output = &types.StepOutput{}
+				output = &types.Output{}
 			}
 			if output.Errors == nil {
 				output.Errors = &types.StepErrors{}
@@ -161,7 +161,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 	return nil
 }
 
-func endStep(cmd *event.PipelineStepStart, output *types.StepOutput, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
+func endStep(cmd *event.PipelineStepStart, output *types.Output, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
 	e, err := event.NewPipelineStepFinished(
 		event.ForPipelineStepStartToPipelineStepFinished(cmd),
 		event.WithStepOutput(output))

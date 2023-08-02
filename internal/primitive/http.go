@@ -69,7 +69,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.StepOu
 }
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
-func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.StepOutput, error) {
+func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.Output, error) {
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -144,17 +144,17 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.StepOutput, 
 	headers := mapResponseHeaders(resp)
 
 	// Construct the output
-	output := types.StepOutput{
-		OutputVariables: map[string]interface{}{},
+	output := types.Output{
+		Data: map[string]interface{}{},
 	}
-	output.OutputVariables[schema.AttributeTypeStatus] = resp.Status
-	output.OutputVariables[schema.AttributeTypeStatusCode] = resp.StatusCode
-	output.OutputVariables[schema.AttributeTypeResponseHeaders] = headers
-	output.OutputVariables[schema.AttributeTypeStartedAt] = start
-	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
+	output.Data[schema.AttributeTypeStatus] = resp.Status
+	output.Data[schema.AttributeTypeStatusCode] = resp.StatusCode
+	output.Data[schema.AttributeTypeResponseHeaders] = headers
+	output.Data[schema.AttributeTypeStartedAt] = start
+	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	if body != nil {
-		output.OutputVariables[schema.AttributeTypeResponseBody] = string(body)
+		output.Data[schema.AttributeTypeResponseBody] = string(body)
 	}
 
 	if resp.StatusCode >= 400 {

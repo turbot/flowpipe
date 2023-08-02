@@ -21,7 +21,7 @@ func (e *Exec) ValidateInput(ctx context.Context, i types.Input) error {
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
+func (e *Exec) Run(ctx context.Context, input types.Input) (*types.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -89,15 +89,15 @@ func (e *Exec) Run(ctx context.Context, input types.Input) (*types.StepOutput, e
 	}
 	finish := time.Now().UTC()
 
-	o := types.StepOutput{
-		OutputVariables: map[string]interface{}{},
+	o := types.Output{
+		Data: map[string]interface{}{},
 	}
 
-	o.OutputVariables["exit_code"] = exitCode
-	o.OutputVariables["stdout_lines"] = stdoutLines
-	o.OutputVariables["stderr_lines"] = stderrLines
-	o.OutputVariables[schema.AttributeTypeStartedAt] = start
-	o.OutputVariables[schema.AttributeTypeFinishedAt] = finish
+	o.Data["exit_code"] = exitCode
+	o.Data["stdout_lines"] = stdoutLines
+	o.Data["stderr_lines"] = stderrLines
+	o.Data[schema.AttributeTypeStartedAt] = start
+	o.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return &o, nil
 }

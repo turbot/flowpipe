@@ -318,7 +318,7 @@ func (c *PipelineParseContext) buildEvalContext() {
 
 // AddResource stores this resource as a variable to be added to the eval context. It alse
 func (c *PipelineParseContext) AddResource(pipelineHcl *types.Pipeline) hcl.Diagnostics {
-	ctyVal, err := pipelineHcl.CtyValue()
+	ctyVal, err := pipelineHcl.AsCtyValue()
 	if err != nil {
 		return hcl.Diagnostics{&hcl.Diagnostic{
 			Severity: hcl.DiagError,

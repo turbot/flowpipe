@@ -49,6 +49,25 @@ pipeline "expr_depend_and_function" {
         if = each.value.duration == "1s"
     }
 
+
+    step "echo" "literal_for" {
+        for_each = ["bach", "beethoven", "mozart"]
+        text = "name is ${each.value}"
+    }
+
+
+    param "user_data" {
+        type = map(list(string))
+        default = {
+            Users = ["shostakovitch", "prokofiev", "rachmaninoff"]
+        }
+    }
+
+    step "echo" "literal_for_from_list" {
+        for_each = { for user in param.user_data.Users : user => user }
+        text = each.value
+    }
+
     output "one" {
         value = step.echo.echo_sleep_2.text
     }

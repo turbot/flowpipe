@@ -27,7 +27,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
+func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -41,13 +41,13 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	output := &types.StepOutput{
-		OutputVariables: map[string]interface{}{},
+	output := &types.Output{
+		Data: map[string]interface{}{},
 	}
 
-	output.OutputVariables[schema.AttributeTypeStartedAt] = start
-	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
-	output.OutputVariables[schema.AttributeTypeDuration] = durationString
+	output.Data[schema.AttributeTypeStartedAt] = start
+	output.Data[schema.AttributeTypeFinishedAt] = finish
+	output.Data[schema.AttributeTypeDuration] = durationString
 
 	return output, nil
 }

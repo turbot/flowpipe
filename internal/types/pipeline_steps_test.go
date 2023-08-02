@@ -11,13 +11,13 @@ import (
 func TestStepAsHclVariables(t *testing.T) {
 	assert := assert.New(t)
 
-	stepOutput := StepOutput{
-		OutputVariables: map[string]interface{}{},
+	stepOutput := Output{
+		Data: map[string]interface{}{},
 	}
 
-	stepOutput.OutputVariables["string"] = "one"
-	stepOutput.OutputVariables["int"] = 25
-	stepOutput.OutputVariables["bool"] = true
+	stepOutput.Data["string"] = "one"
+	stepOutput.Data["int"] = 25
+	stepOutput.Data["bool"] = true
 
 	stepOutput.Errors = &StepErrors{
 		StepError{
@@ -29,7 +29,7 @@ func TestStepAsHclVariables(t *testing.T) {
 		},
 	}
 
-	hclVariables, err := stepOutput.AsHclVariables()
+	hclVariables, err := stepOutput.AsCtyValue()
 	if err != nil {
 		assert.Fail("Error converting step output to HCL variables", err)
 		return
