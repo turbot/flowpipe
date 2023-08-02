@@ -92,18 +92,18 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 		}
 
 		for stepName, stepOutput := range v {
-			if nonIndexStepOutput, ok := stepOutput.(*types.StepOutput); ok {
+			if nonIndexStepOutput, ok := stepOutput.(*types.Output); ok {
 				var err error
-				vm[stepName], err = nonIndexStepOutput.AsHclVariables()
+				vm[stepName], err = nonIndexStepOutput.AsCtyValue()
 				if err != nil {
 					return nil, err
 				}
-			} else if indexedStepOutput, ok := stepOutput.([]*types.StepOutput); ok {
+			} else if indexedStepOutput, ok := stepOutput.([]*types.Output); ok {
 				var err error
 
 				ctyValList := make([]cty.Value, len(indexedStepOutput))
 				for i, stepOutput := range indexedStepOutput {
-					ctyValList[i], err = stepOutput.AsHclVariables()
+					ctyValList[i], err = stepOutput.AsCtyValue()
 					if err != nil {
 						return nil, err
 					}
@@ -509,10 +509,10 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// text = step.echo.text_1[1].text
 
 				if ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*types.StepOutput, et.StepForEach.ForEachTotalCount)
+					ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*types.Output, et.StepForEach.ForEachTotalCount)
 				}
 
-				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.StepOutput)[et.StepForEach.Index] = et.Output
+				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.Output)[et.StepForEach.Index] = et.Output
 			}
 
 			// TODO: Error handling

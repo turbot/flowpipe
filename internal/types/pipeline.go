@@ -70,7 +70,7 @@ func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
 	return nil
 }
 
-func (p *Pipeline) CtyValue() (cty.Value, error) {
+func (p *Pipeline) AsCtyValue() (cty.Value, error) {
 	return pipeparser.GetCtyValue(p)
 }
 

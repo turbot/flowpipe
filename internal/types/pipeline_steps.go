@@ -35,37 +35,37 @@ var ValidHttpMethods = []string{
 }
 
 type StepForEach struct {
-	Index             int         `json:"index" binding:"required"`
-	ForEachOutput     *StepOutput `json:"for_each_output,omitempty"`
-	ForEachTotalCount int         `json:"for_each_total_count" binding:"required"`
+	Index             int     `json:"index" binding:"required"`
+	ForEachOutput     *Output `json:"for_each_output,omitempty"`
+	ForEachTotalCount int     `json:"for_each_total_count" binding:"required"`
 }
 
 type Input map[string]interface{}
 
-type OutputVariables map[string]interface{}
+type OutputData map[string]interface{}
 
-// StepOutput is the output from a pipeline.
-type StepOutput struct {
-	Status          string          `json:"status"`
-	OutputVariables OutputVariables `json:"output_variables,omitempty"`
-	Errors          *StepErrors     `json:"errors,omitempty"`
+// Output is the output from a step execution.
+type Output struct {
+	Status string      `json:"status"`
+	Data   OutputData  `json:"data,omitempty"`
+	Errors *StepErrors `json:"errors,omitempty"`
 }
 
-func (o *StepOutput) Get(key string) interface{} {
+func (o *Output) Get(key string) interface{} {
 	if o == nil {
 		return nil
 	}
-	return o.OutputVariables[key]
+	return o.Data[key]
 }
 
-func (o *StepOutput) Set(key string, value interface{}) {
+func (o *Output) Set(key string, value interface{}) {
 	if o == nil {
 		return
 	}
-	o.OutputVariables[key] = value
+	o.Data[key] = value
 }
 
-func (o *StepOutput) HasErrors() bool {
+func (o *Output) HasErrors() bool {
 	if o == nil {
 		return false
 	}
@@ -73,14 +73,14 @@ func (o *StepOutput) HasErrors() bool {
 	return o.Errors != nil && len(*o.Errors) > 0
 }
 
-func (o *StepOutput) AsHclVariables() (cty.Value, error) {
+func (o *Output) AsCtyValue() (cty.Value, error) {
 	if o == nil {
 		return cty.ObjectVal(map[string]cty.Value{}), nil
 	}
 
 	variables := make(map[string]cty.Value)
 
-	for key, value := range o.OutputVariables {
+	for key, value := range o.Data {
 		if value == nil {
 			continue
 		}

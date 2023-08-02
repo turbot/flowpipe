@@ -14,7 +14,7 @@ type PipelineStepFinished struct {
 	StepExecutionID     string `json:"step_execution_id"`
 
 	// Output
-	Output *types.StepOutput `json:"output,omitempty"`
+	Output *types.Output `json:"output,omitempty"`
 
 	// for_each controls
 	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
@@ -74,7 +74,7 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output *types.StepOutput) PipelineStepFinishedOption {
+func WithStepOutput(output *types.Output) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
 		return nil

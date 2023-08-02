@@ -256,10 +256,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					} else {
 						title += nextStep.StepName
 					}
-					forEachOutput := &types.StepOutput{
-						OutputVariables: map[string]interface{}{},
+					forEachOutput := &types.Output{
+						Data: map[string]interface{}{},
 					}
-					forEachOutput.OutputVariables[schema.AttributeTypeValue] = title
+					forEachOutput.Data[schema.AttributeTypeValue] = title
 
 					forEachControl = &types.StepForEach{
 						Index:             forEachIndex,

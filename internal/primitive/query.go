@@ -65,7 +65,7 @@ func (e *Query) InitializeDB(ctx context.Context, i types.Input) (*sql.DB, error
 	return db, nil
 }
 
-func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
+func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -128,13 +128,13 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 		return nil, err
 	}
 
-	output := &types.StepOutput{
-		OutputVariables: map[string]interface{}{},
+	output := &types.Output{
+		Data: map[string]interface{}{},
 	}
 
-	output.OutputVariables[schema.AttributeTypeRows] = results
-	output.OutputVariables[schema.AttributeTypeStartedAt] = start
-	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
+	output.Data[schema.AttributeTypeRows] = results
+	output.Data[schema.AttributeTypeStartedAt] = start
+	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return output, nil
 }
