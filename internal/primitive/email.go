@@ -86,7 +86,7 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 	return nil
 }
 
-func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, error) {
+func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -153,11 +153,11 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 
 	// Construct the output
-	output := types.StepOutput{
-		OutputVariables: map[string]interface{}{},
+	output := types.Output{
+		Data: map[string]interface{}{},
 	}
-	output.OutputVariables[schema.AttributeTypeStartedAt] = start
-	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
+	output.Data[schema.AttributeTypeStartedAt] = start
+	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return nil, nil
 }
