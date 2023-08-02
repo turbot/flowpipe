@@ -174,7 +174,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 		return
 	}
 
-	assert.Equal(8, len(echoStepsOutput))
+	assert.Equal(10, len(echoStepsOutput))
 	assert.Equal("foo bar", echoStepsOutput["text_1"].(*types.StepOutput).OutputVariables["text"])
 	assert.Equal("lower case Bar Foo Bar Baz and here", echoStepsOutput["text_2"].(*types.StepOutput).OutputVariables["text"])
 	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", echoStepsOutput["text_3"].(*types.StepOutput).OutputVariables["text"])
@@ -209,6 +209,22 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal("sleep 1 output: 1s", pex.PipelineOutput["one"])
 	assert.Equal("Sleep 1 Output: 1s", pex.PipelineOutput["one_function"])
 	assert.Equal("2s", pex.PipelineOutput["indexed"])
+
+	// checking the "echo.literal_for" step
+	assert.Equal(3, len(echoStepsOutput["literal_for"].([]*types.StepOutput)))
+
+	assert.Equal("name is bach", echoStepsOutput["literal_for"].([]*types.StepOutput)[0].OutputVariables["text"])
+	assert.Equal("name is beethoven", echoStepsOutput["literal_for"].([]*types.StepOutput)[1].OutputVariables["text"])
+	assert.Equal("name is mozart", echoStepsOutput["literal_for"].([]*types.StepOutput)[2].OutputVariables["text"])
+
+	// checking the "echo.literal_for_from_list" step
+	assert.Equal(3, len(echoStepsOutput["literal_for_from_list"].([]*types.StepOutput)))
+
+	// TODO: "something" is re-ordering the for_each expression evaluation to an ordered list, I'm yet to find out what that is
+	assert.Equal("prokofiev", echoStepsOutput["literal_for_from_list"].([]*types.StepOutput)[0].OutputVariables["text"])
+	assert.Equal("rachmaninoff", echoStepsOutput["literal_for_from_list"].([]*types.StepOutput)[1].OutputVariables["text"])
+	assert.Equal("shostakovitch", echoStepsOutput["literal_for_from_list"].([]*types.StepOutput)[2].OutputVariables["text"])
+
 }
 
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {
