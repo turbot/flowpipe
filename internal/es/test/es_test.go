@@ -416,6 +416,40 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 }
 
+func (suite *EsTestSuite) TestHttp() {
+	assert := assert.New(suite.T())
+
+	_, pipelineCmd, err := suite.runPipeline("jsonplaceholder_expr", 500*time.Millisecond)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 5, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	echoStepsOutput := ex.AllStepOutputs["echo"]
+	if echoStepsOutput == nil {
+		assert.Fail("echo step output not found")
+		return
+	}
+
+	assert.Equal("finished", echoStepsOutput["output"].(*types.StepOutput).Status)
+	assert.Equal("201", echoStepsOutput["output"].(*types.StepOutput).OutputVariables["text"])
+
+	jsonBodyLoopOutputs := echoStepsOutput["body_json_loop"].([]*types.StepOutput)
+	assert.Equal(len(jsonBodyLoopOutputs), 4)
+	assert.Equal("brian may", jsonBodyLoopOutputs[0].OutputVariables["text"])
+	assert.Equal("freddie mercury", jsonBodyLoopOutputs[1].OutputVariables["text"])
+	assert.Equal("roger taylor", jsonBodyLoopOutputs[2].OutputVariables["text"])
+	assert.Equal("john deacon", jsonBodyLoopOutputs[3].OutputVariables["text"])
+}
+
 func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
 	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(suite.ctx)
@@ -454,6 +488,7 @@ func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecu
 	return ex, pex, nil
 
 }
+
 func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration) (*execution.Execution, *event.PipelineQueue, error) {
 
 	pipelineCmd := &event.PipelineQueue{
