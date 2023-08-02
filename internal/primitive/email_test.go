@@ -27,7 +27,7 @@ func startMailHog() {
 
 	// Start MailHog server as a separate process
 	logger.Debug("Starting MailHog SMTP server")
-	mailhogCmd = exec.Command("/go/bin/MailHog")
+	mailhogCmd = exec.Command("MailHog")
 	if err := mailhogCmd.Start(); err != nil {
 		// logger.Error("Failed to start MailHog: ", err.Error())
 		panic(err)

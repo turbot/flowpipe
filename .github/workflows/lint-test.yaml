@@ -1,12 +1,13 @@
 name: Go Lint and Test
 on:
-  push:
-    tags:
-      - v*
-    branches:
-      - main
-      - "v*"
-  workflow_dispatch:
+  pull_request:
+  # push:
+  #   tags:
+  #     - v*
+  #   branches:
+  #     - main
+  #     - "v*"
+  # workflow_dispatch:
 
 jobs:
   golangci:
@@ -45,6 +46,14 @@ jobs:
           version: v1.52.2
           args: --timeout=15m
           working-directory: flowpipe
+      
+      - name: Install MailHog
+        run: |
+          go install github.com/mailhog/MailHog@v1.0.1
+
+      - name: Run MailHog
+        run: |
+          MailHog
 
       - name: Run tests
         run: make test
