@@ -69,6 +69,12 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 		}
 	}
 
+	if i[schema.AttributeTypeContentType] != nil {
+		if _, ok := i[schema.AttributeTypeContentType].(string); !ok {
+			return fperr.BadRequestWithMessage("Email attribute 'content_type' must be a string")
+		}
+	}
+
 	// validate the subject
 	if i[schema.AttributeTypeSubject] != nil {
 		if _, ok := i[schema.AttributeTypeSubject].(string); !ok {
@@ -110,7 +116,7 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 		Address: senderEmail,
 	}
 
-	// Construct the MIME header
+	// Construct the header
 	header := make(map[string]string)
 	header["From"] = from.String()
 	header["To"] = strings.Join(recipients, ", ")
@@ -125,6 +131,10 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 
 	if input[schema.AttributeTypeSubject] != nil && len(input[schema.AttributeTypeSubject].(string)) > 0 {
 		header["Subject"] = input[schema.AttributeTypeSubject].(string)
+	}
+
+	if input[schema.AttributeTypeContentType] != nil && len(input[schema.AttributeTypeContentType].(string)) > 0 {
+		header["Content-Type"] = input[schema.AttributeTypeContentType].(string)
 	}
 
 	// Build the full email message
