@@ -82,7 +82,7 @@ const (
 	AttributeTypeFrom             = "from"
 	AttributeTypeHost             = "host"
 	AttributeTypePort             = "port"
-	AttributeTypeSenderCredential = "sender_credential"
+	AttributeTypeSenderCredential = "sender_credential" //nolint:gosec
 	AttributeTypeSenderName       = "sender_name"
 	AttributeTypeSubject          = "subject"
 	AttributeTypeTo               = "to"
