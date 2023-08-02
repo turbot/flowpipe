@@ -243,6 +243,32 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	assert.Equal(400, fpErr.Status)
 }
 
+func TestEmailInvalidCreds(t *testing.T) {
+	assert := assert.New(t)
+	hr := Email{}
+
+	input := types.Input(map[string]interface{}{
+		schema.AttributeTypeSenderName:       "Flowpipe",
+		schema.AttributeTypeFrom:             "test@example.com",
+		schema.AttributeTypeSenderCredential: "abcdefghijklmnop",
+		schema.AttributeTypeHost:             "smtp.gmail.com",
+		schema.AttributeTypePort:             "587",
+		schema.AttributeTypeTo:               []string{"recipient@example.com"},
+		schema.AttributeTypeSubject:          "Flowpipe mail test",
+		schema.AttributeTypeBody:             "This is a test email message to validate whether the code works or not.",
+	})
+
+	output, err := hr.Run(context.Background(), input)
+	// No errors
+	assert.Nil(err)
+
+	output.HasErrors()
+	for _, e := range *output.Errors {
+		assert.Equal(535, e.ErrorCode)
+		assert.Contains(e.Message, "Username and Password not accepted")
+	}
+}
+
 type HTTPResponse struct {
 	Items []CapturedEmail `json:"items"`
 }

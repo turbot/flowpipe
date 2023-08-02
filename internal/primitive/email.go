@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/mail"
 	"net/smtp"
+	"net/textproto"
 	"strings"
 	"time"
 
@@ -145,19 +146,34 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	}
 	message += "\r\n" + body
 
-	start := time.Now().UTC()
-	err := smtp.SendMail(host+":"+port, auth, senderEmail, recipients, []byte(message))
-	finish := time.Now().UTC()
-	if err != nil {
-		return nil, err
-	}
-
 	// Construct the output
 	output := types.Output{
 		Data: map[string]interface{}{},
 	}
+
+	start := time.Now().UTC()
+	err := smtp.SendMail(host+":"+port, auth, senderEmail, recipients, []byte(message))
+	finish := time.Now().UTC()
+	if err != nil {
+		if _, ok := err.(*textproto.Error); !ok {
+			return nil, err
+		}
+
+		// Capture all 400+ errors related to negative completion in the output
+		// Refer https://en.wikipedia.org/wiki/List_of_SMTP_server_return_codes for all available error codes
+		smtpErr := err.(*textproto.Error)
+		if smtpErr.Code >= 400 {
+			output.Errors = &types.StepErrors{
+				types.StepError{
+					Message:   smtpErr.Msg,
+					ErrorCode: smtpErr.Code,
+				},
+			}
+		}
+	}
+
 	output.Data[schema.AttributeTypeStartedAt] = start
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
-	return nil, nil
+	return &output, nil
 }
