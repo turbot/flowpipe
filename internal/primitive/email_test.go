@@ -6,15 +6,65 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
+
+var mailhogCmd *exec.Cmd
+
+func startMailHog() {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+	logger := fplog.Logger(ctx)
+
+	// Start MailHog server as a separate process
+	logger.Debug("Starting MailHog SMTP server")
+	mailhogCmd = exec.Command("/go/bin/MailHog")
+	if err := mailhogCmd.Start(); err != nil {
+		// logger.Error("Failed to start MailHog: ", err.Error())
+		panic(err)
+	}
+	logger.Debug("MailHog SMTP server started")
+}
+
+func stopMailHog() {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+	logger := fplog.Logger(ctx)
+
+	// Stop MailHog server process
+	logger.Debug("Stopping MailHog SMTP server")
+	if mailhogCmd.Process != nil {
+		if err := mailhogCmd.Process.Kill(); err != nil {
+			// log.Fatalf("Failed to stop MailHog: %v", err)
+			panic(err)
+		}
+	}
+	logger.Debug("MailHog SMTP server stopped")
+}
+
+func TestMain(m *testing.M) {
+	// Start MailHog before running tests
+	startMailHog()
+	time.Sleep(2 * time.Second) // Wait for the server to be ready
+
+	// Run tests
+	code := m.Run()
+
+	// Stop MailHog after tests are completed
+	stopMailHog()
+
+	// Exit with the test code
+	os.Exit(code)
+}
 
 func TestSendEmail(t *testing.T) {
 	assert := assert.New(t)
@@ -22,8 +72,8 @@ func TestSendEmail(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "Flowpipe",
-		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderName:       "TestSendEmail",
+		schema.AttributeTypeFrom:             "test.send.email@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
 		schema.AttributeTypePort:             "1025",
@@ -32,19 +82,12 @@ func TestSendEmail(t *testing.T) {
 		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
 	})
 
-	// Start the MailHog server as a child process.
-	cmd := exec.Command("mailhog")
-	if err := cmd.Start(); err != nil {
-		panic("Failed to start MailHog server: " + err.Error())
-	}
-	time.Sleep(2 * time.Second) // Wait for the server to be ready
-
 	_, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)
 
 	// Get the captured email data from the SMTP server (e.g., MailHog)
-	capturedEmails, err := captureEmailsFromSMTP()
+	capturedEmails, err := captureEmailsFromSMTP(input[schema.AttributeTypeFrom].(string))
 	if err != nil {
 		assert.Fail("error listing captured emails from Mailhog: ", err.Error())
 	}
@@ -56,18 +99,13 @@ func TestSendEmail(t *testing.T) {
 	capturedEmail := capturedEmails[0]
 
 	// Validate sender's information
-	assert.Contains(capturedEmail.Content.Headers.From[0], "sender@example.com")
+	assert.Contains(capturedEmail.Content.Headers.From[0], "test.send.email@example.com")
 
 	// Validate recipients
 	assert.Equal([]string{"recipient1@example.com, recipient2@example.com"}, capturedEmail.Content.Headers.To)
 
 	// Validate email body
 	assert.Contains(capturedEmail.Content.Body, "This is a test email sent from Golang.")
-
-	// Stop the MailHog server.
-	if err := cmd.Process.Kill(); err != nil {
-		panic("Failed to stop MailHog server: " + err.Error())
-	}
 }
 
 func TestSendEmailWithCc(t *testing.T) {
@@ -76,8 +114,8 @@ func TestSendEmailWithCc(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "Flowpipe",
-		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderName:       "TestSendEmailWithCc",
+		schema.AttributeTypeFrom:             "test.send.email.with.cc@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
 		schema.AttributeTypePort:             "1025",
@@ -86,19 +124,12 @@ func TestSendEmailWithCc(t *testing.T) {
 		schema.AttributeTypeBody:             "This is a test email sent from Golang with Cc.",
 	})
 
-	// Start the MailHog server as a child process.
-	cmd := exec.Command("mailhog")
-	if err := cmd.Start(); err != nil {
-		panic("Failed to start MailHog server: " + err.Error())
-	}
-	time.Sleep(2 * time.Second) // Wait for the server to be ready
-
 	_, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)
 
 	// Get the captured email data from the SMTP server (e.g., MailHog)
-	capturedEmails, err := captureEmailsFromSMTP()
+	capturedEmails, err := captureEmailsFromSMTP(input[schema.AttributeTypeFrom].(string))
 	if err != nil {
 		assert.Fail("error listing captured emails from Mailhog: ", err.Error())
 	}
@@ -110,7 +141,7 @@ func TestSendEmailWithCc(t *testing.T) {
 	capturedEmail := capturedEmails[0]
 
 	// Validate sender's information
-	assert.Contains(capturedEmail.Content.Headers.From[0], "sender@example.com")
+	assert.Contains(capturedEmail.Content.Headers.From[0], "test.send.email.with.cc@example.com")
 
 	// Validate recipients
 	assert.Equal([]string{"recipient1@example.com, recipient2@example.com"}, capturedEmail.Content.Headers.To)
@@ -120,11 +151,6 @@ func TestSendEmailWithCc(t *testing.T) {
 
 	// Validate email body
 	assert.Contains(capturedEmail.Content.Body, "This is a test email sent from Golang with Cc.")
-
-	// Stop the MailHog server.
-	if err := cmd.Process.Kill(); err != nil {
-		panic("Failed to stop MailHog server: " + err.Error())
-	}
 }
 
 func TestSendEmailWithBcc(t *testing.T) {
@@ -133,8 +159,8 @@ func TestSendEmailWithBcc(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := types.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "Flowpipe",
-		schema.AttributeTypeFrom:             "sender@example.com",
+		schema.AttributeTypeSenderName:       "TestSendEmailWithBcc",
+		schema.AttributeTypeFrom:             "test.send.email.with.bcc@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
 		schema.AttributeTypePort:             "1025",
@@ -143,19 +169,12 @@ func TestSendEmailWithBcc(t *testing.T) {
 		schema.AttributeTypeBody:             "This is a test email sent from Golang with Bcc.",
 	})
 
-	// Start the MailHog server as a child process.
-	cmd := exec.Command("mailhog")
-	if err := cmd.Start(); err != nil {
-		panic("Failed to start MailHog server: " + err.Error())
-	}
-	time.Sleep(2 * time.Second) // Wait for the server to be ready
-
 	_, err := hr.Run(context.Background(), input)
 	// No errors
 	assert.Nil(err)
 
 	// Get the captured email data from the SMTP server (e.g., MailHog)
-	capturedEmails, err := captureEmailsFromSMTP()
+	capturedEmails, err := captureEmailsFromSMTP(input[schema.AttributeTypeFrom].(string))
 	if err != nil {
 		assert.Fail("error listing captured emails from Mailhog: ", err.Error())
 	}
@@ -167,7 +186,7 @@ func TestSendEmailWithBcc(t *testing.T) {
 	capturedEmail := capturedEmails[0]
 
 	// Validate sender's information
-	assert.Contains(capturedEmail.Content.Headers.From[0], "sender@example.com")
+	assert.Contains(capturedEmail.Content.Headers.From[0], "test.send.email.with.bcc@example.com")
 
 	// Validate recipients
 	assert.Equal([]string{"recipient1@example.com, recipient2@example.com"}, capturedEmail.Content.Headers.To)
@@ -177,11 +196,6 @@ func TestSendEmailWithBcc(t *testing.T) {
 
 	// Validate email body
 	assert.Contains(capturedEmail.Content.Body, "This is a test email sent from Golang with Bcc.")
-
-	// Stop the MailHog server.
-	if err := cmd.Process.Kill(); err != nil {
-		panic("Failed to stop MailHog server: " + err.Error())
-	}
 }
 
 func TestSendEmailWithMissingRecipient(t *testing.T) {
@@ -252,12 +266,14 @@ type Headers struct {
 	Body string   `json:"body"`
 }
 
-func captureEmailsFromSMTP() ([]CapturedEmail, error) {
+func captureEmailsFromSMTP(from string) ([]CapturedEmail, error) {
 	// MailHog's API base URL
 	mailHogURL := "http://localhost:8025"
+	apiEndpoint := "/api/v2/search"
+	query := fmt.Sprintf("?kind=containing&query=%s", from)
 
 	// Get a list of all emails received by MailHog
-	resp, err := http.Get(mailHogURL + "/api/v2/messages")
+	resp, err := http.Get(mailHogURL + apiEndpoint + query)
 	if err != nil {
 		return nil, err
 	}
