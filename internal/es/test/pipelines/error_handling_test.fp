@@ -23,6 +23,10 @@ pipeline "bad_http_ignored" {
         depends_on = [step.http.my_step_1]
         text = "foo"
     }
+
+    output "one" {
+        value = step.echo.bad_http.text
+    }
 }
 
 pipeline "bad_http_ignored_get_error_code" {
@@ -34,6 +38,10 @@ pipeline "bad_http_ignored_get_error_code" {
     }
     step "echo" "bad_http" {
         text = step.http.my_step_1.status_code
+    }
+
+    output "one" {
+        value = step.echo.bad_http.text
     }
 }
 
@@ -55,7 +63,7 @@ pipeline "bad_http_with_for" {
     param "files" {
         type = list(string)
         // bad.json & ugly.json = 404
-        // astros.json = 201
+        // astros.json = 200
         default = ["bad.json", "ugly.json", "astros.json"]
     }
 
@@ -67,8 +75,9 @@ pipeline "bad_http_with_for" {
         }
     }
 
-    step "echo" "bad_http" {
-        for_each = step.http.http_step.errors
-        text = each.value.message
+    step "echo" "http_step" {
+        for_each = step.http.http_step
+        text = each.value.status_code
+        if = each.value.status_code == 200
     }
 }
