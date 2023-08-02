@@ -287,11 +287,30 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
+
+	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+	if err != nil || pipelineDefn == nil {
+		assert.Fail("Pipeline definition not found", err)
+	}
+
+	badHttpIfErrorTrueStep := pipelineDefn.GetStep("echo.bad_http_if_error_true")
+	if badHttpIfErrorTrueStep == nil {
+		assert.Fail("echo.bad_http_if_error_true not found")
+		return
+	}
+	assert.Contains(badHttpIfErrorTrueStep.GetDependsOn(), "http.my_step_1")
+
+	badHttpIfErrorFalseStep := pipelineDefn.GetStep("echo.bad_http_if_error_false")
+	if badHttpIfErrorFalseStep == nil {
+		assert.Fail("echo.bad_http_if_error_false not found")
+		return
+	}
+	assert.Contains(badHttpIfErrorFalseStep.GetDependsOn(), "http.my_step_1")
 
 	assert.True(pex.IsComplete())
 	assert.Equal("finished", pex.Status)
@@ -303,6 +322,15 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	}
 
 	assert.Equal("foo", output.(string))
+
+	assert.Equal("bar", ex.AllStepOutputs["echo"]["bad_http_if_error_true"].(*types.StepOutput).OutputVariables["text"])
+
+	// checking the is_error function working correctly
+	assert.Equal("finished", ex.AllStepOutputs["echo"]["bad_http_if_error_true"].(*types.StepOutput).Status)
+	assert.Equal("skipped", ex.AllStepOutputs["echo"]["bad_http_if_error_false"].(*types.StepOutput).Status)
+
+	// checking the error_message function working correctly
+	assert.Equal("404 Not Found", ex.AllStepOutputs["echo"]["error_message"].(*types.StepOutput).OutputVariables["text"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil

@@ -2,6 +2,7 @@ package pipeparser
 
 import (
 	"github.com/hashicorp/hcl/v2/ext/tryfunc"
+	pipefuncs "github.com/turbot/flowpipe/pipeparser/funcs"
 	"github.com/turbot/terraform-components/lang/funcs"
 	ctyyaml "github.com/zclconf/go-cty-yaml"
 	"github.com/zclconf/go-cty/cty"
@@ -130,6 +131,8 @@ func ContextFunctions(baseDir string) map[string]function.Function {
 		"yamldecode":       ctyyaml.YAMLDecodeFunc,
 		"yamlencode":       ctyyaml.YAMLEncodeFunc,
 		"zipmap":           stdlib.ZipmapFunc,
+		"is_error":         pipefuncs.IsErrorFunc,
+		"error_message":    pipefuncs.ErrorMessageFunc,
 	}
 
 	return ctxFuncs
