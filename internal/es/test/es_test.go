@@ -3,6 +3,7 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -120,41 +121,20 @@ func (suite *EsTestSuite) AfterTest(suiteName, testName string) {
 func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert := assert.New(suite.T())
 
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(suite.ctx),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                "expr_depend_and_function",
-	}
-
-	if err := suite.esService.Send(pipelineCmd); err != nil {
-		assert.Fail("Error sending pipeline command", err)
-		return
-	}
-
-	pipelineExecutionID := pipelineCmd.PipelineExecutionID
-
 	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
-	time.Sleep(2300 * time.Millisecond)
-
-	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(suite.ctx)
-	for i := 0; i < 3 && err != nil; i++ {
-		time.Sleep(100 * time.Millisecond)
-		ex, err = execution.NewExecution(suite.ctx)
-	}
-
+	_, pipelineCmd, err := suite.runPipeline("expr_depend_and_function", 2300*time.Millisecond)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	err = ex.LoadProcess(pipelineCmd.Event)
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 3)
 	if err != nil {
-		assert.Fail("Error loading process", err)
+		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
 
-	pipelineDefn, err := ex.PipelineDefinition(pipelineExecutionID)
+	pipelineDefn, err := ex.PipelineDefinition(pipelineCmd.PipelineExecutionID)
 	if err != nil || pipelineDefn == nil {
 		assert.Fail("Pipeline definition not found", err)
 	}
@@ -171,12 +151,6 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Contains(dependsOn, "echo.text_1")
 	assert.Contains(dependsOn, "echo.text_2")
 
-	pex := ex.PipelineExecutions[pipelineExecutionID]
-	if pex == nil {
-		assert.Fail("Pipeline execution not found")
-		return
-	}
-
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < 3 && !pex.IsComplete(); i++ {
 		time.Sleep(100 * time.Millisecond)
@@ -186,7 +160,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 			assert.Fail("Error loading process", err)
 			return
 		}
-		pex = ex.PipelineExecutions[pipelineExecutionID]
+		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 	}
 
 	if !pex.IsComplete() {
@@ -240,67 +214,19 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert := assert.New(suite.T())
 
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(suite.ctx),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                "if",
-	}
-
-	if err := suite.esService.Send(pipelineCmd); err != nil {
-		assert.Fail("Error sending pipeline command", err)
-		return
-	}
-
-	pipelineExecutionID := pipelineCmd.PipelineExecutionID
-
-	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
-	time.Sleep(100 * time.Millisecond)
-
-	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(suite.ctx)
-	for i := 0; i < 3 && err != nil; i++ {
-		time.Sleep(100 * time.Millisecond)
-		ex, err = execution.NewExecution(suite.ctx)
-	}
-
+	_, pipelineCmd, err := suite.runPipeline("if", 100*time.Millisecond)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	err = ex.LoadProcess(pipelineCmd.Event)
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 3)
 	if err != nil {
-		assert.Fail("Error loading process", err)
+		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
 
-	pipelineDefn, err := ex.PipelineDefinition(pipelineExecutionID)
-	if err != nil || pipelineDefn == nil {
-		assert.Fail("Pipeline definition not found", err)
-	}
-
-	pex := ex.PipelineExecutions[pipelineExecutionID]
-	if pex == nil {
-		assert.Fail("Pipeline execution not found")
-		return
-	}
-
-	// Wait for the pipeline to complete, but not forever
-	for i := 0; i < 3 && !pex.IsComplete(); i++ {
-		time.Sleep(100 * time.Millisecond)
-
-		err = ex.LoadProcess(pipelineCmd.Event)
-		if err != nil {
-			assert.Fail("Error loading process", err)
-			return
-		}
-		pex = ex.PipelineExecutions[pipelineExecutionID]
-	}
-
-	if !pex.IsComplete() {
-		assert.Fail("Pipeline execution not complete")
-		return
-	}
+	assert.Equal("finished", pex.Status)
 
 	echoStepsOutput := ex.AllStepOutputs["echo"]
 	if echoStepsOutput == nil {
@@ -322,6 +248,165 @@ func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert.Equal("bar", echoStepsOutput["text_2"].(*types.StepOutput).OutputVariables["text"])
 	assert.Nil(echoStepsOutput["text_3"].(*types.StepOutput).OutputVariables["text"])
 
+}
+
+func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
+
+	// bad_http_not_ignored pipeline
+	assert := assert.New(suite.T())
+	_, cmd, err := suite.runPipeline("bad_http_not_ignored", 100*time.Millisecond)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	ex, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5)
+	if err == nil || (err != nil && err.Error() != "not completed") {
+		assert.Fail("Pipeline should not have completed", err)
+		return
+	}
+
+	assert.False(pex.IsComplete())
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal("failed", ex.AllStepOutputs["http"]["my_step_1"].(*types.StepOutput).Status)
+	assert.Equal(float64(404), ex.AllStepOutputs["http"]["my_step_1"].(*types.StepOutput).OutputVariables["status_code"])
+
+	assert.Nil(ex.AllStepOutputs["echo"]["bad_http"])
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
+
+	// bad_http_ignored pipeline
+	_, cmd, err = suite.runPipeline("bad_http_ignored", 100*time.Millisecond)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5)
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("finished", pex.Status)
+
+	output := pex.PipelineOutput["one"]
+	if output == nil {
+		assert.Fail("Pipeline output not found")
+		return
+	}
+
+	assert.Equal("foo", output.(string))
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
+
+	// bad_http_ignored_get_error_code pipeline
+	_, cmd, err = suite.runPipeline("bad_http_ignored_get_error_code", 100*time.Millisecond)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5)
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("finished", pex.Status)
+
+	output = pex.PipelineOutput["one"]
+	if output == nil {
+		assert.Fail("Pipeline output not found")
+		return
+	}
+
+	assert.Equal(float64(404), ex.AllStepOutputs["http"]["my_step_1"].(*types.StepOutput).OutputVariables["status_code"])
+	assert.Equal("404", ex.AllStepOutputs["echo"]["bad_http"].(*types.StepOutput).OutputVariables["text"])
+	assert.Equal("404", output.(string))
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
+}
+
+func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int) (*execution.Execution, *execution.PipelineExecution, error) {
+	// check if the execution id has been completed, check 3 times
+	ex, err := execution.NewExecution(suite.ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = ex.LoadProcess(event)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pex := ex.PipelineExecutions[pipelineExecutionID]
+	if pex == nil {
+		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+
+	}
+
+	// Wait for the pipeline to complete, but not forever
+	for i := 0; i < waitRetry && !pex.IsComplete(); i++ {
+		time.Sleep(waitTime)
+
+		err = ex.LoadProcess(event)
+		if err != nil {
+			return nil, nil, fmt.Errorf("Error loading process: %w", err)
+		}
+		if pex == nil {
+			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		}
+		pex = ex.PipelineExecutions[pipelineExecutionID]
+	}
+
+	if !pex.IsComplete() {
+		return ex, pex, fmt.Errorf("not completed")
+	}
+
+	return ex, pex, nil
+
+}
+func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration) (*execution.Execution, *event.PipelineQueue, error) {
+
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewExecutionEvent(suite.ctx),
+		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Name:                name,
+	}
+
+	if err := suite.esService.Send(pipelineCmd); err != nil {
+		return nil, nil, fmt.Errorf("Error sending pipeline command: %w", err)
+
+	}
+
+	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
+	time.Sleep(initialWaitTime)
+
+	// check if the execution id has been completed, check 3 times
+	ex, err := execution.NewExecution(suite.ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = ex.LoadProcess(pipelineCmd.Event)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ex, pipelineCmd, nil
 }
 
 // In order for 'go test' to run this suite, we need to create
