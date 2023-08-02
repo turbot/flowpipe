@@ -128,7 +128,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 3)
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 3, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -220,7 +220,7 @@ func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 3)
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -261,7 +261,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5)
+	ex, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err == nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Pipeline should not have completed", err)
 		return
@@ -271,8 +271,8 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal("failed", pex.Status)
 
 	assert.Equal("failed", ex.AllStepOutputs["http"]["my_step_1"].(*types.StepOutput).Status)
+	assert.NotNil(ex.AllStepOutputs["http"]["my_step_1"].(*types.StepOutput).Errors)
 	assert.Equal(float64(404), ex.AllStepOutputs["http"]["my_step_1"].(*types.StepOutput).OutputVariables["status_code"])
-
 	assert.Nil(ex.AllStepOutputs["echo"]["bad_http"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
@@ -287,7 +287,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5)
+	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -316,7 +316,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5)
+	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -338,9 +338,41 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
 	// end pipeline test
+
+	// bad_http_with_for pipeline
+	_, cmd, err = suite.runPipeline("bad_http_with_for", 1*time.Second)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(float64(404), ex.AllStepOutputs["http"]["http_step"].([]*types.StepOutput)[0].OutputVariables["status_code"])
+	assert.Equal(float64(404), ex.AllStepOutputs["http"]["http_step"].([]*types.StepOutput)[1].OutputVariables["status_code"])
+	assert.Equal(float64(200), ex.AllStepOutputs["http"]["http_step"].([]*types.StepOutput)[2].OutputVariables["status_code"])
+
+	assert.Equal("skipped", ex.AllStepOutputs["echo"]["http_step"].([]*types.StepOutput)[0].Status)
+	assert.Equal("skipped", ex.AllStepOutputs["echo"]["http_step"].([]*types.StepOutput)[1].Status)
+	assert.Equal("finished", ex.AllStepOutputs["echo"]["http_step"].([]*types.StepOutput)[2].Status)
+	assert.Nil(ex.AllStepOutputs["echo"]["http_step"].([]*types.StepOutput)[0].OutputVariables["text"])
+	assert.Nil(ex.AllStepOutputs["echo"]["http_step"].([]*types.StepOutput)[1].OutputVariables["text"])
+	assert.Equal("200", ex.AllStepOutputs["echo"]["http_step"].([]*types.StepOutput)[2].OutputVariables["text"])
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
 }
 
-func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int) (*execution.Execution, *execution.PipelineExecution, error) {
+func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
 	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(suite.ctx)
 	if err != nil {
@@ -355,11 +387,10 @@ func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecu
 	pex := ex.PipelineExecutions[pipelineExecutionID]
 	if pex == nil {
 		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
-
 	}
 
 	// Wait for the pipeline to complete, but not forever
-	for i := 0; i < waitRetry && !pex.IsComplete(); i++ {
+	for i := 0; i < waitRetry && !pex.IsComplete() && pex.Status != expectedState; i++ {
 		time.Sleep(waitTime)
 
 		err = ex.LoadProcess(event)
