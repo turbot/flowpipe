@@ -29,8 +29,7 @@ func startMailHog() {
 	logger.Debug("Starting MailHog SMTP server")
 	mailhogCmd = exec.Command("MailHog")
 	if err := mailhogCmd.Start(); err != nil {
-		// logger.Error("Failed to start MailHog: ", err.Error())
-		panic(err)
+		logger.Error("Failed to start MailHog: ", err.Error())
 	}
 	logger.Debug("MailHog SMTP server started")
 }
@@ -44,8 +43,7 @@ func stopMailHog() {
 	logger.Debug("Stopping MailHog SMTP server")
 	if mailhogCmd.Process != nil {
 		if err := mailhogCmd.Process.Kill(); err != nil {
-			// log.Fatalf("Failed to stop MailHog: %v", err)
-			panic(err)
+			logger.Error("Failed to stop MailHog: ", err.Error())
 		}
 	}
 	logger.Debug("MailHog SMTP server stopped")
@@ -296,7 +294,7 @@ func captureEmailsFromSMTP(from string) ([]CapturedEmail, error) {
 	}
 
 	if len(v.Items) == 0 {
-		return nil, fmt.Errorf("No emails captured in the inbox")
+		return nil, fperr.NotFoundWithMessage("No emails captured in the inbox")
 	}
 
 	return v.Items, nil
