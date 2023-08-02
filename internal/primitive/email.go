@@ -6,6 +6,7 @@ import (
 	"net/mail"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
@@ -144,10 +145,19 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.StepOutput, 
 	}
 	message += "\r\n" + body
 
+	start := time.Now().UTC()
 	err := smtp.SendMail(host+":"+port, auth, senderEmail, recipients, []byte(message))
+	finish := time.Now().UTC()
 	if err != nil {
 		return nil, err
 	}
+
+	// Construct the output
+	output := types.StepOutput{
+		OutputVariables: map[string]interface{}{},
+	}
+	output.OutputVariables[schema.AttributeTypeStartedAt] = start
+	output.OutputVariables[schema.AttributeTypeFinishedAt] = finish
 
 	return nil, nil
 }
