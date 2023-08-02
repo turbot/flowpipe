@@ -51,9 +51,9 @@ jobs:
         run: |
           go install github.com/mailhog/MailHog@v1.0.1
 
-      - name: Run MailHog
-        run: |
-          MailHog
+      # - name: Run MailHog
+      #   run: |
+      #     MailHog
 
       - name: Run tests
         run: make test
