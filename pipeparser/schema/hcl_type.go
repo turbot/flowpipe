@@ -75,7 +75,17 @@ const (
 	AttributeTypeConnectionString = "connection_string"
 
 	// Used by email step
-	AttributeTypeTo = "to"
+	AttributeTypeBcc              = "bcc"
+	AttributeTypeBody             = "body"
+	AttributeTypeCc               = "cc"
+	AttributeTypeContentType      = "content_type"
+	AttributeTypeFrom             = "from"
+	AttributeTypeHost             = "host"
+	AttributeTypePort             = "port"
+	AttributeTypeSenderCredential = "sender_credential" //nolint:gosec // Getting Potential hardcoded credentials warning
+	AttributeTypeSenderName       = "sender_name"
+	AttributeTypeSubject          = "subject"
+	AttributeTypeTo               = "to"
 
 	// Used by sleep step
 	AttributeTypeDuration = "duration"

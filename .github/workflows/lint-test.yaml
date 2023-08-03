@@ -45,6 +45,11 @@ jobs:
           version: v1.52.2
           args: --timeout=15m
           working-directory: flowpipe
+      
+      # Install MailHog for SMTP mail testing
+      - name: Install MailHog
+        run: |
+          go install github.com/mailhog/MailHog@v1.0.1
 
       - name: Run tests
         run: make test
