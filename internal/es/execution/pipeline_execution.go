@@ -3,6 +3,8 @@ package execution
 import (
 	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // PipelineExecution represents the execution of a single types.
@@ -19,6 +21,7 @@ type PipelineExecution struct {
 
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
+
 	// Status of each step on a per-step basis. Used to determine if dependencies
 	// have been met etc. Note that each step may have multiple executions, the status
 	// of which are not tracked here.
@@ -29,6 +32,109 @@ type PipelineExecution struct {
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 
 	Errors map[string]types.StepError `json:"errors,omitempty"`
+
+	// The "final" output for all the steps in this pipeline execution.
+	AllStepOutputs ExecutionStepOutputs `json:"-"`
+
+	// Steps triggered by pipelines in the execution.
+	StepExecutions map[string]*StepExecution `json:"step_executions"`
+
+	// TODO: not sure if we need this, it's a different index of the step executions
+	// TODO: but also a way to track the order of execution for a given step
+	StepExecutionOrder map[string][]string `json:"step_execution_order"`
+}
+
+/*
+*
+
+	Arrange the step outputs in a way that it can be used for HCL Expression evaluation
+
+	The expressions look something like: step.echo.text_1.text
+
+	So we need to arrange the output as such:
+
+	"step": {
+		"echo": {
+			"text_1": {
+				"text": "hello world" <-- this is the output from the step
+			},
+			"text_2": {
+				"text": "hello world" <-- this is the output from the step
+			},
+		},
+		"http": {
+			"my_http": {
+				"response_body": "hello world" <-- this is the output from the step
+			},
+		},
+	},
+	"param": {
+		"my_param": "hello world" <-- this is set by the calling function, but maybe we should do it here?
+	}
+*/
+func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, error) {
+	stepVariables := make(map[string]cty.Value)
+
+	for stepType, v := range pe.AllStepOutputs {
+
+		if stepVariables[stepType] == cty.NilVal {
+			stepVariables[stepType] = cty.ObjectVal(map[string]cty.Value{})
+		}
+
+		vm := stepVariables[stepType].AsValueMap()
+		if vm == nil {
+			vm = map[string]cty.Value{}
+		}
+
+		for stepName, stepOutput := range v {
+			if nonIndexStepOutput, ok := stepOutput.(*types.Output); ok {
+				var err error
+				vm[stepName], err = nonIndexStepOutput.AsCtyValue()
+				if err != nil {
+					return nil, err
+				}
+			} else if indexedStepOutput, ok := stepOutput.([]*types.Output); ok {
+				var err error
+
+				ctyValList := make([]cty.Value, len(indexedStepOutput))
+				for i, stepOutput := range indexedStepOutput {
+					ctyValList[i], err = stepOutput.AsCtyValue()
+					if err != nil {
+						return nil, err
+					}
+				}
+				vm[stepName] = cty.TupleVal(ctyValList)
+			}
+		}
+
+		stepVariables[stepType] = cty.ObjectVal(vm)
+	}
+
+	executionVariables := map[string]cty.Value{
+		schema.BlockTypePipelineStep: cty.ObjectVal(stepVariables),
+	}
+
+	return executionVariables, nil
+}
+
+// PipelineStepExecutions returns a list of step executions for the given
+// pipeline execution ID and step name.
+func (pe *PipelineExecution) OrderedStepExecutions(stepName string) []StepExecution {
+
+	// Find the step execution order first
+	orders := pe.StepExecutionOrder[stepName]
+	if len(orders) == 0 {
+		// TODO: Error?
+		return nil
+	}
+
+	results := make([]StepExecution, len(orders))
+
+	for i, stepExecutionID := range orders {
+		se := pe.StepExecutions[stepExecutionID]
+		results[i] = *se
+	}
+	return results
 }
 
 // IsCanceled returns true if the pipeline has been canceled

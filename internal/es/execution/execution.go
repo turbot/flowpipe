@@ -33,98 +33,10 @@ type Execution struct {
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
-
-	// Steps triggered by pipelines in the execution. We maintain a flat list
-	// of all steps triggered by all pipelines for easy lookup and querying.
-	StepExecutions map[string]*StepExecution `json:"step_executions"`
-
-	// TODO: not sure if we need this, it's a different index of the step executions
-	// TODO: but also a way to track the order of execution for a given step
-	StepExecutionOrder map[string][]string `json:"step_execution_order"`
-
-	// Later in the "execution" part where we are building the execution details, as we read the jsonl events
-	// there will be an execution variables that is in an array form.
-	//
-	// TODO: I'm not convinced this is the correct place to store this.
-	// TODO: it is convenient, but it probably should live in the PipelineExecution rather than the Execution
-	AllStepOutputs ExecutionStepOutputs `json:"-"`
-}
-
-/*
-*
-
-	Arrange the step outputs in a way that it can be used for HCL Expression evaluation
-
-	The expressions look something like: step.echo.text_1.text
-
-	So we need to arrange the output as such:
-
-	"step": {
-		"echo": {
-			"text_1": {
-				"text": "hello world" <-- this is the output from the step
-			},
-			"text_2": {
-				"text": "hello world" <-- this is the output from the step
-			},
-		},
-		"http": {
-			"my_http": {
-				"response_body": "hello world" <-- this is the output from the step
-			},
-		},
-	},
-	"param": {
-		"my_param": "hello world" <-- this is set by the calling function, but maybe we should do it here?
-	}
-*/
-func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
-	stepVariables := make(map[string]cty.Value)
-
-	for stepType, v := range ex.AllStepOutputs {
-
-		if stepVariables[stepType] == cty.NilVal {
-			stepVariables[stepType] = cty.ObjectVal(map[string]cty.Value{})
-		}
-
-		vm := stepVariables[stepType].AsValueMap()
-		if vm == nil {
-			vm = map[string]cty.Value{}
-		}
-
-		for stepName, stepOutput := range v {
-			if nonIndexStepOutput, ok := stepOutput.(*types.Output); ok {
-				var err error
-				vm[stepName], err = nonIndexStepOutput.AsCtyValue()
-				if err != nil {
-					return nil, err
-				}
-			} else if indexedStepOutput, ok := stepOutput.([]*types.Output); ok {
-				var err error
-
-				ctyValList := make([]cty.Value, len(indexedStepOutput))
-				for i, stepOutput := range indexedStepOutput {
-					ctyValList[i], err = stepOutput.AsCtyValue()
-					if err != nil {
-						return nil, err
-					}
-				}
-				vm[stepName] = cty.TupleVal(ctyValList)
-			}
-		}
-
-		stepVariables[stepType] = cty.ObjectVal(vm)
-	}
-
-	executionVariables := map[string]cty.Value{
-		schema.BlockTypePipelineStep: cty.ObjectVal(stepVariables),
-	}
-
-	return executionVariables, nil
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
-	executionVariables, err := ex.GetExecutionVariables()
+	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
 	}
@@ -182,9 +94,6 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 		// ID is empty by default, so it will be populated from the given event
 		Context:            ctx,
 		PipelineExecutions: map[string]*PipelineExecution{},
-		StepExecutions:     map[string]*StepExecution{},
-		StepExecutionOrder: map[string][]string{},
-		AllStepOutputs:     ExecutionStepOutputs{},
 	}
 
 	// Loop through each option
@@ -216,8 +125,10 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(stepExecutionID string) (types.IPipelineStep, error) {
-	se, ok := ex.StepExecutions[stepExecutionID]
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (types.IPipelineStep, error) {
+	pe := ex.PipelineExecutions[pipelineExecutionID]
+
+	se, ok := pe.StepExecutions[stepExecutionID]
 	if !ok {
 		return nil, fmt.Errorf("step execution %s not found", stepExecutionID)
 	}
@@ -254,8 +165,10 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 // the given pipeline execution. The map is keyed by the step name. If a step
 // has a ForTemplate then the result is an array of outputs.
 func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string]interface{}, error) {
+	pe := ex.PipelineExecutions[pipelineExecutionID]
+
 	outputs := map[string]interface{}{}
-	for _, se := range ex.StepExecutions {
+	for _, se := range pe.StepExecutions {
 		if se.PipelineExecutionID != pipelineExecutionID {
 			continue
 		}
@@ -285,7 +198,7 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 	if pe.ParentStepExecutionID == "" {
 		return nil, nil
 	}
-	se, ok := ex.StepExecutions[pe.ParentStepExecutionID]
+	se, ok := pe.StepExecutions[pe.ParentStepExecutionID]
 	if !ok {
 		return nil, fmt.Errorf("step execution %s not found", pe.ParentStepExecutionID)
 	}
@@ -295,9 +208,10 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 // PipelineStepExecutions returns a list of step executions for the given
 // pipeline execution ID and step name.
 func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
+	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	// Find the step execution order first
-	orders := ex.StepExecutionOrder[stepName]
+	orders := pe.StepExecutionOrder[stepName]
 	if len(orders) == 0 {
 		// TODO: Error?
 		return nil
@@ -306,7 +220,7 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	results := make([]StepExecution, len(orders))
 
 	for i, stepExecutionID := range orders {
-		se := ex.StepExecutions[stepExecutionID]
+		se := pe.StepExecutions[stepExecutionID]
 		results[i] = *se
 	}
 	return results
@@ -385,6 +299,9 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				StepStatus:            map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				Errors:                map[string]types.StepError{},
+				AllStepOutputs:        ExecutionStepOutputs{},
+				StepExecutions:        map[string]*StepExecution{},
+				StepExecutionOrder:    map[string][]string{},
 			}
 
 		case "handler.pipeline_started":
@@ -434,24 +351,25 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				logger.Error("Fail to unmarshall command.pipeline_step_queue event", "execution", ex.ID, "error", err)
 				return err
 			}
-			ex.StepExecutions[et.StepExecutionID] = &StepExecution{
+			// Set the overall step status
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+
+			pe.StepExecutions[et.StepExecutionID] = &StepExecution{
 				PipelineExecutionID: et.PipelineExecutionID,
 				ID:                  et.StepExecutionID,
 				Name:                et.StepName,
 				Status:              "starting",
 			}
-			ex.StepExecutionOrder[et.StepName] = append(ex.StepExecutionOrder[et.StepName], et.StepExecutionID)
+			pe.StepExecutionOrder[et.StepName] = append(pe.StepExecutionOrder[et.StepName], et.StepExecutionID)
 
-			// Set the overall step status
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
+			stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
 			if err != nil {
 				logger.Error("Failed to get step definition - 1", "execution", ex.ID, "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
-			ex.StepExecutions[et.StepExecutionID].Input = et.StepInput
-			ex.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
-			ex.StepExecutions[et.StepExecutionID].NextStepAction = et.NextStepAction
+			pe.StepExecutions[et.StepExecutionID].Input = et.StepInput
+			pe.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
+			pe.StepExecutions[et.StepExecutionID].NextStepAction = et.NextStepAction
 			pe.StepStatus[stepDefn.GetFullyQualifiedName()].Queue(et.StepExecutionID)
 
 		case "command.pipeline_step_start":
@@ -469,14 +387,16 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				logger.Error("Fail to unmarshall handler.pipeline_step_started event", "execution", ex.ID, "error", err)
 				return err
 			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+
 			// Step the specific step execution status
-			ex.StepExecutions[et.StepExecutionID].Status = "started"
-			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
+			pe.StepExecutions[et.StepExecutionID].Status = "started"
+			stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
 			if err != nil {
 				logger.Error("Failed to get step definition - 2", "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+
 			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
 
 		case "handler.pipeline_step_finished":
@@ -487,7 +407,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			stepDefn, err := ex.StepDefinition(et.StepExecutionID)
+			stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
 			if err != nil {
 				logger.Error("Failed to get step definition - 3", "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
@@ -499,17 +419,17 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 
 			// Step the specific step execution status
-			ex.StepExecutions[et.StepExecutionID].Status = et.Output.Status
-			ex.StepExecutions[et.StepExecutionID].Output = et.Output
+			pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
+			pe.StepExecutions[et.StepExecutionID].Output = et.Output
 
-			if ex.AllStepOutputs[stepDefn.GetType()] == nil {
-				ex.AllStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
+			if pe.AllStepOutputs[stepDefn.GetType()] == nil {
+				pe.AllStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
 			}
 
 			if !shouldBeIndexed {
 				// non for_each step. The step will be accessed such as:
 				// text = step.echo.text_1.text
-				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
+				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
 				if err != nil {
 					return err
 				}
@@ -517,11 +437,11 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// for indexed step, you want to be able to access the step as
 				// text = step.echo.text_1[1].text
 
-				if ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*types.Output, et.StepForEach.ForEachTotalCount)
+				if pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+					pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*types.Output, et.StepForEach.ForEachTotalCount)
 				}
 
-				ex.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.Output)[et.StepForEach.Index] = et.Output
+				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.Output)[et.StepForEach.Index] = et.Output
 			}
 
 			// TODO: Error handling
@@ -529,9 +449,9 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			// TODO: is a step failure an immediate end of the pipeline?
 			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
 			if et.Output.HasErrors() {
-				// ex.StepExecutions[et.StepExecutionID].Error = et.Error
+				// pe.StepExecutions[et.StepExecutionID].Error = et.Error
 				// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
-				// ex.StepExecutions[et.StepExecutionID].Status = "failed"
+				// pe.StepExecutions[et.StepExecutionID].Status = "failed"
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
 
 				// IMPORTANT: we must call this to check if this step is the final failure

@@ -33,7 +33,7 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	}
 
-	stepDefn, err := ex.StepDefinition(e.StepExecutionID)
+	stepDefn, err := ex.StepDefinition(e.PipelineExecutionID, e.StepExecutionID)
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	}
