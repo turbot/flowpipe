@@ -459,7 +459,7 @@ func (suite *EsTestSuite) TestParam() {
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -503,7 +503,7 @@ func (suite *EsTestSuite) TestParamOverride() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &types.Input{
-		"simple": "foo",
+		"simple": "bar",
 	}
 
 	_, pipelineCmd, err := suite.runPipeline("param_override_test", 100*time.Millisecond, pipelineInput)
@@ -528,7 +528,7 @@ func (suite *EsTestSuite) TestParamOverride() {
 	}
 
 	assert.Equal("finished", echoStepsOutput["simple"].(*types.Output).Status)
-	assert.Equal("foo", echoStepsOutput["simple"].(*types.Output).Data["text"])
+	assert.Equal("bar", echoStepsOutput["simple"].(*types.Output).Data["text"])
 }
 
 func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {

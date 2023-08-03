@@ -111,7 +111,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// if we have for_each build the list of inputs for the for_each
 		if stepForEach != nil {
 			var err error
-			evalContext, err = ex.BuildEvalContext(pipelineDefn)
+			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
@@ -150,7 +150,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		if evalContext == nil {
 			var err error
-			evalContext, err = ex.BuildEvalContext(pipelineDefn)
+			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}

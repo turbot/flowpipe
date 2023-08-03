@@ -47,7 +47,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		outputBlock := map[string]interface{}{}
 
 		// If all dependencies met, we then calculate the value of this output
-		evalContext, err := ex.BuildEvalContext(pipelineDefn)
+		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
 			logger.Error("Error building eval context while calculating output", "error", err)
 			return err
