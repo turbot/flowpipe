@@ -40,9 +40,8 @@ type StepForEach struct {
 	ForEachTotalCount int     `json:"for_each_total_count" binding:"required"`
 }
 
+// Input to the step or pipeline execution
 type Input map[string]interface{}
-
-type OutputData map[string]interface{}
 
 // Output is the output from a step execution.
 type Output struct {
@@ -50,6 +49,8 @@ type Output struct {
 	Data   OutputData  `json:"data,omitempty"`
 	Errors *StepErrors `json:"errors,omitempty"`
 }
+
+type OutputData map[string]interface{}
 
 func (o *Output) Get(key string) interface{} {
 	if o == nil {

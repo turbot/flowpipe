@@ -99,13 +99,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
 	for _, nextStep := range e.NextSteps {
-
-		// data, err := ex.PipelineData(e.PipelineExecutionID)
-		_, err := ex.PipelineData(e.PipelineExecutionID)
-		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-		}
-
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
 
 		var evalContext *hcl.EvalContext
@@ -118,7 +111,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// if we have for_each build the list of inputs for the for_each
 		if stepForEach != nil {
 			var err error
-			evalContext, err = ex.BuildEvalContext(pipelineDefn)
+			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
@@ -157,7 +150,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		if evalContext == nil {
 			var err error
-			evalContext, err = ex.BuildEvalContext(pipelineDefn)
+			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}

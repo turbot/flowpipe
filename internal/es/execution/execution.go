@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 // Execution represents the current state of an execution. A single execution
@@ -122,8 +123,7 @@ func (ex *Execution) GetExecutionVariables() (map[string]cty.Value, error) {
 	return executionVariables, nil
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline) (*hcl.EvalContext, error) {
-
+func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := ex.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -134,12 +134,21 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline) (*hcl.EvalCo
 		Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
 	}
 
-	// TODO: this only works for default params - we need to implement the parameter passing when
-	// TODO: running the pipeline
-	paramsCtyVal, err := pipelineDefn.ParamsAsCty()
-	if err != nil {
-		return nil, err
+	params := map[string]cty.Value{}
+
+	for k, v := range pipelineDefn.Params {
+		if pe.Args[k] != nil {
+			val, err := gocty.ToCtyValue(pe.Args[k], v.Type)
+			if err != nil {
+				return nil, err
+			}
+			params[k] = val
+		} else {
+			params[k] = v.Default
+		}
 	}
+
+	paramsCtyVal := cty.ObjectVal(params)
 	evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 
 	return evalContext, nil

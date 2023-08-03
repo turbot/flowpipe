@@ -132,7 +132,13 @@ func TestParamsProcessing(t *testing.T) {
 
 	evalContext := &hcl.EvalContext{}
 	evalContext.Variables = map[string]cty.Value{}
-	evalContext.Variables["param"], err = pipeline.ParamsAsCty()
+
+	params := map[string]cty.Value{}
+	for k, v := range pipeline.Params {
+		params[k] = v.Default
+	}
+
+	evalContext.Variables["param"] = cty.ObjectVal(params)
 
 	if err != nil {
 		assert.Fail("found error")
