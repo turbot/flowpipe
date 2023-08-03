@@ -122,7 +122,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert := assert.New(suite.T())
 
 	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
-	_, pipelineCmd, err := suite.runPipeline("expr_depend_and_function", 2300*time.Millisecond)
+	_, pipelineCmd, err := suite.runPipeline("expr_depend_and_function", 2300*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
@@ -230,7 +230,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := suite.runPipeline("if", 100*time.Millisecond)
+	_, pipelineCmd, err := suite.runPipeline("if", 100*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
@@ -270,7 +270,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	// bad_http_not_ignored pipeline
 	assert := assert.New(suite.T())
-	_, cmd, err := suite.runPipeline("bad_http_not_ignored", 100*time.Millisecond)
+	_, cmd, err := suite.runPipeline("bad_http_not_ignored", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
@@ -296,7 +296,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_http_ignored pipeline
-	_, cmd, err = suite.runPipeline("bad_http_ignored", 100*time.Millisecond)
+	_, cmd, err = suite.runPipeline("bad_http_ignored", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
@@ -353,7 +353,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_http_ignored_get_error_code pipeline
-	_, cmd, err = suite.runPipeline("bad_http_ignored_get_error_code", 100*time.Millisecond)
+	_, cmd, err = suite.runPipeline("bad_http_ignored_get_error_code", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
@@ -384,7 +384,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_http_with_for pipeline
-	_, cmd, err = suite.runPipeline("bad_http_with_for", 1*time.Second)
+	_, cmd, err = suite.runPipeline("bad_http_with_for", 1*time.Second, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
@@ -419,7 +419,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 func (suite *EsTestSuite) TestHttp() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := suite.runPipeline("jsonplaceholder_expr", 500*time.Millisecond)
+	_, pipelineCmd, err := suite.runPipeline("jsonplaceholder_expr", 500*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
@@ -448,6 +448,87 @@ func (suite *EsTestSuite) TestHttp() {
 	assert.Equal("freddie mercury", jsonBodyLoopOutputs[1].Data["text"])
 	assert.Equal("roger taylor", jsonBodyLoopOutputs[2].Data["text"])
 	assert.Equal("john deacon", jsonBodyLoopOutputs[3].Data["text"])
+}
+
+func (suite *EsTestSuite) TestParam() {
+	assert := assert.New(suite.T())
+
+	_, pipelineCmd, err := suite.runPipeline("param_test", 100*time.Millisecond, nil)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	echoStepsOutput := ex.AllStepOutputs["echo"]
+	if echoStepsOutput == nil {
+		assert.Fail("echo step output not found")
+		return
+	}
+
+	assert.Equal("finished", echoStepsOutput["simple"].(*types.Output).Status)
+	assert.Equal("foo", echoStepsOutput["simple"].(*types.Output).Data["text"])
+
+	assert.Equal("finished", echoStepsOutput["map_echo"].(*types.Output).Status)
+	assert.Equal("felix", echoStepsOutput["map_echo"].(*types.Output).Data["text"])
+
+	assert.Equal(7, len(echoStepsOutput["for_with_list"].([]*types.Output)))
+
+	assert.Equal("finished", echoStepsOutput["for_with_list"].([]*types.Output)[0].Status)
+	assert.Equal("Green Day", echoStepsOutput["for_with_list"].([]*types.Output)[0].Data["text"])
+
+	assert.Equal("finished", echoStepsOutput["for_with_list"].([]*types.Output)[6].Status)
+	assert.Equal("The All-American Rejects", echoStepsOutput["for_with_list"].([]*types.Output)[6].Data["text"])
+
+	assert.Equal("finished", echoStepsOutput["map_diff_types_string"].(*types.Output).Status)
+	assert.Equal("string", echoStepsOutput["map_diff_types_string"].(*types.Output).Data["text"])
+
+	assert.Equal("finished", echoStepsOutput["map_diff_types_number"].(*types.Output).Status)
+	assert.Equal("1", echoStepsOutput["map_diff_types_number"].(*types.Output).Data["text"])
+
+	assert.Equal(3, len(echoStepsOutput["for_each_list_within_map"].([]*types.Output)))
+	assert.Equal("a", echoStepsOutput["for_each_list_within_map"].([]*types.Output)[0].Data["text"])
+	assert.Equal("b", echoStepsOutput["for_each_list_within_map"].([]*types.Output)[1].Data["text"])
+	assert.Equal("c", echoStepsOutput["for_each_list_within_map"].([]*types.Output)[2].Data["text"])
+}
+
+func (suite *EsTestSuite) TestParamOverride() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &types.Input{
+		"simple": "foo",
+	}
+
+	_, pipelineCmd, err := suite.runPipeline("param_override_test", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	echoStepsOutput := ex.AllStepOutputs["echo"]
+	if echoStepsOutput == nil {
+		assert.Fail("echo step output not found")
+		return
+	}
+
+	assert.Equal("finished", echoStepsOutput["simple"].(*types.Output).Status)
+	assert.Equal("foo", echoStepsOutput["simple"].(*types.Output).Data["text"])
 }
 
 func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
@@ -489,12 +570,16 @@ func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecu
 
 }
 
-func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration) (*execution.Execution, *event.PipelineQueue, error) {
+func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration, args *types.Input) (*execution.Execution, *event.PipelineQueue, error) {
 
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(suite.ctx),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                name,
+	}
+
+	if args != nil {
+		pipelineCmd.Args = *args
 	}
 
 	if err := suite.esService.Send(pipelineCmd); err != nil {
