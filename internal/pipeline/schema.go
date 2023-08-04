@@ -236,3 +236,29 @@ var PipelineStepEchoBlockSchema = &hcl.BodySchema{
 		},
 	},
 }
+
+var PipelineStepPipelineBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name: schema.AttributeTypePipeline,
+		},
+		{
+			Name: schema.AttributeTypeArgs,
+		},
+	},
+}

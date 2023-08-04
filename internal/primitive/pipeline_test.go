@@ -15,9 +15,9 @@ func TestPipelineOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := RunPipeline{}
-	input := types.Input(map[string]interface{}{"name": "my_pipeline", "args": map[string]interface{}{}})
+	input := types.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal("my_pipeline", output.Get("name").(string), "wrong pipeline name")
+	assert.Equal("my_pipeline", output.Get("pipeline").(string), "wrong pipeline name")
 }

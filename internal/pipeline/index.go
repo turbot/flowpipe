@@ -300,6 +300,8 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 		return PipelineStepEchoBlockSchema
 	case schema.BlockTypePipelineStepQuery:
 		return PipelineStepQueryBlockSchema
+	case schema.BlockTypePipelineStepPipeline:
+		return PipelineStepPipelineBlockSchema
 	default:
 		return nil
 	}

@@ -13,7 +13,11 @@
        |-- terraform-components
     ```
 
-1. In `flowpipe\devcontainer` run the Makefile. It will build the local dev container.
+1. There should be a devcontainer ready for use in `ghcr.io`. To pull this devcontainer while we're still in private mode you need to create a class GitHub PAT with the following scopes:
+    1. `read:packages`: must have
+    1. `write:packages` & `delete:packages`: optional
+
+1. Pull the devcontainer: `docker pull ghcr.io/turbot/flowpipe-devcontainer:latest`
 
 1. In VS Code install `devcontainer` extension.
 

@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
@@ -62,6 +63,18 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline, pe *Pipeline
 
 	paramsCtyVal := cty.ObjectVal(params)
 	evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
+
+	allPipelines, err := db.ListAllPipelines()
+	if err != nil {
+		return nil, err
+	}
+
+	pipelineMap := map[string]cty.Value{}
+	for _, p := range allPipelines {
+		pipelineMap[p.Name] = cty.StringVal(p.Name)
+	}
+
+	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
 	return evalContext, nil
 }
@@ -130,7 +143,7 @@ func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string)
 
 	se, ok := pe.StepExecutions[stepExecutionID]
 	if !ok {
-		return nil, fmt.Errorf("step execution %s not found", stepExecutionID)
+		return nil, fmt.Errorf("step execution not found: %s", stepExecutionID)
 	}
 	pd, err := ex.PipelineDefinition(se.PipelineExecutionID)
 	if err != nil {
@@ -151,10 +164,11 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 	// Add arguments data for this pipeline execution
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
-		return nil, fmt.Errorf("pipeline execution %s not found", pipelineExecutionID)
+		return nil, fmt.Errorf("pipeline execution not found: %s", pipelineExecutionID)
 	}
+
 	// Arguments data takes precedence over a step output with the same name
-	data["args"] = pe.Args
+	data[schema.AttributeTypeArgs] = pe.Args
 
 	// TODO - Add variables data for this pipeline execution
 
@@ -172,18 +186,10 @@ func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string
 		if se.PipelineExecutionID != pipelineExecutionID {
 			continue
 		}
-		// sd, err := ex.StepDefinition(stepExecutionID)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// if sd.GetFor() == "" {
-		// 	outputs[se.Name] = se.Output
-		// } else {
 		if _, ok := outputs[se.Name]; !ok {
 			outputs[se.Name] = []interface{}{}
 		}
 		outputs[se.Name] = append(outputs[se.Name].([]interface{}), se.Output)
-		// }
 	}
 	return outputs, nil
 }
@@ -198,9 +204,15 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 	if pe.ParentStepExecutionID == "" {
 		return nil, nil
 	}
-	se, ok := pe.StepExecutions[pe.ParentStepExecutionID]
+
+	parentPe, ok := ex.PipelineExecutions[pe.ParentExecutionID]
 	if !ok {
-		return nil, fmt.Errorf("step execution %s not found", pe.ParentStepExecutionID)
+		return nil, fmt.Errorf("parent pipeline execution not found: %s", pe.ParentStepExecutionID)
+	}
+
+	se, ok := parentPe.StepExecutions[pe.ParentStepExecutionID]
+	if !ok {
+		return nil, fmt.Errorf("parent step execution not found: %s", pe.ParentStepExecutionID)
 	}
 	return se, nil
 }
@@ -279,7 +291,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		var ele types.EventLogEntry
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
-			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err)
+			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba))
 			return err
 		}
 
@@ -298,6 +310,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Status:                "queued",
 				StepStatus:            map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
+				ParentExecutionID:     et.ParentExecutionID,
 				Errors:                map[string]types.StepError{},
 				AllStepOutputs:        ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
@@ -419,8 +432,18 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 
 			// Step the specific step execution status
-			pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
-			pe.StepExecutions[et.StepExecutionID].Output = et.Output
+			if pe.StepExecutions[et.StepExecutionID] == nil {
+				return fperr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
+			}
+
+			if et.Output == nil {
+				// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)
+				logger.Warn("Step execution has a nil output", "stepExecutionID", et.StepExecutionID, "pipelineExecutionID", pe.ID)
+			} else {
+
+				pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
+				pe.StepExecutions[et.StepExecutionID].Output = et.Output
+			}
 
 			if pe.AllStepOutputs[stepDefn.GetType()] == nil {
 				pe.AllStepOutputs[stepDefn.GetType()] = map[string]interface{}{}

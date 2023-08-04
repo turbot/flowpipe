@@ -3,10 +3,10 @@ FROM mcr.microsoft.com/devcontainers/go:0-1.20-bullseye
 RUN apt update \
     && apt install default-jre default-jdk -y \
     && cd /tmp \
-    && wget https://dlcdn.apache.org/maven/maven-3/3.9.3/binaries/apache-maven-3.9.3-bin.tar.gz \
-    && tar xvfz apache-maven-3.9.3-bin.tar.gz \
-    && mv apache-maven-3.9.3 /usr/local/bin/ \
-    && echo "export PATH=/usr/local/bin/apache-maven-3.9.3/bin:$PATH" >> /home/vscode/.profile
+    && wget https://dlcdn.apache.org/maven/maven-3/3.9.4/binaries/apache-maven-3.9.4-bin.tar.gz \
+    && tar xvfz apache-maven-3.9.4-bin.tar.gz \
+    && mv apache-maven-3.9.4 /usr/local/bin/ \
+    && echo "export PATH=/usr/local/bin/apache-maven-3.9.4/bin:$PATH" >> /home/vscode/.profile
 
 # IMPORTANT: need to switch the user before running Go package install
 # otherwise the first Go install will be as root and the /go/pkg directory will be owned by root

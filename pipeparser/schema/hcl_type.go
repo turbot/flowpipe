@@ -46,12 +46,13 @@ const (
 	AttributeTypeSensitive = "sensitive"
 
 	// Pipeline blocks
-	BlockTypePipelineStepHttp  = "http"
-	BlockTypePipelineStepSleep = "sleep"
-	BlockTypePipelineStepEmail = "email"
-	BlockTypePipelineStepEcho  = "echo"
-	BlockTypePipelineStepQuery = "query"
-	BlockTypePipelineStepExec  = "exec"
+	BlockTypePipelineStepHttp     = "http"
+	BlockTypePipelineStepSleep    = "sleep"
+	BlockTypePipelineStepEmail    = "email"
+	BlockTypePipelineStepEcho     = "echo"
+	BlockTypePipelineStepQuery    = "query"
+	BlockTypePipelineStepExec     = "exec"
+	BlockTypePipelineStepPipeline = "pipeline"
 
 	// error block
 	AttributeTypeIgnore  = "ignore"
@@ -106,6 +107,9 @@ const (
 	// Used by echo step
 	AttributeTypeText = "text"
 	AttributeTypeJson = "json"
+
+	// Used byy Pipeline step
+	AttributeTypePipeline = "pipeline"
 
 	AttributeTypeMessage = "message"
 

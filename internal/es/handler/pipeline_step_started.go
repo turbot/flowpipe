@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type PipelineStepStarted EventHandler
@@ -19,6 +20,7 @@ func (PipelineStepStarted) NewEvent() interface{} {
 	return &event.PipelineStepStarted{}
 }
 
+// This handler only handle with a single event type: pipeline step started (if we want to start a new child pipeline)
 func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 	logger := fplog.Logger(ctx)
 
@@ -39,16 +41,12 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	switch stepDefn.GetType() {
-	case "pipeline":
+	case schema.BlockTypePipelineStepPipeline:
 		cmd, err := event.NewPipelineQueue(event.ForPipelineStepStartedToPipelineQueue(e))
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 		}
 		return h.CommandBus.Send(ctx, &cmd)
-	case "sleep":
-		// TODO - implement
-		err := fperr.BadRequestWithMessage("sleep type is not implemented")
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	default:
 		err := fperr.BadRequestWithMessage("step type cannot be started: " + stepDefn.GetType())
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
