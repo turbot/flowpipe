@@ -87,7 +87,6 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case schema.BlockTypePipelineStepSleep:
 			p := primitive.Sleep{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		// TODO: remove this debug primitive (?)
 		case schema.BlockTypePipelineStepEcho:
 			p := primitive.Echo{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)

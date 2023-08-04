@@ -202,6 +202,10 @@ func NewPipelineStep(stepType, stepName string) IPipelineStep {
 		s := &PipelineStepQuery{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
+	case schema.BlockTypePipelineStepPipeline:
+		s := &PipelineStepPipeline{}
+		s.UnresolvedAttributes = make(map[string]hcl.Expression)
+		step = s
 	default:
 		return nil
 	}
@@ -911,6 +915,7 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 		results[schema.AttributeTypeConnectionString] = *connectionString
 	}
 
+	// TODO: evaluate expression in Args
 	if p.Args != nil {
 		results[schema.AttributeTypeArgs] = p.Args
 	}
@@ -961,6 +966,107 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 					connectionString := val.AsString()
 					p.ConnnectionString = &connectionString
+				}
+			}
+		case schema.AttributeTypeArgs:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					vals, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(vals)
+					if err2 != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute to Go values",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+					p.Args = goVals
+				}
+			}
+
+		default:
+			if !p.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Echo Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
+		}
+	}
+
+	return diags
+}
+
+type PipelineStepPipeline struct {
+	PipelineStepBase
+	Pipeline *string       `json:"pipeline"`
+	Args     []interface{} `json:"args"`
+}
+
+func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+
+	var pipeline *string
+	if p.UnresolvedAttributes[schema.AttributeTypePipeline] == nil {
+		if p.Pipeline == nil {
+			return nil, fperr.InternalWithMessage("Url must be supplied")
+		}
+		pipeline = p.Pipeline
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypePipeline], evalContext, &pipeline)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	results := map[string]interface{}{}
+
+	if pipeline != nil {
+		results[schema.AttributeTypePipeline] = *pipeline
+	}
+
+	// TODO: evaluate expression in Args
+	if p.Args != nil {
+		results[schema.AttributeTypeArgs] = p.Args
+	}
+	return results, nil
+}
+
+func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+	diags := p.SetBaseAttributes(hclAttributes)
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case schema.AttributeTypePipeline:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypePipeline + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					sql := val.AsString()
+					p.Pipeline = &sql
 				}
 			}
 		case schema.AttributeTypeArgs:

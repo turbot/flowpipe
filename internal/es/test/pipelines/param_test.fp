@@ -78,6 +78,4 @@ pipeline "param_override_test" {
     step "echo" "simple" {
         text = param.simple
     }
-
-
 }

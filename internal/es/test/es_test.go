@@ -457,7 +457,7 @@ func (suite *EsTestSuite) TestParam() {
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 200, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
