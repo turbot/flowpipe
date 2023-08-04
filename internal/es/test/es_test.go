@@ -301,7 +301,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	ex, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
