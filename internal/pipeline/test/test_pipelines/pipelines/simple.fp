@@ -9,6 +9,10 @@ pipeline "basic_http" {
     }
 
     step "email" "send_it" {
-        to = "victor@turbot.com"
+        to                = ["victor@turbot.com"]
+        from              = "sender@example.com"
+        sender_credential = "sendercredential"
+        host              = "smtp.example.com"
+        port              = "587"
     }
 }
