@@ -16,6 +16,7 @@ type PipelineQueue struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent pipeline execution ID
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
+	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -43,7 +44,10 @@ func ForPipelineStepStartedToPipelineQueue(e *PipelineStepStarted) PipelineQueue
 	return func(cmd *PipelineQueue) error {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.PipelineExecutionID = e.ChildPipelineExecutionID
+
 		cmd.ParentStepExecutionID = e.StepExecutionID
+		cmd.ParentExecutionID = e.PipelineExecutionID
+
 		cmd.Name = e.ChildPipelineName
 		cmd.Args = e.ChildPipelineArgs
 		return nil

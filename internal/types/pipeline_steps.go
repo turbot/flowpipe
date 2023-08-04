@@ -1025,6 +1025,7 @@ func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[stri
 		}
 		pipeline = p.Pipeline
 	} else {
+
 		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypePipeline], evalContext, &pipeline)
 		if diags.HasErrors() {
 			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)

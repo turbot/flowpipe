@@ -30,6 +30,7 @@ type PipelineExecution struct {
 
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
+	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
 	Errors map[string]types.StepError `json:"errors,omitempty"`
 

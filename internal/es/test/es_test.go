@@ -529,6 +529,29 @@ func (suite *EsTestSuite) TestParamOverride() {
 	assert.Equal("bar", echoStepsOutput["simple"].(*types.Output).Data["text"])
 }
 
+func (suite *EsTestSuite) TestChildPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &types.Input{
+		"simple": "bar",
+	}
+
+	_, _, err := suite.runPipeline("parent_pipeline", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	// _, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	// if err != nil {
+	// 	assert.Fail("Error getting pipeline execution", err)
+	// 	return
+	// }
+
+	// assert.Equal("finished", pex.Status)
+}
+
 func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
 	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(suite.ctx)

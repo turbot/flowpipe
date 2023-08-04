@@ -78,7 +78,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case schema.BlockTypePipelineStepHttp:
 			p := primitive.HTTPRequest{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case "pipeline":
+		case schema.BlockTypePipelineStepPipeline:
 			p := primitive.RunPipeline{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepQuery:
@@ -128,15 +128,16 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		}
 
 		// If it's a pipeline step, we need to do something else
-		if stepDefn.GetType() == "pipeline" {
+		if stepDefn.GetType() == schema.AttributeTypePipeline {
 			args := types.Input{}
-			if cmd.StepInput["args"] != nil {
-				args = cmd.StepInput["args"].(map[string]interface{})
+			if cmd.StepInput[schema.AttributeTypeArgs] != nil {
+				args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
 			}
+
 			e, err := event.NewPipelineStepStarted(
 				event.ForPipelineStepStart(cmd),
 				event.WithNewChildPipelineExecutionID(),
-				event.WithChildPipeline(cmd.StepInput["name"].(string), args))
+				event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
 
 			if err != nil {
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
