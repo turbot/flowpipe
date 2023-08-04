@@ -47,14 +47,18 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if parentStepExecution != nil {
+
 		cmd, err := event.NewPipelineStepFinish(
 			event.ForPipelineFinished(e),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
 			event.WithStepExecutionID(parentStepExecution.ID))
+
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
 		}
+
 		return h.CommandBus.Send(ctx, &cmd)
+
 	} else {
 		// Generate output data
 		data, err := ex.PipelineData(e.PipelineExecutionID)

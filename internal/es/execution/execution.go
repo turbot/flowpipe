@@ -186,18 +186,10 @@ func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string
 		if se.PipelineExecutionID != pipelineExecutionID {
 			continue
 		}
-		// sd, err := ex.StepDefinition(stepExecutionID)
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// if sd.GetFor() == "" {
-		// 	outputs[se.Name] = se.Output
-		// } else {
 		if _, ok := outputs[se.Name]; !ok {
 			outputs[se.Name] = []interface{}{}
 		}
 		outputs[se.Name] = append(outputs[se.Name].([]interface{}), se.Output)
-		// }
 	}
 	return outputs, nil
 }

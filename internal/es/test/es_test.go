@@ -536,20 +536,27 @@ func (suite *EsTestSuite) TestChildPipeline() {
 		"simple": "bar",
 	}
 
-	_, _, err := suite.runPipeline("parent_pipeline", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := suite.runPipeline("parent_pipeline", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	// _, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
-	// if err != nil {
-	// 	assert.Fail("Error getting pipeline execution", err)
-	// 	return
-	// }
+	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
 
-	// assert.Equal("finished", pex.Status)
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("child echo step", pex.PipelineOutput["parent_output"])
+
+	// TODO: - Check child pipeline status
+	// TODO: - Add status on pipeline step
+	// TODO: - add multiple childs
+	// TODO: - add more levels (not just 1)
 }
 
 func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {

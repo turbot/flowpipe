@@ -127,7 +127,8 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			output.Status = "finished"
 		}
 
-		// If it's a pipeline step, we need to do something else
+		// If it's a pipeline step, we need to do something else, we we need to start
+		// a new pipeline execution for the child pipeline
 		if stepDefn.GetType() == schema.AttributeTypePipeline {
 			args := types.Input{}
 			if cmd.StepInput[schema.AttributeTypeArgs] != nil {
