@@ -19,11 +19,11 @@ func TestStepAsHclVariables(t *testing.T) {
 	stepOutput.Data["int"] = 25
 	stepOutput.Data["bool"] = true
 
-	stepOutput.Errors = &StepErrors{
-		StepError{
+	stepOutput.Errors = []StepError{
+		{
 			Message: "one",
 		},
-		StepError{
+		{
 			Message:             "two",
 			PipelineExecutionID: "1234",
 		},

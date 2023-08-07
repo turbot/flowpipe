@@ -32,7 +32,7 @@ type PipelineExecution struct {
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
-	Errors map[string]types.StepError `json:"errors,omitempty"`
+	Errors []types.StepError `json:"errors,omitempty"`
 
 	// The "final" output for all the steps in this pipeline execution.
 	AllStepOutputs ExecutionStepOutputs `json:"-"`
@@ -162,6 +162,7 @@ func (pe *PipelineExecution) IsFinishing() bool {
 
 func (pe *PipelineExecution) ShouldFail() bool {
 	return len(pe.Errors) > 0
+
 }
 
 // IsComplete returns true if all steps (that have been initialized) are complete.
@@ -187,6 +188,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Execution) bool {
+
 	return true
 	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
 	// 	// Step not failed, so no need to calculate, return false
@@ -217,8 +219,8 @@ func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Ex
 	// return true
 
 }
-func (pe *PipelineExecution) Fail(stepName string, stepError types.StepError) {
-	pe.Errors[stepName] = stepError
+func (pe *PipelineExecution) Fail(stepName string, stepError ...types.StepError) {
+	pe.Errors = append(pe.Errors, stepError...)
 }
 
 // IsStepInitialized returns true if the step has been initialized.

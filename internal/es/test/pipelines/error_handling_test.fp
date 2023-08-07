@@ -4,9 +4,47 @@ pipeline "bad_http_not_ignored" {
     step "http" "my_step_1" {
         url = "http://api.open-notify.org/astros.jsons"
     }
+
     step "echo" "bad_http" {
         depends_on = [step.http.my_step_1]
         text = "foo"
+    }
+}
+
+pipeline "bad_http_ignored_one_step" {
+    description = "my simple http pipeline"
+    step "http" "my_step_1" {
+        url = "http://api.open-notify.orgs/astros.jsons"
+
+        error {
+            ignore = true
+        }
+    }
+}
+
+pipeline "bad_http_ignored_two_steps" {
+    description = "my simple http pipeline"
+    step "http" "my_step_1" {
+        url = "http://api.open-notify.orgs/astros.jsons"
+
+        error {
+            ignore = true
+        }
+    }
+
+    step "echo" "text_1" {
+        depends_on = [step.http.my_step_1]
+        text = "foo"
+    }
+}
+
+
+pipeline "bad_http_one_step" {
+    description = "my simple http pipeline"
+
+    step "http" "my_step_1" {
+        # should return 404
+        url = "http://api.open-notify.org/astros.jsons"
     }
 }
 

@@ -45,6 +45,24 @@ func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 	}
 }
 
+func ForPipelineFailed(e *PipelineFailed) PipelineStepFinishOption {
+	return func(cmd *PipelineStepFinish) error {
+		cmd.Event = NewChildEvent(e.Event)
+		cmd.Output = &types.Output{
+			Status: "change.me",
+			Data:   e.PipelineOutput,
+			Errors: []types.StepError{
+				{
+					Message: e.ErrorMessage,
+				},
+			},
+		}
+
+		// e.PipelineOutput
+		return nil
+	}
+}
+
 func WithPipelineExecutionID(id string) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.PipelineExecutionID = id

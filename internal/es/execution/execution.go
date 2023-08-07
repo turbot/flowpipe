@@ -311,7 +311,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				StepStatus:            map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				ParentExecutionID:     et.ParentExecutionID,
-				Errors:                map[string]types.StepError{},
+				Errors:                []types.StepError{},
 				AllStepOutputs:        ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
 				StepExecutionOrder:    map[string][]string{},
@@ -472,18 +472,28 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			// TODO: is a step failure an immediate end of the pipeline?
 			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
 			if et.Output.HasErrors() {
-				// pe.StepExecutions[et.StepExecutionID].Error = et.Error
-				// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
-				// pe.StepExecutions[et.StepExecutionID].Status = "failed"
-				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
 
+				// TODO: ignore retries for now (StepFinalFailure)
+				if !stepDefn.GetErrorConfig().Ignore {
+					// pe.StepExecutions[et.StepExecutionID].Error = et.Error
+					// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
+					// pe.StepExecutions[et.StepExecutionID].Status = "failed"
+					pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
+					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
+				} else {
+					// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
+					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
+				}
+
+				// TODO: this below comment is not true anymore, keep this here until we refactor how we handle the failure & retries
 				// IMPORTANT: we must call this to check if this step is the final failure
 				// this function also sets the internal error tracker of the pe. Not sure if that's right place
 				// to do it
-				stepFinalFailure := pe.IsStepFinalFailure(stepDefn, ex)
-				if stepFinalFailure {
-					logger.Trace("Step final failure", "step", stepDefn)
-				}
+
+				// stepFinalFailure := pe.IsStepFinalFailure(stepDefn, ex)
+				// if stepFinalFailure {
+				// 	logger.Trace("Step final failure", "step", stepDefn)
+				// }
 			} else {
 				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
 			}
@@ -538,6 +548,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "failed"
+			pe.PipelineOutput = et.PipelineOutput
 
 		default:
 			// Ignore unknown types while loading

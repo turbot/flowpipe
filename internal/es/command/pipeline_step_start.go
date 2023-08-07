@@ -105,23 +105,23 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				output = &types.Output{}
 			}
 			if output.Errors == nil {
-				output.Errors = &types.StepErrors{}
+				output.Errors = []types.StepError{}
 			}
 
-			output.Errors.Add(types.StepError{
+			output.Errors = append(output.Errors, types.StepError{
 				Message: primitiveError.Error(),
 			})
+
 		}
 
 		// Decorate the errors
 		if output.HasErrors() {
 			output.Status = "failed"
-			for i := 0; i < len(*output.Errors); i++ {
-				err := (*output.Errors)[i]
-				err.Step = cmd.StepName
-				err.PipelineExecutionID = cmd.PipelineExecutionID
-				err.StepExecutionID = cmd.StepExecutionID
-				err.Pipeline = pipelineDefn.Name
+			for i := 0; i < len(output.Errors); i++ {
+				(output.Errors)[i].Step = cmd.StepName
+				(output.Errors)[i].PipelineExecutionID = cmd.PipelineExecutionID
+				(output.Errors)[i].StepExecutionID = cmd.StepExecutionID
+				(output.Errors)[i].Pipeline = pipelineDefn.Name
 			}
 		} else {
 			output.Status = "finished"
