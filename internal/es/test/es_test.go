@@ -412,6 +412,35 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
 	// end pipeline test
+
+	// bad_email_with_invalid_recipients pipeline
+	_, cmd, err = suite.runPipeline("bad_email_with_invalid_recipients", 1*time.Second, nil)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*types.Output).Status)
+	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors)
+
+	errors := pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors
+	for _, e := range *errors {
+		assert.Contains(e.Message, "no such host")
+	}
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
 }
 
 func (suite *EsTestSuite) TestHttp() {
