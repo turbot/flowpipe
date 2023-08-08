@@ -65,19 +65,6 @@ func TestEmailStepWithParam(t *testing.T) {
 		return
 	}
 
-	inputs, err := step.GetInputs(nil)
-	if err != nil {
-		assert.Fail("error getting inputs")
-		return
-	}
-
-	assert.Contains(inputs["to"], "recipient@example.com")
-	assert.Equal("sender@example.com", inputs["from"])
-	assert.Equal("sendercredential", inputs["sender_credential"])
-	assert.Equal("smtp.example.com", inputs["host"])
-	assert.Equal("587", inputs["port"])
-	assert.Equal("You have been subscribed", inputs["subject"])
-
 	var output string
 	expr := pipelines["subscribe"].Steps[1].GetUnresolvedAttributes()["body"]
 
@@ -92,6 +79,19 @@ func TestEmailStepWithParam(t *testing.T) {
 	evalContext := &hcl.EvalContext{}
 	evalContext.Variables = map[string]cty.Value{}
 	evalContext.Variables["step"] = objectVal
+
+	inputs, err := step.GetInputs(evalContext)
+	if err != nil {
+		assert.Fail("error getting inputs")
+		return
+	}
+
+	assert.Contains(inputs["to"], "recipient@example.com")
+	assert.Equal("sender@example.com", inputs["from"])
+	assert.Equal("sendercredential", inputs["sender_credential"])
+	assert.Equal("smtp.example.com", inputs["host"])
+	assert.Equal("587", inputs["port"])
+	assert.Equal("You have been subscribed", inputs["subject"])
 
 	diag := gohcl.DecodeExpression(expr, evalContext, &output)
 	if diag.HasErrors() {

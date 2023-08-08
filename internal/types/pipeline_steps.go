@@ -772,6 +772,66 @@ func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]
 		}
 	}
 
+	var senderName *string
+	if p.UnresolvedAttributes[schema.AttributeTypeSenderName] == nil {
+		senderName = p.SenderName
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSenderName], evalContext, &senderName)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var body *string
+	if p.UnresolvedAttributes[schema.AttributeTypeBody] == nil {
+		body = p.Body
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeBody], evalContext, &body)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var subject *string
+	if p.UnresolvedAttributes[schema.AttributeTypeSubject] == nil {
+		subject = p.Subject
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSubject], evalContext, &subject)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var contentType *string
+	if p.UnresolvedAttributes[schema.AttributeTypeContentType] == nil {
+		contentType = p.ContentType
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeContentType], evalContext, &contentType)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var cc []string
+	if p.UnresolvedAttributes[schema.AttributeTypeCc] == nil {
+		cc = p.Cc
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeCc], evalContext, &cc)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var bcc []string
+	if p.UnresolvedAttributes[schema.AttributeTypeBcc] == nil {
+		bcc = p.Bcc
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeBcc], evalContext, &bcc)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
 	results := map[string]interface{}{}
 
 	if to != nil {
@@ -794,28 +854,28 @@ func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]
 		results[schema.AttributeTypePort] = *port
 	}
 
-	if p.SenderName != nil {
-		results[schema.AttributeTypeSenderName] = *p.SenderName
+	if senderName != nil {
+		results[schema.AttributeTypeSenderName] = *senderName
 	}
 
-	if p.Cc != nil {
-		results[schema.AttributeTypeCc] = p.Cc
+	if cc != nil {
+		results[schema.AttributeTypeCc] = cc
 	}
 
-	if p.Bcc != nil {
-		results[schema.AttributeTypeBcc] = p.Bcc
+	if bcc != nil {
+		results[schema.AttributeTypeBcc] = bcc
 	}
 
-	if p.Body != nil {
-		results[schema.AttributeTypeBody] = *p.Body
+	if body != nil {
+		results[schema.AttributeTypeBody] = *body
 	}
 
-	if p.ContentType != nil {
-		results[schema.AttributeTypeContentType] = *p.ContentType
+	if contentType != nil {
+		results[schema.AttributeTypeContentType] = *contentType
 	}
 
-	if p.Subject != nil {
-		results[schema.AttributeTypeSubject] = *p.Subject
+	if subject != nil {
+		results[schema.AttributeTypeSubject] = *subject
 	}
 
 	return results, nil
@@ -1100,11 +1160,13 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseCon
 			}
 
 		default:
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unsupported attribute for Email Step: " + attr.Name,
-				Subject:  &attr.Range,
-			})
+			if !p.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Email Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
 	return diags
