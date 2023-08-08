@@ -2,7 +2,9 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
@@ -58,46 +60,55 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 
 func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		logger := fplog.Logger(ctx)
 		apiClient := common.GetApiClient()
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*flowpipeapiclient.NewCmdPipeline("run"))
 
 		resp, _, err := request.Execute()
 		if err != nil {
-			fplog.Logger(ctx).Error("Error when calling `PipelineApi.Cmd`", "error", err)
+			logger.Error("Error when calling `PipelineApi.Cmd`", "error", err)
 			return
 		}
 
 		if resp != nil {
-			fplog.Logger(ctx).Info("Run result", "response", resp)
+			s, err := prettyjson.Marshal(resp)
+
+			if err != nil {
+				logger.Error("Error when calling `colorjson.Marshal`", "error", err)
+				return
+			}
+
+			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
+
 		}
 	}
 }
 
 func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		logger := fplog.Logger(ctx)
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
 		apiClient := common.GetApiClient()
 		resp, r, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
 		if err != nil {
-			fplog.Logger(ctx).Error("Error when calling `PipelineApi.List`", "error", err, "httpResponse", r)
+			logger.Error("Error when calling `PipelineApi.List`", "error", err, "httpResponse", r)
 			return
 		}
 
-		fplog.Logger(ctx).Debug("Pipeline list", "response", resp)
 		if resp != nil {
 			printer := printers.GetPrinter(cmd)
 
 			printableResource := types.PrintablePipeline{}
 			printableResource.Items, err = printableResource.Transform(resp)
 			if err != nil {
-				fplog.Logger(ctx).Error("Error when transforming", "error", err)
+				logger.Error("Error when transforming", "error", err)
 			}
 
 			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 			if err != nil {
-				fplog.Logger(ctx).Error("Error when printing", "error", err)
+				logger.Error("Error when printing", "error", err)
 			}
 		}
 	}
