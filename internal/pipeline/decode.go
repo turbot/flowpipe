@@ -105,6 +105,12 @@ func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipeli
 		}
 
 		step.SetErrorConfig(errorConfig)
+	} else {
+		errorConfig := &types.ErrorConfig{
+			Ignore:  false,
+			Retries: 0,
+		}
+		step.SetErrorConfig(errorConfig)
 	}
 
 	return step, hcl.Diagnostics{}

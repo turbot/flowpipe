@@ -251,7 +251,7 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, erro
 		// Refer https://en.wikipedia.org/wiki/List_of_SMTP_server_return_codes for all available error codes
 		smtpErr := err.(*textproto.Error)
 		if smtpErr.Code >= 400 {
-			output.Errors = &types.StepErrors{
+			output.Errors = []types.StepError{
 				types.StepError{
 					Message:   smtpErr.Msg,
 					ErrorCode: smtpErr.Code,

@@ -54,6 +54,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 		return
 	}
 
+	// TODO: paging, filter
 	result := types.ListPipelineResponse{
 		Items: pipelines,
 	}
@@ -95,6 +96,24 @@ func (api *APIService) getPipeline(c *gin.Context) {
 	c.JSON(http.StatusOK, pipeline)
 }
 
+// @Summary Execute a pipeline command
+// @DescriptionExecute a pipeline command
+// @ID   pipeline_cmd
+// @Tags Pipeline
+// @Accept json
+// @Produce json
+// / ...
+// @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
+// @Param request body types.CmdPipeline true "Pipeline command."
+// ...
+// @Success 200 {object} types.RunPipelineResponse
+// @Failure 400 {object} fperr.ErrorModel
+// @Failure 401 {object} fperr.ErrorModel
+// @Failure 403 {object} fperr.ErrorModel
+// @Failure 404 {object} fperr.ErrorModel
+// @Failure 429 {object} fperr.ErrorModel
+// @Failure 500 {object} fperr.ErrorModel
+// @Router /pipeline/{pipeline_name}/cmd [post]
 func (api *APIService) cmdPipeline(c *gin.Context) {
 
 	var uri types.PipelineRequestURI

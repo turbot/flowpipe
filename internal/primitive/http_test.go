@@ -85,7 +85,7 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(404, e.ErrorCode)
 		assert.Equal("404 Not Found", e.Message)
 	}
@@ -111,7 +111,7 @@ func TestHTTPMethodGETUnauthorized(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(401, e.ErrorCode)
 		assert.Equal("401 Unauthorized", e.Message)
 	}
@@ -179,7 +179,7 @@ func TestHTTPMethodPOSTNotFound(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(404, e.ErrorCode)
 		assert.Equal("404 Not Found", e.Message)
 	}
@@ -332,7 +332,7 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(404, e.ErrorCode)
 		assert.Equal("404 Not Found", e.Message)
 	}
@@ -401,7 +401,7 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(404, e.ErrorCode)
 		assert.Equal("404 Not Found", e.Message)
 	}
@@ -468,7 +468,7 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(404, e.ErrorCode)
 		assert.Equal("404 Not Found", e.Message)
 	}

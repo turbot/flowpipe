@@ -54,11 +54,13 @@ type Pipeline struct {
 	// Unparsed JSON raw message, needed so we can unmarshall the step JSON into the correct struct
 	StepsRawJson json.RawMessage `json:"-"`
 
-	Steps []IPipelineStep `json:"steps"`
+	Steps []IPipelineStep `json:"steps,omitempty"`
 
-	Outputs []PipelineOutput `json:"outputs"`
+	Outputs []PipelineOutput `json:"outputs,omitempty"`
 
-	Params map[string]*configs.Variable
+	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
+	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)
+	Params map[string]*configs.Variable `json:"-"`
 }
 
 func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
@@ -287,10 +289,14 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 
 	var tableRows []TableRow
 	for _, item := range lp {
+
+		description := ""
+		if item.Description != nil {
+			description = *item.Description
+		}
 		cells := []interface{}{
-			*item.Type,
 			*item.Name,
-			*item.Parallel,
+			description,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -304,19 +310,14 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
-			Name:        "TYPE",
-			Type:        "string",
-			Description: "The type of the pipeline",
-		},
-		{
 			Name:        "NAME",
 			Type:        "string",
-			Description: "The name of the pipeline",
+			Description: "Pipeline name",
 		},
 		{
-			Name:        "PARALLEL",
-			Type:        "boolean",
-			Description: "Whether the pipeline is parallel",
+			Name:        "DESCRIPTION",
+			Type:        "string",
+			Description: "Pipeline description",
 		},
 	}
 }

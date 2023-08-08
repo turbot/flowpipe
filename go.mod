@@ -26,7 +26,7 @@ require (
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.15.0
 	github.com/stevenle/topsort v0.2.0
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	github.com/thediveo/enumflag/v2 v2.0.3
 	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/turbot/go-kit v0.7.0
@@ -157,7 +157,7 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/swaggo/swag v1.8.12
 	go.uber.org/zap v1.24.0
-	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

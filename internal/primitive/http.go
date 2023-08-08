@@ -159,7 +159,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.Output, erro
 
 	if resp.StatusCode >= 400 {
 		message := resp.Status
-		output.Errors = &types.StepErrors{
+		output.Errors = []types.StepError{
 			types.StepError{
 				Message:   message,
 				ErrorCode: resp.StatusCode,

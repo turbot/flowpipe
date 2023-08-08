@@ -14,7 +14,7 @@ func (api *APIService) DocsRegisterAPI(router *gin.RouterGroup) {
 }
 
 func (api *APIService) getOpenAPIDocs(c *gin.Context) {
-	file := "service/api/docs/openapi.json"
+	file := "internal/service/api/docs/openapi.json"
 
 	b, err := os.ReadFile(file)
 	if err != nil {

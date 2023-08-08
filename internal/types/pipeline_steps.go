@@ -47,7 +47,7 @@ type Input map[string]interface{}
 type Output struct {
 	Status string      `json:"status"`
 	Data   OutputData  `json:"data,omitempty"`
-	Errors *StepErrors `json:"errors,omitempty"`
+	Errors []StepError `json:"errors,omitempty"`
 }
 
 type OutputData map[string]interface{}
@@ -71,7 +71,7 @@ func (o *Output) HasErrors() bool {
 		return false
 	}
 
-	return o.Errors != nil && len(*o.Errors) > 0
+	return o.Errors != nil && len(o.Errors) > 0
 }
 
 func (o *Output) AsCtyValue() (cty.Value, error) {
@@ -110,7 +110,7 @@ func (o *Output) AsCtyValue() (cty.Value, error) {
 
 	if o.Errors != nil {
 		errList := []cty.Value{}
-		for _, stepErr := range *o.Errors {
+		for _, stepErr := range o.Errors {
 			ctyMap := map[string]cty.Value{}
 			var err error
 			ctyMap["message"], err = gocty.ToCtyValue(stepErr.Message, cty.String)
@@ -151,12 +151,6 @@ type StepError struct {
 	Step                string `json:"step"`
 	Message             string `json:"message"`
 	ErrorCode           int    `json:"error_code"`
-}
-
-type StepErrors []StepError
-
-func (s *StepErrors) Add(err StepError) {
-	*s = append(*s, err)
 }
 
 type NextStepAction string
@@ -248,7 +242,7 @@ type PipelineStepBase struct {
 	Type        string       `json:"step_type"`
 	DependsOn   []string     `json:"depends_on,omitempty"`
 	Resolved    bool         `json:"resolved,omitempty"`
-	ErrorConfig *ErrorConfig `json:"error_configs,omitempty"`
+	ErrorConfig *ErrorConfig `json:"-"`
 
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`

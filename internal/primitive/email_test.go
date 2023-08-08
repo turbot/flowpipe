@@ -263,7 +263,7 @@ func TestEmailInvalidCreds(t *testing.T) {
 	assert.Nil(err)
 
 	output.HasErrors()
-	for _, e := range *output.Errors {
+	for _, e := range output.Errors {
 		assert.Equal(535, e.ErrorCode)
 		assert.Contains(e.Message, "Username and Password not accepted")
 	}

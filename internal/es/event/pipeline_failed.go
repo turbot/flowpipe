@@ -11,10 +11,14 @@ import (
 type PipelineFailed struct {
 	// Event metadata
 	Event *Event `json:"event"`
+
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
+
 	// Error details
 	ErrorMessage string `json:"error_message"`
+
+	PipelineOutput map[string]interface{} `json:"pipeline_output"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -46,11 +50,12 @@ func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *Pipel
 
 // ForPipelineFail returns a PipelineFailedOption that sets the fields of the
 // PipelineFailed event from a PipelineFail command.
-func ForPipelineFail(cmd *PipelineFail) PipelineFailedOption {
+func ForPipelineFail(cmd *PipelineFail, pipelineOutput map[string]interface{}) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
 		e.ErrorMessage = cmd.ErrorMessage
+		e.PipelineOutput = pipelineOutput
 		return nil
 	}
 }

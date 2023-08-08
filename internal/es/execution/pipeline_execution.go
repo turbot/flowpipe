@@ -14,7 +14,7 @@ type PipelineExecution struct {
 	// The name of the pipeline
 	Name string `json:"name"`
 	// The input to the pipeline
-	Args types.Input `json:"args"`
+	Args types.Input `json:"args,omitempty"`
 
 	// The output of the pipeline
 	PipelineOutput map[string]interface{} `json:"pipeline_output,omitempty"`
@@ -26,23 +26,23 @@ type PipelineExecution struct {
 	// have been met etc. Note that each step may have multiple executions, the status
 	// of which are not tracked here.
 	// dependencies have been met, etc. The step status is on a per-step
-	StepStatus map[string]*StepStatus `json:"step_status"`
+	StepStatus map[string]*StepStatus `json:"-"`
 
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
-	Errors map[string]types.StepError `json:"errors,omitempty"`
+	Errors []types.StepError `json:"errors,omitempty"`
 
 	// The "final" output for all the steps in this pipeline execution.
 	AllStepOutputs ExecutionStepOutputs `json:"-"`
 
 	// Steps triggered by pipelines in the execution.
-	StepExecutions map[string]*StepExecution `json:"step_executions"`
+	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
 
 	// TODO: not sure if we need this, it's a different index of the step executions
 	// TODO: but also a way to track the order of execution for a given step
-	StepExecutionOrder map[string][]string `json:"step_execution_order"`
+	StepExecutionOrder map[string][]string `json:"-"`
 }
 
 /*
@@ -162,6 +162,7 @@ func (pe *PipelineExecution) IsFinishing() bool {
 
 func (pe *PipelineExecution) ShouldFail() bool {
 	return len(pe.Errors) > 0
+
 }
 
 // IsComplete returns true if all steps (that have been initialized) are complete.
@@ -187,6 +188,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Execution) bool {
+
 	return true
 	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
 	// 	// Step not failed, so no need to calculate, return false
@@ -217,8 +219,8 @@ func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Ex
 	// return true
 
 }
-func (pe *PipelineExecution) Fail(stepName string, stepError types.StepError) {
-	pe.Errors[stepName] = stepError
+func (pe *PipelineExecution) Fail(stepName string, stepError ...types.StepError) {
+	pe.Errors = append(pe.Errors, stepError...)
 }
 
 // IsStepInitialized returns true if the step has been initialized.

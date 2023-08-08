@@ -26,7 +26,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 
 	cmd, ok := c.(*event.PipelineFinish)
 	if !ok {
-		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineFinish", "actual", c)
+		logger.Error("invalid command type", "expected", "*event.PipelineFinish", "actual", c)
 		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
 	}
 
