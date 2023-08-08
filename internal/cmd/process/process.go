@@ -63,7 +63,7 @@ func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 				return
 			}
 
-			fmt.Println(string(s))
+			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
 		} else {
 			ex, _, err := apiClient.ProcessApi.Get(ctx, args[0]).Execute()
 			if err != nil {
@@ -78,7 +78,7 @@ func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 				return
 			}
 
-			fmt.Println(string(s))
+			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
 		}
 	}
 }
