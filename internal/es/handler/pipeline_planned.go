@@ -57,8 +57,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// all existing steps are complete.
 		if pe.IsComplete() {
 			if pe.ShouldFail() {
-				// TODO: what is the error on the pipeline?
-				cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, fperr.InternalWithMessage("pipeline failed")))
+				// There's no error supplied here because it's the step failure that is causing the pipeline to fail
+				cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, nil))
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}

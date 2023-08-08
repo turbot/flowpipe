@@ -143,7 +143,7 @@ func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string)
 
 	se, ok := pe.StepExecutions[stepExecutionID]
 	if !ok {
-		return nil, fmt.Errorf("step execution not found: %s", stepExecutionID)
+		return nil, fperr.BadRequestWithMessage("step execution not found: " + stepExecutionID)
 	}
 	pd, err := ex.PipelineDefinition(se.PipelineExecutionID)
 	if err != nil {
@@ -164,14 +164,13 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 	// Add arguments data for this pipeline execution
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
-		return nil, fmt.Errorf("pipeline execution not found: %s", pipelineExecutionID)
+		return nil, fperr.BadRequestWithMessage("pipeline execution not found: " + pipelineExecutionID)
 	}
 
 	// Arguments data takes precedence over a step output with the same name
 	data[schema.AttributeTypeArgs] = pe.Args
 
 	// TODO - Add variables data for this pipeline execution
-
 	return data, nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 )
 
@@ -83,6 +84,33 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 			outputBlock[output.Name] = val
 		}
 		output = outputBlock
+	}
+
+	// Collect all the step output, but don't also add the error in the cmd/event
+	var pipelineErrors []types.StepError
+	if cmd.Error != nil {
+		pipelineErrors = append(pipelineErrors, *cmd.Error)
+	}
+
+	// TODO: this mechanism of collecting errors won't work when we have retries
+	// TODO: we will need to decide which error should we include. The last one? All of them?
+	for _, stepExecution := range pe.StepExecutions {
+		stepDefn := pipelineDefn.GetStep(stepExecution.Name)
+		if err != nil {
+			logger.Error("Error getting step definition during pipeline_fail event", "error", err)
+			// do not fail, continue to the next step, we are already in pipeline_fail event, what else can we do here?
+			continue
+		}
+		if stepExecution.Output.HasErrors() && (stepDefn.GetErrorConfig() != nil && !stepDefn.GetErrorConfig().Ignore) {
+			pipelineErrors = append(pipelineErrors, stepExecution.Output.Errors...)
+		}
+	}
+
+	if len(pipelineErrors) > 0 {
+		if output == nil {
+			output = map[string]interface{}{}
+		}
+		output["errors"] = pipelineErrors
 	}
 
 	return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFail(cmd, output)))

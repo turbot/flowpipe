@@ -45,7 +45,7 @@ type Input map[string]interface{}
 
 // Output is the output from a step execution.
 type Output struct {
-	Status string      `json:"status"`
+	Status string      `json:"status,omitempty"`
 	Data   OutputData  `json:"data,omitempty"`
 	Errors []StepError `json:"errors,omitempty"`
 }

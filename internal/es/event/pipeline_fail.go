@@ -1,12 +1,14 @@
 package event
 
+import "github.com/turbot/flowpipe/internal/types"
+
 type PipelineFail struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// Error details
-	ErrorMessage string `json:"error_message"`
+	Error *types.StepError `json:"error,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -29,7 +31,10 @@ func ForPipelineLoadedToPipelineFail(e *PipelineLoaded, err error) PipelineFailO
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
 
@@ -37,7 +42,10 @@ func ForPipelineQueuedToPipelineFail(e *PipelineQueued, err error) PipelineFailO
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
 
@@ -45,7 +53,10 @@ func ForPipelineStartedToPipelineFail(e *PipelineStarted, err error) PipelineFai
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
 
@@ -53,7 +64,10 @@ func ForPipelineResumedToPipelineFail(e *PipelineResumed, err error) PipelineFai
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
 
@@ -61,7 +75,10 @@ func ForPipelineStepStartedToPipelineFail(e *PipelineStepStarted, err error) Pip
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
 
@@ -69,7 +86,12 @@ func ForPipelineStepFinishedToPipelineFail(e *PipelineStepFinished, err error) P
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		if err != nil {
+			cmd.Error = &types.StepError{
+				Message:             err.Error(),
+				PipelineExecutionID: e.PipelineExecutionID,
+			}
+		}
 	}
 }
 
@@ -77,7 +99,12 @@ func ForPipelinePlannedToPipelineFail(e *PipelinePlanned, err error) PipelineFai
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		if err != nil {
+			cmd.Error = &types.StepError{
+				Message:             err.Error(),
+				PipelineExecutionID: e.PipelineExecutionID,
+			}
+		}
 	}
 }
 
@@ -85,7 +112,10 @@ func ForPipelineStepQueuedToPipelineFail(e *PipelineStepQueued, err error) Pipel
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
 
@@ -93,6 +123,9 @@ func ForPipelineFinishedToPipelineFail(e *PipelineFinished, err error) PipelineF
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.ErrorMessage = err.Error()
+		cmd.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
 	}
 }
