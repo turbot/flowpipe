@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"os"
 	"path"
@@ -18,6 +19,7 @@ import (
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process", api.listProcess)
 	router.GET("/process/:process_id", api.getProcess)
+	router.GET("/process/:process_id/output", api.getProcessOutput)
 	router.POST("/process/:process_id/cmd", api.cmdProcess)
 	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLog)
 	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
@@ -69,7 +71,7 @@ func (api *APIService) listProcess(c *gin.Context) {
 // / ...
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} types.Process
+// @Success 200 {object} execution.Execution
 // @Failure 400 {object} fperr.ErrorModel
 // @Failure 401 {object} fperr.ErrorModel
 // @Failure 403 {object} fperr.ErrorModel
@@ -85,9 +87,79 @@ func (api *APIService) getProcess(c *gin.Context) {
 		return
 	}
 
-	result := types.Process{ID: uri.ProcessId}
+	evt := &event.Event{
+		ExecutionID: uri.ProcessId,
+	}
 
-	c.JSON(http.StatusOK, result)
+	ex, err := execution.NewExecution(c, execution.WithEvent(evt))
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+
+	}
+
+	err = ex.LoadProcess(evt)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+
+	}
+
+	c.JSON(http.StatusOK, ex)
+}
+
+// TODO: temp API for All Hands demo
+// @Summary Get process output
+// @Description Get process output
+// @ID   process_get_output
+// @Tags Process
+// @Accept json
+// @Produce json
+// / ...
+// @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
+// ...
+// @Success 200 {object} types.OutputData
+// @Failure 400 {object} fperr.ErrorModel
+// @Failure 401 {object} fperr.ErrorModel
+// @Failure 403 {object} fperr.ErrorModel
+// @Failure 404 {object} fperr.ErrorModel
+// @Failure 429 {object} fperr.ErrorModel
+// @Failure 500 {object} fperr.ErrorModel
+// @Router /process/{process_id}/output [get]
+func (api *APIService) getProcessOutput(c *gin.Context) {
+
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	evt := &event.Event{
+		ExecutionID: uri.ProcessId,
+	}
+
+	filePath := path.Join(viper.GetString("output.dir"), evt.ExecutionID+"_output.json")
+
+	// Open the JSON file
+	file, err := os.Open(filePath)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+	defer file.Close()
+
+	// Decode JSON data
+	var output map[string]interface{}
+	decoder := json.NewDecoder(file)
+	err = decoder.Decode(&output)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	pipelineOutput := output["output"]
+
+	c.JSON(http.StatusOK, pipelineOutput)
 }
 
 func (api *APIService) cmdProcess(c *gin.Context) {

@@ -9,6 +9,7 @@ import (
 	"github.com/thediveo/enumflag/v2"
 
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
+	"github.com/turbot/flowpipe/internal/cmd/process"
 	"github.com/turbot/flowpipe/internal/cmd/service"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
@@ -76,6 +77,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		return nil, err
 	}
 	rootCmd.AddCommand(pipelineCmd)
+
+	processCmd, err := process.ProcessCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rootCmd.AddCommand(processCmd)
 
 	return rootCmd, nil
 }
