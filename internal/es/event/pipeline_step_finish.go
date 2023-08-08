@@ -35,9 +35,8 @@ func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &types.Output{
-			Status: "change.me",
+			Status: "", // output is only relevant for step
 			Data:   e.PipelineOutput,
-			// Errors: e.Errors,
 		}
 
 		// e.PipelineOutput
@@ -49,13 +48,9 @@ func ForPipelineFailed(e *PipelineFailed) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &types.Output{
-			Status: "change.me",
+			Status: "",
 			Data:   e.PipelineOutput,
-			Errors: []types.StepError{
-				{
-					Message: e.ErrorMessage,
-				},
-			},
+			Errors: []types.StepError{*e.Error},
 		}
 
 		// e.PipelineOutput

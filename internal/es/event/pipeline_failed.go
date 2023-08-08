@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/internal/types"
 )
 
 type PipelineFailed struct {
@@ -16,7 +17,7 @@ type PipelineFailed struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 
 	// Error details
-	ErrorMessage string `json:"error_message"`
+	Error *types.StepError `json:"error,omitempty"`
 
 	PipelineOutput map[string]interface{} `json:"pipeline_output"`
 }
@@ -54,7 +55,7 @@ func ForPipelineFail(cmd *PipelineFail, pipelineOutput map[string]interface{}) P
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = cmd.ErrorMessage
+		e.Error = cmd.Error
 		e.PipelineOutput = pipelineOutput
 		return nil
 	}
@@ -66,7 +67,10 @@ func ForPipelineLoadToPipelineFailed(cmd *PipelineLoad, err error) PipelineFaile
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -77,7 +81,10 @@ func ForPipelineFinishToPipelineFailed(cmd *PipelineFinish, err error) PipelineF
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -88,7 +95,10 @@ func ForPipelineQueueToPipelineFailed(cmd *PipelineQueue, err error) PipelineFai
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -99,7 +109,10 @@ func ForPipelineStartToPipelineFailed(cmd *PipelineStart, err error) PipelineFai
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -108,7 +121,10 @@ func ForPipelineStepQueueToPipelineFailed(cmd *PipelineStepQueue, err error) Pip
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -120,9 +136,15 @@ func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error) PipelineFaile
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
 		if err != nil {
-			e.ErrorMessage = err.Error()
+			e.Error = &types.StepError{
+				Message:             err.Error(),
+				PipelineExecutionID: cmd.PipelineExecutionID,
+			}
 		} else {
-			e.ErrorMessage = "pipeline plan failed but no error is specified"
+			e.Error = &types.StepError{
+				Message:             "pipeline plan failed but no error is specified",
+				PipelineExecutionID: cmd.PipelineExecutionID,
+			}
 		}
 
 		return nil
@@ -131,29 +153,38 @@ func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error) PipelineFaile
 
 // ForPipelineCancelToPipelineFailed returns a PipelineFailedOption that sets the fields of the
 // PipelineFailed event from a PipelineCancel command.
-func ForPipelineCancelToPipelineFailed(evt *PipelineCancel, err error) PipelineFailedOption {
+func ForPipelineCancelToPipelineFailed(cmd *PipelineCancel, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
-		e.Event = NewFlowEvent(evt.Event)
-		e.PipelineExecutionID = evt.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Event = NewFlowEvent(cmd.Event)
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
 
-func ForPipelinePauseToPipelineFailed(evt *PipelinePause, err error) PipelineFailedOption {
+func ForPipelinePauseToPipelineFailed(cmd *PipelinePause, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
-		e.Event = NewFlowEvent(evt.Event)
-		e.PipelineExecutionID = evt.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Event = NewFlowEvent(cmd.Event)
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
 
-func ForPipelineResumeToPipelineFailed(evt *PipelineResume, err error) PipelineFailedOption {
+func ForPipelineResumeToPipelineFailed(cmd *PipelineResume, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
-		e.Event = NewFlowEvent(evt.Event)
-		e.PipelineExecutionID = evt.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Event = NewFlowEvent(cmd.Event)
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -162,7 +193,10 @@ func ForPipelineStepStartToPipelineFailed(cmd *PipelineStepStart, err error) Pip
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }
@@ -171,7 +205,10 @@ func ForPipelineStepFinishToPipelineFailed(cmd *PipelineStepFinish, err error) P
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.ErrorMessage = err.Error()
+		e.Error = &types.StepError{
+			Message:             err.Error(),
+			PipelineExecutionID: cmd.PipelineExecutionID,
+		}
 		return nil
 	}
 }

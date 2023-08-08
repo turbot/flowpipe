@@ -32,6 +32,7 @@ type PipelineExecution struct {
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
+	// All errors from the step execution + any errors that can be added to the pipeline execution manually
 	Errors []types.StepError `json:"errors,omitempty"`
 
 	// The "final" output for all the steps in this pipeline execution.

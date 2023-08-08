@@ -266,31 +266,33 @@ func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 
 }
 
-// TODO: error handling not done correctly yet
-func (suite *EsTestSuite) SkipTestPipelineErrorBubbleUp() {
+func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 
 	// bad_http_not_ignored pipeline
 	assert := assert.New(suite.T())
-	_, cmd, err := suite.runPipeline("bad_http_one_step", 100*time.Millisecond, nil)
+	_, cmd, err := suite.runPipeline("bad_http_one_step", 200*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 100, "failed")
-	if err == nil || (err != nil && err.Error() != "not completed") {
+	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 200, "failed")
+	if err != nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return
 	}
 
-	assert.False(pex.IsComplete())
+	assert.True(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
 	assert.Equal("failed", pex.AllStepOutputs["http"]["my_step_1"].(*types.Output).Status)
 	assert.NotNil(pex.AllStepOutputs["http"]["my_step_1"].(*types.Output).Errors)
 	assert.Equal(float64(404), pex.AllStepOutputs["http"]["my_step_1"].(*types.Output).Data["status_code"])
 	assert.Nil(pex.AllStepOutputs["echo"]["bad_http"])
+
+	assert.NotNil(pex.PipelineOutput["errors"])
+	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error_code"])
 }
 
 func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
@@ -304,12 +306,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 200, "failed")
 	if err == nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return
 	}
 
+	// This pipeline: bad_http_not_ignored should not complete because there's a step that it can't start
+	// so in a way it's "not completed" but it has failed, since it will never be able to start that one step
 	assert.False(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
@@ -599,7 +603,7 @@ func (suite *EsTestSuite) TestParam() {
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 200, "finished")
+	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 400, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
