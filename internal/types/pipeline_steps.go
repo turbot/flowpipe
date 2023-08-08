@@ -242,7 +242,7 @@ type PipelineStepBase struct {
 	Type        string       `json:"step_type"`
 	DependsOn   []string     `json:"depends_on,omitempty"`
 	Resolved    bool         `json:"resolved,omitempty"`
-	ErrorConfig *ErrorConfig `json:"error_configs,omitempty"`
+	ErrorConfig *ErrorConfig `json:"-"`
 
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`

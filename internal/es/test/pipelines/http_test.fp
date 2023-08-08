@@ -1,5 +1,5 @@
 pipeline "jsonplaceholder_expr" {
-    description = "my simple http pipeline"
+    description = "Simple pipeline to demonstrate HTTP post operation."
 
     step "echo" "method" {
         text = "post"

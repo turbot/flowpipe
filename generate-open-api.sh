@@ -1,7 +1,7 @@
 #!/bin/bash
 
-OUTPUT_DIR=service/api/docs
-swag init -o ${OUTPUT_DIR} -g service/api/api.go
+OUTPUT_DIR=internal/service/api/docs
+swag init -o ${OUTPUT_DIR} -g internal/service/api/index.go
 sed -r -i 's/\/query\./\//g;' ${OUTPUT_DIR}/swagger.json
 sed -r -i 's/"query\./"/g;' ${OUTPUT_DIR}/swagger.json
 sed -r -i 's/\/sperr\./\//g;' ${OUTPUT_DIR}/swagger.json

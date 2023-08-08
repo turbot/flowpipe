@@ -1,6 +1,6 @@
 
 pipeline "bad_http_not_ignored" {
-    description = "my simple http pipeline"
+    description = "Pipeline with a HTTP step that will fail. Error is not ignored."
     step "http" "my_step_1" {
         url = "http://api.open-notify.org/astros.jsons"
     }
@@ -12,7 +12,7 @@ pipeline "bad_http_not_ignored" {
 }
 
 pipeline "bad_http_ignored_one_step" {
-    description = "my simple http pipeline"
+    description = "A simple pipeline with a single bad HTTP step that is ignored."
     step "http" "my_step_1" {
         url = "http://api.open-notify.orgs/astros.jsons"
 
@@ -23,7 +23,7 @@ pipeline "bad_http_ignored_one_step" {
 }
 
 pipeline "bad_http_ignored_two_steps" {
-    description = "my simple http pipeline"
+    description = "Bad HTTP step with an echo step. Bad HTTP step error is ignored."
     step "http" "my_step_1" {
         url = "http://api.open-notify.orgs/astros.jsons"
 
@@ -40,7 +40,7 @@ pipeline "bad_http_ignored_two_steps" {
 
 
 pipeline "bad_http_one_step" {
-    description = "my simple http pipeline"
+    description = "Bad HTTP step, just one step in the pipeline."
 
     step "http" "my_step_1" {
         # should return 404
@@ -50,7 +50,7 @@ pipeline "bad_http_one_step" {
 
 
 pipeline "bad_http_ignored" {
-    description = "my simple http pipeline"
+    description = "Ignored bad HTTP step."
     step "http" "my_step_1" {
         url = "http://api.open-notify.org/astros.jsons"
         error {

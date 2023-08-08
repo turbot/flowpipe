@@ -27,6 +27,12 @@ func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 	pipelineCmd.AddCommand(pipelineListCmd)
 
+	pipelineRunCmd, err := PipelineRunCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pipelineCmd.AddCommand(pipelineRunCmd)
+
 	return pipelineCmd, nil
 
 }
@@ -40,6 +46,44 @@ func PipelineListCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 
 	return serviceStartCmd, nil
+}
+
+func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
+
+	var pipelineRunCmd = &cobra.Command{
+		Use:  "run <pipeline-name>",
+		Args: cobra.ExactArgs(1), // Expecting exactly 1 positional argument
+		Run:  runPipelineFunc(ctx),
+	}
+
+	return pipelineRunCmd, nil
+}
+
+func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+
+		configuration := flowpipeapiclient.NewConfiguration()
+
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: viper.GetBool("api.tls_insecure")}, //nolint:gosec // user defined
+		}
+
+		configuration.Servers[0].URL = viper.GetString("api.host") + ":" + strconv.Itoa(viper.GetInt("api.port")) + "/api/v0"
+		configuration.HTTPClient = &http.Client{Transport: tr}
+
+		apiClient := flowpipeapiclient.NewAPIClient(configuration)
+		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*flowpipeapiclient.NewCmdPipeline("run"))
+
+		resp, _, err := request.Execute()
+		if err != nil {
+			fplog.Logger(ctx).Error("Error when calling `PipelineApi.Cmd`", "error", err)
+			return
+		}
+
+		if resp != nil {
+			fplog.Logger(ctx).Info("Run result", "response", resp)
+		}
+	}
 }
 
 func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
@@ -60,6 +104,7 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		resp, r, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
 		if err != nil {
 			fplog.Logger(ctx).Error("Error when calling `PipelineApi.List`", "error", err, "httpResponse", r)
+			return
 		}
 
 		fplog.Logger(ctx).Debug("Pipeline list", "response", resp)

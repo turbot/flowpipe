@@ -39,7 +39,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	// Command flags
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
-	rootCmd.PersistentFlags().String(constants.CmdOptionApiHost, "https://localhost", "API server host")
+	rootCmd.PersistentFlags().String(constants.CmdOptionApiHost, "http://localhost", "API server host")
 	rootCmd.PersistentFlags().Int(constants.CmdOptionApiPort, 7103, "API server port")
 	rootCmd.PersistentFlags().Bool(constants.CmdOptionTlsInsecure, false, "Skip TLS verification")
 

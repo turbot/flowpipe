@@ -1,5 +1,5 @@
 pipeline "parent_pipeline" {
-
+    description = "Parent pipeline with a child pipeline"
     step "echo" "parent_echo" {
         text = "parent echo step"
     }
@@ -15,6 +15,7 @@ pipeline "parent_pipeline" {
 }
 
 pipeline "child_pipeline" {
+    description = "Child Pipeline"
     step "echo" "child_echo" {
         text = "child echo step"
     }
@@ -26,6 +27,7 @@ pipeline "child_pipeline" {
 
 
 pipeline "parent_multiple_pipelines_with_errors" {
+    description = "Parent pipeline with multiple child pipelines with errors"
     step "echo" "parent_echo" {
         text = "parent echo step"
     }
@@ -45,6 +47,7 @@ pipeline "parent_multiple_pipelines_with_errors" {
 }
 
 pipeline "child_pipeline_a" {
+    description = "Child Pipeline A"
     step "echo" "child_echo" {
         text = "child A echo step"
     }
@@ -55,6 +58,7 @@ pipeline "child_pipeline_a" {
 }
 
 pipeline "child_pipeline_b" {
+    description = "Child Pipeline B"
     step "http" "my_step_1" {
         url = "http://api.open-notify.org/astros.jsons"
     }
@@ -65,6 +69,7 @@ pipeline "child_pipeline_b" {
 }
 
 pipeline "child_pipeline_c" {
+    description = "Child Pipeline C"
     step "http" "my_step_1" {
         url = "http://api.open-notify.org/astros.json"
     }
