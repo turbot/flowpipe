@@ -442,26 +442,112 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	// bad_email_with_invalid_recipients pipeline
 	_, cmd, err = suite.runPipeline("bad_email_with_invalid_recipients", 1*time.Second, nil)
-
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
 
 	assert.True(pex.IsComplete())
-	assert.Equal("finished", pex.Status)
+	assert.Equal("failed", pex.Status)
 
 	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*types.Output).Status)
 	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors)
 
 	errors := pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors
-	for _, e := range *errors {
+	for _, e := range errors {
+		assert.Contains(e.Message, "no such host")
+	}
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
+
+	// bad_email_with_param pipeline
+	_, cmd, err = suite.runPipeline("bad_email_with_param", 1*time.Second, nil)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*types.Output).Status)
+	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors)
+
+	errors = pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors
+	for _, e := range errors {
+		assert.Contains(e.Message, "no such host")
+	}
+
+	// reset ex (so we don't forget if we copy & paste the block)
+	ex = nil
+	// end pipeline test
+
+	// bad_email_with_expr
+	_, cmd, err = suite.runPipeline("bad_email_with_expr", 1*time.Second, nil)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
+	if err != nil || pipelineDefn == nil {
+		assert.Fail("Pipeline definition not found", err)
+	}
+
+	// Get the step details
+	explicitDependsStep := pipelineDefn.GetStep("email.test_email")
+	if explicitDependsStep == nil {
+		assert.Fail("echo.explicit_depends not found")
+		return
+	}
+
+	// Get the depends_on for the step
+	dependsOn := explicitDependsStep.GetDependsOn()
+	assert.Equal(2, len(dependsOn))
+	assert.Contains(dependsOn, "echo.sender_address")
+	assert.Contains(dependsOn, "echo.email_body")
+
+	// Check if the depends_on step is finished and has the correct output
+	echoStepOutput := pex.AllStepOutputs["echo"]
+	if echoStepOutput == nil {
+		assert.Fail("echo step output not found")
+		return
+	}
+	assert.Equal("flowpipe@example.com", echoStepOutput["sender_address"].(*types.Output).Data["text"])
+	assert.Equal("This is an email body", echoStepOutput["email_body"].(*types.Output).Data["text"])
+
+	// Expected the pipeline to fail
+	assert.True(pex.IsComplete())
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*types.Output).Status)
+	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors)
+
+	// The email step should fail because of the invalid smtp host
+	errors = pex.AllStepOutputs["email"]["test_email"].(*types.Output).Errors
+	for _, e := range errors {
 		assert.Contains(e.Message, "no such host")
 	}
 
