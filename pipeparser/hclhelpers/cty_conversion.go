@@ -127,19 +127,52 @@ func CtyToGoInterfaceSlice(v cty.Value) (val []interface{}, err error) {
 	return res, nil
 }
 
+func CtyToGoMapInterface(v cty.Value) (map[string]interface{}, error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsMapType() && !ty.IsObjectType() {
+		return nil, fmt.Errorf("expected list type")
+	}
+
+	res := map[string]interface{}{}
+
+	valueMap := v.AsValueMap()
+
+	for k, v := range valueMap {
+		target, err := CtyToGo(v)
+		if err != nil {
+			return nil, err
+		}
+		res[k] = target
+	}
+
+	return res, nil
+}
+
 func CtyToGo(v cty.Value) (val interface{}, err error) {
 	if v.IsNull() {
 		return nil, nil
 	}
+
 	ty := v.Type()
 	switch {
 	case ty.IsTupleType(), ty.IsListType():
 		{
-			var array []string
-			if array, err = ctyTupleToArrayOfStrings(v); err == nil {
-				val = array
+			target, err := ctyTupleToSliceOfInterfaces(v)
+			if err != nil {
+				return nil, err
 			}
-			return
+			val = target
+		}
+	case ty.IsMapType(), ty.IsObjectType():
+		{
+			target, err := CtyToGoMapInterface(v)
+			if err != nil {
+				return nil, err
+			}
+			val = target
 		}
 	}
 
@@ -247,21 +280,36 @@ func ctyTupleToArrayOfPgStrings(val cty.Value) ([]string, error) {
 	return res, nil
 }
 
-func ctyTupleToArrayOfStrings(val cty.Value) ([]string, error) {
-	var res []string
+func ctyTupleToSliceOfInterfaces(val cty.Value) ([]interface{}, error) {
+	var res []interface{}
 	it := val.ElementIterator()
 	for it.Next() {
 		_, v := it.Element()
 
-		var valStr string
-		if err := gocty.FromCtyValue(v, &valStr); err != nil {
+		target, err := CtyToGo(v)
+		if err != nil {
 			return nil, err
 		}
-
-		res = append(res, valStr)
+		res = append(res, target)
 	}
 	return res, nil
 }
+
+// func ctyTupleToArrayOfStrings(val cty.Value) ([]string, error) {
+// 	var res []string
+// 	it := val.ElementIterator()
+// 	for it.Next() {
+// 		_, v := it.Element()
+
+// 		var valStr string
+// 		if err := gocty.FromCtyValue(v, &valStr); err != nil {
+// 			return nil, err
+// 		}
+
+// 		res = append(res, valStr)
+// 	}
+// 	return res, nil
+// }
 
 func ConvertMapOrSliceToCtyValue(data interface{}) (cty.Value, error) {
 	// Convert the input data to cty.Value based on its type

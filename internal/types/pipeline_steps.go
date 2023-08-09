@@ -1426,8 +1426,8 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepPipeline struct {
 	PipelineStepBase
-	Pipeline *string       `json:"pipeline"`
-	Args     []interface{} `json:"args"`
+	Pipeline *string                `json:"pipeline"`
+	Args     map[string]interface{} `json:"args"`
 }
 
 func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -1494,16 +1494,16 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, parse
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute",
+							Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute",
 							Subject:  &attr.Range,
 						})
 						continue
 					}
-					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(vals)
+					goVals, err2 := hclhelpers.CtyToGoMapInterface(vals)
 					if err2 != nil {
 						diags = append(diags, &hcl.Diagnostic{
 							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute to Go values",
+							Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute to Go values",
 							Subject:  &attr.Range,
 						})
 						continue
