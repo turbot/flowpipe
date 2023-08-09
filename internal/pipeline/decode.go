@@ -9,7 +9,7 @@ import (
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipelineStep, hcl.Diagnostics) {
+func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.IPipelineStep, hcl.Diagnostics) {
 	stepType := block.Labels[0]
 	stepName := block.Labels[1]
 
@@ -116,7 +116,7 @@ func decodeStep(block *hcl.Block, parseCtx *PipelineParseContext) (types.IPipeli
 	return step, hcl.Diagnostics{}
 }
 
-func decodeOutput(block *hcl.Block, parseCtx *PipelineParseContext) (*types.PipelineOutput, hcl.Diagnostics) {
+func decodeOutput(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*types.PipelineOutput, hcl.Diagnostics) {
 
 	o := &types.PipelineOutput{
 		Name: block.Labels[0],

@@ -26,13 +26,12 @@ func ToError(val interface{}) error {
 	}
 }
 
-func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[string]*types.Pipeline, err error) {
-
+func LoadFlowpipeConfig(ctx context.Context, configPath string) (map[string]*types.Pipeline, error) {
 	// create profile map to populate
-	pipelineMap = map[string]*types.Pipeline{}
+	pipelineMap := map[string]*types.Pipeline{}
 
 	// check whether sourcePath is a glob with a root location which exists in the file system
-	localSourcePath, globPattern, err := filehelpers.GlobRoot(pipelinePath)
+	localSourcePath, globPattern, err := filehelpers.GlobRoot(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +42,7 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 		globPattern = path.Join(globPattern, fmt.Sprintf("*%s", pipeparser.PipelineExtension))
 	}
 
-	pipelineFilePaths, err := filehelpers.ListFiles(localSourcePath, &filehelpers.ListOptions{
+	flowpipeConfigFilePaths, err := filehelpers.ListFiles(localSourcePath, &filehelpers.ListOptions{
 		Flags:   filehelpers.AllRecursive,
 		Include: []string{globPattern},
 	})
@@ -52,16 +51,16 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	}
 
 	// pipelineFilePaths is the list of all pipeline files found in the pipelinePath
-	if len(pipelineFilePaths) == 0 {
+	if len(flowpipeConfigFilePaths) == 0 {
 		return pipelineMap, nil
 	}
 
-	fileData, diags := pipeparser.LoadFileData(pipelineFilePaths...)
+	fileData, diags := pipeparser.LoadFileData(flowpipeConfigFilePaths...)
 	if diags.HasErrors() {
 		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
 	}
 
-	if len(fileData) != len(pipelineFilePaths) {
+	if len(fileData) != len(flowpipeConfigFilePaths) {
 		return nil, fperr.InternalWithMessage("Failed to load all pipeline files")
 	}
 
@@ -73,17 +72,17 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	}
 
 	// do a partial decode
-	content, diags := bodies.Content(PipelineBlockSchema)
+	content, diags := bodies.Content(FlowpipeConfigBlockSchema)
 	if diags.HasErrors() {
 		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
 	}
 
 	// content.Blocks is the list of all pipeline blocks found in the pipeline files
-	parseCtx := NewPipelineParseContext(ctx, pipelinePath)
+	parseCtx := NewFlowpipeConfigParseContext(ctx, configPath)
 	parseCtx.SetDecodeContent(content, fileData)
 
 	// build parse context
-	pipelines, err := parsePipelines(parseCtx)
+	pipelines, err := parseAllFlowipeConfig(parseCtx)
 	if err != nil {
 		return nil, fperr.Internal(err)
 	}
@@ -91,12 +90,20 @@ func LoadPipelines(ctx context.Context, pipelinePath string) (pipelineMap map[st
 	return pipelines, nil
 }
 
-func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.Pipeline, error) {
+func LoadPipelines(ctx context.Context, configPath string) (map[string]*types.Pipeline, error) {
+	pipelineMap, err := LoadFlowpipeConfig(ctx, configPath)
+	if err != nil {
+		return nil, err
+	}
+	return pipelineMap, nil
+}
+
+func parseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) (map[string]*types.Pipeline, error) {
 	// we may need to decode more than once as we gather dependencies as we go
 	// continue decoding as long as the number of unresolved blocks decreases
 	prevUnresolvedBlocks := 0
 	for attempts := 0; ; attempts++ {
-		_, diags := decodePipelineHcls(parseCtx)
+		diags := decodeFlowpipeConfigBlocks(parseCtx)
 		if diags.HasErrors() {
 			return nil, pipeparser.DiagsToError("Failed to decode pipelines", diags)
 		}
@@ -120,8 +127,9 @@ func parsePipelines(parseCtx *PipelineParseContext) (map[string]*types.Pipeline,
 
 }
 
-func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipeline, hcl.Diagnostics) {
-	profileMap := map[string]*types.Pipeline{}
+func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagnostics {
+	pipelines := map[string]*types.Pipeline{}
+	// triggers := map[string]*types.Trigger{}
 
 	var diags hcl.Diagnostics
 	blocksToDecode, err := parseCtx.BlocksToDecode()
@@ -131,7 +139,7 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipel
 			Severity: hcl.DiagError,
 			Summary:  "failed to determine required dependency order",
 			Detail:   err.Error()})
-		return nil, diags
+		return diags
 	}
 
 	// now clear dependencies from run context - they will be rebuilt
@@ -142,22 +150,32 @@ func decodePipelineHcls(parseCtx *PipelineParseContext) (map[string]*types.Pipel
 	//
 	// each "block" is the pipeline HCL block that we need to decode into a Go Struct
 	for _, block := range blocksToDecode {
-		if block.Type == schema.BlockTypePipeline {
+		switch block.Type {
+		case schema.BlockTypePipeline:
 			pipelineHcl, res := decodePipeline(block, parseCtx)
 
 			if res.Success() {
-				// success - add to map
-				profileMap[pipelineHcl.Name] = pipelineHcl
+				pipelines[pipelineHcl.Name] = pipelineHcl
 			}
 			diags = append(diags, res.Diags...)
+			// case schema.BlockTypeTrigger:
+			// 	triggerHcl, res := decodeTrigger(block, parseCtx)
+			// 	if res.Success() {
+			// 		triggers[triggerHcl.Name] = triggerHcl
+			// 	}
+			// 	diags = append(diags, res.Diags...)
 		}
 	}
-	return profileMap, diags
+	return diags
 }
+
+// func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*types.Trigger, *pipeparser.DecodeResult) {
+// 	return nil, nil
+// }
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(block *hcl.Block, parseCtx *PipelineParseContext) (*types.Pipeline, *pipeparser.DecodeResult) {
+func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*types.Pipeline, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
 	// get shell pipelineHcl
 	pipelineHcl := types.NewPipelineHcl(block)
@@ -268,7 +286,7 @@ func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 	return diags
 }
 
-func handlePipelineDecodeResult(resource *types.Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *PipelineParseContext) {
+func handlePipelineDecodeResult(resource *types.Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
@@ -307,33 +325,33 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 	}
 }
 
-type PipelineParseContext struct {
+type FlowpipeConfigParseContext struct {
 	pipeparser.ParseContext
 	PipelineHcls map[string]*types.Pipeline
-	valueMap     map[string]cty.Value
+	TriggerHcls  map[string]*types.Trigger
 }
 
-func (c *PipelineParseContext) buildEvalContext() {
+func (c *FlowpipeConfigParseContext) buildEvalContext() {
 	vars := map[string]cty.Value{}
 	c.ParseContext.BuildEvalContext(vars)
 }
 
 // AddResource stores this resource as a variable to be added to the eval context. It alse
-func (c *PipelineParseContext) AddResource(pipelineHcl *types.Pipeline) hcl.Diagnostics {
-	ctyVal, err := pipelineHcl.AsCtyValue()
-	if err != nil {
-		return hcl.Diagnostics{&hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  fmt.Sprintf("failed to convert Pipeline '%s' to its cty value", pipelineHcl.Name),
-			Detail:   err.Error(),
-			// TODO: fix this
-			// Subject:  &workspaceProfile.DeclRange,
-			// Subject: "change me",
-		}}
-	}
+func (c *FlowpipeConfigParseContext) AddResource(pipelineHcl *types.Pipeline) hcl.Diagnostics {
+	// ctyVal, err := pipelineHcl.AsCtyValue()
+	// if err != nil {
+	// 	return hcl.Diagnostics{&hcl.Diagnostic{
+	// 		Severity: hcl.DiagError,
+	// 		Summary:  fmt.Sprintf("failed to convert Pipeline '%s' to its cty value", pipelineHcl.Name),
+	// 		Detail:   err.Error(),
+	// 		// TODO: fix this
+	// 		// Subject:  &workspaceProfile.DeclRange,
+	// 		// Subject: "change me",
+	// 	}}
+	// }
 
 	c.PipelineHcls[pipelineHcl.Name] = pipelineHcl
-	c.valueMap[pipelineHcl.Name] = ctyVal
+	// c.valueMap[pipelineHcl.Name] = ctyVal
 
 	// remove this resource from unparsed blocks
 	delete(c.UnresolvedBlocks, pipelineHcl.Name)
@@ -343,14 +361,14 @@ func (c *PipelineParseContext) AddResource(pipelineHcl *types.Pipeline) hcl.Diag
 	return nil
 }
 
-func NewPipelineParseContext(ctx context.Context, rootEvalPath string) *PipelineParseContext {
+func NewFlowpipeConfigParseContext(ctx context.Context, rootEvalPath string) *FlowpipeConfigParseContext {
 	parseContext := pipeparser.NewParseContext(ctx, rootEvalPath)
 	// TODO uncomment once https://github.com/turbot/steampipe/issues/2640 is done
-	//parseContext.BlockTypes = []string{modconfig.BlockTypeWorkspaceProfile}
-	c := &PipelineParseContext{
+
+	c := &FlowpipeConfigParseContext{
 		ParseContext: parseContext,
 		PipelineHcls: make(map[string]*types.Pipeline),
-		valueMap:     make(map[string]cty.Value),
+		TriggerHcls:  make(map[string]*types.Trigger),
 	}
 
 	c.buildEvalContext()

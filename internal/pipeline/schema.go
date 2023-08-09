@@ -5,6 +5,29 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
+var FlowpipeConfigBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type:       schema.BlockTypePipeline,
+			LabelNames: []string{schema.LabelName},
+		},
+		{
+			Type:       schema.BlockTypeTrigger,
+			LabelNames: []string{schema.LabelType, schema.LabelName},
+		},
+	},
+}
+
+var TriggerBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name:     schema.AttributeTypeDescription,
+			Required: false,
+		},
+	},
+}
+
 var PipelineBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
@@ -15,10 +38,6 @@ var PipelineBlockSchema = &hcl.BodySchema{
 	Blocks: []hcl.BlockHeaderSchema{
 		{
 			Type:       schema.BlockTypeParam,
-			LabelNames: []string{schema.LabelName},
-		},
-		{
-			Type:       schema.BlockTypePipeline,
 			LabelNames: []string{schema.LabelName},
 		},
 		{

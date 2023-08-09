@@ -1,13 +1,18 @@
 package types
 
 import (
+	"github.com/hashicorp/hcl/v2"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )
 
 // The definition of a single Flowpipe Trigger
 type Trigger struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
+	Type        string  `json:"type"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
+
+	// Unparsed HCL body, needed so we can de-code the step HCL into the correct struct
+	RawBody hcl.Body `json:"-" hcl:",remain"`
 }
 
 type PrintableTrigger struct {

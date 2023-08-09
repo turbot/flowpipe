@@ -41,6 +41,7 @@ const (
 	BlockTypePipeline         = "pipeline"
 	BlockTypePipelineStep     = "step"
 	BlockTypePipelineOutput   = "output"
+	BlockTypeTrigger          = "trigger"
 
 	AttributeTypeValue     = "value"
 	AttributeTypeSensitive = "sensitive"
