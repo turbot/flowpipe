@@ -1426,8 +1426,8 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepPipeline struct {
 	PipelineStepBase
-	Pipeline *string                `json:"pipeline"`
-	Args     map[string]interface{} `json:"args"`
+	Pipeline *string `json:"pipeline"`
+	Args     Input   `json:"args"`
 }
 
 func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {

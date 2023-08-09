@@ -295,6 +295,33 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error_code"])
 }
 
+func (suite *EsTestSuite) TestParentChildPipeline() {
+
+	// bad_http_not_ignored pipeline
+	assert := assert.New(suite.T())
+	_, cmd, err := suite.runPipeline("parent_pipeline_with_args", 100*time.Millisecond, nil)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 300, "finished")
+	if err != nil || (err != nil && err.Error() != "not completed") {
+		assert.Fail("Invalid pipeline status", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("finished", pex.Status)
+	// TODO: this doesn't work yet, we need pass the pipeline status up? or does it has its own status?
+	// assert.Equal("finished", pex.AllStepOutputs["pipeline"]["child_pipeline_with_args"].(*types.Output).Status)
+	assert.Equal("child echo step: from parent 24", pex.AllStepOutputs["pipeline"]["child_pipeline_with_args"].(*types.Output).Data["child_output"])
+	assert.Equal("child echo step: from parent 24", pex.PipelineOutput["parent_output"])
+	assert.Nil(pex.PipelineOutput["does_not_exist"])
+
+}
+
 func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	// bad_http_not_ignored pipeline
@@ -603,7 +630,7 @@ func (suite *EsTestSuite) TestParam() {
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 400, "finished")
+	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 500, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return

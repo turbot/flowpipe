@@ -78,3 +78,52 @@ pipeline "child_pipeline_c" {
         value = step.http.my_step_1.status_code
     }
 }
+
+
+pipeline "parent_pipeline_with_args" {
+    description = "Parent pipeline, calls a child pipeline with args"
+    step "pipeline" "child_pipeline_with_args" {
+        pipeline = pipeline.child_pipeline_with_args
+
+        args = {
+            message = "from parent"
+            age = 24
+        }
+    }
+
+    output "parent_output" {
+        value = step.pipeline.child_pipeline_with_args.child_output
+    }
+}
+
+pipeline "parent_pipeline_with_no_args" {
+    description = "Parent pipeline, calls a child pipeline with args"
+
+    step "pipeline" "child_pipeline_with_args" {
+        pipeline = pipeline.child_pipeline_with_args
+    }
+}
+
+
+pipeline "child_pipeline_with_args" {
+    description = "Child Pipeline with Args"
+
+    param "message" {
+        type = string
+        default = "change this message"
+    }
+
+    param "age" {
+        type = number
+        default = 1
+    }
+
+
+    step "echo" "child_echo" {
+        text = "child echo step: ${param.message} ${param.age}"
+    }
+
+    output "child_output" {
+        value = step.echo.child_echo.text
+    }
+}
