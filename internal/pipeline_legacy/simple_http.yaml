@@ -1,8 +1,0 @@
-type: "pipeline"
-name: "simple_http"
-steps:
-  http_1:
-    type: "http_request"
-    name: "http_1"
-    input: '{"url": "http://api.open-notify.org/astros.json"}'    
-output: '{"body_json": {{.http_1.body_json.number}}}'

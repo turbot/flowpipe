@@ -1,9 +1,0 @@
-type: "pipeline"
-name: "simple_for"
-steps:
-  sleep_1:
-    type: "sleep"
-    name: "sleep_1"
-    depends_on: []
-    for: '["1s", "1s", "1s", "1s", "1s","1s", "1s", "1s", "1s", "1s"]'
-    input: '{"duration": "{{.each.value}}"}'

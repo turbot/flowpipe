@@ -1,7 +1,0 @@
-type: "pipeline"
-name: "http_with_error"
-steps:
-  http_1:
-    type: "http_request"
-    name: "http_1"
-    input: '{"url": "http://api.open-notify.orgs/astros.json"}'
