@@ -141,6 +141,11 @@ var PipelineStepSleepBlockSchema = &hcl.BodySchema{
 			Required: true,
 		},
 	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+	},
 }
 
 var PipelineStepEmailBlockSchema = &hcl.BodySchema{
@@ -199,6 +204,11 @@ var PipelineStepEmailBlockSchema = &hcl.BodySchema{
 			Name: schema.AttributeTypeSubject,
 		},
 	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+	},
 }
 
 var PipelineStepQueryBlockSchema = &hcl.BodySchema{
@@ -228,6 +238,11 @@ var PipelineStepQueryBlockSchema = &hcl.BodySchema{
 			Name: schema.AttributeTypeArgs,
 		},
 	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+	},
 }
 
 var PipelineStepEchoBlockSchema = &hcl.BodySchema{
@@ -254,6 +269,11 @@ var PipelineStepEchoBlockSchema = &hcl.BodySchema{
 			Name: schema.AttributeTypeJson,
 		},
 	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+	},
 }
 
 var PipelineStepPipelineBlockSchema = &hcl.BodySchema{
@@ -278,6 +298,11 @@ var PipelineStepPipelineBlockSchema = &hcl.BodySchema{
 		},
 		{
 			Name: schema.AttributeTypeArgs,
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
 		},
 	},
 }
