@@ -44,15 +44,49 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 		return fperr.BadRequestWithMessage("Email input must define to")
 	}
 	if _, ok := i[schema.AttributeTypeTo].([]string); !ok {
+		// The given input is a string slice, but the step input stores it as an interface slice during the JSON unmarshalling?
+		// Check if the input is an interface slice, and the elements are strings
+		if data, ok := i[schema.AttributeTypeTo].([]interface{}); ok {
+			for _, v := range data {
+				if _, ok := v.(string); !ok {
+					return fperr.BadRequestWithMessage("Email attribute 'to' must have elements of type string")
+				}
+			}
+			return nil
+		}
+
 		return fperr.BadRequestWithMessage("Email attribute 'to' must be an array")
 	}
-	if len(i[schema.AttributeTypeTo].([]string)) == 0 {
+
+	var recipients []string
+	if _, ok := i[schema.AttributeTypeTo].([]string); ok {
+		recipients = i[schema.AttributeTypeTo].([]string)
+	}
+
+	if _, ok := i[schema.AttributeTypeTo].([]interface{}); ok {
+		for _, v := range i[schema.AttributeTypeTo].([]interface{}) {
+			recipients = append(recipients, v.(string))
+		}
+	}
+
+	if len(recipients) == 0 {
 		return fperr.BadRequestWithMessage("Recipients must not be empty")
 	}
 
 	// Validate the Cc recipients
 	if i[schema.AttributeTypeCc] != nil {
 		if _, ok := i[schema.AttributeTypeCc].([]string); !ok {
+			// The given input is a string slice, but the step input stores it as an interface slice during the JSON unmarshalling?
+			// Check if the input is an interface slice, and the elements are strings
+			if data, ok := i[schema.AttributeTypeCc].([]interface{}); ok {
+				for _, v := range data {
+					if _, ok := v.(string); !ok {
+						return fperr.BadRequestWithMessage("Email attribute 'cc' must have elements of type string")
+					}
+				}
+				return nil
+			}
+
 			return fperr.BadRequestWithMessage("Email attribute 'cc' must be an array")
 		}
 	}
@@ -60,6 +94,17 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 	// Validate the Bcc recipients
 	if i[schema.AttributeTypeBcc] != nil {
 		if _, ok := i[schema.AttributeTypeBcc].([]string); !ok {
+			// The given input is a string slice, but the step input stores it as an interface slice during the JSON unmarshalling?
+			// Check if the input is an interface slice, and the elements are strings
+			if data, ok := i[schema.AttributeTypeBcc].([]interface{}); ok {
+				for _, v := range data {
+					if _, ok := v.(string); !ok {
+						return fperr.BadRequestWithMessage("Email attribute 'bcc' must have elements of type string")
+					}
+				}
+				return nil
+			}
+
 			return fperr.BadRequestWithMessage("Email attribute 'bcc' must be an array")
 		}
 	}
@@ -101,7 +146,16 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
 
 	// Get the inputs
-	recipients := input[schema.AttributeTypeTo].([]string)
+	var recipients []string
+	if _, ok := input[schema.AttributeTypeTo].([]string); ok {
+		recipients = input[schema.AttributeTypeTo].([]string)
+	}
+
+	if _, ok := input[schema.AttributeTypeTo].([]interface{}); ok {
+		for _, v := range input[schema.AttributeTypeTo].([]interface{}) {
+			recipients = append(recipients, v.(string))
+		}
+	}
 
 	var body string
 	if input[schema.AttributeTypeBody] != nil {
@@ -123,20 +177,54 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	header["From"] = from.String()
 	header["To"] = strings.Join(recipients, ", ")
 
-	if input[schema.AttributeTypeCc] != nil && len(input[schema.AttributeTypeCc].([]string)) > 0 {
-		header["Cc"] = strings.Join(input[schema.AttributeTypeCc].([]string), ", ")
-	}
-
-	if input[schema.AttributeTypeBcc] != nil && len(input[schema.AttributeTypeBcc].([]string)) > 0 {
-		header["Bcc"] = strings.Join(input[schema.AttributeTypeBcc].([]string), ", ")
-	}
-
 	if input[schema.AttributeTypeSubject] != nil && len(input[schema.AttributeTypeSubject].(string)) > 0 {
 		header["Subject"] = input[schema.AttributeTypeSubject].(string)
 	}
 
 	if input[schema.AttributeTypeContentType] != nil && len(input[schema.AttributeTypeContentType].(string)) > 0 {
 		header["Content-Type"] = input[schema.AttributeTypeContentType].(string)
+	}
+
+	if input[schema.AttributeTypeCc] != nil {
+		var cc []string
+
+		// Check if the input is a string slice
+		if _, ok := input[schema.AttributeTypeCc].([]string); ok {
+			cc = input[schema.AttributeTypeCc].([]string)
+		}
+
+		// Check if the input is an interface slice, and the elements are strings
+		if _, ok := input[schema.AttributeTypeCc].([]interface{}); ok {
+			for _, v := range input[schema.AttributeTypeCc].([]interface{}) {
+				cc = append(cc, v.(string))
+			}
+		}
+
+		// if the cc is not empty, add it to the header
+		if len(cc) > 0 {
+			header["Cc"] = strings.Join(cc, ", ")
+		}
+	}
+
+	if input[schema.AttributeTypeBcc] != nil {
+		var bcc []string
+
+		// Check if the input is a string slice
+		if _, ok := input[schema.AttributeTypeBcc].([]string); ok {
+			bcc = input[schema.AttributeTypeBcc].([]string)
+		}
+
+		// Check if the input is an interface slice, and the elements are strings
+		if _, ok := input[schema.AttributeTypeBcc].([]interface{}); ok {
+			for _, v := range input[schema.AttributeTypeBcc].([]interface{}) {
+				bcc = append(bcc, v.(string))
+			}
+		}
+
+		// if the cc is not empty, add it to the header
+		if len(bcc) > 0 {
+			header["Bcc"] = strings.Join(bcc, ", ")
+		}
 	}
 
 	// Build the full email message

@@ -708,13 +708,177 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepEmail struct {
 	PipelineStepBase
-	To string `json:"to"`
+	To               []string `json:"to"`
+	From             *string  `json:"from"`
+	SenderCredential *string  `json:"sender_credential"`
+	Host             *string  `json:"host"`
+	Port             *string  `json:"port"`
+	SenderName       *string  `json:"sender_name"`
+	Cc               []string `json:"cc"`
+	Bcc              []string `json:"bcc"`
+	Body             *string  `json:"body"`
+	ContentType      *string  `json:"content_type"`
+	Subject          *string  `json:"subject"`
 }
 
 func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"to": p.To,
-	}, nil
+	var to []string
+	if p.UnresolvedAttributes[schema.AttributeTypeTo] == nil {
+		to = p.To
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeTo], evalContext, &to)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var from *string
+	if p.UnresolvedAttributes[schema.AttributeTypeFrom] == nil {
+		from = p.From
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeFrom], evalContext, &from)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var senderCredential *string
+	if p.UnresolvedAttributes[schema.AttributeTypeSenderCredential] == nil {
+		senderCredential = p.SenderCredential
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSenderCredential], evalContext, &senderCredential)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var host *string
+	if p.UnresolvedAttributes[schema.AttributeTypeHost] == nil {
+		host = p.Host
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeHost], evalContext, &host)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var port *string
+	if p.UnresolvedAttributes[schema.AttributeTypePort] == nil {
+		port = p.Port
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypePort], evalContext, &port)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var senderName *string
+	if p.UnresolvedAttributes[schema.AttributeTypeSenderName] == nil {
+		senderName = p.SenderName
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSenderName], evalContext, &senderName)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var body *string
+	if p.UnresolvedAttributes[schema.AttributeTypeBody] == nil {
+		body = p.Body
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeBody], evalContext, &body)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var subject *string
+	if p.UnresolvedAttributes[schema.AttributeTypeSubject] == nil {
+		subject = p.Subject
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSubject], evalContext, &subject)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var contentType *string
+	if p.UnresolvedAttributes[schema.AttributeTypeContentType] == nil {
+		contentType = p.ContentType
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeContentType], evalContext, &contentType)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var cc []string
+	if p.UnresolvedAttributes[schema.AttributeTypeCc] == nil {
+		cc = p.Cc
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeCc], evalContext, &cc)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	var bcc []string
+	if p.UnresolvedAttributes[schema.AttributeTypeBcc] == nil {
+		bcc = p.Bcc
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeBcc], evalContext, &bcc)
+		if diags.HasErrors() {
+			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+	}
+
+	results := map[string]interface{}{}
+
+	if to != nil {
+		results[schema.AttributeTypeTo] = to
+	}
+
+	if from != nil {
+		results[schema.AttributeTypeFrom] = *from
+	}
+
+	if senderCredential != nil {
+		results[schema.AttributeTypeSenderCredential] = *senderCredential
+	}
+
+	if host != nil {
+		results[schema.AttributeTypeHost] = *host
+	}
+
+	if port != nil {
+		results[schema.AttributeTypePort] = *port
+	}
+
+	if senderName != nil {
+		results[schema.AttributeTypeSenderName] = *senderName
+	}
+
+	if cc != nil {
+		results[schema.AttributeTypeCc] = cc
+	}
+
+	if bcc != nil {
+		results[schema.AttributeTypeBcc] = bcc
+	}
+
+	if body != nil {
+		results[schema.AttributeTypeBody] = *body
+	}
+
+	if contentType != nil {
+		results[schema.AttributeTypeContentType] = *contentType
+	}
+
+	if subject != nil {
+		results[schema.AttributeTypeSubject] = *subject
+	}
+
+	return results, nil
 }
 
 func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
@@ -728,7 +892,6 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseCon
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-
 					val, err := attr.Expr.Value(parseContext.EvalCtx)
 					if err != nil {
 						diags = append(diags, &hcl.Diagnostic{
@@ -738,15 +901,272 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseCon
 						})
 						continue
 					}
-					p.To = val.AsString()
+					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+					if err2 != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to Go values",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					var recipientSlice []string
+					for _, goVal := range goVals {
+						if recipient, ok := goVal.(string); ok {
+							recipientSlice = append(recipientSlice, recipient)
+						}
+					}
+					p.To = recipientSlice
 				}
 			}
+
+		case schema.AttributeTypeFrom:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeFrom + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					from := val.AsString()
+					p.From = &from
+				}
+			}
+
+		case schema.AttributeTypeSenderCredential:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeSenderCredential + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					senderCredential := val.AsString()
+					p.SenderCredential = &senderCredential
+				}
+			}
+
+		case schema.AttributeTypeHost:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeHost + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					host := val.AsString()
+					p.Host = &host
+				}
+			}
+
+		case schema.AttributeTypePort:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypePort + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					port := val.AsString()
+					p.Port = &port
+				}
+			}
+
+		case schema.AttributeTypeSenderName:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeSenderName + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					senderName := val.AsString()
+					p.SenderName = &senderName
+				}
+			}
+
+		case schema.AttributeTypeCc:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := attr.Expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse to attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+					if err2 != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeCc + " attribute to Go values",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					var ccRecipientSlice []string
+					for _, goVal := range goVals {
+						if recipient, ok := goVal.(string); ok {
+							ccRecipientSlice = append(ccRecipientSlice, recipient)
+						}
+					}
+					p.Cc = ccRecipientSlice
+				}
+			}
+
+		case schema.AttributeTypeBcc:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := attr.Expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse to attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+					if err2 != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeBcc + " attribute to Go values",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					var bccRecipientSlice []string
+					for _, goVal := range goVals {
+						if recipient, ok := goVal.(string); ok {
+							bccRecipientSlice = append(bccRecipientSlice, recipient)
+						}
+					}
+					p.Bcc = bccRecipientSlice
+				}
+			}
+
+		case schema.AttributeTypeBody:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeBody + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					body := val.AsString()
+					p.Body = &body
+				}
+			}
+
+		case schema.AttributeTypeContentType:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeContentType + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					contentType := val.AsString()
+					p.ContentType = &contentType
+				}
+			}
+
+		case schema.AttributeTypeSubject:
+			if attr.Expr != nil {
+				expr := attr.Expr
+				if len(expr.Variables()) > 0 {
+					dependsOnFromExpressions(name, expr, p)
+				} else {
+					val, err := expr.Value(parseContext.EvalCtx)
+					if err != nil {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Unable to parse " + schema.AttributeTypeSubject + " attribute",
+							Subject:  &attr.Range,
+						})
+						continue
+					}
+
+					subject := val.AsString()
+					p.Subject = &subject
+				}
+			}
+
 		default:
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unsupported attribute for Sleep Step: " + attr.Name,
-				Subject:  &attr.Range,
-			})
+			if !p.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Email Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
 	return diags
