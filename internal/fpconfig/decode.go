@@ -1,4 +1,4 @@
-package pipeline
+package fpconfig
 
 import (
 	"github.com/hashicorp/hcl/v2"

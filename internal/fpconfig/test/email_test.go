@@ -7,14 +7,14 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/pipeline"
+	"github.com/turbot/flowpipe/internal/fpconfig"
 	"github.com/zclconf/go-cty/cty"
 )
 
 func TestEmailStep(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -49,7 +49,7 @@ func TestEmailStep(t *testing.T) {
 func TestEmailStepWithParam(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

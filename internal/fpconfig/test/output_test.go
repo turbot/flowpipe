@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/pipeline"
+	"github.com/turbot/flowpipe/internal/fpconfig"
 )
 
 func TestOutput(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/output.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/output.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

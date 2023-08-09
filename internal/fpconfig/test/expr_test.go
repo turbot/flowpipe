@@ -7,14 +7,14 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/pipeline"
+	"github.com/turbot/flowpipe/internal/fpconfig"
 	"github.com/zclconf/go-cty/cty"
 )
 
 func TestExpression(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -49,7 +49,7 @@ func TestExpression(t *testing.T) {
 func TestExprFunc(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -81,7 +81,7 @@ func TestExprFunc(t *testing.T) {
 func TestExprWithinVariable(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -114,7 +114,7 @@ func TestExprWithinVariable(t *testing.T) {
 func TestExprDependAndFunction(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
+	pipelines, err := fpconfig.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
