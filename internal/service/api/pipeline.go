@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/fperr"
@@ -54,7 +55,11 @@ func (api *APIService) listPipelines(c *gin.Context) {
 		return
 	}
 
-	// TODO: paging, filter
+	sort.Slice(pipelines, func(i, j int) bool {
+		return pipelines[i].Name < pipelines[j].Name
+	})
+
+	// TODO: paging, filter, sorting
 	result := types.ListPipelineResponse{
 		Items: pipelines,
 	}

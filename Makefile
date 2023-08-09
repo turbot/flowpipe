@@ -17,6 +17,9 @@ build-open-api:
 	rm -rf service/api/docs
 	./generate-open-api.sh
 
+beta-tag-timetamp:
+	date -u +%Y%m%d%H%M
+
 release-local:
 	goreleaser release --snapshot --clean
 
