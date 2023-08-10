@@ -119,7 +119,7 @@ const (
 
 	// All Possible Trigger Types
 	TriggerTypeSchedule = "schedule"
-	TriggerTypeCron     = "cron"
+	TriggerTypeInterval = "interval"
 
 	LabelName = "name"
 	LabelType = "type"

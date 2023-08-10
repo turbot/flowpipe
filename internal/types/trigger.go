@@ -2,12 +2,14 @@ package types
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -104,19 +106,44 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 
 type TriggerInterval struct {
 	Trigger
-	Interval string `json:"interval"`
+	Schedule string `json:"schedule"`
 }
 
+var validIntervals = []string{"hourly", "daily", "weekly", "monthly"}
+
 func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
-	return nil
+	diags := t.SetBaseAttributes(hclAttributes, ctx)
+	if diags.HasErrors() {
+		return diags
+	}
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case schema.AttributeTypeSchedule:
+			val, _ := attr.Expr.Value(nil)
+			t.Schedule = val.AsString()
+
+			if !helpers.StringSliceContains(validIntervals, strings.ToLower(t.Schedule)) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Invalid interval",
+					Detail:   "The interval must be one of: " + strings.Join(validIntervals, ","),
+					Subject:  &attr.Range,
+				})
+			}
+		}
+	}
+	return diags
 }
 
 func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
 	var trigger ITrigger
 
 	switch triggerType {
-	case "schedule":
+	case schema.TriggerTypeSchedule:
 		trigger = &TriggerSchedule{}
+	case schema.TriggerTypeInterval:
+		trigger = &TriggerInterval{}
 	default:
 		return nil
 	}

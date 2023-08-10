@@ -183,7 +183,19 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (type
 	triggerName := block.Labels[1]
 
 	triggerSchema := GetTriggerBlockSchema(triggerType)
+	if triggerSchema == nil {
+		res.HandleDecodeDiags(hcl.Diagnostics{
+			{
+				Severity: hcl.DiagError,
+				Summary:  fmt.Sprintf("invalid trigger type '%s'", triggerType),
+				Subject:  &block.DefRange,
+			},
+		})
+		return nil, res
+	}
+
 	triggerOptions, _, diags := block.Body.PartialContent(triggerSchema)
+
 	if diags.HasErrors() {
 		res.HandleDecodeDiags(diags)
 		return nil, res
@@ -371,6 +383,8 @@ func GetTriggerBlockSchema(triggerType string) *hcl.BodySchema {
 	switch triggerType {
 	case schema.TriggerTypeSchedule:
 		return TriggerScheduleBlockSchema
+	case schema.TriggerTypeInterval:
+		return TriggerIntervalBlockSchema
 	default:
 		return nil
 	}

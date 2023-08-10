@@ -15,3 +15,8 @@ trigger "schedule" "my_every_5_minute_trigger" {
     schedule = "*/5 * * * *"
     pipeline = pipeline.simple_with_trigger
 }
+
+trigger "interval" "every_hour_trigger" {
+    schedule = "hourly"
+    pipeline = pipeline.simple_with_trigger
+}
