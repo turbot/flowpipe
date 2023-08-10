@@ -55,7 +55,11 @@ func startManagerFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			panic(err)
 		}
 
-		// Start the manager
+		err = m.Initialize()
+		if err != nil {
+			panic(err)
+		}
+
 		err = m.Start()
 		if err != nil {
 			panic(err)

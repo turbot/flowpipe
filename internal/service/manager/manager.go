@@ -7,9 +7,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/fpconfig"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/service/scheduler"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 )
 
@@ -19,6 +24,8 @@ type Manager struct {
 
 	apiService *api.APIService
 	esService  *es.ESService
+
+	triggers map[string]types.ITrigger
 
 	RaftNodeID    string `json:"raft_node_id,omitempty"`
 	RaftBootstrap bool   `json:"raft_bootstrap"`
@@ -79,6 +86,33 @@ func WithHTTPAddress(addr string) ManagerOption {
 	}
 }
 
+// TODO: is there any point to have a separate "Initialize" and "Start"?
+func (m *Manager) Initialize() error {
+	pipelineDir := viper.GetString("pipeline.dir")
+
+	fpParseContext, err := fpconfig.LoadFlowpipeConfig(m.ctx, pipelineDir)
+	if err != nil {
+		return err
+	}
+
+	pipelines := fpParseContext.PipelineHcls
+
+	m.triggers = fpParseContext.TriggerHcls
+
+	inMemoryCache := cache.GetCache()
+	var pipelineNames []string
+
+	for pipelineName := range pipelines {
+		pipelineNames = append(pipelineNames, pipelineName)
+
+		// TODO: how do we want to do this?
+		inMemoryCache.SetWithTTL(pipelineName, pipelines[pipelineName], 24*7*52*99*time.Hour)
+	}
+
+	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+	return nil
+}
+
 // Start starts services managed by the Manager.
 func (m *Manager) Start() error {
 
@@ -109,6 +143,13 @@ func (m *Manager) Start() error {
 
 	// Start API
 	err = a.Start()
+	if err != nil {
+		return err
+	}
+
+	// Start the scheduler service
+	s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
+	err = s.Start()
 	if err != nil {
 		return err
 	}

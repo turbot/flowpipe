@@ -189,7 +189,8 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (type
 		return nil, res
 	}
 
-	triggerHcl := types.NewTrigger(triggerType, triggerName)
+	triggerHcl := types.NewTrigger(parseCtx.RunCtx, triggerType, triggerName)
+
 	if triggerHcl == nil {
 		res.HandleDecodeDiags(hcl.Diagnostics{
 			{

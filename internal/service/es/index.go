@@ -11,10 +11,8 @@ import (
 	"github.com/garsue/watermillzap"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
-	"github.com/turbot/flowpipe/internal/fpconfig"
 	"github.com/turbot/flowpipe/internal/fplog"
 
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
@@ -53,20 +51,8 @@ func (es *ESService) Start() error {
 	logger.Debug("ES starting")
 	defer logger.Debug("ES started")
 
-	pipelineDir := viper.GetString("pipeline.dir")
-
-	logger.Debug("Pipeline dir", "dir", pipelineDir)
-
-	// _, err := pipeline.LoadPipelines(es.ctx, pipelineDir)
-	// if err != nil {
-	// 	return err
-	// }
-
 	outputDir := viper.GetString("output.dir")
-	logger.Debug("Output dir", "dir", pipelineDir)
-
 	logDir := viper.GetString("log.dir")
-	logger.Debug("Log dir", "dir", pipelineDir)
 
 	// Check if the provided output dir exists, if not create it
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
@@ -83,23 +69,6 @@ func (es *ESService) Start() error {
 			return err
 		}
 	}
-
-	pipelines, err := fpconfig.LoadPipelines(es.ctx, pipelineDir)
-	if err != nil {
-		return err
-	}
-
-	inMemoryCache := cache.GetCache()
-	var pipelineNames []string
-
-	for pipelineName := range pipelines {
-		pipelineNames = append(pipelineNames, pipelineName)
-
-		// TODO: how do we want to do this?
-		inMemoryCache.SetWithTTL(pipelineName, pipelines[pipelineName], 24*7*52*99*time.Hour)
-	}
-
-	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 

@@ -1,6 +1,8 @@
 package types
 
 import (
+	"context"
+
 	"github.com/hashicorp/hcl/v2"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/pipeparser"
@@ -11,6 +13,7 @@ import (
 
 // The definition of a single Flowpipe Trigger
 type Trigger struct {
+	ctx         context.Context
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
 
@@ -32,6 +35,10 @@ func (t *Trigger) GetPipeline() cty.Value {
 
 func (t *Trigger) SetName(name string) {
 	t.Name = name
+}
+
+func (t *Trigger) SetContext(ctx context.Context) {
+	t.ctx = ctx
 }
 
 func (p *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
@@ -66,6 +73,7 @@ func (p *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *
 }
 
 type ITrigger interface {
+	SetContext(context.Context)
 	SetName(string)
 	GetName() string
 	GetDescription() *string
@@ -94,9 +102,18 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 	return nil
 }
 
-func NewTrigger(triggerType, triggerName string) ITrigger {
+type TriggerInterval struct {
+	Trigger
+	Interval string `json:"interval"`
+}
 
+func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+	return nil
+}
+
+func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
 	var trigger ITrigger
+
 	switch triggerType {
 	case "schedule":
 		trigger = &TriggerSchedule{}
@@ -105,6 +122,7 @@ func NewTrigger(triggerType, triggerName string) ITrigger {
 	}
 
 	trigger.SetName(triggerName)
+	trigger.SetContext(ctx)
 	return trigger
 }
 
