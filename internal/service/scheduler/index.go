@@ -29,13 +29,12 @@ func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers 
 	}
 }
 
-func randomizeTimestamp(baseTime time.Time, interval time.Duration) time.Time {
-	// Calculate the range for randomization (0-10% of the interval)
-	rangeStart := int64(interval.Seconds() * 0.0)
-	rangeEnd := int64(interval.Seconds() * 0.1)
+func randomizeTimestamp(start, end float64, baseTime time.Time, interval time.Duration) time.Time {
+	rangeStart := int64(interval.Seconds() * start)
+	rangeEnd := int64(interval.Seconds() * end)
 
 	// Generate a random offset within the range
-	randomOffset := time.Duration(rand.Int63n(rangeEnd-rangeStart) + rangeStart)
+	randomOffset := time.Duration((rand.Int63n(rangeEnd-rangeStart) + rangeStart) * int64(time.Second))
 
 	// Create the randomized timestamp
 	randomTimestamp := baseTime.Add(randomOffset)
@@ -71,16 +70,16 @@ func (s *Scheduler) Start() error {
 			var err error
 			switch strings.ToLower(t.Schedule) {
 			case "hourly":
-				ts := randomizeTimestamp(time.Now().UTC(), 1*time.Hour)
+				ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Do(triggerRunner.Run)
 			case "daily":
-				ts := randomizeTimestamp(time.Now().UTC(), 24*time.Hour)
+				ts := randomizeTimestamp(0.1, 0.5, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Day().StartAt(ts).Do(triggerRunner.Run)
 			case "weekly":
-				ts := randomizeTimestamp(time.Now().UTC(), 7*24*time.Hour)
+				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Week().StartAt(ts).Do(triggerRunner.Run)
 			case "monthly":
-				ts := randomizeTimestamp(time.Now().UTC(), 30*24*time.Hour)
+				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Do(triggerRunner.Run)
 			default:
 				return fperr.BadRequestWithMessage("invalid interval schedule: " + t.Schedule)
