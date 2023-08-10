@@ -45,8 +45,6 @@ func (api *APIService) listTriggers(c *gin.Context) {
 		Items: []types.Trigger{},
 	}
 
-	result.Items = append(result.Items, types.Trigger{Type: "trigger_webhook", Name: "webhooktrigger"}, types.Trigger{Type: "trigger_manual", Name: "manualtrigger"})
-
 	c.JSON(http.StatusOK, result)
 }
 
@@ -74,6 +72,6 @@ func (api *APIService) getTrigger(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	result := types.Trigger{Type: "trigger_" + uri.TriggerName, Name: uri.TriggerName}
-	c.JSON(http.StatusOK, result)
+	// result := types.Trigger{Type: "trigger_" + uri.TriggerName, Name: uri.TriggerName}
+	c.JSON(http.StatusOK, "")
 }

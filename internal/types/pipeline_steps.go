@@ -1426,31 +1426,35 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepPipeline struct {
 	PipelineStepBase
-	Pipeline *string `json:"pipeline"`
-	Args     Input   `json:"args"`
+	Pipeline cty.Value `json:"-"`
+	Args     Input     `json:"args"`
 }
 
 func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 
-	var pipeline *string
+	var pipeline string
 	if p.UnresolvedAttributes[schema.AttributeTypePipeline] == nil {
-		if p.Pipeline == nil {
-			return nil, fperr.InternalWithMessage("Url must be supplied")
+		if p.Pipeline == cty.NilVal {
+			return nil, fperr.InternalWithMessage("Pipeline must be supplied")
 		}
-		pipeline = p.Pipeline
-	} else {
+		valueMap := p.Pipeline.AsValueMap()
+		pipelineNameCty := valueMap[schema.LabelName]
+		pipeline = pipelineNameCty.AsString()
 
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypePipeline], evalContext, &pipeline)
+	} else {
+		var pipelineCty cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypePipeline], evalContext, &pipelineCty)
 		if diags.HasErrors() {
 			return nil, pipeparser.DiagsToError(schema.BlockTypePipelineStep, diags)
 		}
+		valueMap := pipelineCty.AsValueMap()
+		pipelineNameCty := valueMap[schema.LabelName]
+		pipeline = pipelineNameCty.AsString()
 	}
 
 	results := map[string]interface{}{}
 
-	if pipeline != nil {
-		results[schema.AttributeTypePipeline] = *pipeline
-	}
+	results[schema.AttributeTypePipeline] = pipeline
 
 	// TODO: evaluate expression in Args
 	if p.Args != nil {
@@ -1479,9 +1483,7 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, parse
 						})
 						continue
 					}
-
-					sql := val.AsString()
-					p.Pipeline = &sql
+					p.Pipeline = val
 				}
 			}
 		case schema.AttributeTypeArgs:

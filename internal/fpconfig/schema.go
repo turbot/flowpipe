@@ -19,11 +19,19 @@ var FlowpipeConfigBlockSchema = &hcl.BodySchema{
 	},
 }
 
-var TriggerBlockSchema = &hcl.BodySchema{
+var TriggerScheduleBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
 			Name:     schema.AttributeTypeDescription,
 			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeSchedule,
+			Required: true,
+		},
+		{
+			Name:     schema.AttributeTypePipeline,
+			Required: true,
 		},
 	},
 }

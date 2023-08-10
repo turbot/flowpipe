@@ -114,6 +114,13 @@ const (
 
 	AttributeTypeMessage = "message"
 
+	// All possible trigger attributes
+	AttributeTypeSchedule = "schedule"
+
+	// All Possible Trigger Types
+	TriggerTypeSchedule = "schedule"
+	TriggerTypeCron     = "cron"
+
 	LabelName = "name"
 	LabelType = "type"
 )

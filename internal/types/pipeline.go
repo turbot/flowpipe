@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/terraform-components/configs"
@@ -72,8 +71,15 @@ func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
 	return nil
 }
 
-func (p *Pipeline) AsCtyValue() (cty.Value, error) {
-	return pipeparser.GetCtyValue(p)
+func (p *Pipeline) AsCtyValue() cty.Value {
+	pipelineVars := map[string]cty.Value{}
+	pipelineVars[schema.LabelName] = cty.StringVal(p.Name)
+
+	if p.Description != nil {
+		pipelineVars[schema.AttributeTypeDescription] = cty.StringVal(*p.Description)
+	}
+
+	return cty.ObjectVal(pipelineVars)
 }
 
 // SetOptions sets the options on the connection
@@ -82,21 +88,6 @@ func (p *Pipeline) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagno
 
 	var diags hcl.Diagnostics
 	switch o := opts.(type) {
-	// case *options.Query:
-	// 	if p.QueryOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.QueryOptions = o
-	// case *options.Check:
-	// 	if p.CheckOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.CheckOptions = o
-	// case *options.WorkspaceProfileDashboard:
-	// 	if p.DashboardOptions != nil {
-	// 		diags = append(diags, duplicateOptionsBlockDiag(block))
-	// 	}
-	// 	p.DashboardOptions = o
 	default:
 		diags = append(diags, &hcl.Diagnostic{
 			Severity: hcl.DiagError,
