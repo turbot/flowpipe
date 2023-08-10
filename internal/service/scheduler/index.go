@@ -2,15 +2,16 @@ package scheduler
 
 import (
 	"context"
-	"math/rand"
+	"crypto/rand"
+	"math/big"
 	"strings"
 	"time"
 
 	"github.com/go-co-op/gocron"
 	"github.com/turbot/flowpipe/fperr"
-	estrigger "github.com/turbot/flowpipe/internal/es/trigger"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
@@ -34,7 +35,9 @@ func randomizeTimestamp(start, end float64, baseTime time.Time, interval time.Du
 	rangeEnd := int64(interval.Seconds() * end)
 
 	// Generate a random offset within the range
-	randomOffset := time.Duration((rand.Int63n(rangeEnd-rangeStart) + rangeStart) * int64(time.Second))
+	n, _ := rand.Int(rand.Reader, big.NewInt(rangeEnd-rangeStart))
+
+	randomOffset := time.Duration((n.Int64() + rangeStart) * int64(time.Second))
 
 	// Create the randomized timestamp
 	randomTimestamp := baseTime.Add(randomOffset)
@@ -57,7 +60,8 @@ func (s *Scheduler) Start() error {
 		case *types.TriggerSchedule:
 			logger.Info("Scheduling trigger", "name", t.Name, "schedule", t.Schedule)
 
-			triggerRunner := estrigger.NewTriggerRunner(s.ctx, s.esService, t)
+			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
+
 			_, err := s.cronScheduler.Cron(t.Schedule).Do(triggerRunner.Run)
 			if err != nil {
 				return err
@@ -65,7 +69,7 @@ func (s *Scheduler) Start() error {
 		case *types.TriggerInterval:
 			logger.Info("Scheduling trigger", "name", t.Name, "interval", t.Schedule)
 
-			triggerRunner := estrigger.NewTriggerRunner(s.ctx, s.esService, t)
+			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
 
 			var err error
 			switch strings.ToLower(t.Schedule) {

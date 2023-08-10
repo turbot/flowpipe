@@ -1426,6 +1426,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseCon
 
 type PipelineStepPipeline struct {
 	PipelineStepBase
+
 	Pipeline cty.Value `json:"-"`
 	Args     Input     `json:"args"`
 }

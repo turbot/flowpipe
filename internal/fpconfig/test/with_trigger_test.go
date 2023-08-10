@@ -48,4 +48,19 @@ func TestPipelineWithTrigger(t *testing.T) {
 	}
 
 	assert.Equal("5 * * * * *", st.Schedule)
+
+	triggerWithArgs := triggers["trigger_with_args"]
+	if triggerWithArgs == nil {
+		assert.Fail("trigger_with_args trigger not found")
+		return
+	}
+
+	twa, ok := triggerWithArgs.(*types.TriggerSchedule)
+	if !ok {
+		assert.Fail("trigger_with_args trigger is not a schedule trigger")
+		return
+	}
+
+	assert.Equal("one", twa.Args["param_one"])
+	assert.Equal(2, twa.Args["param_two_int"])
 }

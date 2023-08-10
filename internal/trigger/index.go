@@ -11,21 +11,30 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-type TriggerRunner struct {
+type BaseTriggerRunner struct {
 	ctx       context.Context
 	trigger   types.ITrigger
 	esService *es.ESService
 }
 
-func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger types.ITrigger) *TriggerRunner {
-	return &TriggerRunner{
-		ctx:       ctx,
-		trigger:   trigger,
-		esService: esService,
+type ITriggerRunner interface {
+	Run()
+}
+
+func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger types.ITrigger) ITriggerRunner {
+	switch trigger.(type) {
+	case *types.TriggerSchedule, *types.TriggerInterval:
+		return &BaseTriggerRunner{
+			ctx:       ctx,
+			trigger:   trigger,
+			esService: esService,
+		}
+	default:
+		return nil
 	}
 }
 
-func (tr *TriggerRunner) Run() {
+func (tr *BaseTriggerRunner) Run() {
 	logger := fplog.Logger(tr.ctx)
 
 	pipeline := tr.trigger.GetPipeline()
@@ -42,6 +51,7 @@ func (tr *TriggerRunner) Run() {
 		Event:               event.NewExecutionEvent(tr.ctx),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                pipelineName,
+		Args:                tr.trigger.GetArgs(),
 	}
 
 	logger.Info("Trigger fired", "trigger", tr.trigger.GetName(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)

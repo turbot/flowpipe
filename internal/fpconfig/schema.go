@@ -33,6 +33,9 @@ var TriggerScheduleBlockSchema = &hcl.BodySchema{
 			Name:     schema.AttributeTypePipeline,
 			Required: true,
 		},
+		{
+			Name: schema.AttributeTypeArgs,
+		},
 	},
 }
 
@@ -49,6 +52,9 @@ var TriggerIntervalBlockSchema = &hcl.BodySchema{
 		{
 			Name:     schema.AttributeTypePipeline,
 			Required: true,
+		},
+		{
+			Name: schema.AttributeTypeArgs,
 		},
 	},
 }

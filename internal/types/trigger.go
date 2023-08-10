@@ -17,7 +17,8 @@ import (
 type Trigger struct {
 	ctx         context.Context
 	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
+	Description *string `json:"description,omitempty"`
+	Args        Input   `json:"args"`
 
 	Pipeline cty.Value `json:"-"`
 	RawBody  hcl.Body  `json:"-" hcl:",remain"`
@@ -43,7 +44,21 @@ func (t *Trigger) SetContext(ctx context.Context) {
 	t.ctx = ctx
 }
 
-func (p *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (t *Trigger) GetArgs() Input {
+	return t.Args
+}
+
+var ValidBaseTriggerAttributes = []string{
+	schema.AttributeTypeDescription,
+	schema.AttributeTypePipeline,
+	schema.AttributeTypeArgs,
+}
+
+func (t *Trigger) IsBaseAttribute(name string) bool {
+	return helpers.StringSliceContains(ValidBaseTriggerAttributes, name)
+}
+
+func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
@@ -51,7 +66,7 @@ func (p *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *
 		if diag != nil && diag.Severity == hcl.DiagError {
 			diags = append(diags, diag)
 		} else {
-			p.Description = desc
+			t.Description = desc
 		}
 	}
 
@@ -66,7 +81,32 @@ func (p *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *
 					Subject:  &attr.Range,
 				})
 			} else {
-				p.Pipeline = val
+				t.Pipeline = val
+			}
+		}
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeArgs]; exists {
+		if attr.Expr != nil {
+			expr := attr.Expr
+			vals, err := expr.Value(parseContext.EvalCtx)
+			if err != nil {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute",
+					Subject:  &attr.Range,
+				})
+
+			} else {
+				goVals, err := hclhelpers.CtyToGoMapInterface(vals)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute to Go values",
+						Subject:  &attr.Range,
+					})
+				}
+				t.Args = goVals
 			}
 		}
 	}
@@ -80,6 +120,7 @@ type ITrigger interface {
 	GetName() string
 	GetDescription() *string
 	GetPipeline() cty.Value
+	GetArgs() Input
 	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
 }
 
@@ -99,6 +140,15 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 		case schema.AttributeTypeSchedule:
 			val, _ := attr.Expr.Value(nil)
 			t.Schedule = val.AsString()
+
+		default:
+			if !t.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Trigger Schedule: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
 	return nil
@@ -128,6 +178,15 @@ func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 					Severity: hcl.DiagError,
 					Summary:  "Invalid interval",
 					Detail:   "The interval must be one of: " + strings.Join(validIntervals, ","),
+					Subject:  &attr.Range,
+				})
+			}
+
+		default:
+			if !t.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Trigger Interval: " + attr.Name,
 					Subject:  &attr.Range,
 				})
 			}
