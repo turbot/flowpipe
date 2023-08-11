@@ -385,6 +385,10 @@ func GetTriggerBlockSchema(triggerType string) *hcl.BodySchema {
 		return TriggerScheduleBlockSchema
 	case schema.TriggerTypeInterval:
 		return TriggerIntervalBlockSchema
+	case schema.TriggerTypeQuery:
+		return TriggerQueryBlockSchema
+	case schema.TriggerTypeHttp:
+		return TriggerHttpBlockSchema
 	default:
 		return nil
 	}

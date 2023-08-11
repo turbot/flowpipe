@@ -195,6 +195,36 @@ func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 	return diags
 }
 
+type TriggerQuery struct {
+	Trigger
+	Query      string   `json:"query"`
+	Args       Input    `json:"args"`
+	PrimaryKey string   `json:"primary_key"`
+	Events     []string `json:"events"`
+}
+
+func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+	diags := t.SetBaseAttributes(hclAttributes, ctx)
+	if diags.HasErrors() {
+		return diags
+	}
+
+	return diags
+}
+
+type TriggerHttp struct {
+	Trigger
+}
+
+func (t *TriggerHttp) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+	diags := t.SetBaseAttributes(hclAttributes, ctx)
+	if diags.HasErrors() {
+		return diags
+	}
+
+	return diags
+}
+
 func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
 	var trigger ITrigger
 
@@ -203,6 +233,10 @@ func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
 		trigger = &TriggerSchedule{}
 	case schema.TriggerTypeInterval:
 		trigger = &TriggerInterval{}
+	case schema.TriggerTypeQuery:
+		trigger = &TriggerQuery{}
+	case schema.TriggerTypeHttp:
+		trigger = &TriggerHttp{}
 	default:
 		return nil
 	}

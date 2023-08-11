@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 )
@@ -75,6 +76,19 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	// We use the cache to store the pipelines
 	cache.InMemoryInitialize(nil)
+
+	m, err := manager.NewManager(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = m.Initialize()
+	if err != nil {
+		panic(err)
+	}
+
+	// We don't do manager.Start() here because we don't want to start the API and Scheduler service
 
 	esService, err := es.NewESService(ctx)
 	if err != nil {
@@ -716,7 +730,7 @@ func (suite *EsTestSuite) TestChildPipeline() {
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 300, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return

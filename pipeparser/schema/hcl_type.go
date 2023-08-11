@@ -120,6 +120,8 @@ const (
 	// All Possible Trigger Types
 	TriggerTypeSchedule = "schedule"
 	TriggerTypeInterval = "interval"
+	TriggerTypeQuery    = "query"
+	TriggerTypeHttp     = "http"
 
 	LabelName = "name"
 	LabelType = "type"

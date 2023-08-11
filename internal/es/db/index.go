@@ -11,7 +11,7 @@ import (
 func GetPipeline(name string) (*types.Pipeline, error) {
 	pipelineCached, found := cache.GetCache().Get(name)
 	if !found {
-		return nil, fperr.NotFoundWithMessage("pipeline " + name + " not found")
+		return nil, fperr.NotFoundWithMessage("pipeline not found: " + name)
 	}
 
 	pipeline, ok := pipelineCached.(*types.Pipeline)
