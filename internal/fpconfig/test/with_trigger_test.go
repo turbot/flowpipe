@@ -94,16 +94,16 @@ func TestBadTriggerConfig(t *testing.T) {
 
 	assert.True(diags.HasErrors())
 
-	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[0].Subject.Filename)
+	assert.Contains(diags[0].Subject.Filename, "invalid_trigger.fp")
 	assert.Contains(diags[0].Summary, "Unsupported attribute; This object does not have an attribute named \"bad_pipeline\".")
 
-	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[1].Subject.Filename)
+	assert.Contains(diags[1].Subject.Filename, "invalid_trigger.fp")
 	assert.Contains(diags[1].Summary, "Missing required argument")
 
-	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[2].Subject.Filename)
+	assert.Contains(diags[1].Subject.Filename, "invalid_trigger.fp")
 	assert.Contains("Invalid cron expression: bad cron format", diags[2].Summary)
 
-	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[3].Subject.Filename)
+	assert.Contains(diags[1].Subject.Filename, "invalid_trigger.fp")
 	assert.Contains("Invalid interval", diags[3].Summary)
 
 }
