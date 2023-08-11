@@ -47,7 +47,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 		return
 	}
 
-	assert.Equal("5 * * * * *", st.Schedule)
+	assert.Equal("5 * * * *", st.Schedule)
 
 	triggerWithArgs := triggers["trigger_with_args"]
 	if triggerWithArgs == nil {
@@ -63,4 +63,47 @@ func TestPipelineWithTrigger(t *testing.T) {
 
 	assert.Equal("one", twa.Args["param_one"])
 	assert.Equal(2, twa.Args["param_two_int"])
+
+	queryTrigger := triggers["query_trigger"]
+	if queryTrigger == nil {
+		assert.Fail("query_trigger trigger not found")
+		return
+	}
+
+	qt, ok := queryTrigger.(*types.TriggerQuery)
+	if !ok {
+		assert.Fail("query_trigger trigger is not a query trigger")
+		return
+	}
+
+	assert.Equal("access_key_id", qt.PrimaryKey)
+	assert.Len(qt.Events, 1)
+	assert.Equal("insert", qt.Events[0])
+	assert.Equal("one", qt.Args["param_one"])
+	assert.Equal(2, qt.Args["param_two_int"])
+	assert.Contains(qt.Sql, "where create_date < now() - interval")
+}
+
+func TestBadTriggerConfig(t *testing.T) {
+	assert := assert.New(t)
+
+	fpParseContext, err := fpconfig.LoadFlowpipeConfig(context.TODO(), "./test_pipelines/invalid_trigger.fp")
+	assert.NotNil(err, "should have some errors")
+
+	diags := fpParseContext.Diags
+
+	assert.True(diags.HasErrors())
+
+	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[0].Subject.Filename)
+	assert.Contains(diags[0].Summary, "Unsupported attribute; This object does not have an attribute named \"bad_pipeline\".")
+
+	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[1].Subject.Filename)
+	assert.Contains(diags[1].Summary, "Missing required argument")
+
+	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[2].Subject.Filename)
+	assert.Contains("Invalid cron expression: bad cron format", diags[2].Summary)
+
+	assert.Equal("/workspaces/flowpipe/internal/fpconfig/test/test_pipelines/invalid_trigger.fp", diags[3].Subject.Filename)
+	assert.Contains("Invalid interval", diags[3].Summary)
+
 }

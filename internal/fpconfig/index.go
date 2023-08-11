@@ -81,7 +81,7 @@ func LoadFlowpipeConfig(ctx context.Context, configPath string) (*FlowpipeConfig
 	// build parse context
 	err = parseAllFlowipeConfig(parseCtx)
 	if err != nil {
-		return nil, fperr.Internal(err)
+		return parseCtx, err
 	}
 
 	return parseCtx, nil
@@ -102,6 +102,8 @@ func parseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
 	for attempts := 0; ; attempts++ {
 		diags := decodeFlowpipeConfigBlocks(parseCtx)
 		if diags.HasErrors() {
+			// Store the diagnostics in the parse context, useful for test and introspection
+			parseCtx.ParseContext.Diags = diags
 			return pipeparser.DiagsToError("Failed to decode pipelines", diags)
 		}
 

@@ -20,6 +20,7 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 		return nil, hcl.Diagnostics{&hcl.Diagnostic{
 			Severity: hcl.DiagError,
 			Summary:  "Invalid pipeline step type " + stepType,
+			Subject:  &block.DefRange,
 		}}
 	}
 
@@ -28,6 +29,7 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 		return nil, hcl.Diagnostics{&hcl.Diagnostic{
 			Severity: hcl.DiagError,
 			Summary:  "Pipeline step block schema not found for step " + stepType,
+			Subject:  &block.DefRange,
 		}}
 	}
 
@@ -52,6 +54,7 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 			return nil, hcl.Diagnostics{&hcl.Diagnostic{
 				Severity: hcl.DiagError,
 				Summary:  "Multiple error blocks found for step " + stepName,
+				Subject:  &block.DefRange,
 			}}
 		}
 		errorBlock := errorBlocks[0]
@@ -76,6 +79,7 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 					Severity: hcl.DiagError,
 					Summary:  "Error decoding ignore attribute",
 					Detail:   err.Error(),
+					Subject:  &block.DefRange,
 				}}
 			}
 			ignore = target
@@ -93,6 +97,7 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 					Severity: hcl.DiagError,
 					Summary:  "Error decoding retries attribute",
 					Detail:   err.Error(),
+					Subject:  &block.DefRange,
 				}}
 			}
 			retries = target

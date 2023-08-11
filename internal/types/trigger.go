@@ -11,6 +11,8 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
+
+	"github.com/robfig/cron/v3"
 )
 
 // The definition of a single Flowpipe Trigger
@@ -70,26 +72,31 @@ func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *
 		}
 	}
 
-	if attr, exists := hclAttributes[schema.AttributeTypePipeline]; exists {
-		if attr.Expr != nil {
-			expr := attr.Expr
-			val, err := expr.Value(parseContext.EvalCtx)
-			if err != nil {
-				diags = append(diags, &hcl.Diagnostic{
-					Severity: hcl.DiagError,
-					Summary:  "Unable to parse " + schema.AttributeTypePipeline + " attribute: " + err.Error(),
-					Subject:  &attr.Range,
-				})
-			} else {
-				t.Pipeline = val
-			}
-		}
+	// Pipeline is a required attribute, we don't need to validate it here because
+	// it should be defined in the Trigger Schema
+	attr := hclAttributes[schema.AttributeTypePipeline]
+
+	expr := attr.Expr
+	// Try to validate the pipeline reference. It's OK to do this here because by the time
+	// we parse the triggers, we should have loaded all the pipelines in the Parser Context.
+	//
+	// Can't do it for the step references because the pipeline that a step refer to may not be parsed
+	// yet.
+	val, err := expr.Value(parseContext.EvalCtx)
+	if err != nil {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Unable to parse " + schema.AttributeTypePipeline + " attribute: " + err.Error(),
+			Subject:  &attr.Range,
+		})
+	} else {
+		t.Pipeline = val
 	}
 
 	if attr, exists := hclAttributes[schema.AttributeTypeArgs]; exists {
 		if attr.Expr != nil {
 			expr := attr.Expr
-			vals, err := expr.Value(parseContext.EvalCtx)
+			vals, err := expr.Value(nil)
 			if err != nil {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
@@ -141,6 +148,16 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 			val, _ := attr.Expr.Value(nil)
 			t.Schedule = val.AsString()
 
+			// validate cron format
+			_, err := cron.ParseStandard(t.Schedule)
+			if err != nil {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Invalid cron expression: " + t.Schedule,
+					Detail:   err.Error(),
+					Subject:  &attr.Range,
+				})
+			}
 		default:
 			if !t.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
@@ -151,7 +168,7 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 			}
 		}
 	}
-	return nil
+	return diags
 }
 
 type TriggerInterval struct {
@@ -197,10 +214,11 @@ func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *pipep
 
 type TriggerQuery struct {
 	Trigger
-	Query      string   `json:"query"`
-	Args       Input    `json:"args"`
-	PrimaryKey string   `json:"primary_key"`
-	Events     []string `json:"events"`
+	Sql              string   `json:"sql"`
+	Schedule         string   `json:"schedule"`
+	ConnectionString string   `json:"connection_string"`
+	PrimaryKey       string   `json:"primary_key"`
+	Events           []string `json:"events"`
 }
 
 func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
@@ -209,6 +227,53 @@ func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, ctx *pipepars
 		return diags
 	}
 
+	for name, attr := range hclAttributes {
+		switch name {
+		case schema.AttributeTypeSchedule:
+			val, _ := attr.Expr.Value(nil)
+			t.Schedule = val.AsString()
+
+			// validate cron format
+			_, err := cron.ParseStandard(t.Schedule)
+			if err != nil {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Invalid cron expression: " + t.Schedule,
+					Detail:   err.Error(),
+					Subject:  &attr.Range,
+				})
+			}
+		case schema.AttributeTypeSql:
+			val, _ := attr.Expr.Value(nil)
+			t.Sql = val.AsString()
+		case schema.AttributeTypeConnectionString:
+			val, _ := attr.Expr.Value(nil)
+			t.ConnectionString = val.AsString()
+		case schema.AttributeTypePrimaryKey:
+			val, _ := attr.Expr.Value(nil)
+			t.PrimaryKey = val.AsString()
+		case schema.AttributeTypeEvents:
+			val, _ := attr.Expr.Value(nil)
+			var err error
+			t.Events, err = hclhelpers.CtyTupleToArrayOfStrings(val)
+			if err != nil {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unable to parse " + schema.AttributeTypeEvents + " Trigger attribute to Go values",
+					Detail:   err.Error(),
+					Subject:  &attr.Range,
+				})
+			}
+		default:
+			if !t.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Trigger Interval: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
+		}
+	}
 	return diags
 }
 

@@ -22,6 +22,8 @@ type ParseContext struct {
 	// the eval context used to decode references in HCL
 	EvalCtx *hcl.EvalContext
 
+	Diags hcl.Diagnostics
+
 	RootEvalPath string
 
 	// if set, only decode these blocks
@@ -72,7 +74,9 @@ func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependenci
 		diags = append(diags, &hcl.Diagnostic{
 			Severity: hcl.DiagError,
 			Summary:  "failed to add root dependency to graph",
-			Detail:   err.Error()})
+			Detail:   err.Error(),
+			Subject:  &block.DefRange,
+		})
 	}
 
 	for _, dep := range dependencies {
@@ -84,7 +88,9 @@ func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependenci
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "failed to parse dependency",
-					Detail:   err.Error()})
+					Detail:   err.Error(),
+					Subject:  &block.DefRange,
+				})
 				continue
 
 			}
@@ -98,7 +104,9 @@ func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependenci
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "failed to add dependency to graph",
-					Detail:   err.Error()})
+					Detail:   err.Error(),
+					Subject:  &block.DefRange,
+				})
 			}
 		}
 	}

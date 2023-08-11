@@ -295,21 +295,21 @@ func ctyTupleToSliceOfInterfaces(val cty.Value) ([]interface{}, error) {
 	return res, nil
 }
 
-// func ctyTupleToArrayOfStrings(val cty.Value) ([]string, error) {
-// 	var res []string
-// 	it := val.ElementIterator()
-// 	for it.Next() {
-// 		_, v := it.Element()
+func CtyTupleToArrayOfStrings(val cty.Value) ([]string, error) {
+	var res []string
+	it := val.ElementIterator()
+	for it.Next() {
+		_, v := it.Element()
 
-// 		var valStr string
-// 		if err := gocty.FromCtyValue(v, &valStr); err != nil {
-// 			return nil, err
-// 		}
+		var valStr string
+		if err := gocty.FromCtyValue(v, &valStr); err != nil {
+			return nil, err
+		}
 
-// 		res = append(res, valStr)
-// 	}
-// 	return res, nil
-// }
+		res = append(res, valStr)
+	}
+	return res, nil
+}
 
 func ConvertMapOrSliceToCtyValue(data interface{}) (cty.Value, error) {
 	// Convert the input data to cty.Value based on its type

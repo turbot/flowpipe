@@ -115,7 +115,9 @@ const (
 	AttributeTypeMessage = "message"
 
 	// All possible trigger attributes
-	AttributeTypeSchedule = "schedule"
+	AttributeTypeSchedule   = "schedule"
+	AttributeTypePrimaryKey = "primary_key"
+	AttributeTypeEvents     = "events"
 
 	// All Possible Trigger Types
 	TriggerTypeSchedule = "schedule"

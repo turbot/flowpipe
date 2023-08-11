@@ -363,6 +363,7 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 				Severity: hcl.DiagError,
 				Summary:  constants.BadDependsOn,
 				Detail:   fmt.Sprintf("The depends_on argument must be a reference to another step, but the given value %q is not a valid reference.", traversal),
+				Subject:  traversal.SourceRange().Ptr(),
 			})
 		}
 		parts := hclhelpers.TraversalAsStringSlice(traversal)
@@ -371,6 +372,7 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 				Severity: hcl.DiagError,
 				Summary:  constants.BadDependsOn,
 				Detail:   "Invalid depends_on format " + strings.Join(parts, "."),
+				Subject:  traversal.SourceRange().Ptr(),
 			})
 			continue
 		}

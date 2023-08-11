@@ -127,7 +127,7 @@ func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *EsTestSuite) AfterTest(suiteName, testName string) {
-
+	time.Sleep(2 * time.Second)
 }
 
 // All methods that begin with "Test" are run as tests within a
