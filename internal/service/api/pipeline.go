@@ -152,6 +152,10 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		Name:                pipeline.Name,
 	}
 
+	if input.Args != nil {
+		pipelineCmd.Args = input.Args
+	}
+
 	if err := api.esService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
 		return

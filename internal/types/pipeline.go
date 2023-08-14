@@ -28,7 +28,8 @@ type RunPipelineResponse struct {
 }
 
 type CmdPipeline struct {
-	Command string `json:"command" binding:"required,oneof=run"`
+	Command string                 `json:"command" binding:"required,oneof=run"`
+	Args    map[string]interface{} `json:"args,omitempty"`
 }
 
 func NewPipelineHcl(block *hcl.Block) *Pipeline {
