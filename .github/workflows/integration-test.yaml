@@ -1,0 +1,36 @@
+name: Integration Test
+on:
+  workflow_dispatch:
+
+jobs:
+  golangci:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Flowpipe repository
+        uses: actions/checkout@v3
+        with:
+          path: flowpipe
+
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
+
+      - name: Checkout Terraform Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/terraform-components
+          path: terraform-components
+
+      # # Install MailHog for SMTP mail testing
+      # - name: Install MailHog
+      #   run: |
+      #     go install github.com/mailhog/MailHog@v1.0.1
+
+      - name: Run tests
+        run: make integration-test
+        working-directory: flowpipe

@@ -25,4 +25,8 @@ release-local:
 
 test:
 	go clean -testcache
-	go test ./... -timeout 120s -v
+	go test  $$(go list ./... | grep -v /internal/es/test) -timeout 60s -v
+
+integration-test:
+	go clean -testcache
+	go test ./internal/es/test -timeout 120s -v
