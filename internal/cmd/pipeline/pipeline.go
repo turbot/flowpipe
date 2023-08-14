@@ -3,11 +3,14 @@ package pipeline
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
@@ -51,9 +54,12 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 
 	var pipelineRunCmd = &cobra.Command{
 		Use:  "run <pipeline-name>",
-		Args: cobra.ExactArgs(1), // Expecting exactly 1 positional argument
+		Args: cobra.ArbitraryArgs,
 		Run:  runPipelineFunc(ctx),
 	}
+
+	// Add the pipeline arg flag
+	pipelineRunCmd.Flags().StringArray(constants.CmdOptionsPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
 
 	return pipelineRunCmd, nil
 }
@@ -61,8 +67,28 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		logger := fplog.Logger(ctx)
+
+		pipelineArgs := map[string]interface{}{}
+		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.CmdOptionsPipelineArg)
+		if err != nil {
+			logger.Error("Error getting the value of pipeline-arg flag", "error", err)
+			return
+		}
+
+		// validate the pipeline arg input
+		err = validatePipelineArgs(pipeLineArgValues)
+		if err != nil {
+			logger.Error("Pipeline argument validation failed", "error", err)
+			return
+		}
+
+		for _, value := range pipeLineArgValues {
+			splitData := strings.Split(value, "=")
+			pipelineArgs[splitData[0]] = splitData[1]
+		}
+
 		apiClient := common.GetApiClient()
-		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*flowpipeapiclient.NewCmdPipeline("run"))
+		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*flowpipeapiclient.NewCmdPipeline("run", pipelineArgs))
 
 		resp, _, err := request.Execute()
 		if err != nil {
@@ -112,4 +138,14 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			}
 		}
 	}
+}
+
+func validatePipelineArgs(pipelineArgs []string) error {
+	validFormat := regexp.MustCompile(`^[^=]+=[^=]+$`)
+	for _, arg := range pipelineArgs {
+		if !validFormat.MatchString(arg) {
+			return fmt.Errorf("invalid format: %s", arg)
+		}
+	}
+	return nil
 }
