@@ -1,10 +1,16 @@
+//nolint:forbidigo // CLI command, expect some fmt.Println
 package mod
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/modinstaller"
+	"github.com/turbot/flowpipe/pipeparser/parse"
 )
 
 // mod management commands
@@ -248,10 +254,42 @@ func modInitCmd() *cobra.Command {
 	}
 
 	// cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
+
 	return cmd
 }
 
+func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath string) (*modconfig.Mod, error) {
+	if !modinstaller.ValidateModLocation(ctx, workspacePath) {
+		return nil, fmt.Errorf("mod %s cancelled", cmd.Name())
+	}
+
+	if parse.ModfileExists(workspacePath) {
+		fmt.Println("Working folder already contains a mod definition file")
+		return nil, nil
+	}
+	mod := modconfig.CreateDefaultMod(workspacePath)
+	if err := mod.Save(); err != nil {
+		return nil, err
+	}
+
+	// TODO: this needs the HCL stuff
+	// load up the written mod file so that we get the updated
+	// block ranges
+	// mod, err := parse.LoadModfile(workspacePath)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	return mod, nil
+}
+
 func runModInitCmd(cmd *cobra.Command, args []string) {
+	workspacePath := viper.GetString(constants.ArgModLocation)
+	_, err := createWorkspaceMod(cmd.Context(), cmd, workspacePath)
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 // 	utils.LogTime("cmd.runModInitCmd")

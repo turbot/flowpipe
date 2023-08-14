@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"context"
-	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -14,7 +14,11 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/service"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+
+	pcconstants "github.com/turbot/flowpipe/pipeparser/constants"
 )
 
 // ④ Now use the FooMode enum flag. If you want a non-zero default, then
@@ -31,12 +35,16 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		Long:    constants.LongDescription,
 		Version: constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			viper.Set(pcconstants.ConfigKeyActiveCommand, cmd)
 			return nil
 		},
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
 
 	c := config.GetConfigFromContext(ctx)
+
+	cwd, err := os.Getwd()
+	error_helpers.FailOnError(err)
 
 	// Command flags
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
@@ -45,26 +53,25 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.PersistentFlags().Int(constants.CmdOptionApiPort, 7103, "API server port")
 	rootCmd.PersistentFlags().Bool(constants.CmdOptionTlsInsecure, false, "Skip TLS verification")
 
+	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.DefaultInstallDir, "Path to the Config Directory")
+	rootCmd.PersistentFlags().String(pcconstants.ArgModLocation, cwd, "Path to the workspace working directory")
+
 	// ⑤ Define the CLI flag parameters for your wrapped enum flag.
 	rootCmd.PersistentFlags().Var(
 		enumflag.New(&outputMode, constants.CmdOptionsOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
 		constants.CmdOptionsOutput,
 		"Output format; one of: table, yaml, json")
 
-	err := viper.BindPFlag("api.host", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiHost))
-	if err != nil {
-		log.Fatal(err)
-	}
+	error_helpers.FailOnError(viper.BindPFlag("api.host", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiHost)))
+	error_helpers.FailOnError(viper.BindPFlag("api.port", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiPort)))
+	error_helpers.FailOnError(viper.BindPFlag("api.tls_insecure", rootCmd.PersistentFlags().Lookup(constants.CmdOptionTlsInsecure)))
 
-	err = viper.BindPFlag("api.port", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiPort))
-	if err != nil {
-		log.Fatal(err)
-	}
+	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgModLocation, rootCmd.PersistentFlags().Lookup(pcconstants.ArgModLocation)))
+	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgInstallDir, rootCmd.PersistentFlags().Lookup(pcconstants.ArgInstallDir)))
 
-	err = viper.BindPFlag("api.tls_insecure", rootCmd.PersistentFlags().Lookup(constants.CmdOptionTlsInsecure))
-	if err != nil {
-		log.Fatal(err)
-	}
+	// disable auto completion generation, since we don't want to support
+	// powershell yet - and there's no way to disable powershell in the default generator
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// flowpipe service
 	serviceCmd, err := service.ServiceCmd(ctx)

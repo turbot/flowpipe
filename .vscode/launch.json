@@ -19,6 +19,14 @@
             "mode": "debug",
             "program": "main.go",
             "args": ["pipeline", "list"]
+        },
+        {
+            "name": "Flowpipe cmd mod init",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "main.go",
+            "args": ["--mod-location", "~/fp-workspace/", "mod", "init"]
         }
     ]
 }
