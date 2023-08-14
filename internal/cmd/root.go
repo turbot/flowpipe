@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
 
+	"github.com/turbot/flowpipe/internal/cmd/mod"
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
 	"github.com/turbot/flowpipe/internal/cmd/process"
 	"github.com/turbot/flowpipe/internal/cmd/service"
@@ -83,6 +84,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		return nil, err
 	}
 	rootCmd.AddCommand(processCmd)
+
+	modCmd, err := mod.ModCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rootCmd.AddCommand(modCmd)
 
 	return rootCmd, nil
 }
