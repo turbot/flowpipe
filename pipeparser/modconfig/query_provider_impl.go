@@ -151,7 +151,6 @@ func (q *QueryProviderImpl) CtyValue() (cty.Value, error) {
 	return GetCtyValue(q)
 }
 
-//nolint:unused // TODO: check this unused property
 func (q *QueryProviderImpl) setBaseProperties() {
 	q.RuntimeDependencyProviderImpl.setBaseProperties()
 	if q.SQL == nil {
@@ -170,7 +169,6 @@ func (q *QueryProviderImpl) setBaseProperties() {
 	}
 }
 
-//nolint:unused // TODO: check this unused property
 func (q *QueryProviderImpl) getBaseImpl() *QueryProviderImpl {
 	return q.base.(QueryProvider).GetQueryProviderImpl()
 }

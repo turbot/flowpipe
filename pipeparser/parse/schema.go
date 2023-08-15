@@ -6,7 +6,7 @@ import (
 )
 
 // cache resource schemas
-var resourceSchemaCache = make(map[string]*hcl.BodySchema) //nolint:unused // TODO: remove
+var resourceSchemaCache = make(map[string]*hcl.BodySchema)
 
 // TODO  [node_reuse] Replace all block type with consts https://github.com/turbot/steampipe/issues/2922
 

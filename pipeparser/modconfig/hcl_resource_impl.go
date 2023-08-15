@@ -103,7 +103,6 @@ func (b *HclResourceImpl) GetBase() HclResource {
 	return b.base
 }
 
-//nolint:unused // TODO: check this unused property
 func (b *HclResourceImpl) setBaseProperties() {
 	if b.Title == nil {
 		b.Title = b.getBaseImpl().Title
@@ -116,7 +115,6 @@ func (b *HclResourceImpl) setBaseProperties() {
 
 }
 
-//nolint:unused // TODO: check this unused property
 func (b *HclResourceImpl) getBaseImpl() *HclResourceImpl {
 	return b.base.GetHclResourceImpl()
 }

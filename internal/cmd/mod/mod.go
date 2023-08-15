@@ -7,10 +7,14 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/pipeparser/cmdconfig"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/modinstaller"
 	"github.com/turbot/flowpipe/pipeparser/parse"
+	"github.com/turbot/flowpipe/pipeparser/utils"
+	"github.com/turbot/go-kit/helpers"
 )
 
 // mod management commands
@@ -63,25 +67,26 @@ func modInstallCmd() *cobra.Command {
 		Long:  `Install one or more mods and their dependencies.`,
 	}
 
+	cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
+
 	// cmdconfig.OnCmd(cmd).
 	// 	AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after installation is complete").
 	// 	AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be installed/updated/uninstalled without modifying them").
 	// 	AddBoolFlag(constants.ArgForce, false, "Install mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)").
-	// 	AddBoolFlag(constants.ArgHelp, false, "Help for install", cmdconfig.FlagOptions.WithShortHand("h"))
 
 	return cmd
 }
 
 func runModInstallCmd(cmd *cobra.Command, args []string) {
-	// ctx := cmd.Context()
-	// utils.LogTime("cmd.runModInstallCmd")
-	// defer func() {
-	// 	utils.LogTime("cmd.runModInstallCmd end")
-	// 	if r := recover(); r != nil {
-	// 		error_helpers.ShowError(ctx, helpers.ToError(r))
-	// 		exitCode = constants.ExitCodeUnknownErrorPanic
-	// 	}
-	// }()
+	ctx := cmd.Context()
+	utils.LogTime("cmd.runModInstallCmd")
+	defer func() {
+		utils.LogTime("cmd.runModInstallCmd end")
+		if r := recover(); r != nil {
+			error_helpers.ShowError(ctx, helpers.ToError(r))
+			// exitCode = constants.ExitCodeUnknownErrorPanic
+		}
+	}()
 
 	// // try to load the workspace mod definition
 	// // - if it does not exist, this will return a nil mod and a nil error
@@ -253,7 +258,7 @@ func modInitCmd() *cobra.Command {
 		Long:  `Initialize the current directory with a mod.sp file.`,
 	}
 
-	// cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
+	cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
 
 	return cmd
 }
