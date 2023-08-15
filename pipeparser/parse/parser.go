@@ -127,7 +127,6 @@ func parseYamlFile(filename string) (*hcl.File, hcl.Diagnostics) {
 	return json.Parse(jsonData, filename)
 }
 
-//nolint:unused // TODO: remove
 func addPseudoResourcesToMod(pseudoResources []modconfig.MappableResource, hclResources map[string]bool, mod *modconfig.Mod) {
 	var duplicates []string
 	for _, r := range pseudoResources {
@@ -150,8 +149,6 @@ func addPseudoResourcesToMod(pseudoResources []modconfig.MappableResource, hclRe
 
 // get names of all resources defined in hcl which may also be created as pseudo resources
 // if we find a mod block, build a shell mod
-//
-//nolint:unused // TODO: check this is not needed
 func loadMappableResourceNames(content *hcl.BodyContent) (map[string]bool, error) {
 	hclResources := make(map[string]bool)
 

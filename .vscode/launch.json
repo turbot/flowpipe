@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flowpipe API server",
+            "name": "Launch API server",
             "type": "go",
             "request": "launch",
             "mode": "debug",
@@ -13,7 +13,7 @@
             "args": ["service", "start", "--pipeline-dir", "./internal/es/test/pipelines"]
         },
         {
-            "name": "Flowpipe cmd pipeline list",
+            "name": "cmd pipeline list",
             "type": "go",
             "request": "launch",
             "mode": "debug",
@@ -21,12 +21,20 @@
             "args": ["pipeline", "list"]
         },
         {
-            "name": "Flowpipe cmd mod init",
+            "name": "cmd mod init",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
-            "args": ["--mod-location", "~/fp-workspace/", "mod", "init"]
+            "args": ["--mod-location", "/home/vscode/fp-workspace", "mod", "init"]
+        },
+        {
+            "name": "cmd mod install",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "main.go",
+            "args": ["--mod-location", "/home/vscode/fp-workspace", "mod", "install", "github.com/turbot/steampipe-mod-aws-insights"]
         }
     ]
 }
