@@ -88,31 +88,30 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	// // try to load the workspace mod definition
-	// // - if it does not exist, this will return a nil mod and a nil error
-	// workspacePath := viper.GetString(constants.ArgModLocation)
-	// workspaceMod, err := parse.LoadModfile(workspacePath)
-	// error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
+	// try to load the workspace mod definition
+	// - if it does not exist, this will return a nil mod and a nil error
+	workspacePath := viper.GetString(constants.ArgModLocation)
+	workspaceMod, err := parse.LoadModfile(workspacePath)
+	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
 
-	// // if no mod was loaded, create a default
-	// if workspaceMod == nil {
-	// 	workspaceMod, err = createWorkspaceMod(ctx, cmd, workspacePath)
-	// 	if err != nil {
-	// 		exitCode = constants.ExitCodeModInstallFailed
-	// 		error_helpers.FailOnError(err)
-	// 	}
-	// }
+	// if no mod was loaded, create a default
+	if workspaceMod == nil {
+		workspaceMod, err = createWorkspaceMod(ctx, cmd, workspacePath)
+		if err != nil {
+			error_helpers.FailOnError(err)
+		}
+	}
 
-	// // if any mod names were passed as args, convert into formed mod names
-	// opts := modinstaller.NewInstallOpts(workspaceMod, args...)
-	// trimGitUrls(opts)
-	// installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
-	// if err != nil {
-	// 	exitCode = constants.ExitCodeModInstallFailed
-	// 	error_helpers.FailOnError(err)
-	// }
+	// if any mod names were passed as args, convert into formed mod names
+	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
+	opts.ModArgs = utils.TrimGitUrls(opts.ModArgs)
+	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
+	if err != nil {
+		// exitCode = constants.ExitCodeModInstallFailed
+		error_helpers.FailOnError(err)
+	}
 
-	// fmt.Println(modinstaller.BuildInstallSummary(installData))
+	fmt.Println(modinstaller.BuildInstallSummary(installData))
 }
 
 // // uninstall
