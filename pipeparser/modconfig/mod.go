@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/hashicorp/hcl/v2/hclwrite"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	filehelpers "github.com/turbot/go-kit/files"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/zclconf/go-cty/cty"
@@ -70,7 +71,7 @@ func NewMod(shortName, modPath string, defRange hcl.Range) *Mod {
 				FullName:        name,
 				UnqualifiedName: name,
 				DeclRange:       defRange,
-				blockType:       BlockTypeMod,
+				blockType:       schema.BlockTypeMod,
 			},
 		},
 		ModPath: modPath,
@@ -154,7 +155,7 @@ func (m *Mod) OnDecoded(block *hcl.Block, _ ResourceMapsProvider) hcl.Diagnostic
 	if m.LegacyRequire != nil && !m.LegacyRequire.Empty() {
 		// ensure that both 'require' and 'requires' were not set
 		for _, b := range block.Body.(*hclsyntax.Body).Blocks {
-			if b.Type == BlockTypeRequire {
+			if b.Type == schema.BlockTypeRequire {
 				return hcl.Diagnostics{&hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Both 'require' and legacy 'requires' blocks are defined",

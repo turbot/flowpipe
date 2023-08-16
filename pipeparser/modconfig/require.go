@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/ociinstaller"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/version"
 )
 
@@ -62,10 +63,10 @@ func (r *Require) initialise(modBlock *hcl.Block) hcl.Diagnostics {
 	diags = append(diags, moreDiags...)
 
 	// find the require block
-	requireBlock := hclhelpers.FindFirstChildBlock(modBlock, BlockTypeRequire)
+	requireBlock := hclhelpers.FindFirstChildBlock(modBlock, schema.BlockTypeRequire)
 	if requireBlock == nil {
 		// was this the legacy 'requires' block?
-		requireBlock = hclhelpers.FindFirstChildBlock(modBlock, BlockTypeLegacyRequires)
+		requireBlock = hclhelpers.FindFirstChildBlock(modBlock, schema.BlockTypeLegacyRequires)
 	}
 	if requireBlock == nil {
 		// nothing else to populate
@@ -77,8 +78,8 @@ func (r *Require) initialise(modBlock *hcl.Block) hcl.Diagnostics {
 	r.BodyRange = requireBlock.Body.(*hclsyntax.Body).SrcRange
 
 	// build maps of plugin and mod blocks
-	pluginBlockMap := hclhelpers.BlocksToMap(hclhelpers.FindChildBlocks(requireBlock, BlockTypePlugin))
-	modBlockMap := hclhelpers.BlocksToMap(hclhelpers.FindChildBlocks(requireBlock, BlockTypeMod))
+	pluginBlockMap := hclhelpers.BlocksToMap(hclhelpers.FindChildBlocks(requireBlock, schema.BlockTypePlugin))
+	modBlockMap := hclhelpers.BlocksToMap(hclhelpers.FindChildBlocks(requireBlock, schema.BlockTypeMod))
 
 	if r.Steampipe != nil {
 		moreDiags := r.Steampipe.initialise(requireBlock)

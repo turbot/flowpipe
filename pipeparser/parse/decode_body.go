@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 )
 
@@ -99,29 +100,29 @@ func getResourceSchema(resource modconfig.HclResource, nestedStructs []any) *hcl
 
 	// special cases for manually parsed attributes and blocks
 	switch resource.BlockType() {
-	case modconfig.BlockTypeMod:
-		res.Blocks = append(res.Blocks, hcl.BlockHeaderSchema{Type: modconfig.BlockTypeRequire})
-	case modconfig.BlockTypeDashboard, modconfig.BlockTypeContainer:
+	case schema.BlockTypeMod:
+		res.Blocks = append(res.Blocks, hcl.BlockHeaderSchema{Type: schema.BlockTypeRequire})
+	case schema.BlockTypeDashboard, schema.BlockTypeContainer:
 		res.Blocks = append(res.Blocks,
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeControl},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeBenchmark},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeCard},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeChart},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeContainer},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeFlow},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeGraph},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeHierarchy},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeImage},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeInput},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeTable},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeText},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeWith},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeControl},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeBenchmark},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeCard},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeChart},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeContainer},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeFlow},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeGraph},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeHierarchy},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeImage},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeInput},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeTable},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeText},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeWith},
 		)
-	case modconfig.BlockTypeQuery:
+	case schema.BlockTypeQuery:
 		// remove `Query` from attributes
 		var querySchema = &hcl.BodySchema{}
 		for _, a := range res.Attributes {
-			if a.Name != modconfig.AttributeQuery {
+			if a.Name != schema.AttributeQuery {
 				querySchema.Attributes = append(querySchema.Attributes, a)
 			}
 		}
@@ -129,21 +130,21 @@ func getResourceSchema(resource modconfig.HclResource, nestedStructs []any) *hcl
 	}
 
 	if _, ok := resource.(modconfig.QueryProvider); ok {
-		res.Blocks = append(res.Blocks, hcl.BlockHeaderSchema{Type: modconfig.BlockTypeParam})
+		res.Blocks = append(res.Blocks, hcl.BlockHeaderSchema{Type: schema.BlockTypeParam})
 		// if this is NOT query, add args
-		if resource.BlockType() != modconfig.BlockTypeQuery {
-			res.Attributes = append(res.Attributes, hcl.AttributeSchema{Name: modconfig.AttributeArgs})
+		if resource.BlockType() != schema.BlockTypeQuery {
+			res.Attributes = append(res.Attributes, hcl.AttributeSchema{Name: schema.AttributeTypeArgs})
 		}
 	}
 	if _, ok := resource.(modconfig.NodeAndEdgeProvider); ok {
 		res.Blocks = append(res.Blocks,
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeCategory},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeNode},
-			hcl.BlockHeaderSchema{Type: modconfig.BlockTypeEdge})
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeCategory},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeNode},
+			hcl.BlockHeaderSchema{Type: schema.BlockTypeEdge})
 	}
 	// TODO: dashbaord related (WithProvider)
 	// if _, ok := resource.(modconfig.WithProvider); ok {
-	// 	res.Blocks = append(res.Blocks, hcl.BlockHeaderSchema{Type: modconfig.BlockTypeWith})
+	// 	res.Blocks = append(res.Blocks, hcl.BlockHeaderSchema{Type: schema.BlockTypeWith})
 	// }
 	return res
 }
