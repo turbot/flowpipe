@@ -7,13 +7,13 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/zclconf/go-cty/cty"
 )
 
 type TriggerRunnerBase struct {
 	ctx       context.Context
-	trigger   pipeline.ITrigger
+	trigger   modconfig.ITrigger
 	esService *es.ESService
 }
 
@@ -21,15 +21,15 @@ type ITriggerRunner interface {
 	Run()
 }
 
-func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger pipeline.ITrigger) ITriggerRunner {
+func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger modconfig.ITrigger) ITriggerRunner {
 	switch trigger.(type) {
-	case *pipeline.TriggerSchedule, *pipeline.TriggerInterval:
+	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
 			ctx:       ctx,
 			trigger:   trigger,
 			esService: esService,
 		}
-	case *pipeline.TriggerQuery:
+	case *modconfig.TriggerQuery:
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				ctx:       ctx,
@@ -37,7 +37,7 @@ func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger pipe
 				esService: esService,
 			},
 		}
-	case *pipeline.TriggerHttp:
+	case *modconfig.TriggerHttp:
 		return &TriggerRunnerHttp{
 			TriggerRunnerBase: TriggerRunnerBase{
 				ctx:       ctx,

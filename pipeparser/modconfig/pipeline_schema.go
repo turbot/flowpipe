@@ -1,4 +1,4 @@
-package pipeline
+package modconfig
 
 import (
 	"github.com/hashicorp/hcl/v2"

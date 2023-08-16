@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 type PipelineStepStarted struct {
@@ -14,9 +14,9 @@ type PipelineStepStarted struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 	// Optional details for step execution
-	ChildPipelineExecutionID string         `json:"child_pipeline_execution_id,omitempty"`
-	ChildPipelineName        string         `json:"child_pipeline_name,omitempty"`
-	ChildPipelineArgs        pipeline.Input `json:"child_pipeline_args,omitempty"`
+	ChildPipelineExecutionID string          `json:"child_pipeline_execution_id,omitempty"`
+	ChildPipelineName        string          `json:"child_pipeline_name,omitempty"`
+	ChildPipelineArgs        modconfig.Input `json:"child_pipeline_args,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -71,7 +71,7 @@ func WithChildPipelineExecutionID(id string) PipelineStepStartedOption {
 	}
 }
 
-func WithChildPipeline(name string, args pipeline.Input) PipelineStepStartedOption {
+func WithChildPipeline(name string, args modconfig.Input) PipelineStepStartedOption {
 	return func(cmd *PipelineStepStarted) error {
 		cmd.ChildPipelineName = name
 		cmd.ChildPipelineArgs = args

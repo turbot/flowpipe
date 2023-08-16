@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -25,7 +25,7 @@ const (
 )
 
 type HTTPRequest struct {
-	Input pipeline.Input
+	Input modconfig.Input
 }
 
 type HTTPInput struct {
@@ -38,7 +38,7 @@ type HTTPInput struct {
 	Insecure         bool
 }
 
-func (h *HTTPRequest) ValidateInput(ctx context.Context, i pipeline.Input) error {
+func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypeUrl] == nil {
 		return pcerr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
@@ -69,7 +69,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i pipeline.Input) error
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -95,7 +95,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input pipeline.Input) (*pipeline.
 }
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
-func doRequest(ctx context.Context, inputParams *HTTPInput) (*pipeline.Output, error) {
+func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, error) {
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -144,7 +144,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*pipeline.Output, e
 	headers := mapResponseHeaders(resp)
 
 	// Construct the output
-	output := pipeline.Output{
+	output := modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 	output.Data[schema.AttributeTypeStatus] = resp.Status
@@ -159,8 +159,8 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*pipeline.Output, e
 
 	if resp.StatusCode >= 400 {
 		message := resp.Status
-		output.Errors = []pipeline.StepError{
-			pipeline.StepError{
+		output.Errors = []modconfig.StepError{
+			modconfig.StepError{
 				Message:   message,
 				ErrorCode: resp.StatusCode,
 			},
@@ -171,12 +171,12 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*pipeline.Output, e
 }
 
 // buildHTTPInput builds the HTTPInput struct from the input parameters
-func buildHTTPInput(input pipeline.Input) (*HTTPInput, error) {
+func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 	// Check for method
 	method, ok := input[schema.AttributeTypeMethod].(string)
 	if !ok {
 		// If not provided, default to GET
-		method = pipeline.HttpMethodGet
+		method = modconfig.HttpMethodGet
 	}
 
 	// Method should be case insensitive

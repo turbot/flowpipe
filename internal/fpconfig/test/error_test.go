@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser"
 )
 
 func TestStepErrorConfig(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/http.fp")
+	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/http.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -26,7 +26,7 @@ func TestStepErrorConfig(t *testing.T) {
 func TestStepErrorConfigRetries(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeline.LoadPipelines(context.TODO(), "./test_pipelines/error.fp")
+	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/error.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

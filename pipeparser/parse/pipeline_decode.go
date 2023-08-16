@@ -1,102 +1,181 @@
-package pipeline
+package parse
 
 import (
-	"context"
 	"fmt"
-	"path"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/parse"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
-	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/terraform-components/configs"
-	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-// ToError formats the supplied value as an error (or just returns it if already an error)
-func ToError(val interface{}) error {
-	if e, ok := val.(error); ok {
-		return e
+func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modconfig.IPipelineStep, hcl.Diagnostics) {
+	stepType := block.Labels[0]
+	stepName := block.Labels[1]
+
+	// TODO: collect all diags?
+
+	step := modconfig.NewPipelineStep(stepType, stepName)
+	if step == nil {
+		return nil, hcl.Diagnostics{&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Invalid pipeline step type " + stepType,
+			Subject:  &block.DefRange,
+		}}
+	}
+
+	pipelineStepBlockSchema := GetPipelineStepBlockSchema(stepType)
+	if pipelineStepBlockSchema == nil {
+		return nil, hcl.Diagnostics{&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Pipeline step block schema not found for step " + stepType,
+			Subject:  &block.DefRange,
+		}}
+	}
+
+	stepOptions, rest, diags := block.Body.PartialContent(pipelineStepBlockSchema)
+
+	if diags.HasErrors() {
+		return nil, diags
+	}
+
+	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, step)
+	if len(diags) > 0 {
+		return nil, diags
+	}
+
+	diags = step.SetAttributes(stepOptions.Attributes, parseCtx.ParseContext.EvalCtx)
+	if len(diags) > 0 {
+		return nil, diags
+	}
+
+	if errorBlocks := stepOptions.Blocks.ByType()[schema.BlockTypeError]; len(errorBlocks) > 0 {
+		if len(errorBlocks) > 1 {
+			return nil, hcl.Diagnostics{&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Multiple error blocks found for step " + stepName,
+				Subject:  &block.DefRange,
+			}}
+		}
+		errorBlock := errorBlocks[0]
+
+		attributes, diags := errorBlock.Body.JustAttributes()
+		if len(diags) > 0 {
+			return nil, diags
+		}
+
+		ignore := false
+		retries := 0
+
+		if attr, exists := attributes[schema.AttributeTypeIgnore]; exists {
+			val, diags := attr.Expr.Value(nil)
+			if len(diags) > 0 {
+				return nil, diags
+			}
+
+			var target bool
+			if err := gocty.FromCtyValue(val, &target); err != nil {
+				return nil, hcl.Diagnostics{&hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Error decoding ignore attribute",
+					Detail:   err.Error(),
+					Subject:  &block.DefRange,
+				}}
+			}
+			ignore = target
+		}
+
+		if attr, exists := attributes[schema.AttributeTypeRetries]; exists {
+			val, diags := attr.Expr.Value(nil)
+			if len(diags) > 0 {
+				return nil, diags
+			}
+
+			var target int
+			if err := gocty.FromCtyValue(val, &target); err != nil {
+				return nil, hcl.Diagnostics{&hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Error decoding retries attribute",
+					Detail:   err.Error(),
+					Subject:  &block.DefRange,
+				}}
+			}
+			retries = target
+
+		}
+
+		errorConfig := &modconfig.ErrorConfig{
+			Ignore:  ignore,
+			Retries: retries,
+		}
+
+		step.SetErrorConfig(errorConfig)
 	} else {
-		// return fperr.InternalWithMessage(fmt.Sprintf("%v", val))
-		return fmt.Errorf("%v", val)
+		errorConfig := &modconfig.ErrorConfig{
+			Ignore:  false,
+			Retries: 0,
+		}
+		step.SetErrorConfig(errorConfig)
 	}
+
+	return step, hcl.Diagnostics{}
 }
 
-func LoadFlowpipeConfig(ctx context.Context, configPath string) (*FlowpipeConfigParseContext, error) {
-	parseCtx := NewFlowpipeConfigParseContext(ctx, configPath)
+func decodeOutput(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.PipelineOutput, hcl.Diagnostics) {
 
-	// check whether sourcePath is a glob with a root location which exists in the file system
-	localSourcePath, globPattern, err := filehelpers.GlobRoot(configPath)
-	if err != nil {
-		return nil, err
+	o := &modconfig.PipelineOutput{
+		Name: block.Labels[0],
 	}
 
-	if localSourcePath == globPattern {
-		// if the path is a folder,
-		// append '*' to the glob explicitly, to match all files in that folder.
-		globPattern = path.Join(globPattern, fmt.Sprintf("*%s", pipeparser.PipelineExtension))
-	}
+	outputOptions, rest, diags := block.Body.PartialContent(modconfig.PipelineOutputBlockSchema)
 
-	flowpipeConfigFilePaths, err := filehelpers.ListFiles(localSourcePath, &filehelpers.ListOptions{
-		Flags:   filehelpers.AllRecursive,
-		Include: []string{globPattern},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// pipelineFilePaths is the list of all pipeline files found in the pipelinePath
-	if len(flowpipeConfigFilePaths) == 0 {
-		return parseCtx, nil
-	}
-
-	fileData, diags := pipeparser.LoadFileData(flowpipeConfigFilePaths...)
 	if diags.HasErrors() {
-		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
+		return o, diags
 	}
 
-	if len(fileData) != len(flowpipeConfigFilePaths) {
-		// return nil, fperr.InternalWithMessage("Failed to load all pipeline files")
-		return nil, fmt.Errorf("Failed to load all pipeline files")
+	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, outputOptions)
+	if len(diags) > 0 {
+		return nil, diags
 	}
 
-	// Each file in the pipelineFilePaths is parsed and the result is stored in the bodies variable
-	// bodies.data length should be the same with pipelineFilePaths length
-	bodies, diags := pipeparser.ParseHclFiles(fileData)
-	if diags.HasErrors() {
-		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
+	if attr, exists := outputOptions.Attributes[schema.AttributeTypeSensitive]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Sensitive)
+		diags = append(diags, valDiags...)
 	}
 
-	// do a partial decode
-	content, diags := bodies.Content(FlowpipeConfigBlockSchema)
-	if diags.HasErrors() {
-		return nil, pipeparser.DiagsToError("Failed to load workspace profiles", diags)
+	if attr, exists := outputOptions.Attributes[schema.AttributeTypeValue]; exists {
+		expr := attr.Expr
+		if len(expr.Variables()) > 0 {
+			traversals := expr.Variables()
+			for _, traversal := range traversals {
+				parts := hclhelpers.TraversalAsStringSlice(traversal)
+				if len(parts) > 0 {
+					if parts[0] == schema.BlockTypePipelineStep {
+						dependsOn := parts[1] + "." + parts[2]
+						o.AppendDependsOn(dependsOn)
+					}
+				}
+			}
+		}
+		o.UnresolvedValue = attr.Expr
+
+	} else {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Missing value attribute",
+			Subject:  &block.DefRange,
+		})
 	}
 
-	parseCtx.SetDecodeContent(content, fileData)
-
-	// build parse context
-	err = parseAllFlowipeConfig(parseCtx)
-	if err != nil {
-		return parseCtx, err
-	}
-
-	return parseCtx, nil
+	return o, diags
 }
 
-func LoadPipelines(ctx context.Context, configPath string) (map[string]*Pipeline, error) {
-	fpParseContext, err := LoadFlowpipeConfig(ctx, configPath)
-	if err != nil {
-		return nil, err
-	}
-	return fpParseContext.PipelineHcls, nil
-}
-
-func parseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
+func ParseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
 	// we may need to decode more than once as we gather dependencies as we go
 	// continue decoding as long as the number of unresolved blocks decreases
 	prevUnresolvedBlocks := 0
@@ -105,7 +184,7 @@ func parseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
 		if diags.HasErrors() {
 			// Store the diagnostics in the parse context, useful for test and introspection
 			parseCtx.ParseContext.Diags = diags
-			return pipeparser.DiagsToError("Failed to decode pipelines", diags)
+			return error_helpers.HclDiagsToError("Failed to decode pipelines", diags)
 		}
 
 		// if there are no unresolved blocks, we are done
@@ -169,11 +248,11 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	return diags
 }
 
-func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (ITrigger, *pipeparser.DecodeResult) {
-	res := pipeparser.NewDecodeResult()
+func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modconfig.ITrigger, *DecodeResult) {
+	res := newDecodeResult()
 
 	if len(block.Labels) != 2 {
-		res.HandleDecodeDiags(hcl.Diagnostics{
+		res.handleDecodeDiags(hcl.Diagnostics{
 			{
 				Severity: hcl.DiagError,
 				Summary:  fmt.Sprintf("invalid trigger block - expected 2 labels, found %d", len(block.Labels)),
@@ -188,7 +267,7 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (ITri
 
 	triggerSchema := GetTriggerBlockSchema(triggerType)
 	if triggerSchema == nil {
-		res.HandleDecodeDiags(hcl.Diagnostics{
+		res.handleDecodeDiags(hcl.Diagnostics{
 			{
 				Severity: hcl.DiagError,
 				Summary:  fmt.Sprintf("invalid trigger type '%s'", triggerType),
@@ -201,14 +280,14 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (ITri
 	triggerOptions, _, diags := block.Body.PartialContent(triggerSchema)
 
 	if diags.HasErrors() {
-		res.HandleDecodeDiags(diags)
+		res.handleDecodeDiags(diags)
 		return nil, res
 	}
 
-	triggerHcl := NewTrigger(parseCtx.RunCtx, triggerType, triggerName)
+	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, triggerType, triggerName)
 
 	if triggerHcl == nil {
-		res.HandleDecodeDiags(hcl.Diagnostics{
+		res.handleDecodeDiags(hcl.Diagnostics{
 			{
 				Severity: hcl.DiagError,
 				Summary:  fmt.Sprintf("invalid trigger type '%s'", triggerType),
@@ -218,43 +297,43 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (ITri
 		return nil, res
 	}
 
-	diags = triggerHcl.SetAttributes(triggerOptions.Attributes, &parseCtx.ParseContext)
+	diags = triggerHcl.SetAttributes(triggerOptions.Attributes, parseCtx.ParseContext.EvalCtx)
 	if len(diags) > 0 {
-		res.HandleDecodeDiags(diags)
+		res.handleDecodeDiags(diags)
 		return nil, res
 	}
 
 	moreDiags := parseCtx.AddTrigger(triggerHcl)
-	res.AddDiags(moreDiags)
+	res.addDiags(moreDiags)
 
 	return triggerHcl, res
 }
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*Pipeline, *pipeparser.DecodeResult) {
-	res := pipeparser.NewDecodeResult()
+func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Pipeline, *DecodeResult) {
+	res := newDecodeResult()
 
 	// get shell pipelineHcl
-	pipelineHcl := NewPipelineHcl(block)
+	pipelineHcl := modconfig.NewPipelineHcl(block)
 
 	// do a partial decode so we can parse the step manually, each pipeline step has its own struct, so we can't use
 	// HCL automatic parsing here
-	pipelineOptions, rest, diags := block.Body.PartialContent(PipelineBlockSchema)
+	pipelineOptions, rest, diags := block.Body.PartialContent(modconfig.PipelineBlockSchema)
 	if diags.HasErrors() {
-		res.HandleDecodeDiags(diags)
+		res.handleDecodeDiags(diags)
 		return nil, res
 	}
 
 	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, pipelineHcl)
 	if len(diags) > 0 {
-		res.HandleDecodeDiags(diags)
+		res.handleDecodeDiags(diags)
 		return nil, res
 	}
 
 	diags = pipelineHcl.SetAttributes(pipelineOptions.Attributes)
 	if len(diags) > 0 {
-		res.HandleDecodeDiags(diags)
+		res.handleDecodeDiags(diags)
 		return nil, res
 	}
 
@@ -269,7 +348,7 @@ func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*Pi
 		case schema.BlockTypePipelineStep:
 			step, diags := decodeStep(block, parseCtx)
 			if diags.HasErrors() {
-				res.HandleDecodeDiags(diags)
+				res.handleDecodeDiags(diags)
 				return nil, res
 			}
 
@@ -279,7 +358,7 @@ func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*Pi
 			output, cfgDiags := decodeOutput(block, parseCtx)
 			diags = append(diags, cfgDiags...)
 			if len(diags) > 0 {
-				res.HandleDecodeDiags(diags)
+				res.handleDecodeDiags(diags)
 				return nil, res
 			}
 
@@ -292,7 +371,7 @@ func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*Pi
 			param, varDiags := configs.DecodeVariableBlock(block, override)
 			diags = append(diags, varDiags...)
 			if len(diags) > 0 {
-				res.HandleDecodeDiags(diags)
+				res.handleDecodeDiags(diags)
 				return nil, res
 			}
 
@@ -313,14 +392,14 @@ func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*Pi
 	handlePipelineDecodeResult(pipelineHcl, res, block, parseCtx)
 	diags = validatePipelineDependencies(pipelineHcl)
 	if len(diags) > 0 {
-		res.HandleDecodeDiags(diags)
+		res.handleDecodeDiags(diags)
 		return nil, res
 	}
 
 	return pipelineHcl, res
 }
 
-func validatePipelineDependencies(pipelineHcl *Pipeline) hcl.Diagnostics {
+func validatePipelineDependencies(pipelineHcl *modconfig.Pipeline) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	var stepRegisters []string
@@ -344,15 +423,15 @@ func validatePipelineDependencies(pipelineHcl *Pipeline) hcl.Diagnostics {
 	return diags
 }
 
-func handlePipelineDecodeResult(resource *Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) {
+func handlePipelineDecodeResult(resource *modconfig.Pipeline, res *DecodeResult, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
 		moreDiags := resource.OnDecoded()
-		res.AddDiags(moreDiags)
+		res.addDiags(moreDiags)
 
 		moreDiags = parseCtx.AddPipeline(resource)
-		res.AddDiags(moreDiags)
+		res.addDiags(moreDiags)
 		return
 	}
 
@@ -360,24 +439,24 @@ func handlePipelineDecodeResult(resource *Pipeline, res *pipeparser.DecodeResult
 	if len(res.Depends) > 0 {
 		// moreDiags := parseCtx.AddDependencies(block, resource.Name(), res.Depends)
 		moreDiags := parseCtx.AddDependencies(block, resource.Name, res.Depends)
-		res.AddDiags(moreDiags)
+		res.addDiags(moreDiags)
 	}
 }
 
 func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 	switch stepType {
 	case schema.BlockTypePipelineStepHttp:
-		return PipelineStepHttpBlockSchema
+		return modconfig.PipelineStepHttpBlockSchema
 	case schema.BlockTypePipelineStepSleep:
-		return PipelineStepSleepBlockSchema
+		return modconfig.PipelineStepSleepBlockSchema
 	case schema.BlockTypePipelineStepEmail:
-		return PipelineStepEmailBlockSchema
+		return modconfig.PipelineStepEmailBlockSchema
 	case schema.BlockTypePipelineStepEcho:
-		return PipelineStepEchoBlockSchema
+		return modconfig.PipelineStepEchoBlockSchema
 	case schema.BlockTypePipelineStepQuery:
-		return PipelineStepQueryBlockSchema
+		return modconfig.PipelineStepQueryBlockSchema
 	case schema.BlockTypePipelineStepPipeline:
-		return PipelineStepPipelineBlockSchema
+		return modconfig.PipelineStepPipelineBlockSchema
 	default:
 		return nil
 	}
@@ -386,70 +465,14 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 func GetTriggerBlockSchema(triggerType string) *hcl.BodySchema {
 	switch triggerType {
 	case schema.TriggerTypeSchedule:
-		return TriggerScheduleBlockSchema
+		return modconfig.TriggerScheduleBlockSchema
 	case schema.TriggerTypeInterval:
-		return TriggerIntervalBlockSchema
+		return modconfig.TriggerIntervalBlockSchema
 	case schema.TriggerTypeQuery:
-		return TriggerQueryBlockSchema
+		return modconfig.TriggerQueryBlockSchema
 	case schema.TriggerTypeHttp:
-		return TriggerHttpBlockSchema
+		return modconfig.TriggerHttpBlockSchema
 	default:
 		return nil
 	}
-}
-
-type FlowpipeConfigParseContext struct {
-	parse.ParseContext
-	PipelineHcls map[string]*Pipeline
-	TriggerHcls  map[string]ITrigger
-}
-
-func (c *FlowpipeConfigParseContext) BuildEvalContext() {
-	vars := map[string]cty.Value{}
-	pipelineVars := map[string]cty.Value{}
-
-	for _, pipeline := range c.PipelineHcls {
-		pipelineVars[pipeline.Name] = pipeline.AsCtyValue()
-	}
-
-	vars["pipeline"] = cty.ObjectVal(pipelineVars)
-
-	c.ParseContext.BuildEvalContext(vars)
-}
-
-// AddPipeline stores this resource as a variable to be added to the eval context. It alse
-func (c *FlowpipeConfigParseContext) AddPipeline(pipelineHcl *Pipeline) hcl.Diagnostics {
-	c.PipelineHcls[pipelineHcl.Name] = pipelineHcl
-
-	// remove this resource from unparsed blocks
-	delete(c.UnresolvedBlocks, pipelineHcl.Name)
-
-	c.BuildEvalContext()
-	return nil
-}
-
-func (c *FlowpipeConfigParseContext) AddTrigger(trigger ITrigger) hcl.Diagnostics {
-
-	c.TriggerHcls[trigger.GetName()] = trigger
-
-	// remove this resource from unparsed blocks
-	delete(c.UnresolvedBlocks, trigger.GetName())
-
-	c.BuildEvalContext()
-	return nil
-}
-
-func NewFlowpipeConfigParseContext(ctx context.Context, rootEvalPath string) *FlowpipeConfigParseContext {
-	parseContext := parse.NewParseContext(ctx, rootEvalPath)
-	// TODO uncomment once https://github.com/turbot/steampipe/issues/2640 is done
-
-	c := &FlowpipeConfigParseContext{
-		ParseContext: parseContext,
-		PipelineHcls: make(map[string]*Pipeline),
-		TriggerHcls:  make(map[string]ITrigger),
-	}
-
-	c.BuildEvalContext()
-
-	return c
 }

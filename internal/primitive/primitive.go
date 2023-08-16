@@ -1,9 +1,9 @@
 package primitive
 
 import (
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 type Primitive interface {
-	Run(pipeline.Input) (*pipeline.Output, error)
+	Run(modconfig.Input) (*modconfig.Output, error)
 }

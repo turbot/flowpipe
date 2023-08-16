@@ -13,8 +13,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -69,7 +69,7 @@ func TestSendEmail(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := pipeline.Input(map[string]interface{}{
+	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "TestSendEmail",
 		schema.AttributeTypeFrom:             "test.send.email@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -111,7 +111,7 @@ func TestSendEmailWithCc(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := pipeline.Input(map[string]interface{}{
+	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "TestSendEmailWithCc",
 		schema.AttributeTypeFrom:             "test.send.email.with.cc@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -156,7 +156,7 @@ func TestSendEmailWithBcc(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := pipeline.Input(map[string]interface{}{
+	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "TestSendEmailWithBcc",
 		schema.AttributeTypeFrom:             "test.send.email.with.bcc@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -201,7 +201,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := pipeline.Input(map[string]interface{}{
+	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "Flowpipe",
 		schema.AttributeTypeFrom:             "sender@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -224,7 +224,7 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := pipeline.Input(map[string]interface{}{
+	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "Flowpipe",
 		schema.AttributeTypeFrom:             "sender@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -247,7 +247,7 @@ func TestEmailInvalidCreds(t *testing.T) {
 	assert := assert.New(t)
 	hr := Email{}
 
-	input := pipeline.Input(map[string]interface{}{
+	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "Flowpipe",
 		schema.AttributeTypeFrom:             "test@example.com",
 		schema.AttributeTypeSenderCredential: "abcdefghijklmnop",

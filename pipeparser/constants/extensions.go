@@ -16,6 +16,7 @@ const (
 	SnapshotExtension      = ".sps"
 	TokenExtension         = ".tptt"
 	LegacyTokenExtension   = ".sptt"
+	PipelineExtension      = ".fp"
 )
 
 var YamlExtensions = []string{".yml", ".yaml"}

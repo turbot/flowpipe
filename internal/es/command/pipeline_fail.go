@@ -7,8 +7,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineFailHandler CommandHandler
@@ -87,7 +87,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Collect all the step output, but don't also add the error in the cmd/event
-	var pipelineErrors []pipeline.StepError
+	var pipelineErrors []modconfig.StepError
 	if cmd.Error != nil {
 		pipelineErrors = append(pipelineErrors, *cmd.Error)
 	}

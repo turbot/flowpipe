@@ -4,24 +4,24 @@ import (
 	"fmt"
 
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineStepStart struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string         `json:"pipeline_execution_id"`
-	StepExecutionID     string         `json:"step_execution_id"`
-	StepName            string         `json:"step_name"`
-	StepInput           pipeline.Input `json:"input"`
+	PipelineExecutionID string          `json:"pipeline_execution_id"`
+	StepExecutionID     string          `json:"step_execution_id"`
+	StepName            string          `json:"step_name"`
+	StepInput           modconfig.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *pipeline.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 
-	DelayMs        int                     `json:"delay_ms,omitempty"` // delay start in milliseconds
-	NextStepAction pipeline.NextStepAction `json:"next_step_action,omitempty"`
+	DelayMs        int                      `json:"delay_ms,omitempty"` // delay start in milliseconds
+	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -73,7 +73,7 @@ func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
 	}
 }
 
-func WithStep(name string, input pipeline.Input, stepForEach *pipeline.StepForEach, nextStepAction pipeline.NextStepAction) PipelineStepStartOption {
+func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, nextStepAction modconfig.NextStepAction) PipelineStepStartOption {
 	return func(cmd *PipelineStepStart) error {
 		cmd.StepName = name
 		cmd.StepInput = input

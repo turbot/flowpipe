@@ -9,8 +9,8 @@ import (
 
 	_ "github.com/lib/pq"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -22,7 +22,7 @@ type Query struct {
 	DB      *sql.DB
 }
 
-func (e *Query) ValidateInput(ctx context.Context, i pipeline.Input) error {
+func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
 	if e.Setting != "go-sqlmock" && i[schema.AttributeTypeConnectionString] == nil {
 		return pcerr.BadRequestWithMessage("Query input must define connection_string")
@@ -39,7 +39,7 @@ func (e *Query) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	return nil
 }
 
-func (e *Query) InitializeDB(ctx context.Context, i pipeline.Input) (*sql.DB, error) {
+func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, error) {
 	var db *sql.DB
 	var err error
 
@@ -65,7 +65,7 @@ func (e *Query) InitializeDB(ctx context.Context, i pipeline.Input) (*sql.DB, er
 	return db, nil
 }
 
-func (e *Query) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
+func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (e *Query) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output
 		return nil, err
 	}
 
-	output := &pipeline.Output{
+	output := &modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 

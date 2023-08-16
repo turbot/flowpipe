@@ -6,8 +6,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -75,7 +75,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
 				if !pe.IsStepQueued(step.GetFullyQualifiedName()) {
-					e.NextSteps = append(e.NextSteps, pipeline.NextStep{StepName: step.GetFullyQualifiedName(), DelayMs: 3000})
+					e.NextSteps = append(e.NextSteps, modconfig.NextStep{StepName: step.GetFullyQualifiedName(), DelayMs: 3000})
 				}
 			}
 			continue
@@ -120,9 +120,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
 					// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
 					// be ended in the handler/pipeline_planned stage
-					e.NextSteps = append(e.NextSteps, pipeline.NextStep{
+					e.NextSteps = append(e.NextSteps, modconfig.NextStep{
 						StepName: step.GetFullyQualifiedName(),
-						Action:   pipeline.NextStepActionInaccessible})
+						Action:   modconfig.NextStepActionInaccessible})
 				}
 				break
 			}
@@ -134,9 +134,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		// Plan to run the step.
-		e.NextSteps = append(e.NextSteps, pipeline.NextStep{
+		e.NextSteps = append(e.NextSteps, modconfig.NextStep{
 			StepName: step.GetFullyQualifiedName(),
-			Action:   pipeline.NextStepActionStart})
+			Action:   modconfig.NextStepActionStart})
 	}
 
 	// Pipeline has been planned, now publish this event

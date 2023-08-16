@@ -7,7 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -43,7 +43,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 	fplog.Logger(api.ctx).Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
 	result := types.ListTriggerResponse{
-		Items: []pipeline.Trigger{},
+		Items: []modconfig.Trigger{},
 	}
 
 	c.JSON(http.StatusOK, result)

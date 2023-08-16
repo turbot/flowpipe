@@ -3,14 +3,14 @@ package primitive
 import (
 	"context"
 
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type RunPipeline struct{}
 
-func (e *RunPipeline) ValidateInput(ctx context.Context, input pipeline.Input) error {
+func (e *RunPipeline) ValidateInput(ctx context.Context, input modconfig.Input) error {
 
 	if input[schema.AttributeTypePipeline] == nil {
 		return pcerr.BadRequestWithMessage("pipeline input must define a name")
@@ -30,12 +30,12 @@ func (e *RunPipeline) ValidateInput(ctx context.Context, input pipeline.Input) e
 	return nil
 }
 
-func (e *RunPipeline) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
+func (e *RunPipeline) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := &pipeline.Output{
+	output := &modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 

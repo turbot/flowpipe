@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Sleep struct{}
 
-func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.Input) error {
+func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error {
 
 	if input[schema.AttributeTypeDuration] == nil {
 		return pcerr.BadRequestWithMessage("Sleep input must define a duration")
@@ -27,7 +27,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.Input) error {
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
+func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (e *Sleep) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	output := &pipeline.Output{
+	output := &modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 

@@ -2,26 +2,26 @@ package db
 
 import (
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 // Ristretto backed pipeline datatabase
 
-func GetPipeline(name string) (*pipeline.Pipeline, error) {
+func GetPipeline(name string) (*modconfig.Pipeline, error) {
 	pipelineCached, found := cache.GetCache().Get(name)
 	if !found {
 		return nil, pcerr.NotFoundWithMessage("pipeline not found: " + name)
 	}
 
-	pipeline, ok := pipelineCached.(*pipeline.Pipeline)
+	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
 	if !ok {
 		return nil, pcerr.InternalWithMessage("invalid pipeline")
 	}
 	return pipeline, nil
 }
 
-func ListAllPipelines() ([]pipeline.Pipeline, error) {
+func ListAllPipelines() ([]modconfig.Pipeline, error) {
 
 	pipelineNamesCached, found := cache.GetCache().Get("#pipeline.names")
 	if !found {
@@ -33,7 +33,7 @@ func ListAllPipelines() ([]pipeline.Pipeline, error) {
 		return nil, pcerr.InternalWithMessage("invalid pipeline names")
 	}
 
-	var pipelines []pipeline.Pipeline
+	var pipelines []modconfig.Pipeline
 	for _, name := range pipelineNames {
 		pipeline, err := GetPipeline(name)
 		if err != nil {

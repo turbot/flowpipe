@@ -1,8 +1,8 @@
 package execution
 
 import (
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -14,7 +14,7 @@ type PipelineExecution struct {
 	// The name of the pipeline
 	Name string `json:"name"`
 	// The input to the pipeline
-	Args pipeline.Input `json:"args,omitempty"`
+	Args modconfig.Input `json:"args,omitempty"`
 
 	// The output of the pipeline
 	PipelineOutput map[string]interface{} `json:"pipeline_output,omitempty"`
@@ -33,7 +33,7 @@ type PipelineExecution struct {
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
-	Errors []pipeline.StepError `json:"errors,omitempty"`
+	Errors []modconfig.StepError `json:"errors,omitempty"`
 
 	// The "final" output for all the steps in this pipeline execution.
 	AllStepOutputs ExecutionStepOutputs `json:"-"`
@@ -89,13 +89,13 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 		}
 
 		for stepName, stepOutput := range v {
-			if nonIndexStepOutput, ok := stepOutput.(*pipeline.Output); ok {
+			if nonIndexStepOutput, ok := stepOutput.(*modconfig.Output); ok {
 				var err error
 				vm[stepName], err = nonIndexStepOutput.AsCtyValue()
 				if err != nil {
 					return nil, err
 				}
-			} else if indexedStepOutput, ok := stepOutput.([]*pipeline.Output); ok {
+			} else if indexedStepOutput, ok := stepOutput.([]*modconfig.Output); ok {
 				var err error
 
 				ctyValList := make([]cty.Value, len(indexedStepOutput))
@@ -188,7 +188,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 }
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
-func (pe *PipelineExecution) IsStepFinalFailure(step pipeline.IPipelineStep, ex *Execution) bool {
+func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.IPipelineStep, ex *Execution) bool {
 
 	return true
 	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
@@ -202,12 +202,12 @@ func (pe *PipelineExecution) IsStepFinalFailure(step pipeline.IPipelineStep, ex 
 	// 		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
 
 	// 		if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-	// 			pe.Fail(step.GetFullyQualifiedName(), pipeline.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
+	// 			pe.Fail(step.GetFullyQualifiedName(), modconfig.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
 	// 		} else {
 	// 			// Set the error
 	// 			pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
 	// 		}
-	// 		// pe.Fail(step.GetName(), pipeline.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
+	// 		// pe.Fail(step.GetName(), modconfig.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
 	// 		return true
 	// 	} else {
 	// 		return false
@@ -220,7 +220,7 @@ func (pe *PipelineExecution) IsStepFinalFailure(step pipeline.IPipelineStep, ex 
 	// return true
 
 }
-func (pe *PipelineExecution) Fail(stepName string, stepError ...pipeline.StepError) {
+func (pe *PipelineExecution) Fail(stepName string, stepError ...modconfig.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
 }
 
@@ -380,15 +380,15 @@ type StepExecution struct {
 	Status string `json:"status"`
 
 	// Input to the step
-	Input pipeline.Input `json:"input"`
+	Input modconfig.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *pipeline.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 
-	NextStepAction pipeline.NextStepAction `json:"next_step_action,omitempty"`
+	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 
 	// Output of the step
-	Output *pipeline.Output `json:"output,omitempty"`
+	Output *modconfig.Output `json:"output,omitempty"`
 }
 
 func (se *StepExecution) Index() *int {

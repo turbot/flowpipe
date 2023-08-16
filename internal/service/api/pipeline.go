@@ -76,7 +76,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
-// @Success 200 {object} pipeline.Pipeline
+// @Success 200 {object} modconfig.Pipeline
 // @Failure 400 {object} pcerr.ErrorModel
 // @Failure 401 {object} pcerr.ErrorModel
 // @Failure 403 {object} pcerr.ErrorModel

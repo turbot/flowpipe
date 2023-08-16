@@ -4,15 +4,14 @@ import (
 	"fmt"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 // This type is used by the API to return a list of pipelines.
 type ListPipelineResponse struct {
-	Items     []pipeline.Pipeline `json:"items"`
-	NextToken *string             `json:"next_token,omitempty"`
+	Items     []modconfig.Pipeline `json:"items"`
+	NextToken *string              `json:"next_token,omitempty"`
 }
 
 type RunPipelineResponse struct {
@@ -127,6 +126,6 @@ func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
 
 // This type is used by the API to return a list of triggers.
 type ListTriggerResponse struct {
-	Items     []pipeline.Trigger `json:"items"`
-	NextToken *string            `json:"next_token,omitempty"`
+	Items     []modconfig.Trigger `json:"items"`
+	NextToken *string             `json:"next_token,omitempty"`
 }

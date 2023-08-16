@@ -9,16 +9,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Email struct {
-	Input pipeline.Input
+	Input modconfig.Input
 }
 
-func (h *Email) ValidateInput(ctx context.Context, i pipeline.Input) error {
+func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
@@ -132,7 +132,7 @@ func (h *Email) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	return nil
 }
 
-func (h *Email) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
+func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func (h *Email) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output
 	message += "\r\n" + body
 
 	// Construct the output
-	output := pipeline.Output{
+	output := modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 
@@ -251,8 +251,8 @@ func (h *Email) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output
 		// Refer https://en.wikipedia.org/wiki/List_of_SMTP_server_return_codes for all available error codes
 		smtpErr := err.(*textproto.Error)
 		if smtpErr.Code >= 400 {
-			output.Errors = []pipeline.StepError{
-				pipeline.StepError{
+			output.Errors = []modconfig.StepError{
+				modconfig.StepError{
 					Message:   smtpErr.Msg,
 					ErrorCode: smtpErr.Code,
 				},

@@ -41,6 +41,10 @@ type ResourceMaps struct {
 	// map of snapshot paths, keyed by snapshot name
 	Snapshots map[string]string
 	Variables map[string]*Variable
+
+	// flowpipe
+	Pipelines map[string]*Pipeline
+	Triggers  map[string]*Trigger
 }
 
 func NewModResources(mod *Mod) *ResourceMaps {
@@ -81,6 +85,10 @@ func emptyModResources() *ResourceMaps {
 		References: make(map[string]*ResourceReference),
 		Snapshots:  make(map[string]string),
 		Variables:  make(map[string]*Variable),
+
+		// Flowpipe
+		Pipelines: make(map[string]*Pipeline),
+		Triggers:  make(map[string]*Trigger),
 	}
 }
 
@@ -382,6 +390,10 @@ func (m *ResourceMaps) Equals(other *ResourceMaps) bool {
 			return false
 		}
 	}
+
+	// TODO: equal for Pipeline
+	// TODO: equal for Trigger
+
 	return true
 }
 

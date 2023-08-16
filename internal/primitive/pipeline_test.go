@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 func TestPipelineOK(t *testing.T) {
@@ -15,7 +15,7 @@ func TestPipelineOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := RunPipeline{}
-	input := pipeline.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
+	input := modconfig.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)

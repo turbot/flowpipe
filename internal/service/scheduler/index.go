@@ -11,18 +11,18 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/trigger"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type Scheduler struct {
 	ctx           context.Context
-	triggers      map[string]pipeline.ITrigger
+	triggers      map[string]modconfig.ITrigger
 	esService     *es.ESService
 	cronScheduler *gocron.Scheduler
 }
 
-func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]pipeline.ITrigger) *Scheduler {
+func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]modconfig.ITrigger) *Scheduler {
 	return &Scheduler{
 		ctx:       ctx,
 		esService: esService,
@@ -57,7 +57,7 @@ func (s *Scheduler) Start() error {
 
 	for _, t := range s.triggers {
 		switch t := t.(type) {
-		case *pipeline.TriggerSchedule:
+		case *modconfig.TriggerSchedule:
 			logger.Info("Scheduling trigger", "name", t.Name, "schedule", t.Schedule)
 
 			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
@@ -66,7 +66,7 @@ func (s *Scheduler) Start() error {
 			if err != nil {
 				return err
 			}
-		case *pipeline.TriggerInterval:
+		case *modconfig.TriggerInterval:
 			logger.Info("Scheduling trigger", "name", t.Name, "interval", t.Schedule)
 
 			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)

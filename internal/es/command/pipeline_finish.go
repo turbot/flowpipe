@@ -6,7 +6,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
@@ -68,7 +68,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			}
 			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
-				err := pipeparser.DiagsToError("output", diags)
+				err := error_helpers.HclDiagsToError("output", diags)
 				logger.Error("Error calculating output", "error", err)
 				return err
 			}

@@ -1,19 +1,19 @@
 package event
 
 import (
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 type PipelineStepFinish struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string           `json:"pipeline_execution_id"`
-	StepExecutionID     string           `json:"step_execution_id"`
-	Output              *pipeline.Output `json:"output,omitempty"`
+	PipelineExecutionID string            `json:"pipeline_execution_id"`
+	StepExecutionID     string            `json:"step_execution_id"`
+	Output              *modconfig.Output `json:"output,omitempty"`
 
 	// for_each controls
-	StepForEach *pipeline.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -36,7 +36,7 @@ func NewPipelineStepFinish(opts ...PipelineStepFinishOption) (*PipelineStepFinis
 func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
-		cmd.Output = &pipeline.Output{
+		cmd.Output = &modconfig.Output{
 			Status: "", // output is only relevant for step
 			Data:   e.PipelineOutput,
 		}
@@ -49,10 +49,10 @@ func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 func ForPipelineFailed(e *PipelineFailed) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
-		cmd.Output = &pipeline.Output{
+		cmd.Output = &modconfig.Output{
 			Status: "",
 			Data:   e.PipelineOutput,
-			Errors: []pipeline.StepError{*e.Error},
+			Errors: []modconfig.StepError{*e.Error},
 		}
 
 		// e.PipelineOutput

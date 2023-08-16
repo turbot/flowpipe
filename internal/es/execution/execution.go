@@ -16,8 +16,8 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/funcs"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -37,7 +37,7 @@ type Execution struct {
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *pipeline.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (pipeline.IPipelineStep, error) {
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.IPipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -311,7 +311,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				StepStatus:            map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				ParentExecutionID:     et.ParentExecutionID,
-				Errors:                []pipeline.StepError{},
+				Errors:                []modconfig.StepError{},
 				AllStepOutputs:        ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
 				StepExecutionOrder:    map[string][]string{},
@@ -461,10 +461,10 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// text = step.echo.text_1[1].text
 
 				if pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*pipeline.Output, et.StepForEach.ForEachTotalCount)
+					pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*modconfig.Output, et.StepForEach.ForEachTotalCount)
 				}
 
-				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*pipeline.Output)[et.StepForEach.Index] = et.Output
+				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*modconfig.Output)[et.StepForEach.Index] = et.Output
 			}
 
 			// TODO: Error handling

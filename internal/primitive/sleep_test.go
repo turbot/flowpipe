@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 func TestSleepOK(t *testing.T) {
@@ -18,7 +18,7 @@ func TestSleepOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := pipeline.Input(map[string]interface{}{"duration": "1s"})
+	input := modconfig.Input(map[string]interface{}{"duration": "1s"})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
@@ -35,7 +35,7 @@ func TestSleepInvalidDuration(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := pipeline.Input(map[string]interface{}{"duration": "5"})
+	input := modconfig.Input(map[string]interface{}{"duration": "5"})
 
 	_, err := q.Run(ctx, input)
 	assert.NotNil(err)

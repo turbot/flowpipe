@@ -7,9 +7,9 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -81,7 +81,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// TODO: but for now take the simplest route
 	pipelineInaccessible := false
 	for _, nextStep := range e.NextSteps {
-		if nextStep.Action == pipeline.NextStepActionInaccessible {
+		if nextStep.Action == modconfig.NextStepActionInaccessible {
 			pipelineInaccessible = true
 			break
 		}
@@ -105,7 +105,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		// ! This is a slice of map. Each slice represent a step execution, an element of the for_each
 		forEachCtyVals := []map[string]cty.Value{}
-		forEachNextStepAction := []pipeline.NextStepAction{}
+		forEachNextStepAction := []modconfig.NextStepAction{}
 		stepForEach := stepDefn.GetForEach()
 
 		// if we have for_each build the list of inputs for the for_each
@@ -129,7 +129,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			val, diags := stepForEach.Value(evalContext)
 
 			if diags.HasErrors() {
-				err := pipeparser.DiagsToError("param", diags)
+				err := error_helpers.HclDiagsToError("param", diags)
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
@@ -146,7 +146,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// the inputs length maybe > 1. If we don't have a for_each, then the inputs length will be
 		// exactly 1
 		//
-		inputs := []pipeline.Input{}
+		inputs := []modconfig.Input{}
 
 		if evalContext == nil {
 			var err error
@@ -171,19 +171,19 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 				val, diags := expr.Value(evalContext)
 				if len(diags) > 0 {
-					err := pipeparser.DiagsToError("diags", diags)
+					err := error_helpers.HclDiagsToError("diags", diags)
 					logger.Error("Error evaluating if condition", "error", err)
 					return err
 				}
 
 				if val.False() {
 					logger.Info("if condition not met for step", "step", stepDefn.GetName())
-					forEachNextStepAction = append(forEachNextStepAction, pipeline.NextStepActionSkip)
+					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionSkip)
 				} else {
-					forEachNextStepAction = append(forEachNextStepAction, pipeline.NextStepActionStart)
+					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
 				}
 			} else {
-				forEachNextStepAction = append(forEachNextStepAction, pipeline.NextStepActionStart)
+				forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
 			}
 		} else {
 
@@ -209,19 +209,19 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 					val, diags := expr.Value(evalContext)
 					if len(diags) > 0 {
-						err := pipeparser.DiagsToError("diags", diags)
+						err := error_helpers.HclDiagsToError("diags", diags)
 						logger.Error("Error evaluating if condition", "error", err)
 						return err
 					}
 
 					if val.False() {
 						logger.Info("if condition not met for step", "step", stepDefn.GetName())
-						forEachNextStepAction = append(forEachNextStepAction, pipeline.NextStepActionSkip)
+						forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionSkip)
 					} else {
-						forEachNextStepAction = append(forEachNextStepAction, pipeline.NextStepActionStart)
+						forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
 					}
 				} else {
-					forEachNextStepAction = append(forEachNextStepAction, pipeline.NextStepActionStart)
+					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
 				}
 			}
 		}
@@ -230,9 +230,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		for i, input := range inputs {
 
 			// Start each step in parallel
-			go func(nextStep pipeline.NextStep, input pipeline.Input, index int) {
+			go func(nextStep modconfig.NextStep, input modconfig.Input, index int) {
 
-				var forEachControl *pipeline.StepForEach
+				var forEachControl *modconfig.StepForEach
 
 				// TODO: this is not very nice and the only reason we do this is for the snapshot, we should
 				// TODO: refactor this
@@ -249,12 +249,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					} else {
 						title += nextStep.StepName
 					}
-					forEachOutput := &pipeline.Output{
+					forEachOutput := &modconfig.Output{
 						Data: map[string]interface{}{},
 					}
 					forEachOutput.Data[schema.AttributeTypeValue] = title
 
-					forEachControl = &pipeline.StepForEach{
+					forEachControl = &modconfig.StepForEach{
 						Index:             forEachIndex,
 						ForEachOutput:     forEachOutput,
 						ForEachTotalCount: len(inputs),

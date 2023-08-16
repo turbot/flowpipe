@@ -14,7 +14,8 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 // Manager manages and represents the status of the service.
@@ -24,7 +25,7 @@ type Manager struct {
 	apiService *api.APIService
 	esService  *es.ESService
 
-	triggers map[string]pipeline.ITrigger
+	triggers map[string]modconfig.ITrigger
 
 	RaftNodeID    string `json:"raft_node_id,omitempty"`
 	RaftBootstrap bool   `json:"raft_bootstrap"`
@@ -89,7 +90,7 @@ func WithHTTPAddress(addr string) ManagerOption {
 func (m *Manager) Initialize() error {
 	pipelineDir := viper.GetString("pipeline.dir")
 
-	fpParseContext, err := pipeline.LoadFlowpipeConfig(m.ctx, pipelineDir)
+	fpParseContext, err := pipeparser.LoadFlowpipeConfig(m.ctx, pipelineDir)
 	if err != nil {
 		return err
 	}

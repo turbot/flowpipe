@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/pipeparser/pipeline"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
 
 type PipelineStepFinished struct {
@@ -14,10 +14,10 @@ type PipelineStepFinished struct {
 	StepExecutionID     string `json:"step_execution_id"`
 
 	// Output
-	Output *pipeline.Output `json:"output,omitempty"`
+	Output *modconfig.Output `json:"output,omitempty"`
 
 	// for_each controls
-	StepForEach *pipeline.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -74,7 +74,7 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output *pipeline.Output) PipelineStepFinishedOption {
+func WithStepOutput(output *modconfig.Output) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
 		return nil
