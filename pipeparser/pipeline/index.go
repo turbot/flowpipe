@@ -1,4 +1,4 @@
-package fpconfig
+package pipeline
 
 import (
 	"context"
@@ -7,8 +7,6 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	filehelpers "github.com/turbot/go-kit/files"
@@ -22,7 +20,8 @@ func ToError(val interface{}) error {
 	if e, ok := val.(error); ok {
 		return e
 	} else {
-		return fperr.InternalWithMessage(fmt.Sprintf("%v", val))
+		// return fperr.InternalWithMessage(fmt.Sprintf("%v", val))
+		return fmt.Errorf("%v", val)
 	}
 }
 
@@ -60,7 +59,8 @@ func LoadFlowpipeConfig(ctx context.Context, configPath string) (*FlowpipeConfig
 	}
 
 	if len(fileData) != len(flowpipeConfigFilePaths) {
-		return nil, fperr.InternalWithMessage("Failed to load all pipeline files")
+		// return nil, fperr.InternalWithMessage("Failed to load all pipeline files")
+		return nil, fmt.Errorf("Failed to load all pipeline files")
 	}
 
 	// Each file in the pipelineFilePaths is parsed and the result is stored in the bodies variable
@@ -87,7 +87,7 @@ func LoadFlowpipeConfig(ctx context.Context, configPath string) (*FlowpipeConfig
 	return parseCtx, nil
 }
 
-func LoadPipelines(ctx context.Context, configPath string) (map[string]*types.Pipeline, error) {
+func LoadPipelines(ctx context.Context, configPath string) (map[string]*Pipeline, error) {
 	fpParseContext, err := LoadFlowpipeConfig(ctx, configPath)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,8 @@ func parseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
 		// if the number of unresolved blocks has NOT reduced, fail
 		if prevUnresolvedBlocks != 0 && unresolvedBlocks >= prevUnresolvedBlocks {
 			str := parseCtx.FormatDependencies()
-			return fperr.BadRequestWithMessage("failed to resolve dependencies after " + fmt.Sprintf("%d", attempts+1) + " passes: " + str)
+			// return fperr.BadRequestWithMessage("failed to resolve dependencies after " + fmt.Sprintf("%d", attempts+1) + " passes: " + str)
+			return fmt.Errorf("failed to resolve dependencies after %d passes: %s", attempts+1, str)
 		}
 		// update prevUnresolvedBlocks
 		prevUnresolvedBlocks = unresolvedBlocks
@@ -167,7 +168,7 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	return diags
 }
 
-func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.ITrigger, *pipeparser.DecodeResult) {
+func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (ITrigger, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
 
 	if len(block.Labels) != 2 {
@@ -203,7 +204,7 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (type
 		return nil, res
 	}
 
-	triggerHcl := types.NewTrigger(parseCtx.RunCtx, triggerType, triggerName)
+	triggerHcl := NewTrigger(parseCtx.RunCtx, triggerType, triggerName)
 
 	if triggerHcl == nil {
 		res.HandleDecodeDiags(hcl.Diagnostics{
@@ -230,11 +231,11 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (type
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*types.Pipeline, *pipeparser.DecodeResult) {
+func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*Pipeline, *pipeparser.DecodeResult) {
 	res := pipeparser.NewDecodeResult()
 
 	// get shell pipelineHcl
-	pipelineHcl := types.NewPipelineHcl(block)
+	pipelineHcl := NewPipelineHcl(block)
 
 	// do a partial decode so we can parse the step manually, each pipeline step has its own struct, so we can't use
 	// HCL automatic parsing here
@@ -318,7 +319,7 @@ func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*ty
 	return pipelineHcl, res
 }
 
-func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
+func validatePipelineDependencies(pipelineHcl *Pipeline) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	var stepRegisters []string
@@ -342,7 +343,7 @@ func validatePipelineDependencies(pipelineHcl *types.Pipeline) hcl.Diagnostics {
 	return diags
 }
 
-func handlePipelineDecodeResult(resource *types.Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) {
+func handlePipelineDecodeResult(resource *Pipeline, res *pipeparser.DecodeResult, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
@@ -398,8 +399,8 @@ func GetTriggerBlockSchema(triggerType string) *hcl.BodySchema {
 
 type FlowpipeConfigParseContext struct {
 	pipeparser.ParseContext
-	PipelineHcls map[string]*types.Pipeline
-	TriggerHcls  map[string]types.ITrigger
+	PipelineHcls map[string]*Pipeline
+	TriggerHcls  map[string]ITrigger
 }
 
 func (c *FlowpipeConfigParseContext) BuildEvalContext() {
@@ -416,7 +417,7 @@ func (c *FlowpipeConfigParseContext) BuildEvalContext() {
 }
 
 // AddPipeline stores this resource as a variable to be added to the eval context. It alse
-func (c *FlowpipeConfigParseContext) AddPipeline(pipelineHcl *types.Pipeline) hcl.Diagnostics {
+func (c *FlowpipeConfigParseContext) AddPipeline(pipelineHcl *Pipeline) hcl.Diagnostics {
 	c.PipelineHcls[pipelineHcl.Name] = pipelineHcl
 
 	// remove this resource from unparsed blocks
@@ -426,7 +427,7 @@ func (c *FlowpipeConfigParseContext) AddPipeline(pipelineHcl *types.Pipeline) hc
 	return nil
 }
 
-func (c *FlowpipeConfigParseContext) AddTrigger(trigger types.ITrigger) hcl.Diagnostics {
+func (c *FlowpipeConfigParseContext) AddTrigger(trigger ITrigger) hcl.Diagnostics {
 
 	c.TriggerHcls[trigger.GetName()] = trigger
 
@@ -443,8 +444,8 @@ func NewFlowpipeConfigParseContext(ctx context.Context, rootEvalPath string) *Fl
 
 	c := &FlowpipeConfigParseContext{
 		ParseContext: parseContext,
-		PipelineHcls: make(map[string]*types.Pipeline),
-		TriggerHcls:  make(map[string]types.ITrigger),
+		PipelineHcls: make(map[string]*Pipeline),
+		TriggerHcls:  make(map[string]ITrigger),
 	}
 
 	c.BuildEvalContext()

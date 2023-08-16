@@ -8,21 +8,21 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/trigger"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type Scheduler struct {
 	ctx           context.Context
-	triggers      map[string]types.ITrigger
+	triggers      map[string]pipeline.ITrigger
 	esService     *es.ESService
 	cronScheduler *gocron.Scheduler
 }
 
-func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]types.ITrigger) *Scheduler {
+func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]pipeline.ITrigger) *Scheduler {
 	return &Scheduler{
 		ctx:       ctx,
 		esService: esService,
@@ -57,7 +57,7 @@ func (s *Scheduler) Start() error {
 
 	for _, t := range s.triggers {
 		switch t := t.(type) {
-		case *types.TriggerSchedule:
+		case *pipeline.TriggerSchedule:
 			logger.Info("Scheduling trigger", "name", t.Name, "schedule", t.Schedule)
 
 			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
@@ -66,7 +66,7 @@ func (s *Scheduler) Start() error {
 			if err != nil {
 				return err
 			}
-		case *types.TriggerInterval:
+		case *pipeline.TriggerInterval:
 			logger.Info("Scheduling trigger", "name", t.Name, "interval", t.Schedule)
 
 			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
@@ -86,7 +86,7 @@ func (s *Scheduler) Start() error {
 				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Do(triggerRunner.Run)
 			default:
-				return fperr.BadRequestWithMessage("invalid interval schedule: " + t.Schedule)
+				return pcerr.BadRequestWithMessage("invalid interval schedule: " + t.Schedule)
 			}
 
 			if err != nil {

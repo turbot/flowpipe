@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -69,7 +69,7 @@ func TestSendEmail(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "TestSendEmail",
 		schema.AttributeTypeFrom:             "test.send.email@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -111,7 +111,7 @@ func TestSendEmailWithCc(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "TestSendEmailWithCc",
 		schema.AttributeTypeFrom:             "test.send.email.with.cc@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -156,7 +156,7 @@ func TestSendEmailWithBcc(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "TestSendEmailWithBcc",
 		schema.AttributeTypeFrom:             "test.send.email.with.bcc@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -201,7 +201,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "Flowpipe",
 		schema.AttributeTypeFrom:             "sender@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -214,7 +214,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 	// No errors
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("Email input must define to", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -224,7 +224,7 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "Flowpipe",
 		schema.AttributeTypeFrom:             "sender@example.com",
 		schema.AttributeTypeSenderCredential: "",
@@ -238,7 +238,7 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	// No errors
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("Recipients must not be empty", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -247,7 +247,7 @@ func TestEmailInvalidCreds(t *testing.T) {
 	assert := assert.New(t)
 	hr := Email{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:       "Flowpipe",
 		schema.AttributeTypeFrom:             "test@example.com",
 		schema.AttributeTypeSenderCredential: "abcdefghijklmnop",
@@ -320,7 +320,7 @@ func captureEmailsFromSMTP(from string) ([]CapturedEmail, error) {
 	}
 
 	if len(v.Items) == 0 {
-		return nil, fperr.NotFoundWithMessage("No emails captured in the inbox")
+		return nil, pcerr.NotFoundWithMessage("No emails captured in the inbox")
 	}
 
 	return v.Items, nil

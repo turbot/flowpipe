@@ -7,10 +7,10 @@ import (
 	"path"
 
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -31,7 +31,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.PipelineFinished)
 	if !ok {
 		logger.Error("invalid event type", "expected", "*event.PipelineFinished", "actual", ei)
-		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
+		return pcerr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
 	}
 
 	logger.Info("pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)

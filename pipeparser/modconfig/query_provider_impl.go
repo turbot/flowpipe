@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/zclconf/go-cty/cty"
@@ -66,7 +67,7 @@ func (q *QueryProviderImpl) ValidateQuery() hcl.Diagnostics {
 	// only used as base for a nested resource.
 	// Therefore only nested resources, controls and queries MUST have sql or a query defined
 	queryRequired := !q.IsTopLevel() ||
-		helpers.StringSliceContains([]string{BlockTypeQuery, BlockTypeControl}, q.BlockType())
+		helpers.StringSliceContains([]string{schema.BlockTypeQuery, schema.BlockTypeControl}, q.BlockType())
 
 	if !queryRequired {
 		return nil

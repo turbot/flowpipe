@@ -6,9 +6,9 @@ import (
 	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PlannerControl struct {
@@ -47,7 +47,7 @@ func (p *PlannerControl) Middleware(h message.HandlerFunc) message.HandlerFunc {
 
 		executionID := pe.Event.ExecutionID
 		if executionID == "" {
-			return nil, fperr.InternalWithMessage("no execution_id found in payload")
+			return nil, pcerr.InternalWithMessage("no execution_id found in payload")
 		}
 
 		// if eventName == "event.PipelinePlan" {

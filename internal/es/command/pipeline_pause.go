@@ -3,10 +3,10 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelinePauseHandler CommandHandler
@@ -27,7 +27,7 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 	evt, ok := c.(*event.PipelinePause)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelinePause", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelinePause")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelinePause")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
@@ -39,12 +39,12 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
 	if pe == nil {
 		logger.Error("Can't pause pipeline execution that doesn't exist", "pipeline_execution_id", evt.PipelineExecutionID)
-		return fperr.BadRequestWithMessage("Can't pause pipeline execution that doesn't exist")
+		return pcerr.BadRequestWithMessage("Can't pause pipeline execution that doesn't exist")
 	}
 
 	if pe.Status != "started" && pe.Status != "queued" {
 		logger.Error("Can't pause pipeline execution that is not started or queued", "pipeline_execution_id", evt.PipelineExecutionID, "pipelineStatus", pe.Status)
-		return fperr.BadRequestWithMessage("Can't pause pipeline execution that is not started or queued")
+		return pcerr.BadRequestWithMessage("Can't pause pipeline execution that is not started or queued")
 	}
 
 	e, err := event.NewPipelinePaused(event.ForPipelinePause(evt))

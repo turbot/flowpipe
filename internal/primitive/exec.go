@@ -7,21 +7,21 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Exec struct{}
 
-func (e *Exec) ValidateInput(ctx context.Context, i types.Input) error {
+func (e *Exec) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	if i["command"] == nil {
-		return fperr.BadRequestWithMessage("Exec input must define a command")
+		return pcerr.BadRequestWithMessage("Exec input must define a command")
 	}
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (e *Exec) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (e *Exec) Run(ctx context.Context, input types.Input) (*types.Output, error
 	}
 	finish := time.Now().UTC()
 
-	o := types.Output{
+	o := pipeline.Output{
 		Data: map[string]interface{}{},
 	}
 

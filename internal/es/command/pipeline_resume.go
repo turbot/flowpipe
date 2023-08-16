@@ -3,10 +3,10 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineResumeHandler CommandHandler
@@ -27,7 +27,7 @@ func (h PipelineResumeHandler) Handle(ctx context.Context, c interface{}) error 
 	evt, ok := c.(*event.PipelineResume)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelineResume", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineResume")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelineResume")
 	}
 
 	logger.Info("(9) pipeline_resume command handler")
@@ -41,12 +41,12 @@ func (h PipelineResumeHandler) Handle(ctx context.Context, c interface{}) error 
 	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
 	if pe == nil {
 		logger.Error("Can't resume pipeline execution that doesn't exist", "pipeline_execution_id", evt.PipelineExecutionID)
-		return fperr.BadRequestWithMessage("Can't resume pipeline execution that doesn't exist")
+		return pcerr.BadRequestWithMessage("Can't resume pipeline execution that doesn't exist")
 	}
 
 	if !pe.IsPaused() {
 		logger.Error("Can't resume pipeline execution that is not paused", "pipeline_execution_id", evt.PipelineExecutionID, "pipelineStatus", pe.Status)
-		return fperr.BadRequestWithMessage("Can't resume pipeline execution that is not paused")
+		return pcerr.BadRequestWithMessage("Can't resume pipeline execution that is not paused")
 	}
 
 	e, err := event.NewPipelineResumed(event.ForPipelineResume(evt))

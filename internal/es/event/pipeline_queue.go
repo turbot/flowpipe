@@ -1,8 +1,8 @@
 package event
 
 import (
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 // PipelineQueue commands a pipeline to be queued for execution.
@@ -10,8 +10,8 @@ type PipelineQueue struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Pipeline details
-	Name string      `json:"name"`
-	Args types.Input `json:"args"`
+	Name string         `json:"name"`
+	Args pipeline.Input `json:"args"`
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent pipeline execution ID

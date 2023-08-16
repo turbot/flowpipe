@@ -3,10 +3,10 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineLoadHandler CommandHandler
@@ -25,7 +25,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineLoad)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineLoad", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineLoad")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelineLoad")
 	}
 
 	// ? new execution here? is it because I'm finally running the pipeline?

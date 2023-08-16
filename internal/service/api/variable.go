@@ -25,11 +25,11 @@ func (api *APIService) VariableRegisterAPI(router *gin.RouterGroup) {
 // @Param next_token query string false "When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data."
 // ...
 // @Success 200 {object} types.ListVariableResponse
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /variable [get]
 func (api *APIService) listVariables(c *gin.Context) {
 	// Get paging parameters
@@ -60,12 +60,12 @@ func (api *APIService) listVariables(c *gin.Context) {
 // @Param variable_name path string true "The name of the variable" format(^[a-z]{0,32}$)
 // ...
 // @Success 200 {object} types.Variable
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 404 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 404 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /variable/{variable_name} [get]
 func (api *APIService) getVariable(c *gin.Context) {
 

@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -75,7 +76,7 @@ func ctyTupleToArgArray(attr *hcl.Attribute, val cty.Value) ([]any, []*modconfig
 	for idx, v := range values {
 		// if the value is unknown, this is a runtime dependency
 		if !v.IsKnown() {
-			runtimeDependency, err := identifyRuntimeDependenciesFromArray(attr, idx, modconfig.AttributeArgs)
+			runtimeDependency, err := identifyRuntimeDependenciesFromArray(attr, idx, schema.AttributeTypeArgs)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -110,13 +111,13 @@ func ctyObjectToArgMap(attr *hcl.Attribute, val cty.Value, evalCtx *hcl.EvalCont
 
 		// if the value is unknown, this is a runtime dependency
 		if !v.IsKnown() {
-			runtimeDependency, err := identifyRuntimeDependenciesFromObject(attr, key, modconfig.AttributeArgs, evalCtx)
+			runtimeDependency, err := identifyRuntimeDependenciesFromObject(attr, key, schema.AttributeTypeArgs, evalCtx)
 			if err != nil {
 				return nil, nil, err
 			}
 			runtimeDependencies = append(runtimeDependencies, runtimeDependency)
 		} else if getWrappedUnknownVal(v) {
-			runtimeDependency, err := identifyRuntimeDependenciesFromObject(attr, key, modconfig.AttributeArgs, evalCtx)
+			runtimeDependency, err := identifyRuntimeDependenciesFromObject(attr, key, schema.AttributeTypeArgs, evalCtx)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -183,7 +184,7 @@ func getRuntimeDepFromExpression(expr hcl.Expression, targetProperty, parentProp
 		return nil, err
 	}
 
-	if propertyPath.ItemType == modconfig.BlockTypeInput {
+	if propertyPath.ItemType == schema.BlockTypeInput {
 		// tactical: validate input dependency
 		if err := validateInputRuntimeDependency(propertyPath); err != nil {
 			return nil, err
@@ -255,7 +256,7 @@ func identifyRuntimeDependenciesFromArray(attr *hcl.Attribute, idx int, parentPr
 				return nil, err
 			}
 			// tactical: validate input dependency
-			if propertyPath.ItemType == modconfig.BlockTypeInput {
+			if propertyPath.ItemType == schema.BlockTypeInput {
 				if err := validateInputRuntimeDependency(propertyPath); err != nil {
 					return nil, err
 				}

@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -25,7 +25,7 @@ const (
 )
 
 type HTTPRequest struct {
-	Input types.Input
+	Input pipeline.Input
 }
 
 type HTTPInput struct {
@@ -38,14 +38,14 @@ type HTTPInput struct {
 	Insecure         bool
 }
 
-func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
+func (h *HTTPRequest) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	if i[schema.AttributeTypeUrl] == nil {
-		return fperr.BadRequestWithMessage("HTTPRequest input must define a url")
+		return pcerr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
 	u := i[schema.AttributeTypeUrl].(string)
 	_, err := url.ParseRequestURI(u)
 	if err != nil {
-		return fperr.BadRequestWithMessage("invalid url: " + u)
+		return pcerr.BadRequestWithMessage("invalid url: " + u)
 	}
 
 	requestBody := i[schema.AttributeTypeRequestBody]
@@ -62,14 +62,14 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i types.Input) error {
 		if requestBodyJSON != nil {
 			_, marshalErr := json.Marshal(requestBodyJSON)
 			if marshalErr != nil {
-				return fperr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
+				return pcerr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
 			}
 		}
 	}
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -95,12 +95,12 @@ func (h *HTTPRequest) Run(ctx context.Context, input types.Input) (*types.Output
 }
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
-func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.Output, error) {
+func doRequest(ctx context.Context, inputParams *HTTPInput) (*pipeline.Output, error) {
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
-		return nil, fperr.BadRequestWithMessage("Error creating request: " + err.Error())
+		return nil, pcerr.BadRequestWithMessage("Error creating request: " + err.Error())
 	}
 
 	// Set the request headers
@@ -144,7 +144,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.Output, erro
 	headers := mapResponseHeaders(resp)
 
 	// Construct the output
-	output := types.Output{
+	output := pipeline.Output{
 		Data: map[string]interface{}{},
 	}
 	output.Data[schema.AttributeTypeStatus] = resp.Status
@@ -159,8 +159,8 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.Output, erro
 
 	if resp.StatusCode >= 400 {
 		message := resp.Status
-		output.Errors = []types.StepError{
-			types.StepError{
+		output.Errors = []pipeline.StepError{
+			pipeline.StepError{
 				Message:   message,
 				ErrorCode: resp.StatusCode,
 			},
@@ -171,12 +171,12 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*types.Output, erro
 }
 
 // buildHTTPInput builds the HTTPInput struct from the input parameters
-func buildHTTPInput(input types.Input) (*HTTPInput, error) {
+func buildHTTPInput(input pipeline.Input) (*HTTPInput, error) {
 	// Check for method
 	method, ok := input[schema.AttributeTypeMethod].(string)
 	if !ok {
 		// If not provided, default to GET
-		method = types.HttpMethodGet
+		method = pipeline.HttpMethodGet
 	}
 
 	// Method should be case insensitive

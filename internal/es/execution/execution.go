@@ -11,12 +11,13 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -36,7 +37,7 @@ type Execution struct {
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *types.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func (ex *Execution) BuildEvalContext(pipelineDefn *pipeline.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -138,12 +139,12 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (types.IPipelineStep, error) {
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (pipeline.IPipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
 	if !ok {
-		return nil, fperr.BadRequestWithMessage("step execution not found: " + stepExecutionID)
+		return nil, pcerr.BadRequestWithMessage("step execution not found: " + stepExecutionID)
 	}
 	pd, err := ex.PipelineDefinition(se.PipelineExecutionID)
 	if err != nil {
@@ -164,7 +165,7 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 	// Add arguments data for this pipeline execution
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
-		return nil, fperr.BadRequestWithMessage("pipeline execution not found: " + pipelineExecutionID)
+		return nil, pcerr.BadRequestWithMessage("pipeline execution not found: " + pipelineExecutionID)
 	}
 
 	// Arguments data takes precedence over a step output with the same name
@@ -253,7 +254,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	logger.Trace("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
 
 	if e.ExecutionID == "" {
-		return fperr.BadRequestWithMessage("event execution ID is empty")
+		return pcerr.BadRequestWithMessage("event execution ID is empty")
 	}
 
 	if ex.ID == "" {
@@ -261,7 +262,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	if ex.ID != e.ExecutionID {
-		return fperr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
+		return pcerr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
 	}
 
 	// Open the event log
@@ -310,7 +311,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				StepStatus:            map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				ParentExecutionID:     et.ParentExecutionID,
-				Errors:                []types.StepError{},
+				Errors:                []pipeline.StepError{},
 				AllStepOutputs:        ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
 				StepExecutionOrder:    map[string][]string{},
@@ -432,7 +433,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 			// Step the specific step execution status
 			if pe.StepExecutions[et.StepExecutionID] == nil {
-				return fperr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
+				return pcerr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
 			}
 
 			if et.Output == nil {
@@ -460,10 +461,10 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// text = step.echo.text_1[1].text
 
 				if pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*types.Output, et.StepForEach.ForEachTotalCount)
+					pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*pipeline.Output, et.StepForEach.ForEachTotalCount)
 				}
 
-				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*types.Output)[et.StepForEach.Index] = et.Output
+				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*pipeline.Output)[et.StepForEach.Index] = et.Output
 			}
 
 			// TODO: Error handling

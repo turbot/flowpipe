@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/inputvars"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
 	filehelpers "github.com/turbot/go-kit/files"
@@ -218,8 +219,8 @@ func (m *ModParseContext) AddModResources(mod *modconfig.Mod) hcl.Diagnostics {
 	// do not add variables (as they have already been added)
 	// if the resource is for a dependency mod, do not add locals
 	shouldAdd := func(item modconfig.HclResource) bool {
-		if item.BlockType() == modconfig.BlockTypeVariable ||
-			item.BlockType() == modconfig.BlockTypeLocals && item.(modconfig.ModTreeItem).GetMod().ShortName != m.CurrentMod.ShortName {
+		if item.BlockType() == schema.BlockTypeVariable ||
+			item.BlockType() == schema.BlockTypeLocals && item.(modconfig.ModTreeItem).GetMod().ShortName != m.CurrentMod.ShortName {
 			return false
 		}
 		return true
@@ -662,7 +663,7 @@ func (m *ModParseContext) getErrorStringForUnresolvedArg(parsedVarName *modconfi
 
 func (m *ModParseContext) getModRequireBlock() *hclsyntax.Block {
 	for _, b := range m.CurrentMod.ResourceWithMetadataBaseRemain.(*hclsyntax.Body).Blocks {
-		if b.Type == modconfig.BlockTypeRequire {
+		if b.Type == schema.BlockTypeRequire {
 			return b
 		}
 	}

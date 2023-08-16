@@ -3,9 +3,9 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineQueueHandler CommandHandler
@@ -22,7 +22,7 @@ func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineQueue)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineQueue", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineQueue")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelineQueue")
 	}
 
 	e, err := event.NewPipelineQueued(event.ForPipelineQueue(cmd))

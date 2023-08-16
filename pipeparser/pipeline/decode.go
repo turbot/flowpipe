@@ -1,21 +1,20 @@
-package fpconfig
+package pipeline
 
 import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.IPipelineStep, hcl.Diagnostics) {
+func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (IPipelineStep, hcl.Diagnostics) {
 	stepType := block.Labels[0]
 	stepName := block.Labels[1]
 
 	// TODO: collect all diags?
 
-	step := types.NewPipelineStep(stepType, stepName)
+	step := NewPipelineStep(stepType, stepName)
 	if step == nil {
 		return nil, hcl.Diagnostics{&hcl.Diagnostic{
 			Severity: hcl.DiagError,
@@ -104,14 +103,14 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 
 		}
 
-		errorConfig := &types.ErrorConfig{
+		errorConfig := &ErrorConfig{
 			Ignore:  ignore,
 			Retries: retries,
 		}
 
 		step.SetErrorConfig(errorConfig)
 	} else {
-		errorConfig := &types.ErrorConfig{
+		errorConfig := &ErrorConfig{
 			Ignore:  false,
 			Retries: 0,
 		}
@@ -121,9 +120,9 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (types.I
 	return step, hcl.Diagnostics{}
 }
 
-func decodeOutput(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*types.PipelineOutput, hcl.Diagnostics) {
+func decodeOutput(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*PipelineOutput, hcl.Diagnostics) {
 
-	o := &types.PipelineOutput{
+	o := &PipelineOutput{
 		Name: block.Labels[0],
 	}
 

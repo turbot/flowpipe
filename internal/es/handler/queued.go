@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type Queued EventHandler
@@ -23,7 +23,7 @@ func (h Queued) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.Queued)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.Queued", "actual", ei)
-		return fperr.BadRequestWithMessage("invalid event type expected *event.Queued")
+		return pcerr.BadRequestWithMessage("invalid event type expected *event.Queued")
 	}
 
 	// Next step is to load the mod triggers and pipelines.

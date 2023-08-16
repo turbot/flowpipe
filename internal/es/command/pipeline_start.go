@@ -3,9 +3,9 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineStartHandler CommandHandler
@@ -22,7 +22,7 @@ func (h PipelineStartHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineStart)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineStart", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineStart")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelineStart")
 	}
 
 	e, err := event.NewPipelineStarted(event.ForPipelineStart(cmd))

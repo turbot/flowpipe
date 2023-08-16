@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
@@ -430,9 +431,9 @@ func (m *ResourceMaps) GetResource(parsedName *ParsedResourceName) (resource Hcl
 	// 	// this function only supports global inputs
 	// 	// if the input has a parent dashboard, you must use GetDashboardInput
 	// 	resource, found = m.GlobalDashboardInputs[longName]
-	case BlockTypeQuery:
+	case schema.BlockTypeQuery:
 		resource, found = m.Queries[longName]
-	case BlockTypeVariable:
+	case schema.BlockTypeVariable:
 		resource, found = m.Variables[longName]
 	}
 	return resource, found

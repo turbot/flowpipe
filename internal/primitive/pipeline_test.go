@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 func TestPipelineOK(t *testing.T) {
@@ -15,7 +15,7 @@ func TestPipelineOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := RunPipeline{}
-	input := types.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
+	input := pipeline.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)

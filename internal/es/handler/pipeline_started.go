@@ -3,9 +3,9 @@ package handler
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineStarted EventHandler
@@ -23,7 +23,7 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 
 	if !ok {
 		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.PipelineStarted", "actual", ei)
-		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStarted")
+		return pcerr.BadRequestWithMessage("invalid event type expected *event.PipelineStarted")
 	}
 
 	evt, err := event.NewPipelinePlan(event.ForPipelineStarted(e))

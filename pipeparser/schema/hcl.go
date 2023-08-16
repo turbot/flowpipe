@@ -127,6 +127,10 @@ const (
 
 	LabelName = "name"
 	LabelType = "type"
+
+	ResourceTypeSnapshot = "snapshot"
+	AttributeArgs        = "args"
+	AttributeQuery       = "query"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider

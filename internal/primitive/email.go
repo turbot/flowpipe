@@ -9,39 +9,39 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Email struct {
-	Input types.Input
+	Input pipeline.Input
 }
 
-func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
+func (h *Email) ValidateInput(ctx context.Context, i pipeline.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
-		return fperr.BadRequestWithMessage("Email input must define from")
+		return pcerr.BadRequestWithMessage("Email input must define from")
 	}
 	if i[schema.AttributeTypeSenderCredential] == nil {
-		return fperr.BadRequestWithMessage("Email input must define sender_credential")
+		return pcerr.BadRequestWithMessage("Email input must define sender_credential")
 	}
 	if i[schema.AttributeTypeHost] == nil {
-		return fperr.BadRequestWithMessage("Email input must define a SMTP host")
+		return pcerr.BadRequestWithMessage("Email input must define a SMTP host")
 	}
 	if i[schema.AttributeTypePort] == nil {
-		return fperr.BadRequestWithMessage("Email input must define a port")
+		return pcerr.BadRequestWithMessage("Email input must define a port")
 	}
 	if i[schema.AttributeTypeSenderName] != nil {
 		if _, ok := i[schema.AttributeTypeSenderName].(string); !ok {
-			return fperr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
+			return pcerr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
 		}
 	}
 
 	// Validate the recipients
 	if i[schema.AttributeTypeTo] == nil {
-		return fperr.BadRequestWithMessage("Email input must define to")
+		return pcerr.BadRequestWithMessage("Email input must define to")
 	}
 	if _, ok := i[schema.AttributeTypeTo].([]string); !ok {
 		// The given input is a string slice, but the step input stores it as an interface slice during the JSON unmarshalling?
@@ -49,13 +49,13 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 		if data, ok := i[schema.AttributeTypeTo].([]interface{}); ok {
 			for _, v := range data {
 				if _, ok := v.(string); !ok {
-					return fperr.BadRequestWithMessage("Email attribute 'to' must have elements of type string")
+					return pcerr.BadRequestWithMessage("Email attribute 'to' must have elements of type string")
 				}
 			}
 			return nil
 		}
 
-		return fperr.BadRequestWithMessage("Email attribute 'to' must be an array")
+		return pcerr.BadRequestWithMessage("Email attribute 'to' must be an array")
 	}
 
 	var recipients []string
@@ -70,7 +70,7 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 	}
 
 	if len(recipients) == 0 {
-		return fperr.BadRequestWithMessage("Recipients must not be empty")
+		return pcerr.BadRequestWithMessage("Recipients must not be empty")
 	}
 
 	// Validate the Cc recipients
@@ -81,13 +81,13 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 			if data, ok := i[schema.AttributeTypeCc].([]interface{}); ok {
 				for _, v := range data {
 					if _, ok := v.(string); !ok {
-						return fperr.BadRequestWithMessage("Email attribute 'cc' must have elements of type string")
+						return pcerr.BadRequestWithMessage("Email attribute 'cc' must have elements of type string")
 					}
 				}
 				return nil
 			}
 
-			return fperr.BadRequestWithMessage("Email attribute 'cc' must be an array")
+			return pcerr.BadRequestWithMessage("Email attribute 'cc' must be an array")
 		}
 	}
 
@@ -99,40 +99,40 @@ func (h *Email) ValidateInput(ctx context.Context, i types.Input) error {
 			if data, ok := i[schema.AttributeTypeBcc].([]interface{}); ok {
 				for _, v := range data {
 					if _, ok := v.(string); !ok {
-						return fperr.BadRequestWithMessage("Email attribute 'bcc' must have elements of type string")
+						return pcerr.BadRequestWithMessage("Email attribute 'bcc' must have elements of type string")
 					}
 				}
 				return nil
 			}
 
-			return fperr.BadRequestWithMessage("Email attribute 'bcc' must be an array")
+			return pcerr.BadRequestWithMessage("Email attribute 'bcc' must be an array")
 		}
 	}
 
 	// Validate the email body
 	if i[schema.AttributeTypeBody] != nil {
 		if _, ok := i[schema.AttributeTypeBody].(string); !ok {
-			return fperr.BadRequestWithMessage("Email attribute 'body' must be a string")
+			return pcerr.BadRequestWithMessage("Email attribute 'body' must be a string")
 		}
 	}
 
 	if i[schema.AttributeTypeContentType] != nil {
 		if _, ok := i[schema.AttributeTypeContentType].(string); !ok {
-			return fperr.BadRequestWithMessage("Email attribute 'content_type' must be a string")
+			return pcerr.BadRequestWithMessage("Email attribute 'content_type' must be a string")
 		}
 	}
 
 	// validate the subject
 	if i[schema.AttributeTypeSubject] != nil {
 		if _, ok := i[schema.AttributeTypeSubject].(string); !ok {
-			return fperr.BadRequestWithMessage("Email attribute 'subject' must be a string")
+			return pcerr.BadRequestWithMessage("Email attribute 'subject' must be a string")
 		}
 	}
 
 	return nil
 }
 
-func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (h *Email) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	message += "\r\n" + body
 
 	// Construct the output
-	output := types.Output{
+	output := pipeline.Output{
 		Data: map[string]interface{}{},
 	}
 
@@ -251,8 +251,8 @@ func (h *Email) Run(ctx context.Context, input types.Input) (*types.Output, erro
 		// Refer https://en.wikipedia.org/wiki/List_of_SMTP_server_return_codes for all available error codes
 		smtpErr := err.(*textproto.Error)
 		if smtpErr.Code >= 400 {
-			output.Errors = []types.StepError{
-				types.StepError{
+			output.Errors = []pipeline.StepError{
+				pipeline.StepError{
 					Message:   smtpErr.Msg,
 					ErrorCode: smtpErr.Code,
 				},

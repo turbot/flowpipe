@@ -6,8 +6,8 @@ import (
 	"runtime/debug"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 // Holds the recovered panic's error along with the stacktrace.
@@ -35,7 +35,7 @@ func PanicRecovererMiddleware(ctx context.Context) message.HandlerMiddleware {
 					recoveredPanicErr := RecoveredPanicError{V: r, Stacktrace: string(debug.Stack())}
 
 					// Flowpipe error by default is not retryable
-					internalErr := fperr.Internal(recoveredPanicErr)
+					internalErr := pcerr.Internal(recoveredPanicErr)
 					err = internalErr
 
 					// Must ack here otherwise Watermill will go to an infinite loop

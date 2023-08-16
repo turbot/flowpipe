@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -28,7 +29,7 @@ func NewLocal(name string, val cty.Value, declRange hcl.Range, mod *Mod) *Local 
 				UnqualifiedName: fmt.Sprintf("local.%s", name),
 				FullName:        fullName,
 				DeclRange:       declRange,
-				blockType:       BlockTypeLocals,
+				blockType:       schema.BlockTypeLocals,
 				// disable cty serialisation of base properties
 				disableCtySerialise: true,
 			},

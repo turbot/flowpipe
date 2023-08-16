@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/fpconfig"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -19,7 +19,7 @@ func TestSimpleForAndParam(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	pipelines, err := fpconfig.LoadPipelines(ctx, "./test_pipelines/for.fp")
+	pipelines, err := pipeline.LoadPipelines(ctx, "./test_pipelines/for.fp")
 	assert.Nil(err, "error found ")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -101,7 +101,7 @@ func TestParamsProcessing(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	pipelines, err := fpconfig.LoadPipelines(ctx, "./test_pipelines/for.fp")
+	pipelines, err := pipeline.LoadPipelines(ctx, "./test_pipelines/for.fp")
 	assert.Nil(err, "error found ")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

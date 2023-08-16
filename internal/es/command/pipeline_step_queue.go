@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineStepQueueHandler CommandHandler
@@ -24,7 +24,7 @@ func (h PipelineStepQueueHandler) Handle(ctx context.Context, c interface{}) err
 	cmd, ok := c.(*event.PipelineStepQueue)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineStepQueue", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineStepQueue")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelineStepQueue")
 	}
 
 	logger := fplog.Logger(ctx)

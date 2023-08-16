@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineStepQueued struct {
@@ -12,13 +12,13 @@ type PipelineStepQueued struct {
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 
-	StepExecutionID string      `json:"step_execution_id"`
-	StepName        string      `json:"step_name"`
-	StepInput       types.Input `json:"input"`
+	StepExecutionID string         `json:"step_execution_id"`
+	StepName        string         `json:"step_name"`
+	StepInput       pipeline.Input `json:"input"`
 
 	// for_each controls
-	StepForEach    *types.StepForEach   `json:"step_for_each,omitempty"`
-	NextStepAction types.NextStepAction `json:"next_step_action,omitempty"`
+	StepForEach    *pipeline.StepForEach   `json:"step_for_each,omitempty"`
+	NextStepAction pipeline.NextStepAction `json:"next_step_action,omitempty"`
 
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 }

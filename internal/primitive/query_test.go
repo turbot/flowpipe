@@ -7,9 +7,9 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -22,7 +22,7 @@ func TestQueryListAll(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql: "SELECT * from aws_ec2_instance order by instance_id",
 	})
 
@@ -94,7 +94,7 @@ func TestQueryWithArgs(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where instance_id = $1",
 		schema.AttributeTypeArgs: []interface{}{"i-000a000b0000c00d1"},
 	})
@@ -139,7 +139,7 @@ func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where type like $1",
 		schema.AttributeTypeArgs: []interface{}{"t2%"},
 	})
@@ -205,7 +205,7 @@ func TestQueryTableNotFound(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql: "SELECT * from instance",
 	})
 
@@ -232,7 +232,7 @@ func TestQueryNoRows(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql: "SELECT * from aws_ec2_instance",
 	})
 
@@ -261,7 +261,7 @@ func TestQueryBadQueryStatement(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql: "SELECT * instance",
 	})
 
@@ -272,7 +272,7 @@ func TestQueryBadQueryStatement(t *testing.T) {
 	}
 	mock := *hr.Mock
 
-	mock.ExpectQuery("^SELECT (.+) instance$").WillReturnError(fperr.BadRequestWithMessage("syntax error at or near \"instance\""))
+	mock.ExpectQuery("^SELECT (.+) instance$").WillReturnError(pcerr.BadRequestWithMessage("syntax error at or near \"instance\""))
 
 	_, err = hr.Run(ctx, input)
 	assert.NotNil(err)
@@ -286,14 +286,14 @@ func TestQueryWithMissingAttributeSql(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeConnectionString: "this is a connection string",
 	})
 
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("Query input must define sql", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -307,7 +307,7 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 		Setting: "go-sqlmock",
 	}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		"sql1": "^SELECT (.+) from aws_ec2_instance order by instance_id$",
 	})
 
@@ -331,7 +331,7 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 	_, err = hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("Query input must define sql", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -343,7 +343,7 @@ func TestQueryMissingArgs(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeConnectionString: "this is a connection string",
 		schema.AttributeTypeSql:              "SELECT * from aws_ec2_instance where instance_id = $1",
 	})
@@ -351,7 +351,7 @@ func TestQueryMissingArgs(t *testing.T) {
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("Query input must define args if the sql has placeholders", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -363,7 +363,7 @@ func TestQueryMissingConnectionString(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where instance_id = $1",
 		schema.AttributeTypeArgs: []interface{}{"i-000a000b0000c00d1"},
 	})
@@ -371,7 +371,7 @@ func TestQueryMissingConnectionString(t *testing.T) {
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("Query input must define connection_string", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }

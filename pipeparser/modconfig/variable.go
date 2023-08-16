@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig/var_config"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/terraform-components/tfdiags"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/convert"
@@ -54,7 +55,7 @@ func NewVariable(v *var_config.Variable, mod *Mod) *Variable {
 				FullName:        fullName,
 				DeclRange:       v.DeclRange,
 				UnqualifiedName: fmt.Sprintf("var.%s", v.Name),
-				blockType:       BlockTypeVariable,
+				blockType:       schema.BlockTypeVariable,
 			},
 			Mod: mod,
 		},

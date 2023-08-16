@@ -8,9 +8,9 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -22,24 +22,24 @@ type Query struct {
 	DB      *sql.DB
 }
 
-func (e *Query) ValidateInput(ctx context.Context, i types.Input) error {
+func (e *Query) ValidateInput(ctx context.Context, i pipeline.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
 	if e.Setting != "go-sqlmock" && i[schema.AttributeTypeConnectionString] == nil {
-		return fperr.BadRequestWithMessage("Query input must define connection_string")
+		return pcerr.BadRequestWithMessage("Query input must define connection_string")
 	}
 
 	if i[schema.AttributeTypeSql] == nil {
-		return fperr.BadRequestWithMessage("Query input must define sql")
+		return pcerr.BadRequestWithMessage("Query input must define sql")
 	}
 
 	sql := i[schema.AttributeTypeSql].(string)
 	if hasPlaceholder(sql) && i[schema.AttributeTypeArgs] == nil {
-		return fperr.BadRequestWithMessage("Query input must define args if the sql has placeholders")
+		return pcerr.BadRequestWithMessage("Query input must define args if the sql has placeholders")
 	}
 	return nil
 }
 
-func (e *Query) InitializeDB(ctx context.Context, i types.Input) (*sql.DB, error) {
+func (e *Query) InitializeDB(ctx context.Context, i pipeline.Input) (*sql.DB, error) {
 	var db *sql.DB
 	var err error
 
@@ -48,7 +48,7 @@ func (e *Query) InitializeDB(ctx context.Context, i types.Input) (*sql.DB, error
 	if e.Setting == "go-sqlmock" {
 		db, mock, err := sqlmock.New()
 		if err != nil {
-			return nil, fperr.BadRequestWithMessage("Failed to open stub database connection: " + err.Error())
+			return nil, pcerr.BadRequestWithMessage("Failed to open stub database connection: " + err.Error())
 		}
 		e.Mock = &mock
 		e.DB = db
@@ -65,7 +65,7 @@ func (e *Query) InitializeDB(ctx context.Context, i types.Input) (*sql.DB, error
 	return db, nil
 }
 
-func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (e *Query) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (e *Query) Run(ctx context.Context, input types.Input) (*types.Output, erro
 		return nil, err
 	}
 
-	output := &types.Output{
+	output := &pipeline.Output{
 		Data: map[string]interface{}{},
 	}
 
