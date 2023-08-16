@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/terraform-components/addrs"
@@ -223,7 +224,7 @@ type IPipelineStep interface {
 	GetDependsOn() []string
 	AppendDependsOn(...string)
 	GetForEach() hcl.Expression
-	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
+	SetAttributes(hcl.Attributes, *parse.ParseContext) hcl.Diagnostics
 	SetErrorConfig(*ErrorConfig)
 	GetErrorConfig() *ErrorConfig
 }
@@ -533,7 +534,7 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	return inputs, nil
 }
 
-func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
@@ -670,7 +671,7 @@ func (p *PipelineStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	}, nil
 }
 
-func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
@@ -883,7 +884,7 @@ func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	return results, nil
 }
 
-func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
@@ -1230,7 +1231,7 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep)
 	p.AddUnresolvedAttribute(name, expr)
 }
 
-func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
 
@@ -1341,7 +1342,7 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	return results, nil
 }
 
-func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
@@ -1469,7 +1470,7 @@ func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[stri
 	return results, nil
 }
 
-func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {

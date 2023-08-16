@@ -15,7 +15,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/funcs"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -45,7 +45,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *pipeline.Pipeline, pe *Pipel
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: pipeparser.ContextFunctions(viper.GetString("work.dir")),
+		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
 	}
 
 	params := map[string]cty.Value{}

@@ -9,12 +9,14 @@ import (
 	"github.com/hashicorp/hcl/v2"
 )
 
+//nolint:unused // TODO: check usage
 type unresolvedBlock struct {
 	Name         string
 	Block        *hcl.Block
 	Dependencies map[string]*modconfig.ResourceDependency
 }
 
+//nolint:unused // TODO: check usage
 func (b unresolvedBlock) String() string {
 	depStrings := make([]string, len(b.Dependencies))
 	idx := 0

@@ -1,12 +1,13 @@
 package parse
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/stevenle/topsort"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/funcs"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/go-kit/helpers"
@@ -14,10 +15,15 @@ import (
 )
 
 type ParseContext struct {
+	// This is the running application context
+	RunCtx           context.Context
 	UnresolvedBlocks map[string]*unresolvedBlock
 	FileData         map[string][]byte
+
 	// the eval context used to decode references in HCL
 	EvalCtx *hcl.EvalContext
+
+	Diags hcl.Diagnostics
 
 	RootEvalPath string
 
@@ -30,10 +36,11 @@ type ParseContext struct {
 	blocks          hcl.Blocks
 }
 
-func NewParseContext(rootEvalPath string) ParseContext {
+func NewParseContext(ctx context.Context, rootEvalPath string) ParseContext {
 	c := ParseContext{
 		UnresolvedBlocks: make(map[string]*unresolvedBlock),
 		RootEvalPath:     rootEvalPath,
+		RunCtx:           ctx,
 	}
 	// add root node - this will depend on all other nodes
 	c.dependencyGraph = c.newDependencyGraph()
@@ -68,7 +75,9 @@ func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependenci
 		diags = append(diags, &hcl.Diagnostic{
 			Severity: hcl.DiagError,
 			Summary:  "failed to add root dependency to graph",
-			Detail:   err.Error()})
+			Detail:   err.Error(),
+			Subject:  &block.DefRange,
+		})
 	}
 
 	for _, dep := range dependencies {
@@ -80,7 +89,9 @@ func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependenci
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "failed to parse dependency",
-					Detail:   err.Error()})
+					Detail:   err.Error(),
+					Subject:  &block.DefRange,
+				})
 				continue
 
 			}
@@ -94,7 +105,9 @@ func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependenci
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "failed to add dependency to graph",
-					Detail:   err.Error()})
+					Detail:   err.Error(),
+					Subject:  &block.DefRange,
+				})
 			}
 		}
 	}
@@ -206,12 +219,12 @@ func (r *ParseContext) getDependencyOrder() ([]string, error) {
 }
 
 // eval functions
-func (r *ParseContext) buildEvalContext(variables map[string]cty.Value) {
+func (r *ParseContext) BuildEvalContext(variables map[string]cty.Value) {
 
 	// create evaluation context
 	r.EvalCtx = &hcl.EvalContext{
 		Variables: variables,
 		// use the mod path as the file root for functions
-		Functions: pipeparser.ContextFunctions(r.RootEvalPath),
+		Functions: funcs.ContextFunctions(r.RootEvalPath),
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/parse"
 )
 
-func SKIPTestModLoad(t *testing.T) {
+func TestModLoad(t *testing.T) {
 	assert := assert.New(t)
 
 	mod, err := parse.LoadModfile("./test_mod/")

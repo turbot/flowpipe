@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
@@ -398,7 +399,7 @@ func GetTriggerBlockSchema(triggerType string) *hcl.BodySchema {
 }
 
 type FlowpipeConfigParseContext struct {
-	pipeparser.ParseContext
+	parse.ParseContext
 	PipelineHcls map[string]*Pipeline
 	TriggerHcls  map[string]ITrigger
 }
@@ -439,7 +440,7 @@ func (c *FlowpipeConfigParseContext) AddTrigger(trigger ITrigger) hcl.Diagnostic
 }
 
 func NewFlowpipeConfigParseContext(ctx context.Context, rootEvalPath string) *FlowpipeConfigParseContext {
-	parseContext := pipeparser.NewParseContext(ctx, rootEvalPath)
+	parseContext := parse.NewParseContext(ctx, rootEvalPath)
 	// TODO uncomment once https://github.com/turbot/steampipe/issues/2640 is done
 
 	c := &FlowpipeConfigParseContext{
