@@ -4,30 +4,30 @@ import (
 	"context"
 	"time"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type Sleep struct{}
 
-func (e *Sleep) ValidateInput(ctx context.Context, input types.Input) error {
+func (e *Sleep) ValidateInput(ctx context.Context, input pipeline.Input) error {
 
 	if input[schema.AttributeTypeDuration] == nil {
-		return fperr.BadRequestWithMessage("Sleep input must define a duration")
+		return pcerr.BadRequestWithMessage("Sleep input must define a duration")
 	}
 
 	durationString := input[schema.AttributeTypeDuration].(string)
 	_, err := time.ParseDuration(durationString)
 	if err != nil {
-		return fperr.BadRequestWithMessage("invalid sleep duration " + durationString)
+		return pcerr.BadRequestWithMessage("invalid sleep duration " + durationString)
 	}
 
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.Output, error) {
+func (e *Sleep) Run(ctx context.Context, input pipeline.Input) (*pipeline.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (e *Sleep) Run(ctx context.Context, input types.Input) (*types.Output, erro
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	output := &types.Output{
+	output := &pipeline.Output{
 		Data: map[string]interface{}{},
 	}
 

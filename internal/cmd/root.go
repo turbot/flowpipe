@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -14,9 +15,9 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/service"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/flowpipe/pipeparser/filepaths"
 
 	pcconstants "github.com/turbot/flowpipe/pipeparser/constants"
 )
@@ -36,6 +37,11 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		Version: constants.Version,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			viper.Set(pcconstants.ConfigKeyActiveCommand, cmd)
+
+			// set up the global viper config with default values from
+			// config files and ENV variables
+			_ = initGlobalConfig()
+
 			return nil
 		},
 	}
@@ -49,10 +55,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	// Command flags
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
+	// Flowpipe API
 	rootCmd.PersistentFlags().String(constants.CmdOptionApiHost, "http://localhost", "API server host")
 	rootCmd.PersistentFlags().Int(constants.CmdOptionApiPort, 7103, "API server port")
 	rootCmd.PersistentFlags().Bool(constants.CmdOptionTlsInsecure, false, "Skip TLS verification")
 
+	// Common (steampipe, flowpipe) flags
 	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.DefaultInstallDir, "Path to the Config Directory")
 	rootCmd.PersistentFlags().String(pcconstants.ArgModLocation, cwd, "Path to the workspace working directory")
 
@@ -66,8 +74,8 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	error_helpers.FailOnError(viper.BindPFlag("api.port", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiPort)))
 	error_helpers.FailOnError(viper.BindPFlag("api.tls_insecure", rootCmd.PersistentFlags().Lookup(constants.CmdOptionTlsInsecure)))
 
-	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgModLocation, rootCmd.PersistentFlags().Lookup(pcconstants.ArgModLocation)))
 	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgInstallDir, rootCmd.PersistentFlags().Lookup(pcconstants.ArgInstallDir)))
+	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgModLocation, rootCmd.PersistentFlags().Lookup(pcconstants.ArgModLocation)))
 
 	// disable auto completion generation, since we don't want to support
 	// powershell yet - and there's no way to disable powershell in the default generator
@@ -99,4 +107,23 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.AddCommand(modCmd)
 
 	return rootCmd, nil
+}
+
+// initConfig reads in config file and ENV variables if set.
+func initGlobalConfig() *error_helpers.ErrorAndWarnings {
+
+	// set global containing the configured install dir (create directory if needed)
+	ensureInstallDir(viper.GetString(pcconstants.ArgInstallDir))
+
+	return nil
+}
+
+func ensureInstallDir(installDir string) {
+	if _, err := os.Stat(installDir); os.IsNotExist(err) {
+		err = os.MkdirAll(installDir, 0755)
+		error_helpers.FailOnErrorWithMessage(err, fmt.Sprintf("could not create installation directory: %s", installDir))
+	}
+
+	// store as SteampipeDir
+	filepaths.SteampipeDir = installDir
 }

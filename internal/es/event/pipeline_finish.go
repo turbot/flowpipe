@@ -3,15 +3,15 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineFinish struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Pipeline execution details
-	PipelineExecutionID string        `json:"pipeline_execution_id"`
-	Output              *types.Output `json:"output,omitempty"`
+	PipelineExecutionID string           `json:"pipeline_execution_id"`
+	Output              *pipeline.Output `json:"output,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -43,7 +43,7 @@ func ForPipelinePlannedToPipelineFinish(e *PipelinePlanned) PipelineFinishOption
 	}
 }
 
-func WithPipelineOutput(output *types.Output) PipelineFinishOption {
+func WithPipelineOutput(output *pipeline.Output) PipelineFinishOption {
 	return func(e *PipelineFinish) error {
 		e.Output = output
 		return nil

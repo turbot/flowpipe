@@ -10,10 +10,10 @@ import (
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/garsue/watermillzap"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
 	"github.com/turbot/flowpipe/internal/util"
@@ -199,7 +199,7 @@ func (es *ESService) Start() error {
 	}
 
 	if cqrsFacade == nil {
-		return fperr.InternalWithMessage("cqrsFacade is nil")
+		return pcerr.InternalWithMessage("cqrsFacade is nil")
 	}
 
 	runID := util.NewProcessID()

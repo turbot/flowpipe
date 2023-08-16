@@ -21,13 +21,13 @@ import (
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 // @title Flowpipe
@@ -207,7 +207,7 @@ func (api *APIService) Start() error {
 		path := c.Request.URL.Path
 		method := c.Request.Method
 		if strings.HasPrefix(path, "/api") {
-			c.JSON(http.StatusNotFound, gin.H{"error": fperr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
+			c.JSON(http.StatusNotFound, gin.H{"error": pcerr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
 		} else {
 			c.File("./static/index.html")
 		}

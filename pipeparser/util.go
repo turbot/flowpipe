@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 // DiagsToError converts tfdiags diags into an error
@@ -22,7 +22,7 @@ func DiagsToError(prefix string, diags hcl.Diagnostics) error {
 		if len(errStrings) > 1 {
 			res += "\n"
 		}
-		return fperr.InternalWithMessage(fmt.Sprintf("%s: %s", prefix, res))
+		return pcerr.InternalWithMessage(fmt.Sprintf("%s: %s", prefix, res))
 	}
 
 	return diags.Errs()[0]

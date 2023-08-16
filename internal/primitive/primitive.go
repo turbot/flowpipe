@@ -1,7 +1,9 @@
 package primitive
 
-import "github.com/turbot/flowpipe/internal/types"
+import (
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
+)
 
 type Primitive interface {
-	Run(types.Input) (*types.Output, error)
+	Run(pipeline.Input) (*pipeline.Output, error)
 }

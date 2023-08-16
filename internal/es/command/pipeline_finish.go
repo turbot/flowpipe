@@ -3,12 +3,12 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineFinishHandler CommandHandler
@@ -27,7 +27,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 	cmd, ok := c.(*event.PipelineFinish)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelineFinish", "actual", c)
-		return fperr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
+		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))

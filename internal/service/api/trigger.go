@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -25,11 +26,11 @@ func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
 // @Param next_token query string false "When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data."
 // ...
 // @Success 200 {object} types.ListTriggerResponse
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /trigger [get]
 func (api *APIService) listTriggers(c *gin.Context) {
 	// Get paging parameters
@@ -42,7 +43,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 	fplog.Logger(api.ctx).Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
 	result := types.ListTriggerResponse{
-		Items: []types.Trigger{},
+		Items: []pipeline.Trigger{},
 	}
 
 	c.JSON(http.StatusOK, result)
@@ -58,12 +59,12 @@ func (api *APIService) listTriggers(c *gin.Context) {
 // @Param trigger_name path string true "The name of the trigger" format(^[a-z]{0,32}$)
 // ...
 // @Success 200 {object} types.Trigger
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 404 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 404 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /trigger/{trigger_name} [get]
 func (api *APIService) getTrigger(c *gin.Context) {
 

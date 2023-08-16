@@ -1,4 +1,4 @@
-package types
+package pipeline
 
 import (
 	"fmt"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
@@ -451,7 +450,8 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	var urlInput string
 	if p.UnresolvedAttributes[schema.AttributeTypeUrl] == nil {
 		if p.Url == nil {
-			return nil, fperr.InternalWithMessage("Url must be supplied")
+			// return nil, fperr.InternalWithMessage("Url must be supplied")
+			return nil, fmt.Errorf("url must be supplied")
 		}
 		urlInput = *p.Url
 	} else {
@@ -1298,7 +1298,8 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var sql *string
 	if p.UnresolvedAttributes[schema.AttributeTypeSql] == nil {
 		if p.Sql == nil {
-			return nil, fperr.InternalWithMessage("Url must be supplied")
+			// return nil, fperr.InternalWithMessage("Url must be supplied")
+			return nil, fmt.Errorf("Url must be supplied")
 		}
 		sql = p.Sql
 	} else {
@@ -1311,7 +1312,8 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var connectionString *string
 	if p.UnresolvedAttributes[schema.AttributeTypeConnectionString] == nil {
 		if p.ConnnectionString == nil {
-			return nil, fperr.InternalWithMessage("Url must be supplied")
+			// return nil, fperr.InternalWithMessage("Url must be supplied")
+			return nil, fmt.Errorf("ConnectionString must be supplied")
 		}
 		connectionString = p.ConnnectionString
 	} else {
@@ -1438,7 +1440,8 @@ func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[stri
 	var pipeline string
 	if p.UnresolvedAttributes[schema.AttributeTypePipeline] == nil {
 		if p.Pipeline == cty.NilVal {
-			return nil, fperr.InternalWithMessage("Pipeline must be supplied")
+			// return nil, fperr.InternalWithMessage("Pipeline must be supplied")
+			return nil, fmt.Errorf("Pipeline must be supplied")
 		}
 		valueMap := p.Pipeline.AsValueMap()
 		pipelineNameCty := valueMap[schema.LabelName]

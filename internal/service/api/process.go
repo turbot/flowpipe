@@ -8,12 +8,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
@@ -37,11 +37,11 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 // @Param next_token query string false "When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data."
 // ...
 // @Success 200 {object} types.ListProcessResponse
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /process [get]
 func (api *APIService) listProcess(c *gin.Context) {
 	// Get paging parameters
@@ -72,12 +72,12 @@ func (api *APIService) listProcess(c *gin.Context) {
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
 // @Success 200 {object} execution.Execution
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 404 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 404 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /process/{process_id} [get]
 func (api *APIService) getProcess(c *gin.Context) {
 
@@ -118,13 +118,13 @@ func (api *APIService) getProcess(c *gin.Context) {
 // / ...
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} types.OutputData
-// @Failure 400 {object} fperr.ErrorModel
-// @Failure 401 {object} fperr.ErrorModel
-// @Failure 403 {object} fperr.ErrorModel
-// @Failure 404 {object} fperr.ErrorModel
-// @Failure 429 {object} fperr.ErrorModel
-// @Failure 500 {object} fperr.ErrorModel
+// @Success 200 {object} pipeline.OutputData
+// @Failure 400 {object} pcerr.ErrorModel
+// @Failure 401 {object} pcerr.ErrorModel
+// @Failure 403 {object} pcerr.ErrorModel
+// @Failure 404 {object} pcerr.ErrorModel
+// @Failure 429 {object} pcerr.ErrorModel
+// @Failure 500 {object} pcerr.ErrorModel
 // @Router /process/{process_id}/output [get]
 func (api *APIService) getProcessOutput(c *gin.Context) {
 
@@ -177,7 +177,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 	}
 
 	if input.Command != "cancel" && input.Command != "pause" && input.Command != "resume" {
-		common.AbortWithError(c, fperr.BadRequestWithMessage("invalid command"))
+		common.AbortWithError(c, pcerr.BadRequestWithMessage("invalid command"))
 		return
 	}
 
@@ -256,7 +256,7 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 	jsonBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		fplog.Logger(api.ctx).Error("error reading sps file", "error", err, "file_path", filePath)
-		common.AbortWithError(c, fperr.InternalWithMessage("internal error"))
+		common.AbortWithError(c, pcerr.InternalWithMessage("internal error"))
 		return
 	}
 

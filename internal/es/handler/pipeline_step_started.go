@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -27,7 +27,7 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.PipelineStepStarted)
 	if !ok {
 		logger.Error("invalid event type", "expected", "*event.PipelineStepStarted", "actual", ei)
-		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStepStarted")
+		return pcerr.BadRequestWithMessage("invalid event type expected *event.PipelineStepStarted")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
@@ -48,7 +48,7 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		}
 		return h.CommandBus.Send(ctx, &cmd)
 	default:
-		err := fperr.BadRequestWithMessage("step type cannot be started: " + stepDefn.GetType())
+		err := pcerr.BadRequestWithMessage("step type cannot be started: " + stepDefn.GetType())
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 	}
 }

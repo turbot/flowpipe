@@ -1,4 +1,4 @@
-package fperr
+package pcerr
 
 import (
 	"github.com/rs/xid"

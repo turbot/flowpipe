@@ -3,9 +3,14 @@
 *.swo
 .DS_Store
 
+# Flowpipe binary
+flowpipe
+
 # IDE
 .idea/
 .run
+
+# Do not exclude .vscode/launch.json
 .vscode/settings.json
 
 # temp debug file (that can sometime fail to delete)

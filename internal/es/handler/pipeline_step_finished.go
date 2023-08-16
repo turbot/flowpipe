@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type PipelineStepFinished EventHandler
@@ -23,7 +23,7 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 	e, ok := ei.(*event.PipelineStepFinished)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.PipelineStepFinished", "actual", ei)
-		return fperr.BadRequestWithMessage("invalid event type expected *event.PipelineStepFinished")
+		return pcerr.BadRequestWithMessage("invalid event type expected *event.PipelineStepFinished")
 	}
 
 	logger := fplog.Logger(ctx)

@@ -3,12 +3,12 @@ package command
 import (
 	"context"
 
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineFailHandler CommandHandler
@@ -27,7 +27,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineFail)
 	if !ok {
 		logger.Error("pipeline_fail handler expected PipelineFail event", "event", c)
-		return fperr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
+		return pcerr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
@@ -87,7 +87,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Collect all the step output, but don't also add the error in the cmd/event
-	var pipelineErrors []types.StepError
+	var pipelineErrors []pipeline.StepError
 	if cmd.Error != nil {
 		pipelineErrors = append(pipelineErrors, *cmd.Error)
 	}

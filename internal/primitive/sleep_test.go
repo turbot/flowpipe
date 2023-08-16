@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/fperr"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 func TestSleepOK(t *testing.T) {
@@ -18,7 +18,7 @@ func TestSleepOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := types.Input(map[string]interface{}{"duration": "1s"})
+	input := pipeline.Input(map[string]interface{}{"duration": "1s"})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
@@ -35,12 +35,12 @@ func TestSleepInvalidDuration(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := types.Input(map[string]interface{}{"duration": "5"})
+	input := pipeline.Input(map[string]interface{}{"duration": "5"})
 
 	_, err := q.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(fperr.ErrorModel)
+	fpErr := err.(pcerr.ErrorModel)
 	assert.Equal("invalid sleep duration 5", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }

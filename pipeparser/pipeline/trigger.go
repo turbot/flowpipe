@@ -1,11 +1,10 @@
-package types
+package pipeline
 
 import (
 	"context"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -309,42 +308,4 @@ func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
 	trigger.SetName(triggerName)
 	trigger.SetContext(ctx)
 	return trigger
-}
-
-type PrintableTrigger struct {
-	Items interface{}
-}
-
-func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
-
-	return nil, nil
-}
-
-func (p PrintableTrigger) GetItems() interface{} {
-	return p.Items
-}
-
-func (p PrintableTrigger) GetTable() (Table, error) {
-	return Table{}, nil
-}
-
-func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{
-		{
-			Name:        "TYPE",
-			Type:        "string",
-			Description: "The type of the trigger",
-		},
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "The name of the trigger",
-		},
-	}
-}
-
-// This type is used by the API to return a list of triggers.
-type ListTriggerResponse struct {
-	Items     []Trigger `json:"items"`
-	NextToken *string   `json:"next_token,omitempty"`
 }

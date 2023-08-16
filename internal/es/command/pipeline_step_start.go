@@ -7,7 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -60,8 +60,8 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
 		// pipeline_plan phase
-		if cmd.NextStepAction == types.NextStepActionSkip {
-			output := &types.Output{
+		if cmd.NextStepAction == pipeline.NextStepActionSkip {
+			output := &pipeline.Output{
 				Status: "skipped",
 			}
 
@@ -69,7 +69,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		var output *types.Output
+		var output *pipeline.Output
 		var primitiveError error
 		switch stepDefn.GetType() {
 		case schema.BlockTypePipelineStepExec:
@@ -105,13 +105,13 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		if primitiveError != nil {
 			logger.Error("primitive failed", "error", primitiveError)
 			if output == nil {
-				output = &types.Output{}
+				output = &pipeline.Output{}
 			}
 			if output.Errors == nil {
-				output.Errors = []types.StepError{}
+				output.Errors = []pipeline.StepError{}
 			}
 
-			output.Errors = append(output.Errors, types.StepError{
+			output.Errors = append(output.Errors, pipeline.StepError{
 				Message: primitiveError.Error(),
 			})
 
@@ -133,7 +133,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		// If it's a pipeline step, we need to do something else, we we need to start
 		// a new pipeline execution for the child pipeline
 		if stepDefn.GetType() == schema.AttributeTypePipeline {
-			args := types.Input{}
+			args := pipeline.Input{}
 			if cmd.StepInput[schema.AttributeTypeArgs] != nil {
 				args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
 			}
@@ -165,7 +165,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 	return nil
 }
 
-func endStep(cmd *event.PipelineStepStart, output *types.Output, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
+func endStep(cmd *event.PipelineStepStart, output *pipeline.Output, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
 	e, err := event.NewPipelineStepFinished(
 		event.ForPipelineStepStartToPipelineStepFinished(cmd),
 		event.WithStepOutput(output))

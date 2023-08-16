@@ -9,13 +9,12 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
-	"github.com/turbot/flowpipe/internal/fpconfig"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 // Manager manages and represents the status of the service.
@@ -25,7 +24,7 @@ type Manager struct {
 	apiService *api.APIService
 	esService  *es.ESService
 
-	triggers map[string]types.ITrigger
+	triggers map[string]pipeline.ITrigger
 
 	RaftNodeID    string `json:"raft_node_id,omitempty"`
 	RaftBootstrap bool   `json:"raft_bootstrap"`
@@ -90,7 +89,7 @@ func WithHTTPAddress(addr string) ManagerOption {
 func (m *Manager) Initialize() error {
 	pipelineDir := viper.GetString("pipeline.dir")
 
-	fpParseContext, err := fpconfig.LoadFlowpipeConfig(m.ctx, pipelineDir)
+	fpParseContext, err := pipeline.LoadFlowpipeConfig(m.ctx, pipelineDir)
 	if err != nil {
 		return err
 	}

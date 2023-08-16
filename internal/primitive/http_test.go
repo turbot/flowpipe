@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -19,7 +19,7 @@ func TestHTTPMethodGET(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl: "https://steampipe.io/",
 	})
 
@@ -38,7 +38,7 @@ func TestHTTPMethodGETWithQueryString(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl: "https://hub.steampipe.io/plugins?categories=saas",
 	})
 
@@ -57,9 +57,9 @@ func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://api.open-notify.org/astros.json",
-		schema.AttributeTypeMethod: types.HttpMethodGet,
+		schema.AttributeTypeMethod: pipeline.HttpMethodGet,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -77,9 +77,9 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://steampipe.io/asdlkfjasdlfkjnotfound/",
-		schema.AttributeTypeMethod: types.HttpMethodGet,
+		schema.AttributeTypeMethod: pipeline.HttpMethodGet,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -100,9 +100,9 @@ func TestHTTPMethodGETUnauthorized(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://cloud.steampipe.io/api/v0/user/flowpipe/connection",
-		schema.AttributeTypeMethod: types.HttpMethodGet,
+		schema.AttributeTypeMethod: pipeline.HttpMethodGet,
 		schema.AttributeTypeRequestBody: `{
 			"Authorization": "Bearer spt_flo3pipe00g0t1nvali_3test0axy78ic8h6http77o24"
 		}`,
@@ -126,9 +126,9 @@ func TestHTTPMethodPOST(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: types.HttpMethodPost,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -150,9 +150,9 @@ func TestHTTPMethodPOSTWithTextBody(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod:      types.HttpMethodPost,
+		schema.AttributeTypeMethod:      pipeline.HttpMethodPost,
 		schema.AttributeTypeRequestBody: "Test",
 	})
 
@@ -171,9 +171,9 @@ func TestHTTPMethodPOSTNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: types.HttpMethodPost,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPost,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -193,9 +193,9 @@ func TestHTTPMethodPOSTWithRequestHeaders(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: types.HttpMethodPost,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -225,9 +225,9 @@ func TestHTTPMethodPOSTWithTimeout(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: types.HttpMethodPost,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -251,9 +251,9 @@ func TestHTTPMethodPOSTWithNoVerifyCertificate(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: types.HttpMethodPost,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -278,9 +278,9 @@ func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: types.HttpMethodPost,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -304,9 +304,9 @@ func TestHTTPMethodDELETE(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod: types.HttpMethodDelete,
+		schema.AttributeTypeMethod: pipeline.HttpMethodDelete,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -324,9 +324,9 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: types.HttpMethodDelete,
+		schema.AttributeTypeMethod: pipeline.HttpMethodDelete,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -347,9 +347,9 @@ func TestHTTPMethodPUT(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod: types.HttpMethodPut,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPut,
 		schema.AttributeTypeRequestBody: `{
 				"id": 1,
 				"title": "foo",
@@ -372,9 +372,9 @@ func TestHTTPMethodPUTWithTextBody(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod:      types.HttpMethodPut,
+		schema.AttributeTypeMethod:      pipeline.HttpMethodPut,
 		schema.AttributeTypeRequestBody: "test",
 	})
 
@@ -393,9 +393,9 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: types.HttpMethodPut,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPut,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -416,9 +416,9 @@ func TestHTTPMethodPATCH(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod: types.HttpMethodPatch,
+		schema.AttributeTypeMethod: pipeline.HttpMethodPatch,
 		schema.AttributeTypeRequestBody: `{
 			"title": "foo",
 			"body": "Updating the body of the target resource"
@@ -440,9 +440,9 @@ func TestHTTPMethodPATCHWithTextBody(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod:      types.HttpMethodPatch,
+		schema.AttributeTypeMethod:      pipeline.HttpMethodPatch,
 		schema.AttributeTypeRequestBody: "test",
 	})
 
@@ -461,9 +461,9 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := types.Input(map[string]interface{}{
+	input := pipeline.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: types.HttpMethodPatch})
+		schema.AttributeTypeMethod: pipeline.HttpMethodPatch})
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)

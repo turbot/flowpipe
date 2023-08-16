@@ -1,0 +1,231 @@
+package pipeline
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/pipeparser/options"
+	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/turbot/terraform-components/configs"
+	"github.com/zclconf/go-cty/cty"
+)
+
+func NewPipelineHcl(block *hcl.Block) *Pipeline {
+	return &Pipeline{
+		Name:   block.Labels[0],
+		Params: map[string]*configs.Variable{},
+	}
+}
+
+// Pipeline represents a "pipeline" block in an flowpipe HCL (*.fp) file
+//
+// Note that this Pipeline definition is different that the pipeline that is running. This definition
+// contains unresolved expressions (mostly in steps), how to handle errors etc but not the actual Pipeline
+// execution data.
+type Pipeline struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
+
+	// Unparsed HCL body, needed so we can de-code the step HCL into the correct struct
+	RawBody hcl.Body `json:"-" hcl:",remain"`
+
+	// Unparsed JSON raw message, needed so we can unmarshall the step JSON into the correct struct
+	StepsRawJson json.RawMessage `json:"-"`
+
+	Steps []IPipelineStep `json:"steps,omitempty"`
+
+	Outputs []PipelineOutput `json:"outputs,omitempty"`
+
+	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
+	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)
+	Params map[string]*configs.Variable `json:"-"`
+}
+
+func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
+	for i := 0; i < len(p.Steps); i++ {
+		if p.Steps[i].GetFullyQualifiedName() == stepFullyQualifiedName {
+			return p.Steps[i]
+		}
+	}
+	return nil
+}
+
+func (p *Pipeline) AsCtyValue() cty.Value {
+	pipelineVars := map[string]cty.Value{}
+	pipelineVars[schema.LabelName] = cty.StringVal(p.Name)
+
+	if p.Description != nil {
+		pipelineVars[schema.AttributeTypeDescription] = cty.StringVal(*p.Description)
+	}
+
+	return cty.ObjectVal(pipelineVars)
+}
+
+// SetOptions sets the options on the connection
+// verify the options object is a valid options type (only options.Connection currently supported)
+func (p *Pipeline) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagnostics {
+
+	var diags hcl.Diagnostics
+	switch o := opts.(type) {
+	default:
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  fmt.Sprintf("invalid nested option type %s - only 'connection' options blocks are supported for Connections", reflect.TypeOf(o).Name()),
+			Subject:  &block.DefRange,
+		})
+	}
+	return diags
+}
+
+func (p *Pipeline) OnDecoded() hcl.Diagnostics {
+	p.setBaseProperties()
+	return nil
+}
+
+func (p *Pipeline) setBaseProperties() {
+
+}
+
+func (ph *Pipeline) UnmarshalJSON(data []byte) error {
+	// Define an auxiliary type to decode the JSON and capture the value of the 'ISteps' field
+	type Aux struct {
+		Name        string          `json:"name"`
+		Description *string         `json:"description,omitempty"`
+		Output      *string         `json:"output,omitempty"`
+		Raw         json.RawMessage `json:"-"`
+		ISteps      json.RawMessage `json:"steps"`
+	}
+
+	aux := Aux{ISteps: json.RawMessage([]byte("null"))} // Provide a default value for 'ISteps' field
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Assign values to the fields of the main struct
+	ph.Name = aux.Name
+	ph.Description = aux.Description
+	ph.StepsRawJson = []byte(aux.Raw)
+
+	// Determine the concrete type of 'ISteps' based on the data present in the JSON
+	if aux.ISteps != nil && string(aux.ISteps) != "null" {
+		// Replace the JSON array of 'ISteps' with the desired concrete type
+		var stepSlice []json.RawMessage
+		if err := json.Unmarshal(aux.ISteps, &stepSlice); err != nil {
+			return err
+		}
+
+		// Iterate over the stepSlice and determine the concrete type of each step
+		for _, stepData := range stepSlice {
+			// Extract the 'step_type' field from the stepData
+			var stepType struct {
+				StepType string `json:"step_type"`
+			}
+			if err := json.Unmarshal(stepData, &stepType); err != nil {
+				return err
+			}
+
+			switch stepType.StepType {
+			case schema.BlockTypePipelineStepHttp:
+				var step PipelineStepHttp
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			case schema.BlockTypePipelineStepSleep:
+				var step PipelineStepSleep
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			case schema.BlockTypePipelineStepEmail:
+				var step PipelineStepEmail
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			case schema.BlockTypePipelineStepEcho:
+				var step PipelineStepEcho
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			case schema.BlockTypePipelineStepQuery:
+				var step PipelineStepQuery
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			case schema.BlockTypePipelineStepPipeline:
+				var step PipelineStepPipeline
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+				ph.Steps = append(ph.Steps, &step)
+			default:
+				// Handle unrecognized step types or return an error
+				// return fperr.BadRequestWithMessage("Unrecognized step type: " + stepType.StepType)
+				return fmt.Errorf("unrecognized step type: %s", stepType.StepType)
+			}
+		}
+	}
+
+	return nil
+}
+
+func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
+	var diags hcl.Diagnostics
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case schema.AttributeTypeDescription:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse description attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Description = &valString
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for pipeline: " + attr.Name,
+				Subject:  &attr.Range,
+			})
+		}
+	}
+	return diags
+}
+
+type PipelineOutput struct {
+	Name            string         `json:"name"`
+	DependsOn       []string       `json:"depends_on,omitempty"`
+	Resolved        bool           `json:"resolved,omitempty"`
+	Sensitive       bool           `json:"sensitive,omitempty"`
+	Value           interface{}    `json:"value,omitempty"`
+	UnresolvedValue hcl.Expression `json:"-"`
+}
+
+func (o *PipelineOutput) AppendDependsOn(dependsOn ...string) {
+	// Use map to track existing DependsOn, this will make the lookup below much faster
+	// rather than using nested loops
+	existingDeps := make(map[string]bool)
+	for _, dep := range o.DependsOn {
+		existingDeps[dep] = true
+	}
+
+	for _, dep := range dependsOn {
+		if !existingDeps[dep] {
+			o.DependsOn = append(o.DependsOn, dep)
+			existingDeps[dep] = true
+		}
+	}
+}

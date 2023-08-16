@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
@@ -11,7 +12,7 @@ import (
 func TestStepAsHclVariables(t *testing.T) {
 	assert := assert.New(t)
 
-	stepOutput := Output{
+	stepOutput := pipeline.Output{
 		Data: map[string]interface{}{},
 	}
 
@@ -19,7 +20,7 @@ func TestStepAsHclVariables(t *testing.T) {
 	stepOutput.Data["int"] = 25
 	stepOutput.Data["bool"] = true
 
-	stepOutput.Errors = []StepError{
+	stepOutput.Errors = []pipeline.StepError{
 		{
 			Message: "one",
 		},

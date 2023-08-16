@@ -1,8 +1,8 @@
 package execution
 
 import (
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -14,7 +14,7 @@ type PipelineExecution struct {
 	// The name of the pipeline
 	Name string `json:"name"`
 	// The input to the pipeline
-	Args types.Input `json:"args,omitempty"`
+	Args pipeline.Input `json:"args,omitempty"`
 
 	// The output of the pipeline
 	PipelineOutput map[string]interface{} `json:"pipeline_output,omitempty"`
@@ -33,7 +33,7 @@ type PipelineExecution struct {
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
-	Errors []types.StepError `json:"errors,omitempty"`
+	Errors []pipeline.StepError `json:"errors,omitempty"`
 
 	// The "final" output for all the steps in this pipeline execution.
 	AllStepOutputs ExecutionStepOutputs `json:"-"`
@@ -89,13 +89,13 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 		}
 
 		for stepName, stepOutput := range v {
-			if nonIndexStepOutput, ok := stepOutput.(*types.Output); ok {
+			if nonIndexStepOutput, ok := stepOutput.(*pipeline.Output); ok {
 				var err error
 				vm[stepName], err = nonIndexStepOutput.AsCtyValue()
 				if err != nil {
 					return nil, err
 				}
-			} else if indexedStepOutput, ok := stepOutput.([]*types.Output); ok {
+			} else if indexedStepOutput, ok := stepOutput.([]*pipeline.Output); ok {
 				var err error
 
 				ctyValList := make([]cty.Value, len(indexedStepOutput))
@@ -188,7 +188,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 }
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
-func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Execution) bool {
+func (pe *PipelineExecution) IsStepFinalFailure(step pipeline.IPipelineStep, ex *Execution) bool {
 
 	return true
 	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
@@ -202,12 +202,12 @@ func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Ex
 	// 		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
 
 	// 		if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-	// 			pe.Fail(step.GetFullyQualifiedName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
+	// 			pe.Fail(step.GetFullyQualifiedName(), pipeline.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
 	// 		} else {
 	// 			// Set the error
 	// 			pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
 	// 		}
-	// 		// pe.Fail(step.GetName(), types.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
+	// 		// pe.Fail(step.GetName(), pipeline.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
 	// 		return true
 	// 	} else {
 	// 		return false
@@ -220,7 +220,7 @@ func (pe *PipelineExecution) IsStepFinalFailure(step types.IPipelineStep, ex *Ex
 	// return true
 
 }
-func (pe *PipelineExecution) Fail(stepName string, stepError ...types.StepError) {
+func (pe *PipelineExecution) Fail(stepName string, stepError ...pipeline.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
 }
 
@@ -316,7 +316,7 @@ func (s *StepStatus) Progress() int {
 func (s *StepStatus) Queue(seID string) {
 	// Can't queue if the step already finished or started (safety check)
 	if s.Finished[seID] || s.Failed[seID] {
-		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -329,7 +329,7 @@ func (s *StepStatus) Queue(seID string) {
 func (s *StepStatus) Start(seID string) {
 	// Can't start if the step already finished or started (safety check)
 	if s.Finished[seID] || s.Failed[seID] {
-		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -341,7 +341,7 @@ func (s *StepStatus) Start(seID string) {
 func (s *StepStatus) Finish(seID string) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
-		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -355,7 +355,7 @@ func (s *StepStatus) Finish(seID string) {
 func (s *StepStatus) Fail(seID string) {
 	// Can't fail if the step already finished (safety check)
 	if s.Finished[seID] {
-		panic(fperr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -380,15 +380,15 @@ type StepExecution struct {
 	Status string `json:"status"`
 
 	// Input to the step
-	Input types.Input `json:"input"`
+	Input pipeline.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach *pipeline.StepForEach `json:"step_for_each,omitempty"`
 
-	NextStepAction types.NextStepAction `json:"next_step_action,omitempty"`
+	NextStepAction pipeline.NextStepAction `json:"next_step_action,omitempty"`
 
 	// Output of the step
-	Output *types.Output `json:"output,omitempty"`
+	Output *pipeline.Output `json:"output,omitempty"`
 }
 
 func (se *StepExecution) Index() *int {

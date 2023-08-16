@@ -2,7 +2,7 @@ package types
 
 import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/fperr"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 type TableRow struct {
@@ -15,7 +15,7 @@ type Table struct {
 }
 
 func (Table) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
-	return nil, fperr.BadRequestWithMessage("not supported")
+	return nil, pcerr.BadRequestWithMessage("not supported")
 }
 
 func (p Table) GetItems() interface{} {

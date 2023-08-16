@@ -1,8 +1,8 @@
 package event
 
 import (
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 // PipelineQueued is published when a pipeline is queued
@@ -12,7 +12,7 @@ type PipelineQueued struct {
 	// Name of the pipeline to be queued
 	Name string `json:"name"`
 	// Input to the pipeline
-	Args types.Input `json:"args"`
+	Args pipeline.Input `json:"args"`
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent step execution ID

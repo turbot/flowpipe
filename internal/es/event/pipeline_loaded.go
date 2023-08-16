@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineLoaded struct {
@@ -12,7 +12,7 @@ type PipelineLoaded struct {
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// Pipeline definition that was loaded
-	Pipeline *types.Pipeline `json:"pipeline"`
+	Pipeline *pipeline.Pipeline `json:"pipeline"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -47,7 +47,7 @@ func ForPipelineLoad(cmd *PipelineLoad) PipelineLoadedOption {
 }
 
 // WithPipeline sets the Pipeline of the PipelineLoaded event.
-func WithPipelineDefinition(pipeline *types.Pipeline) PipelineLoadedOption {
+func WithPipelineDefinition(pipeline *pipeline.Pipeline) PipelineLoadedOption {
 	return func(e *PipelineLoaded) error {
 		e.Pipeline = pipeline
 		return nil

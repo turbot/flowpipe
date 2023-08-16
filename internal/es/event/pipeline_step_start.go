@@ -3,25 +3,25 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/fperr"
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/pipeline"
 )
 
 type PipelineStepStart struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string      `json:"pipeline_execution_id"`
-	StepExecutionID     string      `json:"step_execution_id"`
-	StepName            string      `json:"step_name"`
-	StepInput           types.Input `json:"input"`
+	PipelineExecutionID string         `json:"pipeline_execution_id"`
+	StepExecutionID     string         `json:"step_execution_id"`
+	StepName            string         `json:"step_name"`
+	StepInput           pipeline.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *types.StepForEach `json:"step_for_each,omitempty"`
+	StepForEach *pipeline.StepForEach `json:"step_for_each,omitempty"`
 
-	DelayMs        int                  `json:"delay_ms,omitempty"` // delay start in milliseconds
-	NextStepAction types.NextStepAction `json:"next_step_action,omitempty"`
+	DelayMs        int                     `json:"delay_ms,omitempty"` // delay start in milliseconds
+	NextStepAction pipeline.NextStepAction `json:"next_step_action,omitempty"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -59,7 +59,7 @@ func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
 	return func(cmd *PipelineStepStart) error {
 
 		if e.StepExecutionID == "" {
-			return fperr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
+			return pcerr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
 		}
 
 		cmd.Event = NewChildEvent(e.Event)
@@ -73,7 +73,7 @@ func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
 	}
 }
 
-func WithStep(name string, input types.Input, stepForEach *types.StepForEach, nextStepAction types.NextStepAction) PipelineStepStartOption {
+func WithStep(name string, input pipeline.Input, stepForEach *pipeline.StepForEach, nextStepAction pipeline.NextStepAction) PipelineStepStartOption {
 	return func(cmd *PipelineStepStart) error {
 		cmd.StepName = name
 		cmd.StepInput = input
