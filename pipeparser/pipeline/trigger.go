@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
@@ -59,7 +59,7 @@ func (t *Trigger) IsBaseAttribute(name string) bool {
 	return helpers.StringSliceContains(ValidBaseTriggerAttributes, name)
 }
 
-func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *pipeparser.ParseContext) hcl.Diagnostics {
+func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, parseContext *parse.ParseContext) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
@@ -127,7 +127,7 @@ type ITrigger interface {
 	GetDescription() *string
 	GetPipeline() cty.Value
 	GetArgs() Input
-	SetAttributes(hcl.Attributes, *pipeparser.ParseContext) hcl.Diagnostics
+	SetAttributes(hcl.Attributes, *parse.ParseContext) hcl.Diagnostics
 }
 
 type TriggerSchedule struct {
@@ -135,7 +135,7 @@ type TriggerSchedule struct {
 	Schedule string `json:"schedule"`
 }
 
-func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, ctx *parse.ParseContext) hcl.Diagnostics {
 	diags := t.SetBaseAttributes(hclAttributes, ctx)
 	if diags.HasErrors() {
 		return diags
@@ -177,7 +177,7 @@ type TriggerInterval struct {
 
 var validIntervals = []string{"hourly", "daily", "weekly", "monthly"}
 
-func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, ctx *parse.ParseContext) hcl.Diagnostics {
 	diags := t.SetBaseAttributes(hclAttributes, ctx)
 	if diags.HasErrors() {
 		return diags
@@ -220,7 +220,7 @@ type TriggerQuery struct {
 	Events           []string `json:"events"`
 }
 
-func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, ctx *parse.ParseContext) hcl.Diagnostics {
 	diags := t.SetBaseAttributes(hclAttributes, ctx)
 	if diags.HasErrors() {
 		return diags
@@ -280,7 +280,7 @@ type TriggerHttp struct {
 	Trigger
 }
 
-func (t *TriggerHttp) SetAttributes(hclAttributes hcl.Attributes, ctx *pipeparser.ParseContext) hcl.Diagnostics {
+func (t *TriggerHttp) SetAttributes(hclAttributes hcl.Attributes, ctx *parse.ParseContext) hcl.Diagnostics {
 	diags := t.SetBaseAttributes(hclAttributes, ctx)
 	if diags.HasErrors() {
 		return diags

@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -78,7 +79,9 @@ type ModParseContext struct {
 }
 
 func NewModParseContext(workspaceLock *versionmap.WorkspaceLock, rootEvalPath string, flags ParseModFlag, listOptions *filehelpers.ListOptions) *ModParseContext {
-	parseContext := NewParseContext(rootEvalPath)
+
+	// TODO: pass the correct context
+	parseContext := NewParseContext(context.TODO(), rootEvalPath)
 	c := &ModParseContext{
 		ParseContext:  parseContext,
 		Flags:         flags,
@@ -358,7 +361,7 @@ func (m *ModParseContext) buildEvalContext() {
 	}
 
 	// rebuild the eval context
-	m.ParseContext.buildEvalContext(referenceValues)
+	m.ParseContext.BuildEvalContext(referenceValues)
 }
 
 // store the resource as a cty value in the reference valuemap

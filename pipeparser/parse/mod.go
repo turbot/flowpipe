@@ -8,9 +8,9 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
-	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
+	"github.com/turbot/flowpipe/pipeparser/funcs"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -25,7 +25,7 @@ func LoadModfile(modPath string) (*modconfig.Mod, error) {
 
 	// build an eval context just containing functions
 	evalCtx := &hcl.EvalContext{
-		Functions: pipeparser.ContextFunctions(modPath),
+		Functions: funcs.ContextFunctions(modPath),
 		Variables: make(map[string]cty.Value),
 	}
 

@@ -4,7 +4,7 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-const rootDependencyNode = "rootDependencyNode"
+const rootDependencyNode = "rootDependencyNode" //nolint:unused // TODO: check usage
 
 type ParseModFlag uint32
 
