@@ -110,6 +110,8 @@ func (m *Manager) Initialize() error {
 		inMemoryCache.SetWithTTL(pipelineName, pipelines[pipelineName], 24*7*52*99*time.Hour)
 	}
 
+	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+
 	var triggerNames []string
 
 	for triggerName := range triggers {
