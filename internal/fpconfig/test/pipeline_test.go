@@ -3,7 +3,6 @@ package pipeline_test
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -256,9 +255,6 @@ func TestMarshallUnmarshal(t *testing.T) {
 		assert.NotNil(pipelines[pp], "pipeline not found")
 
 		data, err := json.Marshal(pipelines[pp])
-		assert.Nil(err, "error found, can't marshall")
-
-		err = os.WriteFile("output.json", data, 0644)
 		assert.Nil(err, "error found, can't marshall")
 
 		var p modconfig.Pipeline
