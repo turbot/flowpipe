@@ -1,6 +1,7 @@
 package pipeline_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,10 +25,37 @@ func TestModFileLoad(t *testing.T) {
 	assert.NotNil(mod, "mod is nil")
 }
 
-func SkipTestModLoad(t *testing.T) {
+func SkipTestModLoadSp(t *testing.T) {
 	assert := assert.New(t)
 
 	parseCtx := parse.NewModParseContext(
+		context.TODO(),
+		nil,
+		"./test_steampipe_mod/",
+		parse.CreateDefaultMod,
+		&filehelpers.ListOptions{
+			// // listFlag specifies whether to load files recursively
+			// Flags:   w.listFlag,
+			// Exclude: w.exclusions,
+			// only load .sp files
+			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),
+		})
+
+	mod, err := pipeparser.LoadMod("./test_mod/", parseCtx)
+
+	if err != nil {
+		assert.Fail("error loading mod file", err.Error.Error())
+		return
+	}
+
+	assert.NotNil(mod, "mod is nil")
+}
+
+func SkipTestModLoadFp(t *testing.T) {
+	assert := assert.New(t)
+
+	parseCtx := parse.NewModParseContext(
+		context.TODO(),
 		nil,
 		"./test_mod/",
 		parse.CreateDefaultMod,

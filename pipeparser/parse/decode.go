@@ -164,15 +164,21 @@ func decodeBlock(block *hcl.Block, parseCtx *ModParseContext) (modconfig.HclReso
 			resource, res = decodeVariable(block, parseCtx)
 		case schema.BlockTypeBenchmark:
 			resource, res = decodeBenchmark(block, parseCtx)
+		case schema.BlockTypePipeline:
+			_, res = decodePipeline(block, &parseCtx.FlowpipeConfigParseContext)
+		case schema.BlockTypeTrigger:
+			_, res = decodeTrigger(block, &parseCtx.FlowpipeConfigParseContext)
 		default:
 			// all other blocks are treated the same:
 			resource, res = decodeResource(block, parseCtx)
 		}
 	}
 
-	// handle the result
-	// - if there are dependencies, add to run context
-	handleModDecodeResult(resource, res, block, parseCtx)
+	if resource != nil {
+		// handle the result
+		// - if there are dependencies, add to run context
+		handleModDecodeResult(resource, res, block, parseCtx)
+	}
 
 	return resource, res
 }

@@ -40,6 +40,8 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 
 			// set up the global viper config with default values from
 			// config files and ENV variables
+
+			// TODO: this creates '~' directory in the source when we run the test. Find a solution.
 			_ = initGlobalConfig()
 
 			return nil
@@ -112,6 +114,8 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 // initConfig reads in config file and ENV variables if set.
 func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 
+	// Steampipe CLI loads the Workspace Profile here, but it also loads the mod in the parse context.
+	//
 	// set global containing the configured install dir (create directory if needed)
 	ensureInstallDir(viper.GetString(pcconstants.ArgInstallDir))
 

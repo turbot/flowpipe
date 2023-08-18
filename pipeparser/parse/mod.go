@@ -40,6 +40,8 @@ func LoadModfile(modPath string) (*modconfig.Mod, error) {
 // ParseModDefinition parses the modfile only
 // it is expected the calling code will have verified the existence of the modfile by calling ModfileExists
 // this is called before parsing the workspace to, for example, identify dependency mods
+//
+// This function only parse the "mod" block, and does not parse any resources in the mod file
 func ParseModDefinition(modPath string, evalCtx *hcl.EvalContext) (*modconfig.Mod, *DecodeResult) {
 	res := newDecodeResult()
 
