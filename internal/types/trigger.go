@@ -59,10 +59,10 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 			description = *item.Description
 		}
 		cells := []interface{}{
+			*item.Pipeline,
 			*item.Type,
 			*item.Name,
 			description,
-			*item.Pipeline,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -75,6 +75,11 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 
 func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
+		{
+			Name:        "PIPELINE",
+			Type:        "string",
+			Description: "The name of the pipeline",
+		},
 		{
 			Name:        "TYPE",
 			Type:        "string",
@@ -89,11 +94,6 @@ func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
 			Name:        "DESCRIPTION",
 			Type:        "string",
 			Description: "Trigger description",
-		},
-		{
-			Name:        "PIPELINE",
-			Type:        "string",
-			Description: "The name of the pipeline",
 		},
 	}
 }

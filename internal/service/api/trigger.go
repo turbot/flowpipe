@@ -68,7 +68,14 @@ func (api *APIService) listTriggers(c *gin.Context) {
 		})
 	}
 
+	// Sort the triggers by pipeline, type, name
 	sort.Slice(fpTriggers, func(i, j int) bool {
+		if fpTriggers[i].Pipeline != fpTriggers[j].Pipeline {
+			return fpTriggers[i].Pipeline < fpTriggers[j].Pipeline
+		}
+		if fpTriggers[i].Type != fpTriggers[j].Type {
+			return fpTriggers[i].Type < fpTriggers[j].Type
+		}
 		return fpTriggers[i].Name < fpTriggers[j].Name
 	})
 
