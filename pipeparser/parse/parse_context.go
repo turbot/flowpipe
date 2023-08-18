@@ -36,11 +36,11 @@ type ParseContext struct {
 	blocks          hcl.Blocks
 }
 
-func NewParseContext(ctx context.Context, rootEvalPath string) ParseContext {
+func NewParseContext(runContext context.Context, rootEvalPath string) ParseContext {
 	c := ParseContext{
 		UnresolvedBlocks: make(map[string]*unresolvedBlock),
 		RootEvalPath:     rootEvalPath,
-		RunCtx:           ctx,
+		RunCtx:           runContext,
 	}
 	// add root node - this will depend on all other nodes
 	c.dependencyGraph = c.newDependencyGraph()

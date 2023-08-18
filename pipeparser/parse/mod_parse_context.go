@@ -41,6 +41,9 @@ type ReferenceTypeValueMap map[string]map[string]cty.Value
 
 type ModParseContext struct {
 	ParseContext
+
+	FlowpipeConfigParseContext
+
 	// the mod which is currently being parsed
 	CurrentMod *modconfig.Mod
 	// the workspace lock data
@@ -78,12 +81,17 @@ type ModParseContext struct {
 	DependencyConfig *ModDependencyConfig
 }
 
-func NewModParseContext(workspaceLock *versionmap.WorkspaceLock, rootEvalPath string, flags ParseModFlag, listOptions *filehelpers.ListOptions) *ModParseContext {
+func NewModParseContext(runContext context.Context, workspaceLock *versionmap.WorkspaceLock, rootEvalPath string, flags ParseModFlag, listOptions *filehelpers.ListOptions) *ModParseContext {
 
-	// TODO: pass the correct context
-	parseContext := NewParseContext(context.TODO(), rootEvalPath)
+	parseContext := NewParseContext(runContext, rootEvalPath)
 	c := &ModParseContext{
-		ParseContext:  parseContext,
+		ParseContext: parseContext,
+
+		FlowpipeConfigParseContext: FlowpipeConfigParseContext{
+			ParseContext: parseContext,
+			PipelineHcls: make(map[string]*modconfig.Pipeline),
+			TriggerHcls:  make(map[string]modconfig.ITrigger),
+		},
 		Flags:         flags,
 		WorkspaceLock: workspaceLock,
 		ListOptions:   listOptions,
@@ -106,6 +114,7 @@ func NewModParseContext(workspaceLock *versionmap.WorkspaceLock, rootEvalPath st
 func NewChildModParseContext(parent *ModParseContext, modVersion *versionmap.ResolvedVersionConstraint, rootEvalPath string) *ModParseContext {
 	// create a child run context
 	child := NewModParseContext(
+		parent.RunCtx,
 		parent.WorkspaceLock,
 		rootEvalPath,
 		parent.Flags,
