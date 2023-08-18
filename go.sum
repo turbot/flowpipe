@@ -914,6 +914,8 @@ github.com/thediveo/enumflag/v2 v2.0.3 h1:9Y2S6xowtVWIh7Fz+JKWFdYwb9cM1iWbSbjtUF
 github.com/thediveo/enumflag/v2 v2.0.3/go.mod h1:obz2iwglQIA2Yn00qTpVnQk8hg0WOh7f7U0ZgMsmo9Q=
 github.com/tkrajina/go-reflector v0.5.6 h1:hKQ0gyocG7vgMD2M3dRlYN6WBBOmdoOzJ6njQSepKdE=
 github.com/tkrajina/go-reflector v0.5.6/go.mod h1:ECbqLgccecY5kPmPmXg1MrHW585yMcDkVl6IvJe64T4=
+github.com/turbot/go-kit v0.7.0 h1:Jiua34hnICSWzJgYmqup/sY7G/1jlMqcElJgDIM8uFU=
+github.com/turbot/go-kit v0.7.0/go.mod h1:QIOX91BIxQ/1JEtM4rIHWDito3c3GUP2Z+dUT5F6z94=
 github.com/turbot/go-kit v0.8.0-rc.0 h1:Vj1w5TmZWwdSwBTcOq6FKVlQQ+XwCd27BZVPZ9m1hT0=
 github.com/turbot/go-kit v0.8.0-rc.0/go.mod h1:JkVKhR5XHK86aXY4WzB9Lr0jdnrsafjVh4yJA8ZS3Ck=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.5.1 h1:ta8DmaTFuPLHVG/0oyzxKoCfIChW6UT0tfg+pE7NWSA=
