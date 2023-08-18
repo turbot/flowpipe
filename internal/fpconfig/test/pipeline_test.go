@@ -3,6 +3,7 @@ package pipeline_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,7 @@ func TestLoadPipelineDir(t *testing.T) {
 	assert.Equal(4, len(pipelines), "pipelines are not loaded correctly")
 
 	assert.NotNil(pipelines["simple_http"], "pipeline not found")
-	assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+	assert.Equal("simple_http", pipelines["simple_http"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http"].Steps), 3, "steps are not loaded correctly")
 
 	for _, step := range pipelines["simple_http"].Steps {
@@ -50,7 +51,7 @@ func TestLoadPipelineDirRecusrive(t *testing.T) {
 	assert.Equal(7, len(pipelines), "pipelines are not loaded correctly")
 
 	assert.NotNil(pipelines["simple_http"], "pipeline not found")
-	assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+	assert.Equal("simple_http", pipelines["simple_http"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http"].Steps), 3, "steps are not loaded correctly")
 
 	for _, step := range pipelines["simple_http"].Steps {
@@ -82,7 +83,7 @@ func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
 
 	// Pipeline 1
 	assert.NotNil(pipelines["simple_http"], "pipeline not found")
-	assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+	assert.Equal("simple_http", pipelines["simple_http"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http"].Steps), 3, "steps are not loaded correctly")
 
 	for _, step := range pipelines["simple_http"].Steps {
@@ -102,7 +103,7 @@ func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
 
 	// Pipeline 2
 	assert.NotNil(pipelines["simple_http_2"], "pipeline not found")
-	assert.Equal("simple_http_2", pipelines["simple_http_2"].Name, "wrong pipeline name")
+	assert.Equal("simple_http_2", pipelines["simple_http_2"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http_2"].Steps), 1, "steps are not loaded correctly")
 	for _, step := range pipelines["simple_http_2"].Steps {
 		if step.GetName() == "my_step_1" {
@@ -113,7 +114,7 @@ func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
 
 	// Pipeline 3
 	assert.NotNil(pipelines["sleep_with_output"], "pipeline not found")
-	assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name, "wrong pipeline name")
+	assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["sleep_with_output"].Steps), 1, "steps are not loaded correctly")
 	for _, step := range pipelines["sleep_with_output"].Steps {
 		if step.GetName() == "sleep_1" {
@@ -124,7 +125,7 @@ func TestLoadPipelineFromFileMatchesGlob(t *testing.T) {
 
 	// Pipeline 4
 	assert.NotNil(pipelines["simple_http_file_2"], "pipeline not found")
-	assert.Equal("simple_http_file_2", pipelines["simple_http_file_2"].Name, "wrong pipeline name")
+	assert.Equal("simple_http_file_2", pipelines["simple_http_file_2"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http_file_2"].Steps), 1, "steps are not loaded correctly")
 	for _, step := range pipelines["simple_http_file_2"].Steps {
 		if step.GetName() == "my_step_1" {
@@ -147,7 +148,7 @@ func TestLoadPipelineSpecificFile(t *testing.T) {
 
 	// Pipeline 1
 	assert.NotNil(pipelines["simple_http"], "pipeline not found")
-	assert.Equal("simple_http", pipelines["simple_http"].Name, "wrong pipeline name")
+	assert.Equal("simple_http", pipelines["simple_http"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http"].Steps), 3, "steps are not loaded correctly")
 
 	for _, step := range pipelines["simple_http"].Steps {
@@ -167,7 +168,7 @@ func TestLoadPipelineSpecificFile(t *testing.T) {
 
 	// Pipeline 2
 	assert.NotNil(pipelines["simple_http_2"], "pipeline not found")
-	assert.Equal("simple_http_2", pipelines["simple_http_2"].Name, "wrong pipeline name")
+	assert.Equal("simple_http_2", pipelines["simple_http_2"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["simple_http_2"].Steps), 1, "steps are not loaded correctly")
 	for _, step := range pipelines["simple_http_2"].Steps {
 		if step.GetName() == "my_step_1" {
@@ -178,7 +179,7 @@ func TestLoadPipelineSpecificFile(t *testing.T) {
 
 	// Pipeline 3
 	assert.NotNil(pipelines["sleep_with_output"], "pipeline not found")
-	assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name, "wrong pipeline name")
+	assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["sleep_with_output"].Steps), 1, "steps are not loaded correctly")
 	for _, step := range pipelines["sleep_with_output"].Steps {
 		if step.GetName() == "sleep_1" {
@@ -198,7 +199,7 @@ func TestSleepWithOutput(t *testing.T) {
 	assert.Equal(1, len(pipelines["sleep_with_output"].Steps), "steps are not loaded correctly")
 
 	assert.NotNil(pipelines["sleep_with_output"], "pipeline not found")
-	assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name, "wrong pipeline name")
+	assert.Equal("sleep_with_output", pipelines["sleep_with_output"].Name(), "wrong pipeline name")
 
 	for _, step := range pipelines["sleep_with_output"].Steps {
 		if step.GetName() == "sleep_1" {
@@ -218,7 +219,7 @@ func TestLoadPipelineDepends(t *testing.T) {
 	assert.Equal(len(pipelines), 1, "pipelines are not loaded correctly")
 
 	assert.NotNil(pipelines["http_and_sleep_depends"], "pipeline not found")
-	assert.Equal("http_and_sleep_depends", pipelines["http_and_sleep_depends"].Name, "wrong pipeline name")
+	assert.Equal("http_and_sleep_depends", pipelines["http_and_sleep_depends"].Name(), "wrong pipeline name")
 	assert.Equal(len(pipelines["http_and_sleep_depends"].Steps), 2, "steps are not loaded correctly")
 
 	for _, step := range pipelines["http_and_sleep_depends"].Steps {
@@ -257,12 +258,15 @@ func TestMarshallUnmarshal(t *testing.T) {
 		data, err := json.Marshal(pipelines[pp])
 		assert.Nil(err, "error found, can't marshall")
 
+		err = os.WriteFile("output.json", data, 0644)
+		assert.Nil(err, "error found, can't marshall")
+
 		var p modconfig.Pipeline
 		err = json.Unmarshal(data, &p)
 		assert.Nil(err, "error found, can't unmarshall")
 
 		if pp == "simple_http" {
-			assert.Equal("simple_http", p.Name, "wrong pipeline name")
+			assert.Equal("simple_http", p.Name(), "wrong pipeline name")
 			assert.Equal(3, len(p.Steps), "steps are not loaded correctly")
 
 			for _, step := range p.Steps {
@@ -282,7 +286,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 		}
 
 		if pp == "simple_http_2" {
-			assert.Equal("simple_http_2", p.Name, "wrong pipeline name")
+			assert.Equal("simple_http_2", p.Name(), "wrong pipeline name")
 			assert.Equal(1, len(p.Steps), "steps are not loaded correctly")
 
 			for _, step := range p.Steps {
@@ -294,7 +298,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 		}
 
 		if pp == "sleep_with_output" {
-			assert.Equal("sleep_with_output", p.Name, "wrong pipeline name")
+			assert.Equal("sleep_with_output", p.Name(), "wrong pipeline name")
 			assert.Equal(1, len(p.Steps), "steps are not loaded correctly")
 
 			for _, step := range p.Steps {

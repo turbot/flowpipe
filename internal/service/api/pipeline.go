@@ -56,7 +56,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 	}
 
 	sort.Slice(pipelines, func(i, j int) bool {
-		return pipelines[i].Name < pipelines[j].Name
+		return pipelines[i].Name() < pipelines[j].Name()
 	})
 
 	// TODO: paging, filter, sorting
@@ -149,7 +149,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(c),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                pipeline.Name,
+		Name:                pipeline.Name(),
 	}
 
 	if input.Args != nil {

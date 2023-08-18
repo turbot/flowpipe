@@ -19,7 +19,7 @@ func (c *FlowpipeConfigParseContext) BuildEvalContext() {
 	pipelineVars := map[string]cty.Value{}
 
 	for _, pipeline := range c.PipelineHcls {
-		pipelineVars[pipeline.Name] = pipeline.AsCtyValue()
+		pipelineVars[pipeline.Name()] = pipeline.AsCtyValue()
 	}
 
 	vars["pipeline"] = cty.ObjectVal(pipelineVars)
@@ -29,10 +29,10 @@ func (c *FlowpipeConfigParseContext) BuildEvalContext() {
 
 // AddPipeline stores this resource as a variable to be added to the eval context. It alse
 func (c *FlowpipeConfigParseContext) AddPipeline(pipelineHcl *modconfig.Pipeline) hcl.Diagnostics {
-	c.PipelineHcls[pipelineHcl.Name] = pipelineHcl
+	c.PipelineHcls[pipelineHcl.Name()] = pipelineHcl
 
 	// remove this resource from unparsed blocks
-	delete(c.UnresolvedBlocks, pipelineHcl.Name)
+	delete(c.UnresolvedBlocks, pipelineHcl.Name())
 
 	c.BuildEvalContext()
 	return nil

@@ -107,7 +107,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 		Name:      "start_" + pe.ID,
 		PanelType: "node",
 		Status:    "complete",
-		Title:     "Start: " + pd.Name,
+		Title:     "Start: " + pd.Name(),
 		Data: SnapshotPanelData{
 			Columns: []SnapshotPanelDataColumn{
 				{Name: "id", DataType: "TEXT"},
@@ -117,7 +117,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 			Rows: []SnapshotPanelDataRow{
 				{
 					"id":    "start_" + pe.ID,
-					"title": "Start: " + pd.Name,
+					"title": "Start: " + pd.Name(),
 					"properties": map[string]interface{}{
 						"Execution ID": pe.ID,
 						"Args":         pe.Args,
@@ -138,7 +138,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 		Name:      "end_" + pe.ID,
 		PanelType: "node",
 		Status:    "complete",
-		Title:     "End: " + pd.Name,
+		Title:     "End: " + pd.Name(),
 		Data: SnapshotPanelData{
 			Columns: []SnapshotPanelDataColumn{
 				{Name: "id", DataType: "TEXT"},
@@ -148,7 +148,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 			Rows: []SnapshotPanelDataRow{
 				{
 					"id":    "end_" + pe.ID,
-					"title": "End: " + pd.Name,
+					"title": "End: " + pd.Name(),
 					"properties": map[string]interface{}{
 						"Execution ID": pe.ID,
 						"Output":       pe.PipelineOutput,
@@ -397,7 +397,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 
 	sd := pd.GetStep(stepFullyQualifiedName)
 	if sd == nil {
-		return nil, pcerr.BadRequestWithMessage("step " + stepFullyQualifiedName + " not found in pipeline " + pd.Name)
+		return nil, pcerr.BadRequestWithMessage("step " + stepFullyQualifiedName + " not found in pipeline " + pd.Name())
 	}
 
 	panels := map[string]SnapshotPanel{}

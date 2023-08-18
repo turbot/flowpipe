@@ -26,8 +26,8 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
 	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
 // @title Flowpipe
@@ -242,7 +242,7 @@ func (api *APIService) Start() error {
 		}
 	}()
 
-	api.StartedAt = util.TimeNow()
+	api.StartedAt = utils.TimeNow()
 	api.Status = "running"
 
 	return nil
@@ -274,7 +274,7 @@ func (api *APIService) Stop() error {
 		fplog.Logger(api.ctx).Debug("API HTTPS server stopped")
 	}
 
-	api.StoppedAt = util.TimeNow()
+	api.StoppedAt = utils.TimeNow()
 	api.Status = "stopped"
 	return nil
 }

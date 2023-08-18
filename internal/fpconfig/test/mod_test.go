@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/parse"
 
+	"github.com/turbot/go-kit/files"
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
@@ -35,13 +36,13 @@ func SkipTestModLoadSp(t *testing.T) {
 		parse.CreateDefaultMod,
 		&filehelpers.ListOptions{
 			// // listFlag specifies whether to load files recursively
-			// Flags:   w.listFlag,
+			Flags: files.Files | files.Recursive,
 			// Exclude: w.exclusions,
 			// only load .sp files
 			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),
 		})
 
-	mod, err := pipeparser.LoadMod("./test_mod/", parseCtx)
+	mod, err := pipeparser.LoadMod("./test_steampipe_mod/", parseCtx)
 
 	if err != nil {
 		assert.Fail("error loading mod file", err.Error.Error())
@@ -61,7 +62,7 @@ func SkipTestModLoadFp(t *testing.T) {
 		parse.CreateDefaultMod,
 		&filehelpers.ListOptions{
 			// // listFlag specifies whether to load files recursively
-			// Flags:   w.listFlag,
+			Flags: files.Files | files.Recursive,
 			// Exclude: w.exclusions,
 			// only load .sp files
 			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),

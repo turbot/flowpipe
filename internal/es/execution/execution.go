@@ -72,7 +72,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	pipelineMap := map[string]cty.Value{}
 	for _, p := range allPipelines {
-		pipelineMap[p.Name] = p.AsCtyValue()
+		pipelineMap[p.Name()] = p.AsCtyValue()
 	}
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)

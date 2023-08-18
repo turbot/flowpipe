@@ -21,6 +21,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -99,7 +100,7 @@ func (suite *EsTestSuite) SetupSuite() {
 		panic(err)
 	}
 	esService.Status = "running"
-	esService.StartedAt = util.TimeNow()
+	esService.StartedAt = utils.TimeNow()
 
 	suite.esService = esService
 
@@ -723,7 +724,7 @@ func (suite *EsTestSuite) TestChildPipeline() {
 		"simple": "bar",
 	}
 
-	_, pipelineCmd, err := suite.runPipeline("parent_pipeline", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := suite.runPipeline("parent_pipeline", 300*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)

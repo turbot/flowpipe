@@ -14,8 +14,12 @@ import (
 
 func NewPipelineHcl(block *hcl.Block) *Pipeline {
 	return &Pipeline{
-		Name:   block.Labels[0],
-		Params: map[string]*configs.Variable{},
+		HclResourceImpl: HclResourceImpl{
+			FullName: block.Labels[0],
+		},
+		// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
+		PipelineName: block.Labels[0],
+		Params:       map[string]*configs.Variable{},
 	}
 }
 
@@ -25,8 +29,10 @@ func NewPipelineHcl(block *hcl.Block) *Pipeline {
 // contains unresolved expressions (mostly in steps), how to handle errors etc but not the actual Pipeline
 // execution data.
 type Pipeline struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty" hcl:"description,optional" cty:"description"`
+	HclResourceImpl
+
+	// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
+	PipelineName string `json:"pipeline_name"`
 
 	// Unparsed HCL body, needed so we can de-code the step HCL into the correct struct
 	RawBody hcl.Body `json:"-" hcl:",remain"`
@@ -43,6 +49,7 @@ type Pipeline struct {
 	Params map[string]*configs.Variable `json:"-"`
 }
 
+// Pipeline functions
 func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
 	for i := 0; i < len(p.Steps); i++ {
 		if p.Steps[i].GetFullyQualifiedName() == stepFullyQualifiedName {
@@ -54,7 +61,7 @@ func (p *Pipeline) GetStep(stepFullyQualifiedName string) IPipelineStep {
 
 func (p *Pipeline) AsCtyValue() cty.Value {
 	pipelineVars := map[string]cty.Value{}
-	pipelineVars[schema.LabelName] = cty.StringVal(p.Name)
+	pipelineVars[schema.LabelName] = cty.StringVal(p.Name())
 
 	if p.Description != nil {
 		pipelineVars[schema.AttributeTypeDescription] = cty.StringVal(*p.Description)
@@ -79,23 +86,14 @@ func (p *Pipeline) SetOptions(opts options.Options, block *hcl.Block) hcl.Diagno
 	return diags
 }
 
-func (p *Pipeline) OnDecoded() hcl.Diagnostics {
-	p.setBaseProperties()
-	return nil
-}
-
-func (p *Pipeline) setBaseProperties() {
-
-}
-
 func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 	// Define an auxiliary type to decode the JSON and capture the value of the 'ISteps' field
 	type Aux struct {
-		Name        string          `json:"name"`
-		Description *string         `json:"description,omitempty"`
-		Output      *string         `json:"output,omitempty"`
-		Raw         json.RawMessage `json:"-"`
-		ISteps      json.RawMessage `json:"steps"`
+		PipelineName string          `json:"pipeline_name"`
+		Description  *string         `json:"description,omitempty"`
+		Output       *string         `json:"output,omitempty"`
+		Raw          json.RawMessage `json:"-"`
+		ISteps       json.RawMessage `json:"steps"`
 	}
 
 	aux := Aux{ISteps: json.RawMessage([]byte("null"))} // Provide a default value for 'ISteps' field
@@ -104,7 +102,9 @@ func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 	}
 
 	// Assign values to the fields of the main struct
-	ph.Name = aux.Name
+
+	ph.FullName = aux.PipelineName
+	ph.PipelineName = aux.PipelineName
 	ph.Description = aux.Description
 	ph.StepsRawJson = []byte(aux.Raw)
 
@@ -204,6 +204,20 @@ func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 	}
 	return diags
 }
+
+// end pipeline functions
+
+// Pipeline HclResource interface functions
+
+func (p *Pipeline) OnDecoded(*hcl.Block, ResourceMapsProvider) hcl.Diagnostics {
+	p.setBaseProperties()
+	return nil
+}
+
+func (p *Pipeline) setBaseProperties() {
+}
+
+// end Pipeline Hclresource interface functions
 
 type PipelineOutput struct {
 	Name            string         `json:"name"`
