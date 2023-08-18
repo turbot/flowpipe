@@ -87,7 +87,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 // / ...
 // @Param trigger_name path string true "The name of the trigger" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} types.Trigger
+// @Success 200 {object} types.FpTrigger
 // @Failure 400 {object} pcerr.ErrorModel
 // @Failure 401 {object} pcerr.ErrorModel
 // @Failure 403 {object} pcerr.ErrorModel
