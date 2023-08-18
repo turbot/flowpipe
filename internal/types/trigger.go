@@ -9,6 +9,7 @@ import (
 
 type FpTrigger struct {
 	Name        string                 `json:"name"`
+	Type        string                 `json:"type"`
 	Description *string                `json:"description,omitempty"`
 	Args        map[string]interface{} `json:"args,omitempty"`
 	Pipeline    string                 `json:"pipeline"`

@@ -57,6 +57,7 @@ func GetTrigger(name string) (*modconfig.Trigger, error) {
 	}
 	result := modconfig.Trigger{
 		Name:        trigger.GetName(),
+		Type:        trigger.GetType(),
 		Description: trigger.GetDescription(),
 		Args:        trigger.GetArgs(),
 		Pipeline:    trigger.GetPipeline(),

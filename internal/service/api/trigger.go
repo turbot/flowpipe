@@ -61,6 +61,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 		fpTriggers = append(fpTriggers, types.FpTrigger{
 			Name:        trigger.Name,
+			Type:        trigger.Type,
 			Description: trigger.Description,
 			Args:        trigger.Args,
 			Pipeline:    pipelineName,
@@ -120,6 +121,7 @@ func (api *APIService) getTrigger(c *gin.Context) {
 
 	fpTrigger := types.FpTrigger{
 		Name:        trigger.GetName(),
+		Type:        trigger.GetType(),
 		Description: trigger.GetDescription(),
 		Args:        trigger.GetArgs(),
 		Pipeline:    pipelineName,

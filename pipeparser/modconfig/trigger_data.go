@@ -19,6 +19,7 @@ type Trigger struct {
 	Name        string  `json:"name"`
 	Description *string `json:"description,omitempty"`
 	Args        Input   `json:"args"`
+	Type        string  `json:"type"`
 
 	Pipeline cty.Value `json:"-"`
 	RawBody  hcl.Body  `json:"-" hcl:",remain"`
@@ -34,6 +35,14 @@ func (t *Trigger) GetDescription() *string {
 
 func (t *Trigger) GetPipeline() cty.Value {
 	return t.Pipeline
+}
+
+func (t *Trigger) GetType() string {
+	return t.Type
+}
+
+func (t *Trigger) SetType(triggerType string) {
+	t.Type = triggerType
 }
 
 func (t *Trigger) SetName(name string) {
@@ -123,6 +132,8 @@ type ITrigger interface {
 	SetContext(context.Context)
 	SetName(string)
 	GetName() string
+	SetType(string)
+	GetType() string
 	GetDescription() *string
 	GetPipeline() cty.Value
 	GetArgs() Input
@@ -305,6 +316,7 @@ func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
 	}
 
 	trigger.SetName(triggerName)
+	trigger.SetType(triggerType)
 	trigger.SetContext(ctx)
 	return trigger
 }
