@@ -231,7 +231,7 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	for _, block := range blocksToDecode {
 		switch block.Type {
 		case schema.BlockTypePipeline:
-			pipelineHcl, res := decodePipeline(block, parseCtx)
+			pipelineHcl, res := decodePipeline(nil, block, parseCtx)
 			diags = append(diags, res.Diags...)
 
 			if pipelineHcl != nil {
@@ -320,11 +320,11 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modc
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Pipeline, *DecodeResult) {
+func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Pipeline, *DecodeResult) {
 	res := newDecodeResult()
 
 	// get shell pipelineHcl
-	pipelineHcl := modconfig.NewPipelineHcl(block)
+	pipelineHcl := modconfig.NewPipelineHcl(mod, block)
 
 	// do a partial decode so we can parse the step manually, each pipeline step has its own struct, so we can't use
 	// HCL automatic parsing here

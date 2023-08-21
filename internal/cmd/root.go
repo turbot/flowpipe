@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -117,7 +118,11 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	// Steampipe CLI loads the Workspace Profile here, but it also loads the mod in the parse context.
 	//
 	// set global containing the configured install dir (create directory if needed)
-	ensureInstallDir(viper.GetString(pcconstants.ArgInstallDir))
+
+	runMode := os.Getenv("RUN_MODE")
+	if !strings.HasPrefix(runMode, "TEST") {
+		ensureInstallDir(viper.GetString(pcconstants.ArgInstallDir))
+	}
 
 	return nil
 }

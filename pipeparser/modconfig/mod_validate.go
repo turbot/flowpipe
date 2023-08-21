@@ -2,6 +2,8 @@ package modconfig
 
 import (
 	"fmt"
+
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 )
 
 // ensure we have resolved all children in the resource tree
@@ -12,9 +14,7 @@ func (m *Mod) validateResourceTree() error {
 			errors = append(errors, err)
 		}
 	}
-	// TODO: fix this
-	// return error_helpers.CombineErrorsWithPrefix(fmt.Sprintf("failed to resolve children for %d resources", len(errors)), errors...)
-	return fmt.Errorf("failed to resolve children for %d resources", len(errors))
+	return error_helpers.CombineErrorsWithPrefix(fmt.Sprintf("failed to resolve children for %d resources", len(errors)), errors...)
 }
 
 func (m *Mod) validateChildren(item ModTreeItem) error {

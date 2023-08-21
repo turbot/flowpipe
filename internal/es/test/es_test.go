@@ -38,6 +38,12 @@ type EsTestSuite struct {
 // The SetupSuite method will be run by testify once, at the very
 // start of the testing suite, before any tests are run.
 func (suite *EsTestSuite) SetupSuite() {
+
+	err := os.Setenv("RUN_MODE", "TEST_ES")
+	if err != nil {
+		panic(err)
+	}
+
 	// Get the current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
