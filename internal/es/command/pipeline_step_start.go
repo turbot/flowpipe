@@ -124,7 +124,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				(output.Errors)[i].Step = cmd.StepName
 				(output.Errors)[i].PipelineExecutionID = cmd.PipelineExecutionID
 				(output.Errors)[i].StepExecutionID = cmd.StepExecutionID
-				(output.Errors)[i].Pipeline = pipelineDefn.Name
+				(output.Errors)[i].Pipeline = pipelineDefn.Name()
 			}
 		} else {
 			output.Status = "finished"

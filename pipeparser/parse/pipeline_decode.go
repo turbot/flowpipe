@@ -231,8 +231,13 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	for _, block := range blocksToDecode {
 		switch block.Type {
 		case schema.BlockTypePipeline:
-			_, res := decodePipeline(block, parseCtx)
+			pipelineHcl, res := decodePipeline(block, parseCtx)
 			diags = append(diags, res.Diags...)
+
+			if pipelineHcl != nil {
+				moreDiags := parseCtx.AddPipeline(pipelineHcl)
+				res.addDiags(moreDiags)
+			}
 		}
 	}
 
@@ -241,8 +246,12 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	for _, block := range blocksToDecode {
 		switch block.Type {
 		case schema.BlockTypeTrigger:
-			_, res := decodeTrigger(block, parseCtx)
+			triggerHcl, res := decodeTrigger(block, parseCtx)
 			diags = append(diags, res.Diags...)
+			if triggerHcl != nil {
+				moreDiags := parseCtx.AddTrigger(triggerHcl)
+				res.addDiags(moreDiags)
+			}
 		}
 	}
 	return diags
@@ -414,7 +423,7 @@ func validatePipelineDependencies(pipelineHcl *modconfig.Pipeline) hcl.Diagnosti
 			if !helpers.StringSliceContains(stepRegisters, dep) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
-					Summary:  fmt.Sprintf("invalid depends_on '%s' - step '%s' does not exist for pipeline %s", dep, step.GetFullyQualifiedName(), pipelineHcl.Name),
+					Summary:  fmt.Sprintf("invalid depends_on '%s' - step '%s' does not exist for pipeline %s", dep, step.GetFullyQualifiedName(), pipelineHcl.Name()),
 				})
 			}
 		}
@@ -427,18 +436,17 @@ func handlePipelineDecodeResult(resource *modconfig.Pipeline, res *DecodeResult,
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
-		moreDiags := resource.OnDecoded()
-		res.addDiags(moreDiags)
+		// moreDiags := resource.OnDecoded()
+		// res.addDiags(moreDiags)
 
-		moreDiags = parseCtx.AddPipeline(resource)
-		res.addDiags(moreDiags)
+		// moreDiags = parseCtx.AddPipeline(resource)
+		// res.addDiags(moreDiags)
 		return
 	}
 
 	// failure :(
 	if len(res.Depends) > 0 {
-		// moreDiags := parseCtx.AddDependencies(block, resource.Name(), res.Depends)
-		moreDiags := parseCtx.AddDependencies(block, resource.Name, res.Depends)
+		moreDiags := parseCtx.AddDependencies(block, resource.Name(), res.Depends)
 		res.addDiags(moreDiags)
 	}
 }

@@ -13,9 +13,9 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
 // Manager manages and represents the status of the service.
@@ -140,7 +140,7 @@ func (m *Manager) Start() error {
 		return err
 	}
 	esService.Status = "running"
-	esService.StartedAt = util.TimeNow()
+	esService.StartedAt = utils.TimeNow()
 
 	m.esService = esService
 
@@ -166,7 +166,7 @@ func (m *Manager) Start() error {
 		return err
 	}
 
-	m.StartedAt = util.TimeNow()
+	m.StartedAt = utils.TimeNow()
 	m.Status = "running"
 
 	return nil
@@ -204,7 +204,7 @@ func (m *Manager) Stop() error {
 	// 	fplog.Logger(m.ctx).Error("error stopping raft service", "error", err)
 	// }
 
-	m.StoppedAt = util.TimeNow()
+	m.StoppedAt = utils.TimeNow()
 
 	return nil
 }

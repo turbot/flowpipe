@@ -108,6 +108,9 @@ func NewModParseContext(runContext context.Context, workspaceLock *versionmap.Wo
 	c.dependencyGraph = c.newDependencyGraph()
 	c.buildEvalContext()
 
+	// TODO: this doesn't seem right .. we now have 2 Parse Context one for mod and one for Flowpipe. We should integrate them.
+	c.FlowpipeConfigParseContext.BuildEvalContext()
+
 	return c
 }
 

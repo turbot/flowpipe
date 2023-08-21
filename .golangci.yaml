@@ -48,32 +48,21 @@ linters-settings:
       - commentFormatting # style
 
   depguard:
-    # Kind of list is passed in.
-    # Allowed values: allowlist|denylist
-    # Default: denylist
-    list-type: denylist
+    rules:
+      # Name of a rule.
+      main:
+        # List of file globs that will match this list of settings to compare against.
+        # Default: $all
+        # files:
+        #   - "!**/*_a _file.go"
+        # List of allowed packages.
+        # allow:
+        #   - $gostd
+        #   - github.com/OpenPeeDeeP
+        # Packages that are not allowed where the value is a suggestion.
+        deny:
+          - pkg: "go.uber.org/zap"
+            desc: do not use Uber zap directly, use the fplog package instead
+          - pkg: "github.com/pkg/errors"
+            desc: Should be replaced by standard lib errors package
 
-    # Check the list against standard lib.
-    # Default: false
-    include-go-root: false
-
-    # A list of packages for the list type specified.
-    # Can accept both string prefixes and string glob patterns.
-    # Default: []
-    packages:
-      - go.uber.org/zap
-
-    # A list of packages for the list type specified.
-    # Specify an error message to output when a denied package is used.
-    # Default: []
-    packages-with-error-message:
-      - go.uber.org/zap: do not use Uber zap directly, use the fplog package instead
-
-    # Specify rules by which the linter ignores certain files for consideration.
-    # Can accept both string prefixes and string glob patterns.
-    # The ! character in front of the rule is a special character
-    # which signals that the linter should negate the rule.
-    # This allows for more precise control, but it is only available for glob patterns.
-    # Default: []
-    # ignore-file-rules:
-    #   - "!log/*.go"

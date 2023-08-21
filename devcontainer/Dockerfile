@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:0-1.20-bullseye
+FROM mcr.microsoft.com/devcontainers/go:1-1.21-bullseye
 
 RUN apt update \
     && apt install default-jre default-jdk -y \
