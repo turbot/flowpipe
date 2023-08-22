@@ -41,7 +41,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 		return
 	}
 
-	st, ok := scheduleTrigger.(*modconfig.TriggerSchedule)
+	st, ok := scheduleTrigger.Config.(*modconfig.TriggerSchedule)
 	if !ok {
 		assert.Fail("my_hourly_trigger trigger is not a schedule trigger")
 		return
@@ -55,14 +55,16 @@ func TestPipelineWithTrigger(t *testing.T) {
 		return
 	}
 
-	twa, ok := triggerWithArgs.(*modconfig.TriggerSchedule)
+	twa, ok := triggerWithArgs.Config.(*modconfig.TriggerSchedule)
 	if !ok {
 		assert.Fail("trigger_with_args trigger is not a schedule trigger")
 		return
 	}
 
-	assert.Equal("one", twa.Args["param_one"])
-	assert.Equal(2, twa.Args["param_two_int"])
+	assert.NotNil(twa, "trigger_with_args trigger is nil")
+
+	assert.Equal("one", triggerWithArgs.Args["param_one"])
+	assert.Equal(2, triggerWithArgs.Args["param_two_int"])
 
 	queryTrigger := triggers["query_trigger"]
 	if queryTrigger == nil {
@@ -70,7 +72,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 		return
 	}
 
-	qt, ok := queryTrigger.(*modconfig.TriggerQuery)
+	qt, ok := queryTrigger.Config.(*modconfig.TriggerQuery)
 	if !ok {
 		assert.Fail("query_trigger trigger is not a query trigger")
 		return
@@ -79,8 +81,8 @@ func TestPipelineWithTrigger(t *testing.T) {
 	assert.Equal("access_key_id", qt.PrimaryKey)
 	assert.Len(qt.Events, 1)
 	assert.Equal("insert", qt.Events[0])
-	assert.Equal("one", qt.Args["param_one"])
-	assert.Equal(2, qt.Args["param_two_int"])
+	assert.Equal("one", queryTrigger.Args["param_one"])
+	assert.Equal(2, queryTrigger.Args["param_two_int"])
 	assert.Contains(qt.Sql, "where create_date < now() - interval")
 }
 

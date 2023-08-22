@@ -26,6 +26,8 @@ func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
 			modName = strings.TrimPrefix(modName, "mod.")
 		}
 		pipelineFullName = modName + ".pipeline." + pipelineFullName
+	} else {
+		pipelineFullName = "local.pipeline." + pipelineFullName
 	}
 
 	pipeline := &Pipeline{

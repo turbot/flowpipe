@@ -15,33 +15,19 @@ import (
 
 // The definition of a single Flowpipe Trigger
 type Trigger struct {
-	ctx         context.Context
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Args        Input   `json:"args"`
+	HclResourceImpl
+
+	ctx  context.Context
+	Args Input `json:"args"`
 
 	Pipeline cty.Value `json:"-"`
 	RawBody  hcl.Body  `json:"-" hcl:",remain"`
-}
 
-func (t *Trigger) GetName() string {
-	return t.Name
-}
-
-func (t *Trigger) GetDescription() *string {
-	return t.Description
+	Config ITriggerConfig `json:"-"`
 }
 
 func (t *Trigger) GetPipeline() cty.Value {
 	return t.Pipeline
-}
-
-func (t *Trigger) SetName(name string) {
-	t.Name = name
-}
-
-func (t *Trigger) SetContext(ctx context.Context) {
-	t.ctx = ctx
 }
 
 func (t *Trigger) GetArgs() Input {
@@ -58,7 +44,7 @@ func (t *Trigger) IsBaseAttribute(name string) bool {
 	return helpers.StringSliceContains(ValidBaseTriggerAttributes, name)
 }
 
-func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
@@ -75,6 +61,7 @@ func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, evalContext *h
 	attr := hclAttributes[schema.AttributeTypePipeline]
 
 	expr := attr.Expr
+
 	// Try to validate the pipeline reference. It's OK to do this here because by the time
 	// we parse the triggers, we should have loaded all the pipelines in the Parser Context.
 	//
@@ -119,23 +106,16 @@ func (t *Trigger) SetBaseAttributes(hclAttributes hcl.Attributes, evalContext *h
 	return diags
 }
 
-type ITrigger interface {
-	SetContext(context.Context)
-	SetName(string)
-	GetName() string
-	GetDescription() *string
-	GetPipeline() cty.Value
-	GetArgs() Input
-	SetAttributes(hcl.Attributes, *hcl.EvalContext) hcl.Diagnostics
+type ITriggerConfig interface {
+	SetAttributes(*Mod, *Trigger, hcl.Attributes, *hcl.EvalContext) hcl.Diagnostics
 }
 
 type TriggerSchedule struct {
-	Trigger
 	Schedule string `json:"schedule"`
 }
 
-func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
-	diags := t.SetBaseAttributes(hclAttributes, evalContext)
+func (t *TriggerSchedule) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := trigger.SetBaseAttributes(mod, hclAttributes, evalContext)
 	if diags.HasErrors() {
 		return diags
 	}
@@ -157,7 +137,7 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, evalContex
 				})
 			}
 		default:
-			if !t.IsBaseAttribute(name) {
+			if !trigger.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Unsupported attribute for Trigger Schedule: " + attr.Name,
@@ -170,14 +150,13 @@ func (t *TriggerSchedule) SetAttributes(hclAttributes hcl.Attributes, evalContex
 }
 
 type TriggerInterval struct {
-	Trigger
 	Schedule string `json:"schedule"`
 }
 
 var validIntervals = []string{"hourly", "daily", "weekly", "monthly"}
 
-func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
-	diags := t.SetBaseAttributes(hclAttributes, evalContext)
+func (t *TriggerInterval) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := trigger.SetBaseAttributes(mod, hclAttributes, evalContext)
 	if diags.HasErrors() {
 		return diags
 	}
@@ -198,7 +177,7 @@ func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, evalContex
 			}
 
 		default:
-			if !t.IsBaseAttribute(name) {
+			if !trigger.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Unsupported attribute for Trigger Interval: " + attr.Name,
@@ -211,7 +190,6 @@ func (t *TriggerInterval) SetAttributes(hclAttributes hcl.Attributes, evalContex
 }
 
 type TriggerQuery struct {
-	Trigger
 	Sql              string   `json:"sql"`
 	Schedule         string   `json:"schedule"`
 	ConnectionString string   `json:"connection_string"`
@@ -219,8 +197,8 @@ type TriggerQuery struct {
 	Events           []string `json:"events"`
 }
 
-func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
-	diags := t.SetBaseAttributes(hclAttributes, evalContext)
+func (t *TriggerQuery) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := trigger.SetBaseAttributes(mod, hclAttributes, evalContext)
 	if diags.HasErrors() {
 		return diags
 	}
@@ -263,7 +241,7 @@ func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, evalContext *
 				})
 			}
 		default:
-			if !t.IsBaseAttribute(name) {
+			if !trigger.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  "Unsupported attribute for Trigger Interval: " + attr.Name,
@@ -276,11 +254,10 @@ func (t *TriggerQuery) SetAttributes(hclAttributes hcl.Attributes, evalContext *
 }
 
 type TriggerHttp struct {
-	Trigger
 }
 
-func (t *TriggerHttp) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
-	diags := t.SetBaseAttributes(hclAttributes, evalContext)
+func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := trigger.SetBaseAttributes(mod, hclAttributes, evalContext)
 	if diags.HasErrors() {
 		return diags
 	}
@@ -288,23 +265,42 @@ func (t *TriggerHttp) SetAttributes(hclAttributes hcl.Attributes, evalContext *h
 	return diags
 }
 
-func NewTrigger(ctx context.Context, triggerType, triggerName string) ITrigger {
-	var trigger ITrigger
+func NewTrigger(ctx context.Context, mod *Mod, triggerType, triggerName string) *Trigger {
+
+	triggerFullName := triggerName
+
+	// TODO: rethink this area, we need to be able to handle pipelines that are not in a mod
+	// TODO: we're trying to integrate the pipeline & trigger functionality into the mod system, so it will look
+	// TODO: like a clutch for now
+	if mod != nil {
+		modName := mod.Name()
+		if strings.HasPrefix(modName, "mod") {
+			modName = strings.TrimPrefix(modName, "mod.")
+		}
+		triggerFullName = modName + ".trigger." + triggerFullName
+	} else {
+		triggerFullName = "local.trigger." + triggerFullName
+	}
+
+	trigger := &Trigger{
+		HclResourceImpl: HclResourceImpl{
+			FullName: triggerFullName,
+		},
+		ctx: ctx,
+	}
 
 	switch triggerType {
 	case schema.TriggerTypeSchedule:
-		trigger = &TriggerSchedule{}
+		trigger.Config = &TriggerSchedule{}
 	case schema.TriggerTypeInterval:
-		trigger = &TriggerInterval{}
+		trigger.Config = &TriggerInterval{}
 	case schema.TriggerTypeQuery:
-		trigger = &TriggerQuery{}
+		trigger.Config = &TriggerQuery{}
 	case schema.TriggerTypeHttp:
-		trigger = &TriggerHttp{}
+		trigger.Config = &TriggerHttp{}
 	default:
 		return nil
 	}
 
-	trigger.SetName(triggerName)
-	trigger.SetContext(ctx)
 	return trigger
 }

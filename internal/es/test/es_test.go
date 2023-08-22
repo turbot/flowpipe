@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -793,6 +794,11 @@ func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecu
 }
 
 func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
+
+	parts := strings.Split(name, ".")
+	if len(parts) != 3 {
+		name = "local.pipeline." + name
+	}
 
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(suite.ctx),

@@ -1,6 +1,8 @@
 package db
 
 import (
+	"strings"
+
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
@@ -9,9 +11,16 @@ import (
 // Ristretto backed pipeline datatabase
 
 func GetPipeline(name string) (*modconfig.Pipeline, error) {
+
+	// TODO: hack while we're transitioning to mod format
+	parts := strings.Split(name, ".")
+	if len(parts) != 3 {
+		name = "local.pipeline." + name
+	}
+
 	pipelineCached, found := cache.GetCache().Get(name)
 	if !found {
-		return nil, pcerr.NotFoundWithMessage("pipeline not found: " + name)
+		return nil, pcerr.NotFoundWithMessage("pipeline definition not found: " + name)
 	}
 
 	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
