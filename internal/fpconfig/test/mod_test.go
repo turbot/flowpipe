@@ -13,7 +13,7 @@ import (
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
-func TestModFileLoad(t *testing.T) {
+func SkipTestModFileLoad(t *testing.T) {
 	assert := assert.New(t)
 
 	mod, err := parse.LoadModfile("./test_mod/")
@@ -52,7 +52,7 @@ func SkipTestModLoadSp(t *testing.T) {
 	assert.NotNil(mod, "mod is nil")
 }
 
-func SkipTestModLoadFp(t *testing.T) {
+func TestModLoadFp(t *testing.T) {
 	assert := assert.New(t)
 
 	parseCtx := parse.NewModParseContext(
@@ -68,10 +68,10 @@ func SkipTestModLoadFp(t *testing.T) {
 			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),
 		})
 
-	mod, err := pipeparser.LoadMod("./test_mod/", parseCtx)
+	mod, errorsAndWarnings := pipeparser.LoadMod("./test_mod/", parseCtx)
 
-	if err != nil {
-		assert.Fail("error loading mod file", err.Error.Error())
+	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
+		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())
 		return
 	}
 

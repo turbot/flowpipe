@@ -13,7 +13,7 @@ import (
 
 type TriggerRunnerBase struct {
 	ctx       context.Context
-	trigger   modconfig.ITrigger
+	trigger   *modconfig.Trigger
 	esService *es.ESService
 }
 
@@ -21,8 +21,8 @@ type ITriggerRunner interface {
 	Run()
 }
 
-func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger modconfig.ITrigger) ITriggerRunner {
-	switch trigger.(type) {
+func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *modconfig.Trigger) ITriggerRunner {
+	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
 			ctx:       ctx,
@@ -56,7 +56,7 @@ func (tr *TriggerRunnerBase) Run() {
 	pipeline := tr.trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
-		logger.Error("Pipeline is nil, cannot run trigger", "trigger", tr.trigger.GetName())
+		logger.Error("Pipeline is nil, cannot run trigger", "trigger", tr.trigger.Name())
 		return
 	}
 
@@ -70,7 +70,7 @@ func (tr *TriggerRunnerBase) Run() {
 		Args:                tr.trigger.GetArgs(),
 	}
 
-	logger.Info("Trigger fired", "trigger", tr.trigger.GetName(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+	logger.Info("Trigger fired", "trigger", tr.trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
 
 	if err := tr.esService.Send(pipelineCmd); err != nil {
 		logger.Error("Error sending pipeline command", "error", err)

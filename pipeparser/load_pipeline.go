@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/parse"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
@@ -56,8 +57,8 @@ func LoadFlowpipeConfig(ctx context.Context, configPath string) (*parse.Flowpipe
 	}
 
 	if len(fileData) != len(flowpipeConfigFilePaths) {
-		// return nil, fperr.InternalWithMessage("Failed to load all pipeline files")
-		return nil, fmt.Errorf("Failed to load all pipeline files")
+		return nil, pcerr.InternalWithMessage("Failed to load all pipeline files")
+
 	}
 
 	// Each file in the pipelineFilePaths is parsed and the result is stored in the bodies variable

@@ -25,7 +25,7 @@ type Manager struct {
 	apiService *api.APIService
 	esService  *es.ESService
 
-	triggers map[string]modconfig.ITrigger
+	triggers map[string]*modconfig.Trigger
 
 	RaftNodeID    string `json:"raft_node_id,omitempty"`
 	RaftBootstrap bool   `json:"raft_bootstrap"`
@@ -103,25 +103,24 @@ func (m *Manager) Initialize() error {
 	inMemoryCache := cache.GetCache()
 	var pipelineNames []string
 
-	for pipelineName := range pipelines {
-		pipelineNames = append(pipelineNames, pipelineName)
+	for _, p := range pipelines {
+		pipelineNames = append(pipelineNames, p.Name())
 
 		// TODO: how do we want to do this?
-		inMemoryCache.SetWithTTL(pipelineName, pipelines[pipelineName], 24*7*52*99*time.Hour)
+		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
 	}
 
 	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
 
 	var triggerNames []string
-
-	for triggerName := range triggers {
-		triggerNames = append(triggerNames, triggerName)
+	for _, trigger := range triggers {
+		triggerNames = append(triggerNames, trigger.Name())
 
 		// TODO: how do we want to do this?
-		inMemoryCache.SetWithTTL(triggerName, triggers[triggerName], 24*7*52*99*time.Hour)
+		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
 	}
-
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
+
 	return nil
 }
 

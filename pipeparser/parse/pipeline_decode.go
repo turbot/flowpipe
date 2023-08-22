@@ -2,6 +2,7 @@ package parse
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -11,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/terraform-components/configs"
+	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
@@ -231,7 +233,7 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	for _, block := range blocksToDecode {
 		switch block.Type {
 		case schema.BlockTypePipeline:
-			pipelineHcl, res := decodePipeline(block, parseCtx)
+			pipelineHcl, res := decodePipeline(nil, block, parseCtx)
 			diags = append(diags, res.Diags...)
 
 			if pipelineHcl != nil {
@@ -246,7 +248,8 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	for _, block := range blocksToDecode {
 		switch block.Type {
 		case schema.BlockTypeTrigger:
-			triggerHcl, res := decodeTrigger(block, parseCtx)
+			// TODO: fix the nil mod passing here
+			triggerHcl, res := decodeTrigger(nil, block, parseCtx)
 			diags = append(diags, res.Diags...)
 			if triggerHcl != nil {
 				moreDiags := parseCtx.AddTrigger(triggerHcl)
@@ -257,7 +260,7 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	return diags
 }
 
-func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modconfig.ITrigger, *DecodeResult) {
+func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Trigger, *DecodeResult) {
 	res := newDecodeResult()
 
 	if len(block.Labels) != 2 {
@@ -293,7 +296,7 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modc
 		return nil, res
 	}
 
-	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, triggerType, triggerName)
+	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, mod, triggerType, triggerName)
 
 	if triggerHcl == nil {
 		res.handleDecodeDiags(hcl.Diagnostics{
@@ -306,7 +309,9 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modc
 		return nil, res
 	}
 
-	diags = triggerHcl.SetAttributes(triggerOptions.Attributes, parseCtx.ParseContext.EvalCtx)
+	// TODO: wrong location, we will keep rebuilding the Eval Context for every single trigger?
+	evalContext := rebuildEvalContextWithCurrentMod(mod, parseCtx.EvalCtx)
+	diags = triggerHcl.Config.SetAttributes(mod, triggerHcl, triggerOptions.Attributes, evalContext)
 	if len(diags) > 0 {
 		res.handleDecodeDiags(diags)
 		return nil, res
@@ -318,13 +323,42 @@ func decodeTrigger(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modc
 	return triggerHcl, res
 }
 
+func rebuildEvalContextWithCurrentMod(mod *modconfig.Mod, evalContext *hcl.EvalContext) *hcl.EvalContext {
+
+	modName := "local"
+
+	if mod != nil {
+		modName = mod.Name()
+		parts := strings.Split(modName, ".")
+		if len(parts) == 2 {
+			modName = parts[1]
+		}
+	}
+	// pulls the current mod data from the eval context
+	curentModVars := evalContext.Variables[modName]
+	if curentModVars == cty.NilVal {
+		return evalContext
+	}
+
+	currentModVarsMap := curentModVars.AsValueMap()
+	if currentModVarsMap == nil {
+		return evalContext
+	}
+
+	for k, v := range currentModVarsMap {
+		evalContext.Variables[k] = v
+	}
+
+	return evalContext
+}
+
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Pipeline, *DecodeResult) {
+func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Pipeline, *DecodeResult) {
 	res := newDecodeResult()
 
 	// get shell pipelineHcl
-	pipelineHcl := modconfig.NewPipelineHcl(block)
+	pipelineHcl := modconfig.NewPipelineHcl(mod, block)
 
 	// do a partial decode so we can parse the step manually, each pipeline step has its own struct, so we can't use
 	// HCL automatic parsing here
@@ -439,8 +473,8 @@ func handlePipelineDecodeResult(resource *modconfig.Pipeline, res *DecodeResult,
 		// moreDiags := resource.OnDecoded()
 		// res.addDiags(moreDiags)
 
-		// moreDiags = parseCtx.AddPipeline(resource)
-		// res.addDiags(moreDiags)
+		moreDiags := parseCtx.AddPipeline(resource)
+		res.addDiags(moreDiags)
 		return
 	}
 

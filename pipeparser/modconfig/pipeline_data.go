@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/pipeparser/options"
@@ -12,15 +13,34 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-func NewPipelineHcl(block *hcl.Block) *Pipeline {
-	return &Pipeline{
+func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
+
+	pipelineFullName := block.Labels[0]
+
+	// TODO: rethink this area, we need to be able to handle pipelines that are not in a mod
+	// TODO: we're trying to integrate the pipeline & trigger functionality into the mod system, so it will look
+	// TODO: like a clutch for now
+	if mod != nil {
+		modName := mod.Name()
+		if strings.HasPrefix(modName, "mod") {
+			modName = strings.TrimPrefix(modName, "mod.")
+		}
+		pipelineFullName = modName + ".pipeline." + pipelineFullName
+	} else {
+		pipelineFullName = "local.pipeline." + pipelineFullName
+	}
+
+	pipeline := &Pipeline{
 		HclResourceImpl: HclResourceImpl{
-			FullName: block.Labels[0],
+			// The FullName is the full name of the resource, including the mod name
+			FullName: pipelineFullName,
 		},
 		// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
-		PipelineName: block.Labels[0],
+		PipelineName: pipelineFullName,
 		Params:       map[string]*configs.Variable{},
 	}
+
+	return pipeline
 }
 
 // Pipeline represents a "pipeline" block in an flowpipe HCL (*.fp) file

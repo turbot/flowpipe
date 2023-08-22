@@ -17,12 +17,12 @@ import (
 
 type Scheduler struct {
 	ctx           context.Context
-	triggers      map[string]modconfig.ITrigger
+	triggers      map[string]*modconfig.Trigger
 	esService     *es.ESService
 	cronScheduler *gocron.Scheduler
 }
 
-func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]modconfig.ITrigger) *Scheduler {
+func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*modconfig.Trigger) *Scheduler {
 	return &Scheduler{
 		ctx:       ctx,
 		esService: esService,
@@ -56,23 +56,23 @@ func (s *Scheduler) Start() error {
 	s.cronScheduler = gocron.NewScheduler(time.UTC)
 
 	for _, t := range s.triggers {
-		switch t := t.(type) {
+		switch config := t.Config.(type) {
 		case *modconfig.TriggerSchedule:
-			logger.Info("Scheduling trigger", "name", t.Name, "schedule", t.Schedule)
+			logger.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule)
 
 			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
 
-			_, err := s.cronScheduler.Cron(t.Schedule).Do(triggerRunner.Run)
+			_, err := s.cronScheduler.Cron(config.Schedule).Do(triggerRunner.Run)
 			if err != nil {
 				return err
 			}
 		case *modconfig.TriggerInterval:
-			logger.Info("Scheduling trigger", "name", t.Name, "interval", t.Schedule)
+			logger.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
 
 			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
 
 			var err error
-			switch strings.ToLower(t.Schedule) {
+			switch strings.ToLower(config.Schedule) {
 			case "hourly":
 				ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Do(triggerRunner.Run)
@@ -86,7 +86,7 @@ func (s *Scheduler) Start() error {
 				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Do(triggerRunner.Run)
 			default:
-				return pcerr.BadRequestWithMessage("invalid interval schedule: " + t.Schedule)
+				return pcerr.BadRequestWithMessage("invalid interval schedule: " + config.Schedule)
 			}
 
 			if err != nil {

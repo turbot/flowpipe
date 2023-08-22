@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,12 @@ type EsTestSuite struct {
 // The SetupSuite method will be run by testify once, at the very
 // start of the testing suite, before any tests are run.
 func (suite *EsTestSuite) SetupSuite() {
+
+	err := os.Setenv("RUN_MODE", "TEST_ES")
+	if err != nil {
+		panic(err)
+	}
+
 	// Get the current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -787,6 +794,11 @@ func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecu
 }
 
 func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
+
+	parts := strings.Split(name, ".")
+	if len(parts) != 3 {
+		name = "local.pipeline." + name
+	}
 
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(suite.ctx),

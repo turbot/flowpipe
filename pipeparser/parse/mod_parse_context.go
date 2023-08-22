@@ -42,7 +42,8 @@ type ReferenceTypeValueMap map[string]map[string]cty.Value
 type ModParseContext struct {
 	ParseContext
 
-	FlowpipeConfigParseContext
+	// TODO: fix this issue
+	*FlowpipeConfigParseContext
 
 	// the mod which is currently being parsed
 	CurrentMod *modconfig.Mod
@@ -87,11 +88,8 @@ func NewModParseContext(runContext context.Context, workspaceLock *versionmap.Wo
 	c := &ModParseContext{
 		ParseContext: parseContext,
 
-		FlowpipeConfigParseContext: FlowpipeConfigParseContext{
-			ParseContext: parseContext,
-			PipelineHcls: make(map[string]*modconfig.Pipeline),
-			TriggerHcls:  make(map[string]modconfig.ITrigger),
-		},
+		FlowpipeConfigParseContext: NewFlowpipeConfigParseContext(runContext, rootEvalPath),
+
 		Flags:         flags,
 		WorkspaceLock: workspaceLock,
 		ListOptions:   listOptions,

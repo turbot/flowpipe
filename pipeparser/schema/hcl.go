@@ -207,6 +207,7 @@ var ValidResourceItemTypes = []string{
 	BlockTypeOptions,
 	BlockTypeWorkspaceProfile,
 	BlockTypePipeline,
+	BlockTypeTrigger,
 	BlockTypeWith,
 	// local is not an actual block name but is a resource type
 	"local",

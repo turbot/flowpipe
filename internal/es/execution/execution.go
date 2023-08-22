@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -72,7 +73,14 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	pipelineMap := map[string]cty.Value{}
 	for _, p := range allPipelines {
-		pipelineMap[p.Name()] = p.AsCtyValue()
+
+		// TODO: this doesn't work with mods
+		parts := strings.Split(p.Name(), ".")
+		if len(parts) != 3 {
+			return nil, pcerr.BadRequestWithMessage("invalid pipeline name: " + p.Name())
+		}
+
+		pipelineMap[parts[2]] = p.AsCtyValue()
 	}
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
