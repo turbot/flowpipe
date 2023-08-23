@@ -12,7 +12,6 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
-	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -62,7 +61,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 		fpTriggers = append(fpTriggers, types.FpTrigger{
 			Name:        trigger.FullName,
-			Type:        getTriggerTypeFromTrggerConfig(trigger.Config),
+			Type:        modconfig.GetTriggerTypeFromTrggerConfig(trigger.Config),
 			Description: trigger.Description,
 			Args:        trigger.Args,
 			Pipeline:    pipelineName,
@@ -129,26 +128,11 @@ func (api *APIService) getTrigger(c *gin.Context) {
 
 	fpTrigger := types.FpTrigger{
 		Name:        trigger.FullName,
-		Type:        getTriggerTypeFromTrggerConfig(trigger.Config),
+		Type:        modconfig.GetTriggerTypeFromTrggerConfig(trigger.Config),
 		Description: trigger.Description,
 		Args:        trigger.GetArgs(),
 		Pipeline:    pipelineName,
 	}
 
 	c.JSON(http.StatusOK, fpTrigger)
-}
-
-func getTriggerTypeFromTrggerConfig(config modconfig.ITriggerConfig) string {
-	switch config.(type) {
-	case *modconfig.TriggerSchedule:
-		return schema.TriggerTypeSchedule
-	case *modconfig.TriggerInterval:
-		return schema.TriggerTypeInterval
-	case *modconfig.TriggerQuery:
-		return schema.TriggerTypeQuery
-	case *modconfig.TriggerHttp:
-		return schema.TriggerTypeHttp
-	}
-
-	return ""
 }
