@@ -96,6 +96,7 @@ func (m *Manager) Initialize() error {
 	}
 
 	pipelines := fpParseContext.PipelineHcls
+	triggers := fpParseContext.TriggerHcls
 
 	m.triggers = fpParseContext.TriggerHcls
 
@@ -110,6 +111,16 @@ func (m *Manager) Initialize() error {
 	}
 
 	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+
+	var triggerNames []string
+	for _, trigger := range triggers {
+		triggerNames = append(triggerNames, trigger.Name())
+
+		// TODO: how do we want to do this?
+		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
+	}
+	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
+
 	return nil
 }
 

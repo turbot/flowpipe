@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
 	"github.com/turbot/flowpipe/internal/cmd/process"
 	"github.com/turbot/flowpipe/internal/cmd/service"
+	"github.com/turbot/flowpipe/internal/cmd/trigger"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
@@ -96,6 +97,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		return nil, err
 	}
 	rootCmd.AddCommand(pipelineCmd)
+
+	triggerCmd, err := trigger.TriggerCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rootCmd.AddCommand(triggerCmd)
 
 	processCmd, err := process.ProcessCmd(ctx)
 	if err != nil {

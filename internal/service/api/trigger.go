@@ -2,12 +2,16 @@ package api
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -42,8 +46,41 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
+	triggers, err := db.ListAllTriggers()
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	// Convert the list of triggers to FpTrigger type
+	var fpTriggers []types.FpTrigger
+
+	for _, trigger := range triggers {
+		pipelineInfo := trigger.Pipeline.AsValueMap()
+		pipelineName := pipelineInfo["name"].AsString()
+
+		fpTriggers = append(fpTriggers, types.FpTrigger{
+			Name:        trigger.FullName,
+			Type:        modconfig.GetTriggerTypeFromTrggerConfig(trigger.Config),
+			Description: trigger.Description,
+			Args:        trigger.Args,
+			Pipeline:    pipelineName,
+		})
+	}
+
+	// Sort the triggers by pipeline, type, name
+	sort.Slice(fpTriggers, func(i, j int) bool {
+		if fpTriggers[i].Pipeline != fpTriggers[j].Pipeline {
+			return fpTriggers[i].Pipeline < fpTriggers[j].Pipeline
+		}
+		if fpTriggers[i].Type != fpTriggers[j].Type {
+			return fpTriggers[i].Type < fpTriggers[j].Type
+		}
+		return fpTriggers[i].Name < fpTriggers[j].Name
+	})
+
 	result := types.ListTriggerResponse{
-		Items: []modconfig.Trigger{},
+		Items: fpTriggers,
 	}
 
 	c.JSON(http.StatusOK, result)
@@ -58,7 +95,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 // / ...
 // @Param trigger_name path string true "The name of the trigger" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} types.Trigger
+// @Success 200 {object} types.FpTrigger
 // @Failure 400 {object} pcerr.ErrorModel
 // @Failure 401 {object} pcerr.ErrorModel
 // @Failure 403 {object} pcerr.ErrorModel
@@ -73,6 +110,29 @@ func (api *APIService) getTrigger(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	// result := types.Trigger{Type: "trigger_" + uri.TriggerName, Name: uri.TriggerName}
-	c.JSON(http.StatusOK, "")
+
+	triggerCached, found := cache.GetCache().Get(uri.TriggerName)
+	if !found {
+		common.AbortWithError(c, pcerr.NotFoundWithMessage("trigger not found"))
+		return
+	}
+
+	trigger, ok := triggerCached.(*modconfig.Trigger)
+	if !ok {
+		return
+	}
+
+	// Get the pipeline name from the trigger
+	pipelineInfo := trigger.GetPipeline().AsValueMap()
+	pipelineName := pipelineInfo["name"].AsString()
+
+	fpTrigger := types.FpTrigger{
+		Name:        trigger.FullName,
+		Type:        modconfig.GetTriggerTypeFromTrggerConfig(trigger.Config),
+		Description: trigger.Description,
+		Args:        trigger.GetArgs(),
+		Pipeline:    pipelineName,
+	}
+
+	c.JSON(http.StatusOK, fpTrigger)
 }

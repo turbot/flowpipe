@@ -118,7 +118,7 @@ func (api *APIService) getProcess(c *gin.Context) {
 // / ...
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} pipeline.OutputData
+// @Success 200 {object} modconfig.OutputData
 // @Failure 400 {object} pcerr.ErrorModel
 // @Failure 401 {object} pcerr.ErrorModel
 // @Failure 403 {object} pcerr.ErrorModel

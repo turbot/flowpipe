@@ -33,3 +33,9 @@ pipeline "if" {
         if = step.echo.text_1.text == "bar"
     }
 }
+
+trigger "interval" "every_hour_trigger_on_if" {
+    description = "trigger that will run every hour"
+    schedule    = "hourly"
+    pipeline    = pipeline.if
+}
