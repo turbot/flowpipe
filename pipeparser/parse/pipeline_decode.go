@@ -16,7 +16,7 @@ import (
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modconfig.IPipelineStep, hcl.Diagnostics) {
+func decodeStep(block *hcl.Block, parseCtx *ModParseContext) (modconfig.IPipelineStep, hcl.Diagnostics) {
 	stepType := block.Labels[0]
 	stepName := block.Labels[1]
 
@@ -128,7 +128,7 @@ func decodeStep(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (modconf
 	return step, hcl.Diagnostics{}
 }
 
-func decodeOutput(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.PipelineOutput, hcl.Diagnostics) {
+func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.PipelineOutput, hcl.Diagnostics) {
 
 	o := &modconfig.PipelineOutput{
 		Name: block.Labels[0],
@@ -177,7 +177,8 @@ func decodeOutput(block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modc
 	return o, diags
 }
 
-func ParseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
+// TODO: remove this function
+func ParseAllFlowipeConfig(parseCtx *ModParseContext) error {
 	// we may need to decode more than once as we gather dependencies as we go
 	// continue decoding as long as the number of unresolved blocks decreases
 	prevUnresolvedBlocks := 0
@@ -207,7 +208,8 @@ func ParseAllFlowipeConfig(parseCtx *FlowpipeConfigParseContext) error {
 
 }
 
-func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagnostics {
+// TODO: remove this function
+func decodeFlowpipeConfigBlocks(parseCtx *ModParseContext) hcl.Diagnostics {
 
 	var diags hcl.Diagnostics
 	blocksToDecode, err := parseCtx.BlocksToDecode()
@@ -243,7 +245,7 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 		}
 	}
 
-	parseCtx.BuildEvalContext()
+	parseCtx.buildEvalContext()
 
 	for _, block := range blocksToDecode {
 		switch block.Type {
@@ -260,7 +262,7 @@ func decodeFlowpipeConfigBlocks(parseCtx *FlowpipeConfigParseContext) hcl.Diagno
 	return diags
 }
 
-func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Trigger, *DecodeResult) {
+func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Trigger, *DecodeResult) {
 	res := newDecodeResult()
 
 	if len(block.Labels) != 2 {
@@ -354,7 +356,7 @@ func rebuildEvalContextWithCurrentMod(mod *modconfig.Mod, evalContext *hcl.EvalC
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
-func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) (*modconfig.Pipeline, *DecodeResult) {
+func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipeline, *DecodeResult) {
 	res := newDecodeResult()
 
 	// get shell pipelineHcl
@@ -466,14 +468,14 @@ func validatePipelineDependencies(pipelineHcl *modconfig.Pipeline) hcl.Diagnosti
 	return diags
 }
 
-func handlePipelineDecodeResult(resource *modconfig.Pipeline, res *DecodeResult, block *hcl.Block, parseCtx *FlowpipeConfigParseContext) {
+func handlePipelineDecodeResult(resource *modconfig.Pipeline, res *DecodeResult, block *hcl.Block, parseCtx *ModParseContext) {
 	if res.Success() {
 		// call post decode hook
 		// NOTE: must do this BEFORE adding resource to run context to ensure we respect the base property
-		// moreDiags := resource.OnDecoded()
-		// res.addDiags(moreDiags)
+		moreDiags := resource.OnDecoded(block, parseCtx)
+		res.addDiags(moreDiags)
 
-		moreDiags := parseCtx.AddPipeline(resource)
+		moreDiags = parseCtx.AddPipeline(resource)
 		res.addDiags(moreDiags)
 		return
 	}

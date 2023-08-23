@@ -2,6 +2,7 @@ package modconfig
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -41,7 +42,7 @@ var ValidBaseTriggerAttributes = []string{
 }
 
 func (t *Trigger) IsBaseAttribute(name string) bool {
-	return helpers.StringSliceContains(ValidBaseTriggerAttributes, name)
+	return slices.Contains[[]string, string](ValidBaseTriggerAttributes, name)
 }
 
 func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {

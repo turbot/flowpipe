@@ -43,7 +43,9 @@ type ModParseContext struct {
 	ParseContext
 
 	// TODO: fix this issue
-	*FlowpipeConfigParseContext
+	// TODO: temporary mapping until we sort out merging Flowpipe and Steampipe
+	PipelineHcls map[string]*modconfig.Pipeline
+	TriggerHcls  map[string]*modconfig.Trigger
 
 	// the mod which is currently being parsed
 	CurrentMod *modconfig.Mod
@@ -88,7 +90,10 @@ func NewModParseContext(runContext context.Context, workspaceLock *versionmap.Wo
 	c := &ModParseContext{
 		ParseContext: parseContext,
 
-		FlowpipeConfigParseContext: NewFlowpipeConfigParseContext(runContext, rootEvalPath),
+		// TODO: fix this issue
+		// TODO: temporary mapping until we sort out merging Flowpipe and Steampipe
+		PipelineHcls: make(map[string]*modconfig.Pipeline),
+		TriggerHcls:  make(map[string]*modconfig.Trigger),
 
 		Flags:         flags,
 		WorkspaceLock: workspaceLock,
@@ -105,9 +110,6 @@ func NewModParseContext(runContext context.Context, workspaceLock *versionmap.Wo
 	// add root node - this will depend on all other nodes
 	c.dependencyGraph = c.newDependencyGraph()
 	c.buildEvalContext()
-
-	// TODO: this doesn't seem right .. we now have 2 Parse Context one for mod and one for Flowpipe. We should integrate them.
-	c.FlowpipeConfigParseContext.BuildEvalContext()
 
 	return c
 }
@@ -368,6 +370,39 @@ func (m *ModParseContext) buildEvalContext() {
 		}
 		// now convert the referenceValues itself to a cty object
 		referenceValues[mod] = cty.ObjectVal(refTypeMap)
+	}
+
+	// TODO: this logic can be improved if we know that there's only 1 mod (?)
+	// TODO: optimise, we're relying that m.PipelineHcls is populated (which is a duplicate)
+	for _, pipeline := range m.PipelineHcls {
+		// Split and get the last part for pipeline name
+		parts := strings.Split(pipeline.Name(), ".")
+		pipelineNameOnly := parts[len(parts)-1]
+		modNameOnly := parts[0]
+
+		modVars := referenceValues[modNameOnly]
+		if modVars == cty.NilVal {
+			// This condition should never happen (?)
+			modVars = cty.ObjectVal(map[string]cty.Value{
+				"pipeline": cty.ObjectVal(map[string]cty.Value{}),
+			})
+		}
+
+		modVarsValueMap := modVars.AsValueMap()
+		pipelineVars := modVarsValueMap["pipeline"]
+
+		if pipelineVars == cty.NilVal {
+			pipelineVars = cty.ObjectVal(map[string]cty.Value{})
+		}
+
+		valueMaps := pipelineVars.AsValueMap()
+		if valueMaps == nil {
+			valueMaps = map[string]cty.Value{}
+		}
+
+		valueMaps[pipelineNameOnly] = pipeline.AsCtyValue()
+		modVarsValueMap["pipeline"] = cty.ObjectVal(valueMaps)
+		referenceValues[modNameOnly] = cty.ObjectVal(modVarsValueMap)
 	}
 
 	// rebuild the eval context
@@ -683,3 +718,38 @@ func (m *ModParseContext) getModRequireBlock() *hclsyntax.Block {
 	return nil
 
 }
+
+// TODO: transition period
+// AddPipeline stores this resource as a variable to be added to the eval context. It alse
+func (m *ModParseContext) AddPipeline(pipelineHcl *modconfig.Pipeline) hcl.Diagnostics {
+
+	// Split and get the last part for pipeline name
+	pipelineFullName := pipelineHcl.Name()
+	parts := strings.Split(pipelineFullName, ".")
+	pipelineNameOnly := parts[len(parts)-1]
+
+	m.PipelineHcls[pipelineNameOnly] = pipelineHcl
+
+	// remove this resource from unparsed blocks
+	delete(m.UnresolvedBlocks, pipelineHcl.Name())
+
+	m.buildEvalContext()
+	return nil
+}
+
+func (m *ModParseContext) AddTrigger(trigger *modconfig.Trigger) hcl.Diagnostics {
+
+	// Split and get the last part for pipeline name
+	parts := strings.Split(trigger.Name(), ".")
+	triggerNameOnly := parts[len(parts)-1]
+
+	m.TriggerHcls[triggerNameOnly] = trigger
+
+	// remove this resource from unparsed blocks
+	delete(m.UnresolvedBlocks, trigger.Name())
+
+	m.buildEvalContext()
+	return nil
+}
+
+// TODO: transition period

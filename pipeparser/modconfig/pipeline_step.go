@@ -2,6 +2,7 @@ package modconfig
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -432,7 +433,7 @@ var ValidDependsOnTypes = []string{
 }
 
 func (p *PipelineStepBase) IsBaseAttribute(name string) bool {
-	return helpers.StringSliceContains(ValidBaseStepAttributes, name)
+	return slices.Contains[[]string, string](ValidBaseStepAttributes, name)
 }
 
 type PipelineStepHttp struct {

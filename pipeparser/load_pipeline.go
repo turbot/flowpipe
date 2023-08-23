@@ -23,8 +23,14 @@ func ToError(val interface{}) error {
 	}
 }
 
-func LoadFlowpipeConfig(ctx context.Context, configPath string) (*parse.FlowpipeConfigParseContext, error) {
-	parseCtx := parse.NewFlowpipeConfigParseContext(ctx, configPath)
+func LoadFlowpipeConfig(ctx context.Context, configPath string) (*parse.ModParseContext, error) {
+	parseCtx := parse.NewModParseContext(ctx, nil, configPath, parse.CreateDefaultMod,
+		&filehelpers.ListOptions{
+			// listFlag specifies whether to load files recursively
+			Flags: filehelpers.Files | filehelpers.Recursive,
+			// Exclude: w.exclusions,
+			Include: filehelpers.InclusionsFromExtensions([]string{pcconstants.ModDataExtension, pcconstants.PipelineExtension}),
+		})
 
 	// check whether sourcePath is a glob with a root location which exists in the file system
 	localSourcePath, globPattern, err := filehelpers.GlobRoot(configPath)
