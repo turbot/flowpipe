@@ -11,7 +11,7 @@ import (
 func TestChildPipeline(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/child_pipeline.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/child_pipeline.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -38,7 +38,7 @@ func TestChildPipeline(t *testing.T) {
 func TestChildPipelineWithArgs(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/child_pipeline.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/child_pipeline.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

@@ -11,7 +11,7 @@ import (
 func TestStepErrorConfig(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/http.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/http.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -26,7 +26,7 @@ func TestStepErrorConfig(t *testing.T) {
 func TestStepErrorConfigRetries(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/error.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/error.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

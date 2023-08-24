@@ -90,15 +90,12 @@ func WithHTTPAddress(addr string) ManagerOption {
 func (m *Manager) Initialize() error {
 	pipelineDir := viper.GetString("pipeline.dir")
 
-	fpParseContext, err := pipeparser.LoadFlowpipeConfig(m.ctx, pipelineDir)
+	pipelines, triggers, err := pipeparser.LoadPipelines(m.ctx, pipelineDir)
 	if err != nil {
 		return err
 	}
 
-	pipelines := fpParseContext.PipelineHcls
-	triggers := fpParseContext.TriggerHcls
-
-	m.triggers = fpParseContext.TriggerHcls
+	m.triggers = triggers
 
 	inMemoryCache := cache.GetCache()
 	var pipelineNames []string

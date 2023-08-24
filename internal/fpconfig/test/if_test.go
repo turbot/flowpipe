@@ -11,7 +11,7 @@ import (
 func TestIf(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/if.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/if.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

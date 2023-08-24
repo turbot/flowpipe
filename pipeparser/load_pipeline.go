@@ -3,11 +3,9 @@ package pipeparser
 import (
 	"context"
 	"fmt"
-	"path"
+	"os"
 	"path/filepath"
 
-	pcconstants "github.com/turbot/flowpipe/pipeparser/constants"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
@@ -24,83 +22,51 @@ func ToError(val interface{}) error {
 	}
 }
 
-func LoadFlowpipeConfig(ctx context.Context, configPath string) (*parse.ModParseContext, error) {
-	parseCtx := parse.NewModParseContext(ctx, nil, configPath, parse.CreateDefaultMod,
-		&filehelpers.ListOptions{
-			// listFlag specifies whether to load files recursively
-			Flags: filehelpers.Files | filehelpers.Recursive,
-			// Exclude: w.exclusions,
-			Include: filehelpers.InclusionsFromExtensions([]string{pcconstants.ModDataExtension, pcconstants.PipelineExtension}),
-		})
-
-	// check whether sourcePath is a glob with a root location which exists in the file system
-	localSourcePath, globPattern, err := filehelpers.GlobRoot(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if localSourcePath == globPattern {
-		// if the path is a folder,
-		// append '*' to the glob explicitly, to match all files in that folder.
-		globPattern = path.Join(globPattern, fmt.Sprintf("*%s", pcconstants.PipelineExtension))
-	}
-
-	flowpipeConfigFilePaths, err := filehelpers.ListFiles(localSourcePath, &filehelpers.ListOptions{
-		Flags:   filehelpers.AllRecursive,
-		Include: []string{globPattern},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// pipelineFilePaths is the list of all pipeline files found in the pipelinePath
-	if len(flowpipeConfigFilePaths) == 0 {
-		return parseCtx, nil
-	}
-
-	fileData, diags := parse.LoadFileData(flowpipeConfigFilePaths...)
-	if diags.HasErrors() {
-		return nil, error_helpers.HclDiagsToError("Failed to load workspace profiles", diags)
-	}
-
-	if len(fileData) != len(flowpipeConfigFilePaths) {
-		return nil, pcerr.InternalWithMessage("Failed to load all pipeline files")
-
-	}
-
-	// Each file in the pipelineFilePaths is parsed and the result is stored in the bodies variable
-	// bodies.data length should be the same with pipelineFilePaths length
-	bodies, diags := parse.ParseHclFiles(fileData)
-	if diags.HasErrors() {
-		return nil, error_helpers.HclDiagsToError("Failed to load workspace profiles", diags)
-	}
-
-	// do a partial decode
-	content, diags := bodies.Content(modconfig.FlowpipeConfigBlockSchema)
-	if diags.HasErrors() {
-		return nil, error_helpers.HclDiagsToError("Failed to load workspace profiles", diags)
-	}
-
-	parseCtx.SetDecodeContent(content, fileData)
-
-	// build parse context
-	err = parse.ParseAllFlowipeConfig(parseCtx)
-	if err != nil {
-		return parseCtx, err
-	}
-
-	return parseCtx, nil
-}
-
 // Convenient function to support testing
 //
 // # The automated tests were initially created before the concept of Mod is introduced in Flowpipe
 //
 // We can potentially remove this function, but we have to refactor all our test cases
-func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfig.Pipeline, error) {
+func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfig.Pipeline, map[string]*modconfig.Trigger, error) {
 
-	modDir := filepath.Dir(configPath)
-	fileName := filepath.Base(configPath)
+	var modDir string
+	var fileName string
+	var modFileNameToLoad string
+
+	// Get information about the path
+	info, err := os.Stat(configPath)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Check if it's a regular file
+	if info.Mode().IsRegular() {
+		fileName = filepath.Base(configPath)
+		modDir = filepath.Dir(configPath)
+
+		// TODO: this is a hack (ish) to let the existing automated test to pass
+		if filepath.Ext(fileName) == ".fp" {
+			modFileNameToLoad = "ignore.sp"
+		} else {
+			modFileNameToLoad = fileName
+		}
+	} else if info.IsDir() { // Check if it's a directory
+
+		defaultModSp := filepath.Join(configPath, "mod.sp")
+
+		_, err := os.Stat(defaultModSp)
+		if err == nil {
+			// default mod.sp exist
+			fileName = "mod.sp"
+			modDir = configPath
+		} else {
+			fileName = "*.fp"
+			modDir = configPath
+		}
+		modFileNameToLoad = fileName
+	} else {
+		return nil, nil, pcerr.BadRequestWithMessage("invalid path")
+	}
 
 	parseCtx := parse.NewModParseContext(
 		ctx,
@@ -108,11 +74,18 @@ func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfi
 		modDir,
 		parse.CreateTransientLocalMod,
 		&filehelpers.ListOptions{
-			Flags:   filehelpers.Files,
+			Flags:   filehelpers.Files | filehelpers.Recursive,
 			Include: []string{"**/" + fileName},
 		})
 
-	mod, errorsAndWarnings := LoadModWithFileName(modDir, "ignore.sp", parseCtx)
+	mod, errorsAndWarnings := LoadModWithFileName(modDir, modFileNameToLoad, parseCtx)
 
-	return mod.ResourceMaps.Pipelines, errorsAndWarnings.Error
+	var pipelines map[string]*modconfig.Pipeline
+	var triggers map[string]*modconfig.Trigger
+
+	if mod != nil && mod.ResourceMaps != nil {
+		pipelines = mod.ResourceMaps.Pipelines
+		triggers = mod.ResourceMaps.Triggers
+	}
+	return pipelines, triggers, errorsAndWarnings.Error
 }

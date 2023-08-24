@@ -11,7 +11,7 @@ import (
 func TestQueryStep(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/query.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/query.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -38,7 +38,7 @@ func TestQueryStep(t *testing.T) {
 func TestQueryStepWithArgs(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/query.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/query.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

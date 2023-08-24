@@ -19,7 +19,7 @@ func TestSimpleForAndParam(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	pipelines, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/for.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/for.fp")
 	assert.Nil(err, "error found ")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -101,7 +101,7 @@ func TestParamsProcessing(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	pipelines, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/for.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/for.fp")
 	assert.Nil(err, "error found ")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

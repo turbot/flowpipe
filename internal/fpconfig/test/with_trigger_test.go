@@ -16,10 +16,8 @@ func TestPipelineWithTrigger(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	fpParseContext, err := pipeparser.LoadFlowpipeConfig(ctx, "./test_pipelines/with_trigger.fp")
+	pipelines, triggers, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/with_trigger.fp")
 	assert.Nil(err, "error found")
-
-	pipelines := fpParseContext.PipelineHcls
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
@@ -37,9 +35,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 	dependsOn := echoStep.GetDependsOn()
 	assert.Equal(len(dependsOn), 0)
 
-	triggers := fpParseContext.TriggerHcls
-
-	scheduleTrigger := triggers["my_hourly_trigger"]
+	scheduleTrigger := triggers["local.trigger.my_hourly_trigger"]
 	if scheduleTrigger == nil {
 		assert.Fail("my_hourly_trigger trigger not found")
 		return
@@ -53,7 +49,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 
 	assert.Equal("5 * * * *", st.Schedule)
 
-	triggerWithArgs := triggers["trigger_with_args"]
+	triggerWithArgs := triggers["local.trigger.trigger_with_args"]
 	if triggerWithArgs == nil {
 		assert.Fail("trigger_with_args trigger not found")
 		return
@@ -70,7 +66,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 	assert.Equal("one", triggerWithArgs.Args["param_one"])
 	assert.Equal(2, triggerWithArgs.Args["param_two_int"])
 
-	queryTrigger := triggers["query_trigger"]
+	queryTrigger := triggers["local.trigger.query_trigger"]
 	if queryTrigger == nil {
 		assert.Fail("query_trigger trigger not found")
 		return
@@ -90,29 +86,14 @@ func TestPipelineWithTrigger(t *testing.T) {
 	assert.Contains(qt.Sql, "where create_date < now() - interval")
 }
 
-func SkipTestBadTriggerConfig(t *testing.T) {
+func TestBadTriggerConfig(t *testing.T) {
 	assert := assert.New(t)
 
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	fpParseContext, err := pipeparser.LoadFlowpipeConfig(ctx, "./test_pipelines/invalid_trigger.fp")
+	_, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/invalid_trigger.fp")
 	assert.NotNil(err, "should have some errors")
 
-	diags := fpParseContext.Diags
-
-	assert.True(diags.HasErrors())
-
-	assert.Contains(diags[0].Subject.Filename, "invalid_trigger.fp")
-	assert.Contains(diags[0].Summary, "Unsupported attribute; This object does not have an attribute named \"bad_pipeline\".")
-
-	assert.Contains(diags[1].Subject.Filename, "invalid_trigger.fp")
-	assert.Contains(diags[1].Summary, "Missing required argument")
-
-	assert.Contains(diags[1].Subject.Filename, "invalid_trigger.fp")
-	assert.Contains("Invalid cron expression: bad cron format", diags[2].Summary)
-
-	// assert.Contains(diags[1].Subject.Filename, "invalid_trigger.fp")
-	// assert.Contains("Invalid interval", diags[3].Summary)
-
+	assert.Contains(err.Error(), "Failed to decode all mod hcl files:\nMissing required argument: The argument \"pipeline\" is required, but no definition was found.")
 }

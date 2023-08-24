@@ -77,23 +77,27 @@ func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseC
 
 	modFileExist := true
 	modFilePath := filepath.Join(modPath, modFile)
-	if !parseCtx.ShouldCreateCreateTransientLocalMod() {
-		// verify the mod folder exists
-		_, err := os.Stat(modPath)
-		if os.IsNotExist(err) {
-			return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod folder does not exist: " + modPath))
-		}
 
-		if strings.Trim(modFile, " ") == "" {
-			return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod file name cannot be empty"))
-		}
-
+	if parseCtx.ShouldCreateCreateTransientLocalMod() {
+		// only create transient local mod if the mod file does not exist
 		if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
-			modFileExist = false
+			mod = modconfig.NewMod("local", modPath, hcl.Range{})
+			return mod, errorsAndWarnings
 		}
-	} else {
-		mod = modconfig.NewMod("local", modPath, hcl.Range{})
-		return mod, errorsAndWarnings
+	}
+
+	// verify the mod folder exists
+	_, err := os.Stat(modPath)
+	if os.IsNotExist(err) {
+		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod folder does not exist: " + modPath))
+	}
+
+	if strings.Trim(modFile, " ") == "" {
+		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod file name cannot be empty"))
+	}
+
+	if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
+		modFileExist = false
 	}
 
 	if modFileExist {
