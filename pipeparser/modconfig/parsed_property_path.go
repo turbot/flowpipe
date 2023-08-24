@@ -1,9 +1,9 @@
 package modconfig
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -47,7 +47,7 @@ func ParseResourcePropertyPath(propertyPath string) (*ParsedPropertyPath, error)
 
 	parts := strings.Split(propertyPath, ".")
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("invalid property path '%s' passed to ParseResourcePropertyPath", propertyPath)
+		return nil, pcerr.BadRequestWithMessage("invalid property path passed to ParseResourcePropertyPath: " + propertyPath)
 	}
 
 	// special case handling for runtime dependencies which may have use the "self" qualifier
@@ -76,7 +76,7 @@ func ParseResourcePropertyPath(propertyPath string) (*ParsedPropertyPath, error)
 	}
 
 	if !schema.IsValidResourceItemType(res.ItemType) {
-		return nil, fmt.Errorf("invalid property path '%s' passed to ParseResourcePropertyPath", propertyPath)
+		return nil, pcerr.BadRequestWithMessage("invalid resource item type passed to ParseResourcePropertyPath: " + propertyPath)
 	}
 
 	return res, nil

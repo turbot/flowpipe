@@ -284,7 +284,7 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 		res.handleDecodeDiags(hcl.Diagnostics{
 			{
 				Severity: hcl.DiagError,
-				Summary:  fmt.Sprintf("invalid trigger type '%s'", triggerType),
+				Summary:  "invalid trigger type: " + triggerType,
 				Subject:  &block.DefRange,
 			},
 		})
@@ -316,7 +316,7 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 	diags = triggerHcl.Config.SetAttributes(mod, triggerHcl, triggerOptions.Attributes, evalContext)
 	if len(diags) > 0 {
 		res.handleDecodeDiags(diags)
-		return nil, res
+		return triggerHcl, res
 	}
 
 	moreDiags := parseCtx.AddTrigger(triggerHcl)

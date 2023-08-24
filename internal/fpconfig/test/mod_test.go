@@ -5,70 +5,63 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/parse"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 
-	"github.com/turbot/go-kit/files"
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
-func SkipTestModFileLoad(t *testing.T) {
+func TestModWithBadTrigger(t *testing.T) {
 	assert := assert.New(t)
 
-	mod, err := parse.LoadModfile("./test_mod/")
-
-	if err != nil {
-		assert.Fail("error loading mod file", err.Error())
-		return
-	}
-
-	assert.NotNil(mod, "mod is nil")
-}
-
-func SkipTestModLoadSp(t *testing.T) {
-	assert := assert.New(t)
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
 
 	parseCtx := parse.NewModParseContext(
-		context.TODO(),
+		ctx,
 		nil,
-		"./test_steampipe_mod/",
-		parse.CreateDefaultMod,
+		"./test_mod/",
+		0,
 		&filehelpers.ListOptions{
-			// // listFlag specifies whether to load files recursively
-			Flags: files.Files | files.Recursive,
-			// Exclude: w.exclusions,
-			// only load .sp files
-			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),
+			Flags:   filehelpers.Files,
+			Include: []string{`**/bad_trigger\.sp`},
 		})
 
-	mod, err := pipeparser.LoadMod("./test_steampipe_mod/", parseCtx)
+	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_trigger.sp", parseCtx)
 
-	if err != nil {
-		assert.Fail("error loading mod file", err.Error.Error())
+	if errorsAndWarnings != nil && errorsAndWarnings.Error == nil {
+		assert.Fail("should have an error")
 		return
 	}
 
-	assert.NotNil(mod, "mod is nil")
+	err, ok := errorsAndWarnings.Error.(pcerr.ErrorModel)
+	if !ok {
+		assert.Fail("should be a pcerr.ErrorModel")
+		return
+	}
+
+	assert.Equal(pcerr.ErrorCodeDependencyFailure, err.Type, "wrong error type")
 }
 
 func TestModLoadFp(t *testing.T) {
 	assert := assert.New(t)
 
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
 	parseCtx := parse.NewModParseContext(
-		context.TODO(),
+		ctx,
 		nil,
 		"./test_mod/",
-		parse.CreateDefaultMod,
+		0,
 		&filehelpers.ListOptions{
-			// // listFlag specifies whether to load files recursively
-			Flags: files.Files | files.Recursive,
-			// Exclude: w.exclusions,
-			// only load .sp files
-			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),
+			Flags:   filehelpers.Files,
+			Include: []string{`**/good_mod\.sp`},
 		})
 
-	mod, errorsAndWarnings := pipeparser.LoadMod("./test_mod/", parseCtx)
+	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "good_mod.sp", parseCtx)
 
 	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
 		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())
@@ -76,4 +69,26 @@ func TestModLoadFp(t *testing.T) {
 	}
 
 	assert.NotNil(mod, "mod is nil")
+
+	// check if all pipelines are there
+	pipelines := mod.ResourceMaps.Pipelines
+	assert.Equal(len(pipelines), 3, "wrong number of pipelines")
+
+	jsonForPipeline := pipelines["test_mod.pipeline.json_for"]
+	if jsonForPipeline == nil {
+		assert.Fail("json_for pipeline not found")
+		return
+	}
+
+	// check if all steps are there
+	assert.Equal(2, len(jsonForPipeline.Steps), "wrong number of steps")
+	assert.Equal(jsonForPipeline.Steps[0].GetName(), "json", "wrong step name")
+	assert.Equal(jsonForPipeline.Steps[0].GetType(), "echo", "wrong step type")
+	assert.Equal(jsonForPipeline.Steps[1].GetName(), "json_for", "wrong step name")
+	assert.Equal(jsonForPipeline.Steps[1].GetType(), "echo", "wrong step type")
+
+	// check if all triggers are there
+	triggers := mod.ResourceMaps.Triggers
+	assert.Equal(1, len(triggers), "wrong number of triggers")
+	assert.Equal("test_mod.trigger.my_hourly_trigger", triggers["test_mod.trigger.my_hourly_trigger"].FullName, "wrong trigger name")
 }

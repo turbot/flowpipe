@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
@@ -46,6 +47,9 @@ func (t *Trigger) IsBaseAttribute(name string) bool {
 }
 
 func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+
+	logger := fplog.Logger(t.ctx)
+
 	var diags hcl.Diagnostics
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
@@ -63,18 +67,19 @@ func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, eval
 
 	expr := attr.Expr
 
-	// Try to validate the pipeline reference. It's OK to do this here because by the time
-	// we parse the triggers, we should have loaded all the pipelines in the Parser Context.
-	//
-	// Can't do it for the step references because the pipeline that a step refer to may not be parsed
-	// yet.
 	val, err := expr.Value(evalContext)
 	if err != nil {
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  "Unable to parse " + schema.AttributeTypePipeline + " attribute: " + err.Error(),
-			Subject:  &attr.Range,
-		})
+		// For Trigger's Pipeline reference, all it needs is the pipeline. It can't possibly use the output of a pipeline
+		// so if the Pipeline is not parsed (yet) then the error message is:
+		// Summary: "Unknown variable"
+		// Detail: "There is no variable named \"pipeline\"."
+		//
+		// Do not unpack the error and create a new "Diagnostic", leave the original error message in
+		// and let the "Mod processing" determine if there's an unresolved block
+		logger.Info("Unable to parse " + schema.AttributeTypePipeline + " attribute: " + err.Error() + ". This may not be a fatal error")
+
+		// Don't error out, it's fine to unable to find the reference, we will try again later
+		diags = append(diags, err...)
 	} else {
 		t.Pipeline = val
 	}
@@ -285,7 +290,8 @@ func NewTrigger(ctx context.Context, mod *Mod, triggerType, triggerName string) 
 
 	trigger := &Trigger{
 		HclResourceImpl: HclResourceImpl{
-			FullName: triggerFullName,
+			FullName:        triggerFullName,
+			UnqualifiedName: "trigger." + triggerName,
 		},
 		ctx: ctx,
 	}

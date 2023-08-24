@@ -9,26 +9,24 @@ import (
 
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/parse"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 )
 
-// LoadMod parses all hcl files in modPath and returns a single mod
-// if CreatePseudoResources flag is set, construct hcl resources for files with specific extensions
-// NOTE: it is an error if there is more than 1 mod defined, however zero mods is acceptable
-// - a default mod will be created assuming there are any resource files
-func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mod, errorsAndWarnings *error_helpers.ErrorAndWarnings) {
+func LoadModWithFileName(modPath string, modFile string, parseCtx *parse.ModParseContext) (mod *modconfig.Mod, errorsAndWarnings *error_helpers.ErrorAndWarnings) {
 	defer func() {
 		if r := recover(); r != nil {
 			errorsAndWarnings = error_helpers.NewErrorsAndWarning(helpers.ToError(r))
 		}
 	}()
 
-	mod, loadModResult := loadModDefinition(modPath, parseCtx)
+	mod, loadModResult := loadModDefinition(modPath, modFile, parseCtx)
 	if loadModResult.Error != nil {
 		return nil, loadModResult
 	}
@@ -58,18 +56,43 @@ func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mo
 	return mod, errorsAndWarnings
 }
 
-func loadModDefinition(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mod, errorsAndWarnings *error_helpers.ErrorAndWarnings) {
+// LoadMod parses all hcl files in modPath and returns a single mod
+// if CreatePseudoResources flag is set, construct hcl resources for files with specific extensions
+// NOTE: it is an error if there is more than 1 mod defined, however zero mods is acceptable
+// - a default mod will be created assuming there are any resource files
+func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mod, errorsAndWarnings *error_helpers.ErrorAndWarnings) {
+	defer func() {
+		if r := recover(); r != nil {
+			errorsAndWarnings = error_helpers.NewErrorsAndWarning(helpers.ToError(r))
+		}
+	}()
+
+	return LoadModWithFileName(modPath, filepaths.ModFileName, parseCtx)
+}
+
+func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseContext) (mod *modconfig.Mod, errorsAndWarnings *error_helpers.ErrorAndWarnings) {
 	errorsAndWarnings = &error_helpers.ErrorAndWarnings{}
 	// verify the mod folder exists
 	_, err := os.Stat(modPath)
 	if os.IsNotExist(err) {
-		return nil, error_helpers.NewErrorsAndWarning(fmt.Errorf("mod folder %s does not exist", modPath))
+		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod folder does not exist: " + modPath))
 	}
 
-	if parse.ModfileExists(modPath) {
+	if strings.Trim(modFile, " ") == "" {
+		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod file name cannot be empty"))
+	}
+
+	modFileExist := true
+
+	modFilePath := filepath.Join(modPath, modFile)
+	if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
+		modFileExist = false
+	}
+
+	if modFileExist {
 		// load the mod definition to get the dependencies
 		var res *parse.DecodeResult
-		mod, res = parse.ParseModDefinition(modPath, parseCtx.EvalCtx)
+		mod, res = parse.ParseModDefinitionWithFileName(modPath, modFile, parseCtx.EvalCtx)
 		errorsAndWarnings = error_helpers.DiagsToErrorsAndWarnings("mod load failed", res.Diags)
 		if res.Diags.HasErrors() {
 			return nil, errorsAndWarnings
@@ -77,7 +100,7 @@ func loadModDefinition(modPath string, parseCtx *parse.ModParseContext) (mod *mo
 	} else {
 		// so there is no mod file - should we create a default?
 		if !parseCtx.ShouldCreateDefaultMod() {
-			errorsAndWarnings.Error = fmt.Errorf("mod folder %s does not contain a mod resource definition", modPath)
+			errorsAndWarnings.Error = pcerr.BadRequestWithMessage("mod folder does not contain a mod resource definition: " + modPath)
 			// ShouldCreateDefaultMod flag NOT set - fail
 			return nil, errorsAndWarnings
 		}

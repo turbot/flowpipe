@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
@@ -12,7 +13,10 @@ import (
 func TestPipelineWithTrigger(t *testing.T) {
 	assert := assert.New(t)
 
-	fpParseContext, err := pipeparser.LoadFlowpipeConfig(context.TODO(), "./test_pipelines/with_trigger.fp")
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	fpParseContext, err := pipeparser.LoadFlowpipeConfig(ctx, "./test_pipelines/with_trigger.fp")
 	assert.Nil(err, "error found")
 
 	pipelines := fpParseContext.PipelineHcls
@@ -89,7 +93,10 @@ func TestPipelineWithTrigger(t *testing.T) {
 func TestBadTriggerConfig(t *testing.T) {
 	assert := assert.New(t)
 
-	fpParseContext, err := pipeparser.LoadFlowpipeConfig(context.TODO(), "./test_pipelines/invalid_trigger.fp")
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	fpParseContext, err := pipeparser.LoadFlowpipeConfig(ctx, "./test_pipelines/invalid_trigger.fp")
 	assert.NotNil(err, "should have some errors")
 
 	diags := fpParseContext.Diags

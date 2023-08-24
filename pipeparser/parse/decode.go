@@ -174,7 +174,8 @@ func decodeBlock(block *hcl.Block, parseCtx *ModParseContext) (modconfig.HclReso
 		}
 	}
 
-	if resource != nil {
+	// Note that an interface value that holds a nil concrete value is itself non-nil.
+	if !helpers.IsNil(resource) {
 		// handle the result
 		// - if there are dependencies, add to run context
 		handleModDecodeResult(resource, res, block, parseCtx)

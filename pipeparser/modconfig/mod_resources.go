@@ -869,13 +869,13 @@ func (m *ResourceMaps) AddResource(item HclResource) hcl.Diagnostics {
 		}
 		m.Pipelines[name] = r
 
-		// case *Trigger:
-		// 	name := r.Name()
-		// 	if existing, ok := m.Triggers[name]; ok {
-		// 		diags = append(diags, checkForDuplicate(existing, item)...)
-		// 		break
-		// 	}
-		// 	m.Triggers[name] = r
+	case *Trigger:
+		name := r.Name()
+		if existing, ok := m.Triggers[name]; ok {
+			diags = append(diags, checkForDuplicate(existing, item)...)
+			break
+		}
+		m.Triggers[name] = r
 	}
 
 	return diags

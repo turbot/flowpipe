@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	ErrorCodeBadRequest  = "error_bad_request"
-	ErrorCodeInvalidData = "error_invalid_data"
+	ErrorCodeBadRequest        = "error_bad_request"
+	ErrorCodeInvalidData       = "error_invalid_data"
+	ErrorCodeDependencyFailure = "error_dependency_failure"
 )
 
 func BadRequest(itemType string, id string) ErrorModel {
