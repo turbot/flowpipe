@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
@@ -70,23 +71,29 @@ func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mo
 	return LoadModWithFileName(modPath, filepaths.ModFileName, parseCtx)
 }
 
-func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseContext) (mod *modconfig.Mod, errorsAndWarnings *error_helpers.ErrorAndWarnings) {
-	errorsAndWarnings = &error_helpers.ErrorAndWarnings{}
-	// verify the mod folder exists
-	_, err := os.Stat(modPath)
-	if os.IsNotExist(err) {
-		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod folder does not exist: " + modPath))
-	}
-
-	if strings.Trim(modFile, " ") == "" {
-		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod file name cannot be empty"))
-	}
+func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseContext) (*modconfig.Mod, *error_helpers.ErrorAndWarnings) {
+	var mod *modconfig.Mod
+	errorsAndWarnings := &error_helpers.ErrorAndWarnings{}
 
 	modFileExist := true
-
 	modFilePath := filepath.Join(modPath, modFile)
-	if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
-		modFileExist = false
+	if !parseCtx.ShouldCreateCreateTransientLocalMod() {
+		// verify the mod folder exists
+		_, err := os.Stat(modPath)
+		if os.IsNotExist(err) {
+			return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod folder does not exist: " + modPath))
+		}
+
+		if strings.Trim(modFile, " ") == "" {
+			return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod file name cannot be empty"))
+		}
+
+		if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
+			modFileExist = false
+		}
+	} else {
+		mod = modconfig.NewMod("local", modPath, hcl.Range{})
+		return mod, errorsAndWarnings
 	}
 
 	if modFileExist {

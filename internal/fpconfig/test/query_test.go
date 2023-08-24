@@ -16,12 +16,12 @@ func TestQueryStep(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["query"] == nil {
+	if pipelines["local.pipeline.query"] == nil {
 		assert.Fail("query pipeline not found")
 		return
 	}
 
-	step := pipelines["query"].GetStep("query.query_1")
+	step := pipelines["local.pipeline.query"].GetStep("query.query_1")
 	if step == nil {
 		assert.Fail("query step not found")
 		return
@@ -43,12 +43,12 @@ func TestQueryStepWithArgs(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["query_with_args"] == nil {
+	if pipelines["local.pipeline.query_with_args"] == nil {
 		assert.Fail("query pipeline not found")
 		return
 	}
 
-	step := pipelines["query_with_args"].GetStep("query.query_1")
+	step := pipelines["local.pipeline.query_with_args"].GetStep("query.query_1")
 	if step == nil {
 		assert.Fail("query step not found")
 		return

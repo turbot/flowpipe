@@ -16,17 +16,17 @@ func TestOutput(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["with_output"] == nil {
+	if pipelines["local.pipeline.with_output"] == nil {
 		assert.Fail("with_output pipeline not found")
 		return
 	}
 
-	if len(pipelines["with_output"].Outputs) != 2 {
+	if len(pipelines["local.pipeline.with_output"].Outputs) != 2 {
 		assert.Fail("with_output pipeline has no outputs")
 		return
 	}
 
-	outputs := pipelines["with_output"].Outputs
+	outputs := pipelines["local.pipeline.with_output"].Outputs
 	assert.Equal("one", outputs[0].Name)
 	assert.Equal("two", outputs[1].Name)
 }

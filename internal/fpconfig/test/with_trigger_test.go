@@ -23,12 +23,12 @@ func TestPipelineWithTrigger(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["simple_with_trigger"] == nil {
+	if pipelines["local.pipeline.simple_with_trigger"] == nil {
 		assert.Fail("simple_with_trigger pipeline not found")
 		return
 	}
 
-	echoStep := pipelines["simple_with_trigger"].GetStep("echo.simple_echo")
+	echoStep := pipelines["local.pipeline.simple_with_trigger"].GetStep("echo.simple_echo")
 	if echoStep == nil {
 		assert.Fail("echo.simple_echo step not found")
 		return

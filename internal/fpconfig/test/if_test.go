@@ -16,12 +16,12 @@ func TestIf(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["if"] == nil {
+	if pipelines["local.pipeline.if"] == nil {
 		assert.Fail("if pipeline not found")
 		return
 	}
 
-	step := pipelines["if"].GetStep("echo.text_1")
+	step := pipelines["local.pipeline.if"].GetStep("echo.text_1")
 
 	if step == nil {
 		assert.Fail("echo.text_1 step not found")

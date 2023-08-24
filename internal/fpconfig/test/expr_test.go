@@ -19,13 +19,13 @@ func TestExpression(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["text_expr"] == nil {
+	if pipelines["local.pipeline.text_expr"] == nil {
 		assert.Fail("text_expr pipeline not found")
 		return
 	}
 
 	var output string
-	expr := pipelines["text_expr"].Steps[1].GetUnresolvedAttributes()["text"]
+	expr := pipelines["local.pipeline.text_expr"].Steps[1].GetUnresolvedAttributes()["text"]
 
 	objectVal := cty.ObjectVal(map[string]cty.Value{
 		"echo": cty.ObjectVal(map[string]cty.Value{
@@ -54,12 +54,12 @@ func TestExprFunc(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["expr_func"] == nil {
+	if pipelines["local.pipeline.expr_func"] == nil {
 		assert.Fail("expr_func pipeline not found")
 		return
 	}
 
-	pipelineHcl := pipelines["expr_func"]
+	pipelineHcl := pipelines["local.pipeline.expr_func"]
 	step := pipelineHcl.GetStep("echo.text_title")
 	if step == nil {
 		assert.Fail("echo.text_title step not found")
@@ -86,11 +86,11 @@ func TestExprWithinVariable(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["expr_within_text"] == nil {
+	if pipelines["local.pipeline.expr_within_text"] == nil {
 		assert.Fail("expr_func pipeline not found")
 	}
 
-	pipelineHcl := pipelines["expr_within_text"]
+	pipelineHcl := pipelines["local.pipeline.expr_within_text"]
 	step := pipelineHcl.GetStep("echo.text_title")
 	if step == nil {
 		assert.Fail("echo.text_title step not found")
@@ -119,11 +119,11 @@ func TestExprDependAndFunction(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["expr_depend_and_function"] == nil {
+	if pipelines["local.pipeline.expr_depend_and_function"] == nil {
 		assert.Fail("expr_depend_and_function pipeline not found")
 	}
 
-	pipelineHcl := pipelines["expr_depend_and_function"]
+	pipelineHcl := pipelines["local.pipeline.expr_depend_and_function"]
 	stepOne := pipelineHcl.GetStep("echo.text_1")
 	if stepOne == nil {
 		assert.Fail("echo.text_1 step not found")

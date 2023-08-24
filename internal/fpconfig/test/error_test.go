@@ -16,7 +16,7 @@ func TestStepErrorConfig(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["bad_http"] == nil {
+	if pipelines["local.pipeline.bad_http"] == nil {
 		assert.Fail("bad_http pipeline not found")
 		return
 	}
@@ -31,12 +31,12 @@ func TestStepErrorConfigRetries(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["bad_http_retries"] == nil {
+	if pipelines["local.pipeline.bad_http_retries"] == nil {
 		assert.Fail("bad_http_retries pipeline not found")
 		return
 	}
 
-	step := pipelines["bad_http_retries"].GetStep("http.my_step_1")
+	step := pipelines["local.pipeline.bad_http_retries"].GetStep("http.my_step_1")
 
 	if step == nil {
 		assert.Fail("step not found")

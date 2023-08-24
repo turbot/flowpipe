@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"path/filepath"
 
 	pcconstants "github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
@@ -91,10 +92,27 @@ func LoadFlowpipeConfig(ctx context.Context, configPath string) (*parse.ModParse
 	return parseCtx, nil
 }
 
+// Convenient function to support testing
+//
+// # The automated tests were initially created before the concept of Mod is introduced in Flowpipe
+//
+// We can potentially remove this function, but we have to refactor all our test cases
 func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfig.Pipeline, error) {
-	fpParseContext, err := LoadFlowpipeConfig(ctx, configPath)
-	if err != nil {
-		return nil, err
-	}
-	return fpParseContext.PipelineHcls, nil
+
+	modDir := filepath.Dir(configPath)
+	fileName := filepath.Base(configPath)
+
+	parseCtx := parse.NewModParseContext(
+		ctx,
+		nil,
+		modDir,
+		parse.CreateTransientLocalMod,
+		&filehelpers.ListOptions{
+			Flags:   filehelpers.Files,
+			Include: []string{"**/" + fileName},
+		})
+
+	mod, errorsAndWarnings := LoadModWithFileName(modDir, "ignore.sp", parseCtx)
+
+	return mod.ResourceMaps.Pipelines, errorsAndWarnings.Error
 }

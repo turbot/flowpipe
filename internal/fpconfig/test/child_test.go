@@ -16,12 +16,12 @@ func TestChildPipeline(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["parent"] == nil {
+	if pipelines["local.pipeline.parent"] == nil {
 		assert.Fail("parent pipeline not found")
 		return
 	}
 
-	childPipelineStep := pipelines["parent"].GetStep("pipeline.child_pipeline")
+	childPipelineStep := pipelines["local.pipeline.parent"].GetStep("pipeline.child_pipeline")
 	if childPipelineStep == nil {
 		assert.Fail("pipeline.child_pipeline step not found")
 		return
@@ -43,12 +43,12 @@ func TestChildPipelineWithArgs(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["child_step_with_args"] == nil {
+	if pipelines["local.pipeline.child_step_with_args"] == nil {
 		assert.Fail("child_step_with_args pipeline not found")
 		return
 	}
 
-	childPipelineStep := pipelines["child_step_with_args"].GetStep("pipeline.child_pipeline")
+	childPipelineStep := pipelines["local.pipeline.child_step_with_args"].GetStep("pipeline.child_pipeline")
 	if childPipelineStep == nil {
 		assert.Fail("pipeline.child_pipeline step not found")
 		return

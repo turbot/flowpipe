@@ -17,12 +17,12 @@ func TestHttpStepLoad(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["http_step"] == nil {
+	if pipelines["local.pipeline.http_step"] == nil {
 		assert.Fail("http_step pipeline not found")
 		return
 	}
 
-	pipelineHcl := pipelines["http_step"]
+	pipelineHcl := pipelines["local.pipeline.http_step"]
 	step := pipelineHcl.GetStep("http.send_to_slack")
 	if step == nil {
 		assert.Fail("http.send_to_slack step not found")

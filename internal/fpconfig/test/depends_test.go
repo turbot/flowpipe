@@ -16,12 +16,12 @@ func TestImplicitDependsIndex(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["depends_index"] == nil {
+	if pipelines["local.pipeline.depends_index"] == nil {
 		assert.Fail("depends_index pipeline not found")
 		return
 	}
 
-	step := pipelines["depends_index"].GetStep("echo.echo_1")
+	step := pipelines["local.pipeline.depends_index"].GetStep("echo.echo_1")
 	if step == nil {
 		assert.Fail("echo.echo_1 step not found")
 		return
@@ -39,12 +39,12 @@ func TestImplicitDepends(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["implicit_depends"] == nil {
+	if pipelines["local.pipeline.implicit_depends"] == nil {
 		assert.Fail("implicit_depends pipeline not found")
 		return
 	}
 
-	step := pipelines["implicit_depends"].GetStep("sleep.sleep_2")
+	step := pipelines["local.pipeline.implicit_depends"].GetStep("sleep.sleep_2")
 	if step == nil {
 		assert.Fail("sleep.sleep_2 step not found")
 		return
@@ -62,12 +62,12 @@ func TestExplicitDependsOnIndex(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["explicit_depends_index"] == nil {
+	if pipelines["local.pipeline.explicit_depends_index"] == nil {
 		assert.Fail("explicit_depends_index pipeline not found")
 		return
 	}
 
-	step := pipelines["explicit_depends_index"].GetStep("echo.echo_1")
+	step := pipelines["local.pipeline.explicit_depends_index"].GetStep("echo.echo_1")
 	if step == nil {
 		assert.Fail("echo.echo_1 step not found")
 		return
@@ -85,12 +85,12 @@ func TestImplicitQueryDepends(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["query"] == nil {
+	if pipelines["local.pipeline.query"] == nil {
 		assert.Fail("query pipeline not found")
 		return
 	}
 
-	step := pipelines["query"].GetStep("echo.result")
+	step := pipelines["local.pipeline.query"].GetStep("echo.result")
 	if step == nil {
 		assert.Fail("echo.result step not found")
 		return

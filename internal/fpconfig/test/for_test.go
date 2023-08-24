@@ -24,12 +24,12 @@ func TestSimpleForAndParam(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["for_loop"] == nil {
+	if pipelines["local.pipeline.for_loop"] == nil {
 		assert.Fail("for_loop pipeline not found")
 		return
 	}
 
-	pipeline := pipelines["for_loop"]
+	pipeline := pipelines["local.pipeline.for_loop"]
 
 	step := pipeline.GetStep("echo.no_for_each")
 	if step == nil {
@@ -106,12 +106,12 @@ func TestParamsProcessing(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["for_loop"] == nil {
+	if pipelines["local.pipeline.for_loop"] == nil {
 		assert.Fail("for_loop pipeline not found")
 		return
 	}
 
-	pipeline := pipelines["for_loop"]
+	pipeline := pipelines["local.pipeline.for_loop"]
 
 	step := pipeline.GetStep("echo.text_1")
 	if step == nil {

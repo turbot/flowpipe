@@ -19,12 +19,12 @@ func TestEmailStep(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["email"] == nil {
+	if pipelines["local.pipeline.email"] == nil {
 		assert.Fail("email pipeline not found")
 		return
 	}
 
-	step := pipelines["email"].GetStep("email.test_email")
+	step := pipelines["local.pipeline.email"].GetStep("email.test_email")
 	if step == nil {
 		assert.Fail("email step not found")
 		return
@@ -54,19 +54,19 @@ func TestEmailStepWithParam(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["subscribe"] == nil {
+	if pipelines["local.pipeline.subscribe"] == nil {
 		assert.Fail("pipeline not found")
 		return
 	}
 
-	step := pipelines["subscribe"].GetStep("email.send_it")
+	step := pipelines["local.pipeline.subscribe"].GetStep("email.send_it")
 	if step == nil {
 		assert.Fail("email step not found")
 		return
 	}
 
 	var output string
-	expr := pipelines["subscribe"].Steps[1].GetUnresolvedAttributes()["body"]
+	expr := pipelines["local.pipeline.subscribe"].Steps[1].GetUnresolvedAttributes()["body"]
 
 	objectVal := cty.ObjectVal(map[string]cty.Value{
 		"echo": cty.ObjectVal(map[string]cty.Value{

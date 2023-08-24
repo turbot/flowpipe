@@ -16,12 +16,12 @@ func TestJsonSimple(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["json"] == nil {
+	if pipelines["local.pipeline.json"] == nil {
 		assert.Fail("json pipeline not found")
 		return
 	}
 
-	step := pipelines["json"].GetStep("echo.json")
+	step := pipelines["local.pipeline.json"].GetStep("echo.json")
 	if step == nil {
 		assert.Fail("echo.json step not found")
 		return
@@ -36,12 +36,12 @@ func TestJsonFor(t *testing.T) {
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 
-	if pipelines["json_for"] == nil {
+	if pipelines["local.pipeline.json_for"] == nil {
 		assert.Fail("json_for pipeline not found")
 		return
 	}
 
-	step := pipelines["json_for"].GetStep("echo.json")
+	step := pipelines["local.pipeline.json_for"].GetStep("echo.json")
 	if step == nil {
 		assert.Fail("echo.json step not found")
 		return
