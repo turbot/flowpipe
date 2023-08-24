@@ -29,7 +29,7 @@ func TestModWithBadTrigger(t *testing.T) {
 			Include: []string{`**/bad_trigger\.sp`},
 		})
 
-	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_trigger.sp", parseCtx)
+	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_trigger.sp", parseCtx)
 
 	if errorsAndWarnings != nil && errorsAndWarnings.Error == nil {
 		assert.Fail("should have an error")
