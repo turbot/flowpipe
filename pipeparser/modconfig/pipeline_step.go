@@ -389,18 +389,18 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 	}
 
 	if attr, exists := hclAttributes[schema.AttributeTypeTitle]; exists {
-		title, diag := hclhelpers.AttributeToString(attr, nil, false)
-		if diag != nil && diag.Severity == hcl.DiagError {
-			diags = append(diags, diag)
+		title, moreDiags := hclhelpers.AttributeToString(attr, nil, false)
+		if moreDiags != nil && moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
 		} else {
 			p.Title = title
 		}
 	}
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
-		description, diag := hclhelpers.AttributeToString(attr, nil, false)
-		if diag != nil && diag.Severity == hcl.DiagError {
-			diags = append(diags, diag)
+		description, moreDiags := hclhelpers.AttributeToString(attr, nil, false)
+		if moreDiags != nil && moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
 		} else {
 			p.Description = description
 		}
@@ -545,9 +545,9 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					urlString, diag := hclhelpers.AttributeToString(attr, evalContext, false)
-					if diag != nil && diag.Severity == hcl.DiagError {
-						diags = append(diags, diag)
+					urlString, moreDiags := hclhelpers.AttributeToString(attr, evalContext, false)
+					if moreDiags != nil && moreDiags.HasErrors() {
+						diags = append(diags, moreDiags...)
 						continue
 					}
 					p.Url = urlString
@@ -559,9 +559,9 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					requestTimeoutMs, diag := hclhelpers.AttributeToInt(attr, evalContext, false)
-					if diag != nil && diag.Severity == hcl.DiagError {
-						diags = append(diags, diag)
+					requestTimeoutMs, moreDiags := hclhelpers.AttributeToInt(attr, evalContext, false)
+					if moreDiags != nil && moreDiags.HasErrors() {
+						diags = append(diags, moreDiags...)
 						continue
 					}
 					p.RequestTimeoutMs = requestTimeoutMs
@@ -573,9 +573,9 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					method, diag := hclhelpers.AttributeToString(attr, evalContext, false)
-					if diag != nil && diag.Severity == hcl.DiagError {
-						diags = append(diags, diag)
+					method, moreDiags := hclhelpers.AttributeToString(attr, evalContext, false)
+					if moreDiags != nil && moreDiags.HasErrors() {
+						diags = append(diags, moreDiags...)
 						continue
 					}
 
@@ -598,9 +598,9 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					insecure, diag := hclhelpers.AttributeToBool(attr, evalContext, false)
-					if diag != nil && diag.Severity == hcl.DiagError {
-						diags = append(diags, diag)
+					insecure, moreDiags := hclhelpers.AttributeToBool(attr, evalContext, false)
+					if moreDiags != nil && moreDiags.HasErrors() {
+						diags = append(diags, moreDiags...)
 						continue
 					}
 					p.Insecure = insecure
@@ -612,9 +612,9 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					requestBody, diag := hclhelpers.AttributeToString(attr, evalContext, false)
-					if diag != nil && diag.Severity == hcl.DiagError {
-						diags = append(diags, diag)
+					requestBody, moreDiags := hclhelpers.AttributeToString(attr, evalContext, false)
+					if moreDiags != nil && moreDiags.HasErrors() {
+						diags = append(diags, moreDiags...)
 						continue
 					}
 					p.RequestBody = requestBody
@@ -626,10 +626,9 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				if len(expr.Variables()) > 0 {
 					dependsOnFromExpressions(name, expr, p)
 				} else {
-					mapAttrib, diag := hclhelpers.AttributeToMap(attr, evalContext, false)
-					if diag != nil && diag.Severity == hcl.DiagError {
-						diags = append(diags, diag)
-						continue
+					mapAttrib, moreDiags := hclhelpers.AttributeToMap(attr, evalContext, false)
+					if moreDiags.HasErrors() {
+						diags = append(diags, moreDiags...)
 					}
 
 					p.RequestHeaders = mapAttrib

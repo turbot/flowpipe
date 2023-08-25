@@ -53,9 +53,9 @@ func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, eval
 	var diags hcl.Diagnostics
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
-		desc, diag := hclhelpers.AttributeToString(attr, nil, false)
-		if diag != nil && diag.Severity == hcl.DiagError {
-			diags = append(diags, diag)
+		desc, moreDiags := hclhelpers.AttributeToString(attr, nil, false)
+		if moreDiags != nil && moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
 		} else {
 			t.Description = desc
 		}
