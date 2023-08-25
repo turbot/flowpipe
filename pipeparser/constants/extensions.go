@@ -19,6 +19,8 @@ const (
 	PipelineExtension      = ".fp"
 )
 
+var PipesComponentModDataExtension = ModDataExtension
+
 var YamlExtensions = []string{".yml", ".yaml"}
 
 var ConnectionConfigExtensions = append(YamlExtensions, ConfigExtension, JsonExtension)

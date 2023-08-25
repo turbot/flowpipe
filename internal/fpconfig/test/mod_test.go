@@ -26,10 +26,10 @@ func TestModWithBadTrigger(t *testing.T) {
 		0,
 		&filehelpers.ListOptions{
 			Flags:   filehelpers.Files,
-			Include: []string{`**/bad_trigger\.sp`},
+			Include: []string{"**/bad_trigger.hcl"},
 		})
 
-	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_trigger.sp", parseCtx)
+	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_trigger.hcl", parseCtx)
 
 	if errorsAndWarnings != nil && errorsAndWarnings.Error == nil {
 		assert.Fail("should have an error")
@@ -58,10 +58,10 @@ func TestModLoadFp(t *testing.T) {
 		0,
 		&filehelpers.ListOptions{
 			Flags:   filehelpers.Files,
-			Include: []string{`**/good_mod.sp`},
+			Include: []string{"**/good_mod.hcl"},
 		})
 
-	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "good_mod.sp", parseCtx)
+	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "good_mod.hcl", parseCtx)
 
 	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
 		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())

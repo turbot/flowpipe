@@ -70,6 +70,7 @@ func (suite *FpTestSuite) SetupSuite() {
 	suite.ctx = ctx
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
+	filepaths.PipesComponentModsFileName = "mod.hcl"
 
 	suite.SetupSuiteRunCount++
 }
@@ -94,7 +95,7 @@ func (suite *FpTestSuite) TestModDependencies() {
 		0,
 		&filehelpers.ListOptions{
 			Flags:   filehelpers.Files,
-			Include: []string{"**/*.sp"},
+			Include: []string{"**/*.hcl"},
 		})
 
 	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./mod_dep_one", filepaths.PipesComponentModsFileName, parseCtx)
