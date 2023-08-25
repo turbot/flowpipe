@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
@@ -52,12 +53,12 @@ func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfi
 		}
 	} else if info.IsDir() { // Check if it's a directory
 
-		defaultModSp := filepath.Join(configPath, "mod.sp")
+		defaultModSp := filepath.Join(configPath, filepaths.PipesComponentModsFileName)
 
 		_, err := os.Stat(defaultModSp)
 		if err == nil {
 			// default mod.sp exist
-			fileName = "mod.sp"
+			fileName = filepaths.PipesComponentModsFileName
 			modDir = configPath
 		} else {
 			fileName = "*.fp"

@@ -11,6 +11,7 @@ require (
 	github.com/Machiel/slugify v1.0.1
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/ThreeDotsLabs/watermill v1.2.0
+	github.com/containerd/containerd v1.7.3
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/didip/tollbooth/v7 v7.0.1
@@ -21,8 +22,10 @@ require (
 	github.com/gin-contrib/size v0.0.0-20230212012657-e14a14094dc4
 	github.com/gin-contrib/zap v0.1.0
 	github.com/go-co-op/gocron v1.31.1
+	github.com/go-git/go-git/v5 v5.8.1
 	github.com/go-playground/validator/v10 v10.14.0
 	github.com/goccy/go-yaml v1.11.0
+	github.com/google/uuid v1.3.0
 	github.com/hashicorp/hcl/v2 v2.17.0
 	github.com/hashicorp/raft v1.3.11
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
@@ -30,8 +33,12 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/opencontainers/image-spec v1.1.0-rc4
+	github.com/oras-project/oras-credentials-go v0.3.0
+	github.com/otiai10/copy v1.12.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shiena/ansicolor v0.0.0-20230509054315-a9deabde6e02
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/viper v1.16.0
 	github.com/stevenle/topsort v0.2.0
@@ -42,10 +49,12 @@ require (
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.5.1
 	github.com/turbot/terraform-components v0.0.0-00010101000000-000000000000
 	github.com/unrolled/secure v1.13.0
+	github.com/xlab/treeprint v1.2.0
 	github.com/zclconf/go-cty v1.13.2
 	github.com/zclconf/go-cty-yaml v1.0.3
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	gopkg.in/yaml.v2 v2.4.0
+	oras.land/oras-go/v2 v2.2.1
 	sigs.k8s.io/yaml v1.3.0
 )
 
@@ -82,7 +91,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
-	github.com/containerd/containerd v1.7.3 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -95,7 +103,6 @@ require (
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.4.1 // indirect
-	github.com/go-git/go-git/v5 v5.8.1 // indirect
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
@@ -113,7 +120,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/s2a-go v0.1.3 // indirect
-	github.com/google/uuid v1.3.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
 	github.com/googleapis/gax-go/v2 v2.8.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
@@ -164,9 +170,6 @@ require (
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
-	github.com/oras-project/oras-credentials-go v0.3.0 // indirect
-	github.com/otiai10/copy v1.12.0 // indirect
 	github.com/pegasus-kv/thrift v0.13.0 // indirect
 	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
@@ -179,14 +182,12 @@ require (
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sethvargo/go-retry v0.2.4 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.2.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.16.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/internal/retry v1.16.0 // indirect
@@ -220,7 +221,6 @@ require (
 	gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	k8s.io/apimachinery v0.26.2 // indirect
-	oras.land/oras-go/v2 v2.2.1 // indirect
 )
 
 require (
@@ -237,7 +237,7 @@ require (
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/pflag v1.0.5
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/swaggo/swag v1.8.12
 	go.uber.org/zap v1.24.0

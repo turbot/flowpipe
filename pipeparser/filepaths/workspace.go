@@ -21,12 +21,15 @@ const (
 	WorkspaceLockFileName       = ".mod.cache.json"
 )
 
+var PipesComponentWorkspaceDataDir = WorkspaceDataDir
+var PipesComponentModsFileName = ModFileName
+
 func WorkspaceModPath(workspacePath string) string {
-	return path.Join(workspacePath, WorkspaceDataDir, WorkspaceModDir)
+	return path.Join(workspacePath, PipesComponentWorkspaceDataDir, WorkspaceModDir)
 }
 
 func WorkspaceModShadowPath(workspacePath string) string {
-	return path.Join(workspacePath, WorkspaceDataDir, fmt.Sprintf("%s%s", WorkspaceModShadowDirPrefix, runtime.ExecutionID))
+	return path.Join(workspacePath, PipesComponentWorkspaceDataDir, fmt.Sprintf("%s%s", WorkspaceModShadowDirPrefix, runtime.ExecutionID))
 }
 
 func IsModInstallShadowPath(dirName string) bool {
@@ -42,6 +45,6 @@ func DefaultVarsFilePath(workspacePath string) string {
 }
 
 func ModFilePath(modFolder string) string {
-	modFilePath := filepath.Join(modFolder, ModFileName)
+	modFilePath := filepath.Join(modFolder, PipesComponentModsFileName)
 	return modFilePath
 }

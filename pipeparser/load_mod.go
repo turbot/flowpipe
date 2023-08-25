@@ -68,7 +68,7 @@ func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mo
 		}
 	}()
 
-	return LoadModWithFileName(modPath, filepaths.ModFileName, parseCtx)
+	return LoadModWithFileName(modPath, filepaths.PipesComponentModsFileName, parseCtx)
 }
 
 func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseContext) (*modconfig.Mod, *error_helpers.ErrorAndWarnings) {
@@ -125,7 +125,7 @@ func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseC
 func loadModDependencies(parent *modconfig.Mod, parseCtx *parse.ModParseContext) error {
 	var errors []error
 	if parent.Require != nil {
-		// now ensure there is a lock file - if we have any mod dependnecies there MUST be a lock file -
+		// now ensure there is a lock file - if we have any mod dependencies there MUST be a lock file -
 		// otherwise 'steampipe install' must be run
 		if err := parseCtx.EnsureWorkspaceLock(parent); err != nil {
 			return err
@@ -138,7 +138,7 @@ func loadModDependencies(parent *modconfig.Mod, parseCtx *parse.ModParseContext)
 				return err
 			}
 			if lockedVersion == nil {
-				return fmt.Errorf("not all dependencies are installed - run 'steampipe mod install'")
+				return pcerr.BadRequestWithTypeAndMessage(pcerr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
 			}
 			if err := loadModDependency(lockedVersion, parseCtx); err != nil {
 				errors = append(errors, err)
@@ -150,7 +150,7 @@ func loadModDependencies(parent *modconfig.Mod, parseCtx *parse.ModParseContext)
 }
 
 func loadModDependency(modDependency *versionmap.ResolvedVersionConstraint, parseCtx *parse.ModParseContext) error {
-	// dependency mods are installed to <mod path>/<mod nam>@version
+	// dependency mods are installed to <mod path>/<mod name>@version
 	// for example workspace_folder/.steampipe/mods/github.com/turbot/steampipe-mod-aws-compliance@v1.0
 
 	// we need to list all mod folder in the parent folder: workspace_folder/.steampipe/mods/github.com/turbot/

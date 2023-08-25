@@ -58,7 +58,7 @@ func TestModLoadFp(t *testing.T) {
 		0,
 		&filehelpers.ListOptions{
 			Flags:   filehelpers.Files,
-			Include: []string{`**/good_mod\.sp`},
+			Include: []string{`**/good_mod.sp`},
 		})
 
 	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "good_mod.sp", parseCtx)

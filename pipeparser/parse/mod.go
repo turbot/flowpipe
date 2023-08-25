@@ -107,7 +107,7 @@ func ParseModDefinitionWithFileName(modPath string, modFileName string, evalCtx 
 //
 // This function only parse the "mod" block, and does not parse any resources in the mod file
 func ParseModDefinition(modPath string, evalCtx *hcl.EvalContext) (*modconfig.Mod, *DecodeResult) {
-	return ParseModDefinitionWithFileName(modPath, filepaths.ModFileName, evalCtx)
+	return ParseModDefinitionWithFileName(modPath, filepaths.PipesComponentModsFileName, evalCtx)
 }
 
 // ParseMod parses all source hcl files for the mod path and associated resources, and returns the mod object

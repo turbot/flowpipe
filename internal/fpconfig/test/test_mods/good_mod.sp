@@ -1,9 +1,5 @@
 mod "test_mod" {
   title = "my_mod"
-
-#   require {
-#     mod = "another_mod"
-#   }
 }
 
 trigger "schedule" "my_hourly_trigger" {

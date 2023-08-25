@@ -79,7 +79,7 @@ func (l *WorkspaceLock) getInstalledMods() error {
 	// recursively search for all the mod.sp files under the .steampipe/mods folder, then build the mod name from the file path
 	modFiles, err := filehelpers.ListFiles(l.ModInstallationPath, &filehelpers.ListOptions{
 		Flags:   filehelpers.FilesRecursive,
-		Include: []string{"**/mod.sp"},
+		Include: []string{"**/" + filepaths.PipesComponentModsFileName},
 	})
 	if err != nil {
 		return err
@@ -91,7 +91,7 @@ func (l *WorkspaceLock) getInstalledMods() error {
 	var errors []error
 
 	for _, modfilePath := range modFiles {
-		// try to parse the mon name and version form the parent folder of the modfile
+		// try to parse the mod name and version form the parent folder of the modfile
 		modDependencyName, version, err := l.parseModPath(modfilePath)
 		if err != nil {
 			// if we fail to parse, just ignore this modfile

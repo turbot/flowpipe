@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/inputvars"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
@@ -45,6 +46,7 @@ type ModParseContext struct {
 
 	// TODO: fix this issue
 	// TODO: temporary mapping until we sort out merging Flowpipe and Steampipe
+	// TODO: refactor this out when we have mod dependencies working in Flowpipe
 	PipelineHcls map[string]*modconfig.Pipeline
 	TriggerHcls  map[string]*modconfig.Trigger
 
@@ -146,7 +148,9 @@ func (m *ModParseContext) EnsureWorkspaceLock(mod *modconfig.Mod) error {
 	// if the mod has dependencies, there must a workspace lock object in the run context
 	// (mod MUST be the workspace mod, not a dependency, as we would hit this error as soon as we parse it)
 	if mod.HasDependentMods() && (m.WorkspaceLock.Empty() || m.WorkspaceLock.Incomplete()) {
-		return fmt.Errorf("not all dependencies are installed - run 'steampipe mod install'")
+		// logger := fplog.Logger(m.RunCtx)
+		// logger.Error("mod has dependencies but no workspace lock file found", "mod", mod.Name(), "m.HasDependentMods()", mod.HasDependentMods(), "m.WorkspaceLock.Empty()", m.WorkspaceLock.Empty(), "m.WorkspaceLock.Incomplete()", m.WorkspaceLock.Incomplete())
+		return pcerr.BadRequestWithTypeAndMessage(pcerr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
 	}
 
 	return nil
@@ -379,6 +383,7 @@ func (m *ModParseContext) buildEvalContext() {
 
 	// TODO: this logic can be improved if we know that there's only 1 mod (?)
 	// TODO: optimise, we're relying that m.PipelineHcls is populated (which is a duplicate)
+	// TODO: refactor this out when we have mod dependencies
 	for _, pipeline := range m.PipelineHcls {
 		// Split and get the last part for pipeline name
 		parts := strings.Split(pipeline.Name(), ".")

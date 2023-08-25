@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/hashicorp/hcl/v2/json"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
@@ -84,7 +85,7 @@ func buildOrderedFileNameList(fileData map[string][]byte) []string {
 
 // ModfileExists returns whether a mod file exists at the specified path
 func ModfileExists(modPath string) bool {
-	modFilePath := filepath.Join(modPath, "mod.sp")
+	modFilePath := filepath.Join(modPath, filepaths.PipesComponentModsFileName)
 	if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
 		return false
 	}
