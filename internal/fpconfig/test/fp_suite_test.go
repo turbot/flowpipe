@@ -113,12 +113,82 @@ func (suite *FpTestSuite) TestModDependencies() {
 		return
 	}
 
-	childMod := mod.ResourceMaps.Mods["mod_child_a@v1.0.0"]
-	assert.NotNil(childMod)
+	childModA := mod.ResourceMaps.Mods["mod_child_a@v1.0.0"]
+	assert.NotNil(childModA)
 
-	thisPipelineIsInTheChildPipeline := childMod.ResourceMaps.Pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child"]
-	assert.NotNil(thisPipelineIsInTheChildPipeline)
+	thisPipelineIsInTheChildPipelineModA := childModA.ResourceMaps.Pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child"]
+	assert.NotNil(thisPipelineIsInTheChildPipelineModA)
 
+}
+
+func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
+	assert := assert.New(suite.T())
+
+	workspaceLock, err := versionmap.LoadWorkspaceLock("./backward_compatible_mod")
+
+	assert.Nil(err, "error loading workspace lock")
+
+	parseCtx := parse.NewModParseContext(
+		suite.ctx,
+		workspaceLock,
+		"./test_mod/",
+		0,
+		&filehelpers.ListOptions{
+			Flags:   filehelpers.Files | filehelpers.Recursive,
+			Include: []string{"**/*.hcl", "**/*.sp"},
+		})
+
+	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./backward_compatible_mod", filepaths.PipesComponentModsFileName, parseCtx)
+	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
+		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())
+		return
+	}
+
+	pipelines := mod.ResourceMaps.Pipelines
+
+	assert.NotNil(mod, "mod is nil")
+	jsonForPipeline := pipelines["mod_parent.pipeline.json"]
+	if jsonForPipeline == nil {
+		assert.Fail("json pipeline not found")
+		return
+	}
+
+	parentPipelineHcl := pipelines["mod_parent.pipeline.parent_pipeline_hcl"]
+	assert.NotNil(parentPipelineHcl)
+
+	parentPipelineHclB := pipelines["mod_parent.pipeline.parent_pipeline_hcl_b"]
+	assert.NotNil(parentPipelineHclB)
+
+	parentPipelineHclNested := pipelines["mod_parent.pipeline.parent_pipeline_hcl_nested"]
+	assert.NotNil(parentPipelineHclNested)
+
+	// SP file format
+	parentPipelineSp := pipelines["mod_parent.pipeline.parent_pipeline_sp"]
+	assert.NotNil(parentPipelineSp)
+
+	parentPipelineSpNested := pipelines["mod_parent.pipeline.parent_pipeline_sp_nested"]
+	assert.NotNil(parentPipelineSpNested)
+
+	childModA := mod.ResourceMaps.Mods["mod_child_a@v1.0.0"]
+	assert.NotNil(childModA)
+
+	thisPipelineIsInTheChildPipelineModA := childModA.ResourceMaps.Pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child"]
+	assert.NotNil(thisPipelineIsInTheChildPipelineModA)
+
+	childModB := mod.ResourceMaps.Mods["mod_child_b@v2.0.0"]
+	assert.NotNil(childModB)
+
+	thisPipelineIsInTheChildPipelineModB := childModB.ResourceMaps.Pipelines["mod_child_b.pipeline.this_pipeline_is_in_the_child"]
+	assert.NotNil(thisPipelineIsInTheChildPipelineModB)
+
+	anotherChildPipelineModB := childModB.ResourceMaps.Pipelines["mod_child_b.pipeline.another_child_pipeline"]
+	assert.NotNil(anotherChildPipelineModB)
+
+	secondPipeInTheChildModB := childModB.ResourceMaps.Pipelines["mod_child_b.pipeline.second_pipe_in_the_child"]
+	assert.NotNil(secondPipeInTheChildModB)
+
+	nestedPipeInTheChildModB := childModB.ResourceMaps.Pipelines["mod_child_b.pipeline.nested_pipe_in_child_hcl"]
+	assert.NotNil(nestedPipeInTheChildModB)
 }
 
 // In order for 'go test' to run this suite, we need to create

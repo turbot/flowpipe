@@ -24,6 +24,8 @@ const (
 var PipesComponentWorkspaceDataDir = WorkspaceDataDir
 var PipesComponentModsFileName = ModFileName
 
+var PipesComponentValidModFiles = []string{"mod.sp", "mod.hcl"}
+
 func WorkspaceModPath(workspacePath string) string {
 	return path.Join(workspacePath, PipesComponentWorkspaceDataDir, WorkspaceModDir)
 }

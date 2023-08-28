@@ -20,7 +20,16 @@ func TestSimpleForAndParam(t *testing.T) {
 	ctx = fplog.ContextWithLogger(ctx)
 
 	pipelines, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/for.fp")
-	assert.Nil(err, "error found ")
+
+	if pipelines == nil {
+		assert.Fail("pipelines is nil")
+		return
+	}
+
+	if err != nil {
+		assert.Fail("error found")
+		return
+	}
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
 

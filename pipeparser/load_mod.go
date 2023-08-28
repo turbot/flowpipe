@@ -71,36 +71,41 @@ func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mo
 	return LoadModWithFileName(modPath, filepaths.PipesComponentModsFileName, parseCtx)
 }
 
+func modFileExists(modPath, modFile string) bool {
+	modFilePath := filepath.Join(modPath, modFile)
+
+	// only create transient local mod if the mod file does not exist
+	_, err := os.Stat(modFilePath)
+	if err == nil {
+		return true
+	}
+
+	for _, file := range filepaths.PipesComponentValidModFiles {
+		filePath := filepath.Join(modPath, file)
+		_, err := os.Stat(filePath)
+		if err == nil {
+			return true
+		}
+	}
+
+	return false
+
+}
 func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseContext) (*modconfig.Mod, *error_helpers.ErrorAndWarnings) {
 	var mod *modconfig.Mod
 	errorsAndWarnings := &error_helpers.ErrorAndWarnings{}
 
-	modFileExist := true
-	modFilePath := filepath.Join(modPath, modFile)
+	modFileFound := true
 
-	if parseCtx.ShouldCreateCreateTransientLocalMod() {
-		// only create transient local mod if the mod file does not exist
-		if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
-			mod = modconfig.NewMod("local", modPath, hcl.Range{})
-			return mod, errorsAndWarnings
-		}
+	if parseCtx.ShouldCreateCreateTransientLocalMod() && !modFileExists(modPath, modFile) {
+		mod = modconfig.NewMod("local", modPath, hcl.Range{})
+		return mod, errorsAndWarnings
 	}
 
 	// verify the mod folder exists
-	_, err := os.Stat(modPath)
-	if os.IsNotExist(err) {
-		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod folder does not exist: " + modPath))
-	}
+	modFileFound = modFileExists(modPath, modFile)
 
-	if strings.Trim(modFile, " ") == "" {
-		return nil, error_helpers.NewErrorsAndWarning(pcerr.BadRequestWithMessage("mod file name cannot be empty"))
-	}
-
-	if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
-		modFileExist = false
-	}
-
-	if modFileExist {
+	if modFileFound {
 		// load the mod definition to get the dependencies
 		var res *parse.DecodeResult
 		mod, res = parse.ParseModDefinitionWithFileName(modPath, modFile, parseCtx.EvalCtx)

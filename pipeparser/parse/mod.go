@@ -45,7 +45,22 @@ func ParseModDefinitionWithFileName(modPath string, modFileName string, evalCtx 
 	// if there is no mod at this location, return error
 	modFilePath := filepath.Join(modPath, modFileName)
 
+	modFileFound := true
 	if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
+		modFileFound = false
+		for _, file := range filepaths.PipesComponentValidModFiles {
+			modFilePath = filepath.Join(modPath, file)
+			if _, err := os.Stat(modFilePath); os.IsNotExist(err) {
+
+				continue
+			} else {
+				modFileFound = true
+				break
+			}
+		}
+	}
+
+	if !modFileFound {
 		res.Diags = append(res.Diags, &hcl.Diagnostic{
 			Severity: hcl.DiagError,
 			Summary:  "no mod file found in " + modPath,
