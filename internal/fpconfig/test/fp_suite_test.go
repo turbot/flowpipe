@@ -135,6 +135,7 @@ func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 		0,
 		&filehelpers.ListOptions{
 			Flags:   filehelpers.Files | filehelpers.Recursive,
+			Exclude: []string{"./.flowpipe/**/*.*"},
 			Include: []string{"**/*.hcl", "**/*.sp"},
 		})
 
@@ -145,6 +146,8 @@ func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 	}
 
 	pipelines := mod.ResourceMaps.Pipelines
+
+	assert.Equal(6, len(pipelines), "wrong number of pipelines")
 
 	assert.NotNil(mod, "mod is nil")
 	jsonForPipeline := pipelines["mod_parent.pipeline.json"]
@@ -161,6 +164,13 @@ func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 
 	parentPipelineHclNested := pipelines["mod_parent.pipeline.parent_pipeline_hcl_nested"]
 	assert.NotNil(parentPipelineHclNested)
+
+	// This should be nil, there was a bug that was causing the child pipelines to be loaded in the parent mod
+	thisPipelineIsInTheChildParent := pipelines["mod_parent.pipeline.this_pipeline_is_in_the_child"]
+	assert.Nil(thisPipelineIsInTheChildParent)
+
+	nestedPipeInChildHclParent := pipelines["mod_parent.pipeline.nested_pipe_in_child_hcl"]
+	assert.Nil(nestedPipeInChildHclParent)
 
 	// SP file format
 	parentPipelineSp := pipelines["mod_parent.pipeline.parent_pipeline_sp"]

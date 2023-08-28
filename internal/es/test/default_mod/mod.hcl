@@ -1,5 +1,11 @@
 mod "default_mod" {
     title = "Default built-in Mod"
+    require {
+        mod "mod_depend_a" {
+            version = "1.0.0"
+        }
+    }
+
 }
 
 pipeline "echo_one" {

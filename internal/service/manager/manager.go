@@ -14,8 +14,13 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/utils"
+	"github.com/turbot/flowpipe/pipeparser/versionmap"
+
+	filehelpers "github.com/turbot/go-kit/files"
 )
 
 // Manager manages and represents the status of the service.
@@ -90,9 +95,53 @@ func WithHTTPAddress(addr string) ManagerOption {
 func (m *Manager) Initialize() error {
 	pipelineDir := viper.GetString("pipeline.dir")
 
-	pipelines, triggers, err := pipeparser.LoadPipelines(m.ctx, pipelineDir)
-	if err != nil {
-		return err
+	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
+	filepaths.PipesComponentModsFileName = "mod.hcl"
+
+	var pipelines map[string]*modconfig.Pipeline
+	var triggers map[string]*modconfig.Trigger
+	if pipeparser.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
+		workspaceLock, err := versionmap.LoadWorkspaceLock(pipelineDir)
+
+		if err != nil {
+			return err
+		}
+
+		parseCtx := parse.NewModParseContext(
+			m.ctx,
+			workspaceLock,
+			pipelineDir,
+			0,
+			&filehelpers.ListOptions{
+				Flags:   filehelpers.Files | filehelpers.Recursive,
+				Exclude: []string{"./" + filepaths.PipesComponentWorkspaceDataDir + "/**/*.*"},
+				Include: []string{"**/*.hcl", "**/*.sp", "**/*.fp"},
+			})
+
+		mod, errorsAndWarnings := pipeparser.LoadModWithFileName(pipelineDir, filepaths.PipesComponentModsFileName, parseCtx)
+		if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
+			return errorsAndWarnings.Error
+		}
+
+		pipelines = mod.ResourceMaps.Pipelines
+		triggers = mod.ResourceMaps.Triggers
+
+		for _, dependendMode := range mod.ResourceMaps.Mods {
+			if dependendMode.Name() != mod.Name() {
+				for _, pipeline := range dependendMode.ResourceMaps.Pipelines {
+					pipelines[pipeline.Name()] = pipeline
+				}
+				for _, trigger := range dependendMode.ResourceMaps.Triggers {
+					triggers[trigger.Name()] = trigger
+				}
+			}
+		}
+	} else {
+		var err error
+		pipelines, triggers, err = pipeparser.LoadPipelines(m.ctx, pipelineDir)
+		if err != nil {
+			return err
+		}
 	}
 
 	m.triggers = triggers

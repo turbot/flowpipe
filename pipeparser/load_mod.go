@@ -71,7 +71,7 @@ func LoadMod(modPath string, parseCtx *parse.ModParseContext) (mod *modconfig.Mo
 	return LoadModWithFileName(modPath, filepaths.PipesComponentModsFileName, parseCtx)
 }
 
-func modFileExists(modPath, modFile string) bool {
+func ModFileExists(modPath, modFile string) bool {
 	modFilePath := filepath.Join(modPath, modFile)
 
 	// only create transient local mod if the mod file does not exist
@@ -89,19 +89,19 @@ func modFileExists(modPath, modFile string) bool {
 	}
 
 	return false
-
 }
+
 func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseContext) (*modconfig.Mod, *error_helpers.ErrorAndWarnings) {
 	var mod *modconfig.Mod
 	errorsAndWarnings := &error_helpers.ErrorAndWarnings{}
 
-	if parseCtx.ShouldCreateCreateTransientLocalMod() && !modFileExists(modPath, modFile) {
+	if parseCtx.ShouldCreateCreateTransientLocalMod() && !ModFileExists(modPath, modFile) {
 		mod = modconfig.NewMod("local", modPath, hcl.Range{})
 		return mod, errorsAndWarnings
 	}
 
 	// verify the mod folder exists
-	modFileFound := modFileExists(modPath, modFile)
+	modFileFound := ModFileExists(modPath, modFile)
 
 	if modFileFound {
 		// load the mod definition to get the dependencies
