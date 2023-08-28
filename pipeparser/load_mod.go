@@ -95,15 +95,13 @@ func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseC
 	var mod *modconfig.Mod
 	errorsAndWarnings := &error_helpers.ErrorAndWarnings{}
 
-	modFileFound := true
-
 	if parseCtx.ShouldCreateCreateTransientLocalMod() && !modFileExists(modPath, modFile) {
 		mod = modconfig.NewMod("local", modPath, hcl.Range{})
 		return mod, errorsAndWarnings
 	}
 
 	// verify the mod folder exists
-	modFileFound = modFileExists(modPath, modFile)
+	modFileFound := modFileExists(modPath, modFile)
 
 	if modFileFound {
 		// load the mod definition to get the dependencies
