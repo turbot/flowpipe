@@ -181,7 +181,10 @@ func loadModDependency(modDependency *versionmap.ResolvedVersionConstraint, pars
 	parseCtx.AddLoadedDependencyMod(dependencyMod)
 	if parseCtx.ParentParseCtx != nil {
 		// add mod resources to parent parse context
-		parseCtx.ParentParseCtx.AddModResources(dependencyMod) //nolint:errcheck // TODO: check error
+		err := parseCtx.ParentParseCtx.AddModResources(dependencyMod)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 

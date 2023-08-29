@@ -185,9 +185,7 @@ func (l *WorkspaceLock) parseModPath(modfilePath string) (modDependencyName stri
 
 func (l *WorkspaceLock) Save() error {
 	if len(l.InstallCache) == 0 {
-		// ignore error
-		//nolint:errcheck // TODO: handle error
-		l.Delete()
+		l.Delete() //nolint:errcheck // ignore error
 		return nil
 	}
 	content, err := json.MarshalIndent(l.InstallCache, "", "  ")

@@ -299,7 +299,16 @@ func decodeParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.ParamD
 		defaultValue, deps, moreDiags := decodeParamDefault(attr, parseCtx, def.UnqualifiedName)
 		diags = append(diags, moreDiags...)
 		if !helpers.IsNil(defaultValue) {
-			def.SetDefault(defaultValue) //nolint:errcheck // TODO: handle error
+			err := def.SetDefault(defaultValue)
+			if err != nil {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "invalid default config for " + def.UnqualifiedName,
+					Detail:   err.Error(),
+					Subject:  &attr.Range,
+				})
+				return nil, nil, diags
+			}
 		}
 		runtimeDependencies = deps
 	}

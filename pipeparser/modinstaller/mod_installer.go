@@ -228,7 +228,10 @@ func (i *ModInstaller) InstallWorkspaceDependencies(ctx context.Context) (err er
 
 	if !workspaceMod.HasDependentMods() {
 		// there are no dependencies - delete the cache
-		i.installData.Lock.Delete() //nolint:errcheck // TODO fix this
+		err = i.installData.Lock.Delete()
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
