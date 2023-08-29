@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -16,7 +15,7 @@ import (
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-func decodeStep(block *hcl.Block, parseCtx *ModParseContext) (modconfig.IPipelineStep, hcl.Diagnostics) {
+func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (modconfig.IPipelineStep, hcl.Diagnostics) {
 	stepType := block.Labels[0]
 	stepName := block.Labels[1]
 
@@ -51,7 +50,10 @@ func decodeStep(block *hcl.Block, parseCtx *ModParseContext) (modconfig.IPipelin
 		return nil, diags
 	}
 
-	diags = step.SetAttributes(stepOptions.Attributes, parseCtx.ParseContext.EvalCtx)
+	// TODO: wrong location, we will keep rebuilding the Eval Context for every single pipeline?
+	evalContext := rebuildEvalContextWithCurrentMod(mod, parseCtx.EvalCtx)
+
+	diags = step.SetAttributes(stepOptions.Attributes, evalContext)
 	if len(diags) > 0 {
 		return nil, diags
 	}
@@ -175,91 +177,6 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 	}
 
 	return o, diags
-}
-
-// TODO: remove this function
-func ParseAllFlowipeConfig(parseCtx *ModParseContext) error {
-	// we may need to decode more than once as we gather dependencies as we go
-	// continue decoding as long as the number of unresolved blocks decreases
-	prevUnresolvedBlocks := 0
-	for attempts := 0; ; attempts++ {
-		diags := decodeFlowpipeConfigBlocks(parseCtx)
-		if diags.HasErrors() {
-			// Store the diagnostics in the parse context, useful for test and introspection
-			parseCtx.ParseContext.Diags = diags
-			return error_helpers.HclDiagsToError("Failed to decode pipelines", diags)
-		}
-
-		// if there are no unresolved blocks, we are done
-		unresolvedBlocks := len(parseCtx.UnresolvedBlocks)
-		if unresolvedBlocks == 0 {
-			break
-		}
-		// if the number of unresolved blocks has NOT reduced, fail
-		if prevUnresolvedBlocks != 0 && unresolvedBlocks >= prevUnresolvedBlocks {
-			str := parseCtx.FormatDependencies()
-			// return fperr.BadRequestWithMessage("failed to resolve dependencies after " + fmt.Sprintf("%d", attempts+1) + " passes: " + str)
-			return fmt.Errorf("failed to resolve dependencies after %d passes: %s", attempts+1, str)
-		}
-		// update prevUnresolvedBlocks
-		prevUnresolvedBlocks = unresolvedBlocks
-	}
-	return nil
-
-}
-
-// TODO: remove this function
-func decodeFlowpipeConfigBlocks(parseCtx *ModParseContext) hcl.Diagnostics {
-
-	var diags hcl.Diagnostics
-	blocksToDecode, err := parseCtx.BlocksToDecode()
-	// build list of blocks to decode
-	if err != nil {
-		diags = append(diags, &hcl.Diagnostic{
-			Severity: hcl.DiagError,
-			Summary:  "failed to determine required dependency order",
-			Detail:   err.Error()})
-		return diags
-	}
-
-	// now clear dependencies from run context - they will be rebuilt
-	parseCtx.ClearDependencies()
-
-	// First decode all the pipelines, then decode the triggers
-	//
-	// Triggers reference pipelines so it's an easy way to ensure that we have
-	// all the pipelines loaded in memory before we try to parse the triggers.
-	//
-	// TODO: may need to change the logic later when we start validating mod dependencies
-	// TODO: because that needs to be done in a higher level (?)
-	for _, block := range blocksToDecode {
-		switch block.Type {
-		case schema.BlockTypePipeline:
-			pipelineHcl, res := decodePipeline(nil, block, parseCtx)
-			diags = append(diags, res.Diags...)
-
-			if pipelineHcl != nil {
-				moreDiags := parseCtx.AddPipeline(pipelineHcl)
-				res.addDiags(moreDiags)
-			}
-		}
-	}
-
-	parseCtx.buildEvalContext()
-
-	for _, block := range blocksToDecode {
-		switch block.Type {
-		case schema.BlockTypeTrigger:
-			// TODO: fix the nil mod passing here
-			triggerHcl, res := decodeTrigger(nil, block, parseCtx)
-			diags = append(diags, res.Diags...)
-			if triggerHcl != nil {
-				moreDiags := parseCtx.AddTrigger(triggerHcl)
-				res.addDiags(moreDiags)
-			}
-		}
-	}
-	return diags
 }
 
 func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Trigger, *DecodeResult) {
@@ -391,10 +308,13 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 	for _, block := range pipelineOptions.Blocks {
 		switch block.Type {
 		case schema.BlockTypePipelineStep:
-			step, diags := decodeStep(block, parseCtx)
+			step, diags := decodeStep(mod, block, parseCtx)
 			if diags.HasErrors() {
 				res.handleDecodeDiags(diags)
-				return nil, res
+
+				// Must also return the pipelineHcl even if it failed parsing, because later on the handling of "unresolved blocks" expect
+				// the resource to be there
+				return pipelineHcl, res
 			}
 
 			pipelineHcl.Steps = append(pipelineHcl.Steps, step)
@@ -404,7 +324,7 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 			diags = append(diags, cfgDiags...)
 			if len(diags) > 0 {
 				res.handleDecodeDiags(diags)
-				return nil, res
+				return pipelineHcl, res
 			}
 
 			if output != nil {
@@ -417,7 +337,7 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 			diags = append(diags, varDiags...)
 			if len(diags) > 0 {
 				res.handleDecodeDiags(diags)
-				return nil, res
+				return pipelineHcl, res
 			}
 
 			if param != nil {
@@ -438,7 +358,10 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 	diags = validatePipelineDependencies(pipelineHcl)
 	if len(diags) > 0 {
 		res.handleDecodeDiags(diags)
-		return nil, res
+
+		// Must also return the pipelineHcl even if it failed parsing, because later on the handling of "unresolved blocks" expect
+		// the resource to be there
+		return pipelineHcl, res
 	}
 
 	return pipelineHcl, res
@@ -460,6 +383,7 @@ func validatePipelineDependencies(pipelineHcl *modconfig.Pipeline) hcl.Diagnosti
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
 					Summary:  fmt.Sprintf("invalid depends_on '%s' - step '%s' does not exist for pipeline %s", dep, step.GetFullyQualifiedName(), pipelineHcl.Name()),
+					Detail:   fmt.Sprintf("valid steps are: %s", strings.Join(stepRegisters, ", ")),
 				})
 			}
 		}

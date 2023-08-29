@@ -30,9 +30,9 @@ func TestChildPipeline(t *testing.T) {
 	dependsOn := childPipelineStep.GetDependsOn()
 	assert.Equal(len(dependsOn), 0)
 
-	// Check if the unresolved attributes are correct, it should contain a reference to pipeline
+	// Unresolved attributes should be null at this stage, we have fully parsed child_pipeline.fp
 	unresolvedAttributes := childPipelineStep.GetUnresolvedAttributes()
-	assert.NotNil(unresolvedAttributes["pipeline"])
+	assert.Equal(0, len(unresolvedAttributes))
 }
 
 func TestChildPipelineWithArgs(t *testing.T) {
@@ -57,7 +57,7 @@ func TestChildPipelineWithArgs(t *testing.T) {
 	dependsOn := childPipelineStep.GetDependsOn()
 	assert.Equal(len(dependsOn), 0)
 
-	// Check if the unresolved attributes are correct, it should contain a reference to pipeline
+	// We have fully parsed the file, we should not have unresolved attributes
 	unresolvedAttributes := childPipelineStep.GetUnresolvedAttributes()
-	assert.NotNil(unresolvedAttributes["pipeline"])
+	assert.Equal(0, len(unresolvedAttributes))
 }

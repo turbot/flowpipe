@@ -1475,22 +1475,22 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, evalC
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypePipeline:
+			expr := attr.Expr
 			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypePipeline + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					p.Pipeline = val
+				val, err := expr.Value(evalContext)
+				if err != nil {
+					// For Step's Pipeline reference, all it needs is the pipeline. It can't possibly use the output of a pipeline
+					// so if the Pipeline is not parsed (yet) then the error message is:
+					// Summary: "Unknown variable"
+					// Detail: "There is no variable named \"pipeline\"."
+					//
+					// Do not unpack the error and create a new "Diagnostic", leave the original error message in
+					// and let the "Mod processing" determine if there's an unresolved block
+					diags = append(diags, err...)
+
+					return diags
 				}
+				p.Pipeline = val
 			}
 		case schema.AttributeTypeArgs:
 			if attr.Expr != nil {

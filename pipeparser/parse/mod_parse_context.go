@@ -255,7 +255,15 @@ func (m *ModParseContext) AddModResources(mod *modconfig.Mod) hcl.Diagnostics {
 		// continue walking
 		return true, nil
 	}
-	mod.WalkResources(resourceFunc) //nolint:errcheck // TODO: handle error
+	err := mod.WalkResources(resourceFunc)
+	if err != nil {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "error walking mod resources",
+			Detail:   err.Error(),
+		})
+		return diags
+	}
 
 	// rebuild the eval context
 	m.buildEvalContext()
@@ -358,6 +366,7 @@ func (m *ModParseContext) buildEvalContext() {
 
 	// now for each mod add all the values
 	for mod, modMap := range m.referenceValues {
+		// TODO: this code is from steampipe, looks like there's a special treatment if the mod is named "local"?
 		if mod == "local" {
 			for k, v := range modMap {
 				referenceValues[k] = cty.ObjectVal(v)
@@ -368,6 +377,7 @@ func (m *ModParseContext) buildEvalContext() {
 		// mod map is map[string]map[string]cty.Value
 		// for each element (i.e. map[string]cty.Value) convert to cty object
 		refTypeMap := make(map[string]cty.Value)
+		// TODO: this code is from steampipe, looks like there's a special treatment if the mod is named "local"?
 		if mod == "local" {
 			for k, v := range modMap {
 				referenceValues[k] = cty.ObjectVal(v)
