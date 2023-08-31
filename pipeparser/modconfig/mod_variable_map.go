@@ -7,7 +7,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
-// ModVariableMap is a struct containins maps of variable definitions
+// ModVariableMap is a struct containing maps of variable definitions
 type ModVariableMap struct {
 	// which mod have these variables been loaded for?
 	Mod *Mod

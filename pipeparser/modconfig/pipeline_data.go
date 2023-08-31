@@ -39,6 +39,7 @@ func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
 		// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
 		PipelineName: pipelineFullName,
 		Params:       map[string]*configs.Variable{},
+		mod:          mod,
 	}
 
 	return pipeline
@@ -51,6 +52,8 @@ func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
 // execution data.
 type Pipeline struct {
 	HclResourceImpl
+
+	mod *Mod
 
 	// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
 	PipelineName string `json:"pipeline_name"`
@@ -68,6 +71,10 @@ type Pipeline struct {
 	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
 	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)
 	Params map[string]*configs.Variable `json:"-"`
+}
+
+func (p *Pipeline) GetMod() *Mod {
+	return p.mod
 }
 
 // Pipeline functions

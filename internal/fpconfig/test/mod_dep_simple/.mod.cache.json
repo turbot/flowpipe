@@ -6,13 +6,6 @@
         "version": "1.0.0",
         "constraint": "*",
         "struct_version": 20220411
-      },
-      "mod_child_b": {
-        "name": "mod_child_b",
-        "alias": "mod_child_b",
-        "version": "1.0.0",
-        "constraint": "*",
-        "struct_version": 20220411
       }
     }
   }

@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
@@ -114,8 +115,11 @@ func (m *ResourceMaps) TopLevelResources() *ResourceMaps {
 	res := NewModResources(m.Mod)
 
 	f := func(item HclResource) (bool, error) {
-		if modTreeItem, ok := item.(ModTreeItem); ok && modTreeItem.GetMod().FullName == m.Mod.FullName {
-			res.AddResource(item) //nolint:errcheck // TODO: fix this error check
+		if modItem, ok := item.(ModItem); ok && modItem.GetMod().FullName == m.Mod.FullName {
+			diags := res.AddResource(item)
+			if diags.HasErrors() {
+				return false, error_helpers.HclDiagsToError("TopLevelResources", diags)
+			}
 		}
 		return true, nil
 	}
@@ -688,6 +692,18 @@ func (m *ResourceMaps) WalkResources(resourceFunc func(item HclResource) (bool, 
 		}
 	}
 
+	for _, r := range m.Pipelines {
+		if continueWalking, err := resourceFunc(r); err != nil || !continueWalking {
+			return err
+		}
+	}
+
+	for _, r := range m.Triggers {
+		if continueWalking, err := resourceFunc(r); err != nil || !continueWalking {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -955,6 +971,12 @@ func (m *ResourceMaps) Merge(others []*ResourceMaps) *ResourceMaps {
 		}
 		for k, v := range source.Snapshots {
 			res.Snapshots[k] = v
+		}
+		for k, v := range source.Pipelines {
+			res.Pipelines[k] = v
+		}
+		for k, v := range source.Triggers {
+			res.Triggers[k] = v
 		}
 		for k, v := range source.Variables {
 			// NOTE: only include variables from root mod  - we add in the others separately

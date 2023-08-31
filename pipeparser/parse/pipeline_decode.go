@@ -242,12 +242,12 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 	return triggerHcl, res
 }
 
-func rebuildEvalContextWithCurrentMod(mod *modconfig.Mod, evalContext *hcl.EvalContext) *hcl.EvalContext {
+func rebuildEvalContextWithCurrentMod(currentMod *modconfig.Mod, evalContext *hcl.EvalContext) *hcl.EvalContext {
 
 	modName := "local"
 
-	if mod != nil {
-		modName = mod.Name()
+	if currentMod != nil {
+		modName = currentMod.Name()
 		parts := strings.Split(modName, ".")
 		if len(parts) == 2 {
 			modName = parts[1]
@@ -255,18 +255,54 @@ func rebuildEvalContextWithCurrentMod(mod *modconfig.Mod, evalContext *hcl.EvalC
 	}
 	// pulls the current mod data from the eval context
 	curentModVars := evalContext.Variables[modName]
-	if curentModVars == cty.NilVal {
-		return evalContext
+	if curentModVars != cty.NilVal {
+		currentModVarsMap := curentModVars.AsValueMap()
+		if currentModVarsMap == nil {
+			return evalContext
+		}
+
+		for k, v := range currentModVarsMap {
+			evalContext.Variables[k] = v
+		}
 	}
 
-	currentModVarsMap := curentModVars.AsValueMap()
-	if currentModVarsMap == nil {
-		return evalContext
-	}
+	// pull the dependency of the currentMod one level up, out of the "mod" node
+	//
+	// variables
+	//   mod
+	//     - parent
+	//     - child
+	//
+	// say child is a dependency of parent (which happens to be the current mod)
+	// pull this mod up one level
+	//
+	// variables
+	//   mod
+	//     - parent
+	//     - child
+	//   child
 
-	for k, v := range currentModVarsMap {
-		evalContext.Variables[k] = v
-	}
+	// if currentMod.Require != nil && currentMod.Require.Mods != nil {
+	// 	for _, depMod := range currentMod.Require.Mods {
+	// 		depModName := depMod.Name
+	// 		parts := strings.Split(depModName, ".")
+	// 		if len(parts) == 2 {
+	// 			depModName = parts[1]
+	// 		}
+
+	// 		depModVars := evalContext.Variables[depModName]
+	// 		if depModVars != cty.NilVal {
+	// 			depModVarsMap := depModVars.AsValueMap()
+	// 			if depModVarsMap == nil {
+	// 				return evalContext
+	// 			}
+
+	// 			for k, v := range depModVarsMap {
+	// 				evalContext.Variables[k] = v
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	return evalContext
 }

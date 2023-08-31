@@ -44,11 +44,8 @@ type ReferenceTypeValueMap map[string]map[string]cty.Value
 type ModParseContext struct {
 	ParseContext
 
-	// TODO: fix this issue
-	// TODO: temporary mapping until we sort out merging Flowpipe and Steampipe
-	// TODO: refactor this out when we have mod dependencies working in Flowpipe
-	PipelineHcls map[string]*modconfig.Pipeline
-	TriggerHcls  map[string]*modconfig.Trigger
+	// PipelineHcls map[string]*modconfig.Pipeline
+	TriggerHcls map[string]*modconfig.Trigger
 
 	// the mod which is currently being parsed
 	CurrentMod *modconfig.Mod
@@ -95,8 +92,8 @@ func NewModParseContext(runContext context.Context, workspaceLock *versionmap.Wo
 
 		// TODO: fix this issue
 		// TODO: temporary mapping until we sort out merging Flowpipe and Steampipe
-		PipelineHcls: make(map[string]*modconfig.Pipeline),
-		TriggerHcls:  make(map[string]*modconfig.Trigger),
+		// PipelineHcls: make(map[string]*modconfig.Pipeline),
+		TriggerHcls: make(map[string]*modconfig.Trigger),
 
 		Flags:         flags,
 		WorkspaceLock: workspaceLock,
@@ -391,39 +388,30 @@ func (m *ModParseContext) buildEvalContext() {
 		referenceValues[mod] = cty.ObjectVal(refTypeMap)
 	}
 
-	// TODO: this logic can be improved if we know that there's only 1 mod (?)
-	// TODO: optimise, we're relying that m.PipelineHcls is populated (which is a duplicate)
-	// TODO: refactor this out when we have mod dependencies
-	for _, pipeline := range m.PipelineHcls {
-		// Split and get the last part for pipeline name
-		parts := strings.Split(pipeline.Name(), ".")
-		pipelineNameOnly := parts[len(parts)-1]
-		modNameOnly := parts[0]
+	// TODO: I'm not understanding something here ... if we don't put the dependency mods "up" how is the resources in the current mod will be able to
+	// TODO: reference them?
 
-		modVars := referenceValues[modNameOnly]
-		if modVars == cty.NilVal {
-			// This condition should never happen (?)
-			modVars = cty.ObjectVal(map[string]cty.Value{
-				"pipeline": cty.ObjectVal(map[string]cty.Value{}),
-			})
-		}
+	// for _, depMod := range m.topLevelDependencyMods {
+	// 	// fmt.Println(depMod)
+	// 	depModVariables := referenceValues[depMod.Name()]
+	// 	if depModVariables == cty.NilVal {
+	// 		depModVariables = cty.ObjectVal(make(map[string]cty.Value))
+	// 	}
 
-		modVarsValueMap := modVars.AsValueMap()
-		pipelineVars := modVarsValueMap["pipeline"]
+	// 	depModVariablesMap := depModVariables.AsValueMap()
 
-		if pipelineVars == cty.NilVal {
-			pipelineVars = cty.ObjectVal(map[string]cty.Value{})
-		}
+	// 	depModPipelines := depModVariablesMap["pipeline"]
+	// 	if depModPipelines == cty.NilVal {
+	// 		depModPipelines = cty.ObjectVal(make(map[string]cty.Value))
+	// 	}
 
-		valueMaps := pipelineVars.AsValueMap()
-		if valueMaps == nil {
-			valueMaps = map[string]cty.Value{}
-		}
+	// 	depModPipelinesMap := depModPipelines.AsValueMap()
 
-		valueMaps[pipelineNameOnly] = pipeline.AsCtyValue()
-		modVarsValueMap["pipeline"] = cty.ObjectVal(valueMaps)
-		referenceValues[modNameOnly] = cty.ObjectVal(modVarsValueMap)
-	}
+	// 	for _, pipeline := range depMod.ResourceMaps.Pipelines {
+	// 		depModPipelinesMap[pipeline.Name()] = pipeline.AsCtyValue()
+	// 	}
+
+	// }
 
 	// rebuild the eval context
 	m.ParseContext.BuildEvalContext(referenceValues)
@@ -744,11 +732,16 @@ func (m *ModParseContext) getModRequireBlock() *hclsyntax.Block {
 func (m *ModParseContext) AddPipeline(pipelineHcl *modconfig.Pipeline) hcl.Diagnostics {
 
 	// Split and get the last part for pipeline name
-	pipelineFullName := pipelineHcl.Name()
-	parts := strings.Split(pipelineFullName, ".")
-	pipelineNameOnly := parts[len(parts)-1]
+	// pipelineFullName := pipelineHcl.Name()
+	// parts := strings.Split(pipelineFullName, ".")
+	// pipelineNameOnly := parts[len(parts)-1]
 
-	m.PipelineHcls[pipelineNameOnly] = pipelineHcl
+	// m.PipelineHcls[pipelineNameOnly] = pipelineHcl
+
+	diags := m.addReferenceValue(pipelineHcl, pipelineHcl.AsCtyValue())
+	if diags.HasErrors() {
+		return diags
+	}
 
 	// remove this resource from unparsed blocks
 	delete(m.UnresolvedBlocks, pipelineHcl.Name())

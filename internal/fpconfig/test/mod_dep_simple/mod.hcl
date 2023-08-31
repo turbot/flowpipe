@@ -4,9 +4,6 @@ mod "mod_parent" {
     mod "mod_child_a" {
         version = "1.0.0"
     }
-    mod "mod_child_b" {
-        version = "1.0.0"
-    }
   }
 }
 

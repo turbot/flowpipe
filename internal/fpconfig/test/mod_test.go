@@ -121,6 +121,7 @@ func TestModReferences(t *testing.T) {
 	// check if all pipelines are there
 	pipelines := mod.ResourceMaps.Pipelines
 	assert.NotNil(pipelines, "pipelines is nil")
+	assert.Equal(2, len(pipelines), "wrong number of pipelines")
 	assert.NotNil(pipelines["pipeline_with_references.pipeline.foo"])
 	assert.NotNil(pipelines["pipeline_with_references.pipeline.foo_two"])
 }
