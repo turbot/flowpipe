@@ -28,7 +28,7 @@ release-local:
 
 test:
 	go clean -testcache
-	go test  $$(go list ./... | grep -v /internal/es/test) -timeout 60s -v
+	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/test) -timeout 60s -v
 
 integration-test:
 	go clean -testcache

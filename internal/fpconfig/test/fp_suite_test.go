@@ -80,6 +80,65 @@ func (suite *FpTestSuite) TearDownSuite() {
 	suite.TearDownSuiteRunCount++
 }
 
+func (suite *FpTestSuite) TestGoodMod() {
+	assert := assert.New(suite.T())
+
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./good_mod", []string{".hcl"})
+
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
+
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
+		return
+	}
+
+	// check if all pipelines are there
+	pipelines := mod.ResourceMaps.Pipelines
+	assert.Equal(len(pipelines), 3, "wrong number of pipelines")
+
+	jsonForPipeline := pipelines["test_mod.pipeline.json_for"]
+	if jsonForPipeline == nil {
+		assert.Fail("json_for pipeline not found")
+		return
+	}
+
+	// check if all steps are there
+	assert.Equal(2, len(jsonForPipeline.Steps), "wrong number of steps")
+	assert.Equal(jsonForPipeline.Steps[0].GetName(), "json", "wrong step name")
+	assert.Equal(jsonForPipeline.Steps[0].GetType(), "echo", "wrong step type")
+	assert.Equal(jsonForPipeline.Steps[1].GetName(), "json_for", "wrong step name")
+	assert.Equal(jsonForPipeline.Steps[1].GetType(), "echo", "wrong step type")
+
+	// check if all triggers are there
+	triggers := mod.ResourceMaps.Triggers
+	assert.Equal(1, len(triggers), "wrong number of triggers")
+	assert.Equal("test_mod.trigger.my_hourly_trigger", triggers["test_mod.trigger.my_hourly_trigger"].FullName, "wrong trigger name")
+}
+
+func (suite *FpTestSuite) TestModReferences() {
+	assert := assert.New(suite.T())
+
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_references", []string{".hcl"})
+
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
+
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
+		return
+	}
+
+	// check if all pipelines are there
+	pipelines := mod.ResourceMaps.Pipelines
+	assert.NotNil(pipelines, "pipelines is nil")
+	assert.Equal(2, len(pipelines), "wrong number of pipelines")
+	assert.NotNil(pipelines["pipeline_with_references.pipeline.foo"])
+	assert.NotNil(pipelines["pipeline_with_references.pipeline.foo_two"])
+}
+
 func (suite *FpTestSuite) TestModDependencies() {
 	assert := assert.New(suite.T())
 
@@ -256,6 +315,23 @@ func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 
 	nestedPipeInTheChildModB := childModB.ResourceMaps.Pipelines["mod_child_b.pipeline.nested_pipe_in_child_hcl"]
 	assert.NotNil(nestedPipeInTheChildModB)
+}
+
+func (suite *FpTestSuite) TestModVariable() {
+	assert := assert.New(suite.T())
+
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_variable", []string{".hcl", ".sp"})
+
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
+
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
+		return
+	}
+
+	// pipelines := mod.ResourceMaps.Pipelines
 }
 
 // In order for 'go test' to run this suite, we need to create

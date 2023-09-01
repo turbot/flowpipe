@@ -11,7 +11,6 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/terraform-components/configs"
-	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
@@ -50,10 +49,7 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext)
 		return nil, diags
 	}
 
-	// TODO: wrong location, we will keep rebuilding the Eval Context for every single pipeline?
-	evalContext := rebuildEvalContextWithCurrentMod(mod, parseCtx.EvalCtx)
-
-	diags = step.SetAttributes(stepOptions.Attributes, evalContext)
+	diags = step.SetAttributes(stepOptions.Attributes, parseCtx.EvalCtx)
 	if len(diags) > 0 {
 		return nil, diags
 	}
@@ -228,9 +224,7 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 		return nil, res
 	}
 
-	// TODO: wrong location, we will keep rebuilding the Eval Context for every single trigger?
-	evalContext := rebuildEvalContextWithCurrentMod(mod, parseCtx.EvalCtx)
-	diags = triggerHcl.Config.SetAttributes(mod, triggerHcl, triggerOptions.Attributes, evalContext)
+	diags = triggerHcl.Config.SetAttributes(mod, triggerHcl, triggerOptions.Attributes, parseCtx.EvalCtx)
 	if len(diags) > 0 {
 		res.handleDecodeDiags(diags)
 		return triggerHcl, res
@@ -240,71 +234,6 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 	res.addDiags(moreDiags)
 
 	return triggerHcl, res
-}
-
-func rebuildEvalContextWithCurrentMod(currentMod *modconfig.Mod, evalContext *hcl.EvalContext) *hcl.EvalContext {
-
-	modName := "local"
-
-	if currentMod != nil {
-		modName = currentMod.Name()
-		parts := strings.Split(modName, ".")
-		if len(parts) == 2 {
-			modName = parts[1]
-		}
-	}
-	// pulls the current mod data from the eval context
-	curentModVars := evalContext.Variables[modName]
-	if curentModVars != cty.NilVal {
-		currentModVarsMap := curentModVars.AsValueMap()
-		if currentModVarsMap == nil {
-			return evalContext
-		}
-
-		for k, v := range currentModVarsMap {
-			evalContext.Variables[k] = v
-		}
-	}
-
-	// pull the dependency of the currentMod one level up, out of the "mod" node
-	//
-	// variables
-	//   mod
-	//     - parent
-	//     - child
-	//
-	// say child is a dependency of parent (which happens to be the current mod)
-	// pull this mod up one level
-	//
-	// variables
-	//   mod
-	//     - parent
-	//     - child
-	//   child
-
-	// if currentMod.Require != nil && currentMod.Require.Mods != nil {
-	// 	for _, depMod := range currentMod.Require.Mods {
-	// 		depModName := depMod.Name
-	// 		parts := strings.Split(depModName, ".")
-	// 		if len(parts) == 2 {
-	// 			depModName = parts[1]
-	// 		}
-
-	// 		depModVars := evalContext.Variables[depModName]
-	// 		if depModVars != cty.NilVal {
-	// 			depModVarsMap := depModVars.AsValueMap()
-	// 			if depModVarsMap == nil {
-	// 				return evalContext
-	// 			}
-
-	// 			for k, v := range depModVarsMap {
-	// 				evalContext.Variables[k] = v
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	return evalContext
 }
 
 // TODO: validation - if you specify invalid depends_on it doesn't error out
