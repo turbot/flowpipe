@@ -31,8 +31,15 @@ pipeline "json" {
     }
 }
 
-// pipeline "refer_to_child" {
-//     step "pipeline" "child_output" {
-//         pipeline = mod_child_a.pipeline.this_pipeline_is_in_the_child
-//     }
-// }
+pipeline "refer_to_child" {
+    step "pipeline" "child_output" {
+        pipeline = mod_child_a.pipeline.this_pipeline_is_in_the_child
+    }
+}
+
+pipeline "refer_to_child_b" {
+    step "pipeline" "child_output" {
+        pipeline = mod_child_b.pipeline.foo_two
+    }
+}
+

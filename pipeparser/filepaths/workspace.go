@@ -23,6 +23,7 @@ const (
 
 var PipesComponentWorkspaceDataDir = WorkspaceDataDir
 var PipesComponentModsFileName = ModFileName
+var PipesComponentWorkspaceIgnoreFiles = WorkspaceIgnoreFile
 
 var PipesComponentValidModFiles = []string{"mod.sp", "mod.hcl"}
 

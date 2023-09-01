@@ -166,6 +166,18 @@ func ParseMod(fileData map[string][]byte, pseudoResources []modconfig.MappableRe
 
 	// add the mod to the run context
 	// - this it to ensure all pseudo resources get added and build the eval context with the variables we just added
+
+	// ! This is the place where the child mods (dependent mods) resources are "pulled up" into this current evaluation
+	// ! context.
+	// !
+	// ! Step through the code to find the place where the child mod resources are added to the "referencesValue"
+	// !
+	// ! Note that this resource MUST implement ModItem interface, otherwise it will look "flat", i.e. it will be added
+	// ! to the current mod
+	// !
+	// ! There's also a bug where we test for ModTreeItem, we added a new interface ModItem for resources that are mod
+	// ! resources but not necessarily need to be in the mod tree
+	// !
 	if diags = parseCtx.AddModResources(mod); diags.HasErrors() {
 		return nil, error_helpers.NewErrorsAndWarning(plugin.DiagsToError("Failed to add mod to run context", diags))
 	}

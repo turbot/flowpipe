@@ -45,8 +45,11 @@ type Workspace struct {
 	loadLock    sync.Mutex //nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
 	exclusions  []string
 	modFilePath string
+
 	// should we load/watch files recursively
-	listFlag                filehelpers.ListFlag
+	ListFlag       filehelpers.ListFlag
+	FileInclusions []string
+
 	fileWatcherErrorHandler func(context.Context, error) //nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
 	watcherError            error                        //nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
 	// event handlers
@@ -60,12 +63,11 @@ type Workspace struct {
 	// dashboardEventChan chan dashboardevents.DashboardEvent
 }
 
-// Load creates a Workspace and loads the workspace mod
-func Load(ctx context.Context, workspacePath string) (*Workspace, *error_helpers.ErrorAndWarnings) {
+func LoadWithParams(ctx context.Context, workspacePath string, fileInclusions []string) (*Workspace, *error_helpers.ErrorAndWarnings) {
 	utils.LogTime("workspace.Load start")
 	defer utils.LogTime("workspace.Load end")
 
-	workspace, err := createShellWorkspace(workspacePath)
+	workspace, err := createShellWorkspace(workspacePath, fileInclusions)
 	if err != nil {
 		return nil, error_helpers.NewErrorsAndWarning(err)
 	}
@@ -75,14 +77,19 @@ func Load(ctx context.Context, workspacePath string) (*Workspace, *error_helpers
 	return workspace, errAndWarnings
 }
 
+// Load creates a Workspace and loads the workspace mod
+func Load(ctx context.Context, workspacePath string) (*Workspace, *error_helpers.ErrorAndWarnings) {
+	return LoadWithParams(ctx, workspacePath, []string{constants.ModDataExtension})
+}
+
 // LoadVariables creates a Workspace and uses it to load all variables, ignoring any value resolution errors
 // this is use for the variable list command
-func LoadVariables(ctx context.Context, workspacePath string) ([]*modconfig.Variable, *error_helpers.ErrorAndWarnings) {
+func LoadVariables(ctx context.Context, workspacePath string, fileInclusions []string) ([]*modconfig.Variable, *error_helpers.ErrorAndWarnings) {
 	utils.LogTime("workspace.LoadVariables start")
 	defer utils.LogTime("workspace.LoadVariables end")
 
 	// create shell workspace
-	workspace, err := createShellWorkspace(workspacePath)
+	workspace, err := createShellWorkspace(workspacePath, fileInclusions)
 	if err != nil {
 		return nil, error_helpers.NewErrorsAndWarning(err)
 	}
@@ -98,11 +105,12 @@ func LoadVariables(ctx context.Context, workspacePath string) ([]*modconfig.Vari
 	return variableMap.ToArray(), errorAndWarnings
 }
 
-func createShellWorkspace(workspacePath string) (*Workspace, error) {
+func createShellWorkspace(workspacePath string, fileInclusions []string) (*Workspace, error) {
 	// create shell workspace
 	workspace := &Workspace{
 		Path:           workspacePath,
 		VariableValues: make(map[string]string),
+		FileInclusions: fileInclusions,
 	}
 
 	// check whether the workspace contains a modfile
@@ -208,7 +216,7 @@ func (w *Workspace) setModfileExists() {
 	if modFileExists {
 		log.Printf("[TRACE] modfile exists in workspace folder - creating pseudo-resources and loading files recursively ")
 		// only load/watch recursively if a mod sp file exists in the workspace folder
-		w.listFlag = filehelpers.FilesRecursive
+		w.ListFlag = filehelpers.FilesRecursive
 		w.loadPseudoResources = true
 		w.modFilePath = modFile
 
@@ -217,7 +225,7 @@ func (w *Workspace) setModfileExists() {
 		w.Path = filepath.Dir(modFile)
 	} else {
 		log.Printf("[TRACE] no modfile exists in workspace folder - NOT creating pseudoresources and only loading resource files from top level folder")
-		w.listFlag = filehelpers.Files
+		w.ListFlag = filehelpers.Files
 		w.loadPseudoResources = false
 	}
 }
@@ -333,10 +341,10 @@ func (w *Workspace) getParseContext(ctx context.Context) (*parse.ModParseContext
 		parseFlag,
 		&filehelpers.ListOptions{
 			// listFlag specifies whether to load files recursively
-			Flags:   w.listFlag,
+			Flags:   w.ListFlag,
 			Exclude: w.exclusions,
 			// only load .sp files
-			Include: filehelpers.InclusionsFromExtensions([]string{constants.ModDataExtension}),
+			Include: filehelpers.InclusionsFromExtensions(w.FileInclusions),
 		})
 
 	return parseCtx, nil
@@ -370,7 +378,7 @@ func (w *Workspace) loadExclusions() error {
 		fmt.Sprintf("%s/.*/**", w.Path),
 	}
 
-	ignorePath := filepath.Join(w.Path, filepaths.WorkspaceIgnoreFile)
+	ignorePath := filepath.Join(w.Path, filepaths.PipesComponentWorkspaceIgnoreFiles)
 	file, err := os.Open(ignorePath)
 	if err != nil {
 		// if file does not exist, just return

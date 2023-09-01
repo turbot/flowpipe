@@ -52,6 +52,7 @@ func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
 // execution data.
 type Pipeline struct {
 	HclResourceImpl
+	ResourceWithMetadataImpl
 
 	mod *Mod
 

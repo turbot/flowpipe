@@ -237,7 +237,7 @@ func (m *ModParseContext) AddModResources(mod *modconfig.Mod) hcl.Diagnostics {
 	// if the resource is for a dependency mod, do not add locals
 	shouldAdd := func(item modconfig.HclResource) bool {
 		if item.BlockType() == schema.BlockTypeVariable ||
-			item.BlockType() == schema.BlockTypeLocals && item.(modconfig.ModTreeItem).GetMod().ShortName != m.CurrentMod.ShortName {
+			item.BlockType() == schema.BlockTypeLocals && item.(modconfig.ModItem).GetMod().ShortName != m.CurrentMod.ShortName {
 			return false
 		}
 		return true
@@ -524,7 +524,7 @@ func (m *ModParseContext) addReferenceValue(resource modconfig.HclResource, valu
 
 	// most resources will have a mod property - use this if available
 	var mod *modconfig.Mod
-	if modTreeItem, ok := resource.(modconfig.ModTreeItem); ok {
+	if modTreeItem, ok := resource.(modconfig.ModItem); ok {
 		mod = modTreeItem.GetMod()
 	}
 	// fall back to current mod

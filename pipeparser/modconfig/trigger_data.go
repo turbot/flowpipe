@@ -18,6 +18,7 @@ import (
 // The definition of a single Flowpipe Trigger
 type Trigger struct {
 	HclResourceImpl
+	ResourceWithMetadataImpl
 
 	ctx  context.Context
 	Args Input `json:"args"`

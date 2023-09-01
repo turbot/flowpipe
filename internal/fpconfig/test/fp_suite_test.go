@@ -12,9 +12,11 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
+	"github.com/turbot/flowpipe/pipeparser/workspace"
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
@@ -71,6 +73,7 @@ func (suite *FpTestSuite) SetupSuite() {
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
+	constants.PipesComponentModDataExtension = ".hcl"
 
 	suite.SetupSuiteRunCount++
 }
@@ -84,23 +87,14 @@ func (suite *FpTestSuite) TearDownSuite() {
 func (suite *FpTestSuite) TestModDependencies() {
 	assert := assert.New(suite.T())
 
-	workspaceLock, err := versionmap.LoadWorkspaceLock("./mod_dep_one")
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_dep_one", []string{".hcl"})
 
-	assert.Nil(err, "error loading workspace lock")
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
 
-	parseCtx := parse.NewModParseContext(
-		suite.ctx,
-		workspaceLock,
-		"./mod_dep_one/",
-		0,
-		&filehelpers.ListOptions{
-			Flags:   filehelpers.Files,
-			Include: []string{"**/*.hcl"},
-		})
-
-	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./mod_dep_one", filepaths.PipesComponentModsFileName, parseCtx)
-	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
-		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
 		return
 	}
 
@@ -110,6 +104,18 @@ func (suite *FpTestSuite) TestModDependencies() {
 	jsonForPipeline := pipelines["mod_parent.pipeline.json"]
 	if jsonForPipeline == nil {
 		assert.Fail("json pipeline not found")
+		return
+	}
+
+	referToChildPipeline := pipelines["mod_parent.pipeline.refer_to_child"]
+	if referToChildPipeline == nil {
+		assert.Fail("foo pipeline not found")
+		return
+	}
+
+	referToChildBPipeline := pipelines["mod_parent.pipeline.refer_to_child_b"]
+	if referToChildBPipeline == nil {
+		assert.Fail("refer_to_child_b pipeline not found")
 		return
 	}
 
@@ -124,42 +130,47 @@ func (suite *FpTestSuite) TestModDependencies() {
 func (suite *FpTestSuite) TestModDependenciesSimple() {
 	assert := assert.New(suite.T())
 
-	workspaceLock, err := versionmap.LoadWorkspaceLock("./mod_dep_simple")
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_dep_simple", []string{".hcl"})
 
-	assert.Nil(err, "error loading workspace lock")
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
 
-	parseCtx := parse.NewModParseContext(
-		suite.ctx,
-		workspaceLock,
-		"./mod_dep_simple/",
-		0,
-		&filehelpers.ListOptions{
-			Flags:   filehelpers.Files,
-			Include: []string{"**/*.hcl"},
-		})
-
-	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./mod_dep_simple", filepaths.PipesComponentModsFileName, parseCtx)
-	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
-		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
 		return
 	}
 
 	pipelines := mod.ResourceMaps.Pipelines
-
-	assert.NotNil(mod, "mod is nil")
 	jsonForPipeline := pipelines["mod_parent.pipeline.json"]
 	if jsonForPipeline == nil {
 		assert.Fail("json pipeline not found")
 		return
 	}
 
-	childModA := mod.ResourceMaps.Mods["mod_child_a@v1.0.0"]
-	assert.NotNil(childModA)
+	fooPipeline := pipelines["mod_parent.pipeline.foo"]
+	if fooPipeline == nil {
+		assert.Fail("foo pipeline not found")
+		return
+	}
 
-	thisPipelineIsInTheChildPipelineModA := childModA.ResourceMaps.Pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child"]
-	assert.NotNil(thisPipelineIsInTheChildPipelineModA)
+	assert.Equal(2, len(fooPipeline.Steps), "wrong number of steps")
+	assert.Equal("baz", fooPipeline.Steps[0].GetName())
+	assert.Equal("bar", fooPipeline.Steps[1].GetName())
 
+	referToChildPipeline := pipelines["mod_parent.pipeline.refer_to_child"]
+	if referToChildPipeline == nil {
+		assert.Fail("foo pipeline not found")
+		return
+	}
+
+	childPipeline := pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child"]
+	if childPipeline == nil {
+		assert.Fail("this_pipeline_is_in_the_child pipeline not found")
+		return
+	}
 }
+
 func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 	assert := assert.New(suite.T())
 

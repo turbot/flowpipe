@@ -451,6 +451,10 @@ func (m *ResourceMaps) GetResource(parsedName *ParsedResourceName) (resource Hcl
 		resource, found = m.Queries[longName]
 	case schema.BlockTypeVariable:
 		resource, found = m.Variables[longName]
+	case schema.BlockTypePipeline:
+		resource, found = m.Pipelines[longName]
+	case schema.BlockTypeTrigger:
+		resource, found = m.Triggers[longName]
 	}
 	return resource, found
 }
@@ -566,6 +570,8 @@ func (m *ResourceMaps) Empty() bool {
 		// len(m.DashboardInputs)+
 		// len(m.DashboardTables)+
 		// len(m.DashboardTexts)+
+		len(m.Pipelines)+
+		len(m.Triggers)+
 		len(m.References) == 0
 }
 
