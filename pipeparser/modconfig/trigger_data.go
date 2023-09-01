@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
@@ -49,8 +48,6 @@ func (t *Trigger) IsBaseAttribute(name string) bool {
 
 func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
 
-	logger := fplog.Logger(t.ctx)
-
 	var diags hcl.Diagnostics
 
 	if attr, exists := hclAttributes[schema.AttributeTypeDescription]; exists {
@@ -77,7 +74,6 @@ func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, eval
 		//
 		// Do not unpack the error and create a new "Diagnostic", leave the original error message in
 		// and let the "Mod processing" determine if there's an unresolved block
-		logger.Info("Unable to parse " + schema.AttributeTypePipeline + " attribute: " + err.Error() + ". This may not be a fatal error")
 
 		// Don't error out, it's fine to unable to find the reference, we will try again later
 		diags = append(diags, err...)

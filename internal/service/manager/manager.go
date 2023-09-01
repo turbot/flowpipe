@@ -14,13 +14,11 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/parse"
 	"github.com/turbot/flowpipe/pipeparser/utils"
-	"github.com/turbot/flowpipe/pipeparser/versionmap"
-
-	filehelpers "github.com/turbot/go-kit/files"
+	"github.com/turbot/flowpipe/pipeparser/workspace"
 )
 
 // Manager manages and represents the status of the service.
@@ -97,31 +95,19 @@ func (m *Manager) Initialize() error {
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
+	constants.PipesComponentModDataExtension = ".hcl"
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
 	if pipeparser.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
-		workspaceLock, err := versionmap.LoadWorkspaceLock(pipelineDir)
 
-		if err != nil {
-			return err
+		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
+
+		if errorAndWarning.Error != nil {
+			return errorAndWarning.Error
 		}
 
-		parseCtx := parse.NewModParseContext(
-			m.ctx,
-			workspaceLock,
-			pipelineDir,
-			0,
-			&filehelpers.ListOptions{
-				Flags:   filehelpers.Files | filehelpers.Recursive,
-				Exclude: []string{"./" + filepaths.PipesComponentWorkspaceDataDir + "/**/*.*"},
-				Include: []string{"**/*.hcl", "**/*.sp", "**/*.fp"},
-			})
-
-		mod, errorsAndWarnings := pipeparser.LoadModWithFileName(pipelineDir, filepaths.PipesComponentModsFileName, parseCtx)
-		if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
-			return errorsAndWarnings.Error
-		}
+		mod := w.Mod
 
 		pipelines = mod.ResourceMaps.Pipelines
 		triggers = mod.ResourceMaps.Triggers

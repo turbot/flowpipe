@@ -11,13 +11,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
-	"github.com/turbot/flowpipe/pipeparser/parse"
-	"github.com/turbot/flowpipe/pipeparser/versionmap"
 	"github.com/turbot/flowpipe/pipeparser/workspace"
-	filehelpers "github.com/turbot/go-kit/files"
 )
 
 type FpTestSuite struct {
@@ -107,6 +103,18 @@ func (suite *FpTestSuite) TestModDependencies() {
 		return
 	}
 
+	fooPipeline := pipelines["mod_parent.pipeline.foo"]
+	if fooPipeline == nil {
+		assert.Fail("foo pipeline not found")
+		return
+	}
+
+	fooTwoPipeline := pipelines["mod_parent.pipeline.foo_two"]
+	if fooTwoPipeline == nil {
+		assert.Fail("foo_two pipeline not found")
+		return
+	}
+
 	referToChildPipeline := pipelines["mod_parent.pipeline.refer_to_child"]
 	if referToChildPipeline == nil {
 		assert.Fail("foo pipeline not found")
@@ -124,6 +132,14 @@ func (suite *FpTestSuite) TestModDependencies() {
 
 	thisPipelineIsInTheChildPipelineModA := childModA.ResourceMaps.Pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child"]
 	assert.NotNil(thisPipelineIsInTheChildPipelineModA)
+
+	// check for the triggers
+	triggers := mod.ResourceMaps.Triggers
+	myHourlyTrigger := triggers["mod_parent.trigger.my_hourly_trigger"]
+	if myHourlyTrigger == nil {
+		assert.Fail("my_hourly_trigger not found")
+		return
+	}
 
 }
 
@@ -174,24 +190,14 @@ func (suite *FpTestSuite) TestModDependenciesSimple() {
 func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 	assert := assert.New(suite.T())
 
-	workspaceLock, err := versionmap.LoadWorkspaceLock("./backward_compatible_mod")
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./backward_compatible_mod", []string{".hcl", ".sp"})
 
-	assert.Nil(err, "error loading workspace lock")
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
 
-	parseCtx := parse.NewModParseContext(
-		suite.ctx,
-		workspaceLock,
-		"./test_mod/",
-		0,
-		&filehelpers.ListOptions{
-			Flags:   filehelpers.Files | filehelpers.Recursive,
-			Exclude: []string{"./.flowpipe/**/*.*"},
-			Include: []string{"**/*.hcl", "**/*.sp"},
-		})
-
-	mod, errorsAndWarnings := pipeparser.LoadModWithFileName("./backward_compatible_mod", filepaths.PipesComponentModsFileName, parseCtx)
-	if errorsAndWarnings != nil && errorsAndWarnings.Error != nil {
-		assert.Fail("error loading mod file", errorsAndWarnings.Error.Error())
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
 		return
 	}
 
