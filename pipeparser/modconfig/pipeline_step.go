@@ -1230,6 +1230,56 @@ func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep)
 	p.AddUnresolvedAttribute(name, expr)
 }
 
+func dependsOnFromExpressionsTwo(attr *hcl.Attribute, evalContext *hcl.EvalContext, p IPipelineStep) (cty.Value, hcl.Diagnostics) {
+	expr := attr.Expr
+	// resolve it first if we can
+	val, stepDiags := expr.Value(evalContext)
+	if stepDiags != nil && stepDiags.HasErrors() {
+		resolvedDiags := 0
+		for _, e := range stepDiags {
+			if e.Severity == hcl.DiagError {
+				if e.Detail == `There is no variable named "step".` {
+					traversals := expr.Variables()
+					dependsOnAdded := false
+					for _, traversal := range traversals {
+						parts := hclhelpers.TraversalAsStringSlice(traversal)
+						if len(parts) > 0 {
+							// When the expression/traversal is referencing an index, the index is also included in the parts
+							// for example: []string len: 5, cap: 5, ["step","sleep","sleep_1","0","duration"]
+							if parts[0] == schema.BlockTypePipelineStep {
+								dependsOn := parts[1] + "." + parts[2]
+								p.AppendDependsOn(dependsOn)
+								dependsOnAdded = true
+							}
+						}
+					}
+					if dependsOnAdded {
+						resolvedDiags++
+					}
+				} else if e.Detail == `There is no variable named "each".` {
+					resolvedDiags++
+				} else {
+					return cty.NilVal, stepDiags
+				}
+			}
+		}
+
+		// check if all diags have been resolved
+		if resolvedDiags == len(stepDiags) {
+
+			// * Don't forget to add this, if you change the logic ensure that the code flow still
+			// * calls AddUnresolvedAttribute
+			p.AddUnresolvedAttribute(attr.Name, expr)
+			return cty.NilVal, hcl.Diagnostics{}
+		} else {
+			// There's an error here
+			return cty.NilVal, stepDiags
+		}
+	}
+
+	return val, hcl.Diagnostics{}
+}
+
 func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
 
 	diags := p.SetBaseAttributes(hclAttributes)
@@ -1238,20 +1288,13 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalConte
 		switch name {
 		case schema.AttributeTypeText:
 			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeText + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+				val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+				if stepDiags.HasErrors() {
+					diags = append(diags, stepDiags...)
+					continue
+				}
 
+				if val != cty.NilVal {
 					p.Text = val.AsString()
 				}
 			}

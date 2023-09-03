@@ -13,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/workspace"
 )
 
@@ -331,7 +332,15 @@ func (suite *FpTestSuite) TestModVariable() {
 		return
 	}
 
-	// pipelines := mod.ResourceMaps.Pipelines
+	pipelines := mod.ResourceMaps.Pipelines
+	pipelineOne := pipelines["test_mod.pipeline.one"]
+	if pipelineOne == nil {
+		assert.Fail("pipeline one not found")
+		return
+	}
+
+	assert.Equal("prefix text here and this is the value of var_one and suffix", pipelineOne.Steps[0].(*modconfig.PipelineStepEcho).Text)
+
 }
 
 // In order for 'go test' to run this suite, we need to create

@@ -10,6 +10,10 @@ variable "var_one" {
 
 pipeline "one" {
     step "echo" "one" {
-        text = var.var_one
+        text = "prefix text here and ${var.var_one} and suffix"
+    }
+
+    step "echo" "two" {
+        text =  "got prefix? ${step.echo.one.text} and again ${step.echo.one.text} and var ${var.var_one}"
     }
 }

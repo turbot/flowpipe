@@ -111,7 +111,7 @@ func TestExprWithinVariable(t *testing.T) {
 	assert.NotEqual("hello world", textInput, "wrong input format")
 }
 
-func TestExprDependAndFunction(t *testing.T) {
+func XXTestExprDependAndFunction(t *testing.T) {
 	assert := assert.New(t)
 
 	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")

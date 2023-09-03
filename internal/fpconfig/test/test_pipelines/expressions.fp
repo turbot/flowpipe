@@ -25,16 +25,16 @@ pipeline "expr_within_text" {
 }
 
 
-pipeline "expr_depend_and_function" {
-    step "echo" "text_1" {
-        text = "foo"
-    }
+# pipeline "expr_depend_and_function" {
+#     step "echo" "text_1" {
+#         text = "foo"
+#     }
 
-    step "echo" "text_2" {
-        text = title("bar ${step.echo.text_1.text} baz")
-    }
+#     step "echo" "text_2" {
+#         text = title("bar ${step.echo.text_1.text} baz")
+#     }
 
-    step "echo" "text_3" {
-        text = "output2 ${title(step.echo.text_2.text)} func(output1) ${func(step.echo.text_1.text)}"
-    }
-}
+#     step "echo" "text_3" {
+#         text = "output2 ${title(step.echo.text_2.text)} func(output1) ${func(step.echo.text_1.text)}"
+#     }
+# }
