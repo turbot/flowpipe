@@ -56,7 +56,7 @@ func (p PrintablePipeline) GetItems() interface{} {
 }
 
 func (p PrintablePipeline) GetTable() (Table, error) {
-	lp, ok := p.Items.([]flowpipeapiclient.ModconfigPipeline)
+	lp, ok := p.Items.([]flowpipeapiclient.FpPipeline)
 
 	if !ok {
 		return Table{}, pcerr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Pipeline")
@@ -66,11 +66,12 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 	for _, item := range lp {
 
 		description := ""
-		// if item.Description != nil {
-		// 	description = *item.Description
-		// }
+		if item.Description != nil {
+			description = *item.Description
+		}
 		cells := []interface{}{
-			*item.PipelineName,
+			*item.Mod,
+			*item.Name,
 			description,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
@@ -84,6 +85,11 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 
 func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
+		{
+			Name:        "MOD",
+			Type:        "string",
+			Description: "Mod name",
+		},
 		{
 			Name:        "NAME",
 			Type:        "string",
