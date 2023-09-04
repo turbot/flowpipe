@@ -75,7 +75,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			return err
 		}
 
-		if len(pipelineDefn.Outputs) > 0 {
+		if len(pipelineDefn.OutputConfig) > 0 {
 			data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 		}
 

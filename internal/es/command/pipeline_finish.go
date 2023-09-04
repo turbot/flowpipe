@@ -43,7 +43,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 	}
 
 	var output map[string]interface{}
-	if len(pipelineDefn.Outputs) > 0 {
+	if len(pipelineDefn.OutputConfig) > 0 {
 		outputBlock := map[string]interface{}{}
 
 		// If all dependencies met, we then calculate the value of this output
@@ -53,7 +53,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			return err
 		}
 
-		for _, output := range pipelineDefn.Outputs {
+		for _, output := range pipelineDefn.OutputConfig {
 			// check if its dependencies have been met
 			dependenciesMet := true
 			for _, dep := range output.DependsOn {

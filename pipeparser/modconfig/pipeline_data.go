@@ -67,7 +67,7 @@ type Pipeline struct {
 
 	Steps []IPipelineStep `json:"steps,omitempty"`
 
-	Outputs []PipelineOutput `json:"outputs,omitempty"`
+	OutputConfig []PipelineOutput `json:"outputs,omitempty"`
 
 	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
 	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)

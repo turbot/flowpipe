@@ -70,7 +70,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 			return err
 		}
 
-		if len(pipelineDefn.Outputs) > 0 || (e.PipelineOutput != nil && e.PipelineOutput["errors"] != nil) {
+		if len(pipelineDefn.OutputConfig) > 0 || (e.PipelineOutput != nil && e.PipelineOutput["errors"] != nil) {
 			data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 		}
 

@@ -146,7 +146,7 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext)
 					if len(parts) > 0 {
 						if parts[0] == schema.BlockTypePipelineStep {
 							dependsOn := parts[1] + "." + parts[2]
-							o.AppendDependsOn(dependsOn)
+							step.AppendDependsOn(dependsOn)
 						}
 					}
 				}
@@ -339,7 +339,7 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 			}
 
 			if output != nil {
-				pipelineHcl.Outputs = append(pipelineHcl.Outputs, *output)
+				pipelineHcl.OutputConfig = append(pipelineHcl.OutputConfig, *output)
 			}
 
 		case schema.BlockTypeParam:

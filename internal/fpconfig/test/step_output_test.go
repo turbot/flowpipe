@@ -11,7 +11,7 @@ import (
 func TestStepOutput(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/test.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/step_output.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -24,7 +24,19 @@ func TestStepOutput(t *testing.T) {
 	assert.Equal(2, len(pipelines["local.pipeline.step_output"].Steps), "wrong number of steps")
 
 	startStep := pipelines["local.pipeline.step_output"].GetStep("echo.start_step")
-	assert.NotNil(startStep.GetOutputConfig()["start_output"])
+
+	startStepOutputConfig := startStep.GetOutputConfig()
+	if startStepOutputConfig == nil {
+		assert.Fail("output config not found")
+	}
+
+	startOutput := startStepOutputConfig["start_output"]
+	if startOutput == nil {
+		assert.Fail("start_output not found")
+		return
+	}
+
+	assert.Equal("bar", startOutput.Value)
 
 	// objectVal := cty.ObjectVal(map[string]cty.Value{
 	// 	"echo": cty.ObjectVal(map[string]cty.Value{
