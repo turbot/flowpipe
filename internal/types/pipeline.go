@@ -4,14 +4,19 @@ import (
 	"fmt"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
+type FpPipeline struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Mod         string  `json:"mod"`
+}
+
 // This type is used by the API to return a list of pipelines.
 type ListPipelineResponse struct {
-	Items     []modconfig.Pipeline `json:"items"`
-	NextToken *string              `json:"next_token,omitempty"`
+	Items     []FpPipeline `json:"items"`
+	NextToken *string      `json:"next_token,omitempty"`
 }
 
 type RunPipelineResponse struct {
@@ -51,7 +56,7 @@ func (p PrintablePipeline) GetItems() interface{} {
 }
 
 func (p PrintablePipeline) GetTable() (Table, error) {
-	lp, ok := p.Items.([]flowpipeapiclient.Pipeline)
+	lp, ok := p.Items.([]flowpipeapiclient.ModconfigPipeline)
 
 	if !ok {
 		return Table{}, pcerr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Pipeline")
@@ -61,11 +66,11 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 	for _, item := range lp {
 
 		description := ""
-		if item.Description != nil {
-			description = *item.Description
-		}
+		// if item.Description != nil {
+		// 	description = *item.Description
+		// }
 		cells := []interface{}{
-			*item.Name,
+			*item.PipelineName,
 			description,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
