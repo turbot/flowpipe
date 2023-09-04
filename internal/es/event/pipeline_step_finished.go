@@ -13,8 +13,11 @@ type PipelineStepFinished struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 
-	// Output
+	// Output from the primitive
 	Output *modconfig.Output `json:"output,omitempty"`
+
+	// Step output configured from the output block
+	StepOutput map[string]interface{} `json:"step_output,omitempty"`
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`

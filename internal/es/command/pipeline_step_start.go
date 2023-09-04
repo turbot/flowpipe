@@ -180,6 +180,30 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, logger *fpl
 		return
 	}
 
+	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+	if err != nil {
+		logger.Error("error1", "error", err)
+	}
+
+	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+	if err != nil {
+		logger.Error("Error getting pipeline definiton", "error", err)
+	}
+
+	stepExecution := ex.PipelineExecutions[cmd.PipelineExecutionID].StepExecutions[cmd.StepExecutionID]
+
+	stepDefn := pipelineDefn.GetStep(stepExecution.Name)
+	if err != nil {
+		logger.Error("Error getting step definition", "error", err)
+	}
+
+	outputBlock := map[string]interface{}{}
+	for k, v := range stepDefn.GetOutputConfig() {
+		outputBlock[k] = v.Value
+	}
+
+	e.StepOutput = outputBlock
+
 	err = h.EventBus.Publish(ctx, &e)
 	if err != nil {
 		logger.Error("Error publishing event", "error", err)

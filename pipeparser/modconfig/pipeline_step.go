@@ -228,6 +228,8 @@ type IPipelineStep interface {
 	SetAttributes(hcl.Attributes, *hcl.EvalContext) hcl.Diagnostics
 	SetErrorConfig(*ErrorConfig)
 	GetErrorConfig() *ErrorConfig
+	SetOutputConfig(map[string]*PipelineOutput)
+	GetOutputConfig() map[string]*PipelineOutput
 }
 
 type ErrorConfig struct {
@@ -237,13 +239,14 @@ type ErrorConfig struct {
 
 // A common base struct that all pipeline steps must embed
 type PipelineStepBase struct {
-	Title       *string      `json:"title,omitempty"`
-	Description *string      `json:"description,omitempty"`
-	Name        string       `json:"name"`
-	Type        string       `json:"step_type"`
-	DependsOn   []string     `json:"depends_on,omitempty"`
-	Resolved    bool         `json:"resolved,omitempty"`
-	ErrorConfig *ErrorConfig `json:"-"`
+	Title        *string                    `json:"title,omitempty"`
+	Description  *string                    `json:"description,omitempty"`
+	Name         string                     `json:"name"`
+	Type         string                     `json:"step_type"`
+	DependsOn    []string                   `json:"depends_on,omitempty"`
+	Resolved     bool                       `json:"resolved,omitempty"`
+	ErrorConfig  *ErrorConfig               `json:"-"`
+	OutputConfig map[string]*PipelineOutput `json:"-"`
 
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
@@ -256,6 +259,14 @@ func (p *PipelineStepBase) SetErrorConfig(errorConfig *ErrorConfig) {
 
 func (p *PipelineStepBase) GetErrorConfig() *ErrorConfig {
 	return p.ErrorConfig
+}
+
+func (p *PipelineStepBase) SetOutputConfig(output map[string]*PipelineOutput) {
+	p.OutputConfig = output
+}
+
+func (p *PipelineStepBase) GetOutputConfig() map[string]*PipelineOutput {
+	return p.OutputConfig
 }
 
 func (p *PipelineStepBase) GetForEach() hcl.Expression {

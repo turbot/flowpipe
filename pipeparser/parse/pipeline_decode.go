@@ -123,6 +123,52 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext)
 		step.SetErrorConfig(errorConfig)
 	}
 
+	stepOutput := map[string]*modconfig.PipelineOutput{}
+
+	outputBlocks := stepOptions.Blocks.ByType()[schema.BlockTypePipelineOutput]
+	for _, outputBlock := range outputBlocks {
+		attributes, diags := outputBlock.Body.JustAttributes()
+		if len(diags) > 0 {
+			return nil, diags
+		}
+
+		if attr, exists := attributes[schema.AttributeTypeValue]; exists {
+
+			o := &modconfig.PipelineOutput{
+				Name: outputBlock.Labels[0],
+			}
+
+			expr := attr.Expr
+			if len(expr.Variables()) > 0 {
+				traversals := expr.Variables()
+				for _, traversal := range traversals {
+					parts := hclhelpers.TraversalAsStringSlice(traversal)
+					if len(parts) > 0 {
+						if parts[0] == schema.BlockTypePipelineStep {
+							dependsOn := parts[1] + "." + parts[2]
+							o.AppendDependsOn(dependsOn)
+						}
+					}
+				}
+				o.UnresolvedValue = attr.Expr
+			} else {
+				ctyVal, _ := attr.Expr.Value(nil)
+				val, _ := hclhelpers.CtyToGo(ctyVal)
+				o.Value = val
+			}
+
+			stepOutput[o.Name] = o
+		} else {
+			return nil, hcl.Diagnostics{&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Missing value attribute",
+				Subject:  &block.DefRange,
+			}}
+		}
+
+	}
+	step.SetOutputConfig(stepOutput)
+
 	return step, hcl.Diagnostics{}
 }
 
