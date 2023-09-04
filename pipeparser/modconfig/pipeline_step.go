@@ -540,98 +540,103 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeUrl:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					urlString, moreDiags := hclhelpers.AttributeToString(attr, evalContext, false)
-					if moreDiags != nil && moreDiags.HasErrors() {
-						diags = append(diags, moreDiags...)
-						continue
-					}
-					p.Url = urlString
-				}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				urlString := val.AsString()
+				p.Url = &urlString
 			}
 		case schema.AttributeTypeRequestTimeoutMs:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					requestTimeoutMs, moreDiags := hclhelpers.AttributeToInt(attr, evalContext, false)
-					if moreDiags != nil && moreDiags.HasErrors() {
-						diags = append(diags, moreDiags...)
-						continue
-					}
-					p.RequestTimeoutMs = requestTimeoutMs
-				}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
 			}
+
+			if val != cty.NilVal {
+				int64Val, stepDiags := hclhelpers.CtyToInt64(val)
+				if stepDiags.HasErrors() {
+					diags = append(diags, stepDiags...)
+					continue
+				}
+				p.RequestTimeoutMs = int64Val
+			}
+
 		case schema.AttributeTypeMethod:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					method, moreDiags := hclhelpers.AttributeToString(attr, evalContext, false)
-					if moreDiags != nil && moreDiags.HasErrors() {
-						diags = append(diags, moreDiags...)
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				method := val.AsString()
+				if method != "" {
+					if !helpers.StringSliceContains(ValidHttpMethods, strings.ToLower(method)) {
+						diags = append(diags, &hcl.Diagnostic{
+							Severity: hcl.DiagError,
+							Summary:  "Invalid HTTP method: " + method,
+							Subject:  &attr.Range,
+						})
 						continue
 					}
-
-					if method != nil {
-						if !helpers.StringSliceContains(ValidHttpMethods, strings.ToLower(*method)) {
-							diags = append(diags, &hcl.Diagnostic{
-								Severity: hcl.DiagError,
-								Summary:  "Invalid HTTP method: " + *method,
-								Subject:  &attr.Range,
-							})
-							continue
-						}
-						p.Method = method
-					}
+					p.Method = &method
 				}
 			}
 		case schema.AttributeTypeInsecure:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					insecure, moreDiags := hclhelpers.AttributeToBool(attr, evalContext, false)
-					if moreDiags != nil && moreDiags.HasErrors() {
-						diags = append(diags, moreDiags...)
-						continue
-					}
-					p.Insecure = insecure
-				}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
 			}
-		case schema.AttributeTypeRequestBody:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					requestBody, moreDiags := hclhelpers.AttributeToString(attr, evalContext, false)
-					if moreDiags != nil && moreDiags.HasErrors() {
-						diags = append(diags, moreDiags...)
-						continue
-					}
-					p.RequestBody = requestBody
-				}
-			}
-		case schema.AttributeTypeRequestHeaders:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					mapAttrib, moreDiags := hclhelpers.AttributeToMap(attr, evalContext, false)
-					if moreDiags.HasErrors() {
-						diags = append(diags, moreDiags...)
-					}
 
-					p.RequestHeaders = mapAttrib
+			if val != cty.NilVal {
+				if val.Type() != cty.Bool {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Invalid value for insecure attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				insecure := val.True()
+				p.Insecure = &insecure
+			}
+
+		case schema.AttributeTypeRequestBody:
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				requestBody := val.AsString()
+				p.RequestBody = &requestBody
+			}
+
+		case schema.AttributeTypeRequestHeaders:
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				var err error
+				p.RequestHeaders, err = hclhelpers.CtyToGoMapInterface(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse request_headers attribute",
+						Subject:  &attr.Range,
+					})
+					continue
 				}
 			}
 		default:
@@ -1256,7 +1261,7 @@ func dependsOnFromExpressionsTwo(attr *hcl.Attribute, evalContext *hcl.EvalConte
 					if dependsOnAdded {
 						resolvedDiags++
 					}
-				} else if e.Detail == `There is no variable named "each".` {
+				} else if e.Detail == `There is no variable named "each".` || e.Detail == `There is no variable named "param".` {
 					resolvedDiags++
 				} else {
 					return cty.NilVal, stepDiags
@@ -1287,34 +1292,25 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalConte
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeText:
-			if attr.Expr != nil {
-				val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
-				if stepDiags.HasErrors() {
-					diags = append(diags, stepDiags...)
-					continue
-				}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-				if val != cty.NilVal {
-					p.Text = val.AsString()
-				}
+			if val != cty.NilVal {
+				p.Text = val.AsString()
 			}
 		case schema.AttributeTypeJson:
-			expr := attr.Expr
-			if len(expr.Variables()) > 0 {
-				dependsOnFromExpressions(name, expr, p)
-			} else {
-				val, err := expr.Value(evalContext)
-				if err != nil {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeJson + " attribute",
-						Subject:  &attr.Range,
-					})
-					continue
-				}
-
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+			if val != cty.NilVal {
 				p.Json = json.SimpleJSONValue{Value: val}
 			}
+
 		default:
 			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{

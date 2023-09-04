@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 	"github.com/zclconf/go-cty/cty/json"
@@ -78,6 +79,27 @@ func CtyToString(v cty.Value) (valStr string, err error) {
 	}
 
 	return valStr, err
+}
+
+func CtyToInt64(val cty.Value) (*int64, hcl.Diagnostics) {
+	if val.Type() != cty.Number {
+		return nil, hcl.Diagnostics{&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Unable to parse value as number",
+		}}
+	}
+
+	bigFloatValue := val.AsBigFloat()
+
+	if !bigFloatValue.IsInt() {
+		return nil, hcl.Diagnostics{&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Unable to parse value as int",
+		}}
+	}
+
+	int64Value, _ := bigFloatValue.Int64()
+	return &int64Value, hcl.Diagnostics{}
 }
 
 func CtyToGoInterfaceSlice(v cty.Value) (val []interface{}, err error) {
