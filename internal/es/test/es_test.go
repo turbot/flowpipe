@@ -3,10 +3,8 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"fmt"
 	"os"
 	"path"
-	"strings"
 	"testing"
 	"time"
 
@@ -15,12 +13,9 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/config"
-	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
@@ -30,10 +25,10 @@ import (
 // returns the current testing context
 type EsTestSuite struct {
 	suite.Suite
+	*FlowpipeTestSuite
+
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
-	esService             *es.ESService
-	ctx                   context.Context
 }
 
 // The SetupSuite method will be run by testify once, at the very
@@ -144,13 +139,13 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert := assert.New(suite.T())
 
 	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
-	_, pipelineCmd, err := suite.runPipeline("expr_depend_and_function", 2300*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "expr_depend_and_function", 2300*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -252,13 +247,13 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := suite.runPipeline("if", 100*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "if", 100*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 200, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 200, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -292,14 +287,14 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 
 	// bad_http_not_ignored pipeline
 	assert := assert.New(suite.T())
-	_, cmd, err := suite.runPipeline("bad_http_one_step", 200*time.Millisecond, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "bad_http_one_step", 200*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 200, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 200, "failed")
 	if err != nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return
@@ -321,14 +316,14 @@ func (suite *EsTestSuite) TestParentChildPipeline() {
 
 	// bad_http_not_ignored pipeline
 	assert := assert.New(suite.T())
-	_, cmd, err := suite.runPipeline("parent_pipeline_with_args", 100*time.Millisecond, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "parent_pipeline_with_args", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 300, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 300, "finished")
 	if err != nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return
@@ -348,14 +343,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	// bad_http_not_ignored pipeline
 	assert := assert.New(suite.T())
-	_, cmd, err := suite.runPipeline("bad_http_not_ignored", 100*time.Millisecond, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "bad_http_not_ignored", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 200, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 200, "failed")
 	if err == nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return
@@ -374,14 +369,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_http_ignored pipeline
-	_, cmd, err = suite.runPipeline("bad_http_ignored", 100*time.Millisecond, nil)
+	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_http_ignored", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	ex, pex, err := suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -431,14 +426,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_http_ignored_get_error_code pipeline
-	_, cmd, err = suite.runPipeline("bad_http_ignored_get_error_code", 100*time.Millisecond, nil)
+	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_http_ignored_get_error_code", 100*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -462,14 +457,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_http_with_for pipeline
-	_, cmd, err = suite.runPipeline("bad_http_with_for", 1*time.Second, nil)
+	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_http_with_for", 1*time.Second, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -494,13 +489,13 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_email_with_invalid_recipients pipeline
-	_, cmd, err = suite.runPipeline("bad_email_with_invalid_recipients", 1*time.Second, nil)
+	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_email_with_invalid_recipients", 1*time.Second, nil)
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -522,14 +517,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_email_with_param pipeline
-	_, cmd, err = suite.runPipeline("bad_email_with_param", 1*time.Second, nil)
+	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_email_with_param", 1*time.Second, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -551,14 +546,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// end pipeline test
 
 	// bad_email_with_expr
-	_, cmd, err = suite.runPipeline("bad_email_with_expr", 1*time.Second, nil)
+	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_email_with_expr", 1*time.Second, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	ex, pex, err = suite.getPipelineExAndWait(cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	ex, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -612,13 +607,13 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 func (suite *EsTestSuite) TestHttp() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := suite.runPipeline("jsonplaceholder_expr", 500*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "jsonplaceholder_expr", 500*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 5, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 5, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -646,13 +641,13 @@ func (suite *EsTestSuite) TestHttp() {
 func (suite *EsTestSuite) TestParam() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := suite.runPipeline("param_test", 100*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_test", 100*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 500, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 500, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -699,14 +694,14 @@ func (suite *EsTestSuite) TestParamOverride() {
 		"simple": "bar",
 	}
 
-	_, pipelineCmd, err := suite.runPipeline("param_override_test", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_override_test", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -731,14 +726,14 @@ func (suite *EsTestSuite) TestChildPipeline() {
 		"simple": "bar",
 	}
 
-	_, pipelineCmd, err := suite.runPipeline("parent_pipeline", 300*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "parent_pipeline", 300*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := suite.getPipelineExAndWait(pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 300, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 300, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -754,86 +749,10 @@ func (suite *EsTestSuite) TestChildPipeline() {
 	// TODO: - add more levels (not just 1)
 }
 
-func (suite *EsTestSuite) getPipelineExAndWait(event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
-	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(suite.ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = ex.LoadProcess(event)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pex := ex.PipelineExecutions[pipelineExecutionID]
-	if pex == nil {
-		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
-	}
-
-	// Wait for the pipeline to complete, but not forever
-	for i := 0; i < waitRetry && !pex.IsComplete() && pex.Status != expectedState; i++ {
-		time.Sleep(waitTime)
-
-		err = ex.LoadProcess(event)
-		if err != nil {
-			return nil, nil, fmt.Errorf("Error loading process: %w", err)
-		}
-		if pex == nil {
-			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
-		}
-		pex = ex.PipelineExecutions[pipelineExecutionID]
-	}
-
-	if !pex.IsComplete() {
-		return ex, pex, fmt.Errorf("not completed")
-	}
-
-	return ex, pex, nil
-
-}
-
-func (suite *EsTestSuite) runPipeline(name string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
-
-	parts := strings.Split(name, ".")
-	if len(parts) != 3 {
-		name = "local.pipeline." + name
-	}
-
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(suite.ctx),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                name,
-	}
-
-	if args != nil {
-		pipelineCmd.Args = *args
-	}
-
-	if err := suite.esService.Send(pipelineCmd); err != nil {
-		return nil, nil, fmt.Errorf("Error sending pipeline command: %w", err)
-
-	}
-
-	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
-	time.Sleep(initialWaitTime)
-
-	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(suite.ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = ex.LoadProcess(pipelineCmd.Event)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return ex, pipelineCmd, nil
-}
-
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to suite.Run
 func TestEsTestingSuite(t *testing.T) {
-	suite.Run(t, new(EsTestSuite))
+	suite.Run(t, &EsTestSuite{
+		FlowpipeTestSuite: &FlowpipeTestSuite{},
+	})
 }

@@ -9,21 +9,23 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
 type ModTestSuite struct {
 	suite.Suite
+	*FlowpipeTestSuite
+
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
-	esService             *es.ESService
-	ctx                   context.Context
 }
 
 // The SetupSuite method will be run by testify once, at the very
@@ -55,7 +57,7 @@ func (suite *ModTestSuite) SetupSuite() {
 
 	}
 
-	pipelineDirPath := path.Join(cwd, "pipelines")
+	pipelineDirPath := path.Join(cwd, "default_mod")
 
 	viper.GetViper().Set("pipeline.dir", pipelineDirPath)
 	viper.GetViper().Set("output.dir", outputPath)
@@ -128,6 +130,40 @@ func (suite *ModTestSuite) AfterTest(suiteName, testName string) {
 	time.Sleep(2 * time.Second)
 }
 
+func (suite *ModTestSuite) XXTestPipelineWithParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{
+		"simple": "bar",
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_override_test", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	echoStepsOutput := pex.AllStepOutputs["echo"]
+	if echoStepsOutput == nil {
+		assert.Fail("echo step output not found")
+		return
+	}
+
+	assert.Equal("finished", echoStepsOutput["simple"].(*modconfig.Output).Status)
+	assert.Equal("bar", echoStepsOutput["simple"].(*modconfig.Output).Data["text"])
+}
+
 func TestModTestingSuite(t *testing.T) {
-	suite.Run(t, new(ModTestSuite))
+	suite.Run(t, &ModTestSuite{
+		FlowpipeTestSuite: &FlowpipeTestSuite{},
+	})
 }

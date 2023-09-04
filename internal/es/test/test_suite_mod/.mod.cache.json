@@ -1,0 +1,11 @@
+{
+    "default_mod": {
+      "mod_depend_a": {
+        "name": "mod_depend_a",
+        "alias": "mod_depend_a",
+        "version": "1.0.0",
+        "constraint": "*",
+        "struct_version": 20220411
+      }
+    }
+  }
