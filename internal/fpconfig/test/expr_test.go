@@ -111,7 +111,7 @@ func TestExprWithinVariable(t *testing.T) {
 	assert.NotEqual("hello world", textInput, "wrong input format")
 }
 
-func XXTestExprDependAndFunction(t *testing.T) {
+func TestExprDependAndFunction(t *testing.T) {
 	assert := assert.New(t)
 
 	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/expressions.fp")
@@ -132,6 +132,24 @@ func XXTestExprDependAndFunction(t *testing.T) {
 
 	assert.True(stepOne.IsResolved(), "step should be resolved")
 
+	stepOneInput, err := stepOne.GetInputs(nil)
+	assert.Nil(err)
+	assert.Equal("foo", stepOneInput["text"])
+
+	stepOneA := pipelineHcl.GetStep("echo.text_1_a")
+	if stepOneA == nil {
+		assert.Fail("echo.text_1_a step not found")
+		return
+	}
+
+	assert.True(stepOneA.IsResolved(), "step should be resolved")
+
+	stepOneAInput, err := stepOneA.GetInputs(nil)
+	assert.Nil(err)
+
+	// step_1_a has a title function on its text
+	assert.Equal("Foo", stepOneAInput["text"])
+
 	stepTwo := pipelineHcl.GetStep("echo.text_2")
 	if stepTwo == nil {
 		assert.Fail("echo.text_1 step not found")
@@ -146,5 +164,5 @@ func XXTestExprDependAndFunction(t *testing.T) {
 		return
 	}
 
-	assert.False(stepThree.IsResolved(), "step 2 should NOT be resolved")
+	assert.False(stepThree.IsResolved(), "step 3 should NOT be resolved")
 }
