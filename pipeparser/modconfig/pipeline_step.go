@@ -917,6 +917,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 
 				var recipientSlice []string
 				for _, goVal := range goVals {
+					// TODO here that it's not the right way of doing it, so we don't miss it later.
 					if recipient, ok := goVal.(string); ok {
 						recipientSlice = append(recipientSlice, recipient)
 					}
@@ -1004,6 +1005,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 
 				var ccRecipientSlice []string
 				for _, goVal := range goVals {
+					// TODO here that it's not the right way of doing it, so we don't miss it later.
 					if recipient, ok := goVal.(string); ok {
 						ccRecipientSlice = append(ccRecipientSlice, recipient)
 					}
@@ -1031,6 +1033,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 
 				var bccRecipientSlice []string
 				for _, goVal := range goVals {
+					// TODO here that it's not the right way of doing it, so we don't miss it later.
 					if recipient, ok := goVal.(string); ok {
 						bccRecipientSlice = append(bccRecipientSlice, recipient)
 					}
