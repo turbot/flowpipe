@@ -693,23 +693,16 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeDuration:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse duration attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					p.Duration = val.AsString()
-				}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
 			}
+
+			if val != cty.NilVal {
+				p.Duration = val.AsString()
+			}
+
 		default:
 			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
@@ -905,276 +898,183 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeTo:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := attr.Expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse to attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
-					if err2 != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to Go values",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					var recipientSlice []string
-					for _, goVal := range goVals {
-						if recipient, ok := goVal.(string); ok {
-							recipientSlice = append(recipientSlice, recipient)
-						}
-					}
-					p.To = recipientSlice
+			if val != cty.NilVal {
+				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				if err2 != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to Go values",
+						Subject:  &attr.Range,
+					})
+					continue
 				}
+
+				var recipientSlice []string
+				for _, goVal := range goVals {
+					// TODO here that it's not the right way of doing it, so we don't miss it later.
+					if recipient, ok := goVal.(string); ok {
+						recipientSlice = append(recipientSlice, recipient)
+					}
+				}
+				p.To = recipientSlice
 			}
 
 		case schema.AttributeTypeFrom:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeFrom + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					from := val.AsString()
-					p.From = &from
-				}
+			if val != cty.NilVal {
+				from := val.AsString()
+				p.From = &from
 			}
 
 		case schema.AttributeTypeSenderCredential:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSenderCredential + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					senderCredential := val.AsString()
-					p.SenderCredential = &senderCredential
-				}
+			if val != cty.NilVal {
+				senderCredential := val.AsString()
+				p.SenderCredential = &senderCredential
 			}
 
 		case schema.AttributeTypeHost:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeHost + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					host := val.AsString()
-					p.Host = &host
-				}
+			if val != cty.NilVal {
+				host := val.AsString()
+				p.Host = &host
 			}
 
 		case schema.AttributeTypePort:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypePort + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					port := val.AsString()
-					p.Port = &port
-				}
+			if val != cty.NilVal {
+				port := val.AsString()
+				p.Port = &port
 			}
 
 		case schema.AttributeTypeSenderName:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSenderName + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					senderName := val.AsString()
-					p.SenderName = &senderName
-				}
+			if val != cty.NilVal {
+				senderName := val.AsString()
+				p.SenderName = &senderName
 			}
 
 		case schema.AttributeTypeCc:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := attr.Expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse to attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
-					if err2 != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeCc + " attribute to Go values",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					var ccRecipientSlice []string
-					for _, goVal := range goVals {
-						if recipient, ok := goVal.(string); ok {
-							ccRecipientSlice = append(ccRecipientSlice, recipient)
-						}
-					}
-					p.Cc = ccRecipientSlice
+			if val != cty.NilVal {
+				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				if err2 != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeCc + " attribute to Go values",
+						Subject:  &attr.Range,
+					})
+					continue
 				}
+
+				var ccRecipientSlice []string
+				for _, goVal := range goVals {
+					// TODO here that it's not the right way of doing it, so we don't miss it later.
+					if recipient, ok := goVal.(string); ok {
+						ccRecipientSlice = append(ccRecipientSlice, recipient)
+					}
+				}
+				p.Cc = ccRecipientSlice
 			}
 
 		case schema.AttributeTypeBcc:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := attr.Expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse to attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
-					if err2 != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeBcc + " attribute to Go values",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					var bccRecipientSlice []string
-					for _, goVal := range goVals {
-						if recipient, ok := goVal.(string); ok {
-							bccRecipientSlice = append(bccRecipientSlice, recipient)
-						}
-					}
-					p.Bcc = bccRecipientSlice
+			if val != cty.NilVal {
+				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				if err2 != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeBcc + " attribute to Go values",
+						Subject:  &attr.Range,
+					})
+					continue
 				}
+
+				var bccRecipientSlice []string
+				for _, goVal := range goVals {
+					// TODO here that it's not the right way of doing it, so we don't miss it later.
+					if recipient, ok := goVal.(string); ok {
+						bccRecipientSlice = append(bccRecipientSlice, recipient)
+					}
+				}
+				p.Bcc = bccRecipientSlice
 			}
 
 		case schema.AttributeTypeBody:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeBody + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					body := val.AsString()
-					p.Body = &body
-				}
+			if val != cty.NilVal {
+				body := val.AsString()
+				p.Body = &body
 			}
 
 		case schema.AttributeTypeContentType:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeContentType + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					contentType := val.AsString()
-					p.ContentType = &contentType
-				}
+			if val != cty.NilVal {
+				contentType := val.AsString()
+				p.ContentType = &contentType
 			}
 
 		case schema.AttributeTypeSubject:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSubject + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					subject := val.AsString()
-					p.Subject = &subject
-				}
+			if val != cty.NilVal {
+				subject := val.AsString()
+				p.Subject = &subject
 			}
 
 		default:
@@ -1225,25 +1125,6 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		schema.AttributeTypeText: textInput,
 		schema.AttributeTypeJson: jsonInput,
 	}, nil
-}
-
-func dependsOnFromExpressions(name string, expr hcl.Expression, p IPipelineStep) {
-	if len(expr.Variables()) == 0 {
-		return
-	}
-	traversals := expr.Variables()
-	for _, traversal := range traversals {
-		parts := hclhelpers.TraversalAsStringSlice(traversal)
-		if len(parts) > 0 {
-			// When the expression/traversal is referencing an index, the index is also included in the parts
-			// for example: []string len: 5, cap: 5, ["step","sleep","sleep_1","0","duration"]
-			if parts[0] == schema.BlockTypePipelineStep {
-				dependsOn := parts[1] + "." + parts[2]
-				p.AppendDependsOn(dependsOn)
-			}
-		}
-	}
-	p.AddUnresolvedAttribute(name, expr)
 }
 
 func dependsOnFromExpressionsTwo(attr *hcl.Attribute, evalContext *hcl.EvalContext, p IPipelineStep) (cty.Value, hcl.Diagnostics) {
@@ -1395,71 +1276,45 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeSql:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					sql := val.AsString()
-					p.Sql = &sql
-				}
+			if val != cty.NilVal {
+				sql := val.AsString()
+				p.Sql = &sql
 			}
 		case schema.AttributeTypeConnectionString:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					val, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeConnectionString + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
 
-					connectionString := val.AsString()
-					p.ConnnectionString = &connectionString
-				}
+			if val != cty.NilVal {
+				connectionString := val.AsString()
+				p.ConnnectionString = &connectionString
 			}
 		case schema.AttributeTypeArgs:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					vals, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(vals)
-					if err2 != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute to Go values",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					p.Args = goVals
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				if err2 != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute to Go values",
+						Subject:  &attr.Range,
+					})
+					continue
 				}
+				p.Args = goVals
 			}
 
 		default:
@@ -1542,31 +1397,23 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, evalC
 				p.Pipeline = val
 			}
 		case schema.AttributeTypeArgs:
-			if attr.Expr != nil {
-				expr := attr.Expr
-				if len(expr.Variables()) > 0 {
-					dependsOnFromExpressions(name, expr, p)
-				} else {
-					vals, err := expr.Value(evalContext)
-					if err != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					goVals, err2 := hclhelpers.CtyToGoMapInterface(vals)
-					if err2 != nil {
-						diags = append(diags, &hcl.Diagnostic{
-							Severity: hcl.DiagError,
-							Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute to Go values",
-							Subject:  &attr.Range,
-						})
-						continue
-					}
-					p.Args = goVals
+			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				goVals, err2 := hclhelpers.CtyToGoMapInterface(val)
+				if err2 != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute to Go values",
+						Subject:  &attr.Range,
+					})
+					continue
 				}
+				p.Args = goVals
 			}
 
 		default:
