@@ -103,3 +103,10 @@ func TestEmailStepWithParam(t *testing.T) {
 	dependsOn := step.GetDependsOn()
 	assert.Contains(dependsOn, "echo.email_body")
 }
+
+func TestEmailStepInvalidPortFormat(t *testing.T) {
+	assert := assert.New(t)
+
+	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/email.fp")
+	assert.Nil(err, "error found")
+}

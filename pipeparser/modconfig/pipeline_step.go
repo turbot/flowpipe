@@ -723,7 +723,7 @@ type PipelineStepEmail struct {
 	From             *string  `json:"from"`
 	SenderCredential *string  `json:"sender_credential"`
 	Host             *string  `json:"host"`
-	Port             *string  `json:"port"`
+	Port             *int64   `json:"port"`
 	SenderName       *string  `json:"sender_name"`
 	Cc               []string `json:"cc"`
 	Bcc              []string `json:"bcc"`
@@ -773,7 +773,7 @@ func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]
 		}
 	}
 
-	var port *string
+	var port *int64
 	if p.UnresolvedAttributes[schema.AttributeTypePort] == nil {
 		port = p.Port
 	} else {
@@ -969,8 +969,16 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				port := val.AsString()
-				p.Port = &port
+				port, err := hclhelpers.CtyToInt64(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to convert port into integer",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				p.Port = port
 			}
 
 		case schema.AttributeTypeSenderName:
