@@ -38,37 +38,12 @@ func TestStepOutput(t *testing.T) {
 
 	assert.Equal("bar", startOutput.Value)
 
-	// objectVal := cty.ObjectVal(map[string]cty.Value{
-	// 	"echo": cty.ObjectVal(map[string]cty.Value{
-	// 		"start_step": cty.ObjectVal(map[string]cty.Value{
-	// 			"text": cty.StringVal("foo"),
-	// 			"output": cty.ObjectVal(map[string]cty.Value{
-	// 				"start_output": cty.ObjectVal(map[string]cty.Value{
-	// 					"value": cty.StringVal("bar"),
-	// 				}),
-	// 			}),
-	// 		}),
-	// 		"end_step": cty.ObjectVal(map[string]cty.Value{
-	// 			"text": cty.StringVal("bar"),
-	// 		}),
-	// 	}),
-	// })
+	endStep := pipelines["local.pipeline.step_output"].GetStep("echo.end_step")
+	if endStep == nil {
+		assert.Fail("end_step not found")
+		return
+	}
 
-	// step := pipelines["local.pipeline.step_output"].GetStep("echo.end_step")
-
-	// // panic(fmt.Sprintf("%+v", step.GetOutputConfig()["start_output"]))
-
-	// evalContext := &hcl.EvalContext{}
-	// evalContext.Variables = map[string]cty.Value{}
-	// evalContext.Variables["step"] = objectVal
-
-	// inputs, err := step.GetInputs(evalContext)
-	// if err != nil {
-	// 	assert.Fail("error getting inputs")
-	// 	return
-	// }
-
-	// panic(fmt.Sprintf("%+v", inputs))
-
-	// // assert.Nil(pipelines["step_output"].Steps[0].GetOutputConfig()["start_output"])
+	assert.Equal(1, len(endStep.GetDependsOn()))
+	assert.Equal("echo.start_step", endStep.GetDependsOn()[0])
 }

@@ -75,9 +75,9 @@ func (o *Output) HasErrors() bool {
 	return o.Errors != nil && len(o.Errors) > 0
 }
 
-func (o *Output) AsCtyValue() (cty.Value, error) {
+func (o *Output) AsCtyMap() (map[string]cty.Value, error) {
 	if o == nil {
-		return cty.ObjectVal(map[string]cty.Value{}), nil
+		return map[string]cty.Value{}, nil
 	}
 
 	variables := make(map[string]cty.Value)
@@ -92,17 +92,17 @@ func (o *Output) AsCtyValue() (cty.Value, error) {
 		case string, int, float32, float64, int8, int16, int32, int64, bool, []string, []int, []float32, []float64, []int8, []int16, []int32, []int64, []bool:
 			ctyType, err := gocty.ImpliedType(v)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 
 			variables[key], err = gocty.ToCtyValue(v, ctyType)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 		case []interface{}, map[string]interface{}:
 			val, err := hclhelpers.ConvertMapOrSliceToCtyValue(v)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			variables[key] = val
 		}
@@ -116,33 +116,33 @@ func (o *Output) AsCtyValue() (cty.Value, error) {
 			var err error
 			ctyMap["message"], err = gocty.ToCtyValue(stepErr.Message, cty.String)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			ctyMap["error_code"], err = gocty.ToCtyValue(stepErr.ErrorCode, cty.Number)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			ctyMap["pipeline_execution_id"], err = gocty.ToCtyValue(stepErr.PipelineExecutionID, cty.String)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			ctyMap["step_execution_id"], err = gocty.ToCtyValue(stepErr.StepExecutionID, cty.String)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			ctyMap["pipeline"], err = gocty.ToCtyValue(stepErr.Pipeline, cty.String)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			ctyMap["step"], err = gocty.ToCtyValue(stepErr.Step, cty.String)
 			if err != nil {
-				return cty.NilVal, err
+				return nil, err
 			}
 			errList = append(errList, cty.ObjectVal(ctyMap))
 		}
 		variables["errors"] = cty.ListVal(errList)
 	}
-	return cty.ObjectVal(variables), nil
+	return variables, nil
 }
 
 type StepError struct {

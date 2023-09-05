@@ -3,6 +3,7 @@ pipeline "step_output" {
   step "echo" "begin" {
     text = "baz"
   }
+
   step "echo" "start_step" {
       text = "foo"
 
@@ -15,7 +16,11 @@ pipeline "step_output" {
       }
   }
 
-#   step "echo" "end_step" {
-#      text = step.echo.start_step.output.start_output
-#   }
+  step "echo" "end_step" {
+     text = step.echo.start_step.output.start_output_two
+  }
+
+  output "end_output" {
+     value = step.echo.start_step.output.start_output_two
+  }
 }

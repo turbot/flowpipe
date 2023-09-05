@@ -48,7 +48,9 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 
 func startManagerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+
 		serviceConfig.Initialize(ctx)
+
 		m, err := manager.NewManager(ctx)
 
 		if err != nil {
