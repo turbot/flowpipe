@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
@@ -57,6 +58,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		}
 
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
+		stepOutput := make(map[string]interface{})
 
 		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
 		// pipeline_plan phase
@@ -65,11 +67,12 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				Status: "skipped",
 			}
 
-			endStep(cmd, output, logger, h, ctx)
+			endStep(cmd, output, stepOutput, logger, h, ctx)
 			return
 		}
 
 		var output *modconfig.Output
+
 		var primitiveError error
 		switch stepDefn.GetType() {
 		case schema.BlockTypePipelineStepExec:
@@ -157,18 +160,57 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
+		pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
+
+		// calculate the output blocks
+		for _, outputConfig := range stepDefn.GetOutputConfig() {
+			if outputConfig.UnresolvedValue != nil {
+				evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
+				if err != nil {
+					logger.Error("Error building eval context while calculating output", "error", err)
+					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+					if err2 != nil {
+						logger.Error("Error publishing event", "error", err2)
+					}
+					return
+				}
+				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
+				if len(diags) > 0 && diags.HasErrors() {
+					logger.Error("Error calculating output", "error", diags)
+					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+					if err2 != nil {
+						logger.Error("Error publishing event", "error", err2)
+					}
+					return
+				}
+
+				goVal, err := hclhelpers.CtyToGo(ctyValue)
+				if err != nil {
+					logger.Error("Error converting cty value to Go value for output calculation", "error", err)
+					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+					if err2 != nil {
+						logger.Error("Error publishing event", "error", err2)
+					}
+					return
+				}
+				stepOutput[outputConfig.Name] = goVal
+			} else {
+				stepOutput[outputConfig.Name] = outputConfig.Value
+			}
+		}
+
 		// All other primitives finish immediately.
-		endStep(cmd, output, logger, h, ctx)
+		endStep(cmd, output, stepOutput, logger, h, ctx)
 
 	}(ctx, c, h)
 
 	return nil
 }
 
-func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
+func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
 	e, err := event.NewPipelineStepFinished(
 		event.ForPipelineStepStartToPipelineStepFinished(cmd),
-		event.WithStepOutput(output))
+		event.WithStepOutput(output, stepOutput))
 
 	if err != nil {
 		logger.Error("Error creating Pipeline Step Finished event", "error", err)

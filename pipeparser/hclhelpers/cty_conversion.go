@@ -342,14 +342,16 @@ func ConvertMapOrSliceToCtyValue(data interface{}) (cty.Value, error) {
 		return convertMapToCtyValue(data)
 	default:
 		// For other types, convert it as a single value using convertInterfaceToCtyValue
-		return convertInterfaceToCtyValue(data)
+		return ConvertInterfaceToCtyValue(data)
 	}
 }
 
-func convertInterfaceToCtyValue(v interface{}) (cty.Value, error) {
+func ConvertInterfaceToCtyValue(v interface{}) (cty.Value, error) {
 	// Use reflection to determine the underlying type and convert it to cty.Value
+	//
+	// file: go-cty/cty/gocty/time_implied.go/func impliedType
 	switch reflect.TypeOf(v).Kind() {
-	case reflect.Int, reflect.Float64, reflect.String, reflect.Bool:
+	case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Float32, reflect.Float64, reflect.String, reflect.Bool:
 		ctyType, err := gocty.ImpliedType(v)
 		if err != nil {
 			return cty.NilVal, err
@@ -378,7 +380,7 @@ func convertSliceToCtyValue(v interface{}) (cty.Value, error) {
 	ctyValues := make([]cty.Value, len(slice))
 	for i, item := range slice {
 		var err error
-		ctyValues[i], err = convertInterfaceToCtyValue(item)
+		ctyValues[i], err = ConvertInterfaceToCtyValue(item)
 		if err != nil {
 			return cty.NilVal, err
 		}
@@ -397,7 +399,7 @@ func convertMapToCtyValue(v interface{}) (cty.Value, error) {
 	ctyValues := make(map[string]cty.Value, len(mapData))
 	for key, value := range mapData {
 		var err error
-		ctyValues[key], err = convertInterfaceToCtyValue(value)
+		ctyValues[key], err = ConvertInterfaceToCtyValue(value)
 		if err != nil {
 			return cty.NilVal, err
 		}

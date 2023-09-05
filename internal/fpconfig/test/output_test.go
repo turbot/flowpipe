@@ -21,12 +21,12 @@ func TestOutput(t *testing.T) {
 		return
 	}
 
-	if len(pipelines["local.pipeline.with_output"].Outputs) != 2 {
+	if len(pipelines["local.pipeline.with_output"].OutputConfig) != 2 {
 		assert.Fail("with_output pipeline has no outputs")
 		return
 	}
 
-	outputs := pipelines["local.pipeline.with_output"].Outputs
+	outputs := pipelines["local.pipeline.with_output"].OutputConfig
 	assert.Equal("one", outputs[0].Name)
 	assert.Equal("two", outputs[1].Name)
 }

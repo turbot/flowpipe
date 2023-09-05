@@ -320,7 +320,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				ParentExecutionID:     et.ParentExecutionID,
 				Errors:                []modconfig.StepError{},
-				AllStepOutputs:        ExecutionStepOutputs{},
+				AllNativeStepOutputs:  ExecutionStepOutputs{},
+				AllConfigStepOutputs:  ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
 				StepExecutionOrder:    map[string][]string{},
 			}
@@ -448,31 +449,43 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)
 				logger.Warn("Step execution has a nil output", "stepExecutionID", et.StepExecutionID, "pipelineExecutionID", pe.ID)
 			} else {
-
 				pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
 				pe.StepExecutions[et.StepExecutionID].Output = et.Output
 			}
 
-			if pe.AllStepOutputs[stepDefn.GetType()] == nil {
-				pe.AllStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
+			if len(et.StepOutput) > 0 {
+				pe.StepExecutions[et.StepExecutionID].StepOutput = et.StepOutput
+			}
+
+			if pe.AllNativeStepOutputs[stepDefn.GetType()] == nil {
+				pe.AllNativeStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
+			}
+
+			if pe.AllConfigStepOutputs[stepDefn.GetType()] == nil {
+				pe.AllConfigStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
 			}
 
 			if !shouldBeIndexed {
 				// non for_each step. The step will be accessed such as:
 				// text = step.echo.text_1.text
-				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
-				if err != nil {
-					return err
-				}
+				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
+
+				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
 			} else {
 				// for indexed step, you want to be able to access the step as
 				// text = step.echo.text_1[1].text
 
-				if pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*modconfig.Output, et.StepForEach.ForEachTotalCount)
+				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*modconfig.Output, et.StepForEach.ForEachTotalCount)
 				}
 
-				pe.AllStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*modconfig.Output)[et.StepForEach.Index] = et.Output
+				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*modconfig.Output)[et.StepForEach.Index] = et.Output
+
+				if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]map[string]interface{}, et.StepForEach.ForEachTotalCount)
+				}
+
+				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]map[string]interface{})[et.StepForEach.Index] = et.StepOutput
 			}
 
 			// TODO: Error handling

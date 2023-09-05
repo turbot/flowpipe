@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -35,8 +36,11 @@ type PipelineExecution struct {
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
 	Errors []modconfig.StepError `json:"errors,omitempty"`
 
-	// The "final" output for all the steps in this pipeline execution.
-	AllStepOutputs ExecutionStepOutputs `json:"-"`
+	// The final native/primitive output for all the steps in this pipeline execution.
+	AllNativeStepOutputs ExecutionStepOutputs `json:"-"`
+
+	// The final configured output for all the steps in this pipeline execution.
+	AllConfigStepOutputs ExecutionStepOutputs `json:"-"`
 
 	// Steps triggered by pipelines in the execution.
 	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
@@ -77,7 +81,7 @@ type PipelineExecution struct {
 func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, error) {
 	stepVariables := make(map[string]cty.Value)
 
-	for stepType, v := range pe.AllStepOutputs {
+	for stepType, v := range pe.AllNativeStepOutputs {
 
 		if stepVariables[stepType] == cty.NilVal {
 			stepVariables[stepType] = cty.ObjectVal(map[string]cty.Value{})
@@ -90,23 +94,41 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 
 		for stepName, stepOutput := range v {
 			if nonIndexStepOutput, ok := stepOutput.(*modconfig.Output); ok {
-				var err error
-				vm[stepName], err = nonIndexStepOutput.AsCtyValue()
+				ctyMap, err := nonIndexStepOutput.AsCtyMap()
 				if err != nil {
 					return nil, err
 				}
+
+				// check if there is a configured output (output block on the step) for this step
+				if pe.AllConfigStepOutputs[stepType] != nil && pe.AllConfigStepOutputs[stepType][stepName] != nil {
+					configuredOutputMap := make(map[string]cty.Value)
+
+					for configuredOutputName, configuredOutputValue := range pe.AllConfigStepOutputs[stepType][stepName].(map[string]interface{}) {
+						configuredOutputMap[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
+						if err != nil {
+							return nil, err
+						}
+					}
+
+					ctyMap["output"] = cty.ObjectVal(configuredOutputMap)
+				}
+
+				vm[stepName] = cty.ObjectVal(ctyMap)
+
 			} else if indexedStepOutput, ok := stepOutput.([]*modconfig.Output); ok {
-				var err error
 
 				ctyValList := make([]cty.Value, len(indexedStepOutput))
 				for i, stepOutput := range indexedStepOutput {
-					ctyValList[i], err = stepOutput.AsCtyValue()
+					ctyMap, err := stepOutput.AsCtyMap()
 					if err != nil {
 						return nil, err
 					}
+					ctyValList[i] = cty.ObjectVal(ctyMap)
 				}
+
 				vm[stepName] = cty.TupleVal(ctyValList)
 			}
+
 		}
 
 		stepVariables[stepType] = cty.ObjectVal(vm)
@@ -387,8 +409,15 @@ type StepExecution struct {
 
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 
-	// Output of the step
+	// Native/primitive output of the step
 	Output *modconfig.Output `json:"output,omitempty"`
+
+	// The output from the Step's output block:
+	// output "foo" {
+	//    value = <xxx>
+	//	}
+	//
+	StepOutput map[string]interface{} `json:"step_output,omitempty"`
 }
 
 func (se *StepExecution) Index() *int {

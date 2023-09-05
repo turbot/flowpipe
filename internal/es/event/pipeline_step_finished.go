@@ -13,8 +13,12 @@ type PipelineStepFinished struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 
-	// Output
+	// Output from the primitive, this is the "native" output of the primitive
 	Output *modconfig.Output `json:"output,omitempty"`
+
+	// Step output configured from the output block, we need a separate field for this because
+	// we don't want the StepOutput accidentally override the native primtive outputs
+	StepOutput map[string]interface{} `json:"step_output,omitempty"`
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
@@ -74,9 +78,10 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output *modconfig.Output) PipelineStepFinishedOption {
+func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
+		e.StepOutput = stepOutput
 		return nil
 	}
 }

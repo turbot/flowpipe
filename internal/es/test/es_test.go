@@ -185,7 +185,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 		return
 	}
 
-	echoStepsOutput := pex.AllStepOutputs["echo"]
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepsOutput == nil {
 		assert.Fail("echo step output not found")
 		return
@@ -200,7 +200,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal("sleep 2 output: 2s", echoStepsOutput["echo_sleep_1"].(*modconfig.Output).Data["text"])
 	assert.Equal("sleep 1 output: 1s", echoStepsOutput["echo_sleep_2"].(*modconfig.Output).Data["text"])
 
-	sleepStepsOutput := pex.AllStepOutputs["sleep"]
+	sleepStepsOutput := pex.AllNativeStepOutputs["sleep"]
 	if sleepStepsOutput == nil {
 		assert.Fail("sleep step output not found")
 		return
@@ -261,7 +261,7 @@ func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 
 	assert.Equal("finished", pex.Status)
 
-	echoStepsOutput := pex.AllStepOutputs["echo"]
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepsOutput == nil {
 		assert.Fail("echo step output not found")
 		return
@@ -303,10 +303,10 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 	assert.True(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
-	assert.Equal("failed", pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Status)
-	assert.NotNil(pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Errors)
-	assert.Equal(float64(404), pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Data["status_code"])
-	assert.Nil(pex.AllStepOutputs["echo"]["bad_http"])
+	assert.Equal("failed", pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Status)
+	assert.NotNil(pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Errors)
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Data["status_code"])
+	assert.Nil(pex.AllNativeStepOutputs["echo"]["bad_http"])
 
 	assert.NotNil(pex.PipelineOutput["errors"])
 	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error_code"])
@@ -333,7 +333,7 @@ func (suite *EsTestSuite) TestParentChildPipeline() {
 	assert.Equal("finished", pex.Status)
 	// TODO: this doesn't work yet, we need pass the pipeline status up? or does it has its own status?
 	// assert.Equal("finished", pex.AllStepOutputs["pipeline"]["child_pipeline_with_args"].(*modconfig.Output).Status)
-	assert.Equal("child echo step: from parent 24", pex.AllStepOutputs["pipeline"]["child_pipeline_with_args"].(*modconfig.Output).Data["child_output"])
+	assert.Equal("child echo step: from parent 24", pex.AllNativeStepOutputs["pipeline"]["child_pipeline_with_args"].(*modconfig.Output).Data["child_output"])
 	assert.Equal("child echo step: from parent 24", pex.PipelineOutput["parent_output"])
 	assert.Nil(pex.PipelineOutput["does_not_exist"])
 
@@ -361,10 +361,10 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.False(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
-	assert.Equal("failed", pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Status)
-	assert.NotNil(pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Errors)
-	assert.Equal(float64(404), pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Data["status_code"])
-	assert.Nil(pex.AllStepOutputs["echo"]["bad_http"])
+	assert.Equal("failed", pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Status)
+	assert.NotNil(pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Errors)
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Data["status_code"])
+	assert.Nil(pex.AllNativeStepOutputs["echo"]["bad_http"])
 
 	// end pipeline test
 
@@ -412,14 +412,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	assert.Equal("foo", output.(string))
 
-	assert.Equal("bar", pex.AllStepOutputs["echo"]["bad_http_if_error_true"].(*modconfig.Output).Data["text"])
+	assert.Equal("bar", pex.AllNativeStepOutputs["echo"]["bad_http_if_error_true"].(*modconfig.Output).Data["text"])
 
 	// checking the is_error function working correctly
-	assert.Equal("finished", pex.AllStepOutputs["echo"]["bad_http_if_error_true"].(*modconfig.Output).Status)
-	assert.Equal("skipped", pex.AllStepOutputs["echo"]["bad_http_if_error_false"].(*modconfig.Output).Status)
+	assert.Equal("finished", pex.AllNativeStepOutputs["echo"]["bad_http_if_error_true"].(*modconfig.Output).Status)
+	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["bad_http_if_error_false"].(*modconfig.Output).Status)
 
 	// checking the error_message function working correctly
-	assert.Equal("404 Not Found", pex.AllStepOutputs["echo"]["error_message"].(*modconfig.Output).Data["text"])
+	assert.Equal("404 Not Found", pex.AllNativeStepOutputs["echo"]["error_message"].(*modconfig.Output).Data["text"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -448,8 +448,8 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	assert.Equal(float64(404), pex.AllStepOutputs["http"]["my_step_1"].(*modconfig.Output).Data["status_code"])
-	assert.Equal("404", pex.AllStepOutputs["echo"]["bad_http"].(*modconfig.Output).Data["text"])
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["my_step_1"].(*modconfig.Output).Data["status_code"])
+	assert.Equal("404", pex.AllNativeStepOutputs["echo"]["bad_http"].(*modconfig.Output).Data["text"])
 	assert.Equal("404", output.(string))
 
 	// reset ex (so we don't forget if we copy & paste the block)
@@ -473,16 +473,16 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.True(pex.IsComplete())
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal(float64(404), pex.AllStepOutputs["http"]["http_step"].([]*modconfig.Output)[0].Data["status_code"])
-	assert.Equal(float64(404), pex.AllStepOutputs["http"]["http_step"].([]*modconfig.Output)[1].Data["status_code"])
-	assert.Equal(float64(200), pex.AllStepOutputs["http"]["http_step"].([]*modconfig.Output)[2].Data["status_code"])
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["http_step"].([]*modconfig.Output)[0].Data["status_code"])
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["http_step"].([]*modconfig.Output)[1].Data["status_code"])
+	assert.Equal(float64(200), pex.AllNativeStepOutputs["http"]["http_step"].([]*modconfig.Output)[2].Data["status_code"])
 
-	assert.Equal("skipped", pex.AllStepOutputs["echo"]["http_step"].([]*modconfig.Output)[0].Status)
-	assert.Equal("skipped", pex.AllStepOutputs["echo"]["http_step"].([]*modconfig.Output)[1].Status)
-	assert.Equal("finished", pex.AllStepOutputs["echo"]["http_step"].([]*modconfig.Output)[2].Status)
-	assert.Nil(pex.AllStepOutputs["echo"]["http_step"].([]*modconfig.Output)[0].Data["text"])
-	assert.Nil(pex.AllStepOutputs["echo"]["http_step"].([]*modconfig.Output)[1].Data["text"])
-	assert.Equal("200", pex.AllStepOutputs["echo"]["http_step"].([]*modconfig.Output)[2].Data["text"])
+	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[0].Status)
+	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[1].Status)
+	assert.Equal("finished", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[2].Status)
+	assert.Nil(pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[0].Data["text"])
+	assert.Nil(pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[1].Data["text"])
+	assert.Equal("200", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[2].Data["text"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -504,10 +504,10 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.True(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
-	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Status)
-	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Errors)
+	assert.Equal("failed", pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Status)
+	assert.NotNil(pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors)
 
-	errors := pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
+	errors := pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
 	for _, e := range errors {
 		assert.Contains(e.Message, "no such host")
 	}
@@ -533,10 +533,10 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.True(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
-	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Status)
-	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Errors)
+	assert.Equal("failed", pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Status)
+	assert.NotNil(pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors)
 
-	errors = pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
+	errors = pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
 	for _, e := range errors {
 		assert.Contains(e.Message, "no such host")
 	}
@@ -578,7 +578,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Contains(dependsOn, "echo.email_body")
 
 	// Check if the depends_on step is finished and has the correct output
-	echoStepOutput := pex.AllStepOutputs["echo"]
+	echoStepOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepOutput == nil {
 		assert.Fail("echo step output not found")
 		return
@@ -590,11 +590,11 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.True(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
-	assert.Equal("failed", pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Status)
-	assert.NotNil(pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Errors)
+	assert.Equal("failed", pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Status)
+	assert.NotNil(pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors)
 
 	// The email step should fail because of the invalid smtp host
-	errors = pex.AllStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
+	errors = pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
 	for _, e := range errors {
 		assert.Contains(e.Message, "no such host")
 	}
@@ -621,7 +621,7 @@ func (suite *EsTestSuite) TestHttp() {
 
 	assert.Equal("finished", pex.Status)
 
-	echoStepsOutput := pex.AllStepOutputs["echo"]
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepsOutput == nil {
 		assert.Fail("echo step output not found")
 		return
@@ -655,7 +655,7 @@ func (suite *EsTestSuite) TestParam() {
 
 	assert.Equal("finished", pex.Status)
 
-	echoStepsOutput := pex.AllStepOutputs["echo"]
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepsOutput == nil {
 		assert.Fail("echo step output not found")
 		return
@@ -709,7 +709,7 @@ func (suite *EsTestSuite) TestParamOverride() {
 
 	assert.Equal("finished", pex.Status)
 
-	echoStepsOutput := pex.AllStepOutputs["echo"]
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepsOutput == nil {
 		assert.Fail("echo step output not found")
 		return
@@ -747,6 +747,30 @@ func (suite *EsTestSuite) TestChildPipeline() {
 	// TODO: - Add status on pipeline step
 	// TODO: - add multiple childs
 	// TODO: - add more levels (not just 1)
+}
+
+func (suite *EsTestSuite) TestStepOutput() {
+	assert := assert.New(suite.T())
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "step_output", 500*time.Millisecond, nil)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Second, 2, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	allStepOutputs := pex.AllNativeStepOutputs
+	assert.Equal("baz", allStepOutputs["echo"]["begin"].(*modconfig.Output).Data["text"])
+	assert.Equal("foo", allStepOutputs["echo"]["start_step"].(*modconfig.Output).Data["text"])
+
+	assert.Equal("baz", allStepOutputs["echo"]["end_step"].(*modconfig.Output).Data["text"])
+
 }
 
 // In order for 'go test' to run this suite, we need to create
