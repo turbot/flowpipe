@@ -18,7 +18,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
-            "args": ["service", "start", "--pipeline-dir", "./internal/es/test/default_mod"]
+            "args": ["service", "start", "--pipeline-dir", "./internal/es/test/test_suite_mod"]
         },
         {
             "name": "cmd pipeline list",

@@ -57,7 +57,7 @@ func (suite *ModTestSuite) SetupSuite() {
 
 	}
 
-	pipelineDirPath := path.Join(cwd, "default_mod")
+	pipelineDirPath := path.Join(cwd, "test_suite_mod")
 
 	viper.GetViper().Set("pipeline.dir", pipelineDirPath)
 	viper.GetViper().Set("output.dir", outputPath)
@@ -128,6 +128,27 @@ func (suite *ModTestSuite) BeforeTest(suiteName, testName string) {
 
 func (suite *ModTestSuite) AfterTest(suiteName, testName string) {
 	time.Sleep(2 * time.Second)
+}
+
+func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Second, 1000, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
 }
 
 func (suite *ModTestSuite) XXTestPipelineWithParam() {

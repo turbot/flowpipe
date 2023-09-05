@@ -1,5 +1,5 @@
 {
-    "default_mod": {
+    "test_suite_mod": {
       "mod_depend_a": {
         "name": "mod_depend_a",
         "alias": "mod_depend_a",

@@ -12,6 +12,14 @@ pipeline "echo_one" {
     step "echo" "echo_one" {
         text = "Hello World"
     }
+
+    step "pipeline" "child_pipeline" {
+        pipeline = mod_depend_a.pipeline.echo_one_depend_a
+    }
+
+    output "echo_one_output" {
+        value = step.pipeline.child_pipeline.val
+    }
 }
 
 pipeline "expr_depend_and_function" {

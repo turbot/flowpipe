@@ -340,6 +340,8 @@ func (suite *FpTestSuite) TestModVariable() {
 	}
 
 	assert.Equal("prefix text here and this is the value of var_one and suffix", pipelineOne.Steps[0].(*modconfig.PipelineStepEcho).Text)
+	// step echo.two should not be resolved, it has reference to echo.one step
+	assert.False(pipelineOne.Steps[1].IsResolved())
 
 }
 
