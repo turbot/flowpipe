@@ -30,28 +30,26 @@ func TestStepAsHclVariables(t *testing.T) {
 		},
 	}
 
-	hclVariables, err := stepOutput.AsCtyValue()
+	hclVariables, err := stepOutput.AsCtyMap()
 	if err != nil {
 		assert.Fail("Error converting step output to HCL variables", err)
 		return
 	}
 
-	hclVariablesMap := hclVariables.AsValueMap()
-
-	assert.Equal("one", hclVariablesMap["string"].AsString())
-	assert.Equal(true, hclVariablesMap["int"].AsBigFloat().IsInt())
+	assert.Equal("one", hclVariables["string"].AsString())
+	assert.Equal(true, hclVariables["int"].AsBigFloat().IsInt())
 
 	var intVal int
-	err = gocty.FromCtyValue(hclVariablesMap["int"], &intVal)
+	err = gocty.FromCtyValue(hclVariables["int"], &intVal)
 	if err != nil {
 		assert.Fail("Unable to convert cty value to int")
 		return
 	}
 
 	assert.Equal(25, intVal)
-	assert.Equal(cty.True, hclVariablesMap["bool"])
+	assert.Equal(cty.True, hclVariables["bool"])
 
-	errors := hclVariablesMap["errors"]
+	errors := hclVariables["errors"]
 	errorSlice := errors.AsValueSlice()
 	assert.Equal(2, len(errorSlice), "there should be 2 errors")
 	assert.Equal("one", errorSlice[0].AsValueMap()["message"].AsString())

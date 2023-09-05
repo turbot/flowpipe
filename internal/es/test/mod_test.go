@@ -152,7 +152,7 @@ func (suite *ModTestSuite) XXTestPipelineWithParam() {
 
 	assert.Equal("finished", pex.Status)
 
-	echoStepsOutput := pex.AllStepOutputs["echo"]
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
 	if echoStepsOutput == nil {
 		assert.Fail("echo step output not found")
 		return
