@@ -12,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/pcerr"
 )
 
@@ -55,13 +56,24 @@ func (api *APIService) listPipelines(c *gin.Context) {
 		return
 	}
 
-	sort.Slice(pipelines, func(i, j int) bool {
-		return pipelines[i].Name() < pipelines[j].Name()
+	// Convert the list of pipelines to FpPipeline type
+	var fpPipelines []types.FpPipeline
+
+	for _, pipeline := range pipelines {
+		fpPipelines = append(fpPipelines, types.FpPipeline{
+			Name:        pipeline.Name(),
+			Description: pipeline.Description,
+			Mod:         pipeline.GetMod().FullName,
+		})
+	}
+
+	sort.Slice(fpPipelines, func(i, j int) bool {
+		return fpPipelines[i].Name < fpPipelines[j].Name
 	})
 
 	// TODO: paging, filter, sorting
 	result := types.ListPipelineResponse{
-		Items: pipelines,
+		Items: fpPipelines,
 	}
 
 	c.JSON(http.StatusOK, result)
@@ -92,13 +104,24 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		return
 	}
 
-	pipeline, found := cache.GetCache().Get(uri.PipelineName)
+	pipelineCached, found := cache.GetCache().Get(uri.PipelineName)
 	if !found {
 		common.AbortWithError(c, pcerr.NotFoundWithMessage("pipeline not found"))
 		return
 	}
 
-	c.JSON(http.StatusOK, pipeline)
+	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
+	if !ok {
+		return
+	}
+
+	fpPipeline := types.FpPipeline{
+		Name:        pipeline.Name(),
+		Description: pipeline.Description,
+		Mod:         pipeline.GetMod().FullName,
+	}
+
+	c.JSON(http.StatusOK, fpPipeline)
 }
 
 // @Summary Execute a pipeline command
