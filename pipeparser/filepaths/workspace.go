@@ -24,6 +24,7 @@ const (
 var PipesComponentWorkspaceDataDir = WorkspaceDataDir
 var PipesComponentModsFileName = ModFileName
 var PipesComponentWorkspaceIgnoreFiles = WorkspaceIgnoreFile
+var PipesComponentDefaultVarsFileName = DefaultVarsFileName
 
 var PipesComponentValidModFiles = []string{"mod.sp", "mod.hcl"}
 
@@ -44,7 +45,7 @@ func WorkspaceLockPath(workspacePath string) string {
 }
 
 func DefaultVarsFilePath(workspacePath string) string {
-	return path.Join(workspacePath, DefaultVarsFileName)
+	return path.Join(workspacePath, PipesComponentDefaultVarsFileName)
 }
 
 func ModFilePath(modFolder string) string {
