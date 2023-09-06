@@ -70,7 +70,10 @@ func (suite *FpTestSuite) SetupSuite() {
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
+	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.vars"
+
 	constants.PipesComponentModDataExtension = ".hcl"
+	constants.PipesComponentVariablesExtension = ".vars"
 
 	suite.SetupSuiteRunCount++
 }
@@ -340,8 +343,21 @@ func (suite *FpTestSuite) TestModVariable() {
 	}
 
 	assert.Equal("prefix text here and this is the value of var_one and suffix", pipelineOne.Steps[0].(*modconfig.PipelineStepEcho).Text)
-	// step echo.two should not be resolved, it has reference to echo.one step
-	assert.False(pipelineOne.Steps[1].IsResolved())
+	assert.Equal("prefix text here and value from var file and suffix", pipelineOne.Steps[1].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("prefix text here and var_three from var file and suffix", pipelineOne.Steps[2].(*modconfig.PipelineStepEcho).Text)
+
+	assert.True(pipelineOne.Steps[0].IsResolved())
+	assert.True(pipelineOne.Steps[1].IsResolved())
+	assert.True(pipelineOne.Steps[2].IsResolved())
+
+	// step echo.one_echo should not be resolved, it has reference to echo.one step
+	assert.False(pipelineOne.Steps[3].IsResolved())
+
+	assert.Equal("using value from locals: value of locals_one", pipelineOne.Steps[4].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: 10", pipelineOne.Steps[5].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[6].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[7].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: 33", pipelineOne.Steps[8].(*modconfig.PipelineStepEcho).Text)
 
 }
 

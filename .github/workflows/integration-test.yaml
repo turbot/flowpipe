@@ -26,10 +26,10 @@ jobs:
           repository: turbot/terraform-components
           path: terraform-components
 
-      # # Install MailHog for SMTP mail testing
-      # - name: Install MailHog
-      #   run: |
-      #     go install github.com/mailhog/MailHog@v1.0.1
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
 
       - name: Run tests
         run: make integration-test
