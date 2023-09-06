@@ -142,7 +142,7 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Second, 1000, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return

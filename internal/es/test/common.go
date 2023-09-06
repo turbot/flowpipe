@@ -75,7 +75,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipeline
 	}
 
 	// Wait for the pipeline to complete, but not forever
-	for i := 0; i < waitRetry && !pex.IsComplete(); i++ {
+	for i := 0; i < waitRetry; i++ {
 		time.Sleep(waitTime)
 
 		err = ex.LoadProcess(event)
@@ -87,7 +87,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipeline
 		}
 		pex = ex.PipelineExecutions[pipelineExecutionID]
 
-		if pex.Status == expectedState {
+		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
 			break
 		}
 	}

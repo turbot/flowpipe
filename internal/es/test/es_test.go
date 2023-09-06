@@ -757,7 +757,7 @@ func (suite *EsTestSuite) TestStepOutput() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Second, 2, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 2, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
