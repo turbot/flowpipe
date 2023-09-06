@@ -34,10 +34,10 @@ func CollectVariableValues(workspacePath string, variableFileArgs []string, vari
 	{
 		env := os.Environ()
 		for _, raw := range env {
-			if !strings.HasPrefix(raw, constants.EnvInputVarPrefix) {
+			if !strings.HasPrefix(raw, constants.PipesComponentEnvInputVarPrefix) {
 				continue
 			}
-			raw = raw[len(constants.EnvInputVarPrefix):] // trim the prefix
+			raw = raw[len(constants.PipesComponentEnvInputVarPrefix):] // trim the prefix
 
 			eq := strings.Index(raw, "=")
 			if eq == -1 {

@@ -100,6 +100,7 @@ func (m *Manager) Initialize() error {
 	constants.PipesComponentModDataExtension = ".hcl"
 	constants.PipesComponentVariablesExtension = ".vars"
 	constants.PipesComponentAutoVariablesExtension = ".auto.vars"
+	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger

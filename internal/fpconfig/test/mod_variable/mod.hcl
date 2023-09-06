@@ -34,6 +34,11 @@ variable "var_five" {
   description = "test variable"
 }
 
+# var_six has no default
+variable "var_six" {
+  type        = string
+  description = "test variable"
+}
 
 pipeline "one" {
     step "echo" "one" {
@@ -79,6 +84,10 @@ pipeline "one" {
 
     step "echo" "nine" {
       text = "var_five value is: ${var.var_five}"
+    }
+
+    step "echo" "ten" {
+      text = "var_six value is: ${var.var_six}"
     }
 }
 
