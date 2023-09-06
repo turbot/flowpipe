@@ -905,24 +905,16 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				goVals, err2 := hclhelpers.CtyToGoStringSlice(val)
 				if err2 != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to Go values",
+						Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to string slice",
 						Subject:  &attr.Range,
 					})
 					continue
 				}
-
-				var recipientSlice []string
-				for _, goVal := range goVals {
-					// TODO here that it's not the right way of doing it, so we don't miss it later.
-					if recipient, ok := goVal.(string); ok {
-						recipientSlice = append(recipientSlice, recipient)
-					}
-				}
-				p.To = recipientSlice
+				p.To = goVals
 			}
 
 		case schema.AttributeTypeFrom:
@@ -969,8 +961,8 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				port, err := hclhelpers.CtyToInt64(val)
-				if err != nil {
+				port, ctyDiags := hclhelpers.CtyToInt64(val)
+				if ctyDiags.HasErrors() {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to convert port into integer",
@@ -1001,24 +993,16 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				goVals, err2 := hclhelpers.CtyToGoStringSlice(val)
 				if err2 != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeCc + " attribute to Go values",
+						Summary:  "Unable to parse " + schema.AttributeTypeCc + " attribute to string slice",
 						Subject:  &attr.Range,
 					})
 					continue
 				}
-
-				var ccRecipientSlice []string
-				for _, goVal := range goVals {
-					// TODO here that it's not the right way of doing it, so we don't miss it later.
-					if recipient, ok := goVal.(string); ok {
-						ccRecipientSlice = append(ccRecipientSlice, recipient)
-					}
-				}
-				p.Cc = ccRecipientSlice
+				p.Cc = goVals
 			}
 
 		case schema.AttributeTypeBcc:
@@ -1029,24 +1013,16 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				goVals, err2 := hclhelpers.CtyToGoInterfaceSlice(val)
+				goVals, err2 := hclhelpers.CtyToGoStringSlice(val)
 				if err2 != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeBcc + " attribute to Go values",
+						Summary:  "Unable to parse " + schema.AttributeTypeBcc + " attribute to string slice",
 						Subject:  &attr.Range,
 					})
 					continue
 				}
-
-				var bccRecipientSlice []string
-				for _, goVal := range goVals {
-					// TODO here that it's not the right way of doing it, so we don't miss it later.
-					if recipient, ok := goVal.(string); ok {
-						bccRecipientSlice = append(bccRecipientSlice, recipient)
-					}
-				}
-				p.Bcc = bccRecipientSlice
+				p.Bcc = goVals
 			}
 
 		case schema.AttributeTypeBody:
