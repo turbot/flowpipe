@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/pipeparser/pcerr"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 	"github.com/zclconf/go-cty/cty/json"
@@ -155,7 +156,7 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 	}
 	ty := v.Type()
 	if !ty.IsListType() && !ty.IsTupleType() {
-		return nil, fmt.Errorf("expected list type")
+		return nil, pcerr.BadRequestWithMessage("expected list type")
 	}
 
 	var res []string
@@ -171,7 +172,7 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 			}
 			res = append(res, target)
 		default:
-			return nil, fmt.Errorf("unsupported type %s", v.Type().FriendlyName())
+			return nil, pcerr.BadRequestWithMessage(fmt.Sprintf("expected string value, but got %s", v.Type().FriendlyName()))
 		}
 	}
 
