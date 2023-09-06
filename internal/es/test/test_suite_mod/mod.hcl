@@ -22,6 +22,47 @@ pipeline "echo_one" {
     }
 }
 
+pipeline "echo_with_variable" {
+    step "echo" "echo_one" {
+        text = "Hello World: ${var.var_one}"
+    }
+
+    step "echo" "echo_two" {
+        text = "Hello World Two: ${var.var_two}"
+    }
+
+    step "echo" "echo_three" {
+        text = "Hello World Two: ${var.var_two} and ${step.echo.echo_two.text}"
+    }
+
+    step "echo" "echo_four" {
+        text = local.locals_one
+    }
+
+    step "echo" "echo_five" {
+        text = "${local.locals_two} AND ${step.echo.echo_two.text} AND ${step.echo.echo_four.text}"
+    }
+
+    output "echo_one_output" {
+        value = step.echo.echo_one.text
+    }
+
+    output "echo_two_output" {
+        value = step.echo.echo_two.text
+    }
+
+    output "echo_three_output" {
+        value = step.echo.echo_three.text
+    }
+
+    output "echo_four_output" {
+        value = step.echo.echo_four.text
+    }
+
+    output "echo_five_output" {
+        value = step.echo.echo_five.text
+    }
+}
 
 pipeline "expr_depend_and_function" {
     step "echo" "text_1" {

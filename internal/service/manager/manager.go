@@ -12,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
@@ -94,7 +95,10 @@ func (m *Manager) Initialize() error {
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
+	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.vars"
+
 	constants.PipesComponentModDataExtension = ".hcl"
+	constants.PipesComponentVariablesExtension = ".vars"
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
@@ -190,11 +194,11 @@ func (m *Manager) Start() error {
 	}
 
 	// Start the scheduler service
-	// s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
-	// err = s.Start()
-	// if err != nil {
-	// 	return err
-	// }
+	s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
+	err = s.Start()
+	if err != nil {
+		return err
+	}
 
 	m.StartedAt = utils.TimeNow()
 	m.Status = "running"
