@@ -10,7 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 func AbortWithError(c *gin.Context, err error) {
@@ -27,11 +27,11 @@ func AbortWithError(c *gin.Context, err error) {
 	}
 
 	switch e := err.(type) {
-	case pcerr.ValidationError:
-		badRequest := pcerr.BadRequestWithTypeAndMessage(pcerr.ErrorCodeInvalidData, "Validation Errors")
-		badRequest.ValidationErrors = []*pcerr.ErrorDetailModel{}
+	case perr.ValidationError:
+		badRequest := perr.BadRequestWithTypeAndMessage(perr.ErrorCodeInvalidData, "Validation Errors")
+		badRequest.ValidationErrors = []*perr.ErrorDetailModel{}
 		for _, v := range e.Errors {
-			badRequest.ValidationErrors = append(badRequest.ValidationErrors, &pcerr.ErrorDetailModel{Message: detailMessageByTag(v), Location: fmt.Sprintf("%s.%s", e.Type, getNormalizedField(v.Namespace()))})
+			badRequest.ValidationErrors = append(badRequest.ValidationErrors, &perr.ErrorDetailModel{Message: detailMessageByTag(v), Location: fmt.Sprintf("%s.%s", e.Type, getNormalizedField(v.Namespace()))})
 		}
 		fplog.Logger(c).Error("Validation error",
 			"error", badRequest,
@@ -40,10 +40,10 @@ func AbortWithError(c *gin.Context, err error) {
 			"requestURL", requestURL)
 		c.AbortWithStatusJSON(http.StatusBadRequest, badRequest)
 	case validator.ValidationErrors:
-		badRequest := pcerr.BadRequestWithTypeAndMessage(pcerr.ErrorCodeInvalidData, "Validation Errors")
-		badRequest.ValidationErrors = []*pcerr.ErrorDetailModel{}
+		badRequest := perr.BadRequestWithTypeAndMessage(perr.ErrorCodeInvalidData, "Validation Errors")
+		badRequest.ValidationErrors = []*perr.ErrorDetailModel{}
 		for _, v := range e {
-			badRequest.ValidationErrors = append(badRequest.ValidationErrors, &pcerr.ErrorDetailModel{Message: detailMessageByTag(v), Location: getNormalizedField(v.Namespace())})
+			badRequest.ValidationErrors = append(badRequest.ValidationErrors, &perr.ErrorDetailModel{Message: detailMessageByTag(v), Location: getNormalizedField(v.Namespace())})
 		}
 		fplog.Logger(c).Error("Validation error",
 			"error", badRequest,
@@ -51,14 +51,14 @@ func AbortWithError(c *gin.Context, err error) {
 			"detail", badRequest.ValidationErrors,
 			"requestURL", requestURL)
 		c.AbortWithStatusJSON(http.StatusBadRequest, badRequest)
-	case pcerr.ErrorModel:
+	case perr.ErrorModel:
 		fplog.Logger(c).Error("Error "+e.Instance,
 			"error", e,
 			"errorID", e.Instance,
 			"requestURL", requestURL)
 		c.AbortWithStatusJSON(e.Status, e)
 	default:
-		newErr := pcerr.InternalWithMessage("Internal Error.")
+		newErr := perr.InternalWithMessage("Internal Error.")
 		fplog.Logger(c).Error("Error "+newErr.Instance,
 			"error", newErr,
 			"errorID", newErr.Instance,

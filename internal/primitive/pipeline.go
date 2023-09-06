@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -13,17 +13,17 @@ type RunPipeline struct{}
 func (e *RunPipeline) ValidateInput(ctx context.Context, input modconfig.Input) error {
 
 	if input[schema.AttributeTypePipeline] == nil {
-		return pcerr.BadRequestWithMessage("pipeline input must define a name")
+		return perr.BadRequestWithMessage("pipeline input must define a name")
 	}
 
 	pipelineName := input[schema.AttributeTypePipeline].(string)
 	if pipelineName == "" {
-		return pcerr.BadRequestWithMessage("invalid pipeline name: " + pipelineName)
+		return perr.BadRequestWithMessage("invalid pipeline name: " + pipelineName)
 	}
 
 	if input[schema.AttributeTypeArgs] != nil {
 		if _, ok := input[schema.AttributeTypeArgs].(map[string]interface{}); !ok {
-			return pcerr.BadRequestWithMessage("pipeline args must be a map of values to arg name")
+			return perr.BadRequestWithMessage("pipeline args must be a map of values to arg name")
 		}
 	}
 

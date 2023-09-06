@@ -9,7 +9,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -30,7 +30,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.PipelinePlanned)
 	if !ok {
 		logger.Error("invalid event type", "expected", "*event.PipelinePlanned", "actual", ei)
-		return pcerr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
+		return perr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
@@ -90,7 +90,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	if pipelineInaccessible {
 		logger.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
 		// TODO: what is the error on the pipeline?
-		cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, pcerr.InternalWithMessage("pipeline failed")))
+		cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, perr.InternalWithMessage("pipeline failed")))
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}

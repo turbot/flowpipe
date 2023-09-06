@@ -8,7 +8,7 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 func NodeID(port string) (string, error) {
@@ -47,7 +47,7 @@ func Base36ID(key string, input string, length int) (string, error) {
 	u1Hex := bs[0:16]
 	u1, err := strconv.ParseUint(u1Hex, 16, 64)
 	if err != nil {
-		return "", pcerr.InternalWithMessage("Unable to create hash.")
+		return "", perr.InternalWithMessage("Unable to create hash.")
 	}
 	u1Base36 := strconv.FormatUint(u1, 36)
 

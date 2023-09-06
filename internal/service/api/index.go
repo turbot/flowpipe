@@ -26,7 +26,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
 	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
@@ -207,7 +207,7 @@ func (api *APIService) Start() error {
 		path := c.Request.URL.Path
 		method := c.Request.Method
 		if strings.HasPrefix(path, "/api") {
-			c.JSON(http.StatusNotFound, gin.H{"error": pcerr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
+			c.JSON(http.StatusNotFound, gin.H{"error": perr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
 		} else {
 			c.File("./static/index.html")
 		}

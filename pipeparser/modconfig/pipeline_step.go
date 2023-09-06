@@ -10,7 +10,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/terraform-components/addrs"
@@ -463,7 +463,7 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	var urlInput string
 	if p.UnresolvedAttributes[schema.AttributeTypeUrl] == nil {
 		if p.Url == nil {
-			return nil, pcerr.InternalWithMessage("Url must be supplied")
+			return nil, perr.InternalWithMessage("Url must be supplied")
 		}
 		urlInput = *p.Url
 	} else {
@@ -1229,7 +1229,7 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var sql *string
 	if p.UnresolvedAttributes[schema.AttributeTypeSql] == nil {
 		if p.Sql == nil {
-			return nil, pcerr.BadRequestWithMessage("Url must be supplied")
+			return nil, perr.BadRequestWithMessage("Url must be supplied")
 		}
 		sql = p.Sql
 	} else {
@@ -1242,7 +1242,7 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var connectionString *string
 	if p.UnresolvedAttributes[schema.AttributeTypeConnectionString] == nil {
 		if p.ConnnectionString == nil {
-			return nil, pcerr.BadRequestWithMessage("ConnectionString must be supplied")
+			return nil, perr.BadRequestWithMessage("ConnectionString must be supplied")
 		}
 		connectionString = p.ConnnectionString
 	} else {
@@ -1343,7 +1343,7 @@ func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[stri
 	var pipeline string
 	if p.UnresolvedAttributes[schema.AttributeTypePipeline] == nil {
 		if p.Pipeline == cty.NilVal {
-			return nil, pcerr.InternalWithMessage("Pipeline must be supplied")
+			return nil, perr.InternalWithMessage("Pipeline must be supplied")
 		}
 		valueMap := p.Pipeline.AsValueMap()
 		pipelineNameCty := valueMap[schema.LabelName]

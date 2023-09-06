@@ -13,7 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
@@ -177,7 +177,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 	}
 
 	if input.Command != "cancel" && input.Command != "pause" && input.Command != "resume" {
-		common.AbortWithError(c, pcerr.BadRequestWithMessage("invalid command"))
+		common.AbortWithError(c, perr.BadRequestWithMessage("invalid command"))
 		return
 	}
 
@@ -256,7 +256,7 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 	jsonBytes, err := os.ReadFile(filePath)
 	if err != nil {
 		fplog.Logger(api.ctx).Error("error reading sps file", "error", err, "file_path", filePath)
-		common.AbortWithError(c, pcerr.InternalWithMessage("internal error"))
+		common.AbortWithError(c, perr.InternalWithMessage("internal error"))
 		return
 	}
 

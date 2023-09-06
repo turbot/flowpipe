@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/terraform-components/tfdiags"
 )
@@ -60,7 +60,7 @@ func HclDiagsToError(prefix string, diags hcl.Diagnostics) error {
 		if len(errStrings) > 1 {
 			res += "\n"
 		}
-		return pcerr.InternalWithMessage(fmt.Sprintf("%s: %s", prefix, res))
+		return perr.InternalWithMessage(fmt.Sprintf("%s: %s", prefix, res))
 	}
 
 	return diags.Errs()[0]

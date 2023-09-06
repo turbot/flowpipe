@@ -11,7 +11,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -113,7 +113,7 @@ func (api *APIService) getTrigger(c *gin.Context) {
 
 	triggerCached, found := cache.GetCache().Get(uri.TriggerName)
 	if !found {
-		common.AbortWithError(c, pcerr.NotFoundWithMessage("trigger not found"))
+		common.AbortWithError(c, perr.NotFoundWithMessage("trigger not found"))
 		return
 	}
 

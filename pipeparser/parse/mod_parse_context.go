@@ -10,7 +10,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/inputvars"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
@@ -147,7 +147,7 @@ func (m *ModParseContext) EnsureWorkspaceLock(mod *modconfig.Mod) error {
 	if mod.HasDependentMods() && (m.WorkspaceLock.Empty() || m.WorkspaceLock.Incomplete()) {
 		// logger := fplog.Logger(m.RunCtx)
 		// logger.Error("mod has dependencies but no workspace lock file found", "mod", mod.Name(), "m.HasDependentMods()", mod.HasDependentMods(), "m.WorkspaceLock.Empty()", m.WorkspaceLock.Empty(), "m.WorkspaceLock.Incomplete()", m.WorkspaceLock.Incomplete())
-		return pcerr.BadRequestWithTypeAndMessage(pcerr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
+		return perr.BadRequestWithTypeAndMessage(perr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
 	}
 
 	return nil

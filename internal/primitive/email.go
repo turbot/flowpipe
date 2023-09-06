@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -22,26 +22,26 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
-		return pcerr.BadRequestWithMessage("Email input must define from")
+		return perr.BadRequestWithMessage("Email input must define from")
 	}
 	if i[schema.AttributeTypeSenderCredential] == nil {
-		return pcerr.BadRequestWithMessage("Email input must define sender_credential")
+		return perr.BadRequestWithMessage("Email input must define sender_credential")
 	}
 	if i[schema.AttributeTypeHost] == nil {
-		return pcerr.BadRequestWithMessage("Email input must define a SMTP host")
+		return perr.BadRequestWithMessage("Email input must define a SMTP host")
 	}
 	if i[schema.AttributeTypePort] == nil {
-		return pcerr.BadRequestWithMessage("Email input must define a port")
+		return perr.BadRequestWithMessage("Email input must define a port")
 	}
 	if i[schema.AttributeTypeSenderName] != nil {
 		if _, ok := i[schema.AttributeTypeSenderName].(string); !ok {
-			return pcerr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
+			return perr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
 		}
 	}
 
 	// Validate the recipients
 	if i[schema.AttributeTypeTo] == nil {
-		return pcerr.BadRequestWithMessage("Email input must define to")
+		return perr.BadRequestWithMessage("Email input must define to")
 	}
 	if _, ok := i[schema.AttributeTypeTo].([]string); !ok {
 		// The given input is a string slice, but the step input stores it as an interface slice during the JSON unmarshalling?
@@ -49,13 +49,13 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 		if data, ok := i[schema.AttributeTypeTo].([]interface{}); ok {
 			for _, v := range data {
 				if _, ok := v.(string); !ok {
-					return pcerr.BadRequestWithMessage("Email attribute 'to' must have elements of type string")
+					return perr.BadRequestWithMessage("Email attribute 'to' must have elements of type string")
 				}
 			}
 			return nil
 		}
 
-		return pcerr.BadRequestWithMessage("Email attribute 'to' must be an array")
+		return perr.BadRequestWithMessage("Email attribute 'to' must be an array")
 	}
 
 	var recipients []string
@@ -70,7 +70,7 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	}
 
 	if len(recipients) == 0 {
-		return pcerr.BadRequestWithMessage("Recipients must not be empty")
+		return perr.BadRequestWithMessage("Recipients must not be empty")
 	}
 
 	// Validate the Cc recipients
@@ -81,13 +81,13 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 			if data, ok := i[schema.AttributeTypeCc].([]interface{}); ok {
 				for _, v := range data {
 					if _, ok := v.(string); !ok {
-						return pcerr.BadRequestWithMessage("Email attribute 'cc' must have elements of type string")
+						return perr.BadRequestWithMessage("Email attribute 'cc' must have elements of type string")
 					}
 				}
 				return nil
 			}
 
-			return pcerr.BadRequestWithMessage("Email attribute 'cc' must be an array")
+			return perr.BadRequestWithMessage("Email attribute 'cc' must be an array")
 		}
 	}
 
@@ -99,33 +99,33 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 			if data, ok := i[schema.AttributeTypeBcc].([]interface{}); ok {
 				for _, v := range data {
 					if _, ok := v.(string); !ok {
-						return pcerr.BadRequestWithMessage("Email attribute 'bcc' must have elements of type string")
+						return perr.BadRequestWithMessage("Email attribute 'bcc' must have elements of type string")
 					}
 				}
 				return nil
 			}
 
-			return pcerr.BadRequestWithMessage("Email attribute 'bcc' must be an array")
+			return perr.BadRequestWithMessage("Email attribute 'bcc' must be an array")
 		}
 	}
 
 	// Validate the email body
 	if i[schema.AttributeTypeBody] != nil {
 		if _, ok := i[schema.AttributeTypeBody].(string); !ok {
-			return pcerr.BadRequestWithMessage("Email attribute 'body' must be a string")
+			return perr.BadRequestWithMessage("Email attribute 'body' must be a string")
 		}
 	}
 
 	if i[schema.AttributeTypeContentType] != nil {
 		if _, ok := i[schema.AttributeTypeContentType].(string); !ok {
-			return pcerr.BadRequestWithMessage("Email attribute 'content_type' must be a string")
+			return perr.BadRequestWithMessage("Email attribute 'content_type' must be a string")
 		}
 	}
 
 	// validate the subject
 	if i[schema.AttributeTypeSubject] != nil {
 		if _, ok := i[schema.AttributeTypeSubject].(string); !ok {
-			return pcerr.BadRequestWithMessage("Email attribute 'subject' must be a string")
+			return perr.BadRequestWithMessage("Email attribute 'subject' must be a string")
 		}
 	}
 

@@ -9,7 +9,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/parse"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	filehelpers "github.com/turbot/go-kit/files"
 )
 
@@ -66,7 +66,7 @@ func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfi
 		}
 		modFileNameToLoad = fileName
 	} else {
-		return nil, nil, pcerr.BadRequestWithMessage("invalid path")
+		return nil, nil, perr.BadRequestWithMessage("invalid path")
 	}
 
 	parseCtx := parse.NewModParseContext(

@@ -13,7 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
@@ -106,7 +106,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 
 	pipelineCached, found := cache.GetCache().Get(uri.PipelineName)
 	if !found {
-		common.AbortWithError(c, pcerr.NotFoundWithMessage("pipeline not found"))
+		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline not found"))
 		return
 	}
 
@@ -165,7 +165,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 
 	// Execute the command
 	if input.Command != "run" {
-		common.AbortWithError(c, pcerr.BadRequestWithMessage("invalid command"))
+		common.AbortWithError(c, perr.BadRequestWithMessage("invalid command"))
 		return
 	}
 

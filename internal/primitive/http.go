@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -40,12 +40,12 @@ type HTTPInput struct {
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypeUrl] == nil {
-		return pcerr.BadRequestWithMessage("HTTPRequest input must define a url")
+		return perr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
 	u := i[schema.AttributeTypeUrl].(string)
 	_, err := url.ParseRequestURI(u)
 	if err != nil {
-		return pcerr.BadRequestWithMessage("invalid url: " + u)
+		return perr.BadRequestWithMessage("invalid url: " + u)
 	}
 
 	requestBody := i[schema.AttributeTypeRequestBody]
@@ -62,7 +62,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 		if requestBodyJSON != nil {
 			_, marshalErr := json.Marshal(requestBodyJSON)
 			if marshalErr != nil {
-				return pcerr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
+				return perr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
 			}
 		}
 	}
@@ -100,7 +100,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
 	if err != nil {
-		return nil, pcerr.BadRequestWithMessage("Error creating request: " + err.Error())
+		return nil, perr.BadRequestWithMessage("Error creating request: " + err.Error())
 	}
 
 	// Set the request headers

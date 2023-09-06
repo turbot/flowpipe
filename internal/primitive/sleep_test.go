@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 func TestSleepOK(t *testing.T) {
@@ -40,7 +40,7 @@ func TestSleepInvalidDuration(t *testing.T) {
 	_, err := q.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("invalid sleep duration 5", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
