@@ -33,6 +33,19 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypePort] == nil {
 		return perr.BadRequestWithMessage("Email input must define a port")
 	}
+
+	// Validate the port input
+	if i[schema.AttributeTypePort] != nil {
+		switch i[schema.AttributeTypePort].(type) {
+		case float64:
+			break
+		case int64:
+			break
+		default:
+			return pcerr.BadRequestWithMessage("port must be a number")
+		}
+	}
+
 	if i[schema.AttributeTypeSenderName] != nil {
 		if _, ok := i[schema.AttributeTypeSenderName].(string); !ok {
 			return perr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
@@ -142,8 +155,16 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	senderEmail := input[schema.AttributeTypeFrom].(string)
 	senderCredential := input[schema.AttributeTypeSenderCredential].(string)
 	host := input[schema.AttributeTypeHost].(string)
-	port := input[schema.AttributeTypePort].(int64)
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
+
+	// Convert port into integer
+	var portInt int64
+	if port, ok := input[schema.AttributeTypePort].(float64); ok {
+		portInt = int64(port)
+	}
+	if port, ok := input[schema.AttributeTypePort].(int64); ok {
+		portInt = port
+	}
 
 	// Get the inputs
 	var recipients []string
@@ -240,7 +261,7 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	}
 
 	// Build the address of the SMTP server
-	addr := host + ":" + fmt.Sprintf("%d", port)
+	addr := host + ":" + fmt.Sprintf("%d", portInt)
 
 	start := time.Now().UTC()
 	err := smtp.SendMail(addr, auth, senderEmail, recipients, []byte(message))

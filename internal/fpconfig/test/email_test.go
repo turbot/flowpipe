@@ -107,7 +107,7 @@ func TestEmailStepWithParam(t *testing.T) {
 func TestEmailStepInvalidPortFormat(t *testing.T) {
 	assert := assert.New(t)
 
-	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/email.fp")
+	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_port.fp")
 	assert.NotNil(err, "error found")
 }
 
