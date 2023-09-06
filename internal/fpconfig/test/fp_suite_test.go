@@ -74,6 +74,7 @@ func (suite *FpTestSuite) SetupSuite() {
 
 	constants.PipesComponentModDataExtension = ".hcl"
 	constants.PipesComponentVariablesExtension = ".vars"
+	constants.PipesComponentAutoVariablesExtension = ".auto.vars"
 
 	suite.SetupSuiteRunCount++
 }
@@ -358,6 +359,8 @@ func (suite *FpTestSuite) TestModVariable() {
 	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[6].(*modconfig.PipelineStepEcho).Text)
 	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[7].(*modconfig.PipelineStepEcho).Text)
 	assert.Equal("using value from locals: 33", pipelineOne.Steps[8].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("var_four value is: value from auto.vars file", pipelineOne.Steps[9].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("var_five value is: value from two.auto.vars file", pipelineOne.Steps[10].(*modconfig.PipelineStepEcho).Text)
 
 }
 

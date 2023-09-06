@@ -20,6 +20,8 @@ const (
 )
 
 var PipesComponentModDataExtension = ModDataExtension
+var PipesComponentAutoVariablesExtension = AutoVariablesExtension
+
 var PipesComponentVariablesExtension = ".vars"
 
 var YamlExtensions = []string{".yml", ".yaml"}

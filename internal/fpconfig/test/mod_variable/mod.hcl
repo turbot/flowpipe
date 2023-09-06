@@ -22,6 +22,18 @@ variable "var_three" {
   description = "test variable"
 }
 
+# var_four has no default
+variable "var_four" {
+  type        = string
+  description = "test variable"
+}
+
+# var_five has no default
+variable "var_five" {
+  type        = string
+  description = "test variable"
+}
+
 
 pipeline "one" {
     step "echo" "one" {
@@ -59,6 +71,14 @@ pipeline "one" {
 
     step "echo" "eight" {
       text = "using value from locals: ${local.locals_three_merge.key_three}"
+    }
+
+    step "echo" "eight" {
+      text = "var_four value is: ${var.var_four}"
+    }
+
+    step "echo" "nine" {
+      text = "var_five value is: ${var.var_five}"
     }
 }
 
