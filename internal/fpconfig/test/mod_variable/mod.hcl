@@ -39,4 +39,45 @@ pipeline "one" {
     step "echo" "one_echo" {
         text =  "got prefix? ${step.echo.one.text} and again ${step.echo.one.text} and var ${var.var_one}"
     }
+
+
+    step "echo" "four" {
+      text = "using value from locals: ${local.locals_one}"
+    }
+
+    step "echo" "five" {
+      text = "using value from locals: ${local.locals_two}"
+    }
+
+    step "echo" "six" {
+      text = "using value from locals: ${local.locals_three.key_two}"
+    }
+
+    step "echo" "seven" {
+      text = "using value from locals: ${local.locals_three_merge.key_two}"
+    }
+
+    step "echo" "eight" {
+      text = "using value from locals: ${local.locals_three_merge.key_three}"
+    }
+}
+
+
+locals {
+  locals_three_merge = merge(local.locals_three, {
+    key_three = 33
+  })
+}
+
+locals {
+  locals_one = "value of locals_one"
+
+  locals_two = 10
+
+  locals_three = {
+    key_one = "value of key_one"
+    key_two = "value of key_two"
+  }
+
+  locals_four = ["foo", "bar", "baz"]
 }

@@ -353,6 +353,12 @@ func (suite *FpTestSuite) TestModVariable() {
 	// step echo.one_echo should not be resolved, it has reference to echo.one step
 	assert.False(pipelineOne.Steps[3].IsResolved())
 
+	assert.Equal("using value from locals: value of locals_one", pipelineOne.Steps[4].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: 10", pipelineOne.Steps[5].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[6].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[7].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("using value from locals: 33", pipelineOne.Steps[8].(*modconfig.PipelineStepEcho).Text)
+
 }
 
 // In order for 'go test' to run this suite, we need to create
