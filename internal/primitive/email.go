@@ -6,6 +6,8 @@ import (
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,13 +38,24 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	// Validate the port input
 	if i[schema.AttributeTypePort] != nil {
-		switch i[schema.AttributeTypePort].(type) {
+		var port int64
+		switch data := i[schema.AttributeTypePort].(type) {
 		case float64:
-			break
+			port = int64(data)
 		case int64:
-			break
+			port = data
 		default:
 			return pcerr.BadRequestWithMessage("port must be a number")
+		}
+
+		test := strconv.FormatInt(port, 10)
+		match, err := regexp.MatchString("^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0-9]{1,4}))$", test)
+		if err != nil {
+			return pcerr.BadRequestWithMessage("error while validating the port")
+		}
+
+		if !match {
+			return pcerr.BadRequestWithMessage(fmt.Sprintf("%s is not a valid port", test))
 		}
 	}
 
