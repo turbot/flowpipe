@@ -149,6 +149,35 @@ func CtyToGoInterfaceSlice(v cty.Value) (val []interface{}, err error) {
 	return res, nil
 }
 
+func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsListType() && !ty.IsTupleType() {
+		return nil, fmt.Errorf("expected list type")
+	}
+
+	var res []string
+	it := v.ElementIterator()
+	for it.Next() {
+		_, v := it.Element()
+		switch v.Type() {
+		case cty.String:
+			var target string
+			err = gocty.FromCtyValue(v, &target)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, target)
+		default:
+			return nil, fmt.Errorf("unsupported type %s", v.Type().FriendlyName())
+		}
+	}
+
+	return res, nil
+}
+
 func CtyToGoMapInterface(v cty.Value) (map[string]interface{}, error) {
 	if v.IsNull() || !v.IsWhollyKnown() {
 		return nil, nil

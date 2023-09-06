@@ -142,7 +142,7 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	senderEmail := input[schema.AttributeTypeFrom].(string)
 	senderCredential := input[schema.AttributeTypeSenderCredential].(string)
 	host := input[schema.AttributeTypeHost].(string)
-	port := input[schema.AttributeTypePort].(string)
+	port := input[schema.AttributeTypePort].(int64)
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
 
 	// Get the inputs
@@ -239,8 +239,11 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		Data: map[string]interface{}{},
 	}
 
+	// Build the address of the SMTP server
+	addr := host + ":" + fmt.Sprintf("%d", port)
+
 	start := time.Now().UTC()
-	err := smtp.SendMail(host+":"+port, auth, senderEmail, recipients, []byte(message))
+	err := smtp.SendMail(addr, auth, senderEmail, recipients, []byte(message))
 	finish := time.Now().UTC()
 	if err != nil {
 		if _, ok := err.(*textproto.Error); !ok {
@@ -252,7 +255,7 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		smtpErr := err.(*textproto.Error)
 		if smtpErr.Code >= 400 {
 			output.Errors = []modconfig.StepError{
-				modconfig.StepError{
+				{
 					Message:   smtpErr.Msg,
 					ErrorCode: smtpErr.Code,
 				},

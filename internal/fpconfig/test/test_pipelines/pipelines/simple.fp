@@ -13,6 +13,6 @@ pipeline "basic_http" {
         from              = "sender@example.com"
         sender_credential = "sendercredential"
         host              = "smtp.example.com"
-        port              = "587"
+        port              = 587
     }
 }

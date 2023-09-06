@@ -5,7 +5,7 @@ pipeline "email" {
       from              = "sender@example.com"
       sender_credential = "sendercredential"
       host              = "smtp.example.com"
-      port              = "587"
+      port              = 587
       subject           = "Test email"
       body              = "This is a test email"
       sender_name       = "Flowpipe"
@@ -27,7 +27,7 @@ pipeline "subscribe" {
     from              = "sender@example.com"
     sender_credential = "sendercredential"
     host              = "smtp.example.com"
-    port              = "587"
+    port              = 587
     subject           = "You have been subscribed"
     body              = step.echo.email_body.text
   }
