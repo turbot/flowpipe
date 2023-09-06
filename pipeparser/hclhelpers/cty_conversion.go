@@ -163,17 +163,21 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 	it := v.ElementIterator()
 	for it.Next() {
 		_, v := it.Element()
-		switch v.Type() {
-		case cty.String:
-			var target string
-			err = gocty.FromCtyValue(v, &target)
-			if err != nil {
-				return nil, err
-			}
-			res = append(res, target)
-		default:
-			return nil, pcerr.BadRequestWithMessage(fmt.Sprintf("expected string value, but got %s", v.Type().FriendlyName()))
+
+		// Return error if any of the value in the slice is not a string
+		if v.Type() != cty.String {
+			return nil, hcl.Diagnostics{&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unable to parse value as string",
+			}}
 		}
+
+		var target string
+		err = gocty.FromCtyValue(v, &target)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, target)
 	}
 
 	return res, nil
