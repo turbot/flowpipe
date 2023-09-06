@@ -23,7 +23,7 @@ const (
 // Pipes Components overrides
 var PipesComponentModDataExtension = ModDataExtension
 var PipesComponentAutoVariablesExtension = AutoVariablesExtension
-var PipesComponentVariablesExtension = ".vars"
+var PipesComponentVariablesExtension = VariablesExtension
 
 var YamlExtensions = []string{".yml", ".yaml"}
 
