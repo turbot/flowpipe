@@ -85,6 +85,19 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
+	// populate the variables and locals
+	variablesMap := make(map[string]cty.Value)
+	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
+		variablesMap[variable.ShortName] = variable.Value
+	}
+	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
+
+	localsMap := make(map[string]cty.Value)
+	for _, local := range pipelineDefn.GetMod().ResourceMaps.Locals {
+		localsMap[local.ShortName] = local.Value
+	}
+	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
+
 	return evalContext, nil
 }
 

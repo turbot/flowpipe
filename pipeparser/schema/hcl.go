@@ -131,6 +131,9 @@ const (
 	ResourceTypeSnapshot = "snapshot"
 	AttributeArgs        = "args"
 	AttributeQuery       = "query"
+
+	AttributeVar   = "var"
+	AttributeLocal = "local"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider

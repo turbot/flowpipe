@@ -551,7 +551,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeUrl:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -562,7 +562,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				p.Url = &urlString
 			}
 		case schema.AttributeTypeRequestTimeoutMs:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -578,7 +578,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 		case schema.AttributeTypeMethod:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -599,7 +599,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				}
 			}
 		case schema.AttributeTypeInsecure:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -619,7 +619,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 		case schema.AttributeTypeRequestBody:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -631,7 +631,7 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 		case schema.AttributeTypeRequestHeaders:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
@@ -693,7 +693,7 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeDuration:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -898,7 +898,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeTo:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -919,7 +919,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeFrom:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -931,7 +931,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeSenderCredential:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -943,7 +943,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeHost:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -955,7 +955,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypePort:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -975,7 +975,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeSenderName:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -987,7 +987,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeCc:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1007,7 +1007,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeBcc:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1027,7 +1027,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeBody:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1039,7 +1039,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeContentType:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1051,7 +1051,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 		case schema.AttributeTypeSubject:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1112,7 +1112,7 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	}, nil
 }
 
-func dependsOnFromExpressionsTwo(attr *hcl.Attribute, evalContext *hcl.EvalContext, p IPipelineStep) (cty.Value, hcl.Diagnostics) {
+func dependsOnFromExpressions(attr *hcl.Attribute, evalContext *hcl.EvalContext, p IPipelineStep) (cty.Value, hcl.Diagnostics) {
 	expr := attr.Expr
 	// resolve it first if we can
 	val, stepDiags := expr.Value(evalContext)
@@ -1169,7 +1169,7 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalConte
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeText:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1179,7 +1179,7 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalConte
 				p.Text = val.AsString()
 			}
 		case schema.AttributeTypeJson:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1261,7 +1261,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	for name, attr := range hclAttributes {
 		switch name {
 		case schema.AttributeTypeSql:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1272,7 +1272,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 				p.Sql = &sql
 			}
 		case schema.AttributeTypeConnectionString:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1283,7 +1283,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 				p.ConnnectionString = &connectionString
 			}
 		case schema.AttributeTypeArgs:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue
@@ -1382,7 +1382,7 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, evalC
 				p.Pipeline = val
 			}
 		case schema.AttributeTypeArgs:
-			val, stepDiags := dependsOnFromExpressionsTwo(attr, evalContext, p)
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue

@@ -2,6 +2,9 @@
 run-mod:
 	FLOWPIPE_LOG_LEVEL=INFO go run . service start --pipeline-dir ./internal/es/test/default_mod
 
+run-test-mod:
+	FLOWPIPE_LOG_LEVEL=INFO go run . service start --pipeline-dir ./internal/es/test/test_suite_mod
+
 run-pipeline:
 	FLOWPIPE_LOG_LEVEL=INFO go run . service start --pipeline-dir ./internal/es/test/pipelines
 

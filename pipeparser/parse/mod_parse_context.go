@@ -388,31 +388,6 @@ func (m *ModParseContext) buildEvalContext() {
 		referenceValues[mod] = cty.ObjectVal(refTypeMap)
 	}
 
-	// TODO: I'm not understanding something here ... if we don't put the dependency mods "up" how is the resources in the current mod will be able to
-	// TODO: reference them?
-
-	// for _, depMod := range m.topLevelDependencyMods {
-	// 	// fmt.Println(depMod)
-	// 	depModVariables := referenceValues[depMod.Name()]
-	// 	if depModVariables == cty.NilVal {
-	// 		depModVariables = cty.ObjectVal(make(map[string]cty.Value))
-	// 	}
-
-	// 	depModVariablesMap := depModVariables.AsValueMap()
-
-	// 	depModPipelines := depModVariablesMap["pipeline"]
-	// 	if depModPipelines == cty.NilVal {
-	// 		depModPipelines = cty.ObjectVal(make(map[string]cty.Value))
-	// 	}
-
-	// 	depModPipelinesMap := depModPipelines.AsValueMap()
-
-	// 	for _, pipeline := range depMod.ResourceMaps.Pipelines {
-	// 		depModPipelinesMap[pipeline.Name()] = pipeline.AsCtyValue()
-	// 	}
-
-	// }
-
 	// rebuild the eval context
 	m.ParseContext.BuildEvalContext(referenceValues)
 }
