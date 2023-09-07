@@ -5,7 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type StartHandler CommandHandler
@@ -23,7 +23,7 @@ func (h StartHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.Start)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.Start", "actual", c)
-		return pcerr.BadRequestWithMessage("invalid command type expected *event.Start")
+		return perr.BadRequestWithMessage("invalid command type expected *event.Start")
 	}
 
 	fplog.Logger(ctx).Info("(13) start command handler", "executionID", cmd.Event.ExecutionID)

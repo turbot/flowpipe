@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -397,7 +397,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 
 	sd := pd.GetStep(stepFullyQualifiedName)
 	if sd == nil {
-		return nil, pcerr.BadRequestWithMessage("step " + stepFullyQualifiedName + " not found in pipeline " + pd.Name())
+		return nil, perr.BadRequestWithMessage("step " + stepFullyQualifiedName + " not found in pipeline " + pd.Name())
 	}
 
 	panels := map[string]SnapshotPanel{}

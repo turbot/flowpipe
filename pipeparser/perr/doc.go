@@ -1,4 +1,4 @@
-package pcerr
+package perr
 
 // Formatted printing of errors
 //

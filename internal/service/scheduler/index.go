@@ -12,7 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type Scheduler struct {
@@ -86,7 +86,7 @@ func (s *Scheduler) Start() error {
 				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
 				_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Do(triggerRunner.Run)
 			default:
-				return pcerr.BadRequestWithMessage("invalid interval schedule: " + config.Schedule)
+				return perr.BadRequestWithMessage("invalid interval schedule: " + config.Schedule)
 			}
 
 			if err != nil {

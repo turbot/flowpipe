@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type FpPipeline struct {
@@ -59,7 +59,7 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 	lp, ok := p.Items.([]flowpipeapiclient.FpPipeline)
 
 	if !ok {
-		return Table{}, pcerr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Pipeline")
+		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Pipeline")
 	}
 
 	var tableRows []TableRow

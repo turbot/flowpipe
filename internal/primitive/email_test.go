@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -214,7 +214,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 	// No errors
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("Email input must define to", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -238,7 +238,7 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	// No errors
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("Recipients must not be empty", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -341,7 +341,7 @@ func captureEmailsFromSMTP(from string) ([]CapturedEmail, error) {
 	}
 
 	if len(v.Items) == 0 {
-		return nil, pcerr.NotFoundWithMessage("No emails captured in the inbox")
+		return nil, perr.NotFoundWithMessage("No emails captured in the inbox")
 	}
 
 	return v.Items, nil

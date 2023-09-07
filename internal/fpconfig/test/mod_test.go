@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/parse"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 
 	filehelpers "github.com/turbot/go-kit/files"
 )
@@ -36,13 +36,13 @@ func TestModWithBadTrigger(t *testing.T) {
 		return
 	}
 
-	err, ok := errorsAndWarnings.Error.(pcerr.ErrorModel)
+	err, ok := errorsAndWarnings.Error.(perr.ErrorModel)
 	if !ok {
 		assert.Fail("should be a pcerr.ErrorModel")
 		return
 	}
 
-	assert.Equal(pcerr.ErrorCodeDependencyFailure, err.Type, "wrong error type")
+	assert.Equal(perr.ErrorCodeDependencyFailure, err.Type, "wrong error type")
 }
 
 func TestBadStepReference(t *testing.T) {

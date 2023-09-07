@@ -3,7 +3,7 @@ package execution
 import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -338,7 +338,7 @@ func (s *StepStatus) Progress() int {
 func (s *StepStatus) Queue(seID string) {
 	// Can't queue if the step already finished or started (safety check)
 	if s.Finished[seID] || s.Failed[seID] {
-		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -351,7 +351,7 @@ func (s *StepStatus) Queue(seID string) {
 func (s *StepStatus) Start(seID string) {
 	// Can't start if the step already finished or started (safety check)
 	if s.Finished[seID] || s.Failed[seID] {
-		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -363,7 +363,7 @@ func (s *StepStatus) Start(seID string) {
 func (s *StepStatus) Finish(seID string) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
-		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false
@@ -377,7 +377,7 @@ func (s *StepStatus) Finish(seID string) {
 func (s *StepStatus) Fail(seID string) {
 	// Can't fail if the step already finished (safety check)
 	if s.Finished[seID] {
-		panic(pcerr.BadRequestWithMessage("Step " + seID + " already failed"))
+		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
 	s.Initializing = false

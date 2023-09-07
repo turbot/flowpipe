@@ -13,7 +13,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/parse"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
 	filehelpers "github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
@@ -114,7 +114,7 @@ func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseC
 	} else {
 		// so there is no mod file - should we create a default?
 		if !parseCtx.ShouldCreateDefaultMod() {
-			errorsAndWarnings.Error = pcerr.BadRequestWithMessage("mod folder does not contain a mod resource definition: " + modPath)
+			errorsAndWarnings.Error = perr.BadRequestWithMessage("mod folder does not contain a mod resource definition: " + modPath)
 			// ShouldCreateDefaultMod flag NOT set - fail
 			return nil, errorsAndWarnings
 		}
@@ -141,7 +141,7 @@ func loadModDependencies(parent *modconfig.Mod, parseCtx *parse.ModParseContext)
 				return err
 			}
 			if lockedVersion == nil {
-				return pcerr.BadRequestWithTypeAndMessage(pcerr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
+				return perr.BadRequestWithTypeAndMessage(perr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
 			}
 			if err := loadModDependency(lockedVersion, parseCtx); err != nil {
 				errors = append(errors, err)

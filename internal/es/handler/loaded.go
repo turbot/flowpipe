@@ -5,7 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type Loaded EventHandler
@@ -23,7 +23,7 @@ func (h Loaded) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.Loaded)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.Loaded", "actual", ei)
-		return pcerr.BadRequestWithMessage("invalid event type expected *event.Loaded")
+		return perr.BadRequestWithMessage("invalid event type expected *event.Loaded")
 	}
 
 	fplog.Logger(ctx).Info("[3] loaded event handler", "executionID", e.Event.ExecutionID)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -16,7 +16,7 @@ type Exec struct{}
 
 func (e *Exec) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i["command"] == nil {
-		return pcerr.BadRequestWithMessage("Exec input must define a command")
+		return perr.BadRequestWithMessage("Exec input must define a command")
 	}
 	return nil
 }

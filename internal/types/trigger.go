@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type FpTrigger struct {
@@ -48,7 +48,7 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 	lp, ok := p.Items.([]flowpipeapiclient.FpTrigger)
 
 	if !ok {
-		return Table{}, pcerr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.FpTrigger")
+		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.FpTrigger")
 	}
 
 	var tableRows []TableRow

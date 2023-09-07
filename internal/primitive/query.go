@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 
 	"github.com/DATA-DOG/go-sqlmock"
@@ -25,16 +25,16 @@ type Query struct {
 func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
 	if e.Setting != "go-sqlmock" && i[schema.AttributeTypeConnectionString] == nil {
-		return pcerr.BadRequestWithMessage("Query input must define connection_string")
+		return perr.BadRequestWithMessage("Query input must define connection_string")
 	}
 
 	if i[schema.AttributeTypeSql] == nil {
-		return pcerr.BadRequestWithMessage("Query input must define sql")
+		return perr.BadRequestWithMessage("Query input must define sql")
 	}
 
 	sql := i[schema.AttributeTypeSql].(string)
 	if hasPlaceholder(sql) && i[schema.AttributeTypeArgs] == nil {
-		return pcerr.BadRequestWithMessage("Query input must define args if the sql has placeholders")
+		return perr.BadRequestWithMessage("Query input must define args if the sql has placeholders")
 	}
 	return nil
 }
@@ -48,7 +48,7 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	if e.Setting == "go-sqlmock" {
 		db, mock, err := sqlmock.New()
 		if err != nil {
-			return nil, pcerr.BadRequestWithMessage("Failed to open stub database connection: " + err.Error())
+			return nil, perr.BadRequestWithMessage("Failed to open stub database connection: " + err.Error())
 		}
 		e.Mock = &mock
 		e.DB = db

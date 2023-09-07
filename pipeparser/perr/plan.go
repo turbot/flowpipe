@@ -1,4 +1,4 @@
-package pcerr
+package perr
 
 import (
 	"fmt"

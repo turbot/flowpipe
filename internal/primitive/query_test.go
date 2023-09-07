@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -272,7 +272,7 @@ func TestQueryBadQueryStatement(t *testing.T) {
 	}
 	mock := *hr.Mock
 
-	mock.ExpectQuery("^SELECT (.+) instance$").WillReturnError(pcerr.BadRequestWithMessage("syntax error at or near \"instance\""))
+	mock.ExpectQuery("^SELECT (.+) instance$").WillReturnError(perr.BadRequestWithMessage("syntax error at or near \"instance\""))
 
 	_, err = hr.Run(ctx, input)
 	assert.NotNil(err)
@@ -293,7 +293,7 @@ func TestQueryWithMissingAttributeSql(t *testing.T) {
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("Query input must define sql", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -331,7 +331,7 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 	_, err = hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("Query input must define sql", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -351,7 +351,7 @@ func TestQueryMissingArgs(t *testing.T) {
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("Query input must define args if the sql has placeholders", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
@@ -371,7 +371,7 @@ func TestQueryMissingConnectionString(t *testing.T) {
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
 
-	fpErr := err.(pcerr.ErrorModel)
+	fpErr := err.(perr.ErrorModel)
 	assert.Equal("Query input must define connection_string", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }

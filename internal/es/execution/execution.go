@@ -18,7 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/funcs"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -77,7 +77,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 		// TODO: this doesn't work with mods
 		parts := strings.Split(p.Name(), ".")
 		if len(parts) != 3 {
-			return nil, pcerr.BadRequestWithMessage("invalid pipeline name: " + p.Name())
+			return nil, perr.BadRequestWithMessage("invalid pipeline name: " + p.Name())
 		}
 
 		pipelineMap[parts[2]] = p.AsCtyValue()
@@ -165,7 +165,7 @@ func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string)
 
 	se, ok := pe.StepExecutions[stepExecutionID]
 	if !ok {
-		return nil, pcerr.BadRequestWithMessage("step execution not found: " + stepExecutionID)
+		return nil, perr.BadRequestWithMessage("step execution not found: " + stepExecutionID)
 	}
 	pd, err := ex.PipelineDefinition(se.PipelineExecutionID)
 	if err != nil {
@@ -186,7 +186,7 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 	// Add arguments data for this pipeline execution
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
-		return nil, pcerr.BadRequestWithMessage("pipeline execution not found: " + pipelineExecutionID)
+		return nil, perr.BadRequestWithMessage("pipeline execution not found: " + pipelineExecutionID)
 	}
 
 	// Arguments data takes precedence over a step output with the same name
@@ -275,7 +275,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	logger.Trace("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
 
 	if e.ExecutionID == "" {
-		return pcerr.BadRequestWithMessage("event execution ID is empty")
+		return perr.BadRequestWithMessage("event execution ID is empty")
 	}
 
 	if ex.ID == "" {
@@ -283,7 +283,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	if ex.ID != e.ExecutionID {
-		return pcerr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
+		return perr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
 	}
 
 	// Open the event log
@@ -455,7 +455,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 			// Step the specific step execution status
 			if pe.StepExecutions[et.StepExecutionID] == nil {
-				return pcerr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
+				return perr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
 			}
 
 			if et.Output == nil {

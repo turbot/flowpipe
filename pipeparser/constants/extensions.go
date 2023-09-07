@@ -2,6 +2,7 @@ package constants
 
 import "github.com/turbot/go-kit/helpers"
 
+// Original Steampipe values
 const (
 	PluginExtension        = ".plugin"
 	ConfigExtension        = ".spc"
@@ -19,8 +20,10 @@ const (
 	PipelineExtension      = ".fp"
 )
 
+// Pipes Components overrides
 var PipesComponentModDataExtension = ModDataExtension
-var PipesComponentVariablesExtension = ".vars"
+var PipesComponentAutoVariablesExtension = AutoVariablesExtension
+var PipesComponentVariablesExtension = VariablesExtension
 
 var YamlExtensions = []string{".yml", ".yaml"}
 

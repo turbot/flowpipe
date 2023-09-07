@@ -5,7 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelineStepStart struct {
@@ -59,7 +59,7 @@ func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
 	return func(cmd *PipelineStepStart) error {
 
 		if e.StepExecutionID == "" {
-			return pcerr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
+			return perr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
 		}
 
 		cmd.Event = NewChildEvent(e.Event)

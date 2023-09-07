@@ -5,7 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type StopHandler CommandHandler
@@ -23,7 +23,7 @@ func (h StopHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.Stop)
 	if !ok {
 		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.Stop", "actual", c)
-		return pcerr.BadRequestWithMessage("invalid command type expected *event.Stop")
+		return perr.BadRequestWithMessage("invalid command type expected *event.Stop")
 	}
 
 	fplog.Logger(ctx).Info("(14) stop command handler", "executionID", cmd.Event.ExecutionID)

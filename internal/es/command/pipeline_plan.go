@@ -7,7 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -27,7 +27,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	evt, ok := c.(*event.PipelinePlan)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
-		return pcerr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
+		return perr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))

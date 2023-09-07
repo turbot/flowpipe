@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelineFailHandler CommandHandler
@@ -27,7 +27,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineFail)
 	if !ok {
 		logger.Error("pipeline_fail handler expected PipelineFail event", "event", c)
-		return pcerr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
+		return perr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))

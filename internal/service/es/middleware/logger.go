@@ -7,7 +7,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 // This middleware writes the command and event to the jsonl event log file
@@ -28,7 +28,7 @@ func LogEventMiddlewareWithContext(ctx context.Context) message.HandlerMiddlewar
 
 			executionID := pe.Event.ExecutionID
 			if executionID == "" {
-				return nil, pcerr.InternalWithMessage("no execution_id found in payload")
+				return nil, perr.InternalWithMessage("no execution_id found in payload")
 			}
 
 			var payload map[string]interface{}

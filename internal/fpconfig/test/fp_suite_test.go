@@ -70,10 +70,12 @@ func (suite *FpTestSuite) SetupSuite() {
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.vars"
+	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
 
 	constants.PipesComponentModDataExtension = ".hcl"
-	constants.PipesComponentVariablesExtension = ".vars"
+	constants.PipesComponentVariablesExtension = ".pvars"
+	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
+	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
 
 	suite.SetupSuiteRunCount++
 }
@@ -324,6 +326,8 @@ func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {
 func (suite *FpTestSuite) TestModVariable() {
 	assert := assert.New(suite.T())
 
+	os.Setenv("P_VAR_var_six", "set from env var")
+
 	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_variable", []string{".hcl", ".sp"})
 
 	assert.NotNil(w)
@@ -358,6 +362,9 @@ func (suite *FpTestSuite) TestModVariable() {
 	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[6].(*modconfig.PipelineStepEcho).Text)
 	assert.Equal("using value from locals: value of key_two", pipelineOne.Steps[7].(*modconfig.PipelineStepEcho).Text)
 	assert.Equal("using value from locals: 33", pipelineOne.Steps[8].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("var_four value is: value from auto.vars file", pipelineOne.Steps[9].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("var_five value is: value from two.auto.vars file", pipelineOne.Steps[10].(*modconfig.PipelineStepEcho).Text)
+	assert.Equal("var_six value is: set from env var", pipelineOne.Steps[11].(*modconfig.PipelineStepEcho).Text)
 
 }
 

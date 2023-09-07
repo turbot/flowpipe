@@ -3,6 +3,7 @@ package inputvars
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -33,10 +34,10 @@ func CollectVariableValues(workspacePath string, variableFileArgs []string, vari
 	{
 		env := os.Environ()
 		for _, raw := range env {
-			if !strings.HasPrefix(raw, constants.EnvInputVarPrefix) {
+			if !strings.HasPrefix(raw, constants.PipesComponentEnvInputVarPrefix) {
 				continue
 			}
-			raw = raw[len(constants.EnvInputVarPrefix):] // trim the prefix
+			raw = raw[len(constants.PipesComponentEnvInputVarPrefix):] // trim the prefix
 
 			eq := strings.Index(raw, "=")
 			if eq == -1 {
@@ -66,6 +67,23 @@ func CollectVariableValues(workspacePath string, variableFileArgs []string, vari
 			return nil, error_helpers.DiagsToError(fmt.Sprintf("failed to load variables from '%s'", defaultVarsPath), diags)
 		}
 
+	}
+
+	// get the *.auto.vars (or *.auto.spvars) from the same directory as the defaultVarsPath
+	defaultVarsDir := filepath.Dir(defaultVarsPath)
+	if infos, err := os.ReadDir(defaultVarsDir); err == nil {
+		// "infos" is already sorted by name, so we just need to filter it here.
+		for _, info := range infos {
+			name := info.Name()
+			if !isAutoVarFile(name) {
+				continue
+			}
+			diags := addVarsFromFile(filepath.Join(defaultVarsDir, name), ValueFromAutoFile, ret)
+			if diags.HasErrors() {
+				return nil, error_helpers.DiagsToError(fmt.Sprintf("failed to load variables from '%s'", name), diags)
+			}
+
+		}
 	}
 
 	if infos, err := os.ReadDir("."); err == nil {
@@ -312,5 +330,5 @@ func (v unparsedVariableValueString) ParseVariableValue(mode var_config.Variable
 
 // isAutoVarFile determines if the file ends with .auto.spvars or .auto.spvars.json
 func isAutoVarFile(path string) bool {
-	return strings.HasSuffix(path, constants.AutoVariablesExtension)
+	return strings.HasSuffix(path, constants.PipesComponentAutoVariablesExtension)
 }

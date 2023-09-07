@@ -95,10 +95,12 @@ func (m *Manager) Initialize() error {
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.vars"
+	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
 
 	constants.PipesComponentModDataExtension = ".hcl"
-	constants.PipesComponentVariablesExtension = ".vars"
+	constants.PipesComponentVariablesExtension = ".pvars"
+	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
+	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger

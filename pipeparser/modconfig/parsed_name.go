@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -24,7 +24,7 @@ func ParseResourceName(fullName string) (res *ParsedResourceName, err error) {
 
 	switch len(parts) {
 	case 0:
-		err = pcerr.BadRequestWithMessage("empty name passed to ParseResourceName")
+		err = perr.BadRequestWithMessage("empty name passed to ParseResourceName")
 	case 1:
 		res.Name = parts[0]
 	case 2:
@@ -35,10 +35,10 @@ func ParseResourceName(fullName string) (res *ParsedResourceName, err error) {
 		res.ItemType = parts[1]
 		res.Name = parts[2]
 	default:
-		err = pcerr.BadRequestWithMessage("invalid name passed to ParseResourceName: " + fullName)
+		err = perr.BadRequestWithMessage("invalid name passed to ParseResourceName: " + fullName)
 	}
 	if !schema.IsValidResourceItemType(res.ItemType) {
-		err = pcerr.BadRequestWithMessage("not a valid resource type passed to ParseResourceName: " + fullName + " (" + res.ItemType + ")")
+		err = perr.BadRequestWithMessage("not a valid resource type passed to ParseResourceName: " + fullName + " (" + res.ItemType + ")")
 	}
 	return
 }

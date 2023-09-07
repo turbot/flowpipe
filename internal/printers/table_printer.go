@@ -7,7 +7,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 // Inspired by Kubernetes
@@ -38,7 +38,7 @@ func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items type
 	table, ok := items.(types.Table)
 
 	if !ok {
-		return pcerr.BadRequestWithMessage("not a table")
+		return perr.BadRequestWithMessage("not a table")
 	}
 
 	// Create a tabwriter
