@@ -30,4 +30,8 @@ pipeline "with_step_output" {
         for_each = step.echo.name
         text = "second_step: ${each.value.output.album_name}"
     }
+
+    output "second_step_0" {
+        value = step.echo.second_step[0].text
+    }
 }
