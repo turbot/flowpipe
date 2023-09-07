@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/zclconf/go-cty/cty"
 )
 
 type PipelineStepStartHandler CommandHandler
@@ -174,6 +175,16 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 					}
 					return
 				}
+
+				stepForEach := stepDefn.GetForEach()
+				if stepForEach != nil {
+					// If there's a for_each in the step definition, we need to insert the "each" magic variable
+					// so the output can refer to it
+					eachValue := map[string]cty.Value{}
+					eachValue["value"] = cmd.StepForEach.Each.Value
+					evalContext.Variables[schema.AttributeEach] = cty.ObjectVal(eachValue)
+				}
+
 				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 				if len(diags) > 0 && diags.HasErrors() {
 					logger.Error("Error calculating output", "error", diags)

@@ -489,13 +489,13 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// text = step.echo.text_1[1].text
 
 				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*modconfig.Output, et.StepForEach.ForEachTotalCount)
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*modconfig.Output, et.StepForEach.TotalCount)
 				}
 
 				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*modconfig.Output)[et.StepForEach.Index] = et.Output
 
 				if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]map[string]interface{}, et.StepForEach.ForEachTotalCount)
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]map[string]interface{}, et.StepForEach.TotalCount)
 				}
 
 				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]map[string]interface{})[et.StepForEach.Index] = et.StepOutput

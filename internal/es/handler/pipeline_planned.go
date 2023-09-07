@@ -12,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/json"
 )
 
 type PipelinePlanned EventHandler
@@ -193,7 +194,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				// "each" is the magic keyword that will be used to access the current element in the for_each
 				//
 				// flowpipe's step must use the "each" keyword to access the for_each element that it's currently running
-				evalContext.Variables["each"] = cty.ObjectVal(v)
+				evalContext.Variables[schema.AttributeEach] = cty.ObjectVal(v)
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
 					logger.Error("Error resolving step inputs for for_each step", "error", err)
@@ -255,9 +256,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					forEachOutput.Data[schema.AttributeTypeValue] = title
 
 					forEachControl = &modconfig.StepForEach{
-						Index:             forEachIndex,
-						ForEachOutput:     forEachOutput,
-						ForEachTotalCount: len(inputs),
+						Index:      forEachIndex,
+						Output:     forEachOutput,
+						TotalCount: len(inputs),
+						Each:       json.SimpleJSONValue{Value: forEachCtyVal},
 					}
 				}
 

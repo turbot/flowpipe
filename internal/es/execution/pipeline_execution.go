@@ -118,12 +118,26 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 			} else if indexedStepOutput, ok := stepOutput.([]*modconfig.Output); ok {
 
 				ctyValList := make([]cty.Value, len(indexedStepOutput))
+
+				var configStepOutputs []map[string]interface{}
+				if pe.AllConfigStepOutputs[stepType] != nil && pe.AllConfigStepOutputs[stepType][stepName] != nil {
+					configStepOutputs = pe.AllConfigStepOutputs[stepType][stepName].([]map[string]interface{})
+				}
+
 				for i, stepOutput := range indexedStepOutput {
 					ctyMap, err := stepOutput.AsCtyMap()
 					if err != nil {
 						return nil, err
 					}
+
+					configuredOutputMap := configStepOutputs[i]
+					ctyMap["output"], err = hclhelpers.ConvertMapToCtyValue(configuredOutputMap)
+					if err != nil {
+						return nil, err
+					}
+
 					ctyValList[i] = cty.ObjectVal(ctyMap)
+
 				}
 
 				vm[stepName] = cty.TupleVal(ctyValList)
