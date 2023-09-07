@@ -48,14 +48,14 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 			return perr.BadRequestWithMessage("port must be a number")
 		}
 
-		test := strconv.FormatInt(port, 10)
-		match, err := regexp.MatchString("^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0-9]{1,4}))$", test)
+		portInString := strconv.FormatInt(port, 10)
+		match, err := regexp.MatchString("^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0-9]{1,4}))$", portInString)
 		if err != nil {
 			return perr.BadRequestWithMessage("error while validating the port")
 		}
 
 		if !match {
-			return perr.BadRequestWithMessage(fmt.Sprintf("%s is not a valid port", test))
+			return perr.BadRequestWithMessage(fmt.Sprintf("%s is not a valid port", portInString))
 		}
 	}
 
