@@ -109,6 +109,8 @@ func TestEmailStepInvalidPortFormat(t *testing.T) {
 
 	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_port.fp")
 	assert.NotNil(err, "error found")
+
+	assert.Contains(err.Error(), "Unable to convert port into integer")
 }
 
 func TestEmailStepInvalidRecipient(t *testing.T) {
@@ -116,4 +118,5 @@ func TestEmailStepInvalidRecipient(t *testing.T) {
 
 	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_recipient.fp")
 	assert.NotNil(err, "error found")
+	assert.Contains(err.Error(), "Unable to parse to attribute to string slice")
 }

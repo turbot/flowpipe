@@ -645,7 +645,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd modconfig.IPipeli
 		title = strconv.Itoa(se.StepForEach.Index) + " = "
 
 		// TODO: this is a bit yuck
-		forEachOutput, ok := se.StepForEach.ForEachOutput.Get(schema.AttributeTypeValue).(string)
+		forEachOutput, ok := se.StepForEach.Output.Get(schema.AttributeTypeValue).(string)
 		if !ok {
 			title += sd.GetFullyQualifiedName()
 		} else {
