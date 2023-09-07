@@ -120,11 +120,11 @@ func (dc *DockerClient) ImagePull(imageName string) error {
 // CleanupArtifacts deletes all containers and images related to flowpipe.
 func (dc *DockerClient) CleanupArtifacts() error {
 	// Delete any containers & images related to flowpipe
-	err := dc.deleteContainersWithLabelKey("io.flowpipe.image.type")
+	err := dc.deleteContainersWithLabelKey("io.flowpipe.type")
 	if err != nil {
 		return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
 	}
-	err = dc.deleteImagesWithLabelKey("io.flowpipe.image.type")
+	err = dc.deleteImagesWithLabelKey("io.flowpipe.type")
 	if err != nil {
 		return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
 	}

@@ -13,8 +13,12 @@ containers:
     image: amazon/aws-cli
     #cmd: ["iam", "delete-access-key", "--user-name", "nathan", "--access-key-id", "AKIAfakekey", "--output", "text"]
     #cmd: ["s3", "ls", "--output", "json"]
-    cmd: ["ec2", "describe-vpcs", "--output", "json"]
+    #cmd: ["ec2", "describe-vpcs", "--output", "json"]
+    cmd: ["ec2", "describe-vpcs"]
     env:
       AWS_REGION: us-east-2
       AWS_ACCESS_KEY_ID: AKIAXYSEVGQ7VNWUZQJM
       AWS_SECRET_ACCESS_KEY: 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  
+  curltest:
+    image: curlimages/curl
+    cmd: ["curl", "--silent", "https://api.spacexdata.com/v4/launches/upcoming?limit=5"]

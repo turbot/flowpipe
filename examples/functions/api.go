@@ -9,18 +9,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe-functions/container"
-	"github.com/turbot/flowpipe-functions/docker"
 	"github.com/turbot/flowpipe-functions/function"
 )
 
 var hooks = map[string]*function.Function{}
+var containers = map[string]*container.Container{}
 
 //"hook_name": "http://lambda_endpoint",
 
-func startWebServer(ctx context.Context, functions map[string]*function.Function) {
+func startWebServer(ctx context.Context, functions map[string]*function.Function, inputContainers map[string]*container.Container) {
 	router := gin.Default()
 
 	hooks = functions
+	containers = inputContainers
 
 	// Define your custom middleware to set the context
 	router.Use(func(c *gin.Context) {
@@ -105,39 +106,41 @@ func handleHookRequestOld(c *gin.Context) {
 
 func handleContainerRequest(gc *gin.Context) {
 	containerName := gc.Param("containerName")
-	containerConfig, ok := config.Containers[containerName]
+	containerConfig, ok := containers[containerName]
 	if !ok {
 		gc.JSON(http.StatusBadRequest, gin.H{"error": "Invalid container name"})
 		return
 	}
 
-	dc := gc.Request.Context().Value(DockerClientContext{}).(*docker.DockerClient)
+	/*
+		dc := gc.Request.Context().Value(DockerClientContext{}).(*docker.DockerClient)
 
-	// TODO - do this once, not every request
-	c, err := container.NewContainer(container.WithContext(gc), container.WithDockerClient(dc))
-	if err != nil {
-		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.Name = containerName
-	c.Image = containerConfig.Image
-	c.Cmd = containerConfig.Cmd
-	c.Env = containerConfig.Env
+		// TODO - do this once, not every request
+		c, err := container.NewContainer(container.WithContext(gc), container.WithDockerClient(dc))
+		if err != nil {
+			gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.Name = containerName
+		c.Image = containerConfig.Image
+		c.Cmd = containerConfig.Cmd
+		c.Env = containerConfig.Env
 
-	err = c.Load()
-	if err != nil {
-		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+		err = c.Load()
+		if err != nil {
+			gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+	*/
 
-	containerID, err := c.Run()
+	containerID, err := containerConfig.Run()
 	if err != nil {
 		gc.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Return the container output as the result of the API call
-	gc.String(http.StatusOK, c.Runs[containerID].Output)
+	gc.String(http.StatusOK, containerConfig.Runs[containerID].Output)
 
 }
 

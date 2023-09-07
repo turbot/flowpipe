@@ -3,26 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
-	"github.com/docker/cli/cli/command/image/build"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/go-connections/nat"
-	"github.com/pkg/errors"
-	"github.com/radovskyb/watcher"
+	"github.com/turbot/flowpipe-functions/container"
 	"github.com/turbot/flowpipe-functions/docker"
 	"github.com/turbot/flowpipe-functions/function"
 	"gopkg.in/yaml.v2"
@@ -64,6 +53,10 @@ func (fnConfig *FunctionConfig) GetEnv() []string {
 	return env
 }
 
+func quoteEnvVar(s string) string {
+	return strconv.Quote(s)
+}
+
 type ContainerConfig struct {
 	Name  string            `mapstructure:"name"`
 	Image string            `mapstructure:"image"`
@@ -84,6 +77,8 @@ type AppConfig struct {
 	Containers map[string]ContainerConfig `mapstructure:"containers"`
 }
 
+type DockerClientContext struct{}
+
 var config AppConfig
 
 func main() {
@@ -94,28 +89,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to connect to Docker: %v", err)
 	}
-
-	// Create a channel to receive OS signals
-	sigCh := make(chan os.Signal, 1)
-
-	// Notify the signal channel on SIGINT (Ctrl+C) and SIGTERM
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
-	// Start a goroutine to handle the signal
-	go func() {
-		// Wait for the signal
-		<-sigCh
-
-		// Cleanup docker artifacts
-		// TODO - Can we remove this since we cleanup per function etc?
-		err := dc.CleanupArtifacts()
-		if err != nil {
-			log.Fatalf("Failed to cleanup flowpipe docker artifacts: %v", err)
-		}
-
-		// Exit the program
-		os.Exit(0)
-	}()
 
 	// Read the YAML file
 	yamlFile, err := os.ReadFile("config.yaml")
@@ -157,48 +130,33 @@ func main() {
 
 	}
 
-	startWebServer(ctx, functions)
+	containers := map[string]*container.Container{}
 
-}
+	for cName, cConfig := range config.Containers {
 
-func main3() {
+		fmt.Println(cConfig)
 
-	ctx := context.Background()
-
-	dc, err := docker.New(docker.WithContext(ctx), docker.WithPingTest())
-	if err != nil {
-		log.Fatalf("Failed to connect to Docker: %v", err)
-	}
-
-	fn, err := function.New(
-		function.WithContext(ctx),
-		function.WithDockerClient(dc),
-	)
-	if err != nil {
-		panic(err)
-	}
-	fn.Name = "test"
-	fn.Runtime = "nodejs:18"
-	fn.Handler = "app.handler"
-	fn.Src = "./lambda-nodejs"
-	fmt.Println("Loading...")
-	err = fn.Load()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("Loaded")
-	/*
-		time.Sleep(10 * time.Second)
-			fn.Unload()
-	*/
-
-	/*
-		_, err = fn.Start(fn.CurrentVersionName)
+		c, err := container.NewContainer(
+			container.WithContext(ctx),
+			container.WithDockerClient(dc),
+		)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(fn.Versions)
-	*/
+		c.Name = cName
+		c.Image = cConfig.Image
+		c.Cmd = cConfig.Cmd
+		c.Env = cConfig.Env
+		fmt.Println("Loading...")
+		err = c.Load()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Loaded")
+
+		containers[cName] = c
+
+	}
 
 	// Create a channel to receive OS signals
 	sigCh := make(chan os.Signal, 1)
@@ -206,59 +164,24 @@ func main3() {
 	// Notify the signal channel on SIGINT (Ctrl+C) and SIGTERM
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	go func() {
-
-		// Wait for the signal
-		<-sigCh
-
-		// Cleanup docker artifacts
-		err = fn.Unload()
-		if err != nil {
-			log.Fatalf("Failed to cleanup flowpipe docker artifacts: %v", err)
-		}
-
-		os.Exit(0)
-	}()
-
-	for {
-		output, err := fn.Invoke([]byte(`{"foo": "bar"}`))
-		//output, err := fn.Invoke([]byte(`["foo", "bar"]`))
-		//output, err := fn.Invoke([]byte(`"foo"`))
-		if err != nil {
-			fmt.Println(err)
-		} else {
-			fmt.Println(string(output))
-		}
-
-		time.Sleep(1 * time.Second)
-	}
-
-}
-
-type DockerClientContext struct{}
-
-func main2() {
-
-	ctx := context.Background()
-
-	dc, err := docker.New(docker.WithContext(ctx), docker.WithPingTest())
-	if err != nil {
-		log.Fatalf("Failed to connect to Docker: %v", err)
-	}
-	ctx = context.WithValue(ctx, DockerClientContext{}, dc)
-
-	// Create a channel to receive OS signals
-	sigCh := make(chan os.Signal, 1)
-
-	// Notify the signal channel on SIGINT (Ctrl+C) and SIGTERM
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
 	// Start a goroutine to handle the signal
 	go func() {
+
 		// Wait for the signal
 		<-sigCh
 
+		// TODO - this should be dynamic, what if the functions change through
+		// config changes?
+		for _, fn := range functions {
+			fmt.Printf("Stopping function: %s\n", fn.Name)
+			err := fn.Unload()
+			if err != nil {
+				log.Fatalf("Failed to stop function: %v", err)
+			}
+		}
+
 		// Cleanup docker artifacts
+		// TODO - Can we remove this since we cleanup per function etc?
 		err := dc.CleanupArtifacts()
 		if err != nil {
 			log.Fatalf("Failed to cleanup flowpipe docker artifacts: %v", err)
@@ -268,443 +191,6 @@ func main2() {
 		os.Exit(0)
 	}()
 
-	// Read the YAML file
-	yamlFile, err := os.ReadFile("config.yaml")
-	if err != nil {
-		log.Fatalf("Failed to read YAML file: %v", err)
-	}
+	startWebServer(ctx, functions, containers)
 
-	// Parse the YAML file into the config struct
-	err = yaml.Unmarshal(yamlFile, &config)
-	if err != nil {
-		log.Fatalf("Failed to parse YAML: %v", err)
-	}
-
-	now := time.Now()
-
-	for fnName, fnConfig := range config.Functions {
-
-		fmt.Println(fnConfig)
-
-		// Set the CreatedAt time
-		fnConfig.CreatedAt = &now
-
-		// Set the name in the config for convenience
-		if fnConfig.Name == "" {
-			fnConfig.Name = fnName
-		}
-
-		// Convert Src to AbsolutePath
-		absPath, err := filepath.Abs(fnConfig.Src)
-		if err != nil {
-			fmt.Println("Failed to resolve absolute path:", err)
-			return
-		}
-
-		// Get file/directory information
-		fileInfo, err := os.Stat(absPath)
-		if err != nil {
-			fmt.Println("Absolute path not found:", err)
-			return
-		}
-
-		// Check if the path is a directory
-		if !fileInfo.IsDir() {
-			fmt.Println("Absolute path must be a directory:", err)
-			return
-		}
-
-		// Path looks good, let's use it
-		fnConfig.AbsolutePath = absPath
-
-		// Save it back to the main config
-		config.Functions[fnName] = fnConfig
-	}
-
-	w := watcher.New()
-	defer w.Close()
-
-	// We can receive multiple events per cycle since they might be for
-	// different function locations
-	// TODO - the negative effect of this is when there are multiple changes
-	// inside a given function directory, we will rebuild the Docker image
-	// multiple times. We should probably debounce the events so that we
-	// only rebuild the Docker image once per cycle.
-	w.SetMaxEvents(0)
-
-	// Block the watcher until it is started
-	//w.Wait()
-
-	// Watch all the function directories
-	for _, fnConfig := range config.Functions {
-		if err := w.AddRecursive(fnConfig.AbsolutePath); err != nil {
-			fmt.Println("Failed to add path to watcher:", err)
-		}
-	}
-
-	// Build the initial Docker image for each function
-	// TODO - do this in parallel?
-	for _, fnConfig := range config.Functions {
-		if err := buildDockerImage(fnConfig.GetImageName(), fnConfig); err != nil {
-			log.Fatalf("Failed to build Docker image: %v", err)
-		}
-	}
-
-	// Build the initial Docker image for each function
-	// TODO - do this in parallel?
-	for fnName, fnConfig := range config.Functions {
-		// Run the Docker container initially
-		containerID, err := runDockerContainer(fnConfig)
-		if err != nil {
-			log.Fatalf("Failed to run Docker container: %v", err)
-		}
-		fnConfig.ContainerIDs = append(fnConfig.ContainerIDs, containerID)
-
-		// Save back to the main config
-		config.Functions[fnName] = fnConfig
-	}
-
-	debouncer := NewDebouncer()
-
-	go func() {
-		for {
-			select {
-			case event := <-w.Event:
-				go debouncer.HandleEvent(event)
-			case err := <-w.Error:
-				log.Printf("File watcher error: %v", err)
-			case <-w.Closed:
-				return
-			}
-		}
-	}()
-
-	/*
-		// TEST - convenient way to trigger SIGINT for testing
-		// Sleep for 5 seconds
-		time.Sleep(5 * time.Second)
-		p, err := os.FindProcess(os.Getpid())
-		if err == nil {
-			p.Signal(os.Interrupt)
-		}
-	*/
-
-	//go startWebServer(ctx)
-
-	// Start the watching process - it'll check for changes every 100ms.
-	if err := w.Start(time.Millisecond * 100); err != nil {
-		log.Fatalln(err)
-	}
-
-}
-
-func buildDockerImage(imageName string, fnConfig FunctionConfig) error {
-
-	ctx := context.Background()
-
-	log.Printf("buildDockerImage: %s, %s\n", imageName, fnConfig.AbsolutePath)
-
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		return err
-	}
-
-	// Tar up the function code for use in the build
-	buildCtx, err := archive.TarWithOptions(fnConfig.AbsolutePath, &archive.TarOptions{})
-	if err != nil {
-		return err
-	}
-	defer buildCtx.Close()
-
-	// Our Dockerfile is runtime specific and stored outside the user-defined function
-	// code.
-	dockerfilePath := fmt.Sprintf("./runtimes/%s/Dockerfile", fnConfig.Runtime)
-	dockerfileCtx, err := os.Open(dockerfilePath)
-	if err != nil {
-		return errors.Errorf("unable to open Dockerfile: %v", err)
-	}
-	defer dockerfileCtx.Close()
-
-	// Add our Dockerfile to the build context (tar stream) that contains the user-defined
-	// function code. The dockerfile gets a unique name, e.g. .dockerfile.64cf467fe12e4c96de83
-	buildCtx, relDockerfile, err := build.AddDockerfileToBuildContext(dockerfileCtx, buildCtx)
-	if err != nil {
-		return err
-	}
-
-	buildOptions := types.ImageBuildOptions{
-		Tags: []string{imageName},
-		//Dockerfile:     fmt.Sprintf("/Users/nathan/src/flowpipe/examples/functions/runtimes/%s/Dockerfile", fnConfig.Runtime),
-		// The Dockerfile is relative to the build context. Basically, it's the
-		// unique name for the file that we added to the build context above.
-		Dockerfile:     relDockerfile,
-		SuppressOutput: false,
-		Remove:         true,
-		// This will update the FROM image in the Dockerfile to the latest
-		// version.
-		// TODO - only do this occasionally, e.g. once a day, for faster
-		// performance during development.
-		PullParent: true,
-		Labels: map[string]string{
-			"io.flowpipe.image.type":           "function",
-			"io.flowpipe.image.runtime":        fnConfig.Runtime,
-			"org.opencontainers.image.created": time.Now().Format(time.RFC3339),
-		},
-	}
-
-	fmt.Println(buildOptions.Dockerfile)
-
-	resp, err := cli.ImageBuild(ctx, buildCtx, buildOptions)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	fmt.Println("Building Docker image...")
-	// Output the build progress
-	_, err = io.Copy(os.Stdout, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Docker image built successfully.")
-	return nil
-}
-
-func runDockerContainer(fnConfig FunctionConfig) (string, error) {
-
-	ctx := context.Background()
-
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		return "", err
-	}
-
-	// Only allow the local machine to connect
-	hostIP := "127.0.0.1"
-	// But allow any port to be allocated
-	hostPort := "0"
-
-	containerConfig := &container.Config{
-		Image: fnConfig.GetImageName(),
-		ExposedPorts: nat.PortSet{
-			"8080/tcp": struct{}{},
-		},
-		Labels: map[string]string{
-			// Is this standard for containers?
-			"org.opencontainers.container.created": time.Now().Format(time.RFC3339),
-		},
-		Env: fnConfig.GetEnv(),
-	}
-	if fnConfig.Handler != "" {
-		// Override the Cmd if they have specified a custom handler location
-		containerConfig.Cmd = []string{fnConfig.Handler}
-	}
-
-	containerHostConfig := &container.HostConfig{
-		PortBindings: nat.PortMap{
-			"8080/tcp": []nat.PortBinding{{HostIP: hostIP, HostPort: hostPort}},
-		},
-	}
-
-	// Create a container using the specified image
-	resp, err := cli.ContainerCreate(ctx, containerConfig, containerHostConfig, &network.NetworkingConfig{}, nil, "")
-	if err != nil {
-		return "", err
-	}
-
-	// Start the container
-	if err := cli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return "", err
-	}
-
-	// Get the allocated port for the Lambda function
-	info, err := cli.ContainerInspect(ctx, resp.ID)
-	if err != nil {
-		return "", err
-	}
-	port := info.NetworkSettings.Ports["8080/tcp"][0].HostPort
-
-	// Register the function with our API Gateway
-	//hookToLambdaEndpoint[fnConfig.Name] = fmt.Sprintf("http://localhost:%s/2015-03-31/functions/function/invocations", port)
-
-	fmt.Printf("Docker container started successfully. Lambda function exposed on port %s\n", port)
-	return resp.ID, nil
-}
-
-func restartDockerContainer(fnConfig FunctionConfig, containerID string) (string, error) {
-
-	ctx := context.Background()
-
-	newContainerID := ""
-
-	fmt.Printf("restartDockerContainer: %s, %s\n", fnConfig.GetImageName(), containerID)
-
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-	)
-	if err != nil {
-		return newContainerID, err
-	}
-
-	// Stop the container
-	err = cli.ContainerStop(ctx, containerID, container.StopOptions{})
-	if err != nil {
-		fmt.Printf("Container stop failed: %v\n", err)
-		return newContainerID, err
-	}
-
-	// Remove the container
-	err = cli.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{})
-	if err != nil {
-		fmt.Printf("Container remove failed: %v\n", err)
-		return newContainerID, err
-	}
-
-	// Run the Docker container again
-	newContainerID, err = runDockerContainer(fnConfig)
-	if err != nil {
-		fmt.Printf("Container run failed: %v\n", err)
-		return newContainerID, err
-	}
-
-	return newContainerID, nil
-}
-
-func isSubPath(basePath, subPath string) (bool, error) {
-	relPath, err := filepath.Rel(basePath, subPath)
-	if err != nil {
-		return false, err
-	}
-	fmt.Printf("relPath: %s + %s = %s\n", basePath, subPath, relPath)
-	return len(relPath) > 0 && !strings.HasPrefix(relPath, ".."), nil
-}
-
-func quoteEnvVar(s string) string {
-	return strconv.Quote(s)
-}
-
-type Event struct {
-	Directory string
-	File      string
-}
-
-type Debouncer struct {
-	mu         sync.Mutex
-	queue      map[string]chan struct{}
-	processing map[string]bool
-	timers     map[string]*time.Timer
-}
-
-func NewDebouncer() *Debouncer {
-	return &Debouncer{
-		queue:      make(map[string]chan struct{}),
-		processing: make(map[string]bool),
-		timers:     make(map[string]*time.Timer),
-	}
-}
-
-func (d *Debouncer) HandleEvent(event watcher.Event) error {
-
-	fmt.Println("Handle event:", event)
-	if event.IsDir() && event.Op == watcher.Write {
-		// Directory write events happen when there is any change to the files
-		// or directories inside a directory. They are just noise and can be
-		// safely ignored - especially since the event for the actual change
-		// will be raised anyway.
-		return nil
-	}
-
-	var eventFn FunctionConfig
-
-	for _, fnConfig := range config.Functions {
-		eventMatchesFn, err := isSubPath(fnConfig.AbsolutePath, event.Path)
-		if err != nil {
-			log.Printf("Failed to check if event path is a subpath of function path: %v", err)
-			continue
-		}
-		if eventMatchesFn {
-			eventFn = fnConfig
-			break
-		}
-	}
-
-	if eventFn.Name == "" {
-		log.Printf("No function found for event path: %s", event.Path)
-		return nil
-	}
-
-	debounceDuration := 250 * time.Millisecond
-
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	// Check if the directory is already being processed
-	if d.processing[eventFn.AbsolutePath] {
-		// If it is, discard any previously queued events
-		if _, ok := d.queue[eventFn.AbsolutePath]; !ok {
-			d.queue[eventFn.AbsolutePath] = make(chan struct{}, 1)
-		} else {
-			select {
-			case <-d.queue[eventFn.AbsolutePath]:
-			default:
-			}
-		}
-	} else {
-		// Mark the directory as being processed
-		d.processing[eventFn.AbsolutePath] = true
-
-		// Start the timer for the directory
-		d.timers[eventFn.AbsolutePath] = time.AfterFunc(debounceDuration, func() {
-			fmt.Printf("Processing event: %s/%s\n", eventFn.AbsolutePath, event.Path)
-			d.ProcessEvent(eventFn, event)
-		})
-	}
-
-	fmt.Printf("Event handled: %s/%s\n", eventFn.AbsolutePath, event.Path)
-
-	return nil
-}
-
-func (d *Debouncer) ProcessEvent(eventFn FunctionConfig, event watcher.Event) error {
-
-	fmt.Println("Process event:", event)
-
-	eventFn.SetUpdatedAt()
-	if err := buildDockerImage(eventFn.GetImageName(), eventFn); err != nil {
-		log.Printf("Failed to rebuild Docker image: %v", err)
-		return err
-	} else {
-		fmt.Println("Docker image rebuilt successfully. Restarting containers...")
-		newIDs := []string{}
-		for _, containerID := range eventFn.ContainerIDs {
-			if newID, err := restartDockerContainer(eventFn, containerID); err != nil {
-				log.Printf("Failed to restart Docker container: %v", err)
-				return err
-			} else {
-				fmt.Println("Docker container restarted successfully.")
-				newIDs = append(newIDs, newID)
-			}
-		}
-		eventFn.ContainerIDs = newIDs
-		config.Functions[eventFn.Name] = eventFn
-	}
-
-	d.mu.Lock()
-	delete(d.processing, eventFn.AbsolutePath)
-	d.mu.Unlock()
-
-	fmt.Printf("Event processed: %s/%s\n", eventFn.AbsolutePath, event.Path)
-
-	return nil
 }

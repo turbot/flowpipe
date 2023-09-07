@@ -3,7 +3,9 @@ package container
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -180,6 +182,42 @@ func (c *Container) Run() (string, error) {
 		},
 		Env:         c.GetEnv(),
 		StopTimeout: &timeout,
+
+		// TODO - FIX ME
+		// I'm confused about how this works, and we're seeing a lot of control characters
+		// with AWS CLI output.
+		//
+		// Tty: true, --no-cli-pager
+		// Works! Format is good. But it's complicated and unexpected to need these.
+		//
+		// Tty: false, --no-cli-pager
+		// Control chars in output.
+		//
+		// Tty: false
+		// Control chars in output.
+		//
+		// Tty: true
+		// Hangs, I presume because it's waiting for input on the paging.
+		//
+		// Overall, I trust this StackOverflow answer which says we want to use
+		// docker run (without -it) to avoid control chars. But, we're still getting
+		// the chars for some reason.
+		// https://stackoverflow.com/questions/65824304/aws-cli-returns-json-with-control-codes-making-jq-fail
+		//
+		// The control characters seem to be at the start of each line:
+		// [1 0 0 0 0 0 0 2 123 10 1 0 0 0 0 0 0 14 32 32 32 32 34 86 112 99 115 34 58 32 91 10
+		// Specifically, see the "1 0 0 0 0 0 0 <number>" at the start of each line, which is:
+		// 1 0 0 0 0 0 0  2 {
+		// 1 0 0 0 0 0 0 14     "Vpcs": [
+		//
+		// OK - here is the answer - https://github.com/moby/moby/issues/7375#issuecomment-51462963
+		// Docker adds a control character to each line of output to indicate if
+		// it's stdout or stderr.
+		Tty:          false, // Turn off interactive mode
+		OpenStdin:    false, // Turn off stdin
+		AttachStdin:  false,
+		AttachStdout: false,
+		AttachStderr: false,
 	}
 	containerCreateStart := time.Now()
 	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &container.HostConfig{}, &network.NetworkingConfig{}, nil, "")
@@ -218,7 +256,10 @@ func (c *Container) Run() (string, error) {
 	containerLogsOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Tail:       "all",
+		// Timstamps inject timestamp text into the output, making it hard to parse
+		Timestamps: false,
+		// Get all logs from the container, not just the last X lines
+		Tail: "all",
 	}
 	containerLogsStart := time.Now()
 	reader, err := c.dockerClient.CLI.ContainerLogs(c.ctx, containerID, containerLogsOptions)
@@ -228,12 +269,40 @@ func (c *Container) Run() (string, error) {
 	}
 	defer reader.Close()
 
-	_, err = outputBuf.ReadFrom(reader)
+	o := NewOutput()
+	err = o.FromDockerLogsReader(reader)
 	if err != nil {
 		return containerID, err
 	}
+	c.Runs[containerID].Output = o.Combined()
 
-	c.Runs[containerID].Output = outputBuf.String()
+	/*
+		stdoutStr, stderrStr, err := processLogs(reader)
+		if err != nil {
+			return containerID, err
+		}
+		c.Runs[containerID].Output = stdoutStr + stderrStr
+	*/
+
+	/*
+		_, err = outputBuf.ReadFrom(reader)
+		if err != nil {
+			return containerID, err
+		}
+	*/
+
+	/*
+		encoding := charmap.ISO8859_1 // Example: ISO 8859-1 (Latin-1)
+		// Convert the byte buffer to a string using the specified encoding
+		decoder := encoding.NewDecoder()
+		output, _ := decoder.Bytes(outputBuf.Bytes())
+		c.Runs[containerID].Output = string(output)
+	*/
+
+	//c.Runs[containerID].Output = outputBuf.String()
+
+	fmt.Printf("%v", outputBuf.Bytes())
+	fmt.Printf("%s", c.Runs[containerID].Output)
 
 	c.SetRunStatus(containerID, "logged")
 
@@ -256,4 +325,42 @@ func (c *Container) Run() (string, error) {
 // Cleanup all docker containers for the given container.
 func (c *Container) CleanupArtifacts() error {
 	return c.dockerClient.CleanupArtifactsForLabel("io.flowpipe.name", c.Name)
+}
+
+func processLogs(reader io.Reader) (string, string, error) {
+	header := make([]byte, 8)
+	stdout := bytes.Buffer{}
+	stderr := bytes.Buffer{}
+
+	for {
+		_, err := reader.Read(header)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", "", err
+		}
+
+		streamType := header[0]
+		payloadSize := binary.BigEndian.Uint32(header[4:8])
+		payload := make([]byte, payloadSize)
+
+		_, err = io.ReadFull(reader, payload)
+		if err != nil {
+			return "", "", err
+		}
+
+		switch streamType {
+		case 2:
+			stderr.Write(payload)
+		default:
+			stdout.Write(payload)
+		}
+	}
+
+	// Process stdout and stderr as needed
+	fmt.Println("Stdout:", stdout.String())
+	fmt.Println("Stderr:", stderr.String())
+
+	return stdout.String(), stderr.String(), nil
 }
