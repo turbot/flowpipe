@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/pipeparser/pcerr"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 	"github.com/zclconf/go-cty/cty/json"
@@ -156,7 +156,7 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 	}
 	ty := v.Type()
 	if !ty.IsListType() && !ty.IsTupleType() {
-		return nil, pcerr.BadRequestWithMessage("expected list type")
+		return nil, perr.BadRequestWithMessage("expected list type")
 	}
 
 	var res []string
