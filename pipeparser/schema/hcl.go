@@ -134,6 +134,8 @@ const (
 
 	AttributeVar   = "var"
 	AttributeLocal = "local"
+
+	AttributeEach = "each"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider

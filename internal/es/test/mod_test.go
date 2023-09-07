@@ -180,6 +180,42 @@ func (suite *ModTestSuite) TestModVars() {
 	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
 }
 
+func (suite *ModTestSuite) TestPipelineWithStepOutput() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_step_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].([]*modconfig.Output)
+	assert.Equal(3, len(echoNameStepOutputs))
+	assert.Equal("artist name: Real Friends", echoNameStepOutputs[0].Data["text"])
+	assert.Equal("artist name: A Day To Remember", echoNameStepOutputs[1].Data["text"])
+	assert.Equal("artist name: The Story So Far", echoNameStepOutputs[2].Data["text"])
+
+	secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].([]*modconfig.Output)
+	assert.Equal(3, len(secondStepStepOutputs))
+	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs[0].Data["text"])
+	assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs[1].Data["text"])
+	assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs[2].Data["text"])
+
+}
+
 func (suite *ModTestSuite) XXTestPipelineWithParam() {
 	assert := assert.New(suite.T())
 

@@ -339,7 +339,7 @@ func ConvertMapOrSliceToCtyValue(data interface{}) (cty.Value, error) {
 	case reflect.Slice:
 		return convertSliceToCtyValue(data)
 	case reflect.Map:
-		return convertMapToCtyValue(data)
+		return ConvertMapToCtyValue(data)
 	default:
 		// For other types, convert it as a single value using convertInterfaceToCtyValue
 		return ConvertInterfaceToCtyValue(data)
@@ -365,7 +365,7 @@ func ConvertInterfaceToCtyValue(v interface{}) (cty.Value, error) {
 	case reflect.Slice:
 		return convertSliceToCtyValue(v)
 	case reflect.Map:
-		return convertMapToCtyValue(v)
+		return ConvertMapToCtyValue(v)
 
 	// Add more cases here for other types as needed.
 	default:
@@ -393,7 +393,7 @@ func convertSliceToCtyValue(v interface{}) (cty.Value, error) {
 	return tupleVal, nil
 }
 
-func convertMapToCtyValue(v interface{}) (cty.Value, error) {
+func ConvertMapToCtyValue(v interface{}) (cty.Value, error) {
 	// Convert the map to a map[string]interface{} and recursively convert it to cty values
 	mapData := v.(map[string]interface{})
 	ctyValues := make(map[string]cty.Value, len(mapData))
