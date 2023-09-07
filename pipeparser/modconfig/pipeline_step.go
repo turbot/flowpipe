@@ -911,7 +911,6 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to string slice",
-						Detail:   err2.Error(),
 						Subject:  &attr.Range,
 					})
 					continue
