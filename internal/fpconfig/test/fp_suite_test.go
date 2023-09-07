@@ -145,6 +145,31 @@ func (suite *FpTestSuite) TestModReferences() {
 	assert.NotNil(pipelines["pipeline_with_references.pipeline.foo_two"])
 }
 
+func (suite *FpTestSuite) TestStepOutputParsing() {
+	assert := assert.New(suite.T())
+
+	w, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_with_step_output", []string{".hcl"})
+
+	assert.NotNil(w)
+	assert.Nil(errorAndWarning.Error)
+
+	mod := w.Mod
+	if mod == nil {
+		assert.Fail("mod is nil")
+		return
+	}
+
+	// check if all pipelines are there
+	pipelines := mod.ResourceMaps.Pipelines
+	assert.NotNil(pipelines, "pipelines is nil")
+	assert.Equal(1, len(pipelines), "wrong number of pipelines")
+
+	assert.Equal(2, len(pipelines["test_mod.pipeline.with_step_output"].Steps), "wrong number of steps")
+	assert.False(pipelines["test_mod.pipeline.with_step_output"].Steps[0].IsResolved())
+	assert.False(pipelines["test_mod.pipeline.with_step_output"].Steps[1].IsResolved())
+
+}
+
 func (suite *FpTestSuite) TestModDependencies() {
 	assert := assert.New(suite.T())
 

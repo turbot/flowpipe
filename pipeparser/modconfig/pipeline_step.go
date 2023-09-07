@@ -36,9 +36,10 @@ var ValidHttpMethods = []string{
 }
 
 type StepForEach struct {
-	Index             int     `json:"index" binding:"required"`
-	ForEachOutput     *Output `json:"for_each_output,omitempty"`
-	ForEachTotalCount int     `json:"for_each_total_count" binding:"required"`
+	Index      int                  `json:"index" binding:"required"`
+	Output     *Output              `json:"output,omitempty"`
+	TotalCount int                  `json:"total_count" binding:"required"`
+	Each       json.SimpleJSONValue `json:"each"`
 }
 
 // Input to the step or pipeline execution
@@ -1077,9 +1078,8 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 
 type PipelineStepEcho struct {
 	PipelineStepBase
-	Text    string               `json:"text"`
-	Json    json.SimpleJSONValue `json:"json"`
-	Dynamic cty.Value            `json:"dynamic"`
+	Text string               `json:"text"`
+	Json json.SimpleJSONValue `json:"json"`
 }
 
 func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
