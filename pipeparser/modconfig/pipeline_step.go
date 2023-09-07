@@ -558,7 +558,14 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 			if val != cty.NilVal {
-				urlString := val.AsString()
+				urlString, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeUrl + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.Url = &urlString
 			}
 		case schema.AttributeTypeRequestTimeoutMs:
@@ -585,7 +592,15 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 			if val != cty.NilVal {
-				method := val.AsString()
+				method, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeMethod + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
+
 				if method != "" {
 					if !helpers.StringSliceContains(ValidHttpMethods, strings.ToLower(method)) {
 						diags = append(diags, &hcl.Diagnostic{
@@ -626,7 +641,14 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 			if val != cty.NilVal {
-				requestBody := val.AsString()
+				requestBody, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeRequestBody + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.RequestBody = &requestBody
 			}
 
@@ -700,7 +722,15 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				p.Duration = val.AsString()
+				duration, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeDuration + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
+				p.Duration = duration
 			}
 
 		default:
@@ -926,7 +956,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				from := val.AsString()
+				from, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeFrom + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.From = &from
 			}
 
@@ -938,7 +975,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				senderCredential := val.AsString()
+				senderCredential, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeSenderCredential + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.SenderCredential = &senderCredential
 			}
 
@@ -950,7 +994,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				host := val.AsString()
+				host, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeHost + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.Host = &host
 			}
 
@@ -982,7 +1033,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				senderName := val.AsString()
+				senderName, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeSenderName + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.SenderName = &senderName
 			}
 
@@ -1034,7 +1092,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				body := val.AsString()
+				body, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeBody + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.Body = &body
 			}
 
@@ -1046,7 +1111,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				contentType := val.AsString()
+				contentType, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeContentType + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.ContentType = &contentType
 			}
 
@@ -1058,7 +1130,14 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				subject := val.AsString()
+				subject, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeSubject + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.Subject = &subject
 			}
 
@@ -1176,7 +1255,15 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 
 			if val != cty.NilVal {
-				p.Text = val.AsString()
+				text, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeText + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
+				p.Text = text
 			}
 		case schema.AttributeTypeJson:
 			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
@@ -1268,7 +1355,14 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				sql := val.AsString()
+				sql, err := hclhelpers.CtyToString(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute to string",
+						Subject:  &attr.Range,
+					})
+				}
 				p.Sql = &sql
 			}
 		case schema.AttributeTypeConnectionString:
@@ -1294,7 +1388,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 				if err2 != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeSql + " attribute to Go values",
+						Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute to Go values",
 						Subject:  &attr.Range,
 					})
 					continue
