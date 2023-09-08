@@ -275,6 +275,22 @@ func (suite *FpTestSuite) TestModDependenciesSimple() {
 		assert.Fail("this_pipeline_is_in_the_child pipeline not found")
 		return
 	}
+
+	childPipelineWithVar := pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child_using_variable"]
+	if childPipelineWithVar == nil {
+		assert.Fail("this_pipeline_is_in_the_child pipeline not found")
+		return
+	}
+
+	assert.Equal("foo: this is the value of var_one", childPipelineWithVar.Steps[0].(*modconfig.PipelineStepEcho).Text)
+
+	childPipelineWithVarPassedFromParent := pipelines["mod_child_a.pipeline.this_pipeline_is_in_the_child_using_variable_passed_from_parent"]
+	if childPipelineWithVarPassedFromParent == nil {
+		assert.Fail("this_pipeline_is_in_the_child pipeline not found")
+		return
+	}
+
+	assert.Equal("foo: var_two from parent .pvars file", childPipelineWithVarPassedFromParent.Steps[0].(*modconfig.PipelineStepEcho).Text)
 }
 
 func (suite *FpTestSuite) TestModDependenciesBackwardCompatible() {

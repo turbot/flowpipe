@@ -149,6 +149,9 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 	}
 
 	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
 }
 
 func (suite *ModTestSuite) TestModVars() {
