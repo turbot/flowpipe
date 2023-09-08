@@ -3,6 +3,9 @@ mod "test_suite_mod" {
     require {
         mod "mod_depend_a" {
             version = "1.0.0"
+            args = {
+                var_depend_a_one = var.var_one
+            }
         }
     }
 
@@ -19,6 +22,10 @@ pipeline "echo_one" {
 
     output "echo_one_output" {
         value = step.pipeline.child_pipeline.val
+    }
+
+    output "echo_one_output_val_var_one" {
+        value = step.pipeline.child_pipeline.val_var_one
     }
 }
 
