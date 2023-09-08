@@ -936,16 +936,17 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				goVals, err2 := hclhelpers.CtyToGoStringSlice(val)
-				if err2 != nil {
+				emailRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val)
+				if ctyErr != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to parse " + schema.AttributeTypeTo + " attribute to string slice",
+						Detail:   ctyErr.Error(),
 						Subject:  &attr.Range,
 					})
 					continue
 				}
-				p.To = goVals
+				p.To = emailRecipients
 			}
 
 		case schema.AttributeTypeFrom:
@@ -1052,16 +1053,17 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				goVals, err2 := hclhelpers.CtyToGoStringSlice(val)
-				if err2 != nil {
+				ccRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val)
+				if ctyErr != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to parse " + schema.AttributeTypeCc + " attribute to string slice",
+						Detail:   ctyErr.Error(),
 						Subject:  &attr.Range,
 					})
 					continue
 				}
-				p.Cc = goVals
+				p.Cc = ccRecipients
 			}
 
 		case schema.AttributeTypeBcc:
@@ -1072,16 +1074,17 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				goVals, err2 := hclhelpers.CtyToGoStringSlice(val)
-				if err2 != nil {
+				bccRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val)
+				if ctyErr != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to parse " + schema.AttributeTypeBcc + " attribute to string slice",
+						Detail:   ctyErr.Error(),
 						Subject:  &attr.Range,
 					})
 					continue
 				}
-				p.Bcc = goVals
+				p.Bcc = bccRecipients
 			}
 
 		case schema.AttributeTypeBody:
@@ -1333,8 +1336,20 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 		results[schema.AttributeTypeConnectionString] = *connectionString
 	}
 
-	// TODO: evaluate expression in Args
-	if p.Args != nil {
+	if p.UnresolvedAttributes[schema.AttributeTypeArgs] != nil {
+		var args cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeArgs], evalContext, &args)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+
+		mapValue, err := hclhelpers.CtyToGoMapInterface(args)
+		if err != nil {
+			return nil, err
+		}
+		results[schema.AttributeTypeArgs] = mapValue
+
+	} else if p.Args != nil {
 		results[schema.AttributeTypeArgs] = p.Args
 	}
 
@@ -1442,10 +1457,23 @@ func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[stri
 
 	results[schema.AttributeTypePipeline] = pipeline
 
-	// TODO: evaluate expression in Args
-	if p.Args != nil {
+	if p.UnresolvedAttributes[schema.AttributeTypeArgs] != nil {
+		var args cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeArgs], evalContext, &args)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+
+		mapValue, err := hclhelpers.CtyToGoMapInterface(args)
+		if err != nil {
+			return nil, err
+		}
+		results[schema.AttributeTypeArgs] = mapValue
+
+	} else if p.Args != nil {
 		results[schema.AttributeTypeArgs] = p.Args
 	}
+
 	return results, nil
 }
 
