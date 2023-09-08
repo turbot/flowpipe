@@ -219,36 +219,31 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 
 }
 
-func (suite *ModTestSuite) XXTestPipelineWithParam() {
+func (suite *ModTestSuite) TestPipelineWithArgs() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
-		"simple": "bar",
-	}
+	pipelineInput := &modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_override_test", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.calling_pipeline_with_params", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-
-	assert.Equal("finished", pex.Status)
-
-	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
-	if echoStepsOutput == nil {
-		assert.Fail("echo step output not found")
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
 		return
 	}
 
-	assert.Equal("finished", echoStepsOutput["simple"].(*modconfig.Output).Status)
-	assert.Equal("bar", echoStepsOutput["simple"].(*modconfig.Output).Data["text"])
+	// We pass "bar" as name here
+	assert.Equal("echo bar", pex.PipelineOutput["val"])
+	assert.Equal("echo baz foo bar", pex.PipelineOutput["val_expr"])
 }
 
 func TestModTestingSuite(t *testing.T) {
