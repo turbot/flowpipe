@@ -166,10 +166,7 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 
 		// Return error if any of the value in the slice is not a string
 		if v.Type() != cty.String {
-			return nil, hcl.Diagnostics{&hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unable to parse value as string",
-			}}
+			return nil, perr.BadRequestWithMessage(fmt.Sprintf("expected string type, but got %s", v.Type().FriendlyName()))
 		}
 
 		var target string

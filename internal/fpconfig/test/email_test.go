@@ -118,5 +118,5 @@ func TestEmailStepInvalidRecipient(t *testing.T) {
 
 	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_recipient.fp")
 	assert.NotNil(err, "error found")
-	assert.Contains(err.Error(), "Unable to parse to attribute to string slice")
+	assert.Contains(err.Error(), "Bad Request: expected string type, but got number")
 }
