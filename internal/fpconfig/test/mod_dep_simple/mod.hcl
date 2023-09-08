@@ -3,8 +3,17 @@ mod "mod_parent" {
   require {
     mod "mod_child_a" {
         version = "1.0.0"
+        args = {
+            var_two = var.var_two_parent,
+        }
     }
   }
+}
+
+
+variable "var_two_parent" {
+  type        = string
+  description = "test variable"
 }
 
 pipeline "json" {
