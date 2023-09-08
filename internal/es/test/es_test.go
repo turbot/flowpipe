@@ -641,7 +641,7 @@ func (suite *EsTestSuite) TestHttp() {
 func (suite *EsTestSuite) TestParam() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_test", 100*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_test", 200*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
