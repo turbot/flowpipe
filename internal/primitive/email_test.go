@@ -74,7 +74,7 @@ func TestSendEmail(t *testing.T) {
 		schema.AttributeTypeFrom:             "test.send.email@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypePort:             int64(1025),
 		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
 		schema.AttributeTypeSubject:          "Flowpipe mail test",
 		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
@@ -116,7 +116,7 @@ func TestSendEmailWithCc(t *testing.T) {
 		schema.AttributeTypeFrom:             "test.send.email.with.cc@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypePort:             int64(1025),
 		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
 		schema.AttributeTypeCc:               []string{"ccrecipient@example.com"},
 		schema.AttributeTypeBody:             "This is a test email sent from Golang with Cc.",
@@ -161,7 +161,7 @@ func TestSendEmailWithBcc(t *testing.T) {
 		schema.AttributeTypeFrom:             "test.send.email.with.bcc@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypePort:             int64(1025),
 		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
 		schema.AttributeTypeBcc:              []string{"bccrecipient@example.com"},
 		schema.AttributeTypeBody:             "This is a test email sent from Golang with Bcc.",
@@ -206,7 +206,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 		schema.AttributeTypeFrom:             "sender@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypePort:             int64(1025),
 		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
 	})
 
@@ -229,7 +229,7 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 		schema.AttributeTypeFrom:             "sender@example.com",
 		schema.AttributeTypeSenderCredential: "",
 		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             "1025",
+		schema.AttributeTypePort:             int64(1025),
 		schema.AttributeTypeTo:               []string{},
 		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
 	})
@@ -243,6 +243,27 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	assert.Equal(400, fpErr.Status)
 }
 
+func TestInvalidPortInput(t *testing.T) {
+	assert := assert.New(t)
+	hr := Email{}
+
+	// Use a dummy SMTP server for testing (e.g., MailHog)
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeSenderName:       "TestSendEmail",
+		schema.AttributeTypeFrom:             "test.send.email@example.com",
+		schema.AttributeTypeSenderCredential: "",
+		schema.AttributeTypeHost:             "localhost",
+		schema.AttributeTypePort:             int64(10000000),
+		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeSubject:          "Flowpipe mail test",
+		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
+	})
+
+	_, err := hr.Run(context.Background(), input)
+	assert.NotNil(err)
+	assert.Equal(fmt.Sprintf("Bad Request: %d is not a valid port", int64(10000000)), err.Error())
+}
+
 func TestEmailInvalidCreds(t *testing.T) {
 	assert := assert.New(t)
 	hr := Email{}
@@ -252,7 +273,7 @@ func TestEmailInvalidCreds(t *testing.T) {
 		schema.AttributeTypeFrom:             "test@example.com",
 		schema.AttributeTypeSenderCredential: "abcdefghijklmnop",
 		schema.AttributeTypeHost:             "smtp.gmail.com",
-		schema.AttributeTypePort:             "587",
+		schema.AttributeTypePort:             int64(587),
 		schema.AttributeTypeTo:               []string{"recipient@example.com"},
 		schema.AttributeTypeSubject:          "Flowpipe mail test",
 		schema.AttributeTypeBody:             "This is a test email message to validate whether the code works or not.",

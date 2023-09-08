@@ -6,6 +6,8 @@ import (
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,6 +35,30 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypePort] == nil {
 		return perr.BadRequestWithMessage("Email input must define a port")
 	}
+
+	// Validate the port input
+	if i[schema.AttributeTypePort] != nil {
+		var port int64
+		switch data := i[schema.AttributeTypePort].(type) {
+		case float64:
+			port = int64(data)
+		case int64:
+			port = data
+		default:
+			return perr.BadRequestWithMessage("port must be a number")
+		}
+
+		portInString := strconv.FormatInt(port, 10)
+		match, err := regexp.MatchString("^((6553[0-5])|(655[0-2][0-9])|(65[0-4][0-9]{2})|(6[0-4][0-9]{3})|([1-5][0-9]{4})|([0-5]{0,5})|([0-9]{1,4}))$", portInString)
+		if err != nil {
+			return perr.BadRequestWithMessage("error while validating the port")
+		}
+
+		if !match {
+			return perr.BadRequestWithMessage(fmt.Sprintf("%s is not a valid port", portInString))
+		}
+	}
+
 	if i[schema.AttributeTypeSenderName] != nil {
 		if _, ok := i[schema.AttributeTypeSenderName].(string); !ok {
 			return perr.BadRequestWithMessage("Email attribute 'sender_name' must be a string")
@@ -142,8 +168,16 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	senderEmail := input[schema.AttributeTypeFrom].(string)
 	senderCredential := input[schema.AttributeTypeSenderCredential].(string)
 	host := input[schema.AttributeTypeHost].(string)
-	port := input[schema.AttributeTypePort].(string)
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
+
+	// Convert port into integer
+	var portInt int64
+	if port, ok := input[schema.AttributeTypePort].(float64); ok {
+		portInt = int64(port)
+	}
+	if port, ok := input[schema.AttributeTypePort].(int64); ok {
+		portInt = port
+	}
 
 	// Get the inputs
 	var recipients []string
@@ -239,8 +273,11 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		Data: map[string]interface{}{},
 	}
 
+	// Build the address of the SMTP server
+	addr := host + ":" + fmt.Sprintf("%d", portInt)
+
 	start := time.Now().UTC()
-	err := smtp.SendMail(host+":"+port, auth, senderEmail, recipients, []byte(message))
+	err := smtp.SendMail(addr, auth, senderEmail, recipients, []byte(message))
 	finish := time.Now().UTC()
 	if err != nil {
 		if _, ok := err.(*textproto.Error); !ok {
@@ -252,7 +289,7 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		smtpErr := err.(*textproto.Error)
 		if smtpErr.Code >= 400 {
 			output.Errors = []modconfig.StepError{
-				modconfig.StepError{
+				{
 					Message:   smtpErr.Msg,
 					ErrorCode: smtpErr.Code,
 				},

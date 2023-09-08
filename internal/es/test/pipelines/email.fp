@@ -5,7 +5,7 @@ pipeline "bad_email_with_invalid_recipients" {
       from              = "sender@example.com"
       sender_credential = "sendercredential"
       host              = "smtp.example.com"
-      port              = "587"
+      port              = 587
       subject           = "Test email"
       body              = "This is a test email"
       sender_name       = "Flowpipe"
@@ -30,8 +30,8 @@ pipeline "bad_email_with_param" {
     }
 
     param "port" {
-      type    = string
-      default = "587"
+      type    = number
+      default = 587
     }
 
     param "sender_name" {
@@ -69,8 +69,8 @@ pipeline "bad_email_with_expr" {
     }
 
     param "port" {
-      type    = string
-      default = "587"
+      type    = number
+      default = 587
     }
 
     param "sender_name" {

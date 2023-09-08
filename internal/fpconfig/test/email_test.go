@@ -40,7 +40,7 @@ func TestEmailStep(t *testing.T) {
 	assert.Equal("sender@example.com", inputs["from"])
 	assert.Equal("sendercredential", inputs["sender_credential"])
 	assert.Equal("smtp.example.com", inputs["host"])
-	assert.Equal("587", inputs["port"])
+	assert.Equal(int64(587), inputs["port"])
 	assert.Equal("Test email", inputs["subject"])
 	assert.Equal("This is a test email", inputs["body"])
 	assert.Equal("Flowpipe", inputs["sender_name"])
@@ -90,7 +90,7 @@ func TestEmailStepWithParam(t *testing.T) {
 	assert.Equal("sender@example.com", inputs["from"])
 	assert.Equal("sendercredential", inputs["sender_credential"])
 	assert.Equal("smtp.example.com", inputs["host"])
-	assert.Equal("587", inputs["port"])
+	assert.Equal(int64(587), inputs["port"])
 	assert.Equal("You have been subscribed", inputs["subject"])
 
 	diag := gohcl.DecodeExpression(expr, evalContext, &output)
@@ -102,4 +102,21 @@ func TestEmailStepWithParam(t *testing.T) {
 
 	dependsOn := step.GetDependsOn()
 	assert.Contains(dependsOn, "echo.email_body")
+}
+
+func TestEmailStepInvalidPortFormat(t *testing.T) {
+	assert := assert.New(t)
+
+	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_port.fp")
+	assert.NotNil(err, "error found")
+
+	assert.Contains(err.Error(), "Unable to convert port into integer")
+}
+
+func TestEmailStepInvalidRecipient(t *testing.T) {
+	assert := assert.New(t)
+
+	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_recipient.fp")
+	assert.NotNil(err, "error found")
+	assert.Contains(err.Error(), "Bad Request: expected string type, but got number")
 }
