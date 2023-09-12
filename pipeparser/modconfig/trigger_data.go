@@ -28,6 +28,12 @@ type Trigger struct {
 	Config ITriggerConfig `json:"-"`
 }
 
+func (p *Trigger) Equals(other *Trigger) bool {
+	// TODO: other checks?
+	return p.FullName == other.FullName &&
+		p.GetMetadata().ModFullName == other.GetMetadata().ModFullName
+}
+
 func (t *Trigger) GetPipeline() cty.Value {
 	return t.Pipeline
 }

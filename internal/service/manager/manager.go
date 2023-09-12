@@ -107,6 +107,23 @@ func (m *Manager) Initialize() error {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
 
+		err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
+			logger := fplog.Logger(m.ctx)
+			logger.Error("error watching workspace", "error", e)
+		})
+
+		w.SetOnFileWatcherEventMessages(func() {
+			err := m.Reload(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+			if err != nil {
+				logger := fplog.Logger(m.ctx)
+				logger.Error("error reloading pipelines", "error", err)
+			}
+		})
+
+		if err != nil {
+			return err
+		}
+
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
@@ -134,6 +151,33 @@ func (m *Manager) Initialize() error {
 		}
 	}
 
+	m.triggers = triggers
+
+	inMemoryCache := cache.GetCache()
+	var pipelineNames []string
+
+	for _, p := range pipelines {
+		pipelineNames = append(pipelineNames, p.Name())
+
+		// TODO: how do we want to do this?
+		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
+	}
+
+	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+
+	var triggerNames []string
+	for _, trigger := range triggers {
+		triggerNames = append(triggerNames, trigger.Name())
+
+		// TODO: how do we want to do this?
+		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
+	}
+	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
+
+	return nil
+}
+
+func (m *Manager) Reload(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
 	m.triggers = triggers
 
 	inMemoryCache := cache.GetCache()

@@ -26,6 +26,68 @@ type HclResourceImpl struct {
 	isTopLevel          bool
 }
 
+func (b *HclResourceImpl) Equals(other *HclResourceImpl) bool {
+	if b == nil || other == nil {
+		return false
+	}
+
+	// Compare FullName
+	if b.FullName != other.FullName {
+		return false
+	}
+
+	// Compare Title (if not nil)
+	if (b.Title == nil && other.Title != nil) || (b.Title != nil && other.Title == nil) {
+		return false
+	}
+	if b.Title != nil && other.Title != nil && *b.Title != *other.Title {
+		return false
+	}
+
+	// Compare ShortName
+	if b.ShortName != other.ShortName {
+		return false
+	}
+
+	// Compare UnqualifiedName
+	if b.UnqualifiedName != other.UnqualifiedName {
+		return false
+	}
+
+	// Compare Description (if not nil)
+	if (b.Description == nil && other.Description != nil) || (b.Description != nil && other.Description == nil) {
+		return false
+	}
+	if b.Description != nil && other.Description != nil && *b.Description != *other.Description {
+		return false
+	}
+
+	// Compare Documentation (if not nil)
+	if (b.Documentation == nil && other.Documentation != nil) || (b.Documentation != nil && other.Documentation == nil) {
+		return false
+	}
+	if b.Documentation != nil && other.Documentation != nil && *b.Documentation != *other.Documentation {
+		return false
+	}
+
+	// Compare Tags
+	if len(b.Tags) != len(other.Tags) {
+		return false
+	}
+	for key, value := range b.Tags {
+		if otherValue, ok := other.Tags[key]; !ok || value != otherValue {
+			return false
+		}
+	}
+
+	// Compare other fields (blockType, disableCtySerialise, isTopLevel)
+	if b.blockType != other.blockType || b.disableCtySerialise != other.disableCtySerialise || b.isTopLevel != other.isTopLevel {
+		return false
+	}
+
+	return true
+}
+
 // Name implements HclResource
 // return name in format: '<blocktype>.<shortName>'
 func (b *HclResourceImpl) Name() string {

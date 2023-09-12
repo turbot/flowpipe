@@ -1,6 +1,6 @@
 variable "var_one" {
   type        = string
-  description = "test variable"
+  description = "test variable 2"
   default     = "this is the value of var_one"
 }
 

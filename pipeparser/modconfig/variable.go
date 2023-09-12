@@ -78,11 +78,23 @@ func NewVariable(v *var_config.Variable, mod *Mod) *Variable {
 }
 
 func (v *Variable) Equals(other *Variable) bool {
+	if (v.Description != nil && other.Description == nil) || (v.Description == nil && other.Description != nil) {
+		return false
+	}
+
+	if v.Description == nil {
+		return v.ShortName == other.ShortName &&
+			v.FullName == other.FullName &&
+			v.Default.RawEquals(other.Default) &&
+			v.Value.RawEquals(other.Value)
+	}
+
 	return v.ShortName == other.ShortName &&
 		v.FullName == other.FullName &&
-		v.Description == other.Description &&
+		*v.Description == *other.Description &&
 		v.Default.RawEquals(other.Default) &&
 		v.Value.RawEquals(other.Value)
+
 }
 
 // OnDecoded implements HclResource

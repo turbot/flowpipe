@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/terraform-components/configs"
@@ -203,6 +204,38 @@ func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (p *Pipeline) Equals(other *Pipeline) bool {
+
+	baseEqual := p.HclResourceImpl.Equals(&other.HclResourceImpl)
+	if !baseEqual {
+		return false
+	}
+
+	if len(p.Steps) != len(other.Steps) {
+		return false
+	}
+
+	for i := 0; i < len(p.Steps); i++ {
+		if !p.Steps[i].Equals(other.Steps[i]) {
+			return false
+		}
+	}
+
+	if len(p.OutputConfig) != len(other.OutputConfig) {
+		return false
+	}
+
+	for i := 0; i < len(p.OutputConfig); i++ {
+		if !p.OutputConfig[i].Equals(&other.OutputConfig[i]) {
+			return false
+		}
+	}
+
+	// TODO: other checks?
+	return p.FullName == other.FullName &&
+		p.GetMetadata().ModFullName == other.GetMetadata().ModFullName
+}
+
 func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 
@@ -255,6 +288,51 @@ type PipelineOutput struct {
 	Sensitive       bool           `json:"sensitive,omitempty"`
 	Value           interface{}    `json:"value,omitempty"`
 	UnresolvedValue hcl.Expression `json:"-"`
+}
+
+func (p *PipelineOutput) Equals(other *PipelineOutput) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && other == nil {
+		return true
+	}
+
+	// If one of the pointers is nil while the other is not, they are not equal
+	if (p == nil && other != nil) || (p != nil && other == nil) {
+		return false
+	}
+
+	// Compare Name field
+	if p.Name != other.Name {
+		return false
+	}
+
+	// Compare DependsOn field using deep equality
+	if !reflect.DeepEqual(p.DependsOn, other.DependsOn) {
+		return false
+	}
+
+	// Compare Resolved field
+	if p.Resolved != other.Resolved {
+		return false
+	}
+
+	// Compare Sensitive field
+	if p.Sensitive != other.Sensitive {
+		return false
+	}
+
+	// Compare Value field using deep equality
+	if !reflect.DeepEqual(p.Value, other.Value) {
+		return false
+	}
+
+	// Compare UnresolvedValue field using deep equality
+	if !hclhelpers.ExpressionsEqual(p.UnresolvedValue, other.UnresolvedValue) {
+		return false
+	}
+
+	// All fields are equal
+	return true
 }
 
 func (o *PipelineOutput) AppendDependsOn(dependsOn ...string) {

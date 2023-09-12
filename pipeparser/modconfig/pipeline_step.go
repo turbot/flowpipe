@@ -2,6 +2,7 @@ package modconfig
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -231,11 +232,30 @@ type IPipelineStep interface {
 	GetErrorConfig() *ErrorConfig
 	SetOutputConfig(map[string]*PipelineOutput)
 	GetOutputConfig() map[string]*PipelineOutput
+	Equals(other IPipelineStep) bool
 }
 
 type ErrorConfig struct {
 	Ignore  bool `json:"ignore"`
 	Retries int  `json:"retries"`
+}
+
+func (ec *ErrorConfig) Equals(other *ErrorConfig) bool {
+	if ec == nil || other == nil {
+		return false
+	}
+
+	// Compare Ignore
+	if ec.Ignore != other.Ignore {
+		return false
+	}
+
+	// Compare Retries
+	if ec.Retries != other.Retries {
+		return false
+	}
+
+	return true
 }
 
 // A common base struct that all pipeline steps must embed
@@ -252,6 +272,84 @@ type PipelineStepBase struct {
 	// This cant' be serialised
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
 	ForEach              hcl.Expression            `json:"-"`
+}
+
+func (p *PipelineStepBase) Equals(otherBase *PipelineStepBase) bool {
+	if p == nil || otherBase == nil {
+		return false
+	}
+
+	// Compare Title (if not nil)
+	if (p.Title == nil && otherBase.Title != nil) || (p.Title != nil && otherBase.Title == nil) {
+		return false
+	}
+	if p.Title != nil && otherBase.Title != nil && *p.Title != *otherBase.Title {
+		return false
+	}
+
+	// Compare Description (if not nil)
+	if (p.Description == nil && otherBase.Description != nil) || (p.Description != nil && otherBase.Description == nil) {
+		return false
+	}
+	if p.Description != nil && otherBase.Description != nil && *p.Description != *otherBase.Description {
+		return false
+	}
+
+	// Compare Name
+	if p.Name != otherBase.Name {
+		return false
+	}
+
+	// Compare Type
+	if p.Type != otherBase.Type {
+		return false
+	}
+
+	// Compare DependsOn slices
+	if len(p.DependsOn) != len(otherBase.DependsOn) {
+		return false
+	}
+	for i, dep := range p.DependsOn {
+		if dep != otherBase.DependsOn[i] {
+			return false
+		}
+	}
+
+	// Compare Resolved
+	if p.Resolved != otherBase.Resolved {
+		return false
+	}
+
+	// Compare ErrorConfig (if not nil)
+	if (p.ErrorConfig == nil && otherBase.ErrorConfig != nil) || (p.ErrorConfig != nil && otherBase.ErrorConfig == nil) {
+		return false
+	}
+	if p.ErrorConfig != nil && otherBase.ErrorConfig != nil && !p.ErrorConfig.Equals(otherBase.ErrorConfig) {
+		return false
+	}
+
+	// Compare UnresolvedAttributes (map comparison)
+	if len(p.UnresolvedAttributes) != len(otherBase.UnresolvedAttributes) {
+		return false
+	}
+	for key, expr := range p.UnresolvedAttributes {
+		otherExpr, ok := otherBase.UnresolvedAttributes[key]
+		if !ok || !hclhelpers.ExpressionsEqual(expr, otherExpr) {
+			return false
+		}
+
+		// haven't found a good way to test check equality for two hcl expressions
+	}
+
+	// Compare ForEach (if not nil)
+	if (p.ForEach == nil && otherBase.ForEach != nil) || (p.ForEach != nil && otherBase.ForEach == nil) {
+		return false
+	}
+	if p.ForEach != nil && otherBase.ForEach != nil && !hclhelpers.ExpressionsEqual(p.ForEach, otherBase.ForEach) {
+		return false
+	}
+
+	return true
 }
 
 func (p *PipelineStepBase) SetErrorConfig(errorConfig *ErrorConfig) {
@@ -458,6 +556,61 @@ type PipelineStepHttp struct {
 	Insecure         *bool                  `json:"insecure,omitempty"`
 	RequestBody      *string                `json:"request_body,omitempty"`
 	RequestHeaders   map[string]interface{} `json:"request_headers,omitempty"`
+}
+
+func (p *PipelineStepHttp) Equals(iOther IPipelineStep) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepHttp)
+	if !ok {
+		return false
+	}
+
+	if !p.PipelineStepBase.Equals(&other.PipelineStepBase) {
+		return false
+	}
+
+	// If one of the pointers is nil while the other is not, they are not equal
+	if (p == nil && other != nil) || (p != nil && other == nil) {
+		return false
+	}
+
+	// Compare Url field
+	if *p.Url != *other.Url {
+		return false
+	}
+
+	// Compare RequestTimeoutMs field
+	if *p.RequestTimeoutMs != *other.RequestTimeoutMs {
+		return false
+	}
+
+	// Compare Method field
+	if *p.Method != *other.Method {
+		return false
+	}
+
+	// Compare Insecure field
+	if *p.Insecure != *other.Insecure {
+		return false
+	}
+
+	// Compare RequestBody field
+	if *p.RequestBody != *other.RequestBody {
+		return false
+	}
+
+	// Compare RequestHeaders field using deep equality
+	if !reflect.DeepEqual(p.RequestHeaders, other.RequestHeaders) {
+		return false
+	}
+
+	// All fields are equal
+	return true
+
 }
 
 func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -692,6 +845,10 @@ type PipelineStepSleep struct {
 	Duration string `json:"duration"`
 }
 
+func (p *PipelineStepSleep) Equals(iOther IPipelineStep) bool {
+	return true
+}
+
 func (p *PipelineStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	var durationInput string
 
@@ -761,6 +918,10 @@ type PipelineStepEmail struct {
 	Body             *string  `json:"body"`
 	ContentType      *string  `json:"content_type"`
 	Subject          *string  `json:"subject"`
+}
+
+func (p *PipelineStepEmail) Equals(iOther IPipelineStep) bool {
+	return true
 }
 
 func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -1163,6 +1324,29 @@ type PipelineStepEcho struct {
 	Json json.SimpleJSONValue `json:"json"`
 }
 
+func (p *PipelineStepEcho) Equals(iOther IPipelineStep) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepEcho)
+	if !ok {
+		return false
+	}
+
+	if !p.PipelineStepBase.Equals(&other.PipelineStepBase) {
+		return false
+	}
+
+	if p.Text != other.Text {
+		return false
+	}
+
+	// TODO: json test?
+	return true
+}
+
 func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 	var textInput string
 
@@ -1298,6 +1482,10 @@ type PipelineStepQuery struct {
 	Args              []interface{} `json:"args"`
 }
 
+func (p *PipelineStepQuery) Equals(other IPipelineStep) bool {
+	return true
+}
+
 func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 
 	var sql *string
@@ -1429,6 +1617,10 @@ type PipelineStepPipeline struct {
 
 	Pipeline cty.Value `json:"-"`
 	Args     Input     `json:"args"`
+}
+
+func (p *PipelineStepPipeline) Equals(iOther IPipelineStep) bool {
+	return true
 }
 
 func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {

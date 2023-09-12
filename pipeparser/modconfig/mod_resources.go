@@ -187,6 +187,22 @@ func (m *ResourceMaps) Equals(other *ResourceMaps) bool {
 		}
 	}
 
+	for name, pipeline := range m.Pipelines {
+		if otherPipeline, ok := other.Pipelines[name]; !ok {
+			return false
+		} else if !pipeline.Equals(otherPipeline) {
+			return false
+		}
+	}
+
+	for name, trigger := range m.Triggers {
+		if otherTrigger, ok := other.Triggers[name]; !ok {
+			return false
+		} else if !trigger.Equals(otherTrigger) {
+			return false
+		}
+	}
+
 	// for name, dashboard := range m.Dashboards {
 	// 	if otherDashboard, ok := other.Dashboards[name]; !ok {
 	// 		return false
@@ -394,9 +410,6 @@ func (m *ResourceMaps) Equals(other *ResourceMaps) bool {
 			return false
 		}
 	}
-
-	// TODO: equal for Pipeline
-	// TODO: equal for Trigger
 
 	return true
 }

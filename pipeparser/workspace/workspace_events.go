@@ -2,7 +2,9 @@ package workspace
 
 import (
 	"context"
+	"log"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
@@ -68,38 +70,38 @@ func (w *Workspace) UnregisterDashboardEventHandlers() {
 // 	}
 // }
 
-// TODO: filewatcher
-// func (w *Workspace) handleFileWatcherEvent(ctx context.Context, client db_common.Client, ev []fsnotify.Event) {
-// 	log.Printf("[TRACE] handleFileWatcherEvent")
-// 	prevResourceMaps, resourceMaps, errAndWarnings := w.reloadResourceMaps(ctx)
+func (w *Workspace) handleFileWatcherEvent(ctx context.Context, ev []fsnotify.Event) {
 
-// 	if errAndWarnings.GetError() != nil {
-// 		log.Printf("[TRACE] handleFileWatcherEvent reloadResourceMaps returned error - call PublishDashboardEvent")
-// 		// publish error event
-// 		// TODO: dashboard
-// 		// w.PublishDashboardEvent(ctx, &dashboardevents.WorkspaceError{Error: errAndWarnings.GetError()})
-// 		log.Printf("[TRACE] back from PublishDashboardEvent")
-// 		return
-// 	}
-// 	// if resources have changed, update introspection tables
-// 	if !prevResourceMaps.Equals(resourceMaps) {
-// 		if viper.GetString(constants.ArgIntrospection) != constants.IntrospectionNone {
-// 			res := client.RefreshSessions(context.Background())
-// 			if res.Error != nil || len(res.Warnings) > 0 {
-// 				fmt.Println()
-// 				error_helpers.ShowErrorWithMessage(ctx, res.Error, "error when refreshing session data")
-// 				error_helpers.ShowWarning(strings.Join(res.Warnings, "\n"))
-// 			}
-// 		}
-// 		if w.onFileWatcherEventMessages != nil {
-// 			w.onFileWatcherEventMessages()
-// 		}
-// 	}
-// 	// TODO: dashboard
-// 	// w.raiseDashboardChangedEvents(ctx, resourceMaps, prevResourceMaps)
-// }
+	prevResourceMaps, resourceMaps, errAndWarnings := w.reloadResourceMaps(ctx)
 
-//nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
+	if errAndWarnings.GetError() != nil {
+		log.Printf("[TRACE] handleFileWatcherEvent reloadResourceMaps returned error - call PublishDashboardEvent")
+		// publish error event
+		// TODO: dashboard
+		// w.PublishDashboardEvent(ctx, &dashboardevents.WorkspaceError{Error: errAndWarnings.GetError()})
+		log.Printf("[TRACE] back from PublishDashboardEvent")
+		return
+	}
+	// if resources have changed, update introspection tables
+	if !prevResourceMaps.Equals(resourceMaps) {
+
+		// TODO: db_client in file watcher
+		// if viper.GetString(constants.ArgIntrospection) != constants.IntrospectionNone {
+		// 	res := client.RefreshSessions(context.Background())
+		// 	if res.Error != nil || len(res.Warnings) > 0 {
+		// 		fmt.Println()
+		// 		error_helpers.ShowErrorWithMessage(ctx, res.Error, "error when refreshing session data")
+		// 		error_helpers.ShowWarning(strings.Join(res.Warnings, "\n"))
+		// 	}
+		// }
+		if w.onFileWatcherEventMessages != nil {
+			w.onFileWatcherEventMessages()
+		}
+	}
+	// TODO: dashboard
+	// w.raiseDashboardChangedEvents(ctx, resourceMaps, prevResourceMaps)
+}
+
 func (w *Workspace) reloadResourceMaps(ctx context.Context) (*modconfig.ResourceMaps, *modconfig.ResourceMaps, *error_helpers.ErrorAndWarnings) {
 	w.loadLock.Lock()
 	defer w.loadLock.Unlock()

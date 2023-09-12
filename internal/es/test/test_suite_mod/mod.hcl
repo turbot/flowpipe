@@ -1,5 +1,5 @@
 mod "test_suite_mod" {
-    title = "Default test suite mod"
+    title = "Default test suite mod 3"
     require {
         mod "mod_depend_a" {
             version = "1.0.0"
@@ -10,6 +10,32 @@ mod "test_suite_mod" {
     }
 
 }
+
+pipeline "echo_one_a" {
+    description = "foo"
+
+    step "echo" "echo_one" {
+        text = "Hello World"
+    }
+
+    step "echo" "echo_two" {
+        text = "Hello World two C"
+    }
+
+
+    step "pipeline" "child_pipeline" {
+        pipeline = mod_depend_a.pipeline.echo_one_depend_a
+    }
+
+    output "echo_one_output" {
+        value = step.pipeline.child_pipeline.val
+    }
+
+    output "echo_one_output_val_var_one" {
+        value = step.pipeline.child_pipeline.val_var_one
+    }
+}
+
 
 pipeline "echo_one" {
     step "echo" "echo_one" {

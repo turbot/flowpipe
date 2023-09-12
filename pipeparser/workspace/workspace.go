@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
@@ -42,7 +43,7 @@ type Workspace struct {
 	SourceSnapshots []string
 
 	watcher     *filewatcher.FileWatcher
-	loadLock    sync.Mutex //nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
+	loadLock    sync.Mutex
 	exclusions  []string
 	modFilePath string
 
@@ -50,8 +51,8 @@ type Workspace struct {
 	ListFlag       filehelpers.ListFlag
 	FileInclusions []string
 
-	fileWatcherErrorHandler func(context.Context, error) //nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
-	watcherError            error                        //nolint:unused // TODO: unused for now but may be used by other code that we haven't imported
+	fileWatcherErrorHandler func(context.Context, error)
+	watcherError            error
 	// event handlers
 	// TODO: dashboard
 	// dashboardEventHandlers []dashboardevents.DashboardEventHandler
@@ -146,42 +147,40 @@ func LoadResourceNames(ctx context.Context, workspacePath string) (*modconfig.Wo
 	return workspace.loadWorkspaceResourceName(ctx)
 }
 
-// TODO: filewatcher
-// func (w *Workspace) SetupWatcher(ctx context.Context, client db_common.Client, errorHandler func(context.Context, error)) error {
-// 	watcherOptions := &filewatcher.WatcherOptions{
-// 		Directories: []string{w.Path},
-// 		Include:     filehelpers.InclusionsFromExtensions(pipeparser.GetModFileExtensions()),
-// 		Exclude:     w.exclusions,
-// 		ListFlag:    w.listFlag,
-// 		EventMask:   fsnotify.Create | fsnotify.Remove | fsnotify.Rename | fsnotify.Write,
-// 		// we should look into passing the callback function into the underlying watcher
-// 		// we need to analyze the kind of errors that come out from the watcher and
-// 		// decide how to handle them
-// 		// OnError: errCallback,
-// 		OnChange: func(events []fsnotify.Event) {
-// 			w.handleFileWatcherEvent(ctx, client, events)
-// 		},
-// 	}
-// 	watcher, err := filewatcher.NewWatcher(watcherOptions)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	w.watcher = watcher
-// 	// start the watcher
-// 	watcher.Start()
+func (w *Workspace) SetupWatcher(ctx context.Context, errorHandler func(context.Context, error)) error {
+	watcherOptions := &filewatcher.WatcherOptions{
+		Directories: []string{w.Path},
+		Include:     filehelpers.InclusionsFromExtensions(pipeparser.GetModFileExtensions()),
+		Exclude:     w.exclusions,
+		ListFlag:    w.ListFlag,
+		EventMask:   fsnotify.Create | fsnotify.Remove | fsnotify.Rename | fsnotify.Write,
+		// we should look into passing the callback function into the underlying watcher
+		// we need to analyze the kind of errors that come out from the watcher and
+		// decide how to handle them
+		// OnError: errCallback,
+		OnChange: func(events []fsnotify.Event) {
+			w.handleFileWatcherEvent(ctx, events)
+		},
+	}
+	watcher, err := filewatcher.NewWatcher(watcherOptions)
+	if err != nil {
+		return err
+	}
+	w.watcher = watcher
+	// start the watcher
+	watcher.Start()
 
-// 	// set the file watcher error handler, which will get called when there are parsing errors
-// 	// after a file watcher event
-// 	w.fileWatcherErrorHandler = errorHandler
-// 	if w.fileWatcherErrorHandler == nil {
-// 		w.fileWatcherErrorHandler = func(ctx context.Context, err error) {
-// 			fmt.Println()
-// 			error_helpers.ShowErrorWithMessage(ctx, err, "failed to reload mod from file watcher")
-// 		}
-// 	}
+	// set the file watcher error handler, which will get called when there are parsing errors
+	// after a file watcher event
+	w.fileWatcherErrorHandler = errorHandler
+	if w.fileWatcherErrorHandler == nil {
+		w.fileWatcherErrorHandler = func(ctx context.Context, err error) {
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed to reload mod from file watcher")
+		}
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func (w *Workspace) SetOnFileWatcherEventMessages(f func()) {
 	w.onFileWatcherEventMessages = f
