@@ -63,7 +63,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 		fpPipelines = append(fpPipelines, types.FpPipeline{
 			Name:        pipeline.Name(),
 			Description: pipeline.Description,
-			Mod:         pipeline.GetMod().FullName,
+			Mod:         pipeline.GetMod().ShortName,
 		})
 	}
 
