@@ -18,3 +18,11 @@ trigger "schedule" "my_every_minute_trigger" {
         param_one = "from trigger"
     }
 }
+
+trigger "schedule" "my_every_minute_trigger_nine" {
+    schedule = "* * * * *"
+    pipeline = pipeline.simple_with_trigger
+    args = {
+        param_one = "from trigger"
+    }
+}

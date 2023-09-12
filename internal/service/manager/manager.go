@@ -12,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
@@ -24,8 +25,9 @@ import (
 type Manager struct {
 	ctx context.Context
 
-	apiService *api.APIService
-	esService  *es.ESService
+	apiService       *api.APIService
+	esService        *es.ESService
+	schedulerService *scheduler.SchedulerService
 
 	triggers map[string]*modconfig.Trigger
 
@@ -113,11 +115,20 @@ func (m *Manager) Initialize() error {
 		})
 
 		w.SetOnFileWatcherEventMessages(func() {
+			logger := fplog.Logger(m.ctx)
 			err := m.Reload(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 			if err != nil {
-				logger := fplog.Logger(m.ctx)
 				logger.Error("error reloading pipelines", "error", err)
 			}
+
+			if m.schedulerService != nil {
+				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
+				err := m.schedulerService.ReloadTriggers()
+				if err != nil {
+					logger.Error("error reloading triggers", "error", err)
+				}
+			}
+
 		})
 
 		if err != nil {
@@ -239,11 +250,13 @@ func (m *Manager) Start() error {
 	}
 
 	// Start the scheduler service
-	// s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
-	// err = s.Start()
-	// if err != nil {
-	// 	return err
-	// }
+	s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
+	err = s.Start()
+	if err != nil {
+		return err
+	}
+
+	m.schedulerService = s
 
 	m.StartedAt = utils.TimeNow()
 	m.Status = "running"
