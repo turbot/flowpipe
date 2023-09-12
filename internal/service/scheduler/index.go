@@ -15,18 +15,18 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
-type Scheduler struct {
+type SchedulerService struct {
 	ctx           context.Context
-	triggers      map[string]*modconfig.Trigger
+	Triggers      map[string]*modconfig.Trigger
 	esService     *es.ESService
 	cronScheduler *gocron.Scheduler
 }
 
-func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*modconfig.Trigger) *Scheduler {
-	return &Scheduler{
+func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*modconfig.Trigger) *SchedulerService {
+	return &SchedulerService{
 		ctx:       ctx,
 		esService: esService,
-		triggers:  triggers,
+		Triggers:  triggers,
 	}
 }
 
@@ -45,17 +45,31 @@ func randomizeTimestamp(start, end float64, baseTime time.Time, interval time.Du
 	return randomTimestamp
 }
 
-func (s *Scheduler) Start() error {
+func (s *SchedulerService) Restart() error {
+	if s.cronScheduler == nil {
+		return nil
+	}
+
+	s.cronScheduler.Stop()
+
+	err := s.Start()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func (s *SchedulerService) Start() error {
 
 	logger := fplog.Logger(s.ctx)
 
-	if len(s.triggers) == 0 {
+	if len(s.Triggers) == 0 {
 		return nil
 	}
 
 	s.cronScheduler = gocron.NewScheduler(time.UTC)
 
-	for _, t := range s.triggers {
+	for _, t := range s.Triggers {
 		switch config := t.Config.(type) {
 		case *modconfig.TriggerSchedule:
 			logger.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule)
@@ -66,6 +80,7 @@ func (s *Scheduler) Start() error {
 			if err != nil {
 				return err
 			}
+
 		case *modconfig.TriggerInterval:
 			logger.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
 

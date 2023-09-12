@@ -279,19 +279,13 @@ func (p *PipelineStepBase) Equals(otherBase *PipelineStepBase) bool {
 		return false
 	}
 
-	// Compare Title (if not nil)
-	if (p.Title == nil && otherBase.Title != nil) || (p.Title != nil && otherBase.Title == nil) {
-		return false
-	}
-	if p.Title != nil && otherBase.Title != nil && *p.Title != *otherBase.Title {
+	// Compare Title
+	if !reflect.DeepEqual(p.Title, otherBase.Title) {
 		return false
 	}
 
-	// Compare Description (if not nil)
-	if (p.Description == nil && otherBase.Description != nil) || (p.Description != nil && otherBase.Description == nil) {
-		return false
-	}
-	if p.Description != nil && otherBase.Description != nil && *p.Description != *otherBase.Description {
+	// Compare Description
+	if !reflect.DeepEqual(p.Description, otherBase.Description) {
 		return false
 	}
 
@@ -573,33 +567,28 @@ func (p *PipelineStepHttp) Equals(iOther IPipelineStep) bool {
 		return false
 	}
 
-	// If one of the pointers is nil while the other is not, they are not equal
-	if (p == nil && other != nil) || (p != nil && other == nil) {
-		return false
-	}
-
 	// Compare Url field
-	if *p.Url != *other.Url {
+	if reflect.DeepEqual(p.Url, other.Url) {
 		return false
 	}
 
 	// Compare RequestTimeoutMs field
-	if *p.RequestTimeoutMs != *other.RequestTimeoutMs {
+	if reflect.DeepEqual(p.RequestTimeoutMs, other.RequestTimeoutMs) {
 		return false
 	}
 
 	// Compare Method field
-	if *p.Method != *other.Method {
+	if reflect.DeepEqual(p.Method, other.Method) {
 		return false
 	}
 
 	// Compare Insecure field
-	if *p.Insecure != *other.Insecure {
+	if reflect.DeepEqual(p.Insecure, other.Insecure) {
 		return false
 	}
 
 	// Compare RequestBody field
-	if *p.RequestBody != *other.RequestBody {
+	if reflect.DeepEqual(p.RequestBody, other.RequestBody) {
 		return false
 	}
 
@@ -846,7 +835,21 @@ type PipelineStepSleep struct {
 }
 
 func (p *PipelineStepSleep) Equals(iOther IPipelineStep) bool {
-	return true
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepSleep)
+	if !ok {
+		return false
+	}
+
+	if !p.PipelineStepBase.Equals(&other.PipelineStepBase) {
+		return false
+	}
+
+	return p.Duration == other.Duration
 }
 
 func (p *PipelineStepSleep) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -921,7 +924,33 @@ type PipelineStepEmail struct {
 }
 
 func (p *PipelineStepEmail) Equals(iOther IPipelineStep) bool {
-	return true
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepEmail)
+	if !ok {
+		return false
+	}
+
+	if !p.PipelineStepBase.Equals(&other.PipelineStepBase) {
+		return false
+	}
+
+	// Use reflect.DeepEqual to compare slices and pointers
+	return reflect.DeepEqual(p.To, other.To) &&
+		reflect.DeepEqual(p.From, other.From) &&
+		reflect.DeepEqual(p.SenderCredential, other.SenderCredential) &&
+		reflect.DeepEqual(p.Host, other.Host) &&
+		reflect.DeepEqual(p.Port, other.Port) &&
+		reflect.DeepEqual(p.SenderName, other.SenderName) &&
+		reflect.DeepEqual(p.Cc, other.Cc) &&
+		reflect.DeepEqual(p.Bcc, other.Bcc) &&
+		reflect.DeepEqual(p.Body, other.Body) &&
+		reflect.DeepEqual(p.ContentType, other.ContentType) &&
+		reflect.DeepEqual(p.Subject, other.Subject)
+
 }
 
 func (p *PipelineStepEmail) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -1482,8 +1511,32 @@ type PipelineStepQuery struct {
 	Args              []interface{} `json:"args"`
 }
 
-func (p *PipelineStepQuery) Equals(other IPipelineStep) bool {
-	return true
+func (p *PipelineStepQuery) Equals(iOther IPipelineStep) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepQuery)
+	if !ok {
+		return false
+	}
+
+	if !p.PipelineStepBase.Equals(&other.PipelineStepBase) {
+		return false
+	}
+
+	if len(p.Args) != len(other.Args) {
+		return false
+	}
+	for i := range p.Args {
+		if p.Args[i] != other.Args[i] {
+			return false
+		}
+	}
+
+	return reflect.DeepEqual(p.ConnnectionString, other.ConnnectionString) &&
+		reflect.DeepEqual(p.Sql, other.Sql)
 }
 
 func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
@@ -1620,7 +1673,41 @@ type PipelineStepPipeline struct {
 }
 
 func (p *PipelineStepPipeline) Equals(iOther IPipelineStep) bool {
-	return true
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepPipeline)
+	if !ok {
+		return false
+	}
+
+	if !p.PipelineStepBase.Equals(&other.PipelineStepBase) {
+		return false
+	}
+
+	// Check if the maps have the same number of elements
+	if len(p.Args) != len(other.Args) {
+		return false
+	}
+
+	// Iterate through the first map
+	for key, value1 := range p.Args {
+		// Check if the key exists in the second map
+		value2, ok := other.Args[key]
+		if !ok {
+			return false
+		}
+
+		// Use reflect.DeepEqual to compare the values
+		if !reflect.DeepEqual(value1, value2) {
+			return false
+		}
+	}
+
+	return p.Pipeline.AsValueMap()["name"] != other.Pipeline.AsValueMap()["name"]
+
 }
 
 func (p *PipelineStepPipeline) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
