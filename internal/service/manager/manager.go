@@ -105,6 +105,7 @@ func (m *Manager) Initialize() error {
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
+	var modInfo *modconfig.Mod
 	if pipeparser.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
@@ -140,6 +141,7 @@ func (m *Manager) Initialize() error {
 		}
 
 		mod := w.Mod
+		modInfo = mod
 
 		pipelines = mod.ResourceMaps.Pipelines
 		triggers = mod.ResourceMaps.Triggers
@@ -184,6 +186,8 @@ func (m *Manager) Initialize() error {
 		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
 	}
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
+
+	inMemoryCache.SetWithTTL("#rootmod.name", modInfo.ShortName, 24*7*52*99*time.Hour)
 
 	return nil
 }
