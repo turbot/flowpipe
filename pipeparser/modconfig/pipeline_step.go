@@ -1706,7 +1706,7 @@ func (p *PipelineStepPipeline) Equals(iOther IPipelineStep) bool {
 		}
 	}
 
-	return p.Pipeline.AsValueMap()["name"] != other.Pipeline.AsValueMap()["name"]
+	return p.Pipeline.AsValueMap()["name"] == other.Pipeline.AsValueMap()["name"]
 
 }
 
