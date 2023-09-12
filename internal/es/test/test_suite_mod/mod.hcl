@@ -27,7 +27,7 @@ pipeline "echo_one_a" {
     }
 
     step "echo" "echo_four" {
-        text = "Hello World four"
+        text = "Hello World four C"
     }
 
     step "pipeline" "child_pipeline" {

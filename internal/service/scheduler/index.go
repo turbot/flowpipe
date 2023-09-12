@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"math/big"
+	"slices"
 	"strings"
 	"time"
 
@@ -45,23 +46,148 @@ func randomizeTimestamp(start, end float64, baseTime time.Time, interval time.Du
 	return randomTimestamp
 }
 
-func (s *SchedulerService) Restart() error {
+func (s *SchedulerService) ReloadTriggers() error {
 	if s.cronScheduler == nil {
 		return nil
 	}
 
-	s.cronScheduler.Stop()
+	logger := fplog.Logger(s.ctx)
+	validJobsNames := []string{}
 
-	err := s.Start()
-	if err != nil {
-		return err
+	for _, t := range s.Triggers {
+		validJobsNames = append(validJobsNames, "id:"+t.FullName)
+
+		// Find the job in the scheduler
+		jobs, err := s.cronScheduler.FindJobsByTag("id:" + t.FullName)
+		if err != nil && err == gocron.ErrJobNotFoundWithTag {
+			err := s.scheduleTrigger(t)
+			if err != nil {
+				return err
+			}
+			continue
+		} else if err != nil {
+			return err
+		}
+
+		if len(jobs) > 1 {
+			return perr.ConflictWithMessage("multiple jobs found for trigger: " + t.FullName)
+		}
+
+		if len(jobs) == 0 {
+			err := s.scheduleTrigger(t)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		job := jobs[0]
+		jobTags := job.Tags()
+
+		var scheduleString string
+		switch config := t.Config.(type) {
+		case *modconfig.TriggerSchedule:
+			scheduleString = config.Schedule
+		case *modconfig.TriggerInterval:
+			scheduleString = config.Schedule
+		}
+
+		if jobTags[1] != "schedule:"+scheduleString {
+			logger.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
+			s.cronScheduler.RemoveByReference(job)
+			err := s.scheduleTrigger(t)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		if jobTags[2] != "pipeline:"+t.Pipeline.AsValueMap()["name"].AsString() {
+			logger.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
+			s.cronScheduler.RemoveByReference(job)
+			err := s.scheduleTrigger(t)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+	}
+
+	// now loop through all the jobs in the scheduler and remove any that are not in the valid list
+	allJobs := s.cronScheduler.Jobs()
+	for _, job := range allJobs {
+		jobTags := job.Tags()
+		if len(jobTags) != 3 || !strings.HasPrefix(jobTags[0], "id:") {
+			continue
+		}
+
+		if !slices.Contains[[]string, string](validJobsNames, jobTags[0]) {
+			logger.Info("Removing trigger", "name", jobTags[0])
+			s.cronScheduler.RemoveByReference(job)
+		}
 	}
 
 	return nil
 }
-func (s *SchedulerService) Start() error {
 
+func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 	logger := fplog.Logger(s.ctx)
+
+	pipelineName := t.Pipeline.AsValueMap()["name"].AsString()
+	switch config := t.Config.(type) {
+	case *modconfig.TriggerSchedule:
+
+		tags := []string{
+			"id:" + t.FullName,
+			"schedule:" + config.Schedule,
+			"pipeline:" + pipelineName,
+		}
+
+		logger.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
+
+		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
+		_, err := s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
+		if err != nil {
+			return err
+		}
+
+	case *modconfig.TriggerInterval:
+		tags := []string{
+			"id:" + t.FullName,
+			"schedule:" + config.Schedule,
+			"pipeline:" + pipelineName,
+		}
+
+		logger.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
+
+		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
+
+		var err error
+		switch strings.ToLower(config.Schedule) {
+		case "hourly":
+			ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		case "daily":
+			ts := randomizeTimestamp(0.1, 0.5, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Day().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		case "weekly":
+			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Week().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		case "monthly":
+			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		default:
+			return perr.BadRequestWithMessage("invalid interval schedule: " + config.Schedule)
+		}
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SchedulerService) Start() error {
 
 	if len(s.Triggers) == 0 {
 		return nil
@@ -70,43 +196,9 @@ func (s *SchedulerService) Start() error {
 	s.cronScheduler = gocron.NewScheduler(time.UTC)
 
 	for _, t := range s.Triggers {
-		switch config := t.Config.(type) {
-		case *modconfig.TriggerSchedule:
-			logger.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule)
-
-			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
-
-			_, err := s.cronScheduler.Cron(config.Schedule).Do(triggerRunner.Run)
-			if err != nil {
-				return err
-			}
-
-		case *modconfig.TriggerInterval:
-			logger.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
-
-			triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
-
-			var err error
-			switch strings.ToLower(config.Schedule) {
-			case "hourly":
-				ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
-				_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Do(triggerRunner.Run)
-			case "daily":
-				ts := randomizeTimestamp(0.1, 0.5, time.Now().UTC(), 1*time.Hour)
-				_, err = s.cronScheduler.Every(1).Day().StartAt(ts).Do(triggerRunner.Run)
-			case "weekly":
-				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
-				_, err = s.cronScheduler.Every(1).Week().StartAt(ts).Do(triggerRunner.Run)
-			case "monthly":
-				ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
-				_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Do(triggerRunner.Run)
-			default:
-				return perr.BadRequestWithMessage("invalid interval schedule: " + config.Schedule)
-			}
-
-			if err != nil {
-				return err
-			}
+		err := s.scheduleTrigger(t)
+		if err != nil {
+			return err
 		}
 	}
 

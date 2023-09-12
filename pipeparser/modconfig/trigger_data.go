@@ -29,8 +29,30 @@ type Trigger struct {
 }
 
 func (p *Trigger) Equals(other *Trigger) bool {
-	// TODO: other checks?
+
+	pipelineName := p.Pipeline.AsValueMap()["name"].AsString()
+	otherPipelineName := other.Pipeline.AsValueMap()["name"].AsString()
+
+	var scheduleString string
+	var otherScheduleString string
+
+	switch config := p.Config.(type) {
+	case *TriggerSchedule:
+		scheduleString = config.Schedule
+	case *TriggerInterval:
+		scheduleString = config.Schedule
+	}
+
+	switch config := other.Config.(type) {
+	case *TriggerSchedule:
+		otherScheduleString = config.Schedule
+	case *TriggerInterval:
+		otherScheduleString = config.Schedule
+	}
+
 	return p.FullName == other.FullName &&
+		pipelineName == otherPipelineName &&
+		scheduleString == otherScheduleString &&
 		p.GetMetadata().ModFullName == other.GetMetadata().ModFullName
 }
 

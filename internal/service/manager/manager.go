@@ -121,14 +121,13 @@ func (m *Manager) Initialize() error {
 				logger.Error("error reloading pipelines", "error", err)
 			}
 
-			// TODO: this reschedule the trigger all the time even if the triggers are not updated
-			// if m.schedulerService != nil {
-			// 	m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
-			// 	err := m.schedulerService.Start()
-			// 	if err != nil {
-			// 		logger.Error("error reloading triggers", "error", err)
-			// 	}
-			// }
+			if m.schedulerService != nil {
+				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
+				err := m.schedulerService.ReloadTriggers()
+				if err != nil {
+					logger.Error("error reloading triggers", "error", err)
+				}
+			}
 
 		})
 

@@ -194,11 +194,21 @@ func (m *ResourceMaps) Equals(other *ResourceMaps) bool {
 			return false
 		}
 	}
+	for name := range other.Pipelines {
+		if _, ok := m.Pipelines[name]; !ok {
+			return false
+		}
+	}
 
 	for name, trigger := range m.Triggers {
 		if otherTrigger, ok := other.Triggers[name]; !ok {
 			return false
 		} else if !trigger.Equals(otherTrigger) {
+			return false
+		}
+	}
+	for name := range other.Triggers {
+		if _, ok := m.Triggers[name]; !ok {
 			return false
 		}
 	}
