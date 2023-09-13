@@ -14,7 +14,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/utils"
@@ -93,15 +92,6 @@ func WithHTTPAddress(addr string) ManagerOption {
 // TODO: is there any point to have a separate "Initialize" and "Start"?
 func (m *Manager) Initialize() error {
 	pipelineDir := viper.GetString("pipeline.dir")
-
-	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
-	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
-
-	constants.PipesComponentModDataExtension = ".hcl"
-	constants.PipesComponentVariablesExtension = ".pvars"
-	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
-	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger

@@ -63,6 +63,7 @@ const (
 	ArgSnapshotLocation     = "snapshot-location"
 	ArgSnapshotTitle        = "snapshot-title"
 	ArgDatabaseStartTimeout = "database-start-timeout"
+	ArgGitUrlMode           = "git-url-mode"
 )
 
 // metaquery mode arguments

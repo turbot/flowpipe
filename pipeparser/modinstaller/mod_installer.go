@@ -51,6 +51,8 @@ type ModInstaller struct {
 	dryRun bool
 	// do we force install even if there are require errors
 	force bool
+
+	GitUrlMode GitUrlMode
 }
 
 func NewModInstaller(opts *InstallOpts) (*ModInstaller, error) {
@@ -86,7 +88,7 @@ func NewModInstaller(opts *InstallOpts) (*ModInstaller, error) {
 	}
 
 	// create install data
-	i.installData = NewInstallData(workspaceLock, i.workspaceMod)
+	i.installData = NewInstallData(workspaceLock, i.workspaceMod, opts.GitUrlMode)
 
 	// parse args to get the required mod versions
 	requiredMods, err := i.GetRequiredModVersionsFromArgs(opts.ModArgs)
@@ -94,6 +96,8 @@ func NewModInstaller(opts *InstallOpts) (*ModInstaller, error) {
 		return nil, err
 	}
 	i.mods = requiredMods
+
+	i.GitUrlMode = opts.GitUrlMode
 
 	return i, nil
 }
@@ -551,7 +555,7 @@ func (i *ModInstaller) install(ctx context.Context, dependency *ResolvedModRef, 
 
 func (i *ModInstaller) installFromGit(dependency *ResolvedModRef, installPath string) error {
 	// get the mod from git
-	gitUrl := getGitUrl(dependency.Name)
+	gitUrl := getGitUrl(dependency.Name, i.GitUrlMode)
 	log.Println("[TRACE] >>> cloning", gitUrl, dependency.GitReference)
 	_, err := git.PlainClone(installPath,
 		false,

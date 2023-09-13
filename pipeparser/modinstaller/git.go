@@ -1,8 +1,9 @@
 package modinstaller
 
 import (
-	"fmt"
+	"errors"
 	"sort"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/go-git/go-git/v5"
@@ -10,8 +11,66 @@ import (
 	"github.com/go-git/go-git/v5/storage/memory"
 )
 
-func getGitUrl(modName string) string {
-	return fmt.Sprintf("https://%s", modName)
+type GitUrlMode string
+
+// String is used both by fmt.Print and by Cobra in help text
+func (e *GitUrlMode) String() string {
+	return string(*e)
+}
+
+// Set must have pointer receiver so it doesn't change the value of a copy
+func (e *GitUrlMode) Set(v string) error {
+	switch v {
+	case "https", "ssh":
+		*e = GitUrlMode(v)
+		return nil
+	default:
+		return errors.New(`must be one of "https" or "ssh"`)
+	}
+}
+
+// Type is only used in help text
+func (e *GitUrlMode) Type() string {
+	return "GitUrlMode"
+}
+
+const (
+	GitUrlModeHTTPS GitUrlMode = "https"
+	GitUrlModeSSH   GitUrlMode = "ssh"
+)
+
+func getGitUrl(modName string, urlMode GitUrlMode) string {
+	return transformToGitURL(modName, urlMode)
+}
+
+func transformToGitURL(input string, urlMode GitUrlMode) string {
+
+	if urlMode == GitUrlModeHTTPS {
+		if !strings.HasPrefix(input, "https://") {
+			input = "https://" + input
+		}
+		return input
+	}
+
+	if !strings.HasPrefix(input, "github.com") {
+		return input
+	}
+
+	if !strings.HasPrefix(input, "git@") {
+		input = "git@" + input
+	}
+
+	if !strings.HasSuffix(input, ".git") {
+		input += ".git"
+	}
+
+	// Add a colon after the "git@github.com" part, so it replaces the first / with :
+	if !strings.Contains(input, ":") {
+		index := strings.Index(input, "/")
+		input = input[:index] + ":" + input[index+1:]
+	}
+
+	return input
 }
 
 func getTags(repo string) ([]string, error) {

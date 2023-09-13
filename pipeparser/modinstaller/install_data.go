@@ -1,10 +1,9 @@
 package modinstaller
 
 import (
-	"fmt"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/versionhelpers"
 	"github.com/turbot/flowpipe/pipeparser/versionmap"
 	"github.com/xlab/treeprint"
@@ -27,9 +26,11 @@ type InstallData struct {
 	// list of dependencies which have been uninstalled
 	Uninstalled  versionmap.DependencyVersionMap
 	WorkspaceMod *modconfig.Mod
+
+	GitUrlMode GitUrlMode
 }
 
-func NewInstallData(workspaceLock *versionmap.WorkspaceLock, workspaceMod *modconfig.Mod) *InstallData {
+func NewInstallData(workspaceLock *versionmap.WorkspaceLock, workspaceMod *modconfig.Mod, urlMode GitUrlMode) *InstallData {
 	return &InstallData{
 		Lock:         workspaceLock,
 		WorkspaceMod: workspaceMod,
@@ -39,6 +40,7 @@ func NewInstallData(workspaceLock *versionmap.WorkspaceLock, workspaceMod *modco
 		Upgraded:     make(versionmap.DependencyVersionMap),
 		Downgraded:   make(versionmap.DependencyVersionMap),
 		Uninstalled:  make(versionmap.DependencyVersionMap),
+		GitUrlMode:   urlMode,
 	}
 }
 
@@ -88,9 +90,9 @@ func (d *InstallData) getAvailableModVersions(modName string, includePrerelease 
 	}
 	// so we have not cached this yet - retrieve from Git
 	var err error
-	availableVersions, err = getTagVersionsFromGit(getGitUrl(modName), includePrerelease)
+	availableVersions, err = getTagVersionsFromGit(getGitUrl(modName, d.GitUrlMode), includePrerelease)
 	if err != nil {
-		return nil, fmt.Errorf("could not retrieve version data from Git URL '%s'", modName)
+		return nil, perr.BadRequestWithMessage("could not retrieve version data from Git URL " + modName + " - " + err.Error())
 	}
 	// update our cache
 	d.allAvailable[modName] = availableVersions

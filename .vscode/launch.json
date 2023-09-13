@@ -42,7 +42,8 @@
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
-            "args": ["--install-dir", "/home/vscode/.flowpipe", "--mod-location", "/home/vscode/fp-workspace", "mod", "install", "github.com/turbot/steampipe-mod-aws-insights"]
+            // "args": ["--install-dir", "/home/vscode/.flowpipe", "--mod-location", "/home/vscode/fp-workspace", "mod", "install", "github.com/turbot/steampipe-mod-aws-insights"]
+            "args": ["--mod-location", "/home/vscode/fp-workspace", "mod", "install", "github.com/turbot/flowpipe-mod-reference", "--git-url-mode", "ssh"]
         }
     ]
 }
