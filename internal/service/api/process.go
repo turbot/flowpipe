@@ -37,11 +37,11 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 // @Param next_token query string false "When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data."
 // ...
 // @Success 200 {object} types.ListProcessResponse
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /process [get]
 func (api *APIService) listProcess(c *gin.Context) {
 	// Get paging parameters
@@ -72,12 +72,12 @@ func (api *APIService) listProcess(c *gin.Context) {
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
 // @Success 200 {object} execution.Execution
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 404 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /process/{process_id} [get]
 func (api *APIService) getProcess(c *gin.Context) {
 
@@ -119,12 +119,12 @@ func (api *APIService) getProcess(c *gin.Context) {
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
 // @Success 200 {object} modconfig.OutputData
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 404 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /process/{process_id}/output [get]
 func (api *APIService) getProcessOutput(c *gin.Context) {
 

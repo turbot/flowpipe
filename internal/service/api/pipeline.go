@@ -1,8 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -34,11 +36,11 @@ func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
 // @Param next_token query string false "When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data."
 // ...
 // @Success 200 {object} types.ListPipelineResponse
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /pipeline [get]
 func (api *APIService) listPipelines(c *gin.Context) {
 	// Get paging parameters
@@ -89,12 +91,12 @@ func (api *APIService) listPipelines(c *gin.Context) {
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
 // @Success 200 {object} modconfig.Pipeline
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 404 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /pipeline/{pipeline_name} [get]
 func (api *APIService) getPipeline(c *gin.Context) {
 
@@ -135,12 +137,12 @@ func (api *APIService) getPipeline(c *gin.Context) {
 // @Param request body types.CmdPipeline true "Pipeline command."
 // ...
 // @Success 200 {object} types.RunPipelineResponse
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 404 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /pipeline/{pipeline_name}/cmd [post]
 func (api *APIService) cmdPipeline(c *gin.Context) {
 
@@ -149,8 +151,24 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
+	pipelineName := uri.PipelineName
 
-	pipeline, err := db.GetPipeline(uri.PipelineName)
+	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
+	// For example: foo.pipeline.bar
+	// However, since foo is the top level mod, we should be able to just run the pipeline bar
+	splitPipelineName := strings.Split(pipelineName, ".")
+	// If the pipeline name provided is not fully qualified
+	if len(splitPipelineName) == 1 {
+		// Get the root mod name from the cache
+		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
+			if rootModName, ok := rootModNameCached.(string); ok {
+				// Prepend the root mod name to the pipeline name to get the fully qualified name
+				pipelineName = fmt.Sprintf("%s.pipeline.%s", rootModName, pipelineName)
+			}
+		}
+	}
+
+	pipeline, err := db.GetPipeline(pipelineName)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
