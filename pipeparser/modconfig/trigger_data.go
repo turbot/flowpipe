@@ -30,8 +30,8 @@ type Trigger struct {
 
 func (p *Trigger) Equals(other *Trigger) bool {
 
-	pipelineName := p.Pipeline.AsValueMap()["name"].AsString()
-	otherPipelineName := other.Pipeline.AsValueMap()["name"].AsString()
+	pipelineName := p.Pipeline.AsValueMap()[schema.LabelName].AsString()
+	otherPipelineName := other.Pipeline.AsValueMap()[schema.LabelName].AsString()
 
 	var scheduleString string
 	var otherScheduleString string
@@ -298,11 +298,8 @@ func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hc
 
 func NewTrigger(ctx context.Context, mod *Mod, triggerType, triggerName string) *Trigger {
 
-	triggerFullName := triggerName
+	triggerFullName := triggerType + "." + triggerName
 
-	// TODO: rethink this area, we need to be able to handle pipelines that are not in a mod
-	// TODO: we're trying to integrate the pipeline & trigger functionality into the mod system, so it will look
-	// TODO: like a clutch for now
 	if mod != nil {
 		modName := mod.Name()
 		if strings.HasPrefix(modName, "mod") {

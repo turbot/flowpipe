@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
 type SchedulerService struct {
@@ -102,7 +103,7 @@ func (s *SchedulerService) ReloadTriggers() error {
 			continue
 		}
 
-		if jobTags[2] != "pipeline:"+t.Pipeline.AsValueMap()["name"].AsString() {
+		if jobTags[2] != "pipeline:"+t.Pipeline.AsValueMap()[schema.LabelName].AsString() {
 			logger.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
 			s.cronScheduler.RemoveByReference(job)
 			err := s.scheduleTrigger(t)
@@ -133,7 +134,7 @@ func (s *SchedulerService) ReloadTriggers() error {
 func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 	logger := fplog.Logger(s.ctx)
 
-	pipelineName := t.Pipeline.AsValueMap()["name"].AsString()
+	pipelineName := t.Pipeline.AsValueMap()[schema.LabelName].AsString()
 	switch config := t.Config.(type) {
 	case *modconfig.TriggerSchedule:
 

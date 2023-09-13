@@ -35,7 +35,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 	dependsOn := echoStep.GetDependsOn()
 	assert.Equal(len(dependsOn), 0)
 
-	scheduleTrigger := triggers["local.trigger.my_hourly_trigger"]
+	scheduleTrigger := triggers["local.trigger.schedule.my_hourly_trigger"]
 	if scheduleTrigger == nil {
 		assert.Fail("my_hourly_trigger trigger not found")
 		return
@@ -49,7 +49,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 
 	assert.Equal("5 * * * *", st.Schedule)
 
-	triggerWithArgs := triggers["local.trigger.trigger_with_args"]
+	triggerWithArgs := triggers["local.trigger.schedule.trigger_with_args"]
 	if triggerWithArgs == nil {
 		assert.Fail("trigger_with_args trigger not found")
 		return
@@ -66,7 +66,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 	assert.Equal("one", triggerWithArgs.Args["param_one"])
 	assert.Equal(2, triggerWithArgs.Args["param_two_int"])
 
-	queryTrigger := triggers["local.trigger.query_trigger"]
+	queryTrigger := triggers["local.trigger.query.query_trigger"]
 	if queryTrigger == nil {
 		assert.Fail("query_trigger trigger not found")
 		return

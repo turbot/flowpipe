@@ -120,7 +120,7 @@ func (suite *FpTestSuite) TestGoodMod() {
 	// check if all triggers are there
 	triggers := mod.ResourceMaps.Triggers
 	assert.Equal(1, len(triggers), "wrong number of triggers")
-	assert.Equal("test_mod.trigger.my_hourly_trigger", triggers["test_mod.trigger.my_hourly_trigger"].FullName, "wrong trigger name")
+	assert.Equal("test_mod.trigger.schedule.my_hourly_trigger", triggers["test_mod.trigger.schedule.my_hourly_trigger"].FullName, "wrong trigger name")
 }
 
 func (suite *FpTestSuite) TestModReferences() {
@@ -225,7 +225,7 @@ func (suite *FpTestSuite) TestModDependencies() {
 
 	// check for the triggers
 	triggers := mod.ResourceMaps.Triggers
-	myHourlyTrigger := triggers["mod_parent.trigger.my_hourly_trigger"]
+	myHourlyTrigger := triggers["mod_parent.trigger.schedule.my_hourly_trigger"]
 	if myHourlyTrigger == nil {
 		assert.Fail("my_hourly_trigger not found")
 		return
