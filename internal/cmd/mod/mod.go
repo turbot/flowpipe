@@ -72,7 +72,10 @@ func modInstallCmd() *cobra.Command {
 	var gitUrlModeEnum = modinstaller.GitUrlModeHTTPS
 
 	cmd.Flags().Var(&gitUrlModeEnum, constants.ArgGitUrlMode, "Git URL mode (https or ssh)")
-	viper.BindPFlag(constants.ArgGitUrlMode, cmd.Flags().Lookup(constants.ArgGitUrlMode))
+	err := viper.BindPFlag(constants.ArgGitUrlMode, cmd.Flags().Lookup(constants.ArgGitUrlMode))
+	if err != nil {
+		panic(err)
+	}
 
 	// cmdconfig.OnCmd(cmd).
 	// 	AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after installation is complete").
