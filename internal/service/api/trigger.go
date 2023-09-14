@@ -1,8 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -110,8 +112,24 @@ func (api *APIService) getTrigger(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
+	triggerName := uri.TriggerName
 
-	triggerCached, found := cache.GetCache().Get(uri.TriggerName)
+	// If we run the API server with a mod foo, in order get the trigger, the API needs the fully-qualified name of the trigger.
+	// For example: foo.trigger.trigger_type.bar
+	// However, since foo is the top level mod, we should be able to just get the trigger bar
+	splitTriggerName := strings.Split(triggerName, ".")
+	// If the pipeline name provided is not fully qualified
+	if len(splitTriggerName) < 4 {
+		// Get the root mod name from the cache
+		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
+			if rootModName, ok := rootModNameCached.(string); ok {
+				// Prepend the root mod name to the pipeline name to get the fully qualified name
+				triggerName = fmt.Sprintf("%s.trigger.%s", rootModName, triggerName)
+			}
+		}
+	}
+
+	triggerCached, found := cache.GetCache().Get(triggerName)
 	if !found {
 		common.AbortWithError(c, perr.NotFoundWithMessage("trigger not found"))
 		return
