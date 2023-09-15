@@ -105,8 +105,9 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
+	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
 
-	pipelineCached, found := cache.GetCache().Get(uri.PipelineName)
+	pipelineCached, found := cache.GetCache().Get(pipelineName)
 	if !found {
 		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline not found"))
 		return
@@ -151,22 +152,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	pipelineName := uri.PipelineName
-
-	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
-	// For example: foo.pipeline.bar
-	// However, since foo is the top level mod, we should be able to just run the pipeline bar
-	splitPipelineName := strings.Split(pipelineName, ".")
-	// If the pipeline name provided is not fully qualified
-	if len(splitPipelineName) == 1 {
-		// Get the root mod name from the cache
-		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
-			if rootModName, ok := rootModNameCached.(string); ok {
-				// Prepend the root mod name to the pipeline name to get the fully qualified name
-				pipelineName = fmt.Sprintf("%s.pipeline.%s", rootModName, pipelineName)
-			}
-		}
-	}
+	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
 
 	pipeline, err := db.GetPipeline(pipelineName)
 	if err != nil {
@@ -208,4 +194,22 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		ParentStepExecutionID: pipelineCmd.ParentStepExecutionID,
 	}
 	c.JSON(http.StatusOK, response)
+}
+
+func constructPipelineFullyQualifiedName(pipelineName string) string {
+	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
+	// For example: foo.pipeline.bar
+	// However, since foo is the top level mod, we should be able to just run the pipeline bar
+	splitPipelineName := strings.Split(pipelineName, ".")
+	// If the pipeline name provided is not fully qualified
+	if len(splitPipelineName) == 1 {
+		// Get the root mod name from the cache
+		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
+			if rootModName, ok := rootModNameCached.(string); ok {
+				// Prepend the root mod name to the pipeline name to get the fully qualified name
+				pipelineName = fmt.Sprintf("%s.pipeline.%s", rootModName, pipelineName)
+			}
+		}
+	}
+	return pipelineName
 }
