@@ -177,7 +177,11 @@ func (m *Manager) Initialize() error {
 	}
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
 
-	inMemoryCache.SetWithTTL("#rootmod.name", modInfo.ShortName, 24*7*52*99*time.Hour)
+	if modInfo != nil {
+		inMemoryCache.SetWithTTL("#rootmod.name", modInfo.ShortName, 24*7*52*99*time.Hour)
+	} else {
+		inMemoryCache.SetWithTTL("#rootmod.name", "local", 24*7*52*99*time.Hour)
+	}
 
 	return nil
 }
