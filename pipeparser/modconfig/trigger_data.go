@@ -334,8 +334,8 @@ func NewTrigger(ctx context.Context, mod *Mod, triggerType, triggerName string) 
 	return trigger
 }
 
-// GetTriggerTypeFromTrggerConfig returns the type of the trigger from the trigger config
-func GetTriggerTypeFromTrggerConfig(config ITriggerConfig) string {
+// GetTriggerTypeFromTriggerConfig returns the type of the trigger from the trigger config
+func GetTriggerTypeFromTriggerConfig(config ITriggerConfig) string {
 	switch config.(type) {
 	case *TriggerSchedule:
 		return schema.TriggerTypeSchedule
