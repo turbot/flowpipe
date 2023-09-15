@@ -124,6 +124,7 @@ func (api *APIService) getTrigger(c *gin.Context) {
 		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
 			if rootModName, ok := rootModNameCached.(string); ok {
 				// Prepend the root mod name to the pipeline name to get the fully qualified name
+				// For example: foo.trigger.trigger_type.bar
 				triggerName = fmt.Sprintf("%s.trigger.%s", rootModName, triggerName)
 			}
 		}
