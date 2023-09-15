@@ -204,6 +204,30 @@ func CtyToGoMapInterface(v cty.Value) (map[string]interface{}, error) {
 	return res, nil
 }
 
+func CtyToGoMapString(v cty.Value) (map[string]string, error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsMapType() && !ty.IsObjectType() {
+		return nil, fmt.Errorf("expected list type")
+	}
+
+	res := map[string]string{}
+
+	valueMap := v.AsValueMap()
+
+	for k, v := range valueMap {
+		target, err := CtyToString(v)
+		if err != nil {
+			return nil, err
+		}
+		res[k] = target
+	}
+
+	return res, nil
+}
+
 func CtyToGo(v cty.Value) (val interface{}, err error) {
 	if v.IsNull() {
 		return nil, nil

@@ -23,7 +23,11 @@ const (
 	legacyStateFileName          = "update-check.json"
 	availableVersionsFileName    = "available_versions.json"
 	legacyNotificationsFileName  = "notifications.json"
+
+	PipesComponentInternal = "internal"
 )
+
+var PipesComponentDefaultInstallDir = DefaultInstallDir
 
 var SteampipeDir string
 

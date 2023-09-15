@@ -16,6 +16,8 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
@@ -36,6 +38,16 @@ func (suite *ModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
+	filepaths.PipesComponentModsFileName = "mod.hcl"
+	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
+	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
+
+	constants.PipesComponentModDataExtension = ".hcl"
+	constants.PipesComponentVariablesExtension = ".pvars"
+	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
+	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
 
 	// Get the current working directory
 	cwd, err := os.Getwd()

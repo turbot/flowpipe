@@ -33,14 +33,15 @@ func (p *Trigger) Equals(other *Trigger) bool {
 	pipelineName := p.Pipeline.AsValueMap()[schema.LabelName].AsString()
 	otherPipelineName := other.Pipeline.AsValueMap()[schema.LabelName].AsString()
 
-	var scheduleString string
-	var otherScheduleString string
+	scheduleString := ""
+	otherScheduleString := ""
 
 	switch config := p.Config.(type) {
 	case *TriggerSchedule:
 		scheduleString = config.Schedule
 	case *TriggerInterval:
 		scheduleString = config.Schedule
+
 	}
 
 	switch config := other.Config.(type) {
@@ -112,14 +113,9 @@ func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, eval
 	if attr, exists := hclAttributes[schema.AttributeTypeArgs]; exists {
 		if attr.Expr != nil {
 			expr := attr.Expr
-			vals, err := expr.Value(nil)
-			if err != nil {
-				diags = append(diags, &hcl.Diagnostic{
-					Severity: hcl.DiagError,
-					Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute",
-					Subject:  &attr.Range,
-				})
-
+			vals, moreDiags := expr.Value(evalContext)
+			if moreDiags != nil {
+				diags = append(diags, moreDiags...)
 			} else {
 				goVals, err := hclhelpers.CtyToGoMapInterface(vals)
 				if err != nil {
@@ -285,12 +281,46 @@ func (t *TriggerQuery) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes h
 }
 
 type TriggerHttp struct {
+	ResponseBody    string            `json:"response_body"`
+	ResponseHeaders map[string]string `json:"response_headers"`
 }
 
 func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
 	diags := trigger.SetBaseAttributes(mod, hclAttributes, evalContext)
 	if diags.HasErrors() {
 		return diags
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeResponseBody]; exists {
+		if attr.Expr != nil {
+			expr := attr.Expr
+			val, moreDiags := expr.Value(evalContext)
+			if moreDiags != nil {
+				diags = append(diags, moreDiags...)
+			} else {
+				t.ResponseBody = val.AsString()
+			}
+		}
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeResponseHeaders]; exists {
+		if attr.Expr != nil {
+			expr := attr.Expr
+			vals, moreDiags := expr.Value(evalContext)
+			if moreDiags != nil {
+				diags = append(diags, moreDiags...)
+			} else {
+				goVals, err := hclhelpers.CtyToGoMapString(vals)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute to Go values",
+						Subject:  &attr.Range,
+					})
+				}
+				t.ResponseHeaders = goVals
+			}
+		}
 	}
 
 	return diags

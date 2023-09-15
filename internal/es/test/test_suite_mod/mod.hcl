@@ -18,18 +18,6 @@ pipeline "echo_one_a" {
         text = "Hello World"
     }
 
-    step "echo" "echo_two" {
-        text = "Hello World two C"
-    }
-
-    step "echo" "echo_three" {
-        text = "Hello World three"
-    }
-
-    step "echo" "echo_four" {
-        text = "Hello World four C"
-    }
-
     step "pipeline" "child_pipeline" {
         pipeline = mod_depend_a.pipeline.echo_one_depend_a
     }

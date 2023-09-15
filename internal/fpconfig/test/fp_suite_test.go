@@ -71,6 +71,7 @@ func (suite *FpTestSuite) SetupSuite() {
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
 	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
+	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
 
 	constants.PipesComponentModDataExtension = ".hcl"
 	constants.PipesComponentVariablesExtension = ".pvars"

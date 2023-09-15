@@ -2,14 +2,19 @@ package cmd
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
 
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/mod"
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
 	"github.com/turbot/flowpipe/internal/cmd/process"
@@ -65,7 +70,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.PersistentFlags().Bool(constants.CmdOptionTlsInsecure, false, "Skip TLS verification")
 
 	// Common (steampipe, flowpipe) flags
-	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.DefaultInstallDir, "Path to the Config Directory")
+	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.PipesComponentDefaultInstallDir, "Path to the Config Directory")
 	rootCmd.PersistentFlags().String(pcconstants.ArgModLocation, cwd, "Path to the workspace working directory")
 
 	// ⑤ Define the CLI flag parameters for your wrapped enum flag.
@@ -125,13 +130,51 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	// Steampipe CLI loads the Workspace Profile here, but it also loads the mod in the parse context.
 	//
 	// set global containing the configured install dir (create directory if needed)
-
+	installDir := viper.GetString(pcconstants.ArgInstallDir)
 	runMode := os.Getenv("RUN_MODE")
 	if !strings.HasPrefix(runMode, "TEST") {
-		ensureInstallDir(viper.GetString(pcconstants.ArgInstallDir))
+		ensureInstallDir(filepath.Join(installDir, "internal"))
 	}
 
+	salt, err := flowpipeSalt(filepath.Join(installDir, filepaths.PipesComponentInternal, "salt"), 32)
+	if err != nil {
+		error_helpers.FailOnErrorWithMessage(err, err.Error())
+	}
+
+	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
+
 	return nil
+}
+
+// Assumes that the install dir exists
+func flowpipeSalt(filename string, length int) (string, error) {
+	// Check if the salt file exists
+	if _, err := os.Stat(filename); err == nil {
+		// If the file exists, read the salt from it
+		saltBytes, err := os.ReadFile(filename)
+		if err != nil {
+			return "", err
+		}
+		return string(saltBytes), nil
+	}
+
+	// If the file does not exist, generate a new salt
+	salt := make([]byte, length)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode the salt as a hexadecimal string
+	saltHex := hex.EncodeToString(salt)
+
+	// Write the salt to the file
+	err = os.WriteFile(filename, []byte(saltHex), 0600)
+	if err != nil {
+		return "", err
+	}
+
+	return saltHex, nil
 }
 
 func ensureInstallDir(installDir string) {

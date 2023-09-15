@@ -22,6 +22,23 @@ trigger "schedule" "trigger_with_args" {
     }
 }
 
+trigger "http" "trigger_with_args" {
+
+    response_body = "ok"
+
+    response_headers = {
+      Content-Type = "application/json"
+      User-Agent  = "flowpipe"
+    }
+
+    pipeline = pipeline.simple_with_trigger
+
+    args = {
+        param_one     = "one"
+        param_two_int = 2
+    }
+}
+
 
 trigger "query" "query_trigger" {
     schedule = "5 * * * *"

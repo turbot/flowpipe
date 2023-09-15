@@ -84,6 +84,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 	assert.Equal("one", queryTrigger.Args["param_one"])
 	assert.Equal(2, queryTrigger.Args["param_two_int"])
 	assert.Contains(qt.Sql, "where create_date < now() - interval")
+
 }
 
 func TestBadTriggerConfig(t *testing.T) {
