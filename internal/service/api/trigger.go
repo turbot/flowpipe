@@ -32,11 +32,11 @@ func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
 // @Param next_token query string false "When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data."
 // ...
 // @Success 200 {object} types.ListTriggerResponse
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /trigger [get]
 func (api *APIService) listTriggers(c *gin.Context) {
 	// Get paging parameters
@@ -63,7 +63,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 		fpTriggers = append(fpTriggers, types.FpTrigger{
 			Name:        trigger.FullName,
-			Type:        modconfig.GetTriggerTypeFromTrggerConfig(trigger.Config),
+			Type:        modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
 			Description: trigger.Description,
 			Args:        trigger.Args,
 			Pipeline:    pipelineName,
@@ -98,12 +98,12 @@ func (api *APIService) listTriggers(c *gin.Context) {
 // @Param trigger_name path string true "The name of the trigger" format(^[a-z]{0,32}$)
 // ...
 // @Success 200 {object} types.FpTrigger
-// @Failure 400 {object} pcerr.ErrorModel
-// @Failure 401 {object} pcerr.ErrorModel
-// @Failure 403 {object} pcerr.ErrorModel
-// @Failure 404 {object} pcerr.ErrorModel
-// @Failure 429 {object} pcerr.ErrorModel
-// @Failure 500 {object} pcerr.ErrorModel
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
 // @Router /trigger/{trigger_name} [get]
 func (api *APIService) getTrigger(c *gin.Context) {
 
@@ -118,12 +118,12 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	// For example: foo.trigger.trigger_type.bar
 	// However, since foo is the top level mod, we should be able to just get the trigger bar
 	splitTriggerName := strings.Split(triggerName, ".")
-	// If the pipeline name provided is not fully qualified
+	// If the trigger name provided is not fully qualified
 	if len(splitTriggerName) < 4 {
 		// Get the root mod name from the cache
 		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
 			if rootModName, ok := rootModNameCached.(string); ok {
-				// Prepend the root mod name to the pipeline name to get the fully qualified name
+				// Prepend the root mod name to the trigger name to get the fully qualified name
 				// For example: foo.trigger.trigger_type.bar
 				triggerName = fmt.Sprintf("%s.trigger.%s", rootModName, triggerName)
 			}
@@ -147,7 +147,7 @@ func (api *APIService) getTrigger(c *gin.Context) {
 
 	fpTrigger := types.FpTrigger{
 		Name:        trigger.FullName,
-		Type:        modconfig.GetTriggerTypeFromTrggerConfig(trigger.Config),
+		Type:        modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
 		Description: trigger.Description,
 		Args:        trigger.GetArgs(),
 		Pipeline:    pipelineName,
