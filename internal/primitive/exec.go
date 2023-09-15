@@ -39,7 +39,7 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 	stdoutLines := []string{}
 	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	stdoutScanner := bufio.NewScanner(stdout)
-	stdoutScanner.Buffer(make([]byte, bufio.MaxScanTokenSize*1024), bufio.MaxScanTokenSize*1024)
+	stdoutScanner.Buffer(make([]byte, bufio.MaxScanTokenSize*20), bufio.MaxScanTokenSize*20)
 	go func() {
 		for stdoutScanner.Scan() {
 			t := stdoutScanner.Text()
@@ -56,7 +56,7 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 	stderrLines := []string{}
 	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	stderrScanner := bufio.NewScanner(stderr)
-	stderrScanner.Buffer(make([]byte, bufio.MaxScanTokenSize*1024), bufio.MaxScanTokenSize*1024)
+	stderrScanner.Buffer(make([]byte, bufio.MaxScanTokenSize*20), bufio.MaxScanTokenSize*20)
 	go func() {
 		for stderrScanner.Scan() {
 			t := stderrScanner.Text()
