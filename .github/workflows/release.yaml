@@ -41,19 +41,19 @@ jobs:
         with:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
-          # path: flowpipe-sdk-go
+          path: flowpipe-sdk-go
 
       - name: Checkout Terraform Components repository
         uses: actions/checkout@v3
         with:
           ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/terraform-components
-          # path: terraform-components
+          path: terraform-components
       
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
         with:
-          # path: flowpipe
+          path: flowpipe
           ref: ${{ github.event.inputs.version }}
 
       # this is required, check golangci-lint-action docs
@@ -73,5 +73,6 @@ jobs:
         with:
           version: latest
           args: release --clean
+          # workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
