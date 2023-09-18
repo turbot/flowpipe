@@ -53,7 +53,6 @@ jobs:
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
         with:
-          path: flowpipe
           ref: ${{ github.event.inputs.version }}
 
       # this is required, check golangci-lint-action docs
@@ -63,7 +62,9 @@ jobs:
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
       
       - name: pwd
-        run: pwd
+        run: |
+          pwd
+          ls -la
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
