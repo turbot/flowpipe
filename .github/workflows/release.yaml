@@ -33,13 +33,9 @@ jobs:
 
   build_and_release:
     name: Release
+    needs: [create_release_tag]
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Flowpipe repository
-        uses: actions/checkout@v3
-        with:
-          path: flowpipe
-
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v3
         with:
@@ -53,6 +49,12 @@ jobs:
           ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/terraform-components
           path: terraform-components
+      
+      - name: Checkout Flowpipe repository
+        uses: actions/checkout@v3
+        with:
+          path: flowpipe
+          ref: ${{ github.event.inputs.version }}
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
@@ -65,5 +67,6 @@ jobs:
         with:
           version: latest
           args: release --clean
+          workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
