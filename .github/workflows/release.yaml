@@ -73,6 +73,6 @@ jobs:
         with:
           version: latest
           args: release --clean
-          # workdir: flowpipe
+          workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
