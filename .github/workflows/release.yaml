@@ -65,7 +65,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
-          # version: latest
+          version: latest
           args: release --clean
           workdir: flowpipe
         env:
