@@ -1,0 +1,69 @@
+name: Flowpipe Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version to release (must be prefixed with 'v')"
+        required: true
+
+env:
+  VERSION: ${{ github.event.inputs.version }}
+  GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+jobs:
+  create_release_tag:
+    name: Tag Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.ref }}
+
+      - name: Unshallow
+        run: git fetch --prune --unshallow
+
+      - name: Tag Release
+        run: |
+          git config user.name "Flowpipe GitHub Actions Bot"
+          git config user.email noreply@github.com
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
+
+  build_and_release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Flowpipe repository
+        uses: actions/checkout@v3
+        with:
+          path: flowpipe
+
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
+
+      - name: Checkout Terraform Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/terraform-components
+          path: terraform-components
+
+      # this is required, check golangci-lint-action docs
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
