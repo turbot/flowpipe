@@ -2,19 +2,16 @@ name: Flowpipe Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "The version to release (must be prefixed with 'v')"
-        required: true
 
 env:
-  VERSION: ${{ github.event.inputs.version }}
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
 jobs:
   create_release_tag:
     name: Tag Release
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.calculate_version.outputs.VERSION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -24,16 +21,24 @@ jobs:
       - name: Unshallow
         run: git fetch --prune --unshallow
 
+      - name: Calculate version
+        id: calculate_version
+        run: |
+          beta_tag_timestamp=$(date -u +%Y%m%d%H%M)
+          VERSION=$(echo "v0.1.0-beta.$beta_tag_timestamp")
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Tag Release
         run: |
           git config user.name "Flowpipe GitHub Actions Bot"
           git config user.email noreply@github.com
-          git tag ${{ github.event.inputs.version }}
-          git push origin ${{ github.event.inputs.version }}
+          git tag $VERSION
+          git push origin $VERSION
 
   build_and_release:
     name: Release
-    needs: [create_release_tag]
+    needs: create_release_tag
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Flowpipe SDK Go repository
@@ -54,7 +59,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: flowpipe
-          ref: ${{ github.event.inputs.version }}
+          ref: ${{ needs.create_release_tag.outputs.VERSION }}
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
@@ -70,3 +75,4 @@ jobs:
           workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          VERSION: ${{ needs.create_release_tag.outputs.VERSION }}
