@@ -22,8 +22,7 @@ jobs:
       - name: Calculate version
         run: |
           beta_tag_timestamp=$(date -u +%Y%m%d%H%M)
-          VERSION=$(v0.1.0-beta.$beta_tag_timestamp)
-          echo $VERSION
+          VERSION=$(echo "v0.1.0-beta.$beta_tag_timestamp")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Tag Release
