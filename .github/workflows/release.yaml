@@ -2,13 +2,8 @@ name: Flowpipe Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "The version to release (must be prefixed with 'v')"
-        required: true
 
 env:
-  VERSION: ${{ github.event.inputs.version }}
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
 jobs:
@@ -16,6 +11,13 @@ jobs:
     name: Tag Release
     runs-on: ubuntu-latest
     steps:
+      - name: Calculate version
+        run: |
+          beta_tag_timestamp=$(make beta-tag-timestamp)
+          VERSION=$(v0.1.0-beta.$beta_tag_timestamp)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+        shell: bash
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -28,8 +30,8 @@ jobs:
         run: |
           git config user.name "Flowpipe GitHub Actions Bot"
           git config user.email noreply@github.com
-          git tag ${{ github.event.inputs.version }}
-          git push origin ${{ github.event.inputs.version }}
+          git tag ${{ env.Version }}
+          git push origin ${{ env.Version }}
 
   build_and_release:
     name: Release
