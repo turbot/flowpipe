@@ -26,7 +26,7 @@ jobs:
           beta_tag_timestamp=$(date -u +%Y%m%d%H%M)
           VERSION=$(echo "v0.1.0-beta.$beta_tag_timestamp")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "$VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Tag Release
         run: |
