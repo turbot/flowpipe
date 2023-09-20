@@ -71,3 +71,4 @@ jobs:
           workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          VERSION: ${{ env.Version }}
