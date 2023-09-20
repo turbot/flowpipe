@@ -1,0 +1,46 @@
+# Gtihub workflow to build and push the flowpipe devcontainer image to the Github Container Registry
+# The workflow is still in development and is not ready to use yet
+
+name: Build and Release Flowpipe DevContainer
+
+on:
+  workflow_dispatch:
+
+env:
+  GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+
+jobs:
+  build_and_release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Flowpipe repository
+        uses: actions/checkout@v3
+        with:
+          path: flowpipe
+
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
+
+      - name: Checkout Terraform Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/terraform-components
+          path: terraform-components
+      
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
+      
+      - name: Build and push
+        run: |
+          ls -la
+          cd flowpipe/devcontainer
+          pwd
+          ls -la
