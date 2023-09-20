@@ -10,6 +10,8 @@ jobs:
   create_release_tag:
     name: Tag Release
     runs-on: ubuntu-latest
+    outputs:
+      VERSION: ${{ steps.calculate_version.outputs.VERSION }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -24,6 +26,7 @@ jobs:
           beta_tag_timestamp=$(date -u +%Y%m%d%H%M)
           VERSION=$(echo "v0.1.0-beta.$beta_tag_timestamp")
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "$VERSION" >> $GITHUB_OUTPUT
 
       - name: Tag Release
         run: |
@@ -34,7 +37,7 @@ jobs:
 
   build_and_release:
     name: Release
-    needs: [create_release_tag]
+    needs: create_release_tag
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Flowpipe SDK Go repository
@@ -55,7 +58,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           path: flowpipe
-          ref: ${{ env.VERSION }}
+          ref: ${{ github.env.VERSION }}
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
@@ -71,4 +74,4 @@ jobs:
           workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          VERSION: ${{ env.Version }}
+          VERSION: ${{ needs.create_release_tag.outputs.VERSION }}
