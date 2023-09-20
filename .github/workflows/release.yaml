@@ -29,8 +29,8 @@ jobs:
         run: |
           git config user.name "Flowpipe GitHub Actions Bot"
           git config user.email noreply@github.com
-          git tag ${{ env.Version }}
-          git push origin ${{ env.Version }}
+          git tag $VERSION
+          git push origin $VERSION
 
   build_and_release:
     name: Release
