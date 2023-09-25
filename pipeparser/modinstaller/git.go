@@ -112,7 +112,7 @@ func getTagVersionsFromGit(repo string, includePrerelease bool) (semver.Collecti
 			continue
 		}
 
-		if !includePrerelease && v.Metadata() != "" || v.Prerelease() != "" {
+		if (!includePrerelease && v.Metadata() != "") || (!includePrerelease && v.Prerelease() != "") {
 			continue
 		}
 		versions[idx] = v
