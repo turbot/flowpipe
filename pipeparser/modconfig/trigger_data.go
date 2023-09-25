@@ -19,8 +19,8 @@ type Trigger struct {
 	HclResourceImpl
 	ResourceWithMetadataImpl
 
-	ctx  context.Context
-	Args Input `json:"args"`
+	ctx     context.Context
+	ArgsRaw hcl.Expression `json:"-"`
 
 	Pipeline cty.Value `json:"-"`
 	RawBody  hcl.Body  `json:"-" hcl:",remain"`
@@ -61,8 +61,26 @@ func (t *Trigger) GetPipeline() cty.Value {
 	return t.Pipeline
 }
 
-func (t *Trigger) GetArgs() Input {
-	return t.Args
+func (t *Trigger) GetArgs(evalContext *hcl.EvalContext) (Input, hcl.Diagnostics) {
+
+	if t.ArgsRaw == nil {
+		return Input{}, hcl.Diagnostics{}
+	}
+
+	value, diags := t.ArgsRaw.Value(evalContext)
+
+	if diags.HasErrors() {
+		return Input{}, diags
+	}
+
+	retVal, err := hclhelpers.CtyToGoMapInterface(value)
+	if err != nil {
+		return Input{}, hcl.Diagnostics{&hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute to Go values",
+		}}
+	}
+	return retVal, diags
 }
 
 var ValidBaseTriggerAttributes = []string{
@@ -112,21 +130,22 @@ func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, eval
 
 	if attr, exists := hclAttributes[schema.AttributeTypeArgs]; exists {
 		if attr.Expr != nil {
-			expr := attr.Expr
-			vals, moreDiags := expr.Value(evalContext)
-			if moreDiags != nil {
-				diags = append(diags, moreDiags...)
-			} else {
-				goVals, err := hclhelpers.CtyToGoMapInterface(vals)
-				if err != nil {
-					diags = append(diags, &hcl.Diagnostic{
-						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute to Go values",
-						Subject:  &attr.Range,
-					})
-				}
-				t.Args = goVals
-			}
+			t.ArgsRaw = attr.Expr
+			// expr := attr.Expr
+			// vals, moreDiags := expr.Value(evalContext)
+			// if moreDiags != nil {
+			// 	diags = append(diags, moreDiags...)
+			// } else {
+			// 	goVals, err := hclhelpers.CtyToGoMapInterface(vals)
+			// 	if err != nil {
+			// 		diags = append(diags, &hcl.Diagnostic{
+			// 			Severity: hcl.DiagError,
+			// 			Summary:  "Unable to parse " + schema.AttributeTypeArgs + " Trigger attribute to Go values",
+			// 			Subject:  &attr.Range,
+			// 		})
+			// 	}
+			// 	t.Args = goVals
+			// }
 		}
 	}
 

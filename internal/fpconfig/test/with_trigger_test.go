@@ -63,8 +63,8 @@ func TestPipelineWithTrigger(t *testing.T) {
 
 	assert.NotNil(twa, "trigger_with_args trigger is nil")
 
-	assert.Equal("one", triggerWithArgs.Args["param_one"])
-	assert.Equal(2, triggerWithArgs.Args["param_two_int"])
+	// assert.Equal("one", triggerWithArgs.Args["param_one"])
+	// assert.Equal(2, triggerWithArgs.Args["param_two_int"])
 
 	queryTrigger := triggers["local.trigger.query.query_trigger"]
 	if queryTrigger == nil {
@@ -81,10 +81,34 @@ func TestPipelineWithTrigger(t *testing.T) {
 	assert.Equal("access_key_id", qt.PrimaryKey)
 	assert.Len(qt.Events, 1)
 	assert.Equal("insert", qt.Events[0])
-	assert.Equal("one", queryTrigger.Args["param_one"])
-	assert.Equal(2, queryTrigger.Args["param_two_int"])
+	// assert.Equal("one", queryTrigger.Args["param_one"])
+	// assert.Equal(2, queryTrigger.Args["param_two_int"])
 	assert.Contains(qt.Sql, "where create_date < now() - interval")
 
+	httpTriggerWithArgs := triggers["local.trigger.http.trigger_with_args"]
+	if httpTriggerWithArgs == nil {
+		assert.Fail("trigger_with_args trigger not found")
+		return
+	}
+
+	httpConfig, ok := httpTriggerWithArgs.Config.(*modconfig.TriggerHttp)
+	if !ok {
+		assert.Fail("trigger_with_args trigger is not a schedule trigger")
+		return
+	}
+
+	assert.Equal("ok", httpConfig.ResponseBody)
+	assert.Equal(2, len(httpConfig.ResponseHeaders))
+}
+
+func TestPipelineWithTriggerSelf(t *testing.T) {
+	assert := assert.New(t)
+
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	_, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/with_trigger_self.fp")
+	assert.Nil(err, "error found")
 }
 
 func TestBadTriggerConfig(t *testing.T) {

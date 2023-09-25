@@ -56,6 +56,18 @@ func (s *SchedulerService) ReloadTriggers() error {
 	validJobsNames := []string{}
 
 	for _, t := range s.Triggers {
+		var scheduleString string
+		switch config := t.Config.(type) {
+		case *modconfig.TriggerSchedule:
+			scheduleString = config.Schedule
+		case *modconfig.TriggerInterval:
+			scheduleString = config.Schedule
+		}
+
+		if scheduleString == "" {
+			continue
+		}
+
 		validJobsNames = append(validJobsNames, "id:"+t.FullName)
 
 		// Find the job in the scheduler
@@ -84,14 +96,6 @@ func (s *SchedulerService) ReloadTriggers() error {
 
 		job := jobs[0]
 		jobTags := job.Tags()
-
-		var scheduleString string
-		switch config := t.Config.(type) {
-		case *modconfig.TriggerSchedule:
-			scheduleString = config.Schedule
-		case *modconfig.TriggerInterval:
-			scheduleString = config.Schedule
-		}
 
 		if jobTags[1] != "schedule:"+scheduleString {
 			logger.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)

@@ -238,6 +238,8 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 	triggerType := block.Labels[0]
 	triggerName := block.Labels[1]
 
+	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, mod, triggerType, triggerName)
+
 	triggerSchema := GetTriggerBlockSchema(triggerType)
 	if triggerSchema == nil {
 		res.handleDecodeDiags(hcl.Diagnostics{
@@ -247,7 +249,7 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 				Subject:  &block.DefRange,
 			},
 		})
-		return nil, res
+		return triggerHcl, res
 	}
 
 	triggerOptions, _, diags := block.Body.PartialContent(triggerSchema)
@@ -256,8 +258,6 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 		res.handleDecodeDiags(diags)
 		return nil, res
 	}
-
-	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, mod, triggerType, triggerName)
 
 	if triggerHcl == nil {
 		res.handleDecodeDiags(hcl.Diagnostics{

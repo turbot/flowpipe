@@ -183,7 +183,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		pipelineCmd.Args = input.Args
 	}
 
-	if err := api.esService.Send(pipelineCmd); err != nil {
+	if err := api.EsService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}

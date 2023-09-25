@@ -2,11 +2,16 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
 	"reflect"
+	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,14 +23,24 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
+	"github.com/zclconf/go-cty/cty"
 
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/flowpipe/pipeparser/funcs"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
@@ -57,7 +72,7 @@ type APIService struct {
 	// Ctx is the context used by the API service.
 	ctx context.Context
 
-	esService *es.ESService
+	EsService *es.ESService
 
 	httpServer  *http.Server
 	httpsServer *http.Server
@@ -71,6 +86,9 @@ type APIService struct {
 	Status    string     `json:"status"`
 	StartedAt *time.Time `json:"started_at,omitempty"`
 	StoppedAt *time.Time `json:"stopped_at,omitempty"`
+
+	apiPrefixGroup *gin.RouterGroup
+	router         *gin.Engine
 }
 
 // APIServiceOption defines a type of function to configures the APIService.
@@ -81,7 +99,7 @@ func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOpti
 	// Defaults
 	api := &APIService{
 		ctx:       ctx,
-		esService: es,
+		EsService: es,
 		Status:    "initialized",
 		HTTPSHost: viper.GetString("web.https.host"),
 		HTTPSPort: fmt.Sprintf("%d", viper.GetInt("web.https.port")),
@@ -116,6 +134,221 @@ func WithHTTPSAddress(addr string) APIServiceOption {
 		}
 		return nil
 	}
+}
+
+func (api *APIService) RegisterHttpTriggers(triggers map[string]*modconfig.Trigger) error {
+
+	salt, ok := cache.GetCache().Get("salt")
+	if !ok {
+		return perr.InternalWithMessage("salt not found")
+	}
+
+	routesInfo := api.router.Routes()
+
+	currentTriggers := []string{}
+	for _, routeInfo := range routesInfo {
+		if routeInfo.Method == "POST" && strings.HasPrefix(routeInfo.Path, "/api/:api_version/hook/") {
+			parts := strings.Split(routeInfo.Path, "/")
+			triggerName := parts[len(parts)-2]
+			hashString := parts[len(parts)-1]
+			currentTriggers = append(currentTriggers, triggerName+"/"+hashString)
+		}
+	}
+
+	// validTriggers := map[string]bool{}
+	for _, t := range triggers {
+		_, ok := t.Config.(*modconfig.TriggerHttp)
+		if !ok {
+			continue
+		}
+
+		inputString := t.FullName
+		// Concatenate the input string and the salt
+		concatenated := inputString + salt.(string)
+
+		// Create a new SHA-256 hash
+		hasher := sha256.New()
+
+		// Write the concatenated string to the hasher
+		hasher.Write([]byte(concatenated))
+
+		// Get the final hash value
+		hashBytes := hasher.Sum(nil)
+
+		// Convert the hash to a hexadecimal string
+		hashString := hex.EncodeToString(hashBytes)
+		// validTriggers[t.FullName+"/"+hashString] = true
+
+		// Check if we already have this route defined
+		if slices.Contains[[]string, string](currentTriggers, t.FullName+"/"+hashString) {
+			continue
+		}
+
+		api.apiPrefixGroup.POST("/hook/"+t.FullName+"/"+hashString, api.TriggerWebhook)
+	}
+
+	// There's no way to remove routes in Gin
+	// now remove current triggers that are not in valid triggers
+	// for _, t := range currentTriggers {
+	// 	if !validTriggers[t] {
+	// 		api.router.
+	// 	}
+	// }
+
+	return nil
+}
+
+func parseURLPattern(urlPattern string) (string, string, error) {
+	regexPattern := `^/api/v\d+/hook/([a-zA-Z0-9_\-\.]+)/([a-zA-Z0-9]+)`
+	re := regexp.MustCompile(regexPattern)
+
+	if !re.MatchString(urlPattern) {
+		return "", "", perr.BadRequestWithMessage("Invalid URL pattern")
+	}
+
+	matches := re.FindStringSubmatch(urlPattern)
+
+	if len(matches) != 3 {
+		return "", "", perr.BadRequestWithMessage("Invalid URL pattern")
+	}
+
+	elements := strings.Split(matches[0], "/")
+
+	if len(elements) != 6 {
+		return "", "", perr.BadRequestWithMessage("Invalid URL pattern")
+	}
+
+	return matches[1], matches[2], nil
+}
+
+func (api *APIService) TriggerWebhook(c *gin.Context) {
+	requestURL := c.Request.URL
+
+	webhookTriggerName, webhookTriggerHash, err := parseURLPattern(requestURL.Path)
+
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	// Get the trigger from the cache
+	triggerCached, found := cache.GetCache().Get(webhookTriggerName)
+	if !found {
+		common.AbortWithError(c, perr.NotFoundWithMessage("trigger not found"))
+		return
+	}
+
+	// check if the t is a webhook t
+	t, ok := triggerCached.(*modconfig.Trigger)
+	if !ok {
+		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a trigger"))
+		return
+	}
+
+	_, ok = t.Config.(*modconfig.TriggerHttp)
+	if !ok {
+		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
+		return
+	}
+
+	salt, ok := cache.GetCache().Get("salt")
+	if !ok {
+		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+		return
+	}
+
+	inputString := webhookTriggerName
+	// Concatenate the input string and the salt
+	concatenated := inputString + salt.(string)
+
+	// Create a new SHA-256 hash
+	hasher := sha256.New()
+
+	// Write the concatenated string to the hasher
+	hasher.Write([]byte(concatenated))
+
+	// Get the final hash value
+	hashBytes := hasher.Sum(nil)
+
+	// Convert the hash to a hexadecimal string
+	hashString := hex.EncodeToString(hashBytes)
+
+	if hashString != webhookTriggerHash {
+		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
+		return
+	}
+
+	// triggerRunnerHttp := trigger.TriggerRunnerHttp{
+	// 	TriggerRunnerBase: trigger.TriggerRunnerBase{
+	// 		Ctx:       api.ctx,
+	// 		Trigger:   t,
+	// 		EsService: api.EsService,
+	// 	},
+	// }
+
+	body := ""
+	if c.Request.Body != nil {
+		bodyBytes, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		}
+		body = string(bodyBytes)
+	}
+	data := map[string]interface{}{}
+
+	data["request_body"] = body
+	// data["request_headers"] = c.Request.Header
+	data["url"] = c.Request.RequestURI
+
+	executionVariables := map[string]cty.Value{}
+
+	selfObject := map[string]cty.Value{}
+	for k, v := range data {
+		ctyVal, err := hclhelpers.ConvertInterfaceToCtyValue(v)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		}
+		selfObject[k] = ctyVal
+	}
+
+	executionVariables["self"] = cty.ObjectVal(selfObject)
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+	}
+
+	pipelineArgs, diags := t.GetArgs(evalContext)
+	if diags.HasErrors() {
+		common.AbortWithError(c, error_helpers.HclDiagsToError("trigger", diags))
+
+	}
+
+	pipeline := t.GetPipeline()
+	pipelineName := pipeline.AsValueMap()["name"].AsString()
+
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewExecutionEvent(c),
+		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Name:                pipelineName,
+	}
+
+	pipelineCmd.Args = pipelineArgs
+
+	if err := api.EsService.Send(pipelineCmd); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	response := types.RunPipelineResponse{
+		ExecutionID:           pipelineCmd.Event.ExecutionID,
+		PipelineExecutionID:   pipelineCmd.PipelineExecutionID,
+		ParentStepExecutionID: pipelineCmd.ParentStepExecutionID,
+	}
+	c.JSON(http.StatusOK, response)
+
 }
 
 // Start starts services managed by the Manager.
@@ -185,6 +418,9 @@ func (api *APIService) Start() error {
 	api.VariableRegisterAPI(apiPrefixGroup)
 	api.ProcessRegisterAPI(apiPrefixGroup)
 	api.DocsRegisterAPI(apiPrefixGroup)
+
+	api.apiPrefixGroup = apiPrefixGroup
+	api.router = router
 
 	// Custom validators for our types
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {

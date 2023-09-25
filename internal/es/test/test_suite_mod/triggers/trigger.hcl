@@ -26,3 +26,34 @@ trigger "schedule" "my_every_minute_trigger_nine" {
         param_one = "from trigger"
     }
 }
+
+
+pipeline "http_webhook_pipeline" {
+    param "event" {
+        type = string
+    }
+
+    step "echo" "simple_echo" {
+        text = "event: ${param.event}"
+    }
+
+    output "response" {
+        value = step.echo.simple_echo
+    }
+}
+
+trigger "http" "http_trigger" {
+
+    response_body = "ok"
+
+    response_headers = {
+      Content-Type = "application/json"
+      User-Agent  = "flowpipe"
+    }
+
+    pipeline = pipeline.http_webhook_pipeline
+
+    args = {
+        event = self.request_body
+    }
+}

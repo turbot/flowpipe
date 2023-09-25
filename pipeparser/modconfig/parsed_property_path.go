@@ -51,12 +51,11 @@ func ParseResourcePropertyPath(propertyPath string) (*ParsedPropertyPath, error)
 	}
 
 	// special case handling for runtime dependencies which may have use the "self" qualifier
-	// TODO: dashboard specific block
-	// if parts[0] == RuntimeDependencyDashboardScope {
-	// 	res.Scope = parts[0]
-	// 	parts = parts[1:]
-	// }
-	// TODO: end dashboard specific block
+	// const RuntimeDependencyDashboardScope = "self"
+	if parts[0] == "self" {
+		res.Scope = parts[0]
+		parts = parts[1:]
+	}
 
 	if schema.IsValidResourceItemType(parts[0]) {
 		// put empty mod as first part

@@ -191,7 +191,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 			Reason:              "because I said so",
 		}
 
-		if err := api.esService.Send(pipelineEvent); err != nil {
+		if err := api.EsService.Send(pipelineEvent); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -205,7 +205,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 			Reason:              "just because",
 		}
 
-		if err := api.esService.Send(pipelineEvent); err != nil {
+		if err := api.EsService.Send(pipelineEvent); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -217,7 +217,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 			Reason:              "just because",
 		}
 
-		if err := api.esService.Send(pipelineEvent); err != nil {
+		if err := api.EsService.Send(pipelineEvent); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

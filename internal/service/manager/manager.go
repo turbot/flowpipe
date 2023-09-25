@@ -119,6 +119,12 @@ func (m *Manager) Initialize() error {
 					logger.Error("error reloading triggers", "error", err)
 				}
 			}
+			if m.apiService != nil {
+				err := m.apiService.RegisterHttpTriggers(w.Mod.ResourceMaps.Triggers)
+				if err != nil {
+					logger.Error("error registering http triggers", "error", err)
+				}
+			}
 
 		})
 
@@ -243,6 +249,11 @@ func (m *Manager) Start() error {
 
 	// Start API
 	err = a.Start()
+	if err != nil {
+		return err
+	}
+
+	err = a.RegisterHttpTriggers(m.triggers)
 	if err != nil {
 		return err
 	}

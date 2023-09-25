@@ -12,9 +12,9 @@ import (
 )
 
 type TriggerRunnerBase struct {
-	ctx       context.Context
-	trigger   *modconfig.Trigger
-	esService *es.ESService
+	Ctx       context.Context
+	Trigger   *modconfig.Trigger
+	EsService *es.ESService
 }
 
 type ITriggerRunner interface {
@@ -25,24 +25,16 @@ func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *mod
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
-			ctx:       ctx,
-			trigger:   trigger,
-			esService: esService,
+			Ctx:       ctx,
+			Trigger:   trigger,
+			EsService: esService,
 		}
 	case *modconfig.TriggerQuery:
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
-				ctx:       ctx,
-				trigger:   trigger,
-				esService: esService,
-			},
-		}
-	case *modconfig.TriggerHttp:
-		return &TriggerRunnerHttp{
-			TriggerRunnerBase: TriggerRunnerBase{
-				ctx:       ctx,
-				trigger:   trigger,
-				esService: esService,
+				Ctx:       ctx,
+				Trigger:   trigger,
+				EsService: esService,
 			},
 		}
 	default:
@@ -51,28 +43,35 @@ func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *mod
 }
 
 func (tr *TriggerRunnerBase) Run() {
-	logger := fplog.Logger(tr.ctx)
+	logger := fplog.Logger(tr.Ctx)
 
-	pipeline := tr.trigger.GetPipeline()
+	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
-		logger.Error("Pipeline is nil, cannot run trigger", "trigger", tr.trigger.Name())
+		logger.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
 		return
 	}
 
 	pipelineDefn := pipeline.AsValueMap()
 	pipelineName := pipelineDefn["name"].AsString()
 
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(tr.ctx),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                pipelineName,
-		Args:                tr.trigger.GetArgs(),
+	piplineArgs, diags := tr.Trigger.GetArgs(nil)
+
+	if diags.HasErrors() {
+		logger.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
+		return
 	}
 
-	logger.Info("Trigger fired", "trigger", tr.trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewExecutionEvent(tr.Ctx),
+		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Name:                pipelineName,
+		Args:                piplineArgs,
+	}
 
-	if err := tr.esService.Send(pipelineCmd); err != nil {
+	logger.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+
+	if err := tr.EsService.Send(pipelineCmd); err != nil {
 		logger.Error("Error sending pipeline command", "error", err)
 		return
 	}
@@ -89,5 +88,50 @@ type TriggerRunnerHttp struct {
 	TriggerRunnerBase
 }
 
-func (tr *TriggerRunnerHttp) Run() {
+func (tr *TriggerRunnerHttp) Run(c context.Context, data map[string]interface{}) error {
+	// executionVariables := map[string]cty.Value{}
+
+	// selfObject := map[string]cty.Value{}
+	// for k, v := range data {
+	// 	ctyVal, err := hclhelpers.ConvertInterfaceToCtyValue(v)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	selfObject[k] = ctyVal
+	// }
+
+	// executionVariables["self"] = cty.ObjectVal(selfObject)
+
+	// evalContext := &hcl.EvalContext{
+	// 	Variables: executionVariables,
+	// 	Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+	// }
+
+	// pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
+	// if diags.HasErrors() {
+	// 	return error_helpers.HclDiagsToError("trigger", diags)
+	// }
+
+	// pipeline := tr.Trigger.GetPipeline()
+	// pipelineName := pipeline.AsValueMap()["name"].AsString()
+
+	// pipelineCmd := &event.PipelineQueue{
+	// 	Event:               event.NewExecutionEvent(c),
+	// 	PipelineExecutionID: util.NewPipelineExecutionID(),
+	// 	Name:                pipelineName,
+	// }
+
+	// pipelineCmd.Args = pipelineArgs
+
+	// if err := api.EsService.Send(pipelineCmd); err != nil {
+	// 	return err
+	// }
+
+	// response := types.RunPipelineResponse{
+	// 	ExecutionID:           pipelineCmd.Event.ExecutionID,
+	// 	PipelineExecutionID:   pipelineCmd.PipelineExecutionID,
+	// 	ParentStepExecutionID: pipelineCmd.ParentStepExecutionID,
+	// }
+	return nil
+
 }
