@@ -278,14 +278,6 @@ func (api *APIService) TriggerWebhook(c *gin.Context) {
 		return
 	}
 
-	// triggerRunnerHttp := trigger.TriggerRunnerHttp{
-	// 	TriggerRunnerBase: trigger.TriggerRunnerBase{
-	// 		Ctx:       api.ctx,
-	// 		Trigger:   t,
-	// 		EsService: api.EsService,
-	// 	},
-	// }
-
 	body := ""
 	if c.Request.Body != nil {
 		bodyBytes, err := io.ReadAll(c.Request.Body)
