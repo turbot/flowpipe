@@ -10,7 +10,6 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/options"
 	"github.com/turbot/flowpipe/pipeparser/schema"
-	"github.com/turbot/terraform-components/configs"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -39,7 +38,7 @@ func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
 		},
 		// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
 		PipelineName: pipelineFullName,
-		Params:       map[string]*configs.Variable{},
+		Params:       map[string]*PipelineParam{},
 		mod:          mod,
 	}
 
@@ -72,7 +71,7 @@ type Pipeline struct {
 
 	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
 	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)
-	Params map[string]*configs.Variable `json:"-"`
+	Params map[string]*PipelineParam `json:"-"`
 }
 
 func (p *Pipeline) GetMod() *Mod {
@@ -280,6 +279,12 @@ func (p *Pipeline) setBaseProperties() {
 }
 
 // end Pipeline Hclresource interface functions
+
+type PipelineParam struct {
+	Name    string
+	Default cty.Value
+	Type    cty.Type
+}
 
 type PipelineOutput struct {
 	Name            string         `json:"name"`

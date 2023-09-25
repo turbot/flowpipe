@@ -256,6 +256,7 @@ func (suite *ModTestSuite) TestPipelineWithArgs() {
 	// We pass "bar" as name here
 	assert.Equal("echo bar", pex.PipelineOutput["val"])
 	assert.Equal("echo baz foo bar", pex.PipelineOutput["val_expr"])
+	assert.Equal("echo this is the value of var_one", pex.PipelineOutput["val_from_val"])
 }
 
 func TestModTestingSuite(t *testing.T) {

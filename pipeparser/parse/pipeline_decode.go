@@ -5,12 +5,13 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/ext/typeexpr"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/terraform-components/configs"
+	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
@@ -170,6 +171,57 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext)
 	step.SetOutputConfig(stepOutput)
 
 	return step, hcl.Diagnostics{}
+}
+
+func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.PipelineParam, hcl.Diagnostics) {
+	o := &modconfig.PipelineParam{
+		Name: block.Labels[0],
+	}
+
+	paramOptions, rest, diags := block.Body.PartialContent(modconfig.PipelineParamBlockSchema)
+
+	if diags.HasErrors() {
+		return o, diags
+	}
+
+	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, paramOptions)
+	if len(diags) > 0 {
+		return nil, diags
+	}
+
+	if attr, exists := paramOptions.Attributes[schema.AttributeTypeType]; exists {
+		expr := attr.Expr
+		// First we'll deal with some shorthand forms that the HCL-level type
+		// expression parser doesn't include. These both emulate pre-0.12 behavior
+		// of allowing a list or map of any element type as long as all of the
+		// elements are consistent. This is the same as list(any) or map(any).
+		switch hcl.ExprAsKeyword(expr) {
+		case "list":
+			o.Type = cty.List(cty.DynamicPseudoType)
+		case "map":
+			o.Type = cty.Map(cty.DynamicPseudoType)
+		default:
+			ty, moreDiags := typeexpr.TypeConstraint(expr)
+			if diags.HasErrors() {
+				diags = append(diags, moreDiags...)
+				return o, diags
+			}
+
+			o.Type = ty
+		}
+	}
+
+	if attr, exists := paramOptions.Attributes[schema.AttributeTypeDefault]; exists {
+		ctyVal, moreDiags := attr.Expr.Value(parseCtx.EvalCtx)
+		if moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
+			return o, diags
+		}
+
+		o.Default = ctyVal
+	}
+
+	return o, diags
 }
 
 func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.PipelineOutput, hcl.Diagnostics) {
@@ -343,16 +395,15 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 			}
 
 		case schema.BlockTypeParam:
-			override := false
-			param, varDiags := configs.DecodeVariableBlock(block, override)
-			diags = append(diags, varDiags...)
-			if len(diags) > 0 {
+			pipelineParam, moreDiags := decodePipelineParam(block, parseCtx)
+			if len(moreDiags) > 0 {
+				diags = append(diags, moreDiags...)
 				res.handleDecodeDiags(diags)
 				return pipelineHcl, res
 			}
 
-			if param != nil {
-				pipelineHcl.Params[param.Name] = param
+			if pipelineParam != nil {
+				pipelineHcl.Params[pipelineParam.Name] = pipelineParam
 			}
 
 		default:

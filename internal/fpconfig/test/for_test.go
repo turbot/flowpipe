@@ -174,7 +174,7 @@ func TestParamsProcessing(t *testing.T) {
 	assert.NotNil(ctyOutput, "cty output not nil")
 
 	forEachCtyVals := []map[string]cty.Value{}
-	if ctyOutput.Type().IsListType() {
+	if ctyOutput.Type().IsTupleType() {
 		listVal := ctyOutput.AsValueSlice()
 		assert.Equal(3, len(listVal), "wrong number of values")
 

@@ -157,6 +157,17 @@ var PipelineOutputBlockSchema = &hcl.BodySchema{
 	},
 }
 
+var PipelineParamBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeType,
+		},
+		{
+			Name: schema.AttributeTypeDefault,
+		},
+	},
+}
+
 var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{

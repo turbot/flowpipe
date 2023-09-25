@@ -46,6 +46,9 @@ const (
 	AttributeTypeValue     = "value"
 	AttributeTypeSensitive = "sensitive"
 
+	AttributeTypeType    = "type"
+	AttributeTypeDefault = "default"
+
 	// Pipeline blocks
 	BlockTypePipelineStepHttp     = "http"
 	BlockTypePipelineStepSleep    = "sleep"

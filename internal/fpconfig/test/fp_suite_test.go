@@ -408,6 +408,16 @@ func (suite *FpTestSuite) TestModVariable() {
 	assert.Equal("var_five value is: value from two.auto.vars file", pipelineOne.Steps[10].(*modconfig.PipelineStepEcho).Text)
 	assert.Equal("var_six value is: set from env var", pipelineOne.Steps[11].(*modconfig.PipelineStepEcho).Text)
 
+	githubIssuePipeline := pipelines["test_mod.pipeline.github_issue"]
+	if githubIssuePipeline == nil {
+		assert.Fail("github_issue pipeline not found")
+		return
+	}
+
+	assert.Equal(1, len(githubIssuePipeline.Params))
+	assert.NotNil(githubIssuePipeline.Params["gh_repo"])
+	assert.Equal("hello-world", githubIssuePipeline.Params["gh_repo"].Default.AsString())
+
 }
 
 // In order for 'go test' to run this suite, we need to create

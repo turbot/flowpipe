@@ -92,6 +92,24 @@ pipeline "one" {
 }
 
 
+variable "default_gh_repo" {
+  type        = string
+  default     = "hello-world"
+}
+
+pipeline "github_issue" {
+    param "gh_repo" {
+        type    = string
+        default = var.default_gh_repo
+    }
+
+    step "http" "get_issue" {
+        url = "https://api.github.com/repos/octocat/${param.gh_repo}/issues/2743"
+    }
+}
+
+
+
 locals {
   locals_three_merge = merge(local.locals_three, {
     key_three = 33
