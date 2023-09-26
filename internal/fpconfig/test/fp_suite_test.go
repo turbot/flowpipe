@@ -418,6 +418,16 @@ func (suite *FpTestSuite) TestModVariable() {
 	assert.NotNil(githubIssuePipeline.Params["gh_repo"])
 	assert.Equal("hello-world", githubIssuePipeline.Params["gh_repo"].Default.AsString())
 
+	githubGetIssueWithNumber := pipelines["test_mod.pipeline.github_get_issue_with_number"]
+	if githubGetIssueWithNumber == nil {
+		assert.Fail("github_get_issue_with_number pipeline not found")
+		return
+	}
+
+	assert.Equal(2, len(githubGetIssueWithNumber.Params))
+	assert.Equal("cty.String", githubGetIssueWithNumber.Params["github_token"].Type.GoString())
+	assert.Equal("cty.Number", githubGetIssueWithNumber.Params["github_issue_number"].Type.GoString())
+
 }
 
 // In order for 'go test' to run this suite, we need to create

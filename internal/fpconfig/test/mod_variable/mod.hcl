@@ -109,6 +109,42 @@ pipeline "github_issue" {
 }
 
 
+pipeline "github_get_issue_with_number" {
+
+  param "github_token" {
+    type = string
+  }
+
+  param "github_issue_number" {
+    type = number
+  }
+
+  step "http" "get_issue" {
+    title  = "Get details about an issue"
+    method = "post"
+    url    = "https://api.github.com/graphql"
+    request_headers = {
+      Content-Type  = "application/json"
+      Authorization = "Bearer ${param.github_token}"
+    }
+
+    request_body = jsonencode({
+      query = <<EOM
+              query {
+                repository(owner: "octocat", name: "hello-world") {
+                  issue(number: ${param.github_issue_number}) {
+                    id
+                    number
+                    url
+                    title
+                    body
+                  }
+                }
+              }
+            EOM
+    })
+  }
+}
 
 locals {
   locals_three_merge = merge(local.locals_three, {
