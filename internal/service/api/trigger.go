@@ -61,13 +61,19 @@ func (api *APIService) listTriggers(c *gin.Context) {
 		pipelineInfo := trigger.Pipeline.AsValueMap()
 		pipelineName := pipelineInfo["name"].AsString()
 
-		fpTriggers = append(fpTriggers, types.FpTrigger{
+		fpTrigger := types.FpTrigger{
 			Name:        trigger.FullName,
 			Type:        modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
 			Description: trigger.Description,
-			// Args:        trigger.Args,
-			Pipeline: pipelineName,
-		})
+			Pipeline:    pipelineName,
+		}
+
+		if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
+			fpTrigger.Url = &tc.Url
+		}
+
+		fpTriggers = append(fpTriggers, fpTrigger)
+
 	}
 
 	// Sort the triggers by pipeline, type, name
@@ -145,18 +151,15 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	pipelineInfo := trigger.GetPipeline().AsValueMap()
 	pipelineName := pipelineInfo["name"].AsString()
 
-	pipelineTriggers, diags := trigger.GetArgs(nil)
-	if diags.HasErrors() {
-		common.AbortWithError(c, perr.InternalWithMessage("error getting trigger args"))
-		return
-	}
-
 	fpTrigger := types.FpTrigger{
 		Name:        trigger.FullName,
 		Type:        modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
 		Description: trigger.Description,
-		Args:        pipelineTriggers,
 		Pipeline:    pipelineName,
+	}
+
+	if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
+		fpTrigger.Url = &tc.Url
 	}
 
 	c.JSON(http.StatusOK, fpTrigger)

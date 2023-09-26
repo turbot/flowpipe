@@ -2,6 +2,8 @@ package manager
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 	"github.com/turbot/flowpipe/pipeparser/workspace"
 )
@@ -107,18 +110,21 @@ func (m *Manager) Initialize() error {
 
 		w.SetOnFileWatcherEventMessages(func() {
 			logger := fplog.Logger(m.ctx)
-			err := m.Reload(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+			err := m.ReloadPipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 			if err != nil {
 				logger.Error("error reloading pipelines", "error", err)
 			}
 
+			// Reload scheduled triggers
 			if m.schedulerService != nil {
 				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
-				err := m.schedulerService.ReloadTriggers()
+				err := m.schedulerService.RescheduleTriggers()
 				if err != nil {
 					logger.Error("error reloading triggers", "error", err)
 				}
 			}
+
+			// Reload HTTP (webhook) triggers
 			if m.apiService != nil {
 				err := m.apiService.RegisterHttpTriggers(w.Mod.ResourceMaps.Triggers)
 				if err != nil {
@@ -168,7 +174,7 @@ func (m *Manager) Initialize() error {
 	for _, p := range pipelines {
 		pipelineNames = append(pipelineNames, p.Name())
 
-		// TODO: how do we want to do this?
+		// TODO: how long to set the timeout?
 		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
 	}
 
@@ -178,8 +184,19 @@ func (m *Manager) Initialize() error {
 	for _, trigger := range triggers {
 		triggerNames = append(triggerNames, trigger.Name())
 
-		// TODO: how do we want to do this?
+		// if it's a webhook trigger, calculate the URL
+		_, ok := trigger.Config.(*modconfig.TriggerHttp)
+		if ok {
+			triggerUrl, err := m.CalculateTriggerUrl(trigger)
+			if err != nil {
+				return err
+			}
+			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
+		}
+
+		// TODO: how long to set the timeout?
 		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
+
 	}
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
 
@@ -192,7 +209,32 @@ func (m *Manager) Initialize() error {
 	return nil
 }
 
-func (m *Manager) Reload(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
+func (m *Manager) CalculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
+	salt, ok := cache.GetCache().Get("salt")
+	if !ok {
+		return "", perr.InternalWithMessage("salt not found")
+	}
+
+	inputString := trigger.FullName
+	// Concatenate the input string and the salt
+	concatenated := inputString + salt.(string)
+
+	// Create a new SHA-256 hash
+	hasher := sha256.New()
+
+	// Write the concatenated string to the hasher
+	hasher.Write([]byte(concatenated))
+
+	// Get the final hash value
+	hashBytes := hasher.Sum(nil)
+
+	// Convert the hash to a hexadecimal string
+	hashString := hex.EncodeToString(hashBytes)
+	return "/hook/" + trigger.FullName + "/" + hashString, nil
+
+}
+
+func (m *Manager) ReloadPipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
 	m.triggers = triggers
 
 	inMemoryCache := cache.GetCache()
@@ -211,7 +253,16 @@ func (m *Manager) Reload(pipelines map[string]*modconfig.Pipeline, triggers map[
 	for _, trigger := range triggers {
 		triggerNames = append(triggerNames, trigger.Name())
 
-		// TODO: how do we want to do this?
+		// if it's a webhook trigger, calculate the URL
+		_, ok := trigger.Config.(*modconfig.TriggerHttp)
+		if ok {
+			triggerUrl, err := m.CalculateTriggerUrl(trigger)
+			if err != nil {
+				return err
+			}
+			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
+		}
+
 		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
 	}
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
@@ -239,21 +290,21 @@ func (m *Manager) Start() error {
 	m.esService = esService
 
 	// Define the API service
-	a, err := api.NewAPIService(m.ctx, esService,
+	apiService, err := api.NewAPIService(m.ctx, esService,
 		api.WithHTTPSAddress(m.HTTPSAddress))
 
 	if err != nil {
 		return err
 	}
-	m.apiService = a
+	m.apiService = apiService
 
 	// Start API
-	err = a.Start()
+	err = apiService.Start()
 	if err != nil {
 		return err
 	}
 
-	err = a.RegisterHttpTriggers(m.triggers)
+	err = apiService.RegisterHttpTriggers(m.triggers)
 	if err != nil {
 		return err
 	}

@@ -47,7 +47,7 @@ func randomizeTimestamp(start, end float64, baseTime time.Time, interval time.Du
 	return randomTimestamp
 }
 
-func (s *SchedulerService) ReloadTriggers() error {
+func (s *SchedulerService) RescheduleTriggers() error {
 	if s.cronScheduler == nil {
 		return nil
 	}

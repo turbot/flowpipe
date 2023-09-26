@@ -138,11 +138,6 @@ func WithHTTPSAddress(addr string) APIServiceOption {
 
 func (api *APIService) RegisterHttpTriggers(triggers map[string]*modconfig.Trigger) error {
 
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		return perr.InternalWithMessage("salt not found")
-	}
-
 	routesInfo := api.router.Routes()
 
 	currentTriggers := []string{}
@@ -151,7 +146,7 @@ func (api *APIService) RegisterHttpTriggers(triggers map[string]*modconfig.Trigg
 			parts := strings.Split(routeInfo.Path, "/")
 			triggerName := parts[len(parts)-2]
 			hashString := parts[len(parts)-1]
-			currentTriggers = append(currentTriggers, triggerName+"/"+hashString)
+			currentTriggers = append(currentTriggers, "/hook/"+triggerName+"/"+hashString)
 		}
 	}
 
@@ -162,29 +157,14 @@ func (api *APIService) RegisterHttpTriggers(triggers map[string]*modconfig.Trigg
 			continue
 		}
 
-		inputString := t.FullName
-		// Concatenate the input string and the salt
-		concatenated := inputString + salt.(string)
-
-		// Create a new SHA-256 hash
-		hasher := sha256.New()
-
-		// Write the concatenated string to the hasher
-		hasher.Write([]byte(concatenated))
-
-		// Get the final hash value
-		hashBytes := hasher.Sum(nil)
-
-		// Convert the hash to a hexadecimal string
-		hashString := hex.EncodeToString(hashBytes)
-		// validTriggers[t.FullName+"/"+hashString] = true
+		triggerUrl := t.Config.(*modconfig.TriggerHttp).Url
 
 		// Check if we already have this route defined
-		if slices.Contains[[]string, string](currentTriggers, t.FullName+"/"+hashString) {
+		if slices.Contains[[]string, string](currentTriggers, triggerUrl) {
 			continue
 		}
 
-		api.apiPrefixGroup.POST("/hook/"+t.FullName+"/"+hashString, api.TriggerWebhook)
+		api.apiPrefixGroup.POST(triggerUrl, api.TriggerWebhook)
 	}
 
 	// There's no way to remove routes in Gin

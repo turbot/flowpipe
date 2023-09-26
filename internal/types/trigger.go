@@ -8,11 +8,11 @@ import (
 )
 
 type FpTrigger struct {
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"`
-	Description *string                `json:"description,omitempty"`
-	Args        map[string]interface{} `json:"args,omitempty"`
-	Pipeline    string                 `json:"pipeline"`
+	Name        string  `json:"name"`
+	Type        string  `json:"type"`
+	Description *string `json:"description,omitempty"`
+	Pipeline    string  `json:"pipeline"`
+	Url         *string `json:"url,omitempty"`
 }
 
 // This type is used by the API to return a list of triggers.
