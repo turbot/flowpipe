@@ -13,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
@@ -25,6 +26,7 @@ type ESService struct {
 	commandBus *cqrs.CommandBus
 	router     *message.Router
 
+	RootMod   *modconfig.Mod
 	Status    string     `json:"status"`
 	StartedAt *time.Time `json:"started_at,omitempty"`
 	StoppedAt *time.Time `json:"stopped_at,omitempty"`

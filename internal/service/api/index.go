@@ -42,6 +42,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
@@ -202,6 +203,9 @@ func parseURLPattern(urlPattern string) (string, string, error) {
 }
 
 func (api *APIService) TriggerWebhook(c *gin.Context) {
+
+	logger := fplog.Logger(api.ctx)
+
 	requestURL := c.Request.URL
 
 	webhookTriggerName, webhookTriggerHash, err := parseURLPattern(requestURL.Path)
@@ -285,7 +289,21 @@ func (api *APIService) TriggerWebhook(c *gin.Context) {
 		selfObject[k] = ctyVal
 	}
 
+	mod := api.EsService.RootMod
+	modFullName := t.GetMetadata().ModFullName
+
+	if modFullName != mod.FullName {
+		logger.Error("Trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.FullName)
+		return
+	}
+
+	vars := map[string]cty.Value{}
+	for _, v := range mod.ResourceMaps.Variables {
+		vars[v.GetMetadata().ResourceName] = v.Value
+	}
+
 	executionVariables["self"] = cty.ObjectVal(selfObject)
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,

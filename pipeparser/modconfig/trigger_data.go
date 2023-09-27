@@ -19,7 +19,12 @@ type Trigger struct {
 	HclResourceImpl
 	ResourceWithMetadataImpl
 
-	ctx     context.Context
+	ctx context.Context
+
+	// 27/09/23 - Args is introduces combination of both parse time and runtime arguments. "var" should be resolved
+	// at parse time, the vars all should be supplied when we start the system. However, args can also contain
+	// runtime variable, i.e. self.request_body, self.rows
+	//
 	ArgsRaw hcl.Expression `json:"-"`
 
 	Pipeline cty.Value `json:"-"`

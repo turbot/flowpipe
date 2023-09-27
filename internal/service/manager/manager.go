@@ -27,6 +27,7 @@ import (
 type Manager struct {
 	ctx context.Context
 
+	RootMod          *modconfig.Mod
 	apiService       *api.APIService
 	esService        *es.ESService
 	schedulerService *scheduler.SchedulerService
@@ -99,6 +100,7 @@ func (m *Manager) Initialize() error {
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
 	var modInfo *modconfig.Mod
+
 	if pipeparser.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
@@ -206,6 +208,8 @@ func (m *Manager) Initialize() error {
 		inMemoryCache.SetWithTTL("#rootmod.name", "local", 24*7*52*99*time.Hour)
 	}
 
+	m.RootMod = modInfo
+
 	return nil
 }
 
@@ -286,6 +290,7 @@ func (m *Manager) Start() error {
 	}
 	esService.Status = "running"
 	esService.StartedAt = utils.TimeNow()
+	esService.RootMod = m.RootMod
 
 	m.esService = esService
 

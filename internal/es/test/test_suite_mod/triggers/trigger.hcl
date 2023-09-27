@@ -27,6 +27,14 @@ trigger "schedule" "my_every_minute_trigger_nine" {
     }
 }
 
+trigger "schedule" "my_every_minute_with_var" {
+    schedule = "* * * * *"
+    pipeline = pipeline.simple_with_trigger
+    args = {
+        param_one = var.var_two
+    }
+}
+
 
 pipeline "http_webhook_pipeline" {
     param "event" {
@@ -42,18 +50,18 @@ pipeline "http_webhook_pipeline" {
     }
 }
 
-trigger "http" "http_trigger" {
+// trigger "http" "http_trigger" {
 
-    response_body = "ok"
+//     response_body = "ok"
 
-    response_headers = {
-      Content-Type = "application/json"
-      User-Agent  = "flowpipe"
-    }
+//     response_headers = {
+//       Content-Type = "application/json"
+//       User-Agent  = "flowpipe"
+//     }
 
-    pipeline = pipeline.http_webhook_pipeline
+//     pipeline = pipeline.http_webhook_pipeline
 
-    args = {
-        event = self.request_body
-    }
-}
+//     args = {
+//         event = self.request_body
+//     }
+// }

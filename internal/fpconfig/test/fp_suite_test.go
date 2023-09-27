@@ -429,6 +429,22 @@ func (suite *FpTestSuite) TestModVariable() {
 	assert.Equal("cty.String", githubGetIssueWithNumber.Params["github_token"].Type.GoString())
 	assert.Equal("cty.Number", githubGetIssueWithNumber.Params["github_issue_number"].Type.GoString())
 
+	triggers := mod.ResourceMaps.Triggers
+
+	if len(triggers) == 0 {
+		assert.Fail("triggers not loaded")
+		return
+	}
+
+	reportTrigger := triggers["test_mod.trigger.schedule.report_triggers"]
+	if reportTrigger == nil {
+		assert.Fail("report_triggers not found")
+		return
+	}
+
+	_, ok := reportTrigger.Config.(*modconfig.TriggerSchedule)
+	assert.True(ok, "report_triggers is not of type TriggerSchedule")
+
 }
 
 // In order for 'go test' to run this suite, we need to create
