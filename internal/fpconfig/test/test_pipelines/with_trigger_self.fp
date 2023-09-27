@@ -7,14 +7,6 @@ pipeline "simple_with_trigger" {
 }
 
 trigger "http" "http_trigger_with_self" {
-
-    response_body = "ok"
-
-    response_headers = {
-      Content-Type = "application/json"
-      User-Agent  = "flowpipe"
-    }
-
     pipeline = pipeline.simple_with_trigger
 
     args = {

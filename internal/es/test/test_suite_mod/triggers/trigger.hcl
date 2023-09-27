@@ -45,23 +45,20 @@ pipeline "http_webhook_pipeline" {
         text = "event: ${param.event}"
     }
 
-    output "response" {
+    output "output_from_request_body" {
         value = step.echo.simple_echo
+    }
+
+    output "hardcoded_output" {
+        value = "foo"
     }
 }
 
-// trigger "http" "http_trigger" {
+trigger "http" "http_trigger" {
 
-//     response_body = "ok"
+    pipeline = pipeline.http_webhook_pipeline
 
-//     response_headers = {
-//       Content-Type = "application/json"
-//       User-Agent  = "flowpipe"
-//     }
-
-//     pipeline = pipeline.http_webhook_pipeline
-
-//     args = {
-//         event = self.request_body
-//     }
-// }
+    args = {
+        event = self.request_body
+    }
+}

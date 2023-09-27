@@ -101,12 +101,6 @@ var TriggerHttpBlockSchema = &hcl.BodySchema{
 		{
 			Name: schema.AttributeTypeArgs,
 		},
-		{
-			Name: schema.AttributeTypeResponseBody,
-		},
-		{
-			Name: schema.AttributeTypeResponseHeaders,
-		},
 	},
 }
 

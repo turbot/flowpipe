@@ -91,14 +91,12 @@ func TestPipelineWithTrigger(t *testing.T) {
 		return
 	}
 
-	httpConfig, ok := httpTriggerWithArgs.Config.(*modconfig.TriggerHttp)
+	_, ok = httpTriggerWithArgs.Config.(*modconfig.TriggerHttp)
 	if !ok {
 		assert.Fail("trigger_with_args trigger is not a schedule trigger")
 		return
 	}
 
-	assert.Equal("ok", httpConfig.ResponseBody)
-	assert.Equal(2, len(httpConfig.ResponseHeaders))
 }
 
 func TestPipelineWithTriggerSelf(t *testing.T) {

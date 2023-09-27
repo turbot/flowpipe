@@ -27,3 +27,12 @@ type ProcessRequestURI struct {
 	// ProcessId string `uri:"process_id" binding:"required" format:"^(pexec|exec)_[0-9a-v]{20}$"`
 	ProcessId string `uri:"process_id" binding:"required" format:"^exec_[0-9a-v]{20}$"`
 }
+
+type WebhookRequestUri struct {
+	Trigger string `json:"trigger" uri:"trigger" binding:"required"`
+	Hash    string `json:"hash" uri:"hash" binding:"required"`
+}
+
+type WebhookRequestQuery struct {
+	ExecutionMode *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
+}

@@ -2,10 +2,9 @@ package manager
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
@@ -125,15 +125,6 @@ func (m *Manager) Initialize() error {
 					logger.Error("error reloading triggers", "error", err)
 				}
 			}
-
-			// Reload HTTP (webhook) triggers
-			if m.apiService != nil {
-				err := m.apiService.RegisterHttpTriggers(w.Mod.ResourceMaps.Triggers)
-				if err != nil {
-					logger.Error("error registering http triggers", "error", err)
-				}
-			}
-
 		})
 
 		if err != nil {
@@ -181,6 +172,7 @@ func (m *Manager) Initialize() error {
 	}
 
 	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+	runMode := os.Getenv("RUN_MODE")
 
 	var triggerNames []string
 	for _, trigger := range triggers {
@@ -189,11 +181,13 @@ func (m *Manager) Initialize() error {
 		// if it's a webhook trigger, calculate the URL
 		_, ok := trigger.Config.(*modconfig.TriggerHttp)
 		if ok {
-			triggerUrl, err := m.CalculateTriggerUrl(trigger)
-			if err != nil {
-				return err
+			if !strings.HasPrefix(runMode, "TEST") {
+				triggerUrl, err := m.CalculateTriggerUrl(trigger)
+				if err != nil {
+					return err
+				}
+				trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
 			}
-			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
 		}
 
 		// TODO: how long to set the timeout?
@@ -219,23 +213,9 @@ func (m *Manager) CalculateTriggerUrl(trigger *modconfig.Trigger) (string, error
 		return "", perr.InternalWithMessage("salt not found")
 	}
 
-	inputString := trigger.FullName
-	// Concatenate the input string and the salt
-	concatenated := inputString + salt.(string)
+	hashString := util.CalculateHash(trigger.FullName, salt.(string))
 
-	// Create a new SHA-256 hash
-	hasher := sha256.New()
-
-	// Write the concatenated string to the hasher
-	hasher.Write([]byte(concatenated))
-
-	// Get the final hash value
-	hashBytes := hasher.Sum(nil)
-
-	// Convert the hash to a hexadecimal string
-	hashString := hex.EncodeToString(hashBytes)
 	return "/hook/" + trigger.FullName + "/" + hashString, nil
-
 }
 
 func (m *Manager) ReloadPipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
@@ -305,11 +285,6 @@ func (m *Manager) Start() error {
 
 	// Start API
 	err = apiService.Start()
-	if err != nil {
-		return err
-	}
-
-	err = apiService.RegisterHttpTriggers(m.triggers)
 	if err != nil {
 		return err
 	}
