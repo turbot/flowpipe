@@ -29,6 +29,14 @@
             "args": ["pipeline", "list"]
         },
         {
+            "name": "cmd pipeline run",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "main.go",
+            "args": ["pipeline", "run", "github_issue_number", "--pipeline-arg", "github_token='asdf'", "--pipeline-arg", "github_issue_number=2721"]
+        },
+        {
             "name": "cmd mod init",
             "type": "go",
             "request": "launch",

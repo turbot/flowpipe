@@ -141,7 +141,7 @@ func loadModDependencies(parent *modconfig.Mod, parseCtx *parse.ModParseContext)
 				return err
 			}
 			if lockedVersion == nil {
-				return perr.BadRequestWithTypeAndMessage(perr.ErrorCodeDependencyFailure, "not all dependencies are installed - run 'steampipe mod install'")
+				return perr.BadRequestWithTypeAndMessage(perr.ErrorCodeDependencyFailure, "not all dependencies are installed - run '"+constants.PipesComponentAppName+" mod install'")
 			}
 			if err := loadModDependency(lockedVersion, parseCtx); err != nil {
 				errors = append(errors, err)

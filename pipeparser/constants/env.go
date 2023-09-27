@@ -2,6 +2,7 @@ package constants
 
 // Environment Variables
 const (
+	AppName            = "steampipe"
 	EnvUpdateCheck     = "STEAMPIPE_UPDATE_CHECK"
 	EnvInstallDir      = "STEAMPIPE_INSTALL_DIR"
 	EnvInstallDatabase = "STEAMPIPE_INITDB_DATABASE_NAME"
@@ -40,3 +41,4 @@ const (
 )
 
 var PipesComponentEnvInputVarPrefix = EnvInputVarPrefix
+var PipesComponentAppName = AppName

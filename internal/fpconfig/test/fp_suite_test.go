@@ -77,6 +77,7 @@ func (suite *FpTestSuite) SetupSuite() {
 	constants.PipesComponentVariablesExtension = ".pvars"
 	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
 	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
+	constants.PipesComponentAppName = "flowpipe"
 
 	suite.SetupSuiteRunCount++
 }

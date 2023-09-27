@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
@@ -342,5 +343,5 @@ func (l *WorkspaceLock) FindInstalledDependency(modDependency *ResolvedVersionCo
 		return dependencyFilepath, nil
 	}
 
-	return "", fmt.Errorf("dependency mod '%s' is not installed - run 'steampipe mod install'", modDependency.DependencyPath())
+	return "", fmt.Errorf("dependency mod '%s' is not installed - run '"+constants.PipesComponentAppName+" mod install'", modDependency.DependencyPath())
 }
