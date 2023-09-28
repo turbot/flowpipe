@@ -114,7 +114,7 @@ func loadModDefinition(modPath string, modFile string, parseCtx *parse.ModParseC
 	} else {
 		// so there is no mod file - should we create a default?
 		if !parseCtx.ShouldCreateDefaultMod() {
-			errorsAndWarnings.Error = perr.BadRequestWithMessage("mod folder does not contain a mod resource definition: " + modPath)
+			errorsAndWarnings.Error = perr.BadRequestWithMessage(fmt.Sprintf("mod folder does not contain a mod resource definition '%s'", modPath))
 			// ShouldCreateDefaultMod flag NOT set - fail
 			return nil, errorsAndWarnings
 		}

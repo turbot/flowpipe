@@ -154,7 +154,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	}
 	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
 
-	pipeline, err := db.GetPipeline(pipelineName)
+	pipelineDefn, err := db.GetPipeline(pipelineName)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -173,10 +173,22 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		return
 	}
 
+	errors := pipelineDefn.ValidatePipelineParam(input.Args)
+	if len(errors) > 0 {
+
+		// merge all errors into one
+		var errStrs []string
+		for _, err := range errors {
+			errStrs = append(errStrs, err.Error())
+		}
+		common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+		return
+	}
+
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(c),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                pipeline.Name(),
+		Name:                pipelineDefn.Name(),
 	}
 
 	if input.Args != nil {

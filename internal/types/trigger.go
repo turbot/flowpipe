@@ -48,7 +48,7 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 	lp, ok := p.Items.([]flowpipeapiclient.FpTrigger)
 
 	if !ok {
-		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.FpTrigger")
+		return Table{}, perr.BadRequestWithMessage("unable to cast to []flowpipeapiclient.FpTrigger")
 	}
 
 	var tableRows []TableRow

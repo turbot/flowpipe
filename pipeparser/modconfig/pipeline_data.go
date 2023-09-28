@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/options"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -72,6 +73,41 @@ type Pipeline struct {
 	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
 	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)
 	Params map[string]*PipelineParam `json:"-"`
+}
+
+func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error {
+
+	errors := []error{}
+	for k, v := range params {
+		param, ok := p.Params[k]
+		if !ok {
+			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("unknown parameter specified '%s'", k)))
+			continue
+		}
+
+		if !hclhelpers.GoTypeMatchesCtyType(v, param.Type) {
+			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("invalid type for parameter '%s'", k)))
+		}
+	}
+
+	return errors
+}
+
+func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]interface{}, []error) {
+	errors := []error{}
+	for k, v := range params {
+		param, ok := p.Params[k]
+		if !ok {
+			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("unknown parameter specified '%s'", k)))
+			continue
+		}
+
+		if !hclhelpers.GoTypeMatchesCtyType(v, param.Type) {
+			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("invalid type for parameter '%s'", k)))
+		}
+	}
+
+	return nil, errors
 }
 
 func (p *Pipeline) GetMod() *Mod {
@@ -194,8 +230,8 @@ func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 				ph.Steps = append(ph.Steps, &step)
 			default:
 				// Handle unrecognized step types or return an error
-				// return fperr.BadRequestWithMessage("Unrecognized step type: " + stepType.StepType)
-				return fmt.Errorf("unrecognized step type: %s", stepType.StepType)
+				return perr.BadRequestWithMessage(fmt.Sprintf("unrecognized step type '%s'", stepType.StepType))
+
 			}
 		}
 	}

@@ -1544,7 +1544,7 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var sql *string
 	if p.UnresolvedAttributes[schema.AttributeTypeSql] == nil {
 		if p.Sql == nil {
-			return nil, perr.BadRequestWithMessage("Url must be supplied")
+			return nil, perr.BadRequestWithMessage("url must be supplied")
 		}
 		sql = p.Sql
 	} else {
@@ -1643,7 +1643,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 				if err2 != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
-						Summary:  "Unable to parse " + schema.AttributeTypeArgs + " attribute to Go values",
+						Summary:  "Unable to parse '" + schema.AttributeTypeArgs + "' attribute to Go values",
 						Subject:  &attr.Range,
 					})
 					continue
@@ -1655,7 +1655,7 @@ func (p *PipelineStepQuery) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
 					Severity: hcl.DiagError,
-					Summary:  "Unsupported attribute for Echo Step: " + attr.Name,
+					Summary:  "Unsupported attribute for Echo Step '" + attr.Name + "'",
 					Subject:  &attr.Range,
 				})
 			}

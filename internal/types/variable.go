@@ -39,7 +39,7 @@ func (p PrintableVariable) GetTable() (Table, error) {
 	// lp, ok := p.Items.([]flowpipeapiclient.Variable)
 
 	// if !ok {
-	// 	return Table{}, fperr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Variable")
+	// 	return Table{}, fperr.BadRequestWithMessage("unable to cast to []flowpipeapiclient.Variable")
 	// }
 
 	// var tableRows []TableRow

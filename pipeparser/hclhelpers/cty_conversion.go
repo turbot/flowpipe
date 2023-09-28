@@ -7,10 +7,177 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 	"github.com/zclconf/go-cty/cty/json"
 )
+
+func isNumeric(i interface{}) bool {
+	switch i.(type) {
+	case int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64,
+		float32, float64, complex64, complex128:
+		return true
+	default:
+		return false
+	}
+}
+
+func isSliceOfNumeric(slice interface{}) bool {
+	value := reflect.ValueOf(slice)
+
+	if value.Kind() != reflect.Slice {
+		return false
+	}
+
+	if value.Len() == 0 {
+		// An empty slice is not considered a slice of numeric values.
+		return false
+	}
+
+	for i := 0; i < value.Len(); i++ {
+		element := value.Index(i).Interface()
+		if !isNumeric(element) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func isSliceOfStrings(i interface{}) bool {
+	// Check if it's a slice.
+	if slice, ok := i.([]interface{}); ok {
+		// Iterate over the elements of the slice.
+		for _, v := range slice {
+			// Check if the element is a string or an interface{} that contains a string.
+			if _, isString := v.(string); !isString {
+				// If any element is not a string, return false.
+				return false
+			}
+		}
+		// All elements are either strings or interface{} containing strings, return true.
+		return true
+	} else if _, ok := i.([]string); ok {
+		// It's a []string, so return true.
+		return true
+	}
+	// It's not a slice of strings or interfaces, return false.
+	return false
+}
+
+func isStringMap(i interface{}) bool {
+	// Check if the input is an interface
+	if m, ok := i.(map[string]interface{}); ok {
+		// Iterate over the map and check if all values are strings
+		for _, v := range m {
+			if _, isString := v.(string); !isString {
+				return false
+			}
+		}
+		return true
+	} else if _, ok := i.(map[string]string); ok {
+		// It's a []string, so return true.
+		return true
+	}
+	return false
+}
+
+func isNumericMap(i interface{}) bool {
+	// Check if the input is actually a map
+	val := reflect.ValueOf(i)
+	if val.Kind() != reflect.Map {
+		return false
+	}
+
+	// Iterate over the map and check the type of each value
+	for _, key := range val.MapKeys() {
+		value := val.MapIndex(key)
+		if value.Kind() != reflect.Int && value.Kind() != reflect.Int8 && value.Kind() != reflect.Int16 && value.Kind() != reflect.Int32 && value.Kind() != reflect.Int64 &&
+			value.Kind() != reflect.Uint && value.Kind() != reflect.Uint8 && value.Kind() != reflect.Uint16 && value.Kind() != reflect.Uint32 && value.Kind() != reflect.Uint64 &&
+			value.Kind() != reflect.Float32 && value.Kind() != reflect.Float64 &&
+			value.Kind() != reflect.Complex64 && value.Kind() != reflect.Complex128 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func GoTypeMatchesCtyType(val interface{}, ctyType cty.Type) bool {
+	if helpers.IsNil(val) {
+		return false
+	}
+
+	if ctyType == cty.String {
+		return reflect.TypeOf(val).Kind() == reflect.String
+	}
+
+	if ctyType == cty.Number {
+		return isNumeric(val)
+	}
+
+	if ctyType == cty.Bool {
+		return reflect.TypeOf(val).Kind() == reflect.Bool
+	}
+
+	if ctyType == cty.List(cty.String) {
+		return isSliceOfStrings(val)
+	}
+
+	if ctyType == cty.List(cty.Number) {
+		return isSliceOfNumeric(val)
+	}
+
+	if ctyType.IsListType() || ctyType.IsTupleType() {
+		_, ok := val.([]interface{})
+		return ok
+	}
+
+	if ctyType == cty.Map(cty.String) {
+		return isStringMap(val)
+	}
+
+	if ctyType == cty.Map(cty.Number) {
+		return isNumericMap(val)
+	}
+
+	if ctyType.IsMapType() || ctyType.IsObjectType() {
+		return reflect.ValueOf(val).Kind() == reflect.Map
+	}
+
+	return false
+}
+
+// func StringToGoTypeBasedOnCtyType(val string, ctyType cty.Type) (interface{}, error) {
+
+// 	if ctyType == cty.String {
+// 		return val, nil
+// 	}
+
+// 	if ctyType == cty.Number {
+// 		return helpers.ParseInt(val)
+// 	}
+
+// 	if ctyType == cty.Bool {
+// 		return helpers.ParseBool(val)
+// 	}
+
+// 	if ctyType == cty.List(cty.String) {
+// 		return helpers.ParseStringSlice(val)
+// 	}
+
+// 	if ctyType == cty.List(cty.Number) {
+// 		return helpers.ParseIntSlice(val)
+// 	}
+
+// 	if ctyType.IsListType() || ctyType.IsTupleType() {
+// 		return helpers.ParseStringSlice(val)
+// 	}
+
+// 	return nil, fmt.Errorf("unsupported type %s", ctyType.FriendlyName())
+// }
 
 // CtyToJSON converts a cty value to it;s JSON representation
 func CtyToJSON(val cty.Value) (string, error) {

@@ -38,16 +38,16 @@ func ParseResourceName(fullName string) (res *ParsedResourceName, err error) {
 		// this only applies for Triggers (as of 2023/09/13)
 		// mod_name.trigger.schedule.trigger__name
 		if parts[1] != "trigger" {
-			err = perr.BadRequestWithMessage("invalid name passed to ParseResourceName: " + fullName)
+			err = perr.BadRequestWithMessage(fmt.Sprintf("invalid name passed to ParseResourceName '%s' ", fullName))
 		}
 		res.Mod = parts[0]
 		res.ItemType = parts[1]
 		res.Name = parts[2] + "." + parts[3]
 	default:
-		err = perr.BadRequestWithMessage("invalid name passed to ParseResourceName: " + fullName)
+		err = perr.BadRequestWithMessage(fmt.Sprintf("invalid name passed to ParseResourceName '%s'", fullName))
 	}
 	if !schema.IsValidResourceItemType(res.ItemType) {
-		err = perr.BadRequestWithMessage("not a valid resource type passed to ParseResourceName: " + fullName + " (" + res.ItemType + ")")
+		err = perr.BadRequestWithMessage("not a valid resource type passed to ParseResourceName '" + fullName + "' (" + res.ItemType + ")")
 	}
 	return
 }

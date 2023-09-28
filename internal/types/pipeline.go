@@ -38,14 +38,14 @@ func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (int
 
 	apiResourceType := r.GetResourceType()
 	if apiResourceType != "ListPipelineResponse" {
-		// return nil, fperr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
-		return nil, fmt.Errorf("invalid resource type: %s", apiResourceType)
+
+		return nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid resource type: %s", apiResourceType))
 	}
 
 	lp, ok := r.(*flowpipeapiclient.ListPipelineResponse)
 	if !ok {
-		// return nil, fperr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListPipelineResponse")
-		return nil, fmt.Errorf("unable to cast to flowpipeapiclient.ListPipelineResponse")
+
+		return nil, perr.BadRequestWithMessage("unable to cast to flowpipeapiclient.ListPipelineResponse")
 	}
 
 	return lp.Items, nil
