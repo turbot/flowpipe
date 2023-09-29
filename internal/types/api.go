@@ -36,3 +36,7 @@ type WebhookRequestUri struct {
 type WebhookRequestQuery struct {
 	ExecutionMode *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
 }
+
+type PipelineRequestQuery struct {
+	ExecutionMode *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
+}

@@ -39,4 +39,8 @@ pipeline "github_get_issue" {
             EOM
     })
   }
+
+  output "issue" {
+    value = step.http.get_issue.response_body
+  }
 }

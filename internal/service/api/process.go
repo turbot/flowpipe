@@ -71,7 +71,7 @@ func (api *APIService) listProcess(c *gin.Context) {
 // / ...
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} execution.Execution
+// @Success 200 {object} types.Process
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -102,10 +102,13 @@ func (api *APIService) getProcess(c *gin.Context) {
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
-
 	}
 
-	c.JSON(http.StatusOK, ex)
+	process := types.Process{
+		ID: ex.ID,
+	}
+
+	c.JSON(http.StatusOK, process)
 }
 
 // TODO: temp API for All Hands demo
@@ -118,7 +121,7 @@ func (api *APIService) getProcess(c *gin.Context) {
 // / ...
 // @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} modconfig.OutputData
+// @Success 200 {object} types.ProcessOutputData
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -157,7 +160,10 @@ func (api *APIService) getProcessOutput(c *gin.Context) {
 		return
 	}
 
-	pipelineOutput := output["output"]
+	pipelineOutput := types.ProcessOutputData{
+		ID:     evt.ExecutionID,
+		Output: output,
+	}
 
 	c.JSON(http.StatusOK, pipelineOutput)
 }

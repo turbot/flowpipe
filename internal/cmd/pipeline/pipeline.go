@@ -68,7 +68,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 	return func(cmd *cobra.Command, args []string) {
 		logger := fplog.Logger(ctx)
 
-		pipelineArgs := map[string]interface{}{}
+		pipelineArgs := map[string]string{}
 		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.CmdOptionsPipelineArg)
 		if err != nil {
 			logger.Error("Error getting the value of pipeline-arg flag", "error", err)
@@ -88,7 +88,10 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		}
 
 		apiClient := common.GetApiClient()
-		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*flowpipeapiclient.NewCmdPipeline("run", pipelineArgs))
+		cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
+		cmdPipelineRun.ArgsString = &pipelineArgs
+
+		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
 
 		resp, _, err := request.Execute()
 		if err != nil {

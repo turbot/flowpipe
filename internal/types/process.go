@@ -9,6 +9,11 @@ type Process struct {
 	ID string `json:"process_id"`
 }
 
+type ProcessOutputData struct {
+	ID     string                 `json:"process_id"`
+	Output map[string]interface{} `json:"output"`
+}
+
 type PrintableProcess struct {
 	Items interface{}
 }

@@ -91,7 +91,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
-// @Success 200 {object} modconfig.Pipeline
+// @Success 200 {object} types.FpPipeline
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -137,6 +137,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // @Param request body types.CmdPipeline true "Pipeline command."
+// @Param execution_mode query string false "synchronous vs asynchronous"
 // ...
 // @Success 200 {object} types.RunPipelineResponse
 // @Failure 400 {object} perr.ErrorModel
@@ -166,6 +167,17 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	if err := c.ShouldBindJSON(&input); err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+
+	pipelineQuery := types.PipelineRequestQuery{}
+	if err := c.ShouldBindQuery(&pipelineQuery); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	executionMode := "asynchronous"
+	if pipelineQuery.ExecutionMode != nil {
+		executionMode = *pipelineQuery.ExecutionMode
 	}
 
 	// Execute the command
@@ -206,6 +218,11 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 
 	if err := api.EsService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
+		return
+	}
+
+	if executionMode == "synchronous" {
+		api.waitForPipeline(c, pipelineCmd)
 		return
 	}
 
