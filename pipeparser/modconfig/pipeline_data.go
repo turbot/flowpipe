@@ -70,8 +70,6 @@ type Pipeline struct {
 
 	OutputConfig []PipelineOutput `json:"outputs,omitempty"`
 
-	// TODO: we reduce the attributes returned by pipeline list for now, we need to decide how we want to return the data to the client
-	// TODO: how do we represent the variables? They don't show up because they are stored as non serializable types for now (see UnresolvedVariables in Step)
 	Params map[string]*PipelineParam `json:"-"`
 }
 
@@ -93,8 +91,13 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 	return errors
 }
 
+// This is inefficient because we are coercing the value from string -> Go using Cty (because that's how the pipeline is defined)
+// and again we convert from Go -> Cty when we're executing the pipeline to build EvalContext when we're evaluating
+// data are not resolved during parse time.
 func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]interface{}, []error) {
 	errors := []error{}
+	res := map[string]interface{}{}
+
 	for k, v := range params {
 		param, ok := p.Params[k]
 		if !ok {
@@ -102,12 +105,15 @@ func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]in
 			continue
 		}
 
-		if !hclhelpers.GoTypeMatchesCtyType(v, param.Type) {
-			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("invalid type for parameter '%s'", k)))
+		val, moreErr := hclhelpers.CoerceStringToGoBasedOnCtyType(v, param.Type)
+		if moreErr != nil {
+			errors = append(errors, moreErr)
+			continue
 		}
+		res[k] = val
 	}
 
-	return nil, errors
+	return res, errors
 }
 
 func (p *Pipeline) GetMod() *Mod {

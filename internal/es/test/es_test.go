@@ -719,6 +719,38 @@ func (suite *EsTestSuite) TestParamOverride() {
 	assert.Equal("bar", echoStepsOutput["simple"].(*modconfig.Output).Data["text"])
 }
 
+// func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
+// 	assert := assert.New(suite.T())
+
+// 	pipelineInput := &modconfig.Input{
+// 		"simple": cty.StringVal("bar"),
+// 	}
+
+// 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "param_override_test", 100*time.Millisecond, pipelineInput)
+
+// 	if err != nil {
+// 		assert.Fail("Error creating execution", err)
+// 		return
+// 	}
+
+// 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+// 	if err != nil {
+// 		assert.Fail("Error getting pipeline execution", err)
+// 		return
+// 	}
+
+// 	assert.Equal("finished", pex.Status)
+
+// 	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
+// 	if echoStepsOutput == nil {
+// 		assert.Fail("echo step output not found")
+// 		return
+// 	}
+
+// 	assert.Equal("finished", echoStepsOutput["simple"].(*modconfig.Output).Status)
+// 	assert.Equal("bar", echoStepsOutput["simple"].(*modconfig.Output).Data["text"])
+// }
+
 func (suite *EsTestSuite) TestChildPipeline() {
 	assert := assert.New(suite.T())
 

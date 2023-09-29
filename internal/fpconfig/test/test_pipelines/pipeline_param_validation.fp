@@ -20,6 +20,10 @@ pipeline "validate_my_param" {
         type = list(string)
     }
 
+    param "list_bool" {
+        type = list(bool)
+    }
+
     param "list_number" {
         type = list(number)
     }
@@ -52,10 +56,13 @@ pipeline "validate_my_param" {
         type = map(number)
     }
 
+    param "map_of_bool" {
+        type = map(bool)
+    }
+
     param "map_of_number_two" {
         type = map(number)
     }
-
 
     param "map_of_any" {
         type = map

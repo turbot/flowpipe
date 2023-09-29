@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
@@ -173,15 +174,8 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		return
 	}
 
-	errors := pipelineDefn.ValidatePipelineParam(input.Args)
-	if len(errors) > 0 {
-
-		// merge all errors into one
-		var errStrs []string
-		for _, err := range errors {
-			errStrs = append(errStrs, err.Error())
-		}
-		common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+	if len(input.Args) > 0 && len(input.ArgsString) > 0 {
+		common.AbortWithError(c, perr.BadRequestWithMessage("args and args_string are mutually exclusive"))
 		return
 	}
 
@@ -191,8 +185,23 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		Name:                pipelineDefn.Name(),
 	}
 
-	if input.Args != nil {
+	if len(input.Args) > 0 {
+		errs := pipelineDefn.ValidatePipelineParam(input.Args)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+			return
+		}
 		pipelineCmd.Args = input.Args
+
+	} else if len(input.ArgsString) > 0 {
+		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+			return
+		}
+		pipelineCmd.Args = args
 	}
 
 	if err := api.EsService.Send(pipelineCmd); err != nil {

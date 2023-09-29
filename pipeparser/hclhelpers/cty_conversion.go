@@ -3,9 +3,12 @@ package hclhelpers
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/zclconf/go-cty/cty"
@@ -150,34 +153,110 @@ func GoTypeMatchesCtyType(val interface{}, ctyType cty.Type) bool {
 	return false
 }
 
-// func StringToGoTypeBasedOnCtyType(val string, ctyType cty.Type) (interface{}, error) {
+func CoerceStringToGoBasedOnCtyType(input string, typ cty.Type) (interface{}, error) {
+	// Check if the provided type is one of the supported types
+	if typ == cty.String {
+		return input, nil
+	}
 
-// 	if ctyType == cty.String {
-// 		return val, nil
-// 	}
+	if typ == cty.Number {
+		// Attempt to convert the input string to an integer
+		intValue, err := strconv.Atoi(input)
+		if err != nil {
+			floatValue, err := strconv.ParseFloat(input, 64)
+			if err != nil {
+				return nil, perr.BadRequestWithMessage(fmt.Sprintf("unable to convert '%s' to a number", input))
+			}
+			return floatValue, nil
+		}
+		return intValue, err
+	}
 
-// 	if ctyType == cty.Number {
-// 		return helpers.ParseInt(val)
-// 	}
+	if typ == cty.Bool {
+		// Attempt to convert the input string to a boolean
+		boolValue, err := strconv.ParseBool(input)
+		if err != nil {
+			return nil, perr.BadRequestWithMessage(fmt.Sprintf("unable to convert '%s' to a boolean", input))
+		}
+		return boolValue, nil
+	}
 
-// 	if ctyType == cty.Bool {
-// 		return helpers.ParseBool(val)
-// 	}
+	fakeFilename := fmt.Sprintf("<value for var.%s>", input)
+	expr, diags := hclsyntax.ParseExpression([]byte(input), fakeFilename, hcl.Pos{Line: 1, Column: 1})
+	if diags.HasErrors() {
+		return nil, error_helpers.HclDiagsToError("flowpipe", diags)
+	}
 
-// 	if ctyType == cty.List(cty.String) {
-// 		return helpers.ParseStringSlice(val)
-// 	}
+	val, valDiags := expr.Value(nil)
+	diags = append(diags, valDiags...)
 
-// 	if ctyType == cty.List(cty.Number) {
-// 		return helpers.ParseIntSlice(val)
-// 	}
+	if typ.IsListType() || typ.IsTupleType() {
 
-// 	if ctyType.IsListType() || ctyType.IsTupleType() {
-// 		return helpers.ParseStringSlice(val)
-// 	}
+		if typ == cty.List(cty.String) {
+			res, err := CtyToGoStringSlice(val)
+			if err != nil {
+				return nil, err
+			}
+			return res, error_helpers.HclDiagsToError("flowpipe", diags)
+		}
 
-// 	return nil, fmt.Errorf("unsupported type %s", ctyType.FriendlyName())
-// }
+		if typ == cty.List(cty.Number) {
+			res, err := CtyToGoNumericSlice(val)
+			if err != nil {
+				return nil, err
+			}
+			return res, error_helpers.HclDiagsToError("flowpipe", diags)
+		}
+
+		if typ == cty.List(cty.Bool) {
+			res, err := CtyToGoBoolSlice(val)
+			if err != nil {
+				return nil, err
+			}
+			return res, error_helpers.HclDiagsToError("flowpipe", diags)
+		}
+
+		res, err := CtyToGoInterfaceSlice(val)
+		if err != nil {
+			return nil, err
+		}
+		return res, error_helpers.HclDiagsToError("flowpipe", diags)
+	}
+
+	if typ.IsMapType() || typ.IsObjectType() {
+		if typ == cty.Map(cty.String) {
+			res, err := CtyToGoMapString(val)
+			if err != nil {
+				return nil, err
+			}
+			return res, error_helpers.HclDiagsToError("flowpipe", diags)
+		}
+
+		if typ == cty.Map(cty.Number) {
+			res, err := CtyToGoMapNumeric(val)
+			if err != nil {
+				return nil, err
+			}
+			return res, error_helpers.HclDiagsToError("flowpipe", diags)
+		}
+
+		if typ == cty.Map(cty.Bool) {
+			res, err := CtyToGoMapBool(val)
+			if err != nil {
+				return nil, err
+			}
+			return res, error_helpers.HclDiagsToError("flowpipe", diags)
+		}
+
+		res, err := CtyToGoMapInterface(val)
+		if err != nil {
+			return nil, err
+		}
+		return res, error_helpers.HclDiagsToError("flowpipe", diags)
+	}
+
+	return nil, perr.BadRequestWithMessage(fmt.Sprintf("unsupported type %s", typ.FriendlyName()))
+}
 
 // CtyToJSON converts a cty value to it;s JSON representation
 func CtyToJSON(val cty.Value) (string, error) {
@@ -305,7 +384,7 @@ func CtyToGoInterfaceSlice(v cty.Value) (val []interface{}, err error) {
 			} else {
 				var targetf float64
 				if err = gocty.FromCtyValue(v, &targetf); err == nil {
-					res = append(res, target)
+					res = append(res, targetf)
 				} else {
 					return nil, err
 				}
@@ -347,6 +426,63 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 	return res, nil
 }
 
+func CtyToGoNumericSlice(v cty.Value) (val []float64, err error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsListType() && !ty.IsTupleType() {
+		return nil, perr.BadRequestWithMessage("expected list type")
+	}
+
+	var res []float64
+	it := v.ElementIterator()
+	for it.Next() {
+		_, v := it.Element()
+
+		// Return error if any of the value in the slice is not a number
+		if v.Type() != cty.Number {
+			return nil, perr.BadRequestWithMessage("expected number type, but got " + v.Type().FriendlyName())
+		}
+
+		var target float64
+		err = gocty.FromCtyValue(v, &target)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, target)
+	}
+
+	return res, nil
+
+}
+
+func CtyToGoBoolSlice(v cty.Value) (val []bool, err error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsListType() && !ty.IsTupleType() {
+		return nil, perr.BadRequestWithMessage("expected list type")
+	}
+
+	var res []bool
+	it := v.ElementIterator()
+	for it.Next() {
+		_, v := it.Element()
+
+		// Return error if any of the value in the slice is not a number
+		if v.Type() != cty.Bool {
+			return nil, perr.BadRequestWithMessage("expected number type, but got " + v.Type().FriendlyName())
+		}
+
+		res = append(res, v.True())
+	}
+
+	return res, nil
+
+}
+
 func CtyToGoMapInterface(v cty.Value) (map[string]interface{}, error) {
 	if v.IsNull() || !v.IsWhollyKnown() {
 		return nil, nil
@@ -377,7 +513,7 @@ func CtyToGoMapString(v cty.Value) (map[string]string, error) {
 	}
 	ty := v.Type()
 	if !ty.IsMapType() && !ty.IsObjectType() {
-		return nil, fmt.Errorf("expected list type")
+		return nil, perr.BadRequestWithMessage("expected map type")
 	}
 
 	res := map[string]string{}
@@ -385,11 +521,63 @@ func CtyToGoMapString(v cty.Value) (map[string]string, error) {
 	valueMap := v.AsValueMap()
 
 	for k, v := range valueMap {
+		if v.Type() != cty.String {
+			return nil, perr.BadRequestWithMessage("expected string type, but got " + v.Type().FriendlyName())
+		}
+
 		target, err := CtyToString(v)
 		if err != nil {
 			return nil, err
 		}
 		res[k] = target
+	}
+
+	return res, nil
+}
+
+func CtyToGoMapNumeric(v cty.Value) (map[string]float64, error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsMapType() && !ty.IsObjectType() {
+		return nil, perr.BadRequestWithMessage("expected map type")
+	}
+
+	res := map[string]float64{}
+
+	valueMap := v.AsValueMap()
+
+	for k, v := range valueMap {
+		if v.Type() != cty.Number {
+			return nil, perr.BadRequestWithMessage("expected number type, but got " + v.Type().FriendlyName())
+		}
+		var target float64
+		err := gocty.FromCtyValue(v, &target)
+		if err != nil {
+			return nil, err
+		}
+		res[k] = target
+	}
+
+	return res, nil
+}
+
+func CtyToGoMapBool(v cty.Value) (map[string]bool, error) {
+	if v.IsNull() || !v.IsWhollyKnown() {
+		return nil, nil
+	}
+	ty := v.Type()
+	if !ty.IsMapType() && !ty.IsObjectType() {
+		return nil, fmt.Errorf("expected list type")
+	}
+
+	res := map[string]bool{}
+
+	valueMap := v.AsValueMap()
+
+	for k, v := range valueMap {
+		res[k] = v.True()
 	}
 
 	return res, nil

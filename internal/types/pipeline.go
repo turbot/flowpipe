@@ -26,8 +26,9 @@ type RunPipelineResponse struct {
 }
 
 type CmdPipeline struct {
-	Command string                 `json:"command" binding:"required,oneof=run"`
-	Args    map[string]interface{} `json:"args,omitempty"`
+	Command    string                 `json:"command" binding:"required,oneof=run"`
+	Args       map[string]interface{} `json:"args,omitempty"`
+	ArgsString map[string]string      `json:"args_string,omitempty"`
 }
 
 type PrintablePipeline struct {

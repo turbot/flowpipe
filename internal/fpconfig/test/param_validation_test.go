@@ -32,16 +32,16 @@ func TestParamValidation(t *testing.T) {
 		"my_token": 123,
 	}
 
-	errors := validateMyParam.ValidatePipelineParam(stringInvalid)
-	assert.Equal(1, len(errors))
-	assert.Equal("Bad Request: invalid type for parameter 'my_token'", errors[0].Error())
+	errs := validateMyParam.ValidatePipelineParam(stringInvalid)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: invalid type for parameter 'my_token'", errs[0].Error())
 
 	invalidParam := map[string]interface{}{
 		"invalid": "foo",
 	}
-	errors = validateMyParam.ValidatePipelineParam(invalidParam)
-	assert.Equal(1, len(errors))
-	assert.Equal("Bad Request: unknown parameter specified 'invalid'", errors[0].Error())
+	errs = validateMyParam.ValidatePipelineParam(invalidParam)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: unknown parameter specified 'invalid'", errs[0].Error())
 
 	allValid := map[string]interface{}{
 		"my_token":      "123",
@@ -50,8 +50,8 @@ func TestParamValidation(t *testing.T) {
 		"my_bool":       true,
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(allValid)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(allValid)
+	assert.Equal(0, len(errs))
 
 	invalidNum := map[string]interface{}{
 		"my_token":      "123",
@@ -59,9 +59,9 @@ func TestParamValidation(t *testing.T) {
 		"my_number_two": "123.45",
 		"my_bool":       true,
 	}
-	errors = validateMyParam.ValidatePipelineParam(invalidNum)
-	assert.Equal(1, len(errors))
-	assert.Equal("Bad Request: invalid type for parameter 'my_number_two'", errors[0].Error())
+	errs = validateMyParam.ValidatePipelineParam(invalidNum)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: invalid type for parameter 'my_number_two'", errs[0].Error())
 
 	moreThanOneInvalids := map[string]interface{}{
 		"my_token":      "123",
@@ -69,8 +69,8 @@ func TestParamValidation(t *testing.T) {
 		"my_number_two": "123.45",
 		"my_bool":       "true",
 	}
-	errors = validateMyParam.ValidatePipelineParam(moreThanOneInvalids)
-	assert.Equal(3, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(moreThanOneInvalids)
+	assert.Equal(3, len(errs))
 
 	expectedErrors := []string{
 		"Bad Request: invalid type for parameter 'my_number'",
@@ -79,7 +79,7 @@ func TestParamValidation(t *testing.T) {
 	}
 
 	actualErrors := []string{}
-	for _, err := range errors {
+	for _, err := range errs {
 		actualErrors = append(actualErrors, err.Error())
 	}
 
@@ -94,8 +94,8 @@ func TestParamValidation(t *testing.T) {
 		"list_number_three": []int64{1, 4},
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(paramList)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(paramList)
+	assert.Equal(0, len(errs))
 
 	paramListMoreNumberType := map[string]interface{}{
 		"list_string":       []string{"foo", "bar"},
@@ -104,8 +104,8 @@ func TestParamValidation(t *testing.T) {
 		"list_number_three": []int16{1, 4},
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(paramListMoreNumberType)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(paramListMoreNumberType)
+	assert.Equal(0, len(errs))
 
 	paramListAsInterface := map[string]interface{}{
 		"list_string":       []interface{}{"foo", "bar"},
@@ -114,8 +114,8 @@ func TestParamValidation(t *testing.T) {
 		"list_number_three": []interface{}{1, 4},
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(paramListAsInterface)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(paramListAsInterface)
+	assert.Equal(0, len(errs))
 
 	paramNotList := map[string]interface{}{
 		"list_string":     "foo",
@@ -123,8 +123,8 @@ func TestParamValidation(t *testing.T) {
 		"list_number_two": 1.23,
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(paramNotList)
-	assert.Equal(3, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(paramNotList)
+	assert.Equal(3, len(errs))
 
 	expectedErrors = []string{
 		"Bad Request: invalid type for parameter 'list_string'",
@@ -133,12 +133,19 @@ func TestParamValidation(t *testing.T) {
 	}
 
 	actualErrors = []string{}
-	for _, err := range errors {
+	for _, err := range errs {
 		actualErrors = append(actualErrors, err.Error())
 	}
 
 	equalIgnoreOrder = cmp.Equal(expectedErrors, actualErrors, cmpopts.SortSlices(less))
 	assert.True(equalIgnoreOrder, "expected errors do not match")
+
+	listStringInvalid := map[string]interface{}{
+		"list_string": []interface{}{"foo", 1, "two"},
+	}
+	errs = validateMyParam.ValidatePipelineParam(listStringInvalid)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: invalid type for parameter 'list_string'", errs[0].Error())
 
 	listAny := map[string]interface{}{
 		"list_any":       []interface{}{"foo", 1, 1.23, true},
@@ -146,8 +153,11 @@ func TestParamValidation(t *testing.T) {
 		"list_any_three": []interface{}{1, 2, 3},
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(listAny)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(paramNotList)
+	assert.Equal(3, len(errs))
+
+	errs = validateMyParam.ValidatePipelineParam(listAny)
+	assert.Equal(0, len(errs))
 
 	stringMap := map[string]interface{}{
 		"map_of_string": map[string]string{
@@ -156,8 +166,8 @@ func TestParamValidation(t *testing.T) {
 		},
 	}
 
-	errors = validateMyParam.ValidatePipelineParam(stringMap)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(stringMap)
+	assert.Equal(0, len(errs))
 
 	stringMapGeneric := map[string]interface{}{
 		"map_of_string": map[string]interface{}{
@@ -165,8 +175,8 @@ func TestParamValidation(t *testing.T) {
 			"baz": "qux",
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(stringMapGeneric)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(stringMapGeneric)
+	assert.Equal(0, len(errs))
 
 	stringMapGenericInvalid := map[string]interface{}{
 		"map_of_string": map[string]interface{}{
@@ -174,9 +184,9 @@ func TestParamValidation(t *testing.T) {
 			"baz": 123,
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(stringMapGenericInvalid)
-	assert.Equal(1, len(errors))
-	assert.Equal("Bad Request: invalid type for parameter 'map_of_string'", errors[0].Error())
+	errs = validateMyParam.ValidatePipelineParam(stringMapGenericInvalid)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: invalid type for parameter 'map_of_string'", errs[0].Error())
 
 	numberMap := map[string]interface{}{
 		"map_of_number": map[string]float64{
@@ -184,8 +194,8 @@ func TestParamValidation(t *testing.T) {
 			"baz": 4.56,
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(numberMap)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(numberMap)
+	assert.Equal(0, len(errs))
 
 	numberMapInvalid := map[string]interface{}{
 		"map_of_number": map[string]interface{}{
@@ -193,8 +203,8 @@ func TestParamValidation(t *testing.T) {
 			"baz": "4.56",
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(numberMapInvalid)
-	assert.Equal(1, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(numberMapInvalid)
+	assert.Equal(1, len(errs))
 
 	numberMapInvalid = map[string]interface{}{
 		"map_of_number": map[string]string{
@@ -203,8 +213,8 @@ func TestParamValidation(t *testing.T) {
 		},
 		"map_of_number_two": 4,
 	}
-	errors = validateMyParam.ValidatePipelineParam(numberMapInvalid)
-	assert.Equal(2, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(numberMapInvalid)
+	assert.Equal(2, len(errs))
 
 	numberMap = map[string]interface{}{
 		"map_of_number": map[string]float64{
@@ -216,8 +226,8 @@ func TestParamValidation(t *testing.T) {
 			"baz": 4,
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(numberMap)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(numberMap)
+	assert.Equal(0, len(errs))
 
 	numberMap = map[string]interface{}{
 		"map_of_number": map[string]int16{
@@ -229,8 +239,8 @@ func TestParamValidation(t *testing.T) {
 			"baz": 4,
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(numberMap)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(numberMap)
+	assert.Equal(0, len(errs))
 
 	anyMap := map[string]interface{}{
 		"map_of_string": map[string]interface{}{
@@ -250,15 +260,222 @@ func TestParamValidation(t *testing.T) {
 			"baz": "4",
 		},
 	}
-	errors = validateMyParam.ValidatePipelineParam(anyMap)
-	assert.Equal(0, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(anyMap)
+	assert.Equal(0, len(errs))
 
 	anyMapInvalid := map[string]interface{}{
 		"map_of_any":       []interface{}{1, 2, 3},
 		"map_of_any_two":   []interface{}{"foo", 2, 3},
 		"map_of_any_three": 23,
 	}
-	errors = validateMyParam.ValidatePipelineParam(anyMapInvalid)
-	assert.Equal(3, len(errors))
+	errs = validateMyParam.ValidatePipelineParam(anyMapInvalid)
+	assert.Equal(3, len(errs))
 
+}
+
+func TestParamCoerce(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/pipeline_param_validation.fp")
+	assert.Nil(err, "error found")
+
+	validateMyParam := pipelines["local.pipeline.validate_my_param"]
+	if validateMyParam == nil {
+		assert.Fail("validate_my_param pipeline not found")
+		return
+	}
+
+	stringParam := map[string]string{
+		"my_token": "abc",
+	}
+	res, errs := validateMyParam.CoercePipelineParams(stringParam)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+	assert.NotNil(res)
+
+	stringParamNotFound := map[string]string{
+		"my_token_s": "abc",
+	}
+	_, errs = validateMyParam.CoercePipelineParams(stringParamNotFound)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: unknown parameter specified 'my_token_s'", errs[0].Error())
+
+	stringParamNumberButValid := map[string]string{
+		"my_token": "23",
+	}
+	res, errs = validateMyParam.CoercePipelineParams(stringParamNumberButValid)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+
+	assert.NotNil(res)
+
+	numParam := map[string]string{
+		"my_number": "23",
+	}
+	res, errs = validateMyParam.CoercePipelineParams(numParam)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+
+	assert.NotNil(res)
+	assert.Equal(23, res["my_number"])
+
+	numParamInvalid := map[string]string{
+		"my_number": "foo",
+	}
+	_, errs = validateMyParam.CoercePipelineParams(numParamInvalid)
+	assert.Equal(1, len(errs))
+
+	assert.Equal("Bad Request: unable to convert 'foo' to a number", errs[0].Error())
+
+	boolParam := map[string]string{
+		"my_bool": "true",
+	}
+	res, errs = validateMyParam.CoercePipelineParams(boolParam)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+
+	assert.NotNil(res)
+	assert.Equal(true, res["my_bool"])
+
+	listSameTypes := map[string]string{
+		"list_string":     `["foo", "bar", "3"]`,
+		"list_number":     `[1, 2, 3]`,
+		"list_number_two": `[1.1, 2.2, 3.4]`,
+	}
+	res, errs = validateMyParam.CoercePipelineParams(listSameTypes)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+
+	assert.NotNil(res)
+	assert.Equal(3, len(res["list_string"].([]string)))
+	assert.Equal("foo", res["list_string"].([]string)[0])
+	assert.Equal("bar", res["list_string"].([]string)[1])
+	assert.Equal("3", res["list_string"].([]string)[2])
+
+	assert.Equal(3, len(res["list_number"].([]float64)))
+	assert.Equal(float64(1), res["list_number"].([]float64)[0])
+	assert.Equal(float64(2), res["list_number"].([]float64)[1])
+	assert.Equal(float64(3), res["list_number"].([]float64)[2])
+
+	assert.Equal(3, len(res["list_number_two"].([]float64)))
+	assert.Equal(1.1, res["list_number_two"].([]float64)[0])
+	assert.Equal(2.2, res["list_number_two"].([]float64)[1])
+	assert.Equal(3.4, res["list_number_two"].([]float64)[2])
+
+	listStringInvalid := map[string]string{
+		"list_string": `["foo", "bar", 3]`,
+	}
+	_, errs = validateMyParam.CoercePipelineParams(listStringInvalid)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: expected string type, but got number", errs[0].Error())
+
+	moreInvalidList := map[string]string{
+		"list_string": `["foo", "bar", 3]`,
+		"list_number": `[1, "bar", 3]`,
+	}
+	_, errs = validateMyParam.CoercePipelineParams(moreInvalidList)
+	assert.Equal(2, len(errs))
+
+	expectedErrors := []string{
+		"Bad Request: expected string type, but got number",
+		"Bad Request: expected number type, but got string",
+	}
+
+	actualErrors := []string{}
+	for _, err := range errs {
+		actualErrors = append(actualErrors, err.Error())
+	}
+
+	less := func(a, b string) bool { return a < b }
+	equalIgnoreOrder := cmp.Equal(expectedErrors, actualErrors, cmpopts.SortSlices(less))
+	assert.True(equalIgnoreOrder, "expected errors do not match")
+
+	listAny := map[string]string{
+		"list_any":       `["foo", 1, 1.23, true]`,
+		"list_any_two":   `["foo", "bar", "baz"]`,
+		"list_any_three": `[1, 2.3, 4]`,
+	}
+	res, errs = validateMyParam.CoercePipelineParams(listAny)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+	assert.NotNil(res)
+
+	assert.Equal(4, len(res["list_any"].([]interface{})))
+	assert.Equal("foo", res["list_any"].([]interface{})[0])
+	assert.Equal(1, res["list_any"].([]interface{})[1])
+	assert.Equal(1.23, res["list_any"].([]interface{})[2])
+	assert.Equal(true, res["list_any"].([]interface{})[3])
+
+	assert.Equal(3, len(res["list_any_two"].([]interface{})))
+	assert.Equal("foo", res["list_any_two"].([]interface{})[0])
+	assert.Equal("bar", res["list_any_two"].([]interface{})[1])
+	assert.Equal("baz", res["list_any_two"].([]interface{})[2])
+
+	assert.Equal(3, len(res["list_any_three"].([]interface{})))
+	assert.Equal(1, res["list_any_three"].([]interface{})[0])
+	assert.Equal(2.3, res["list_any_three"].([]interface{})[1])
+	assert.Equal(4, res["list_any_three"].([]interface{})[2])
+
+	validMap := map[string]string{
+		"map_of_string":     `{"foo": "bar", "baz": "qux"}`,
+		"map_of_number":     `{"foo": 1.23, "baz": 4.56}`,
+		"map_of_number_two": `{"foo": 1, "bar": 2}`,
+		"map_of_any":        `{"foo": 1, "bar": 2.3, "baz": "qux", "bam": true}`,
+		"map_of_bool":       `{"foo": true, "bar": false}`,
+	}
+
+	res, errs = validateMyParam.CoercePipelineParams(validMap)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+	assert.NotNil(res)
+	assert.Equal(2, len(res["map_of_string"].(map[string]string)))
+	assert.Equal("bar", res["map_of_string"].(map[string]string)["foo"])
+	assert.Equal("qux", res["map_of_string"].(map[string]string)["baz"])
+
+	assert.Equal(2, len(res["map_of_number"].(map[string]float64)))
+	assert.Equal(float64(1.23), res["map_of_number"].(map[string]float64)["foo"])
+	assert.Equal(float64(4.56), res["map_of_number"].(map[string]float64)["baz"])
+
+	assert.Equal(2, len(res["map_of_number_two"].(map[string]float64)))
+	assert.Equal(float64(1), res["map_of_number_two"].(map[string]float64)["foo"])
+	assert.Equal(float64(2), res["map_of_number_two"].(map[string]float64)["bar"])
+
+	assert.Equal(4, len(res["map_of_any"].(map[string]interface{})))
+	assert.Equal(1, res["map_of_any"].(map[string]interface{})["foo"])
+	assert.Equal(2.3, res["map_of_any"].(map[string]interface{})["bar"])
+	assert.Equal("qux", res["map_of_any"].(map[string]interface{})["baz"])
+	assert.Equal(true, res["map_of_any"].(map[string]interface{})["bam"])
+
+	assert.Equal(2, len(res["map_of_bool"].(map[string]bool)))
+	assert.Equal(true, res["map_of_bool"].(map[string]bool)["foo"])
+	assert.Equal(false, res["map_of_bool"].(map[string]bool)["bar"])
+
+	invalidStringMap := map[string]string{
+		"map_of_string": `{"foo": 1, "baz": "qux"}`,
+	}
+
+	_, errs = validateMyParam.CoercePipelineParams(invalidStringMap)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: expected string type, but got number", errs[0].Error())
+
+	invalidNumberMap := map[string]string{
+		"map_of_number": `{"foo": 1, "baz": "qux"}`,
+	}
+	_, errs = validateMyParam.CoercePipelineParams(invalidNumberMap)
+	assert.Equal(1, len(errs))
+	assert.Equal("Bad Request: expected number type, but got string", errs[0].Error())
 }
