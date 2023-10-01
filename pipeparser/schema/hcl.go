@@ -109,8 +109,9 @@ const (
 	AttributeTypeStatus           = "status"
 
 	// Used by echo step
-	AttributeTypeText = "text"
-	AttributeTypeJson = "json"
+	AttributeTypeText    = "text"
+	AttributeTypeNumeric = "numeric"
+	AttributeTypeJson    = "json"
 
 	// Used byy Pipeline step
 	AttributeTypePipeline = "pipeline"

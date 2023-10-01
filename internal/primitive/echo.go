@@ -25,6 +25,7 @@ func (e *Echo) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 	}
 	o.Data[schema.AttributeTypeText] = input[schema.AttributeTypeText]
 	o.Data[schema.AttributeTypeJson] = input[schema.AttributeTypeJson]
+	o.Data[schema.AttributeTypeNumeric] = input[schema.AttributeTypeNumeric]
 
 	return &o, nil
 }
