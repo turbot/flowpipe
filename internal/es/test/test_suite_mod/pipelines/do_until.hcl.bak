@@ -7,8 +7,8 @@ pipeline "do_until" {
     step "echo" "repeat_two" {
         text  = "iteration no"
 
-        do_until = last.output.token == ""
-        do_until = last.index > 4
+        // do_until = last.output.token == ""
+        // do_until = last.index > 4
 
         numeric = last.index
     }

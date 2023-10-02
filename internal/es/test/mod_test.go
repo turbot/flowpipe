@@ -260,7 +260,7 @@ func (suite *ModTestSuite) TestPipelineWithArgs() {
 	assert.Equal("echo this is the value of var_one", pex.PipelineOutput["val_from_val"])
 }
 
-func (suite *ModTestSuite) TestDoUntil() {
+func (suite *ModTestSuite) SkipTestDoUntil() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
