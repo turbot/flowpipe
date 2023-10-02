@@ -511,6 +511,8 @@ func (p *PipelineStepBase) SetBaseAttributes(hclAttributes hcl.Attributes) hcl.D
 		}
 	}
 
+	// if attribute is always unresolved, or at least we treat it to be unresolved. Most of the
+	// usage will be testing the value that can only be had during the pipeline execution
 	if attr, exists := hclAttributes[schema.AttributeTypeIf]; exists {
 		// If is always treated as an unresolved attribute
 		p.AddUnresolvedAttribute(schema.AttributeTypeIf, attr.Expr)
@@ -1349,8 +1351,9 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 
 type PipelineStepEcho struct {
 	PipelineStepBase
-	Text string               `json:"text"`
-	Json json.SimpleJSONValue `json:"json"`
+	Text    string               `json:"text"`
+	Numeric float64              `json:"numeric"`
+	Json    json.SimpleJSONValue `json:"json"`
 }
 
 func (p *PipelineStepEcho) Equals(iOther IPipelineStep) bool {
@@ -1388,6 +1391,16 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		}
 	}
 
+	var numericInput float64
+	if p.UnresolvedAttributes[schema.AttributeTypeNumeric] == nil {
+		numericInput = p.Numeric
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeNumeric], evalContext, &numericInput)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+	}
+
 	var jsonInput json.SimpleJSONValue
 	if p.UnresolvedAttributes[schema.AttributeTypeJson] == nil {
 		jsonInput = p.Json
@@ -1401,8 +1414,9 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	}
 
 	return map[string]interface{}{
-		schema.AttributeTypeText: textInput,
-		schema.AttributeTypeJson: jsonInput,
+		schema.AttributeTypeText:    textInput,
+		schema.AttributeTypeJson:    jsonInput,
+		schema.AttributeTypeNumeric: numericInput,
 	}, nil
 }
 
@@ -1488,6 +1502,16 @@ func (p *PipelineStepEcho) SetAttributes(hclAttributes hcl.Attributes, evalConte
 			}
 			if val != cty.NilVal {
 				p.Json = json.SimpleJSONValue{Value: val}
+			}
+
+		case schema.AttributeTypeNumeric:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+			}
+
+			if val != cty.NilVal {
+				p.Numeric, _ = val.AsBigFloat().Float64()
 			}
 
 		default:
