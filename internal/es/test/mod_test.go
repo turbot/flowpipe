@@ -38,6 +38,10 @@ func (suite *ModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+	err = os.Setenv("P_VAR_var_from_env", "from env")
+	if err != nil {
+		panic(err)
+	}
 
 	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
 	filepaths.PipesComponentModsFileName = "mod.hcl"
@@ -72,9 +76,9 @@ func (suite *ModTestSuite) SetupSuite() {
 
 	pipelineDirPath := path.Join(cwd, "test_suite_mod")
 
-	viper.GetViper().Set("pipeline.dir", pipelineDirPath)
-	viper.GetViper().Set("output.dir", outputPath)
-	viper.GetViper().Set("log.dir", outputPath)
+	viper.GetViper().Set(constants.ArgPipelineDir, pipelineDirPath)
+	viper.GetViper().Set(constants.ArgOutputDir, outputPath)
+	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
 	ctx := context.Background()

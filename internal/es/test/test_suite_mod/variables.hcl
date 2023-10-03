@@ -16,6 +16,11 @@ variable "var_three" {
   default     = "if you see this then something is wrong"
 }
 
+variable "var_from_env" {
+  type = string
+  description = "will be set from env variable"
+}
+
 locals {
   locals_three_merge = merge(local.locals_three, {
     key_three = 33

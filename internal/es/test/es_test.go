@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/utils"
 )
@@ -62,9 +63,9 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	pipelineDirPath := path.Join(cwd, "pipelines")
 
-	viper.GetViper().Set("pipeline.dir", pipelineDirPath)
-	viper.GetViper().Set("output.dir", outputPath)
-	viper.GetViper().Set("log.dir", outputPath)
+	viper.GetViper().Set(constants.ArgPipelineDir, pipelineDirPath)
+	viper.GetViper().Set(constants.ArgOutputDir, outputPath)
+	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
 	ctx := context.Background()
