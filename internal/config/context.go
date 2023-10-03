@@ -19,7 +19,6 @@ func Viper(ctx context.Context) *viper.Viper {
 */
 
 func ContextWithConfig(ctx context.Context) (context.Context, error) {
-	//cfg, err := NewConfig(ctx, WithFlags())
 	cfg, err := NewConfig(ctx)
 	if err != nil {
 		return nil, err
