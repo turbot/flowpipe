@@ -181,7 +181,8 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 					// If there's a for_each in the step definition, we need to insert the "each" magic variable
 					// so the output can refer to it
 					eachValue := map[string]cty.Value{}
-					eachValue["value"] = cmd.StepForEach.Each.Value
+					eachValue[schema.AttributeTypeValue] = cmd.StepForEach.Each.Value
+					eachValue[schema.AttributeKey] = cty.NumberIntVal(int64(cmd.StepForEach.Index))
 					evalContext.Variables[schema.AttributeEach] = cty.ObjectVal(eachValue)
 				}
 

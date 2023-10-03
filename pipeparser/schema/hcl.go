@@ -140,6 +140,7 @@ const (
 	AttributeLocal = "local"
 
 	AttributeEach = "each"
+	AttributeKey  = "key"
 )
 
 // QueryProviderBlocks is a list of block types which implement QueryProvider

@@ -686,6 +686,11 @@ func (suite *EsTestSuite) TestParam() {
 	assert.Equal("a", echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)[0].Data["text"])
 	assert.Equal("b", echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)[1].Data["text"])
 	assert.Equal("c", echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)[2].Data["text"])
+
+	assert.Equal(7, len(echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)))
+	assert.Equal("0: Green Day", echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)[0].Data["text"])
+	assert.Equal("1: New Found Glory", echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)[1].Data["text"])
+	assert.Equal("2: Sum 41", echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)[2].Data["text"])
 }
 
 func (suite *EsTestSuite) TestParamOverride() {

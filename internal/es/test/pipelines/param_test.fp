@@ -54,6 +54,11 @@ pipeline "param_test" {
         text = each.value
     }
 
+    step "echo" "for_with_list_and_index" {
+        for_each = param.list_band_names
+        text = "${each.key}: ${each.value}"
+    }
+
     step echo "map_diff_types_string" {
         text = param.object_diff_types.string
     }

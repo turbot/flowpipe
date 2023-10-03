@@ -135,9 +135,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			}
 
 			listVal := val.AsValueSlice()
-			for _, v := range listVal {
+			for i, v := range listVal {
 				forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
 					schema.AttributeTypeValue: v,
+					schema.AttributeKey:       cty.NumberIntVal(int64(i)),
 				})
 			}
 
@@ -241,7 +242,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					forEachControl = nil
 				} else {
 					forEachIndex := index
-					forEachCtyVal := forEachCtyVals[index]["value"]
+					forEachCtyVal := forEachCtyVals[index][schema.AttributeTypeValue]
 
 					var title string
 
