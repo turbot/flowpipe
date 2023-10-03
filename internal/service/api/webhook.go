@@ -104,7 +104,10 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	data := map[string]interface{}{}
 
 	data["request_body"] = body
-	// data["request_headers"] = c.Request.Header
+	data["request_headers"] = map[string]string{}
+	for k, v := range c.Request.Header {
+		data["request_headers"].(map[string]string)[k] = v[0]
+	}
 	data["url"] = c.Request.RequestURI
 
 	executionVariables := map[string]cty.Value{}

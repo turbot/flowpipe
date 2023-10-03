@@ -21,13 +21,13 @@ func TestSimpleForAndParam(t *testing.T) {
 
 	pipelines, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/for.fp")
 
-	if pipelines == nil {
-		assert.Fail("pipelines is nil")
+	if err != nil {
+		assert.Fail("error found", err)
 		return
 	}
 
-	if err != nil {
-		assert.Fail("error found")
+	if len(pipelines) == 0 {
+		assert.Fail("pipelines is nil")
 		return
 	}
 

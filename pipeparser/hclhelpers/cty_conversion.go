@@ -805,7 +805,30 @@ func convertSliceToCtyValue(v interface{}) (cty.Value, error) {
 
 func ConvertMapToCtyValue(v interface{}) (cty.Value, error) {
 	// Convert the map to a map[string]interface{} and recursively convert it to cty values
-	mapData := v.(map[string]interface{})
+	mapData, ok := v.(map[string]interface{})
+	if !ok {
+		// try to convert to map[string]string
+		mapData, ok := v.(map[string]string)
+		if !ok {
+			return cty.NilVal, perr.BadRequestWithMessage("unable to convert map to cty value")
+		}
+
+		ctyValues := make(map[string]cty.Value, len(mapData))
+		for key, value := range mapData {
+			var err error
+			ctyValues[key], err = ConvertInterfaceToCtyValue(value)
+			if err != nil {
+				return cty.NilVal, err
+			}
+		}
+		// Create a cty.ObjectVal from the cty values
+		objectVal := cty.ObjectVal(ctyValues)
+
+		// Return the cty.ObjectVal as a cty.Value
+		return objectVal, nil
+
+	}
+
 	ctyValues := make(map[string]cty.Value, len(mapData))
 	for key, value := range mapData {
 		var err error

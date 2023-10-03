@@ -26,6 +26,9 @@
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
+            "env": {
+                "P_VAR_var_from_env": "var_from_env",
+            },
             "args": ["service", "start", "--pipeline-dir", "./internal/es/test/test_suite_mod"]
         },
         {

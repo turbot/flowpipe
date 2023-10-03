@@ -62,3 +62,12 @@ trigger "http" "http_trigger" {
         event = self.request_body
     }
 }
+
+trigger "http" "http_trigger_header" {
+
+    pipeline = pipeline.http_webhook_pipeline
+
+    args = {
+        event = self.request_headers["X-Event"]
+    }
+}
