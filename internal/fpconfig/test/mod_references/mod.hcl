@@ -35,7 +35,7 @@ pipeline "foo_two" {
         text = "foo"
     }
 
-    outout "foo" {
+    output "foo" {
         value = echo.baz.text
     }
 }

@@ -23,14 +23,6 @@ trigger "schedule" "trigger_with_args" {
 }
 
 trigger "http" "trigger_with_args" {
-
-    response_body = "ok"
-
-    response_headers = {
-      Content-Type = "application/json"
-      User-Agent  = "flowpipe"
-    }
-
     pipeline = pipeline.simple_with_trigger
 
     args = {

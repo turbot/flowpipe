@@ -178,15 +178,10 @@ func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfi
 		Name: block.Labels[0],
 	}
 
-	paramOptions, rest, diags := block.Body.PartialContent(modconfig.PipelineParamBlockSchema)
+	paramOptions, diags := block.Body.Content(modconfig.PipelineParamBlockSchema)
 
 	if diags.HasErrors() {
 		return o, diags
-	}
-
-	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, paramOptions)
-	if len(diags) > 0 {
-		return nil, diags
 	}
 
 	if attr, exists := paramOptions.Attributes[schema.AttributeTypeType]; exists {
@@ -230,15 +225,10 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 		Name: block.Labels[0],
 	}
 
-	outputOptions, rest, diags := block.Body.PartialContent(modconfig.PipelineOutputBlockSchema)
+	outputOptions, diags := block.Body.Content(modconfig.PipelineOutputBlockSchema)
 
 	if diags.HasErrors() {
 		return o, diags
-	}
-
-	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, outputOptions)
-	if len(diags) > 0 {
-		return nil, diags
 	}
 
 	if attr, exists := outputOptions.Attributes[schema.AttributeTypeSensitive]; exists {
@@ -304,7 +294,7 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 		return triggerHcl, res
 	}
 
-	triggerOptions, _, diags := block.Body.PartialContent(triggerSchema)
+	triggerOptions, diags := block.Body.Content(triggerSchema)
 
 	if diags.HasErrors() {
 		res.handleDecodeDiags(diags)
@@ -342,16 +332,8 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 	// get shell pipelineHcl
 	pipelineHcl := modconfig.NewPipelineHcl(mod, block)
 
-	// do a partial decode so we can parse the step manually, each pipeline step has its own struct, so we can't use
-	// HCL automatic parsing here
-	pipelineOptions, rest, diags := block.Body.PartialContent(modconfig.PipelineBlockSchema)
+	pipelineOptions, diags := block.Body.Content(modconfig.PipelineBlockSchema)
 	if diags.HasErrors() {
-		res.handleDecodeDiags(diags)
-		return nil, res
-	}
-
-	diags = gohcl.DecodeBody(rest, parseCtx.EvalCtx, pipelineHcl)
-	if len(diags) > 0 {
 		res.handleDecodeDiags(diags)
 		return nil, res
 	}
@@ -361,8 +343,6 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 		res.handleDecodeDiags(diags)
 		return nil, res
 	}
-
-	// TODO: should we return immediately after error?
 
 	// use a map keyed by a string for fast lookup
 	// we use an empty struct as the value type, so that

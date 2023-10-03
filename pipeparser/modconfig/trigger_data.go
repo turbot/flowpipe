@@ -314,6 +314,19 @@ func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hc
 		return diags
 	}
 
+	for name, attr := range hclAttributes {
+		switch name {
+		default:
+			if !trigger.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Trigger Interval: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
+		}
+	}
+
 	return diags
 }
 
