@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
 
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
@@ -87,8 +88,8 @@ func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOpti
 		EsService: es,
 		Status:    "initialized",
 		HTTPSHost: viper.GetString("web.https.host"),
-		HTTPSPort: fmt.Sprintf("%d", viper.GetInt("web.https.port")),
-		HTTPPort:  fmt.Sprintf("%d", viper.GetInt("web.http.port")),
+		HTTPSPort: fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPortHttps)),
+		HTTPPort:  fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPort)),
 	}
 	// Set options
 	for _, opt := range opts {

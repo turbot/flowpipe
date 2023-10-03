@@ -19,7 +19,7 @@ type ResourcePrinter interface {
 
 func GetPrinter(cmd *cobra.Command) ResourcePrinter {
 
-	format := cmd.Flags().Lookup(constants.CmdOptionsOutput).Value.String()
+	format := cmd.Flags().Lookup(constants.ArgOutput).Value.String()
 
 	switch format {
 	case "table":

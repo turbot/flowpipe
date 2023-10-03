@@ -1,9 +1,10 @@
 package constants
 
 const (
-	CmdOptionApiHost      = "api-host"
-	CmdOptionApiPort      = "api-port"
-	CmdOptionTlsInsecure  = "insecure"
-	CmdOptionsOutput      = "output"
-	CmdOptionsPipelineArg = "pipeline-arg"
+	ArgApiHost      = "api-host"
+	ArgApiPort      = "api-port"
+	ArgApiPortHttps = "api-port-https"
+	ArgTlsInsecure  = "insecure"
+	ArgOutput       = "output"
+	ArgPipelineArg  = "pipeline-arg"
 )

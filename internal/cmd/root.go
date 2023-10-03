@@ -65,9 +65,9 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
 	// Flowpipe API
-	rootCmd.PersistentFlags().String(constants.CmdOptionApiHost, "http://localhost", "API server host")
-	rootCmd.PersistentFlags().Int(constants.CmdOptionApiPort, 7103, "API server port")
-	rootCmd.PersistentFlags().Bool(constants.CmdOptionTlsInsecure, false, "Skip TLS verification")
+	rootCmd.PersistentFlags().String(constants.ArgApiHost, "http://localhost", "API server host")
+	rootCmd.PersistentFlags().Int(constants.ArgApiPort, 7103, "API server port")
+	rootCmd.PersistentFlags().Bool(constants.ArgTlsInsecure, false, "Skip TLS verification")
 
 	// Common (steampipe, flowpipe) flags
 	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.PipesComponentDefaultInstallDir, "Path to the Config Directory")
@@ -75,13 +75,13 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 
 	// ⑤ Define the CLI flag parameters for your wrapped enum flag.
 	rootCmd.PersistentFlags().Var(
-		enumflag.New(&outputMode, constants.CmdOptionsOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
-		constants.CmdOptionsOutput,
+		enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
+		constants.ArgOutput,
 		"Output format; one of: table, yaml, json")
 
-	error_helpers.FailOnError(viper.BindPFlag("api.host", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiHost)))
-	error_helpers.FailOnError(viper.BindPFlag("api.port", rootCmd.PersistentFlags().Lookup(constants.CmdOptionApiPort)))
-	error_helpers.FailOnError(viper.BindPFlag("api.tls_insecure", rootCmd.PersistentFlags().Lookup(constants.CmdOptionTlsInsecure)))
+	error_helpers.FailOnError(viper.BindPFlag(constants.ArgApiHost, rootCmd.PersistentFlags().Lookup(constants.ArgApiHost)))
+	error_helpers.FailOnError(viper.BindPFlag(constants.ArgApiPort, rootCmd.PersistentFlags().Lookup(constants.ArgApiPort)))
+	error_helpers.FailOnError(viper.BindPFlag(constants.ArgTlsInsecure, rootCmd.PersistentFlags().Lookup(constants.ArgTlsInsecure)))
 
 	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgInstallDir, rootCmd.PersistentFlags().Lookup(pcconstants.ArgInstallDir)))
 	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgModLocation, rootCmd.PersistentFlags().Lookup(pcconstants.ArgModLocation)))
