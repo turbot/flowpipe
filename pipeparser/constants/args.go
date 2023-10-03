@@ -64,6 +64,11 @@ const (
 	ArgSnapshotTitle        = "snapshot-title"
 	ArgDatabaseStartTimeout = "database-start-timeout"
 	ArgGitUrlMode           = "git-url-mode"
+
+	ArgPipelineDir = "pipeline-dir"
+	ArgWorkDir     = "work-dir"
+	ArgOutputDir   = "output-dir"
+	ArgLogDir      = "log-dir"
 )
 
 // metaquery mode arguments

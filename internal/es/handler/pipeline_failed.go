@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
@@ -76,7 +77,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 		// Dump the output
 		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		filePath := path.Join(viper.GetString("output.dir"), e.Event.ExecutionID+"_output.json")
+		filePath := path.Join(viper.GetString(constants.ArgOutputDir), e.Event.ExecutionID+"_output.json")
 		_ = os.WriteFile(filePath, jsonStr, 0600)
 
 		snapshot, err := ex.Snapshot(e.PipelineExecutionID)
@@ -90,7 +91,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 				return err
 			}
 
-			filePath := path.Join(viper.GetString("output.dir"), e.Event.ExecutionID+".sps")
+			filePath := path.Join(viper.GetString(constants.ArgOutputDir), e.Event.ExecutionID+".sps")
 			_ = os.WriteFile(filePath, jsonStr, 0600)
 		}
 	}

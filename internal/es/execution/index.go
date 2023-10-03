@@ -9,12 +9,13 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 )
 
 func LoadEventLogEntries(executionID string) ([]types.EventLogEntry, error) {
 
 	// Open the JSONL file
-	fileName := path.Join(viper.GetString("log.dir"), executionID+".jsonl")
+	fileName := path.Join(viper.GetString(constants.ArgLogDir), executionID+".jsonl")
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err

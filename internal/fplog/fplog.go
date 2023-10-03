@@ -15,6 +15,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 )
 
 type FlowpipeLogger struct {
@@ -187,6 +188,6 @@ func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.Sampling = nil
-	cfg.OutputPaths = []string{path.Join(viper.GetString("log.dir"), fmt.Sprintf("%s.jsonl", executionID))}
+	cfg.OutputPaths = []string{path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", executionID))}
 	return zap.Must(cfg.Build())
 }

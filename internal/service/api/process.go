@@ -13,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
@@ -141,7 +142,7 @@ func (api *APIService) getProcessOutput(c *gin.Context) {
 		ExecutionID: uri.ProcessId,
 	}
 
-	filePath := path.Join(viper.GetString("output.dir"), evt.ExecutionID+"_output.json")
+	filePath := path.Join(viper.GetString(constants.ArgOutputDir), evt.ExecutionID+"_output.json")
 
 	// Open the JSON file
 	file, err := os.Open(filePath)
@@ -257,7 +258,7 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 		return
 	}
 
-	filePath := path.Join(viper.GetString("log.dir"), uri.ProcessId+".sps")
+	filePath := path.Join(viper.GetString(constants.ArgLogDir), uri.ProcessId+".sps")
 
 	jsonBytes, err := os.ReadFile(filePath)
 	if err != nil {

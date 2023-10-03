@@ -1,5 +1,8 @@
 ~
 
+# VS Code debug binary
+__debug_bin*
+
 # Editor cache and lock files
 *.swp
 *.swo

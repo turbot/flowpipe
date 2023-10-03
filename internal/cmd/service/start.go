@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/viper"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 )
 
 func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
@@ -18,27 +20,27 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 		Run:  startManagerFunc(ctx),
 	}
 
-	serviceStartCmd.Flags().String("pipeline-dir", "./flowpipe/pipelines", "The directory to load pipelines from")
-	serviceStartCmd.Flags().String("work-dir", "./flowpipe/pipelines", "Working directory for pipeline execution")
-	serviceStartCmd.Flags().String("output-dir", "./tmp", "The directory path to dump the snapshot file")
-	serviceStartCmd.Flags().String("log-dir", "./tmp", "The directory path to the log file for the execution")
+	serviceStartCmd.Flags().String(constants.ArgPipelineDir, "./flowpipe/pipelines", "The directory to load pipelines from")
+	serviceStartCmd.Flags().String(constants.ArgWorkDir, "./flowpipe/pipelines", "Working directory for pipeline execution")
+	serviceStartCmd.Flags().String(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file")
+	serviceStartCmd.Flags().String(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution")
 
-	err := viper.BindPFlag("pipeline.dir", serviceStartCmd.Flags().Lookup("pipeline-dir"))
+	err := viper.BindPFlag(constants.ArgPipelineDir, serviceStartCmd.Flags().Lookup(constants.ArgPipelineDir))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = viper.BindPFlag("work.dir", serviceStartCmd.Flags().Lookup("work-dir"))
+	err = viper.BindPFlag(constants.ArgWorkDir, serviceStartCmd.Flags().Lookup(constants.ArgWorkDir))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = viper.BindPFlag("output.dir", serviceStartCmd.Flags().Lookup("output-dir"))
+	err = viper.BindPFlag(constants.ArgOutputDir, serviceStartCmd.Flags().Lookup(constants.ArgOutputDir))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = viper.BindPFlag("log.dir", serviceStartCmd.Flags().Lookup("log-dir"))
+	err = viper.BindPFlag(constants.ArgLogDir, serviceStartCmd.Flags().Lookup(constants.ArgLogDir))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -54,17 +56,17 @@ func startManagerFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		m, err := manager.NewManager(ctx)
 
 		if err != nil {
-			panic(err)
+			error_helpers.FailOnError(err)
 		}
 
 		err = m.Initialize()
 		if err != nil {
-			panic(err)
+			error_helpers.FailOnError(err)
 		}
 
 		err = m.Start()
 		if err != nil {
-			panic(err)
+			error_helpers.FailOnError(err)
 		}
 
 		// Block until we receive a signal

@@ -37,6 +37,9 @@ func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfi
 	// Get information about the path
 	info, err := os.Stat(configPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return map[string]*modconfig.Pipeline{}, map[string]*modconfig.Trigger{}, nil
+		}
 		return nil, nil, err
 	}
 

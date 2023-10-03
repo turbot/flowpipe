@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/funcs"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
@@ -262,7 +263,7 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 // LogFilePath returns the path to the log file for the execution.
 func (ex *Execution) LogFilePath() (string, error) {
 	filename := fmt.Sprintf("%s.jsonl", ex.ID)
-	p := filepath.Join(viper.GetString("log.dir"), filename)
+	p := filepath.Join(viper.GetString(constants.ArgLogDir), filename)
 	return filepath.Abs(p)
 }
 

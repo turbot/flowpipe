@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -23,6 +22,7 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
 
@@ -130,11 +130,21 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	// Steampipe CLI loads the Workspace Profile here, but it also loads the mod in the parse context.
 	//
 	// set global containing the configured install dir (create directory if needed)
+
+	// load workspace profile from the configured install dir
+	loader, err := pipeparser.LoadWorkspaceProfile(context.TODO())
+	error_helpers.FailOnError(err)
+
+	// set global workspace profile
+	pipeparser.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
+
+	var cmd = viper.Get(pcconstants.ConfigKeyActiveCommand).(*cobra.Command)
+	// set-up viper with defaults from the env and default workspace profile
+	err = pipeparser.BootstrapViper(loader, cmd)
+	error_helpers.FailOnError(err)
+
 	installDir := viper.GetString(pcconstants.ArgInstallDir)
-	runMode := os.Getenv("RUN_MODE")
-	if !strings.HasPrefix(runMode, "TEST") {
-		ensureInstallDir(filepath.Join(installDir, "internal"))
-	}
+	ensureInstallDir(filepath.Join(installDir, "internal"))
 
 	salt, err := flowpipeSalt(filepath.Join(installDir, filepaths.PipesComponentInternal, "salt"), 32)
 	if err != nil {

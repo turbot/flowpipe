@@ -13,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 
@@ -53,8 +54,8 @@ func (es *ESService) Start() error {
 	logger.Debug("ES starting")
 	defer logger.Debug("ES started")
 
-	outputDir := viper.GetString("output.dir")
-	logDir := viper.GetString("log.dir")
+	outputDir := viper.GetString(constants.ArgOutputDir)
+	logDir := viper.GetString(constants.ArgLogDir)
 
 	// Check if the provided output dir exists, if not create it
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {

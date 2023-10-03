@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/pipeparser/cmdconfig"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/go-kit/types"
 )
 
@@ -21,6 +22,10 @@ func Viper() *viper.Viper {
 
 // BootstrapViper sets up viper with the essential path config (workspace-chdir and install-dir)
 func BootstrapViper(loader *WorkspaceProfileLoader, cmd *cobra.Command) error {
+	if loader == nil {
+		return perr.BadRequestWithMessage("workspace profile loader cannot be nil")
+	}
+
 	// set defaults  for keys which do not have a corresponding command flag
 	setBaseDefaults()
 
@@ -56,6 +61,10 @@ func tildefyPaths() error {
 	pathArgs := []string{
 		constants.ArgModLocation,
 		constants.ArgInstallDir,
+		constants.ArgPipelineDir,
+		constants.ArgWorkDir,
+		constants.ArgOutputDir,
+		constants.ArgLogDir,
 	}
 	var err error
 	for _, argName := range pathArgs {
