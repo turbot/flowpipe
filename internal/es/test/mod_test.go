@@ -286,10 +286,28 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 		return
 	}
 
-	// We pass "bar" as name here
 	assert.Equal("janis joplin was 27", pex.PipelineOutput["text_1"])
 	assert.Equal("jerry garcia was 53", pex.PipelineOutput["text_2"])
 	assert.Equal("jimi hendrix was 27", pex.PipelineOutput["text_3"])
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.set_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("[\"[0] guitar\",\"[1] bass\",\"[2] drums\"]", pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) SkipTestDoUntil() {
