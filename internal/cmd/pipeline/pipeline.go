@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/go-kit/helpers"
 )
 
 func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
@@ -60,6 +61,7 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 
 	// Add the pipeline arg flag
 	pipelineRunCmd.Flags().StringArray(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
+	pipelineRunCmd.Flags().String(constants.ArgPipelineExecutionMode, "asynchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.")
 
 	return pipelineRunCmd, nil
 }
@@ -68,6 +70,11 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 	return func(cmd *cobra.Command, args []string) {
 		logger := fplog.Logger(ctx)
 
+		// API client
+		apiClient := common.GetApiClient()
+		cmdPipelineRun := flowpipeapiclient.NewTypesCmdPipeline("run")
+
+		// Get the pipeline args from the flag
 		pipelineArgs := map[string]string{}
 		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgPipelineArg)
 		if err != nil {
@@ -87,9 +94,28 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			pipelineArgs[splitData[0]] = splitData[1]
 		}
 
-		apiClient := common.GetApiClient()
-		cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
+		// Set the pipeline args
 		cmdPipelineRun.ArgsString = &pipelineArgs
+
+		// Get the pipeline execution mode from the flag
+		executionMode := "asynchronous"
+		pipelineExecutionMode, err := cmd.Flags().GetString(constants.ArgPipelineExecutionMode)
+		if err != nil {
+			logger.Error("Error getting the value of execution-mode flag", "error", err)
+			return
+		}
+
+		if pipelineExecutionMode != "" {
+			err = validatePipelineExecutionMode(pipelineExecutionMode)
+			if err != nil {
+				logger.Error("Pipeline execution mode validation failed", "error", err)
+				return
+			}
+			executionMode = pipelineExecutionMode
+		}
+
+		// Set the pipeline execution mode
+		// cmdPipelineRun.ExecutionMode = &pipelineExecutionMode
 
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
 
@@ -149,6 +175,13 @@ func validatePipelineArgs(pipelineArgs []string) error {
 		if !validFormat.MatchString(arg) {
 			return fmt.Errorf("invalid format: %s", arg)
 		}
+	}
+	return nil
+}
+
+func validatePipelineExecutionMode(mode string) error {
+	if !helpers.StringSliceContains([]string{"asynchronous", "synchronous"}, mode) {
+		return fmt.Errorf("invalid execution mode: %s", mode)
 	}
 	return nil
 }

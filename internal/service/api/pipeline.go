@@ -137,7 +137,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // @Param request body types.CmdPipeline true "Pipeline command."
-// @Param execution_mode query string false "synchronous vs asynchronous"
+// @Param execution_mode query string true "synchronous vs asynchronous"
 // ...
 // @Success 200 {object} types.RunPipelineResponse
 // @Failure 400 {object} perr.ErrorModel
