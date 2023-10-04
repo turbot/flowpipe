@@ -72,7 +72,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 
 		// API client
 		apiClient := common.GetApiClient()
-		cmdPipelineRun := flowpipeapiclient.NewTypesCmdPipeline("run")
+		cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
 
 		// Get the pipeline args from the flag
 		pipelineArgs := map[string]string{}
@@ -115,10 +115,9 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		}
 
 		// Set the pipeline execution mode
-		// cmdPipelineRun.ExecutionMode = &pipelineExecutionMode
+		cmdPipelineRun.ExecutionMode = &executionMode
 
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
-
 		resp, _, err := request.Execute()
 		if err != nil {
 			logger.Error("Error when calling `PipelineApi.Cmd`", "error", err)
