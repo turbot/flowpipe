@@ -1128,7 +1128,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				emailRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val)
+				emailRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val, val.Type())
 				if ctyErr != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
@@ -1245,7 +1245,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				ccRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val)
+				ccRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val, val.Type())
 				if ctyErr != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
@@ -1266,7 +1266,7 @@ func (p *PipelineStepEmail) SetAttributes(hclAttributes hcl.Attributes, evalCont
 			}
 
 			if val != cty.NilVal {
-				bccRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val)
+				bccRecipients, ctyErr := hclhelpers.CtyToGoStringSlice(val, val.Type())
 				if ctyErr != nil {
 					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,

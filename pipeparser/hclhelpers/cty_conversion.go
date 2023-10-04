@@ -49,6 +49,28 @@ func isSliceOfNumeric(slice interface{}) bool {
 	return true
 }
 
+func isSliceOfBool(slice interface{}) bool {
+	value := reflect.ValueOf(slice)
+
+	if value.Kind() != reflect.Slice {
+		return false
+	}
+
+	if value.Len() == 0 {
+		// An empty slice is not considered a slice of numeric values.
+		return false
+	}
+
+	for i := 0; i < value.Len(); i++ {
+		element := value.Index(i).Interface()
+		if _, isBool := element.(bool); !isBool {
+			return false
+		}
+	}
+
+	return true
+}
+
 func isSliceOfStrings(i interface{}) bool {
 	// Check if it's a slice.
 	if slice, ok := i.([]interface{}); ok {
@@ -133,7 +155,28 @@ func GoTypeMatchesCtyType(val interface{}, ctyType cty.Type) bool {
 		return isSliceOfNumeric(val)
 	}
 
+	if ctyType == cty.List(cty.Bool) {
+		return isSliceOfBool(val)
+	}
+
 	if ctyType.IsListType() || ctyType.IsTupleType() {
+		_, ok := val.([]interface{})
+		return ok
+	}
+
+	if ctyType == cty.Set(cty.String) {
+		return isSliceOfStrings(val)
+	}
+
+	if ctyType == cty.Set(cty.Number) {
+		return isSliceOfNumeric(val)
+	}
+
+	if ctyType == cty.Set(cty.Bool) {
+		return isSliceOfBool(val)
+	}
+
+	if ctyType.IsSetType() {
 		_, ok := val.([]interface{})
 		return ok
 	}
@@ -146,7 +189,7 @@ func GoTypeMatchesCtyType(val interface{}, ctyType cty.Type) bool {
 		return isNumericMap(val)
 	}
 
-	if ctyType.IsMapType() || ctyType.IsObjectType() {
+	if ctyType.IsMapType() || ctyType.IsObjectType() || ctyType.IsTupleType() {
 		return reflect.ValueOf(val).Kind() == reflect.Map
 	}
 
@@ -190,26 +233,26 @@ func CoerceStringToGoBasedOnCtyType(input string, typ cty.Type) (interface{}, er
 	val, valDiags := expr.Value(nil)
 	diags = append(diags, valDiags...)
 
-	if typ.IsListType() || typ.IsTupleType() {
+	if typ.IsListType() || typ.IsTupleType() || typ.IsSetType() {
 
-		if typ == cty.List(cty.String) {
-			res, err := CtyToGoStringSlice(val)
+		if typ == cty.List(cty.String) || typ == cty.Set(cty.String) {
+			res, err := CtyToGoStringSlice(val, typ)
 			if err != nil {
 				return nil, err
 			}
 			return res, error_helpers.HclDiagsToError("flowpipe", diags)
 		}
 
-		if typ == cty.List(cty.Number) {
-			res, err := CtyToGoNumericSlice(val)
+		if typ == cty.List(cty.Number) || typ == cty.Set(cty.Number) {
+			res, err := CtyToGoNumericSlice(val, typ)
 			if err != nil {
 				return nil, err
 			}
 			return res, error_helpers.HclDiagsToError("flowpipe", diags)
 		}
 
-		if typ == cty.List(cty.Bool) {
-			res, err := CtyToGoBoolSlice(val)
+		if typ == cty.List(cty.Bool) || typ == cty.Set(cty.Bool) {
+			res, err := CtyToGoBoolSlice(val, typ)
 			if err != nil {
 				return nil, err
 			}
@@ -396,16 +439,17 @@ func CtyToGoInterfaceSlice(v cty.Value) (val []interface{}, err error) {
 	return res, nil
 }
 
-func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
+func CtyToGoStringSlice(v cty.Value, typ cty.Type) (val []string, err error) {
 	if v.IsNull() || !v.IsWhollyKnown() {
 		return nil, nil
 	}
 	ty := v.Type()
-	if !ty.IsListType() && !ty.IsTupleType() {
+	if !ty.IsListType() && !ty.IsTupleType() && !ty.IsSetType() {
 		return nil, perr.BadRequestWithMessage("expected list type")
 	}
 
 	var res []string
+	currentElements := map[string]bool{}
 	it := v.ElementIterator()
 	for it.Next() {
 		_, v := it.Element()
@@ -420,22 +464,31 @@ func CtyToGoStringSlice(v cty.Value) (val []string, err error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if typ.IsSetType() {
+			if _, ok := currentElements[target]; ok {
+				return nil, perr.BadRequestWithMessage("duplicate value found in set")
+			}
+			currentElements[target] = true
+		}
+
 		res = append(res, target)
 	}
 
 	return res, nil
 }
 
-func CtyToGoNumericSlice(v cty.Value) (val []float64, err error) {
+func CtyToGoNumericSlice(v cty.Value, typ cty.Type) (val []float64, err error) {
 	if v.IsNull() || !v.IsWhollyKnown() {
 		return nil, nil
 	}
 	ty := v.Type()
-	if !ty.IsListType() && !ty.IsTupleType() {
+	if !ty.IsListType() && !ty.IsTupleType() && !ty.IsSetType() {
 		return nil, perr.BadRequestWithMessage("expected list type")
 	}
 
 	var res []float64
+	currentElements := map[float64]bool{}
 	it := v.ElementIterator()
 	for it.Next() {
 		_, v := it.Element()
@@ -450,6 +503,13 @@ func CtyToGoNumericSlice(v cty.Value) (val []float64, err error) {
 		if err != nil {
 			return nil, err
 		}
+
+		if typ.IsSetType() {
+			if _, ok := currentElements[target]; ok {
+				return nil, perr.BadRequestWithMessage("duplicate value found in set")
+			}
+			currentElements[target] = true
+		}
 		res = append(res, target)
 	}
 
@@ -457,7 +517,7 @@ func CtyToGoNumericSlice(v cty.Value) (val []float64, err error) {
 
 }
 
-func CtyToGoBoolSlice(v cty.Value) (val []bool, err error) {
+func CtyToGoBoolSlice(v cty.Value, typ cty.Type) (val []bool, err error) {
 	if v.IsNull() || !v.IsWhollyKnown() {
 		return nil, nil
 	}
@@ -467,6 +527,7 @@ func CtyToGoBoolSlice(v cty.Value) (val []bool, err error) {
 	}
 
 	var res []bool
+	currentElements := map[bool]bool{}
 	it := v.ElementIterator()
 	for it.Next() {
 		_, v := it.Element()
@@ -474,6 +535,13 @@ func CtyToGoBoolSlice(v cty.Value) (val []bool, err error) {
 		// Return error if any of the value in the slice is not a number
 		if v.Type() != cty.Bool {
 			return nil, perr.BadRequestWithMessage("expected number type, but got " + v.Type().FriendlyName())
+		}
+
+		if typ.IsSetType() {
+			if _, ok := currentElements[v.True()]; ok {
+				return nil, perr.BadRequestWithMessage("duplicate value found in set")
+			}
+			currentElements[v.True()] = true
 		}
 
 		res = append(res, v.True())

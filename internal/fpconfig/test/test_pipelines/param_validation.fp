@@ -16,6 +16,22 @@ pipeline "validate_my_param" {
         type = bool
     }
 
+    param "set_string" {
+        type = set(string)
+    }
+
+    param "set_number" {
+        type = set(number)
+    }
+
+    param "set_bool" {
+        type = set(bool)
+    }
+
+    param "set_any" {
+        type = set
+    }
+
     param "list_string" {
         type = list(string)
     }

@@ -134,7 +134,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
-			if val.Type().IsListType() || val.Type().IsSetType() {
+			if val.Type().IsListType() || val.Type().IsSetType() || val.Type().IsTupleType() {
 				listVal := val.AsValueSlice()
 				for i, v := range listVal {
 					forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
