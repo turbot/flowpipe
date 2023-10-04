@@ -1,10 +1,11 @@
-# Gtihub workflow to build and push the flowpipe devcontainer image to the Github Container Registry
-# The workflow is still in development and is not ready to use yet
-
 name: Build and Release Flowpipe DevContainer
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "The version of the Flowpipe DevContainer"
+        required: true
 
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -37,10 +38,15 @@ jobs:
         with:
           go-version: '1.21'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GH_ACCESS_TOKEN }}
       
       - name: Build and push
         run: |
-          ls -la
           cd flowpipe/devcontainer
-          pwd
-          ls -la
+          docker buildx build --push --platform linux/arm64,linux/amd64 --tag ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }} .
