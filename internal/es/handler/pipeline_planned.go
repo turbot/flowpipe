@@ -134,14 +134,23 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
-			listVal := val.AsValueSlice()
-			for i, v := range listVal {
-				forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
-					schema.AttributeTypeValue: v,
-					schema.AttributeKey:       cty.NumberIntVal(int64(i)),
-				})
+			if val.Type().IsListType() || val.Type().IsSetType() {
+				listVal := val.AsValueSlice()
+				for i, v := range listVal {
+					forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
+						schema.AttributeTypeValue: v,
+						schema.AttributeKey:       cty.NumberIntVal(int64(i)),
+					})
+				}
+			} else if val.Type().IsMapType() || val.Type().IsObjectType() {
+				mapVal := val.AsValueMap()
+				for k, v := range mapVal {
+					forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
+						schema.AttributeTypeValue: v,
+						schema.AttributeKey:       cty.StringVal(k),
+					})
+				}
 			}
-
 		}
 
 		// inputs will gather the input data for each step execution, if we have a for_each
