@@ -162,10 +162,11 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	response := types.RunPipelineResponse{
-		ExecutionID:           pipelineCmd.Event.ExecutionID,
-		PipelineExecutionID:   pipelineCmd.PipelineExecutionID,
-		ParentStepExecutionID: pipelineCmd.ParentStepExecutionID,
+	response := types.PipelineExecutionResponse{
+		"flowpipe": map[string]interface{}{
+			"execution_id":          pipelineCmd.Event.ExecutionID,
+			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+		},
 	}
 	c.JSON(http.StatusOK, response)
 }
@@ -216,5 +217,12 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		return
 	}
 
-	c.JSON(http.StatusOK, pex.PipelineOutput)
+	response := pex.PipelineOutput
+
+	response["flowpipe"] = map[string]interface{}{
+		"execution_id":          pipelineCmd.Event.ExecutionID,
+		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+	}
+
+	c.JSON(http.StatusOK, response)
 }
