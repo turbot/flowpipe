@@ -13,7 +13,7 @@ import (
 func TestParamValidation(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/pipeline_param_validation.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/param_validation.fp")
 	assert.Nil(err, "error found")
 
 	validateMyParam := pipelines["local.pipeline.validate_my_param"]
@@ -153,10 +153,25 @@ func TestParamValidation(t *testing.T) {
 		"list_any_three": []interface{}{1, 2, 3},
 	}
 
-	errs = validateMyParam.ValidatePipelineParam(paramNotList)
-	assert.Equal(3, len(errs))
-
 	errs = validateMyParam.ValidatePipelineParam(listAny)
+	assert.Equal(0, len(errs))
+
+	setString := map[string]interface{}{
+		"set_string": []string{"foo", "bar", "baz"},
+	}
+	errs = validateMyParam.ValidatePipelineParam(setString)
+	assert.Equal(0, len(errs))
+
+	setNumber := map[string]interface{}{
+		"set_number": []int{1, 2, 3},
+	}
+	errs = validateMyParam.ValidatePipelineParam(setNumber)
+	assert.Equal(0, len(errs))
+
+	setBool := map[string]interface{}{
+		"set_bool": []bool{false, true, true},
+	}
+	errs = validateMyParam.ValidatePipelineParam(setBool)
 	assert.Equal(0, len(errs))
 
 	stringMap := map[string]interface{}{
@@ -276,7 +291,7 @@ func TestParamValidation(t *testing.T) {
 func TestParamCoerce(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/pipeline_param_validation.fp")
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/param_validation.fp")
 	assert.Nil(err, "error found")
 
 	validateMyParam := pipelines["local.pipeline.validate_my_param"]
@@ -427,6 +442,44 @@ func TestParamCoerce(t *testing.T) {
 	assert.Equal(1, res["list_any_three"].([]interface{})[0])
 	assert.Equal(2.3, res["list_any_three"].([]interface{})[1])
 	assert.Equal(4, res["list_any_three"].([]interface{})[2])
+
+	setSameTypes := map[string]string{
+		"set_string": `["foo", "bar", "3"]`,
+		"set_number": `[1, 2, 3]`,
+	}
+	res, errs = validateMyParam.CoercePipelineParams(setSameTypes)
+	if len(errs) > 0 {
+		assert.Fail("error found")
+		return
+	}
+	equalIgnoreOrder = cmp.Equal(expectedErrors, actualErrors, cmpopts.SortSlices(less))
+	assert.True(equalIgnoreOrder, "expected errors do not match")
+
+	assert.Equal(3, len(res["set_string"].([]string)))
+	assert.Equal("foo", res["set_string"].([]string)[0])
+	assert.Equal("bar", res["set_string"].([]string)[1])
+	assert.Equal("3", res["set_string"].([]string)[2])
+
+	assert.Equal(3, len(res["set_number"].([]float64)))
+	assert.Equal(float64(1), res["set_number"].([]float64)[0])
+	assert.Equal(float64(2), res["set_number"].([]float64)[1])
+	assert.Equal(float64(3), res["set_number"].([]float64)[2])
+
+	setFailures := map[string]string{
+		"set_string": `["foo", "bar", "bar"]`,
+	}
+	_, errs = validateMyParam.CoercePipelineParams(setFailures)
+	expectedErrors = []string{
+		"Bad Request: duplicate value found in set",
+	}
+
+	actualErrors = []string{}
+	for _, err := range errs {
+		actualErrors = append(actualErrors, err.Error())
+	}
+
+	equalIgnoreOrder = cmp.Equal(expectedErrors, actualErrors, cmpopts.SortSlices(less))
+	assert.True(equalIgnoreOrder, "expected errors do not match")
 
 	validMap := map[string]string{
 		"map_of_string":     `{"foo": "bar", "baz": "qux"}`,

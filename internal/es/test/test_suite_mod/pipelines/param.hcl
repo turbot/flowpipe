@@ -62,3 +62,20 @@ pipeline "calling_pipeline_with_params" {
         value = step.pipeline.simple_param.from_var
     }
 }
+
+pipeline "set_param" {
+
+    param "instruments" {
+        type = set(string)
+        default = ["guitar", "bass", "drums"]
+    }
+
+    step "echo" "instruments" {
+        for_each = param.instruments
+        text = "[${each.key}] ${each.value}"
+    }
+
+    output "val" {
+        value = step.echo.instruments[*].text
+    }
+}
