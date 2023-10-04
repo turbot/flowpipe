@@ -2,7 +2,9 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -20,12 +22,23 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 		Run:  startManagerFunc(ctx),
 	}
 
-	serviceStartCmd.Flags().String(constants.ArgPipelineDir, "./flowpipe/pipelines", "The directory to load pipelines from")
+	serviceStartCmd.Flags().String(constants.ArgPipelineDir, ".", "The directory to load pipelines from. Defaults to the current directory.")
 	serviceStartCmd.Flags().String(constants.ArgWorkDir, "./flowpipe/pipelines", "Working directory for pipeline execution")
 	serviceStartCmd.Flags().String(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file")
 	serviceStartCmd.Flags().String(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution")
 
-	err := viper.BindPFlag(constants.ArgPipelineDir, serviceStartCmd.Flags().Lookup(constants.ArgPipelineDir))
+	pipelineDir, err := serviceStartCmd.Flags().GetString(constants.ArgPipelineDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if the specified file exists in the pipeline directory.
+	filePath := fmt.Sprintf("%s/mod.hcl", pipelineDir)
+	if _, err := os.Stat(filePath); err != nil {
+		return nil, fmt.Errorf("mod.hcl not found in the current directory")
+	}
+
+	err = viper.BindPFlag(constants.ArgPipelineDir, serviceStartCmd.Flags().Lookup(constants.ArgPipelineDir))
 	if err != nil {
 		log.Fatal(err)
 	}
