@@ -19,7 +19,7 @@
 
 1. Run flowpipe specifying the pipeline directory
     ```
-    $ ./flowpipe service start --pipeline-dir ./pipeline
+    $ ./flowpipe service start --mod-location ./pipeline
     ```
 
 ### VS Code Dev Container
@@ -30,7 +30,7 @@
     ```bash
     # Starts the service, reads pipeline definition from the `pipelines` directory
     $ make
-    FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --pipeline-dir ./pipeline
+    FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --mod-location ./pipeline
     2023-06-06T11:53:49.835Z        DEBUG   Manager starting
     2023-06-06T11:53:49.835Z        DEBUG   ES starting
     2023-06-06T11:53:49.835Z        DEBUG   Pipeline dir    {"dir": "./pipeline"}
