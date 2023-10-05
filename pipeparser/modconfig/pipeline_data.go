@@ -77,6 +77,7 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 
 	errors := []error{}
 
+	// Lists out all the pipeline params that don't have a default value
 	pipelineParamsWithNoDefaultValue := []string{}
 	for key, param := range p.Params {
 		if param.Default.IsNull() {
@@ -84,10 +85,17 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 		}
 	}
 
+	// Check if any arguments are passed in for the pipeline params that don't have a default value
+	var missingParams []string
 	for _, param := range pipelineParamsWithNoDefaultValue {
-		if _, ok := params[param]; !ok {
-			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter '%s'", param)))
+		if params[param] == nil {
+			missingParams = append(missingParams, param)
 		}
+	}
+
+	// Return error if there is no arguments provided for the pipeline params that don't have a default value
+	if len(missingParams) > 0 {
+		errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter: %s", strings.Join(missingParams, ", "))))
 	}
 
 	for k, v := range params {
@@ -110,6 +118,28 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 // data are not resolved during parse time.
 func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]interface{}, []error) {
 	errors := []error{}
+
+	// Lists out all the pipeline params that don't have a default value
+	pipelineParamsWithNoDefaultValue := []string{}
+	for key, param := range p.Params {
+		if param.Default.IsNull() {
+			pipelineParamsWithNoDefaultValue = append(pipelineParamsWithNoDefaultValue, key)
+		}
+	}
+
+	// Check if any arguments are passed in for the pipeline params that don't have a default value
+	var missingParams []string
+	for _, param := range pipelineParamsWithNoDefaultValue {
+		if params[param] == "" {
+			missingParams = append(missingParams, param)
+		}
+	}
+
+	// Return error if there is no arguments provided for the pipeline params that don't have a default value
+	if len(missingParams) > 0 {
+		errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter: %s", strings.Join(missingParams, ", "))))
+	}
+
 	res := map[string]interface{}{}
 
 	for k, v := range params {

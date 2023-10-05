@@ -190,24 +190,46 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		Name:                pipelineDefn.Name(),
 	}
 
-	if len(input.Args) > 0 {
-		errs := pipelineDefn.ValidatePipelineParam(input.Args)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
-			return
-		}
-		pipelineCmd.Args = input.Args
-
-	} else if len(input.ArgsString) > 0 {
-		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
-			return
-		}
-		pipelineCmd.Args = args
+	// TODO: Recheck this logic
+	// Are we using args, args_string or both?
+	// For now, append all the args and args_string values
+	// and coerce them into a map[string]string.
+	// And, then send it to pipeline execution.
+	pipelineArgs := map[string]string{}
+	for k, v := range input.Args {
+		pipelineArgs[k] = fmt.Sprint(v)
 	}
+
+	for k, v := range input.ArgsString {
+		pipelineArgs[k] = v
+	}
+
+	args, errs := pipelineDefn.CoercePipelineParams(pipelineArgs)
+	if len(errs) > 0 {
+		errStrs := error_helpers.MergeErrors(errs)
+		common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+		return
+	}
+	pipelineCmd.Args = args
+
+	// if len(input.Args) > 0 {
+	// 	errs := pipelineDefn.ValidatePipelineParam(input.Args)
+	// 	if len(errs) > 0 {
+	// 		errStrs := error_helpers.MergeErrors(errs)
+	// 		common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+	// 		return
+	// 	}
+	// 	pipelineCmd.Args = input.Args
+
+	// } else if len(input.ArgsString) > 0 {
+	// 	args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
+	// 	if len(errs) > 0 {
+	// 		errStrs := error_helpers.MergeErrors(errs)
+	// 		common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+	// 		return
+	// 	}
+	// 	pipelineCmd.Args = args
+	// }
 
 	if err := api.EsService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
