@@ -14,12 +14,15 @@ type ErrorDetailModel struct {
 }
 
 type ErrorModel struct {
-	Instance         string              `json:"instance" binding:"required"`
-	ID               string              `json:"-"`
-	Type             string              `json:"type" binding:"required"`
-	Title            string              `json:"title" binding:"required"`
-	Status           int                 `json:"status" binding:"required"`
-	Detail           string              `json:"detail,omitempty"`
+	Instance string `json:"instance" binding:"required"`
+	ID       string `json:"-"`
+	Type     string `json:"type" binding:"required"`
+	Title    string `json:"title" binding:"required"`
+	Status   int    `json:"status" binding:"required"`
+
+	// If we don't have required it comes out as pointer and tehre is a bug in the formatter
+	Detail string `json:"detail" binding:"required"`
+
 	ValidationErrors []*ErrorDetailModel `json:"validation_errors,omitempty"`
 
 	// All errors are fatal unless specified

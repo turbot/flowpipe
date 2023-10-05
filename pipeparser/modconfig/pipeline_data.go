@@ -76,6 +76,20 @@ type Pipeline struct {
 func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error {
 
 	errors := []error{}
+
+	pipelineParamsWithNoDefaultValue := []string{}
+	for key, param := range p.Params {
+		if param.Default.IsNull() {
+			pipelineParamsWithNoDefaultValue = append(pipelineParamsWithNoDefaultValue, key)
+		}
+	}
+
+	for _, param := range pipelineParamsWithNoDefaultValue {
+		if _, ok := params[param]; !ok {
+			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter '%s'", param)))
+		}
+	}
+
 	for k, v := range params {
 		param, ok := p.Params[k]
 		if !ok {
