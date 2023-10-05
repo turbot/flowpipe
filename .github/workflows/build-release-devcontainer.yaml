@@ -15,6 +15,11 @@ jobs:
     name: Build and Release
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Flowpipe repository
+        uses: actions/checkout@v3
+        with:
+          path: flowpipe
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
@@ -32,12 +37,13 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v5
         with:
+          context: flowpipe/devcontainer
           push: true
           platforms: linux/arm64,linux/amd64
           tags: |
             ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }}
       
-      - name: Build and push
-        run: |
-          cd flowpipe/devcontainer
-          docker buildx build --push --platform linux/arm64,linux/amd64 --tag ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }} .
+      # - name: Build and push
+      #   run: |
+      #     cd flowpipe/devcontainer
+      #     docker buildx build --push --platform linux/arm64,linux/amd64 --tag ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }} .
