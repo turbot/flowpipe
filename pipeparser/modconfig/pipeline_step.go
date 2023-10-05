@@ -1568,11 +1568,11 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var sql *string
 	if p.UnresolvedAttributes[schema.AttributeTypeSql] == nil {
 		if p.Sql == nil {
-			return nil, perr.BadRequestWithMessage("url must be supplied")
+			return nil, perr.BadRequestWithMessage("sql must be supplied")
 		}
 		sql = p.Sql
 	} else {
-		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeUrl], evalContext, &sql)
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSql], evalContext, &sql)
 		if diags.HasErrors() {
 			return nil, error_helpers.HclDiagsToError(schema.BlockTypePipelineStep, diags)
 		}
@@ -1581,7 +1581,7 @@ func (p *PipelineStepQuery) GetInputs(evalContext *hcl.EvalContext) (map[string]
 	var connectionString *string
 	if p.UnresolvedAttributes[schema.AttributeTypeConnectionString] == nil {
 		if p.ConnnectionString == nil {
-			return nil, perr.BadRequestWithMessage("ConnectionString must be supplied")
+			return nil, perr.BadRequestWithMessage("connection string must be supplied")
 		}
 		connectionString = p.ConnnectionString
 	} else {
