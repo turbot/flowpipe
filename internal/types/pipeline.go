@@ -22,9 +22,10 @@ type ListPipelineResponse struct {
 type PipelineExecutionResponse map[string]interface{}
 
 type CmdPipeline struct {
-	Command    string                 `json:"command" binding:"required,oneof=run"`
-	Args       map[string]interface{} `json:"args,omitempty"`
-	ArgsString map[string]string      `json:"args_string,omitempty"`
+	Command       string                 `json:"command" binding:"required,oneof=run"`
+	Args          map[string]interface{} `json:"args,omitempty"`
+	ArgsString    map[string]string      `json:"args_string,omitempty"`
+	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
 }
 
 type PrintablePipeline struct {
