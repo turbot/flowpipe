@@ -19,11 +19,7 @@ type ListPipelineResponse struct {
 	NextToken *string      `json:"next_token,omitempty"`
 }
 
-type RunPipelineResponse struct {
-	ExecutionID           string `json:"execution_id"`
-	PipelineExecutionID   string `json:"pipeline_execution_id"`
-	ParentStepExecutionID string `json:"parent_step_execution_id"`
-}
+type PipelineExecutionResponse map[string]interface{}
 
 type CmdPipeline struct {
 	Command    string                 `json:"command" binding:"required,oneof=run"`

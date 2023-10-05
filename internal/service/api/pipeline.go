@@ -139,7 +139,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 // @Param request body types.CmdPipeline true "Pipeline command."
 // @Param execution_mode query string false "synchronous vs asynchronous"
 // ...
-// @Success 200 {object} types.RunPipelineResponse
+// @Success 200 {object} types.PipelineExecutionResponse
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -226,11 +226,13 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		return
 	}
 
-	response := types.RunPipelineResponse{
-		ExecutionID:           pipelineCmd.Event.ExecutionID,
-		PipelineExecutionID:   pipelineCmd.PipelineExecutionID,
-		ParentStepExecutionID: pipelineCmd.ParentStepExecutionID,
+	response := types.PipelineExecutionResponse{
+		"flowpipe": map[string]interface{}{
+			"execution_id":          pipelineCmd.Event.ExecutionID,
+			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+		},
 	}
+
 	c.JSON(http.StatusOK, response)
 }
 
