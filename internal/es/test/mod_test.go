@@ -76,7 +76,7 @@ func (suite *ModTestSuite) SetupSuite() {
 
 	pipelineDirPath := path.Join(cwd, "test_suite_mod")
 
-	viper.GetViper().Set(constants.ArgPipelineDir, pipelineDirPath)
+	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
 	viper.GetViper().Set(constants.ArgOutputDir, outputPath)
 	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 

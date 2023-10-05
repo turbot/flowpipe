@@ -96,7 +96,7 @@ func WithHTTPAddress(addr string) ManagerOption {
 
 // TODO: is there any point to have a separate "Initialize" and "Start"?
 func (m *Manager) Initialize() error {
-	pipelineDir := viper.GetString(constants.ArgPipelineDir)
+	pipelineDir := viper.GetString(constants.ArgModLocation)
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
