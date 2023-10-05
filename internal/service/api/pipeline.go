@@ -137,7 +137,6 @@ func (api *APIService) getPipeline(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // @Param request body types.CmdPipeline true "Pipeline command."
-// @Param execution_mode query string false "synchronous vs asynchronous"
 // ...
 // @Success 200 {object} types.PipelineExecutionResponse
 // @Failure 400 {object} perr.ErrorModel
@@ -169,15 +168,9 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		return
 	}
 
-	pipelineQuery := types.PipelineRequestQuery{}
-	if err := c.ShouldBindQuery(&pipelineQuery); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
 	executionMode := "asynchronous"
-	if pipelineQuery.ExecutionMode != nil {
-		executionMode = *pipelineQuery.ExecutionMode
+	if input.ExecutionMode != nil {
+		executionMode = *input.ExecutionMode
 	}
 
 	// Execute the command
