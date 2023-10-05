@@ -42,8 +42,3 @@ jobs:
           platforms: linux/arm64,linux/amd64
           tags: |
             ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }}
-      
-      # - name: Build and push
-      #   run: |
-      #     cd flowpipe/devcontainer
-      #     docker buildx build --push --platform linux/arm64,linux/amd64 --tag ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }} .
