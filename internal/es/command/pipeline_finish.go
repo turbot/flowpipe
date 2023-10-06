@@ -69,8 +69,9 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("output", diags)
-				logger.Error("Error calculating output", "error", err)
-				return err
+				logger.Error("Error calculating output on pipeline finish", "error", err)
+				outputBlock[output.Name] = "Unable to calculate output " + output.Name
+				continue
 			}
 			val, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {

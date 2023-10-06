@@ -219,6 +219,10 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 
 	response := pex.PipelineOutput
 
+	if response == nil {
+		response = map[string]interface{}{}
+	}
+
 	response["flowpipe"] = map[string]interface{}{
 		"execution_id":          pipelineCmd.Event.ExecutionID,
 		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
