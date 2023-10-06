@@ -11,9 +11,9 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/go-kit/helpers"
 )
 
@@ -68,7 +68,6 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 
 func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		logger := fplog.Logger(ctx)
 
 		// API client
 		apiClient := common.GetApiClient()
@@ -78,14 +77,14 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		pipelineArgs := map[string]string{}
 		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgPipelineArg)
 		if err != nil {
-			logger.Error("Error getting the value of pipeline-arg flag", "error", err)
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of pipeline-arg flag")
 			return
 		}
 
 		// validate the pipeline arg input
 		err = validatePipelineArgs(pipeLineArgValues)
 		if err != nil {
-			logger.Error("Pipeline argument validation failed", "error", err)
+			error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline argument validation failed")
 			return
 		}
 
@@ -101,14 +100,14 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		executionMode := "asynchronous"
 		pipelineExecutionMode, err := cmd.Flags().GetString(constants.ArgPipelineExecutionMode)
 		if err != nil {
-			logger.Error("Error getting the value of execution-mode flag", "error", err)
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of execution-mode flag")
 			return
 		}
 
 		if pipelineExecutionMode != "" {
 			err = validatePipelineExecutionMode(pipelineExecutionMode)
 			if err != nil {
-				logger.Error("Pipeline execution mode validation failed", "error", err)
+				error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline execution mode validation failed")
 				return
 			}
 			executionMode = pipelineExecutionMode
@@ -120,7 +119,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
 		resp, _, err := request.Execute()
 		if err != nil {
-			logger.Error(err.Error())
+			error_helpers.ShowError(ctx, err)
 			return
 		}
 
@@ -128,7 +127,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			s, err := prettyjson.Marshal(resp)
 
 			if err != nil {
-				logger.Error("Error when calling `colorjson.Marshal`", "error", err)
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
 				return
 			}
 
@@ -140,14 +139,13 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 
 func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		logger := fplog.Logger(ctx)
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
 		apiClient := common.GetApiClient()
-		resp, r, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
+		resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
 		if err != nil {
-			logger.Error("Error when calling `PipelineApi.List`", "error", err, "httpResponse", r)
+			error_helpers.ShowError(ctx, err)
 			return
 		}
 
@@ -157,12 +155,12 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			printableResource := types.PrintablePipeline{}
 			printableResource.Items, err = printableResource.Transform(resp)
 			if err != nil {
-				logger.Error("Error when transforming", "error", err)
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
 			}
 
 			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 			if err != nil {
-				logger.Error("Error when printing", "error", err)
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 			}
 		}
 	}

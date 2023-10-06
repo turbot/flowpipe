@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
@@ -44,7 +44,6 @@ func ProcessGetCmd(ctx context.Context) (*cobra.Command, error) {
 func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 
-		logger := fplog.Logger(ctx)
 		apiClient := common.GetApiClient()
 
 		outputOnly, _ := cmd.Flags().GetBool("output-only")
@@ -52,14 +51,14 @@ func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 		if outputOnly {
 			output, _, err := apiClient.ProcessApi.GetOutput(ctx, args[0]).Execute()
 			if err != nil {
-				logger.Error("Error when calling `ProcessApi.GetOutput`", "error", err)
+				error_helpers.ShowError(ctx, err)
 				return
 			}
 
 			s, err := prettyjson.Marshal(output)
 
 			if err != nil {
-				logger.Error("Error when calling `colorjson.Marshal`", "error", err)
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
 				return
 			}
 
@@ -67,14 +66,14 @@ func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 		} else {
 			ex, _, err := apiClient.ProcessApi.Get(ctx, args[0]).Execute()
 			if err != nil {
-				logger.Error("Error when calling `ProcessApi.Get`", "error", err)
+				error_helpers.ShowError(ctx, err)
 				return
 			}
 
 			s, err := prettyjson.Marshal(ex)
 
 			if err != nil {
-				logger.Error("Error when calling `colorjson.Marshal`", "error", err)
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
 				return
 			}
 

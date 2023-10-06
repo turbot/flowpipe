@@ -4,6 +4,7 @@ package mod
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -74,7 +75,7 @@ func modInstallCmd() *cobra.Command {
 	cmd.Flags().Var(&gitUrlModeEnum, constants.ArgGitUrlMode, "Git URL mode (https or ssh)")
 	err := viper.BindPFlag(constants.ArgGitUrlMode, cmd.Flags().Lookup(constants.ArgGitUrlMode))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	// cmdconfig.OnCmd(cmd).
@@ -303,7 +304,7 @@ func runModInitCmd(cmd *cobra.Command, args []string) {
 	workspacePath := viper.GetString(constants.ArgModLocation)
 	_, err := createWorkspaceMod(cmd.Context(), cmd, workspacePath)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 }
