@@ -178,8 +178,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				val, diags := expr.Value(evalContext)
 				if len(diags) > 0 {
 					err := error_helpers.HclDiagsToError("diags", diags)
+
 					logger.Error("Error evaluating if condition", "error", err)
-					return err
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
 
 				if val.False() {
@@ -198,7 +199,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
 					logger.Error("Error resolving step inputs for single step", "error", err)
-					return err
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
 				inputs = append(inputs, stepInputs)
 			} else {
@@ -227,7 +228,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					if len(diags) > 0 {
 						err := error_helpers.HclDiagsToError("diags", diags)
 						logger.Error("Error evaluating if condition", "error", err)
-						return err
+						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					}
 
 					if val.False() {
@@ -245,7 +246,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					stepInputs, err := stepDefn.GetInputs(evalContext)
 					if err != nil {
 						logger.Error("Error resolving step inputs for for_each step", "error", err)
-						return err
+						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					}
 					inputs = append(inputs, stepInputs)
 				} else {
