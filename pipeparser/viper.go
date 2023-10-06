@@ -62,7 +62,6 @@ func tildefyPaths() error {
 		constants.ArgModLocation,
 		constants.ArgInstallDir,
 		constants.ArgModLocation,
-		constants.ArgWorkDir,
 		constants.ArgOutputDir,
 		constants.ArgLogDir,
 	}
