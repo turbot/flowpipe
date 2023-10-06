@@ -292,10 +292,10 @@ func (m *Manager) Start() error {
 
 	// Start the scheduler service
 	s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
-	// err = s.Start()
-	// if err != nil {
-	// 	return err
-	// }
+	err = s.Start()
+	if err != nil {
+		return err
+	}
 
 	m.schedulerService = s
 
