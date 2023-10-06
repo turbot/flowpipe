@@ -188,7 +188,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 
 				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 				if len(diags) > 0 && diags.HasErrors() {
-					logger.Error("Error calculating output", "error", diags)
+					logger.Error("Error calculating output on step start", "error", diags)
 					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 					if err2 != nil {
 						logger.Error("Error publishing event", "error", err2)

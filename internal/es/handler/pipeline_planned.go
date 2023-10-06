@@ -169,13 +169,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		// now resolve the inputs, if there's no for_each then there's just one input
 		if len(forEachCtyVals) == 0 {
-			// There's no for_each
-			stepInputs, err := stepDefn.GetInputs(evalContext)
-			if err != nil {
-				logger.Error("Error resolving step inputs for single step", "error", err)
-				return err
-			}
-			inputs = append(inputs, stepInputs)
+
+			calculateInput := true
 
 			if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
 				expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
@@ -183,18 +178,33 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				val, diags := expr.Value(evalContext)
 				if len(diags) > 0 {
 					err := error_helpers.HclDiagsToError("diags", diags)
+
 					logger.Error("Error evaluating if condition", "error", err)
-					return err
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
 
 				if val.False() {
 					logger.Info("if condition not met for step", "step", stepDefn.GetName())
+					calculateInput = false
 					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionSkip)
 				} else {
 					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
 				}
 			} else {
 				forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
+			}
+
+			if calculateInput {
+				// There's no for_each
+				stepInputs, err := stepDefn.GetInputs(evalContext)
+				if err != nil {
+					logger.Error("Error resolving step inputs for single step", "error", err)
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				}
+				inputs = append(inputs, stepInputs)
+			} else {
+				// If we're to skip the next step, then we need to add a dummy input
+				inputs = append(inputs, map[string]interface{}{})
 			}
 		} else {
 
@@ -205,16 +215,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				//
 				// flowpipe's step must use the "each" keyword to access the for_each element that it's currently running
 				evalContext.Variables[schema.AttributeEach] = cty.ObjectVal(v)
-				stepInputs, err := stepDefn.GetInputs(evalContext)
-				if err != nil {
-					logger.Error("Error resolving step inputs for for_each step", "error", err)
-					return err
-				}
-				inputs = append(inputs, stepInputs)
 
 				// check the "IF" block to see if the step should be skipped?
 				// I used to do this in the "step_start" section, but if the IF attribute uses the "each" element, this is the place
 				// to do it
+
+				calculateInput := true
 				if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
 					expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
 
@@ -222,11 +228,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					if len(diags) > 0 {
 						err := error_helpers.HclDiagsToError("diags", diags)
 						logger.Error("Error evaluating if condition", "error", err)
-						return err
+						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					}
 
 					if val.False() {
 						logger.Info("if condition not met for step", "step", stepDefn.GetName())
+						calculateInput = false
 						forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionSkip)
 					} else {
 						forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
@@ -234,6 +241,19 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				} else {
 					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
 				}
+
+				if calculateInput {
+					stepInputs, err := stepDefn.GetInputs(evalContext)
+					if err != nil {
+						logger.Error("Error resolving step inputs for for_each step", "error", err)
+						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					}
+					inputs = append(inputs, stepInputs)
+				} else {
+					// If we're to skip the next step, then we need to add a dummy input
+					inputs = append(inputs, map[string]interface{}{})
+				}
+
 			}
 		}
 

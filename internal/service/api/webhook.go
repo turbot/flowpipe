@@ -208,7 +208,22 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	}
 
 	if pex == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution not found (2)"))
+		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution not found"))
+		return
+	}
+
+	if pex.Status == "failed" {
+		errorString := ""
+		if pex.PipelineOutput != nil && pex.PipelineOutput["errors"] != nil {
+			errorCollection, ok := pex.PipelineOutput["errors"].([]interface{})
+			if ok {
+				for _, err := range errorCollection {
+					errorString += err.(map[string]interface{})["message"].(string) + "; "
+				}
+			}
+		}
+
+		common.AbortWithError(c, perr.InternalWithMessage("pipeline failed: "+errorString))
 		return
 	}
 
@@ -218,6 +233,10 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	}
 
 	response := pex.PipelineOutput
+
+	if response == nil {
+		response = map[string]interface{}{}
+	}
 
 	response["flowpipe"] = map[string]interface{}{
 		"execution_id":          pipelineCmd.Event.ExecutionID,

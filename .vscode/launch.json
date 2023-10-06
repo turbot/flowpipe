@@ -18,7 +18,7 @@
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
-            "args": ["service", "start", "--mod-location", "./internal/es/test/pipelines"]
+            "args": ["service", "start", "--mod-location", "./internal/es/test/pipelines", "--output-dir", "./tmp", "--log-dir", "./tmp"]
         },
         {
             "name": "Launch API server (test suite mod)",
@@ -29,7 +29,7 @@
             "env": {
                 "P_VAR_var_from_env": "var_from_env",
             },
-            "args": ["service", "start", "--mod-location", "./internal/es/test/test_suite_mod"]
+            "args": ["service", "start", "--mod-location", "./internal/es/test/test_suite_mod", "--output-dir", "./tmp", "--log-dir", "./tmp"]
         },
         {
             "name": "cmd pipeline list",
