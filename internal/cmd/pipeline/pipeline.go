@@ -120,7 +120,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
 		resp, _, err := request.Execute()
 		if err != nil {
-			logger.Error("Error when calling `PipelineApi.Cmd`", "error", err)
+			logger.Error(err.Error())
 			return
 		}
 

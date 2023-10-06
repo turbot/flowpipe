@@ -190,7 +190,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		Name:                pipelineDefn.Name(),
 	}
 
-	if len(input.Args) > 0 {
+	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
 		errs := pipelineDefn.ValidatePipelineParam(input.Args)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
