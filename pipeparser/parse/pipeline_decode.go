@@ -280,7 +280,7 @@ func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseConte
 	triggerType := block.Labels[0]
 	triggerName := block.Labels[1]
 
-	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, mod, triggerType, triggerName)
+	triggerHcl := modconfig.NewTrigger(parseCtx.RunCtx, block, mod, triggerType, triggerName)
 
 	triggerSchema := GetTriggerBlockSchema(triggerType)
 	if triggerSchema == nil {

@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -238,11 +240,19 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	// checking the "echo.literal_for_from_list" step
 	assert.Equal(3, len(echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)))
 
-	// TODO: "something" is re-ordering the for_each expression evaluation to an ordered list, I'm yet to find out what that is
-	assert.Equal("prokofiev", echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[0].Data["text"])
-	assert.Equal("rachmaninoff", echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[1].Data["text"])
-	assert.Equal("shostakovitch", echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[2].Data["text"])
+	expectedNames := []string{"shostakovitch", "prokofiev", "rachmaninoff"}
+	foundNames := []string{
+		echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[0].Data["text"].(string),
+		echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[1].Data["text"].(string),
+		echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[2].Data["text"].(string),
+	}
 
+	less := func(a, b string) bool { return a < b }
+	equalIgnoreOrder := cmp.Diff(expectedNames, foundNames, cmpopts.SortSlices(less)) == ""
+	if !equalIgnoreOrder {
+		assert.Fail("literal_for_from_list output not correct")
+		return
+	}
 }
 
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {

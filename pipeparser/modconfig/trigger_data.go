@@ -330,7 +330,7 @@ func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hc
 	return diags
 }
 
-func NewTrigger(ctx context.Context, mod *Mod, triggerType, triggerName string) *Trigger {
+func NewTrigger(ctx context.Context, block *hcl.Block, mod *Mod, triggerType, triggerName string) *Trigger {
 
 	triggerFullName := triggerType + "." + triggerName
 
@@ -348,6 +348,8 @@ func NewTrigger(ctx context.Context, mod *Mod, triggerType, triggerName string) 
 		HclResourceImpl: HclResourceImpl{
 			FullName:        triggerFullName,
 			UnqualifiedName: "trigger." + triggerName,
+			DeclRange:       block.DefRange,
+			blockType:       block.Type,
 		},
 		ctx: ctx,
 	}

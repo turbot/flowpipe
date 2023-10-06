@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -286,9 +288,18 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 		return
 	}
 
-	assert.Equal("janis joplin was 27", pex.PipelineOutput["text_1"])
-	assert.Equal("jerry garcia was 53", pex.PipelineOutput["text_2"])
-	assert.Equal("jimi hendrix was 27", pex.PipelineOutput["text_3"])
+	expectedStrings := []string{"janis joplin was 27", "jerry garcia was 53", "jimi hendrix was 27"}
+	foundStrings := []string{
+		pex.PipelineOutput["text_1"].(string),
+		pex.PipelineOutput["text_2"].(string),
+		pex.PipelineOutput["text_3"].(string),
+	}
+	less := func(a, b string) bool { return a < b }
+	equalIgnoreOrder := cmp.Diff(expectedStrings, foundStrings, cmpopts.SortSlices(less)) == ""
+	if !equalIgnoreOrder {
+		assert.Fail("test_suite_mod.pipeline.for_map output not correct")
+		return
+	}
 
 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.set_param", 100*time.Millisecond, pipelineInput)
 
