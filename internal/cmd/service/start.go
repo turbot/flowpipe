@@ -21,16 +21,10 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 
 	serviceStartCmd.Flags().String(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.")
-	serviceStartCmd.Flags().String(constants.ArgWorkDir, "./flowpipe/pipelines", "Working directory for pipeline execution")
-	serviceStartCmd.Flags().String(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file")
-	serviceStartCmd.Flags().String(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution")
+	serviceStartCmd.Flags().String(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.")
+	serviceStartCmd.Flags().String(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.")
 
 	err := viper.BindPFlag(constants.ArgModLocation, serviceStartCmd.Flags().Lookup(constants.ArgModLocation))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = viper.BindPFlag(constants.ArgWorkDir, serviceStartCmd.Flags().Lookup(constants.ArgWorkDir))
 	if err != nil {
 		log.Fatal(err)
 	}
