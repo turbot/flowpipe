@@ -80,24 +80,11 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 	errors := []error{}
 
 	// Lists out all the pipeline params that don't have a default value
-	pipelineParamsWithNoDefaultValue := []string{}
-	for key, param := range p.Params {
-		if param.Default.IsNull() {
-			pipelineParamsWithNoDefaultValue = append(pipelineParamsWithNoDefaultValue, key)
+	pipelineParamsWithNoDefaultValue := map[string]bool{}
+	for k, p := range p.Params {
+		if p.Default.IsNull() {
+			pipelineParamsWithNoDefaultValue[k] = true
 		}
-	}
-
-	// Check if any arguments are passed in for the pipeline params that don't have a default value
-	var missingParams []string
-	for _, param := range pipelineParamsWithNoDefaultValue {
-		if params[param] == nil {
-			missingParams = append(missingParams, param)
-		}
-	}
-
-	// Return error if there is no arguments provided for the pipeline params that don't have a default value
-	if len(missingParams) > 0 {
-		errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter: %s", strings.Join(missingParams, ", "))))
 	}
 
 	for k, v := range params {
@@ -109,7 +96,19 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 
 		if !hclhelpers.GoTypeMatchesCtyType(v, param.Type) {
 			errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("invalid type for parameter '%s'", k)))
+		} else {
+			delete(pipelineParamsWithNoDefaultValue, k)
 		}
+	}
+
+	var missingParams []string
+	for k := range pipelineParamsWithNoDefaultValue {
+		missingParams = append(missingParams, k)
+	}
+
+	// Return error if there is no arguments provided for the pipeline params that don't have a default value
+	if len(missingParams) > 0 {
+		errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter: %s", strings.Join(missingParams, ", "))))
 	}
 
 	return errors
@@ -122,24 +121,11 @@ func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]in
 	errors := []error{}
 
 	// Lists out all the pipeline params that don't have a default value
-	pipelineParamsWithNoDefaultValue := []string{}
-	for key, param := range p.Params {
-		if param.Default.IsNull() {
-			pipelineParamsWithNoDefaultValue = append(pipelineParamsWithNoDefaultValue, key)
+	pipelineParamsWithNoDefaultValue := map[string]bool{}
+	for k, p := range p.Params {
+		if p.Default.IsNull() {
+			pipelineParamsWithNoDefaultValue[k] = true
 		}
-	}
-
-	// Check if any arguments are passed in for the pipeline params that don't have a default value
-	var missingParams []string
-	for _, param := range pipelineParamsWithNoDefaultValue {
-		if params[param] == "" {
-			missingParams = append(missingParams, param)
-		}
-	}
-
-	// Return error if there is no arguments provided for the pipeline params that don't have a default value
-	if len(missingParams) > 0 {
-		errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter: %s", strings.Join(missingParams, ", "))))
 	}
 
 	res := map[string]interface{}{}
@@ -157,6 +143,18 @@ func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]in
 			continue
 		}
 		res[k] = val
+
+		delete(pipelineParamsWithNoDefaultValue, k)
+	}
+
+	var missingParams []string
+	for k := range pipelineParamsWithNoDefaultValue {
+		missingParams = append(missingParams, k)
+	}
+
+	// Return error if there is no arguments provided for the pipeline params that don't have a default value
+	if len(missingParams) > 0 {
+		errors = append(errors, perr.BadRequestWithMessage(fmt.Sprintf("missing parameter: %s", strings.Join(missingParams, ", "))))
 	}
 
 	return res, errors
