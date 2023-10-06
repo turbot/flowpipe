@@ -36,6 +36,8 @@ func NewPipelineHcl(mod *Mod, block *hcl.Block) *Pipeline {
 			// The FullName is the full name of the resource, including the mod name
 			FullName:        pipelineFullName,
 			UnqualifiedName: "pipeline." + block.Labels[0],
+			DeclRange:       block.DefRange,
+			blockType:       block.Type,
 		},
 		// TODO: hack to serialise pipeline name because HclResourceImpl is not serialised
 		PipelineName: pipelineFullName,

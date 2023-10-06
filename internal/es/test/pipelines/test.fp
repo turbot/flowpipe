@@ -1,4 +1,4 @@
-pipeline "step_output" {
+pipeline "step_output_2" {
 
   step "echo" "start_step" {
       text = "foo"
@@ -16,4 +16,4 @@ pipeline "step_output" {
    #   text = step.echo.start_step.output.start_output
      text = step.echo.start_step.text
   }
-} 
+}

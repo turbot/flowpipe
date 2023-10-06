@@ -60,7 +60,7 @@ func LoadPipelines(ctx context.Context, configPath string) (map[string]*modconfi
 
 		_, err := os.Stat(defaultModSp)
 		if err == nil {
-			// default mod.sp exist
+			// default mod.hcl exist
 			fileName = filepaths.PipesComponentModsFileName
 			modDir = configPath
 		} else {
