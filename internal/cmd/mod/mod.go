@@ -28,24 +28,24 @@ func ModCmd(ctx context.Context) (*cobra.Command, error) {
 
 Mods enable you to run, build, and share dashboards, benchmarks and other resources.
 
-Find pre-built mods in the public registry at https://hub.Flowpipe.io.
+Find pre-built mods in the public registry at https://hub.flowpipe.io.
 
 Examples:
 
     # Create a new mod in the current directory
-    Flowpipe mod init
+    flowpipe mod init
 
     # Install a mod
-    Flowpipe mod install github.com/turbot/steampipe-mod-aws-compliance
+    flowpipe mod install github.com/turbot/steampipe-mod-aws-compliance
 
     # Update a mod
-    Flowpipe mod update github.com/turbot/steampipe-mod-aws-compliance
+    flowpipe mod update github.com/turbot/steampipe-mod-aws-compliance
 
     # List installed mods
-    Flowpipe mod list
+    flowpipe mod list
 
     # Uninstall a mod
-    Flowpipe mod uninstall github.com/turbot/steampipe-mod-aws-compliance
+    flowpipe mod uninstall github.com/turbot/steampipe-mod-aws-compliance
 	`,
 	}
 
