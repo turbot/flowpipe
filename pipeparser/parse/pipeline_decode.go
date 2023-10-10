@@ -273,6 +273,29 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 	return o, diags
 }
 
+func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Function, *DecodeResult) {
+
+	res := newDecodeResult()
+
+	if len(block.Labels) != 1 {
+		res.handleDecodeDiags(hcl.Diagnostics{
+			{
+				Severity: hcl.DiagError,
+				Summary:  fmt.Sprintf("invalid function block - expected 1 label, found %d", len(block.Labels)),
+				Subject:  &block.DefRange,
+			},
+		})
+		return nil, res
+	}
+
+	functionName := block.Labels[0]
+
+	functionHcl := modconfig.NewFunction(block, mod, functionName)
+
+	return functionHcl, res
+
+}
+
 func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Trigger, *DecodeResult) {
 	res := newDecodeResult()
 

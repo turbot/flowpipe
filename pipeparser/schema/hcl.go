@@ -42,6 +42,7 @@ const (
 	BlockTypePipelineStep     = "step"
 	BlockTypePipelineOutput   = "output"
 	BlockTypeTrigger          = "trigger"
+	BlockTypeFunction         = "function"
 
 	AttributeTypeValue     = "value"
 	AttributeTypeSensitive = "sensitive"
@@ -121,6 +122,11 @@ const (
 	AttributeTypePipeline = "pipeline"
 
 	AttributeTypeMessage = "message"
+
+	// Functions attributes
+	AttributeTypeRuntime = "runtime"
+	AttributeTypeEnv     = "env"
+	AttributeTypeSrc     = "src"
 
 	// All possible trigger attributes
 	AttributeTypeSchedule   = "schedule"

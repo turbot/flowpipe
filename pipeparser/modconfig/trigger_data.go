@@ -365,6 +365,30 @@ func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hc
 	return diags
 }
 
+func NewFunction(block *hcl.Block, mod *Mod, functionName string) *Function {
+	functionFullName := functionName
+	if mod != nil {
+		modName := mod.Name()
+		if strings.HasPrefix(modName, "mod") {
+			modName = strings.TrimPrefix(modName, "mod.")
+		}
+		functionFullName = modName + ".trigger." + functionName
+	} else {
+		functionFullName = "local.trigger." + functionName
+	}
+
+	function := &Function{
+		HclResourceImpl: HclResourceImpl{
+			FullName:        functionFullName,
+			UnqualifiedName: "function." + functionName,
+			DeclRange:       block.DefRange,
+			blockType:       block.Type,
+		},
+	}
+
+	return function
+}
+
 func NewTrigger(ctx context.Context, block *hcl.Block, mod *Mod, triggerType, triggerName string) *Trigger {
 
 	triggerFullName := triggerType + "." + triggerName
