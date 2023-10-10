@@ -7,6 +7,11 @@
 		"source=${localWorkspaceFolder}/../terraform-components,target=/workspaces/terraform-components,type=bind,consistency=cached"
 	],
 
+
+	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
+	},
+
 	// Automatically remove the container when it is stopped (docker rm <container-name>)
 	// not reliable: https://github.com/microsoft/vscode-remote-release/issues/3512
 	"runArgs": ["--rm"],
