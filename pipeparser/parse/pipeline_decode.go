@@ -273,7 +273,7 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 	return o, diags
 }
 
-func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Function, *DecodeResult) {
+func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.FlowpipeFunction, *DecodeResult) {
 
 	res := newDecodeResult()
 
@@ -291,6 +291,24 @@ func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 	functionName := block.Labels[0]
 
 	functionHcl := modconfig.NewFunction(block, mod, functionName)
+
+	functionOptions, diags := block.Body.Content(modconfig.FlowpipeFunctionBlockSchema)
+
+	if diags.HasErrors() {
+		res.handleDecodeDiags(diags)
+		return nil, res
+	}
+
+	for name, attr := range functionOptions.Attributes {
+		switch name {
+		case schema.AttributeTypeRuntime:
+			valDiags := gohcl.DecodeExpression(attr.Expr, nil, &functionHcl.Runtime)
+			diags = append(diags, valDiags...)
+		case schema.AttributeTypeSrc:
+			valDiags := gohcl.DecodeExpression(attr.Expr, nil, &functionHcl.Src)
+			diags = append(diags, valDiags...)
+		}
+	}
 
 	return functionHcl, res
 

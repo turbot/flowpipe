@@ -365,8 +365,8 @@ func (t *TriggerHttp) SetAttributes(mod *Mod, trigger *Trigger, hclAttributes hc
 	return diags
 }
 
-func NewFunction(block *hcl.Block, mod *Mod, functionName string) *Function {
-	functionFullName := functionName
+func NewFunction(block *hcl.Block, mod *Mod, functionName string) *FlowpipeFunction {
+	var functionFullName string
 	if mod != nil {
 		modName := mod.Name()
 		if strings.HasPrefix(modName, "mod") {
@@ -377,7 +377,7 @@ func NewFunction(block *hcl.Block, mod *Mod, functionName string) *Function {
 		functionFullName = "local.trigger." + functionName
 	}
 
-	function := &Function{
+	function := &FlowpipeFunction{
 		HclResourceImpl: HclResourceImpl{
 			FullName:        functionFullName,
 			UnqualifiedName: "function." + functionName,
