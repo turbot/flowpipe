@@ -15,3 +15,15 @@ function "hello_nodejs" {
         "HELLO": "world"
     }
 }
+
+function "validate_policy" {
+    runtime = "nodejs:18"
+    handler = "index.handler"
+    src = "./functions/validate-policy"
+}
+
+function "revert_policy" {
+    runtime = "nodejs:18"
+    handler = "index.handler"
+    src = "./functions/revert-policy"
+}
