@@ -220,7 +220,8 @@ var PipelineParamBlockSchema = &hcl.BodySchema{
 			Name: schema.AttributeTypeDefault,
 		},
 		{
-			Name: schema.AttributeTypeDescription,
+			Name:     schema.AttributeTypeDescription,
+			Required: false,
 		},
 	},
 }

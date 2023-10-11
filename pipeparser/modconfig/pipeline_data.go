@@ -76,7 +76,6 @@ type Pipeline struct {
 }
 
 func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error {
-
 	errors := []error{}
 
 	// Lists out all the pipeline params that don't have a default value
