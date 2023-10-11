@@ -1958,10 +1958,55 @@ func (p *PipelineStepContainer) Equals(iOther IPipelineStep) bool {
 }
 
 func (p *PipelineStepContainer) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+	var image string
+	if p.UnresolvedAttributes[schema.AttributeTypeImage] == nil {
+		image = p.Image
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeImage], evalContext, &image)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+	}
+
+	var cmd []string
+	if p.UnresolvedAttributes[schema.AttributeTypeCmd] == nil {
+		cmd = p.Cmd
+	} else {
+		var args cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeCmd], evalContext, &args)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+
+		var err error
+		cmd, err = hclhelpers.CtyToGoStringSlice(args, args.Type())
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var env map[string]string
+	if p.UnresolvedAttributes[schema.AttributeTypeEnv] == nil {
+		env = p.Env
+	} else {
+		var args cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeEnv], evalContext, &args)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+
+		var err error
+		env, err = hclhelpers.CtyToGoMapString(args)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return map[string]interface{}{
-		schema.AttributeTypeImage: p.Image,
-		schema.AttributeTypeCmd:   p.Cmd,
-		schema.AttributeTypeEnv:   p.Env,
+		schema.LabelName:          p.Name,
+		schema.AttributeTypeImage: image,
+		schema.AttributeTypeCmd:   cmd,
+		schema.AttributeTypeEnv:   env,
 	}, nil
 }
 

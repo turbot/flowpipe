@@ -11,6 +11,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type Container struct {
@@ -35,7 +36,8 @@ type Container struct {
 type ContainerRun struct {
 	ContainerID string `json:"container_id"`
 	Status      string `json:"status"`
-	Output      string `json:"output"`
+	Stdout      string `json:"stdout"`
+	Stderr      string `json:"stderr`
 }
 
 // Option defines a function signature for configuring the Docker client.
@@ -117,11 +119,11 @@ func (c *Container) Unload() error {
 func (c *Container) Validate() error {
 
 	if c.Name == "" {
-		return fmt.Errorf("name required for container")
+		return perr.BadRequestWithMessage("name required for container")
 	}
 
 	if c.Image == "" {
-		return fmt.Errorf("image required for container: %s", c.Name)
+		return perr.BadRequestWithMessage("image required for container: " + c.Name)
 	}
 
 	return nil
@@ -182,7 +184,6 @@ func (c *Container) Run() (string, error) {
 		Env:         c.GetEnv(),
 		StopTimeout: &timeout,
 
-		// TODO - FIX ME
 		// I'm confused about how this works, and we're seeing a lot of control characters
 		// with AWS CLI output.
 		//
@@ -282,35 +283,11 @@ func (c *Container) Run() (string, error) {
 	if err != nil {
 		return containerID, err
 	}
-	c.Runs[containerID].Output = o.Combined()
-
-	/*
-		stdoutStr, stderrStr, err := processLogs(reader)
-		if err != nil {
-			return containerID, err
-		}
-		c.Runs[containerID].Output = stdoutStr + stderrStr
-	*/
-
-	/*
-		_, err = outputBuf.ReadFrom(reader)
-		if err != nil {
-			return containerID, err
-		}
-	*/
-
-	/*
-		encoding := charmap.ISO8859_1 // Example: ISO 8859-1 (Latin-1)
-		// Convert the byte buffer to a string using the specified encoding
-		decoder := encoding.NewDecoder()
-		output, _ := decoder.Bytes(outputBuf.Bytes())
-		c.Runs[containerID].Output = string(output)
-	*/
-
-	//c.Runs[containerID].Output = outputBuf.String()
+	c.Runs[containerID].Stdout = o.Stdout()
+	c.Runs[containerID].Stderr = o.Stderr()
 
 	fmt.Printf("%v", outputBuf.Bytes())
-	fmt.Printf("%s", c.Runs[containerID].Output)
+	fmt.Printf("%s", c.Runs[containerID].Stdout)
 
 	err = c.SetRunStatus(containerID, "logged")
 	if err != nil {
@@ -340,41 +317,3 @@ func (c *Container) Run() (string, error) {
 func (c *Container) CleanupArtifacts() error {
 	return c.dockerClient.CleanupArtifactsForLabel("io.flowpipe.name", c.Name)
 }
-
-// func processLogs(reader io.Reader) (string, string, error) {
-// 	header := make([]byte, 8)
-// 	stdout := bytes.Buffer{}
-// 	stderr := bytes.Buffer{}
-
-// 	for {
-// 		_, err := reader.Read(header)
-// 		if err != nil {
-// 			if err == io.EOF {
-// 				break
-// 			}
-// 			return "", "", err
-// 		}
-
-// 		streamType := header[0]
-// 		payloadSize := binary.BigEndian.Uint32(header[4:8])
-// 		payload := make([]byte, payloadSize)
-
-// 		_, err = io.ReadFull(reader, payload)
-// 		if err != nil {
-// 			return "", "", err
-// 		}
-
-// 		switch streamType {
-// 		case 2:
-// 			stderr.Write(payload)
-// 		default:
-// 			stdout.Write(payload)
-// 		}
-// 	}
-
-// 	// Process stdout and stderr as needed
-// 	fmt.Println("Stdout:", stdout.String())
-// 	fmt.Println("Stderr:", stderr.String())
-
-// 	return stdout.String(), stderr.String(), nil
-// }

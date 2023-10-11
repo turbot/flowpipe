@@ -32,6 +32,22 @@ func convertToSliceOfString(input []interface{}) []string {
 	return result
 }
 
+func convertMapToStrings(input map[string]interface{}) map[string]string {
+	result := make(map[string]string)
+
+	for key, value := range input {
+		if str, ok := value.(string); ok {
+			result[key] = str
+		} else {
+			// Handle the case where the value is not a string
+			// You can choose to skip, convert, or handle it as needed.
+			result[key] = fmt.Sprint(value)
+		}
+	}
+
+	return result
+}
+
 func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -50,13 +66,14 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 			panic(err)
 		}
 
+		c.Name = input[schema.LabelName].(string)
 		c.Image = input[schema.AttributeTypeImage].(string)
 		if input[schema.AttributeTypeCmd] != nil {
 			c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
 		}
 
 		if input[schema.AttributeTypeEnv] != nil {
-			c.Env = input[schema.AttributeTypeEnv].(map[string]string)
+			c.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
 		}
 
 		err = c.Load()
@@ -67,7 +84,10 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		containerCache[c.Image] = c
 	}
 
-	result, err := c.Run()
+	containerID, err := c.Run()
+
+	stdout := c.Runs[containerID].Stdout
+	stderr := c.Runs[containerID].Stderr
 
 	if err != nil {
 		return nil, err
@@ -75,7 +95,9 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 	o := modconfig.Output{
 		Data: map[string]interface{}{
-			"result": result,
+			"container_id": containerID,
+			"stdout":       stdout,
+			"stderr":       stderr,
 		},
 	}
 

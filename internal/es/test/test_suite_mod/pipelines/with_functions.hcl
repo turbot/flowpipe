@@ -11,8 +11,9 @@ pipeline "with_functions" {
 }
 
 
-pipeline "with_containers" {
+pipeline "with_container" {
     param "aws_region" {
+        type = string
         default = "us-east-1"
     }
     param "aws_access_key_id" {
@@ -24,7 +25,7 @@ pipeline "with_containers" {
         default = "abc"
     }
 
-    step "container" "hello_nodejs_step" {
+    step "container" "container_run" {
         image = "steampipe-aws-compliance"
         cmd = ["steampipe", "check", "aws_compliance.benchmark.audit_manager_control_tower_disallow_instances_5_1_1", "--output", "json"]
         env = {
@@ -32,5 +33,13 @@ pipeline "with_containers" {
             AWS_ACCESS_KEY_ID = param.aws_access_key_id
             AWS_SECRET_ACCESS_KEY = param.aws_secret_access_key
         }
+    }
+
+    output "stdout" {
+        value = step.container.container_run.stdout
+    }
+
+    output "stderr" {
+        value = step.container.container_run.stderr
     }
 }
