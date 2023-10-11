@@ -20,7 +20,7 @@ type ErrorModel struct {
 	Title    string `json:"title" binding:"required"`
 	Status   int    `json:"status" binding:"required"`
 
-	// If we don't have required it comes out as pointer and tehre is a bug in the formatter
+	// If we don't have required it comes out as pointer and there is a bug in the formatter
 	Detail string `json:"detail" binding:"required"`
 
 	ValidationErrors []*ErrorDetailModel `json:"validation_errors,omitempty"`

@@ -72,11 +72,10 @@ type Pipeline struct {
 
 	OutputConfig []PipelineOutput `json:"outputs,omitempty"`
 
-	Params map[string]*PipelineParam `json:"-"`
+	Params map[string]*PipelineParam `json:"params"`
 }
 
 func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error {
-
 	errors := []error{}
 
 	// Lists out all the pipeline params that don't have a default value
@@ -341,6 +340,55 @@ func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 				valString := val.AsString()
 				p.Description = &valString
 			}
+		case schema.AttributeTypeTitle:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse title attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Title = &valString
+			}
+		case schema.AttributeTypeDocumentation:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse documentation attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Documentation = &valString
+			}
+		case schema.AttributeTypeTags:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse tags attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsValueMap()
+				resultMap := make(map[string]string)
+				for key, value := range valString {
+					resultMap[key] = value.AsString()
+				}
+				p.Tags = resultMap
+			}
 		default:
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,
@@ -367,9 +415,10 @@ func (p *Pipeline) setBaseProperties() {
 // end Pipeline Hclresource interface functions
 
 type PipelineParam struct {
-	Name    string
-	Default cty.Value
-	Type    cty.Type
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Default     cty.Value `json:"-"`
+	Type        cty.Type  `json:"-"`
 }
 
 type PipelineOutput struct {

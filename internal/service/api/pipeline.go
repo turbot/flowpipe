@@ -60,23 +60,26 @@ func (api *APIService) listPipelines(c *gin.Context) {
 	}
 
 	// Convert the list of pipelines to FpPipeline type
-	var fpPipelines []types.FpPipeline
+	var listPipelineResponseItems []types.ListPipelineResponseItem
 
 	for _, pipeline := range pipelines {
-		fpPipelines = append(fpPipelines, types.FpPipeline{
-			Name:        pipeline.Name(),
-			Description: pipeline.Description,
-			Mod:         pipeline.GetMod().ShortName,
+		listPipelineResponseItems = append(listPipelineResponseItems, types.ListPipelineResponseItem{
+			Name:          pipeline.Name(),
+			Description:   pipeline.Description,
+			Mod:           pipeline.GetMod().ShortName,
+			Title:         pipeline.Title,
+			Tags:          pipeline.Tags,
+			Documentation: pipeline.Documentation,
 		})
 	}
 
-	sort.Slice(fpPipelines, func(i, j int) bool {
-		return fpPipelines[i].Name < fpPipelines[j].Name
+	sort.Slice(listPipelineResponseItems, func(i, j int) bool {
+		return listPipelineResponseItems[i].Name < listPipelineResponseItems[j].Name
 	})
 
 	// TODO: paging, filter, sorting
 	result := types.ListPipelineResponse{
-		Items: fpPipelines,
+		Items: listPipelineResponseItems,
 	}
 
 	c.JSON(http.StatusOK, result)
@@ -91,7 +94,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
-// @Success 200 {object} types.FpPipeline
+// @Success 200 {object} types.GetPipelineResponse
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -119,13 +122,19 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		return
 	}
 
-	fpPipeline := types.FpPipeline{
-		Name:        pipeline.Name(),
-		Description: pipeline.Description,
-		Mod:         pipeline.GetMod().FullName,
+	getPipelineresponse := types.GetPipelineResponse{
+		Name:          pipeline.Name(),
+		Description:   pipeline.Description,
+		Mod:           pipeline.GetMod().FullName,
+		Title:         pipeline.Title,
+		Tags:          pipeline.Tags,
+		Documentation: pipeline.Documentation,
+		Steps:         pipeline.Steps,
+		OutputConfig:  pipeline.OutputConfig,
+		Params:        pipeline.Params,
 	}
 
-	c.JSON(http.StatusOK, fpPipeline)
+	c.JSON(http.StatusOK, getPipelineresponse)
 }
 
 // @Summary Execute a pipeline command

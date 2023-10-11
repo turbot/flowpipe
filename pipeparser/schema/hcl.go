@@ -69,6 +69,10 @@ const (
 	AttributeTypeDescription = "description"
 	AttributeTypeIf          = "if"
 
+	// pipeline attributes
+	AttributeTypeTags          = "tags"
+	AttributeTypeDocumentation = "documentation"
+
 	AttributeTypeStartedAt  = "started_at"
 	AttributeTypeFinishedAt = "finished_at"
 

@@ -216,6 +216,16 @@ func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfi
 		o.Default = ctyVal
 	}
 
+	if attr, exists := paramOptions.Attributes[schema.AttributeTypeDescription]; exists {
+		ctyVal, moreDiags := attr.Expr.Value(parseCtx.EvalCtx)
+		if moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
+			return o, diags
+		}
+
+		o.Description = ctyVal.AsString()
+	}
+
 	return o, diags
 }
 

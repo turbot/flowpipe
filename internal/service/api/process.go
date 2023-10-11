@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -54,11 +56,76 @@ func (api *APIService) listProcess(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list process request", "next_token", nextToken, "limit", limit)
 
-	result := types.ListProcessResponse{
-		Items: []types.Process{},
+	// Read the log directory to list out all the process that have been executed
+	logDir := viper.GetString(constants.ArgLogDir)
+	processLogFiles, err := os.ReadDir(logDir)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
-	result.Items = append(result.Items, types.Process{ID: "123"}, types.Process{ID: "456"})
+	// Extract the execution IDs from the log file names
+	executionIDs := []string{}
+	for _, f := range processLogFiles {
+		execID := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
+		executionIDs = append(executionIDs, execID)
+	}
+
+	// Get the log entries using the execution ID and extract the pipeline name
+	processList := []types.Process{}
+	for _, execID := range executionIDs {
+
+		logEntries, err := execution.LoadEventLogEntries(execID)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		}
+
+		for _, e := range logEntries {
+			if e.EventType == "command.pipeline_queue" {
+				var payload *types.ProcessPayload
+				err := json.Unmarshal(e.Payload, &payload)
+				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				evt := &event.Event{
+					ExecutionID: execID,
+				}
+
+				ex, err := execution.NewExecution(c, execution.WithEvent(evt))
+				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				err = ex.LoadProcess(evt)
+				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				pex := ex.PipelineExecutions[payload.PipelineExecutionID]
+				if pex == nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				processList = append(processList, types.Process{
+					ID:       execID,
+					Pipeline: payload.PipelineName,
+					Status:   pex.Status,
+				})
+
+				break
+			}
+		}
+	}
+
+	result := types.ListProcessResponse{
+		Items: processList,
+	}
 
 	c.JSON(http.StatusOK, result)
 }
@@ -244,13 +311,38 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		common.AbortWithError(c, err)
 	}
 
+	var items []types.ProcessEventLog
+	for _, item := range logEntries {
+		items = append(items, types.ProcessEventLog{
+			EventType: item.EventType,
+			Timestamp: item.Timestamp,
+			Payload:   item.Payload,
+		})
+	}
+
 	result := types.ListProcessLogResponse{
-		Items: logEntries,
+		Items: items,
 	}
 
 	c.JSON(http.StatusOK, result)
 }
 
+// @Summary Get process snapshot
+// @Description Get process snapshot
+// @ID   process_get_snapshot
+// @Tags Process
+// @Produce json
+// / ...
+// @Param process_id path string true "The id of the process" format(^[a-z]{0,32}$)
+// ...
+// @Success 200 {object} execution.Snapshot
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
+// @Router /process/:process_id/log/process.sps [get]
 func (api *APIService) listProcessSps(c *gin.Context) {
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {

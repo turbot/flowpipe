@@ -92,11 +92,15 @@ var ValidBaseTriggerAttributes = []string{
 	schema.AttributeTypeDescription,
 	schema.AttributeTypePipeline,
 	schema.AttributeTypeArgs,
+	schema.AttributeTypeTitle,
+	schema.AttributeTypeDocumentation,
+	schema.AttributeTypeTags,
 }
 
 func (t *Trigger) IsBaseAttribute(name string) bool {
 	return slices.Contains[[]string, string](ValidBaseTriggerAttributes, name)
 }
+
 
 func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
 
@@ -108,6 +112,37 @@ func (t *Trigger) SetBaseAttributes(mod *Mod, hclAttributes hcl.Attributes, eval
 			diags = append(diags, moreDiags...)
 		} else {
 			t.Description = desc
+		}
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeTitle]; exists {
+		title, moreDiags := hclhelpers.AttributeToString(attr, nil, false)
+		if moreDiags != nil && moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
+		} else {
+			t.Title = title
+		}
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeDocumentation]; exists {
+		doc, moreDiags := hclhelpers.AttributeToString(attr, nil, false)
+		if moreDiags != nil && moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
+		} else {
+			t.Documentation = doc
+		}
+	}
+
+	if attr, exists := hclAttributes[schema.AttributeTypeTags]; exists {
+		tags, moreDiags := hclhelpers.AttributeToMap(attr, nil, false)
+		if moreDiags != nil && moreDiags.HasErrors() {
+			diags = append(diags, moreDiags...)
+		} else {
+			resultMap := make(map[string]string)
+				for key, value := range tags {
+					resultMap[key] = value.(string)
+				}
+			t.Tags = resultMap
 		}
 	}
 

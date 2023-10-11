@@ -62,10 +62,13 @@ func (api *APIService) listTriggers(c *gin.Context) {
 		pipelineName := pipelineInfo["name"].AsString()
 
 		fpTrigger := types.FpTrigger{
-			Name:        trigger.FullName,
-			Type:        modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
-			Description: trigger.Description,
-			Pipeline:    pipelineName,
+			Name:          trigger.FullName,
+			Type:          modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
+			Description:   trigger.Description,
+			Pipeline:      pipelineName,
+			Title:         trigger.Title,
+			Tags:          trigger.Tags,
+			Documentation: trigger.Documentation,
 		}
 
 		if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
@@ -152,10 +155,13 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	pipelineName := pipelineInfo["name"].AsString()
 
 	fpTrigger := types.FpTrigger{
-		Name:        trigger.FullName,
-		Type:        modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
-		Description: trigger.Description,
-		Pipeline:    pipelineName,
+		Name:          trigger.FullName,
+		Type:          modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
+		Description:   trigger.Description,
+		Pipeline:      pipelineName,
+		Title:         trigger.Title,
+		Tags:          trigger.Tags,
+		Documentation: trigger.Documentation,
 	}
 
 	if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {

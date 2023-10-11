@@ -41,3 +41,5 @@ __debug_bin
 dist/
 
 tmp/
+
+**/*.jsonl
