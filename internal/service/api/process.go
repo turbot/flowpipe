@@ -29,10 +29,6 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 
 }
 
-type ProcessPayload struct {
-	PipelineName string `json:"name"`
-}
-
 // @Summary List processs
 // @Description Lists processs
 // @ID   process_list
@@ -87,9 +83,31 @@ func (api *APIService) listProcess(c *gin.Context) {
 
 		for _, e := range logEntries {
 			if e.EventType == "command.pipeline_queue" {
-				var payload *ProcessPayload
+				var payload *types.ProcessPayload
 				err := json.Unmarshal(e.Payload, &payload)
 				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				evt := &event.Event{
+					ExecutionID: execID,
+				}
+
+				ex, err := execution.NewExecution(c, execution.WithEvent(evt))
+				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				err = ex.LoadProcess(evt)
+				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				pex := ex.PipelineExecutions[payload.PipelineExecutionID]
+				if pex == nil {
 					common.AbortWithError(c, err)
 					return
 				}
@@ -97,6 +115,7 @@ func (api *APIService) listProcess(c *gin.Context) {
 				processList = append(processList, types.Process{
 					ID:       execID,
 					Pipeline: payload.PipelineName,
+					Status:   pex.Status,
 				})
 
 				break

@@ -8,6 +8,13 @@ import (
 type Process struct {
 	ID       string `json:"execution_id"`
 	Pipeline string `json:"pipeline"`
+	Status   string `json:"status"`
+}
+
+// Process log payload definition
+type ProcessPayload struct {
+	PipelineName        string `json:"name"`
+	PipelineExecutionID string `json:"pipeline_execution_id"`
 }
 
 type ProcessOutputData struct {
