@@ -1882,10 +1882,14 @@ func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[stri
 	runtimeCty := valueMap[schema.AttributeTypeRuntime]
 	runtime := runtimeCty.AsString()
 
+	handlerCty := valueMap[schema.AttributeTypeHandler]
+	handler := handlerCty.AsString()
+
 	return map[string]interface{}{
 		schema.AttributeTypeFunction: function,
 		schema.AttributeTypeSrc:      src,
 		schema.AttributeTypeRuntime:  runtime,
+		schema.AttributeTypeHandler:  handler,
 	}, nil
 }
 

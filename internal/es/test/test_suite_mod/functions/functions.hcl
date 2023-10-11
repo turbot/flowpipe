@@ -6,3 +6,12 @@ function "hello_python" {
         "HELLO": "world"
     }
 }
+
+function "hello_nodejs" {
+    runtime = "nodejs:18"
+    handler = "index.handler"
+    src = "./functions/hello-nodejs"
+    env = {
+        "HELLO": "world"
+    }
+}

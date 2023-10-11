@@ -25,9 +25,10 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 	fn := functionCache[input[schema.AttributeTypeFunction].(string)]
 
 	if fn == nil {
-
-		fn, err := function.New(
-			function.WithContext(ctx),
+		var err error
+		fn, err = function.New(
+			// TODO: warning: do not use the passed in context (?) not sure why
+			function.WithContext(context.Background()),
 			function.WithDockerClient(docker.GlobalDockerClient),
 		)
 		if err != nil {
@@ -47,7 +48,8 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		functionCache[fn.Name] = fn
 	}
 
-	result, err := fn.Invoke([]byte{})
+	body := "{}"
+	result, err := fn.Invoke([]byte(body))
 	if err != nil {
 		return nil, err
 	}

@@ -334,9 +334,11 @@ func (m *Manager) Stop() error {
 
 	// Cleanup docker artifacts
 	// TODO - Can we remove this since we cleanup per function etc?
-	err = docker.GlobalDockerClient.CleanupArtifacts()
-	if err != nil {
-		fplog.Logger(m.ctx).Error("Failed to cleanup flowpipe docker artifacts", "error", err)
+	if docker.GlobalDockerClient != nil {
+		err = docker.GlobalDockerClient.CleanupArtifacts()
+		if err != nil {
+			fplog.Logger(m.ctx).Error("Failed to cleanup flowpipe docker artifacts", "error", err)
+		}
 	}
 
 	m.StoppedAt = utils.TimeNow()
