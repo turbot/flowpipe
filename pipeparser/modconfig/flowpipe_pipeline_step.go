@@ -203,6 +203,10 @@ func NewPipelineStep(stepType, stepName string) IPipelineStep {
 		s := &PipelineStepPipeline{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
+	case schema.BlockTypePipelineStepFunction:
+		s := &PipelineStepFunction{}
+		s.UnresolvedAttributes = make(map[string]hcl.Expression)
+		step = s
 	default:
 		return nil
 	}
@@ -1730,6 +1734,7 @@ func (p *PipelineStepPipeline) Equals(iOther IPipelineStep) bool {
 		}
 	}
 
+	// TODO: more here, can't just compare the name
 	return p.Pipeline.AsValueMap()[schema.LabelName] == other.Pipeline.AsValueMap()[schema.LabelName]
 
 }
@@ -1833,6 +1838,79 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, evalC
 					Subject:  &attr.Range,
 				})
 			}
+		}
+	}
+
+	return diags
+}
+
+type PipelineStepFunction struct {
+	PipelineStepBase
+
+	Function cty.Value `json:"-"`
+}
+
+func (p *PipelineStepFunction) Equals(iOther IPipelineStep) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepFunction)
+	if !ok {
+		return false
+	}
+
+	// TODO: more here, can't just compare the name
+	return p.Function.AsValueMap()[schema.LabelName] == other.Function.AsValueMap()[schema.LabelName]
+}
+
+func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+
+	var function string
+	if p.Function == cty.NilVal {
+		return nil, perr.InternalWithMessage("Function must be supplied")
+	}
+	valueMap := p.Function.AsValueMap()
+	functionNameCty := valueMap[schema.LabelName]
+	function = functionNameCty.AsString()
+
+	return map[string]interface{}{
+		schema.AttributeTypeFunction: function,
+	}, nil
+}
+
+func (p *PipelineStepFunction) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := hcl.Diagnostics{}
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case schema.AttributeTypeFunction:
+			expr := attr.Expr
+			if attr.Expr != nil {
+				val, err := expr.Value(evalContext)
+				if err != nil {
+					// For Step's Function reference, all it needs is the function. It can't possibly use the output of a function
+					// so if the Function is not parsed (yet) then the error message is:
+					// Summary: "Unknown variable"
+					// Detail: "There is no variable named \"function\"."
+					//
+					// Do not unpack the error and create a new "Diagnostic", leave the original error message in
+					// and let the "Mod processing" determine if there's an unresolved block
+					//
+					// There's no "depends_on" from the step to the function, the Flowpipe ES engine does not require it
+					diags = append(diags, err...)
+
+					return diags
+				}
+				p.Function = val
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for Function Step: " + attr.Name,
+				Subject:  &attr.Range,
+			})
 		}
 	}
 

@@ -273,7 +273,7 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 	return o, diags
 }
 
-func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.FlowpipeFunction, *DecodeResult) {
+func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Function, *DecodeResult) {
 
 	res := newDecodeResult()
 
@@ -302,13 +302,18 @@ func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 	for name, attr := range functionOptions.Attributes {
 		switch name {
 		case schema.AttributeTypeRuntime:
-			valDiags := gohcl.DecodeExpression(attr.Expr, nil, &functionHcl.Runtime)
+			valDiags := gohcl.DecodeExpression(attr.Expr, parseCtx.EvalCtx, &functionHcl.Runtime)
 			diags = append(diags, valDiags...)
 		case schema.AttributeTypeSrc:
-			valDiags := gohcl.DecodeExpression(attr.Expr, nil, &functionHcl.Src)
+			valDiags := gohcl.DecodeExpression(attr.Expr, parseCtx.EvalCtx, &functionHcl.Src)
+			diags = append(diags, valDiags...)
+		case schema.AttributeTypeHandler:
+			valDiags := gohcl.DecodeExpression(attr.Expr, parseCtx.EvalCtx, &functionHcl.Handler)
 			diags = append(diags, valDiags...)
 		}
 	}
+
+	parseCtx.AddFunction(functionHcl)
 
 	return functionHcl, res
 
@@ -518,6 +523,8 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 		return modconfig.PipelineStepQueryBlockSchema
 	case schema.BlockTypePipelineStepPipeline:
 		return modconfig.PipelineStepPipelineBlockSchema
+	case schema.BlockTypePipelineStepFunction:
+		return modconfig.PipelineStepFunctionBlockSchema
 	default:
 		return nil
 	}

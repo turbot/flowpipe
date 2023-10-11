@@ -58,6 +58,7 @@ const (
 	BlockTypePipelineStepQuery    = "query"
 	BlockTypePipelineStepExec     = "exec"
 	BlockTypePipelineStepPipeline = "pipeline"
+	BlockTypePipelineStepFunction = "function"
 
 	// error block
 	AttributeTypeIgnore  = "ignore"
@@ -124,9 +125,11 @@ const (
 	AttributeTypeMessage = "message"
 
 	// Functions attributes
-	AttributeTypeRuntime = "runtime"
-	AttributeTypeEnv     = "env"
-	AttributeTypeSrc     = "src"
+	AttributeTypeRuntime  = "runtime"
+	AttributeTypeEnv      = "env"
+	AttributeTypeSrc      = "src"
+	AttributeTypeHandler  = "handler"
+	AttributeTypeFunction = "function"
 
 	// All possible trigger attributes
 	AttributeTypeSchedule   = "schedule"
@@ -228,6 +231,7 @@ var ValidResourceItemTypes = []string{
 	BlockTypeWorkspaceProfile,
 	BlockTypePipeline,
 	BlockTypeTrigger,
+	BlockTypeFunction,
 	BlockTypeWith,
 	// local is not an actual block name but is a resource type
 	"local",

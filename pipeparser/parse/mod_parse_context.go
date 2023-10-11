@@ -725,6 +725,19 @@ func (m *ModParseContext) AddPipeline(pipelineHcl *modconfig.Pipeline) hcl.Diagn
 	return nil
 }
 
+func (m *ModParseContext) AddFunction(function *modconfig.Function) hcl.Diagnostics {
+	diags := m.addReferenceValue(function, function.AsCtyValue())
+	if diags.HasErrors() {
+		return diags
+	}
+
+	// remove this resource from unparsed blocks
+	delete(m.UnresolvedBlocks, function.Name())
+
+	m.buildEvalContext()
+	return nil
+}
+
 func (m *ModParseContext) AddTrigger(trigger *modconfig.Trigger) hcl.Diagnostics {
 
 	// Split and get the last part for pipeline name
