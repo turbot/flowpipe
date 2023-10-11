@@ -76,7 +76,6 @@ type Pipeline struct {
 }
 
 func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error {
-
 	errors := []error{}
 
 	// Lists out all the pipeline params that don't have a default value
@@ -416,9 +415,10 @@ func (p *Pipeline) setBaseProperties() {
 // end Pipeline Hclresource interface functions
 
 type PipelineParam struct {
-	Name    string
-	Default cty.Value
-	Type    cty.Type
+	Name        string
+	Description string
+	Default     cty.Value
+	Type        cty.Type
 }
 
 type PipelineOutput struct {
