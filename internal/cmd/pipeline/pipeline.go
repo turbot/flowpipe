@@ -55,7 +55,7 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 
 	var pipelineRunCmd = &cobra.Command{
 		Use:  "run <pipeline-name>",
-		Args: cobra.ArbitraryArgs,
+		Args: cobra.ExactArgs(1),
 		Run:  runPipelineFunc(ctx),
 	}
 
