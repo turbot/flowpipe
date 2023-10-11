@@ -541,3 +541,42 @@ var PipelineStepFunctionBlockSchema = &hcl.BodySchema{
 		},
 	},
 }
+
+var PipelineStepContainerBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name:     schema.AttributeTypeImage,
+			Required: true,
+		},
+		{
+			Name: schema.AttributeTypeCmd,
+		},
+		{
+			Name: schema.AttributeTypeEnv,
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+		{
+			Type:       schema.BlockTypePipelineOutput,
+			LabelNames: []string{schema.LabelName},
+		},
+	},
+}

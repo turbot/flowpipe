@@ -296,7 +296,7 @@ func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 
 	if diags.HasErrors() {
 		res.handleDecodeDiags(diags)
-		return nil, res
+		return functionHcl, res
 	}
 
 	for name, attr := range functionOptions.Attributes {
@@ -313,7 +313,16 @@ func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 		}
 	}
 
-	parseCtx.AddFunction(functionHcl)
+	err := parseCtx.AddFunction(functionHcl)
+	if err != nil {
+		res.handleDecodeDiags(hcl.Diagnostics{
+			{
+				Severity: hcl.DiagError,
+				Summary:  fmt.Sprintf("invalid function block - %s", err.Error()),
+				Subject:  &block.DefRange,
+			},
+		})
+	}
 
 	return functionHcl, res
 
@@ -525,6 +534,8 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 		return modconfig.PipelineStepPipelineBlockSchema
 	case schema.BlockTypePipelineStepFunction:
 		return modconfig.PipelineStepFunctionBlockSchema
+	case schema.BlockTypePipelineStepContainer:
+		return modconfig.PipelineStepContainerBlockSchema
 	default:
 		return nil
 	}

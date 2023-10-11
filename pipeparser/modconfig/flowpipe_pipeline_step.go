@@ -207,6 +207,11 @@ func NewPipelineStep(stepType, stepName string) IPipelineStep {
 		s := &PipelineStepFunction{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
+
+	case schema.BlockTypePipelineStepContainer:
+		s := &PipelineStepContainer{}
+		s.UnresolvedAttributes = make(map[string]hcl.Expression)
+		step = s
 	default:
 		return nil
 	}
@@ -1917,6 +1922,101 @@ func (p *PipelineStepFunction) SetAttributes(hclAttributes hcl.Attributes, evalC
 					return diags
 				}
 				p.Function = val
+			}
+		default:
+			diags = append(diags, &hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Unsupported attribute for Function Step: " + attr.Name,
+				Subject:  &attr.Range,
+			})
+		}
+	}
+
+	return diags
+}
+
+type PipelineStepContainer struct {
+	PipelineStepBase
+
+	Image string            `json:"image"`
+	Cmd   []string          `json:"cmd"`
+	Env   map[string]string `json:"env"`
+}
+
+func (p *PipelineStepContainer) Equals(iOther IPipelineStep) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	other, ok := iOther.(*PipelineStepContainer)
+	if !ok {
+		return false
+	}
+
+	return p.Image == other.Image && reflect.DeepEqual(p.Cmd, other.Cmd) && reflect.DeepEqual(p.Env, other.Env)
+}
+
+func (p *PipelineStepContainer) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+	return map[string]interface{}{
+		schema.AttributeTypeImage: p.Image,
+		schema.AttributeTypeCmd:   p.Cmd,
+		schema.AttributeTypeEnv:   p.Env,
+	}, nil
+}
+
+func (p *PipelineStepContainer) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := hcl.Diagnostics{}
+
+	for name, attr := range hclAttributes {
+		switch name {
+		case schema.AttributeTypeImage:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				p.Image = val.AsString()
+			}
+		case schema.AttributeTypeCmd:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				cmds, moreErr := hclhelpers.CtyToGoStringSlice(val, val.Type())
+				if moreErr != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse '" + schema.AttributeTypeCmd + "' attribute to string slice",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				p.Cmd = cmds
+			}
+		case schema.AttributeTypeEnv:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				env, moreErr := hclhelpers.CtyToGoMapString(val)
+				if moreErr != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse '" + schema.AttributeTypeEnv + "' attribute to string map",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				p.Env = env
 			}
 		default:
 			diags = append(diags, &hcl.Diagnostic{

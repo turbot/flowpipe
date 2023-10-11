@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/turbot/flowpipe/internal/docker"
 	function "github.com/turbot/flowpipe/internal/functions"
@@ -54,9 +55,19 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		return nil, err
 	}
 
+	// Create an instance of the struct
+	var resultsJson map[string]interface{}
+
+	// Unmarshal the JSON string into the struct
+	err = json.Unmarshal(result, &resultsJson)
+	if err != nil {
+
+		return nil, err
+	}
+
 	o := modconfig.Output{
 		Data: map[string]interface{}{
-			"result": string(result),
+			"result": resultsJson,
 		},
 	}
 
