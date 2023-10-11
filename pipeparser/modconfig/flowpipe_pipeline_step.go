@@ -1872,11 +1872,20 @@ func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[stri
 		return nil, perr.InternalWithMessage("Function must be supplied")
 	}
 	valueMap := p.Function.AsValueMap()
+
 	functionNameCty := valueMap[schema.LabelName]
 	function = functionNameCty.AsString()
 
+	srcCty := valueMap[schema.AttributeTypeSrc]
+	src := srcCty.AsString()
+
+	runtimeCty := valueMap[schema.AttributeTypeRuntime]
+	runtime := runtimeCty.AsString()
+
 	return map[string]interface{}{
 		schema.AttributeTypeFunction: function,
+		schema.AttributeTypeSrc:      src,
+		schema.AttributeTypeRuntime:  runtime,
 	}, nil
 }
 

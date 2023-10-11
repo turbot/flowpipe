@@ -22,7 +22,9 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	"github.com/radovskyb/watcher"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
@@ -150,7 +152,7 @@ func (fn *Function) GetEnv() []string {
 // be injected into the function image during the build process.
 func (fn *Function) GetDockerfileTemplatePath() string {
 	// This is safe because the runtime has already been validated.
-	return fmt.Sprintf("./runtimes/%s/Dockerfile", fn.Runtime)
+	return fmt.Sprintf("./internal/runtimes/%s/Dockerfile", fn.Runtime)
 }
 
 // SetUpdatedAt sets the updated at time.
@@ -227,7 +229,10 @@ func (fn *Function) Validate() error {
 		return fmt.Errorf("src required for function: %s", fn.Name)
 	}
 	// Convert src to an absolute path
-	absPath, err := filepath.Abs(fn.Src)
+	workspacePath := viper.GetString(constants.ArgModLocation)
+
+	path := filepath.Join(workspacePath, fn.Src)
+	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return fmt.Errorf("failed to get absolute path to src for function: %s", fn.Name)
 	}
@@ -466,9 +471,9 @@ func (fn *Function) BuildOne() error {
 // in the runtimes directory.
 func (fn *Function) RuntimesAvailable() ([]string, error) {
 	dirNames := make([]string, 0)
-	files, err := os.ReadDir("./runtimes")
+	files, err := os.ReadDir("./internal/runtimes")
 	if err != nil {
-		return nil, err
+		return nil, perr.InternalWithMessage("unable to read runtimes directory")
 	}
 	for _, file := range files {
 		if file.IsDir() {

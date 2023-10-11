@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	docker "github.com/turbot/flowpipe/internal/docker"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/pipeparser/constants"
@@ -44,6 +45,11 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 
 func startManagerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+
+		err := docker.Initialize(ctx)
+		if err != nil {
+			error_helpers.FailOnError(err)
+		}
 
 		serviceConfig.Initialize(ctx)
 

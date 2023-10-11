@@ -36,5 +36,17 @@ func (f *Function) AsCtyValue() cty.Value {
 		functionVars[schema.AttributeTypeDescription] = cty.StringVal(*f.Description)
 	}
 
+	if f.Runtime != "" {
+		functionVars[schema.AttributeTypeRuntime] = cty.StringVal(f.Runtime)
+	}
+
+	if f.Src != "" {
+		functionVars[schema.AttributeTypeSrc] = cty.StringVal(f.Src)
+	}
+
+	if f.Handler != "" {
+		functionVars[schema.AttributeTypeHandler] = cty.StringVal(f.Handler)
+	}
+
 	return cty.ObjectVal(functionVars)
 }

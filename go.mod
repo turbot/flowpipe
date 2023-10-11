@@ -45,7 +45,6 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc4
 	github.com/oras-project/oras-credentials-go v0.3.0
 	github.com/otiai10/copy v1.12.0
-	github.com/pkg/errors v0.9.1
 	github.com/radovskyb/watcher v1.0.7
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shiena/ansicolor v0.0.0-20230509054315-a9deabde6e02
@@ -192,6 +191,7 @@ require (
 	github.com/pegasus-kv/thrift v0.13.0 // indirect
 	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect

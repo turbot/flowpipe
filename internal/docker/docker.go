@@ -15,6 +15,18 @@ import (
 	"github.com/docker/docker/client"
 )
 
+var GlobalDockerClient *DockerClient
+
+func Initialize(ctx context.Context) error {
+	dc, err := New(WithContext(ctx), WithPingTest())
+	if err != nil {
+		return err
+	}
+
+	GlobalDockerClient = dc
+	return nil
+}
+
 // Client represents a connection to Docker.
 type DockerClient struct {
 	CLI *client.Client
