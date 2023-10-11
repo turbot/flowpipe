@@ -91,7 +91,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
-// @Success 200 {object} types.FpPipeline
+// @Success 200 {object} *modconfig.Pipeline
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -119,13 +119,14 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		return
 	}
 
-	fpPipeline := types.FpPipeline{
-		Name:        pipeline.Name(),
-		Description: pipeline.Description,
-		Mod:         pipeline.GetMod().FullName,
-	}
+	// TODO: Remove this later, since the API should not be returning the full pipeline definition
+	// fpPipeline := types.FpPipeline{
+	// 	Name:        pipeline.Name(),
+	// 	Description: pipeline.Description,
+	// 	Mod:         pipeline.GetMod().FullName,
+	// }
 
-	c.JSON(http.StatusOK, fpPipeline)
+	c.JSON(http.StatusOK, pipeline)
 }
 
 // @Summary Execute a pipeline command
