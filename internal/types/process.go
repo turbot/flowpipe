@@ -6,7 +6,8 @@ import (
 
 // The definition of a single Flowpipe Process
 type Process struct {
-	ID string `json:"process_id"`
+	ID       string `json:"execution_id"`
+	Pipeline string `json:"pipeline"`
 }
 
 type ProcessOutputData struct {

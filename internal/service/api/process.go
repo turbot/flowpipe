@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -25,6 +27,10 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLog)
 	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
 
+}
+
+type ProcessPayload struct {
+	PipelineName string `json:"name"`
 }
 
 // @Summary List processs
@@ -54,11 +60,53 @@ func (api *APIService) listProcess(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list process request", "next_token", nextToken, "limit", limit)
 
-	result := types.ListProcessResponse{
-		Items: []types.Process{},
+	// Read the log directory to list out all the process that have been executed
+	logDir := viper.GetString(constants.ArgLogDir)
+	processLogFiles, err := os.ReadDir(logDir)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
-	result.Items = append(result.Items, types.Process{ID: "123"}, types.Process{ID: "456"})
+	// Extract the execution IDs from the log file names
+	executionIDs := []string{}
+	for _, f := range processLogFiles {
+		execID := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
+		executionIDs = append(executionIDs, execID)
+	}
+
+	// Get the log entries using the execution ID and extract the pipeline name
+	processList := []types.Process{}
+	for _, execID := range executionIDs {
+
+		logEntries, err := execution.LoadEventLogEntries(execID)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		}
+
+		for _, e := range logEntries {
+			if e.EventType == "command.pipeline_queue" {
+				var payload *ProcessPayload
+				err := json.Unmarshal(e.Payload, &payload)
+				if err != nil {
+					common.AbortWithError(c, err)
+					return
+				}
+
+				processList = append(processList, types.Process{
+					ID:       execID,
+					Pipeline: payload.PipelineName,
+				})
+
+				break
+			}
+		}
+	}
+
+	result := types.ListProcessResponse{
+		Items: processList,
+	}
 
 	c.JSON(http.StatusOK, result)
 }
