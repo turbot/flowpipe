@@ -72,7 +72,7 @@ type Pipeline struct {
 
 	OutputConfig []PipelineOutput `json:"outputs,omitempty"`
 
-	Params map[string]*PipelineParam `json:"-"`
+	Params map[string]*PipelineParam `json:"params"`
 }
 
 func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error {
@@ -416,9 +416,10 @@ func (p *Pipeline) setBaseProperties() {
 // end Pipeline Hclresource interface functions
 
 type PipelineParam struct {
-	Name    string
-	Default cty.Value
-	Type    cty.Type
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Default     cty.Value `json:"-"`
+	Type        cty.Type  `json:"-"`
 }
 
 type PipelineOutput struct {

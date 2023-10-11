@@ -30,11 +30,11 @@ func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 	pipelineCmd.AddCommand(pipelineListCmd)
 
-	pipelineShowCmd, err := PipelineShowCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineShowCmd)
+	// pipelineShowCmd, err := PipelineShowCmd(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// pipelineCmd.AddCommand(pipelineShowCmd)
 
 	pipelineRunCmd, err := PipelineRunCmd(ctx)
 	if err != nil {

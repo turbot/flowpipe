@@ -299,22 +299,6 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 
 }
 
-// @Summary Get process logs
-// @Description Get process logs
-// @ID   process_get_log
-// @Tags Process
-// @Produce json
-// / ...
-// @Param process_id path string true "The id of the process" format(^[a-z]{0,32}$)
-// ...
-// @Success 200 {object} types.ProcessEventLog
-// @Failure 400 {object} perr.ErrorModel
-// @Failure 401 {object} perr.ErrorModel
-// @Failure 403 {object} perr.ErrorModel
-// @Failure 404 {object} perr.ErrorModel
-// @Failure 429 {object} perr.ErrorModel
-// @Failure 500 {object} perr.ErrorModel
-// @Router /process/:process_id/log/process.jsonl [get]
 func (api *APIService) listProcessEventLog(c *gin.Context) {
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
