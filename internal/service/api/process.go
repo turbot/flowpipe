@@ -349,7 +349,7 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 // @Failure 404 {object} perr.ErrorModel
 // @Failure 429 {object} perr.ErrorModel
 // @Failure 500 {object} perr.ErrorModel
-// @Router /process/:process_id/log/process.jsonl [get]
+// @Router /process/:process_id/log/process.sps [get]
 func (api *APIService) listProcessSps(c *gin.Context) {
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
