@@ -26,6 +26,18 @@ var TriggerScheduleBlockSchema = &hcl.BodySchema{
 			Required: false,
 		},
 		{
+			Name:     schema.AttributeTypeTitle,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeDocumentation,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTags,
+			Required: false,
+		},
+		{
 			Name:     schema.AttributeTypeSchedule,
 			Required: true,
 		},
@@ -46,6 +58,18 @@ var TriggerIntervalBlockSchema = &hcl.BodySchema{
 			Required: false,
 		},
 		{
+			Name:     schema.AttributeTypeTitle,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeDocumentation,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTags,
+			Required: false,
+		},
+		{
 			Name:     schema.AttributeTypeSchedule,
 			Required: true,
 		},
@@ -63,6 +87,18 @@ var TriggerQueryBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
 			Name:     schema.AttributeTypeDescription,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTitle,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeDocumentation,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTags,
 			Required: false,
 		},
 		{
@@ -95,6 +131,18 @@ var TriggerHttpBlockSchema = &hcl.BodySchema{
 			Required: false,
 		},
 		{
+			Name:     schema.AttributeTypeTitle,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeDocumentation,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTags,
+			Required: false,
+		},
+		{
 			Name:     schema.AttributeTypePipeline,
 			Required: true,
 		},
@@ -108,6 +156,18 @@ var PipelineBlockSchema = &hcl.BodySchema{
 	Attributes: []hcl.AttributeSchema{
 		{
 			Name:     schema.AttributeTypeDescription,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTitle,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeDocumentation,
+			Required: false,
+		},
+		{
+			Name:     schema.AttributeTypeTags,
 			Required: false,
 		},
 	},

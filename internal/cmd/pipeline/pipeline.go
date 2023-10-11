@@ -30,6 +30,12 @@ func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 	pipelineCmd.AddCommand(pipelineListCmd)
 
+	pipelineShowCmd, err := PipelineShowCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pipelineCmd.AddCommand(pipelineShowCmd)
+
 	pipelineRunCmd, err := PipelineRunCmd(ctx)
 	if err != nil {
 		return nil, err
@@ -46,6 +52,17 @@ func PipelineListCmd(ctx context.Context) (*cobra.Command, error) {
 		Use:  "list",
 		Args: cobra.NoArgs,
 		Run:  listPipelineFunc(ctx),
+	}
+
+	return serviceStartCmd, nil
+}
+
+func PipelineShowCmd(ctx context.Context) (*cobra.Command, error) {
+
+	var serviceStartCmd = &cobra.Command{
+		Use:  "show <pipeline-name>",
+		Args: cobra.ExactArgs(1),
+		Run:  showPipelineFunc(ctx),
 	}
 
 	return serviceStartCmd, nil
@@ -144,6 +161,32 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 
 		apiClient := common.GetApiClient()
 		resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
+
+		if resp != nil {
+			printer := printers.GetPrinter(cmd)
+
+			printableResource := types.PrintablePipeline{}
+			printableResource.Items, err = printableResource.Transform(resp)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+			}
+
+			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			}
+		}
+	}
+}
+
+func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		apiClient := common.GetApiClient()
+		resp, _, err := apiClient.PipelineApi.Get(context.Background(), args[0]).Execute()
 		if err != nil {
 			error_helpers.ShowError(ctx, err)
 			return

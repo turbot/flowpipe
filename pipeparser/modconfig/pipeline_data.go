@@ -341,6 +341,55 @@ func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes) hcl.Diagnostics {
 				valString := val.AsString()
 				p.Description = &valString
 			}
+		case schema.AttributeTypeTitle:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse title attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Title = &valString
+			}
+		case schema.AttributeTypeDocumentation:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse documentation attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsString()
+				p.Documentation = &valString
+			}
+		case schema.AttributeTypeTags:
+			if attr.Expr != nil {
+				val, err := attr.Expr.Value(nil)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse tags attribute",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+
+				valString := val.AsValueMap()
+				resultMap := make(map[string]string)
+				for key, value := range valString {
+					resultMap[key] = value.AsString()
+				}
+				p.Tags = resultMap
+			}
 		default:
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,

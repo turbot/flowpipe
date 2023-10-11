@@ -23,6 +23,12 @@ func TriggerCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 	triggerCmd.AddCommand(triggerListCmd)
 
+	triggerShowCmd, err := TriggerShowCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	triggerCmd.AddCommand(triggerShowCmd)
+
 	return triggerCmd, nil
 
 }
@@ -38,6 +44,17 @@ func TriggerListCmd(ctx context.Context) (*cobra.Command, error) {
 	return triggerListCmd, nil
 }
 
+func TriggerShowCmd(ctx context.Context) (*cobra.Command, error) {
+
+	var triggerShowCmd = &cobra.Command{
+		Use:  "show <trigger-name>",
+		Args: cobra.ExactArgs(1),
+		Run:  showTriggerFunc(ctx),
+	}
+
+	return triggerShowCmd, nil
+}
+
 func listTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
@@ -45,6 +62,32 @@ func listTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 
 		apiClient := common.GetApiClient()
 		resp, _, err := apiClient.TriggerApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
+
+		if resp != nil {
+			printer := printers.GetPrinter(cmd)
+
+			printableResource := types.PrintableTrigger{}
+			printableResource.Items, err = printableResource.Transform(resp)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+			}
+
+			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			}
+		}
+	}
+}
+
+func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		apiClient := common.GetApiClient()
+		resp, _, err := apiClient.TriggerApi.Get(context.Background(), args[0]).Execute()
 		if err != nil {
 			error_helpers.ShowError(ctx, err)
 			return
