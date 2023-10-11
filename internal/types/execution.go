@@ -7,7 +7,7 @@ import (
 
 type EventLogEntry struct {
 	EventType string          `json:"event_type"`
-	Timestamp *time.Time      `json:"timestamp"`
+	Timestamp *time.Time      `json:"ts"`
 	Payload   json.RawMessage `json:"payload"`
 }
 
