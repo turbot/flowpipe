@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )
 
@@ -20,6 +22,16 @@ type ProcessPayload struct {
 type ProcessOutputData struct {
 	ID     string                 `json:"process_id"`
 	Output map[string]interface{} `json:"output"`
+}
+
+// Identical to the EventLogEntry struct in internal/types/execution.go
+// Using the EventLogEntry returned an error at the time of openapi generation:
+// cannot find type definition: json.RawMessage
+// TODO - Recheck to use the EventLogEntry struct
+type ProcessEventLog struct {
+	EventType string     `json:"event_type"`
+	Timestamp *time.Time `json:"ts"`
+	Payload   []byte     `json:"payload"`
 }
 
 type PrintableProcess struct {
@@ -88,8 +100,8 @@ type ListProcessResponse struct {
 
 // This type is used by the API to return a list of pipelines.
 type ListProcessLogResponse struct {
-	Items     []EventLogEntry `json:"items"`
-	NextToken *string         `json:"next_token,omitempty"`
+	Items     []ProcessEventLog `json:"items"`
+	NextToken *string           `json:"next_token,omitempty"`
 }
 
 type CmdProcess struct {

@@ -307,7 +307,7 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 // / ...
 // @Param process_id path string true "The id of the process" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} types.ListProcessLogResponse
+// @Success 200 {object} types.ProcessEventLog
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -327,8 +327,17 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		common.AbortWithError(c, err)
 	}
 
+	var items []types.ProcessEventLog
+	for _, item := range logEntries {
+		items = append(items, types.ProcessEventLog{
+			EventType: item.EventType,
+			Timestamp: item.Timestamp,
+			Payload:   item.Payload,
+		})
+	}
+
 	result := types.ListProcessLogResponse{
-		Items: logEntries,
+		Items: items,
 	}
 
 	c.JSON(http.StatusOK, result)
