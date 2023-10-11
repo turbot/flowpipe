@@ -226,6 +226,11 @@ func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfi
 		o.Description = ctyVal.AsString()
 	}
 
+	if attr, exists := paramOptions.Attributes[schema.AttributeTypeOptional]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Optional)
+		diags = append(diags, valDiags...)
+	}
+
 	return o, diags
 }
 
