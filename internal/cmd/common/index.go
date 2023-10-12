@@ -17,7 +17,7 @@ type customTransport struct {
 	Transport http.RoundTripper
 }
 
-var ErrUnreachable = errors.New("flowpipe service is unreachable.\nYou can start a local flowpipe server with \"cd  <mod-directory> && flowpipe service start.\"")
+var ErrUnreachable = errors.New("flowpipe service is unreachable. Is your flowpipe service running?")
 
 func (c *customTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := c.Transport.RoundTrip(req)
