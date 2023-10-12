@@ -90,8 +90,6 @@ pipeline "with_functions_no_env_var" {
     }
 }
 
-
-
 pipeline "with_container" {
     param "aws_region" {
         type = string
@@ -122,5 +120,55 @@ pipeline "with_container" {
 
     output "stderr" {
         value = step.container.container_run.stderr
+    }
+}
+
+pipeline "container_with_for_each" {
+    param "input" {
+        type = list(any)
+        default = [
+            {
+                name = "foo"
+                value = "bar"
+            },
+            {
+                name = "baz"
+                value = "qux"
+            },
+            {
+                name = "quux"
+                value = "quuz"
+            }
+        ]
+    }
+
+    step "container" "container_run_aws" {
+        for_each = param.input
+        image = "amazon/aws-cli"
+        cmd = ["s3api", "put-bucket-versioning", "--bucket", element(split(":", each.value.name), 5), "--versioning-configuration", "Status=Enabled"]
+        env = {
+            AWS_REGION = "us-east-1"
+            AWS_ACCESS_KEY_ID = "AKIAQGDRKHTKBKCJASUB"
+            AWS_SECRET_ACCESS_KEY = "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"
+        }
+    }
+
+
+    step "echo" "foo" {
+        for_each = param.input
+        text = "echo ${each.value.name}"
+    }
+
+    step "echo" "baz" {
+        if = false
+        text = "not here"
+    }
+
+    output "baz" {
+        value = step.echo.baz.text
+    }
+
+    output "val" {
+        value = step.echo.foo
     }
 }

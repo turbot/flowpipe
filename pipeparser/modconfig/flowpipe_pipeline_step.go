@@ -1977,7 +1977,7 @@ func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[stri
 }
 
 func (p *PipelineStepFunction) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
-	diags := hcl.Diagnostics{}
+	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
@@ -2141,7 +2141,7 @@ func (p *PipelineStepContainer) GetInputs(evalContext *hcl.EvalContext) (map[str
 }
 
 func (p *PipelineStepContainer) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
-	diags := hcl.Diagnostics{}
+	diags := p.SetBaseAttributes(hclAttributes)
 
 	for name, attr := range hclAttributes {
 		switch name {
