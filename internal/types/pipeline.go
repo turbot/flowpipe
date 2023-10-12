@@ -24,15 +24,23 @@ type ListPipelineResponse struct {
 }
 
 type GetPipelineResponse struct {
-	Name          string                              `json:"name"`
-	Description   *string                             `json:"description,omitempty"`
-	Mod           string                              `json:"mod"`
-	Title         *string                             `json:"title,omitempty"`
-	Documentation *string                             `json:"documentation,omitempty"`
-	Tags          map[string]string                   `json:"tags"`
-	Steps         []modconfig.IPipelineStep           `json:"steps,omitempty"`
-	OutputConfig  []modconfig.PipelineOutput          `json:"outputs,omitempty"`
-	Params        map[string]*modconfig.PipelineParam `json:"params,omitempty"`
+	Name          string                     `json:"name"`
+	Description   *string                    `json:"description,omitempty"`
+	Mod           string                     `json:"mod"`
+	Title         *string                    `json:"title,omitempty"`
+	Documentation *string                    `json:"documentation,omitempty"`
+	Tags          map[string]string          `json:"tags"`
+	Steps         []modconfig.IPipelineStep  `json:"steps,omitempty"`
+	OutputConfig  []modconfig.PipelineOutput `json:"outputs,omitempty"`
+	Params        []FpPipelineParam          `json:"params,omitempty"`
+}
+
+type FpPipelineParam struct {
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Optional    *bool   `json:"optional,omitempty"`
+	Default     *string `json:"default,omitempty"`
+	Type        string  `json:"type"`
 }
 
 type PipelineExecutionResponse map[string]interface{}

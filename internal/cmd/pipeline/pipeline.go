@@ -215,12 +215,19 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			if resp.Description != nil {
 				output += "\nDescription:\n" + *resp.Description + "\n"
 			}
-			output += formatSection("\nParams:", resp.Params)
-			output += formatSection("\nOutputs:", resp.Outputs)
+			if resp.Params != nil {
+				output += formatSection("\nParams:", resp.Params)
+			}
+			if resp.Outputs != nil {
+				output += formatSection("\nOutputs:", resp.Outputs)
+			}
 			output += "\nUsage:" + "\n"
 			if resp.Params != nil {
 				var pArg string
-				for _, param := range *resp.Params {
+				for _, param := range resp.Params {
+					if (param.Default != nil && len(*param.Default) > 0) || (param.Optional != nil && *param.Optional) {
+						continue
+					}
 					pArg += " --pipeline-arg " + *param.Name + "=<value>"
 				}
 				output += "  flowpipe pipeline run " + *resp.Name + pArg
@@ -239,8 +246,8 @@ func formatSection(sectionName string, items interface{}) string {
 	if items != nil {
 		output += sectionName + "\n"
 		switch v := items.(type) {
-		case *map[string]flowpipeapiclient.ModconfigPipelineParam:
-			for _, item := range *v {
+		case []flowpipeapiclient.FpPipelineParam:
+			for _, item := range v {
 				output += "  " + paramToString(item) + "\n"
 			}
 		case []flowpipeapiclient.ModconfigPipelineOutput:
@@ -253,13 +260,22 @@ func formatSection(sectionName string, items interface{}) string {
 }
 
 // Helper function to convert Param to string
-func paramToString(param flowpipeapiclient.ModconfigPipelineParam) string {
-	return *param.Name + "[*param.Type]: " + *param.Description
+func paramToString(param flowpipeapiclient.FpPipelineParam) string {
+	strOutput := *param.Name + "[" + *param.Type + "]"
+
+	if param.Description != nil && len(*param.Description) > 0 {
+		strOutput += ": " + *param.Description
+	}
+	return strOutput
 }
 
 // Helper function to convert Output to string
 func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
-	return *output.Name + ": " + *output.Description
+	strOutput := *output.Name
+	if output.Description != nil && len(*output.Description) > 0 {
+		strOutput += ": " + *output.Description
+	}
+	return strOutput
 }
 func validatePipelineArgs(pipelineArgs []string) error {
 	validFormat := regexp.MustCompile(`^[^=]+=[^=]+$`)

@@ -17,6 +17,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/flowpipe/pipeparser/utils"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
@@ -131,7 +132,25 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		Documentation: pipeline.Documentation,
 		Steps:         pipeline.Steps,
 		OutputConfig:  pipeline.OutputConfig,
-		Params:        pipeline.Params,
+	}
+
+	pipelineParams := []types.FpPipelineParam{}
+	for _, param := range pipeline.Params {
+
+		var paramDefault string
+		if !param.Default.IsNull() {
+			paramDefault = param.Default.AsString()
+		}
+
+		pipelineParams = append(pipelineParams, types.FpPipelineParam{
+			Name:        param.Name,
+			Description: utils.ToStringPointer(param.Description),
+			Optional:    &param.Optional,
+			Type:        param.Type.FriendlyName(),
+			Default:     &paramDefault,
+		})
+
+		getPipelineresponse.Params = pipelineParams
 	}
 
 	c.JSON(http.StatusOK, getPipelineresponse)
