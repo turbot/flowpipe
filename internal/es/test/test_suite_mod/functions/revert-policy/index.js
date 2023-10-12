@@ -36,7 +36,7 @@ exports.handler = async(event, context) => {
     console.log("Deleted the restricted policy version")
 
     return {
-      "message": `Policy ${event.policyMeta.policyName} Has been altered and contains restricted Actions: ${event.policy}, please approve or deny this change`,
+      "message": `Policy ${event.policyMeta.policyName} Has been altered and contains restricted Actions: ${event.policy}`,
       "action": "remedy"
     };
 

@@ -29,6 +29,7 @@ pipeline "lambda_example" {
     }
 
     step "function" "revert_policy_step" {
+        if = step.function.validate_policy_step.result.action == "remedy"
         runtime = "nodejs:18"
         handler = "index.handler"
         src = "./functions/revert-policy"
