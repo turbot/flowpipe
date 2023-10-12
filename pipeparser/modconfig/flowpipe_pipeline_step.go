@@ -2039,11 +2039,13 @@ func (p *PipelineStepFunction) SetAttributes(hclAttributes hcl.Attributes, evalC
 			}
 
 		default:
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unsupported attribute for Function Step: " + attr.Name,
-				Subject:  &attr.Range,
-			})
+			if !p.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Function Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
 
@@ -2179,11 +2181,13 @@ func (p *PipelineStepContainer) SetAttributes(hclAttributes hcl.Attributes, eval
 				p.Env = env
 			}
 		default:
-			diags = append(diags, &hcl.Diagnostic{
-				Severity: hcl.DiagError,
-				Summary:  "Unsupported attribute for Function Step: " + attr.Name,
-				Subject:  &attr.Range,
-			})
+			if !p.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Function Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
 		}
 	}
 

@@ -17,7 +17,14 @@ pipeline "with_functions" {
         default = "abc"
     }
 
+    param "test_run" {
+        type = string
+        default = "aye"
+    }
+
     step "function" "hello_nodejs_step" {
+        if = param.test_run == "aye"
+
         runtime = "nodejs:18"
         handler = "index.handler"
         src = "./functions/hello-nodejs"
