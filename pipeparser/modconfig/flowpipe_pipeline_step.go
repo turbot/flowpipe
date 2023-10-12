@@ -1884,8 +1884,10 @@ func (p *PipelineStepFunction) Equals(iOther IPipelineStep) bool {
 		return false
 	}
 
-	// TODO: more here, can't just compare the name
-	return p.Function.AsValueMap()[schema.LabelName] == other.Function.AsValueMap()[schema.LabelName]
+	return p.Name == other.Name &&
+		p.Runtime == other.Runtime &&
+		p.Handler == other.Handler &&
+		p.Src == other.Src
 }
 
 func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
