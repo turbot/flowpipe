@@ -24,6 +24,7 @@ import (
 	"github.com/radovskyb/watcher"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
@@ -31,11 +32,12 @@ import (
 type Function struct {
 
 	// fnuration
-	Name    string            `json:"name"`
-	Runtime string            `json:"runtime"`
-	Handler string            `json:"handler"`
-	Src     string            `json:"src"`
-	Env     map[string]string `json:"env"`
+	Name    string                 `json:"name"`
+	Runtime string                 `json:"runtime"`
+	Handler string                 `json:"handler"`
+	Src     string                 `json:"src"`
+	Env     map[string]string      `json:"env"`
+	Event   map[string]interface{} `json:"event"`
 
 	// PullParentImagePeriod defines how often the parent image should be pulled.
 	// This is useful for keeping the parent image up to date. Default is every
@@ -51,8 +53,11 @@ type Function struct {
 	CurrentVersionName      string             `json:"current_version_name"`
 	Versions                map[string]Version `json:"versions"`
 
-	// Internal
-	ctx          context.Context      `json:"-"`
+	// run context, need context.Background()
+	ctx context.Context `json:"-"`
+
+	// Flowpipe run context (e.g. for logging)
+	runCtx       context.Context      `json:"-"`
 	watcher      *watcher.Watcher     `json:"-"`
 	buildMutex   sync.Mutex           `json:"-"`
 	dockerClient *docker.DockerClient `json:"-"`
@@ -71,6 +76,13 @@ type FunctionOption func(*Function) error
 func WithContext(ctx context.Context) FunctionOption {
 	return func(c *Function) error {
 		c.ctx = ctx
+		return nil
+	}
+}
+
+func WithRunContext(runContext context.Context) FunctionOption {
+	return func(c *Function) error {
+		c.runCtx = runContext
 		return nil
 	}
 }
@@ -363,8 +375,8 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 }
 
 func (fn *Function) Invoke(input []byte) ([]byte, error) {
+	logger := fplog.Logger(fn.runCtx)
 
-	// Convenience
 	output := []byte{}
 
 	// Ensure the function has been started
@@ -375,7 +387,8 @@ func (fn *Function) Invoke(input []byte) ([]byte, error) {
 
 	// Forward request to lambda endpoint
 	v := fn.Versions[fn.CurrentVersionName]
-	fmt.Println("LambdaEndpoint:", v.LambdaEndpoint())
+	logger.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName)
+
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
 		return output, err
@@ -383,9 +396,7 @@ func (fn *Function) Invoke(input []byte) ([]byte, error) {
 	defer resp.Body.Close()
 
 	// Response handling
-	fmt.Println(resp)
 	output, err = io.ReadAll(resp.Body)
-	fmt.Println("output:", string(output))
 	return output, err
 }
 

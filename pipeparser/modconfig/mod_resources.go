@@ -46,7 +46,6 @@ type ResourceMaps struct {
 	// flowpipe
 	Pipelines map[string]*Pipeline
 	Triggers  map[string]*Trigger
-	Functions map[string]*Function
 }
 
 func NewModResources(mod *Mod) *ResourceMaps {
@@ -91,7 +90,6 @@ func emptyModResources() *ResourceMaps {
 		// Flowpipe
 		Pipelines: make(map[string]*Pipeline),
 		Triggers:  make(map[string]*Trigger),
-		Functions: make(map[string]*Function),
 	}
 }
 
@@ -211,19 +209,6 @@ func (m *ResourceMaps) Equals(other *ResourceMaps) bool {
 	}
 	for name := range other.Triggers {
 		if _, ok := m.Triggers[name]; !ok {
-			return false
-		}
-	}
-
-	for name, function := range m.Functions {
-		if otherFunction, ok := other.Functions[name]; !ok {
-			return false
-		} else if !function.Equals(otherFunction) {
-			return false
-		}
-	}
-	for name := range other.Functions {
-		if _, ok := m.Functions[name]; !ok {
 			return false
 		}
 	}
@@ -493,8 +478,6 @@ func (m *ResourceMaps) GetResource(parsedName *ParsedResourceName) (resource Hcl
 		resource, found = m.Pipelines[longName]
 	case schema.BlockTypeTrigger:
 		resource, found = m.Triggers[longName]
-	case schema.BlockTypeFunction:
-		resource, found = m.Functions[longName]
 	}
 	return resource, found
 }
@@ -612,7 +595,6 @@ func (m *ResourceMaps) Empty() bool {
 		// len(m.DashboardTexts)+
 		len(m.Pipelines)+
 		len(m.Triggers)+
-		len(m.Functions)+
 		len(m.References) == 0
 }
 
@@ -746,12 +728,6 @@ func (m *ResourceMaps) WalkResources(resourceFunc func(item HclResource) (bool, 
 	}
 
 	for _, r := range m.Triggers {
-		if continueWalking, err := resourceFunc(r); err != nil || !continueWalking {
-			return err
-		}
-	}
-
-	for _, r := range m.Functions {
 		if continueWalking, err := resourceFunc(r); err != nil || !continueWalking {
 			return err
 		}
@@ -945,14 +921,6 @@ func (m *ResourceMaps) AddResource(item HclResource) hcl.Diagnostics {
 			break
 		}
 		m.Triggers[name] = r
-
-	case *Function:
-		name := r.Name()
-		if existing, ok := m.Functions[name]; ok {
-			diags = append(diags, checkForDuplicate(existing, item)...)
-			break
-		}
-		m.Functions[name] = r
 	}
 
 	return diags
@@ -1038,9 +1006,6 @@ func (m *ResourceMaps) Merge(others []*ResourceMaps) *ResourceMaps {
 		}
 		for k, v := range source.Triggers {
 			res.Triggers[k] = v
-		}
-		for k, v := range source.Functions {
-			res.Functions[k] = v
 		}
 		for k, v := range source.Variables {
 			// NOTE: only include variables from root mod  - we add in the others separately

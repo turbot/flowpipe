@@ -42,7 +42,6 @@ const (
 	BlockTypePipelineStep     = "step"
 	BlockTypePipelineOutput   = "output"
 	BlockTypeTrigger          = "trigger"
-	BlockTypeFunction         = "function"
 
 	AttributeTypeValue     = "value"
 	AttributeTypeSensitive = "sensitive"
@@ -131,6 +130,7 @@ const (
 	AttributeTypeSrc      = "src"
 	AttributeTypeHandler  = "handler"
 	AttributeTypeFunction = "function"
+	AttributeTypeEvent    = "event"
 
 	AttributeTypeImage = "image"
 	AttributeTypeCmd   = "cmd"
@@ -235,7 +235,6 @@ var ValidResourceItemTypes = []string{
 	BlockTypeWorkspaceProfile,
 	BlockTypePipeline,
 	BlockTypeTrigger,
-	BlockTypeFunction,
 	BlockTypeWith,
 	// local is not an actual block name but is a resource type
 	"local",

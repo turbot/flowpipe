@@ -37,7 +37,7 @@ type ContainerRun struct {
 	ContainerID string `json:"container_id"`
 	Status      string `json:"status"`
 	Stdout      string `json:"stdout"`
-	Stderr      string `json:"stderr`
+	Stderr      string `json:"stderr"`
 }
 
 // Option defines a function signature for configuring the Docker client.

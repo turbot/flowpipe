@@ -273,61 +273,6 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 	return o, diags
 }
 
-func decodeFunction(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Function, *DecodeResult) {
-
-	res := newDecodeResult()
-
-	if len(block.Labels) != 1 {
-		res.handleDecodeDiags(hcl.Diagnostics{
-			{
-				Severity: hcl.DiagError,
-				Summary:  fmt.Sprintf("invalid function block - expected 1 label, found %d", len(block.Labels)),
-				Subject:  &block.DefRange,
-			},
-		})
-		return nil, res
-	}
-
-	functionName := block.Labels[0]
-
-	functionHcl := modconfig.NewFunction(block, mod, functionName)
-
-	functionOptions, diags := block.Body.Content(modconfig.FlowpipeFunctionBlockSchema)
-
-	if diags.HasErrors() {
-		res.handleDecodeDiags(diags)
-		return functionHcl, res
-	}
-
-	for name, attr := range functionOptions.Attributes {
-		switch name {
-		case schema.AttributeTypeRuntime:
-			valDiags := gohcl.DecodeExpression(attr.Expr, parseCtx.EvalCtx, &functionHcl.Runtime)
-			diags = append(diags, valDiags...)
-		case schema.AttributeTypeSrc:
-			valDiags := gohcl.DecodeExpression(attr.Expr, parseCtx.EvalCtx, &functionHcl.Src)
-			diags = append(diags, valDiags...)
-		case schema.AttributeTypeHandler:
-			valDiags := gohcl.DecodeExpression(attr.Expr, parseCtx.EvalCtx, &functionHcl.Handler)
-			diags = append(diags, valDiags...)
-		}
-	}
-
-	err := parseCtx.AddFunction(functionHcl)
-	if err != nil {
-		res.handleDecodeDiags(hcl.Diagnostics{
-			{
-				Severity: hcl.DiagError,
-				Summary:  fmt.Sprintf("invalid function block - %s", err.Error()),
-				Subject:  &block.DefRange,
-			},
-		})
-	}
-
-	return functionHcl, res
-
-}
-
 func decodeTrigger(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Trigger, *DecodeResult) {
 	res := newDecodeResult()
 

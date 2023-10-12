@@ -1853,6 +1853,13 @@ type PipelineStepFunction struct {
 	PipelineStepBase
 
 	Function cty.Value `json:"-"`
+
+	Runtime string `json:"runtime" cty:"runtime"`
+	Src     string `json:"src" cty:"src"`
+	Handler string `json:"handler" cty:"handler"`
+
+	Event map[string]interface{} `json:"event"`
+	Env   map[string]string      `json:"env"`
 }
 
 func (p *PipelineStepFunction) Equals(iOther IPipelineStep) bool {
@@ -1872,29 +1879,76 @@ func (p *PipelineStepFunction) Equals(iOther IPipelineStep) bool {
 
 func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
 
-	var function string
-	if p.Function == cty.NilVal {
-		return nil, perr.InternalWithMessage("Function must be supplied")
+	var env map[string]string
+	if p.UnresolvedAttributes[schema.AttributeTypeEnv] == nil {
+		env = p.Env
+	} else {
+		var args cty.Value
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeEnv], evalContext, &args)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+
+		var err error
+		env, err = hclhelpers.CtyToGoMapString(args)
+		if err != nil {
+			return nil, err
+		}
 	}
-	valueMap := p.Function.AsValueMap()
 
-	functionNameCty := valueMap[schema.LabelName]
-	function = functionNameCty.AsString()
+	var event map[string]interface{}
+	if p.UnresolvedAttributes[schema.AttributeTypeEvent] == nil {
+		event = p.Event
+	} else {
+		val, diags := p.UnresolvedAttributes[schema.AttributeTypeEvent].Value(evalContext)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
 
-	srcCty := valueMap[schema.AttributeTypeSrc]
-	src := srcCty.AsString()
+		var err error
+		event, err = hclhelpers.CtyToGoMapInterface(val)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	runtimeCty := valueMap[schema.AttributeTypeRuntime]
-	runtime := runtimeCty.AsString()
+	var src string
+	if p.UnresolvedAttributes[schema.AttributeTypeSrc] == nil {
+		src = p.Src
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSrc], evalContext, &src)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+	}
 
-	handlerCty := valueMap[schema.AttributeTypeHandler]
-	handler := handlerCty.AsString()
+	var runtime string
+	if p.UnresolvedAttributes[schema.AttributeTypeRuntime] == nil {
+		runtime = p.Runtime
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSrc], evalContext, &runtime)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+	}
+
+	var handler string
+	if p.UnresolvedAttributes[schema.AttributeTypeHandler] == nil {
+		handler = p.Handler
+	} else {
+		diags := gohcl.DecodeExpression(p.UnresolvedAttributes[schema.AttributeTypeSrc], evalContext, &handler)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError("step", diags)
+		}
+	}
 
 	return map[string]interface{}{
-		schema.AttributeTypeFunction: function,
-		schema.AttributeTypeSrc:      src,
-		schema.AttributeTypeRuntime:  runtime,
-		schema.AttributeTypeHandler:  handler,
+		schema.LabelName:            p.Name,
+		schema.AttributeTypeSrc:     src,
+		schema.AttributeTypeRuntime: runtime,
+		schema.AttributeTypeHandler: handler,
+		schema.AttributeTypeEvent:   event,
+		schema.AttributeTypeEnv:     env,
 	}, nil
 }
 
@@ -1903,26 +1957,76 @@ func (p *PipelineStepFunction) SetAttributes(hclAttributes hcl.Attributes, evalC
 
 	for name, attr := range hclAttributes {
 		switch name {
-		case schema.AttributeTypeFunction:
-			expr := attr.Expr
-			if attr.Expr != nil {
-				val, err := expr.Value(evalContext)
-				if err != nil {
-					// For Step's Function reference, all it needs is the function. It can't possibly use the output of a function
-					// so if the Function is not parsed (yet) then the error message is:
-					// Summary: "Unknown variable"
-					// Detail: "There is no variable named \"function\"."
-					//
-					// Do not unpack the error and create a new "Diagnostic", leave the original error message in
-					// and let the "Mod processing" determine if there's an unresolved block
-					//
-					// There's no "depends_on" from the step to the function, the Flowpipe ES engine does not require it
-					diags = append(diags, err...)
-
-					return diags
-				}
-				p.Function = val
+		case schema.AttributeTypeSrc:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
 			}
+
+			if val != cty.NilVal {
+				p.Src = val.AsString()
+			}
+
+		case schema.AttributeTypeHandler:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				p.Handler = val.AsString()
+			}
+
+		case schema.AttributeTypeRuntime:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+			}
+
+			if val != cty.NilVal {
+				p.Runtime = val.AsString()
+			}
+
+		case schema.AttributeTypeEnv:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+			if val != cty.NilVal {
+				env, moreErr := hclhelpers.CtyToGoMapString(val)
+				if moreErr != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse '" + schema.AttributeTypeEnv + "' attribute to string map",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				p.Env = env
+			}
+		case schema.AttributeTypeEvent:
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+			}
+
+			if val != cty.NilVal {
+				events, err := hclhelpers.CtyToGoMapInterface(val)
+				if err != nil {
+					diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse '" + schema.AttributeTypeEvent + "' attribute to string map",
+						Subject:  &attr.Range,
+					})
+					continue
+				}
+				p.Event = events
+			}
+
 		default:
 			diags = append(diags, &hcl.Diagnostic{
 				Severity: hcl.DiagError,

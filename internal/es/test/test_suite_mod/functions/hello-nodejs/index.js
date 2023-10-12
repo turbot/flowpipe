@@ -7,7 +7,7 @@ exports.handler = async (event, context) => {
   const response = {
     statusCode: 200,
     body: {
-      message: `Hola, World! The current time is ${currentTime}`,
+      message: `Hola, World! The current time is ${currentTime}. From ${event.user.name} with age: ${event.user.age}. Not nested: ${event.notNested}.`,
       event,
       context
     },

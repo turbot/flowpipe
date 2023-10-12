@@ -16,31 +16,6 @@ var FlowpipeConfigBlockSchema = &hcl.BodySchema{
 			Type:       schema.BlockTypeTrigger,
 			LabelNames: []string{schema.LabelType, schema.LabelName},
 		},
-		{
-			Type:       schema.BlockTypeFunction,
-			LabelNames: []string{schema.LabelName},
-		},
-	},
-}
-
-var FlowpipeFunctionBlockSchema = &hcl.BodySchema{
-	Attributes: []hcl.AttributeSchema{
-		{
-			Name:     schema.AttributeTypeRuntime,
-			Required: true,
-		},
-		{
-			Name:     schema.AttributeTypeSrc,
-			Required: true,
-		},
-		{
-			Name:     schema.AttributeTypeEnv,
-			Required: false,
-		},
-		{
-			Name:     schema.AttributeTypeHandler,
-			Required: false,
-		},
 	},
 }
 
@@ -528,7 +503,20 @@ var PipelineStepFunctionBlockSchema = &hcl.BodySchema{
 			Name: schema.AttributeTypeIf,
 		},
 		{
-			Name: schema.AttributeTypeFunction,
+			Name:     schema.AttributeTypeSrc,
+			Required: true,
+		},
+		{
+			Name: schema.AttributeTypeHandler,
+		},
+		{
+			Name: schema.AttributeTypeRuntime,
+		},
+		{
+			Name: schema.AttributeTypeEnv,
+		},
+		{
+			Name: schema.AttributeTypeEvent,
 		},
 	},
 	Blocks: []hcl.BlockHeaderSchema{
