@@ -12,15 +12,8 @@ let message = ""
 let action = ""
 
 exports.handler = async (event, context) => {
-
-    // Mocked event
-    event = {
-      policy: '{"Version":"2012-10-17","Statement":[{"Sid":"VisualEditor0","Effect":"Allow","Action":["s3:DeleteBucket","s3:DeleteObject"],"Resource":"*"}]}'
-    }
-
-    var policyObject = JSON.parse(event.policy)
+    var policyObject = event.policy
     let policyActions = policyObject.Statement[0].Action
-    console.log(policyActions)
 
     //const found = policyActions.some(restrictedActions)
 
