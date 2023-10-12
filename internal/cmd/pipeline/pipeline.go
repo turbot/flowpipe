@@ -210,10 +210,10 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 						output += ", " + k + " = " + v
 					}
 				}
-				output += "\n\n"
+				output += "\n"
 			}
 			if resp.Description != nil {
-				output += "Description:\n" + *resp.Description + "\n"
+				output += "\nDescription:\n" + *resp.Description + "\n"
 			}
 			output += formatSection("\nParams:", resp.Params)
 			output += formatSection("\nOutputs:", resp.Outputs)
