@@ -34,6 +34,14 @@ pipeline "with_functions" {
         value = step.function.hello_nodejs_step.result.body.message
     }
 
+    output "env" {
+        value = step.function.hello_nodejs_step.result.body.env
+    }
+
+    output "status_code" {
+        value = step.function.hello_nodejs_step.result.statusCode
+    }
+
 }
 
 

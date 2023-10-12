@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -154,7 +153,7 @@ func (fn *Function) GetImageLatestTag() string {
 func (fn *Function) GetEnv() []string {
 	env := []string{}
 	for k, v := range fn.Env {
-		env = append(env, fmt.Sprintf("%s=%s", strconv.Quote(k), strconv.Quote(v)))
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return env
 }
@@ -374,7 +373,7 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 	return fn.Start(imageName)
 }
 
-func (fn *Function) Invoke(input []byte) ([]byte, error) {
+func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 	logger := fplog.Logger(fn.runCtx)
 
 	output := []byte{}
@@ -382,7 +381,7 @@ func (fn *Function) Invoke(input []byte) ([]byte, error) {
 	// Ensure the function has been started
 	_, err := fn.StartIfNotStarted(fn.CurrentVersionName)
 	if err != nil {
-		return output, err
+		return 0, output, err
 	}
 
 	// Forward request to lambda endpoint
@@ -391,13 +390,14 @@ func (fn *Function) Invoke(input []byte) ([]byte, error) {
 
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
-		return output, err
+		return 0, output, err
 	}
 	defer resp.Body.Close()
 
 	// Response handling
 	output, err = io.ReadAll(resp.Body)
-	return output, err
+
+	return resp.StatusCode, output, err
 }
 
 func (fn *Function) Restart(containerID string) (string, error) {

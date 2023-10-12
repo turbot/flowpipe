@@ -60,6 +60,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 		c, err = container.NewContainer(
 			container.WithContext(context.Background()),
+			container.WithRunContext(ctx),
 			container.WithDockerClient(docker.GlobalDockerClient),
 		)
 		if err != nil {

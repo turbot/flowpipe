@@ -30,6 +30,7 @@ type Container struct {
 
 	// Internal
 	ctx          context.Context
+	runCtx       context.Context
 	dockerClient *docker.DockerClient
 }
 
@@ -47,6 +48,13 @@ type ContainerOption func(*Container) error
 func WithContext(ctx context.Context) ContainerOption {
 	return func(c *Container) error {
 		c.ctx = ctx
+		return nil
+	}
+}
+
+func WithRunContext(ctx context.Context) ContainerOption {
+	return func(c *Container) error {
+		c.runCtx = ctx
 		return nil
 	}
 }
@@ -88,8 +96,6 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 func (c *Container) GetEnv() []string {
 	env := []string{}
 	for k, v := range c.Env {
-		// TODO - escape me
-		//env = append(env, fmt.Sprintf("%s=%s", strconv.Quote(k), strconv.Quote(v)))
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 	return env

@@ -75,7 +75,7 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		body = string(jsonString)
 	}
 
-	result, err := fn.Invoke([]byte(body))
+	statusCode, result, err := fn.Invoke([]byte(body))
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,8 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 
 	o := modconfig.Output{
 		Data: map[string]interface{}{
-			"result": resultsJson,
+			"result":      resultsJson,
+			"status_code": statusCode,
 		},
 	}
 
