@@ -69,8 +69,13 @@ func TransformErrorToSteampipe(err error) error {
 	}
 	// transform to a context
 	err = HandleCancelError(err)
-
-	errString := strings.TrimSpace(err.Error())
+	
+	var errString string
+	if strings.Contains(err.Error(), "flowpipe service is unreachable") {
+		errString = strings.Split(err.Error(), ": ")[1]
+	} else {
+		errString = strings.TrimSpace(err.Error())
+	}
 
 	// an error that originated from our database/sql driver (always prefixed with "ERROR:")
 	if strings.HasPrefix(errString, "ERROR:") {
