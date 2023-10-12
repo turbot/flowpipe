@@ -5,12 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch API server (bare)",
+            "name": "Launch API server (custom)",
             "type": "go",
             "request": "launch",
             "mode": "debug",
             "program": "main.go",
-            "args": ["service", "start"]
+            "args": ["service", "start", "--mod-location", "/home/vscode/mods/flowpipe-mod-urlscan", "--output-dir", "./tmp", "--log-dir", "./tmp"]
         },
         {
             "name": "Launch API server",

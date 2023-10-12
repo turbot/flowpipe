@@ -1442,6 +1442,17 @@ func (p *PipelineStepEcho) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 
 func dependsOnFromExpressions(attr *hcl.Attribute, evalContext *hcl.EvalContext, p IPipelineStep) (cty.Value, hcl.Diagnostics) {
 	expr := attr.Expr
+
+	// If there is a param in the expression, then we must assume that we can't resolve it at this stage.
+	// If the param has a default, it will be fully resolved and when we change the param, Flowpipe doesn't know that the
+	// attribute needs to be recalculated
+	for _, traversals := range expr.Variables() {
+		if traversals.RootName() == "param" {
+			p.AddUnresolvedAttribute(attr.Name, expr)
+			return cty.NilVal, hcl.Diagnostics{}
+		}
+	}
+
 	// resolve it first if we can
 	val, stepDiags := expr.Value(evalContext)
 	if stepDiags != nil && stepDiags.HasErrors() {

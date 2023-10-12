@@ -48,20 +48,23 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		}
 		fn.Src = input[schema.AttributeTypeSrc].(string)
 
-		if input[schema.AttributeTypeEnv] != nil {
-			fn.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
-		}
-
-		if input[schema.AttributeTypeEvent] != nil {
-			fn.Event = input[schema.AttributeTypeEvent].(map[string]interface{})
-		}
-
 		err = fn.Load()
 		if err != nil {
 			return nil, err
 		}
 
 		functionCache[fn.Name] = fn
+	}
+
+	// This must be set outside the function schema
+	if input[schema.AttributeTypeEnv] != nil {
+		// TODO: if env variable changes, we need to rebuild the container
+		fn.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
+	}
+
+	if input[schema.AttributeTypeEvent] != nil {
+
+		fn.Event = input[schema.AttributeTypeEvent].(map[string]interface{})
 	}
 
 	body := "{}"
