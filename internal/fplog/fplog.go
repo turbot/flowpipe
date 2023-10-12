@@ -186,7 +186,7 @@ func (c *FlowpipeLogger) Trace(msg string, keysAndValues ...interface{}) {
 
 func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
 	cfg := zap.NewProductionConfig()
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 	cfg.Sampling = nil
 	cfg.OutputPaths = []string{path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", executionID))}
 	return zap.Must(cfg.Build())
