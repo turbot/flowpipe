@@ -10,8 +10,6 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
-var containerCache = map[string]*container.Container{}
-
 type Container struct{}
 
 func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -53,36 +51,28 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		return nil, err
 	}
 
-	c := containerCache[input[schema.AttributeTypeImage].(string)]
+	c, err := container.NewContainer(
+		container.WithContext(context.Background()),
+		container.WithRunContext(ctx),
+		container.WithDockerClient(docker.GlobalDockerClient),
+	)
+	if err != nil {
+		panic(err)
+	}
 
-	if c == nil {
-		var err error
+	c.Name = input[schema.LabelName].(string)
+	c.Image = input[schema.AttributeTypeImage].(string)
+	if input[schema.AttributeTypeCmd] != nil {
+		c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
+	}
 
-		c, err = container.NewContainer(
-			container.WithContext(context.Background()),
-			container.WithRunContext(ctx),
-			container.WithDockerClient(docker.GlobalDockerClient),
-		)
-		if err != nil {
-			panic(err)
-		}
+	if input[schema.AttributeTypeEnv] != nil {
+		c.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
+	}
 
-		c.Name = input[schema.LabelName].(string)
-		c.Image = input[schema.AttributeTypeImage].(string)
-		if input[schema.AttributeTypeCmd] != nil {
-			c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
-		}
-
-		if input[schema.AttributeTypeEnv] != nil {
-			c.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
-		}
-
-		err = c.Load()
-		if err != nil {
-			panic(err)
-		}
-
-		containerCache[c.Image] = c
+	err = c.Load()
+	if err != nil {
+		panic(err)
 	}
 
 	containerID, err := c.Run()
