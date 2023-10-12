@@ -11,6 +11,9 @@ __debug_bin*
 # Flowpipe binary
 flowpipe
 
+# accidental .flowpipe directory in workspace dir
+.flowpipe
+
 # IDE
 .idea/
 .run
