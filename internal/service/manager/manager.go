@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
@@ -331,11 +332,14 @@ func (m *Manager) Stop() error {
 		fplog.Logger(m.ctx).Error("error stopping es service", "error", err)
 	}
 
-	// err = m.raftService.Stop()
-	// if err != nil {
-	// 	// Log and continue stopping other services
-	// 	fplog.Logger(m.ctx).Error("error stopping raft service", "error", err)
-	// }
+	// Cleanup docker artifacts
+	// TODO - Can we remove this since we cleanup per function etc?
+	if docker.GlobalDockerClient != nil {
+		err = docker.GlobalDockerClient.CleanupArtifacts()
+		if err != nil {
+			fplog.Logger(m.ctx).Error("Failed to cleanup flowpipe docker artifacts", "error", err)
+		}
+	}
 
 	m.StoppedAt = utils.TimeNow()
 

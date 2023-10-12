@@ -114,6 +114,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			var err error
 			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
+				logger.Error("Error building eval context for for_each", "error", err)
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 
@@ -163,6 +164,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			var err error
 			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
+				logger.Error("Error building eval context for step", "error", err)
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 		}

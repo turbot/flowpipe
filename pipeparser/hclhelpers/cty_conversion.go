@@ -193,6 +193,10 @@ func GoTypeMatchesCtyType(val interface{}, ctyType cty.Type) bool {
 		return reflect.ValueOf(val).Kind() == reflect.Map
 	}
 
+	if ctyType == cty.DynamicPseudoType {
+		return true
+	}
+
 	return false
 }
 
@@ -674,36 +678,36 @@ func CtyToGo(v cty.Value) (val interface{}, err error) {
 			}
 			val = target
 		}
-	}
-
-	switch ty {
-	case cty.Bool:
-		var target bool
-		if err = gocty.FromCtyValue(v, &target); err == nil {
-			val = target
-		}
-
-	case cty.Number:
-		var target int
-		if err = gocty.FromCtyValue(v, &target); err == nil {
-			val = target
-		} else {
-			var targetf float64
-			if err = gocty.FromCtyValue(v, &targetf); err == nil {
-				val = targetf
-			}
-		}
-	case cty.String:
-		var target string
-		if err := gocty.FromCtyValue(v, &target); err == nil {
-			val = target
-		}
-
 	default:
-		var json string
-		// wrap as postgres string
-		if json, err = CtyToJSON(v); err == nil {
-			val = json
+		switch ty {
+		case cty.Bool:
+			var target bool
+			if err = gocty.FromCtyValue(v, &target); err == nil {
+				val = target
+			}
+
+		case cty.Number:
+			var target int
+			if err = gocty.FromCtyValue(v, &target); err == nil {
+				val = target
+			} else {
+				var targetf float64
+				if err = gocty.FromCtyValue(v, &targetf); err == nil {
+					val = targetf
+				}
+			}
+		case cty.String:
+			var target string
+			if err := gocty.FromCtyValue(v, &target); err == nil {
+				val = target
+			}
+
+		default:
+			var json string
+			// wrap as postgres string
+			if json, err = CtyToJSON(v); err == nil {
+				val = json
+			}
 		}
 	}
 

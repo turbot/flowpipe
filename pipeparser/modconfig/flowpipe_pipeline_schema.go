@@ -488,3 +488,87 @@ var PipelineStepPipelineBlockSchema = &hcl.BodySchema{
 		},
 	},
 }
+
+var PipelineStepFunctionBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name:     schema.AttributeTypeSrc,
+			Required: true,
+		},
+		{
+			Name: schema.AttributeTypeHandler,
+		},
+		{
+			Name: schema.AttributeTypeRuntime,
+		},
+		{
+			Name: schema.AttributeTypeEnv,
+		},
+		{
+			Name: schema.AttributeTypeEvent,
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+		{
+			Type:       schema.BlockTypePipelineOutput,
+			LabelNames: []string{schema.LabelName},
+		},
+	},
+}
+
+var PipelineStepContainerBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+		{
+			Name:     schema.AttributeTypeImage,
+			Required: true,
+		},
+		{
+			Name: schema.AttributeTypeCmd,
+		},
+		{
+			Name: schema.AttributeTypeEnv,
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+		{
+			Type:       schema.BlockTypePipelineOutput,
+			LabelNames: []string{schema.LabelName},
+		},
+	},
+}
