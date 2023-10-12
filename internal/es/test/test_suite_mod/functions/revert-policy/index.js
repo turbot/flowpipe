@@ -3,25 +3,10 @@ SPDX-FileCopyrightText: 2020 Amazon.com, Inc. or its affiliates. All Rights Rese
 SPDX-License-Identifier: MIT-0
 */
 
-// Mocked env
-process.env = {
-  "restrictedActions": "s3:DeleteBucket,s3:DeleteObject"
-}
-
 let restrictedActions = process.env.restrictedActions.split(",");
 const AWS = require('aws-sdk')
 var iam = new AWS.IAM({apiVersion: '2010-05-08'});
 exports.handler = async(event, context) => {
-
-    // Mocked event
-    event = {
-      policy: '{"Version":"2012-10-17","Statement":[{"Sid":"VisualEditor0","Effect":"Allow","Action":["s3:AddBucket","s3:AddObject"],"Resource":"*"}]}',
-      policyMeta: {
-        "arn": "arn:aws:iam::123456789012:policy/ExamplePolicy",
-        "policyName": "ExamplePolicy",
-        "defaultVersionId": "v1"
-      }
-    }
 
     /* The following command Create a new blank policy version as a placeholder*/
     var params = {
