@@ -3,10 +3,6 @@ SPDX-FileCopyrightText: 2020 Amazon.com, Inc. or its affiliates. All Rights Rese
 SPDX-License-Identifier: MIT-0
 */
 
-process.env = {
-  "restrictedActions": "s3:DeleteBucket,s3:DeleteObject"
-}
-
 let restrictedActions = process.env.restrictedActions.split(",");
 let message = ""
 let action = ""

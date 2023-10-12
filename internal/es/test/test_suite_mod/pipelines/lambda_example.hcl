@@ -1,5 +1,10 @@
 pipeline "lambda_example" {
 
+    param "restricted_actions" {
+        type = string
+        default = "s3:DeleteBucket,s3:DeleteObject"
+    }
+
     param "event" {
         type = any
     }
@@ -9,6 +14,10 @@ pipeline "lambda_example" {
         handler = "index.handler"
         src = "./functions/validate-policy"
         event = param.event
+
+        env = {
+            "restrictedActions" = param.restricted_actions
+        }
     }
 
     output "returning_message" {
