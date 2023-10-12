@@ -27,7 +27,7 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		return nil, err
 	}
 
-	fn := functionCache[input[schema.AttributeTypeSrc].(string)]
+	fn := functionCache[input[schema.LabelName].(string)]
 
 	if fn == nil {
 		var err error
