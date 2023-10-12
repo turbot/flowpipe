@@ -318,7 +318,10 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 		return
 	}
 
-	assert.Equal("[\"[0] guitar\",\"[1] bass\",\"[2] drums\"]", pex.PipelineOutput["val"])
+	assert.Equal(3, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("[0] guitar", pex.PipelineOutput["val"].([]interface{})[0])
+	assert.Equal("[1] bass", pex.PipelineOutput["val"].([]interface{})[1])
+	assert.Equal("[2] drums", pex.PipelineOutput["val"].([]interface{})[2])
 }
 
 func (suite *ModTestSuite) SkipTestDoUntil() {
