@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 var GlobalDockerClient *DockerClient
@@ -154,6 +155,8 @@ func (dc *DockerClient) CleanupArtifacts() error {
 // deleteContainersWithLabel deletes all containers with the specified label.
 func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 
+	logger := fplog.Logger(dc.ctx)
+
 	containers, err := dc.CLI.ContainerList(dc.ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
@@ -163,9 +166,9 @@ func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 		if container.Labels[labelKey] != "" {
 			err = dc.CLI.ContainerRemove(dc.ctx, container.ID, types.ContainerRemoveOptions{Force: true})
 			if err != nil {
-				log.Printf("failed to remove container %s: %s\n", container.ID, err)
+				logger.Error("failed to remove container", "containerID", container.ID, "error", err)
 			} else {
-				log.Printf("container %s deleted\n", container.ID)
+				logger.Info("container deleted", "containerID", container.ID)
 			}
 		}
 	}
@@ -175,10 +178,12 @@ func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 
 // deleteImagesWithLabel deletes all images with the specified label.
 func (dc *DockerClient) deleteImagesWithLabelKey(labelKey string) error {
+	logger := fplog.Logger(dc.ctx)
 
 	images, err := dc.CLI.ImageList(dc.ctx, types.ImageListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to list images: %s", err)
+		logger.Error("failed to list images", "error", err)
+		return perr.InternalWithMessage("failed to list images: " + err.Error())
 	}
 
 	for _, image := range images {
@@ -190,13 +195,13 @@ func (dc *DockerClient) deleteImagesWithLabelKey(labelKey string) error {
 				// install, npm install).
 				// TODO - find some way to support this, but also to keep it
 				// fast(er) by default
-				// PruneChildren: true,
+				PruneChildren: true,
 			}
 			_, err = dc.CLI.ImageRemove(dc.ctx, image.ID, imgRemoveOpts)
 			if err != nil {
-				log.Printf("failed to remove image %s: %s\n", image.ID, err)
+				logger.Error("failed to remove image", "imageID", image.ID, "error", err)
 			} else {
-				log.Printf("image %s deleted\n", image.ID)
+				logger.Info("image deleted", "imageID", image.ID)
 			}
 		}
 	}

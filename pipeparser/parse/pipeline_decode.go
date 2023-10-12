@@ -15,7 +15,7 @@ import (
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext) (modconfig.IPipelineStep, hcl.Diagnostics) {
+func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext, pipelineHcl *modconfig.Pipeline) (modconfig.IPipelineStep, hcl.Diagnostics) {
 	stepType := block.Labels[0]
 	stepName := block.Labels[1]
 
@@ -29,6 +29,7 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext)
 			Subject:  &block.DefRange,
 		}}
 	}
+	step.SetPipelineName(pipelineHcl.FullName)
 
 	pipelineStepBlockSchema := GetPipelineStepBlockSchema(stepType)
 	if pipelineStepBlockSchema == nil {
@@ -361,7 +362,7 @@ func decodePipeline(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseCont
 	for _, block := range pipelineOptions.Blocks {
 		switch block.Type {
 		case schema.BlockTypePipelineStep:
-			step, diags := decodeStep(mod, block, parseCtx)
+			step, diags := decodeStep(mod, block, parseCtx, pipelineHcl)
 			if diags.HasErrors() {
 				res.handleDecodeDiags(diags)
 

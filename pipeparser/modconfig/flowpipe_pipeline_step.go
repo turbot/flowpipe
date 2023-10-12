@@ -229,6 +229,8 @@ type IPipelineStep interface {
 	SetName(string)
 	GetType() string
 	SetType(string)
+	SetPipelineName(string)
+	GetPipelineName() string
 	IsResolved() bool
 	AddUnresolvedAttribute(string, hcl.Expression)
 	GetUnresolvedAttributes() map[string]hcl.Expression
@@ -273,6 +275,7 @@ type PipelineStepBase struct {
 	Description  *string                    `json:"description,omitempty"`
 	Name         string                     `json:"name"`
 	Type         string                     `json:"step_type"`
+	PipelineName string                     `json:"pipeline_name,omitempty"`
 	DependsOn    []string                   `json:"depends_on,omitempty"`
 	Resolved     bool                       `json:"resolved,omitempty"`
 	ErrorConfig  *ErrorConfig               `json:"-"`
@@ -353,6 +356,14 @@ func (p *PipelineStepBase) Equals(otherBase *PipelineStepBase) bool {
 	}
 
 	return true
+}
+
+func (p *PipelineStepBase) SetPipelineName(pipelineName string) {
+	p.PipelineName = pipelineName
+}
+
+func (p *PipelineStepBase) GetPipelineName() string {
+	return p.PipelineName
 }
 
 func (p *PipelineStepBase) SetErrorConfig(errorConfig *ErrorConfig) {
@@ -1943,7 +1954,7 @@ func (p *PipelineStepFunction) GetInputs(evalContext *hcl.EvalContext) (map[stri
 	}
 
 	return map[string]interface{}{
-		schema.LabelName:            p.Name,
+		schema.LabelName:            p.PipelineName + "." + p.GetFullyQualifiedName(),
 		schema.AttributeTypeSrc:     src,
 		schema.AttributeTypeRuntime: runtime,
 		schema.AttributeTypeHandler: handler,
