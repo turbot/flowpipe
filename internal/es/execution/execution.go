@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/funcs"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -54,11 +55,21 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	for k, v := range pipelineDefn.Params {
 		if pe.Args[k] != nil {
-			val, err := gocty.ToCtyValue(pe.Args[k], v.Type)
-			if err != nil {
-				return nil, err
+			if !v.Type.HasDynamicTypes() {
+				val, err := gocty.ToCtyValue(pe.Args[k], v.Type)
+				if err != nil {
+					return nil, err
+				}
+				params[k] = val
+			} else {
+				// we'll do our best here
+				val, err := hclhelpers.ConvertInterfaceToCtyValue(pe.Args[k])
+				if err != nil {
+					return nil, err
+				}
+				params[k] = val
 			}
-			params[k] = val
+
 		} else {
 			params[k] = v.Default
 		}

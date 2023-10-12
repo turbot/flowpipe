@@ -52,7 +52,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		// If all dependencies met, we then calculate the value of this output
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
-			logger.Error("Error building eval context while calculating output", "error", err)
+			logger.Error("Error building eval context while calculating output in pipeline_fail", "error", err)
 			return err
 		}
 

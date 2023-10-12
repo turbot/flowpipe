@@ -50,13 +50,15 @@ const (
 	AttributeTypeDefault = "default"
 
 	// Pipeline blocks
-	BlockTypePipelineStepHttp     = "http"
-	BlockTypePipelineStepSleep    = "sleep"
-	BlockTypePipelineStepEmail    = "email"
-	BlockTypePipelineStepEcho     = "echo"
-	BlockTypePipelineStepQuery    = "query"
-	BlockTypePipelineStepExec     = "exec"
-	BlockTypePipelineStepPipeline = "pipeline"
+	BlockTypePipelineStepHttp      = "http"
+	BlockTypePipelineStepSleep     = "sleep"
+	BlockTypePipelineStepEmail     = "email"
+	BlockTypePipelineStepEcho      = "echo"
+	BlockTypePipelineStepQuery     = "query"
+	BlockTypePipelineStepExec      = "exec"
+	BlockTypePipelineStepPipeline  = "pipeline"
+	BlockTypePipelineStepFunction  = "function"
+	BlockTypePipelineStepContainer = "container"
 
 	// error block
 	AttributeTypeIgnore  = "ignore"
@@ -121,6 +123,17 @@ const (
 	AttributeTypePipeline = "pipeline"
 
 	AttributeTypeMessage = "message"
+
+	// Functions attributes
+	AttributeTypeRuntime  = "runtime"
+	AttributeTypeEnv      = "env"
+	AttributeTypeSrc      = "src"
+	AttributeTypeHandler  = "handler"
+	AttributeTypeFunction = "function"
+	AttributeTypeEvent    = "event"
+
+	AttributeTypeImage = "image"
+	AttributeTypeCmd   = "cmd"
 
 	// All possible trigger attributes
 	AttributeTypeSchedule   = "schedule"
