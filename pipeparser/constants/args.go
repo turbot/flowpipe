@@ -67,6 +67,7 @@ const (
 
 	ArgOutputDir = "output-dir"
 	ArgLogDir    = "log-dir"
+	ArgFunctions = "functions"
 )
 
 // metaquery mode arguments

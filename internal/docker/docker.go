@@ -13,17 +13,24 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
+	"github.com/turbot/flowpipe/internal/fplog"
 )
 
 var GlobalDockerClient *DockerClient
 
 func Initialize(ctx context.Context) error {
+	logger := fplog.Logger(ctx)
+
+	logger.Info("Initializing Docker client")
 	dc, err := New(WithContext(ctx), WithPingTest())
 	if err != nil {
+		logger.Error("Failed to initialize Docker client", "error", err)
 		return err
 	}
 
 	GlobalDockerClient = dc
+
+	logger.Info("Docker client initialized")
 	return nil
 }
 
