@@ -30,11 +30,11 @@ func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 	pipelineCmd.AddCommand(pipelineListCmd)
 
-	// pipelineShowCmd, err := PipelineShowCmd(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// pipelineCmd.AddCommand(pipelineShowCmd)
+	pipelineShowCmd, err := PipelineShowCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pipelineCmd.AddCommand(pipelineShowCmd)
 
 	pipelineRunCmd, err := PipelineRunCmd(ctx)
 	if err != nil {
@@ -193,22 +193,74 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		}
 
 		if resp != nil {
-			printer := printers.GetPrinter(cmd)
+			output := "\n"
 
-			printableResource := types.PrintablePipeline{}
-			printableResource.Items, err = printableResource.Transform(resp)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+			if resp.Title != nil {
+				output += "Title: " + *resp.Title + "\n"
 			}
-
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			output += "Name:  " + *resp.Name + "\n"
+			if resp.Tags != nil {
+				output += "Tags:"
+				isFirstTag := true
+				for k, v := range *resp.Tags {
+					if isFirstTag {
+						output += "  " + k + " = " + v
+						isFirstTag = false
+					} else {
+						output += ", " + k + " = " + v
+					}
+				}
+				output += "\n\n"
 			}
+			if resp.Description != nil {
+				output += "Description:\n" + *resp.Description + "\n"
+			}
+			output += formatSection("\nParams:", resp.Params)
+			output += formatSection("\nOutputs:", resp.Outputs)
+			output += "\nUsage:" + "\n"
+			if resp.Params != nil {
+				var pArg string
+				for _, param := range *resp.Params {
+					pArg += " --pipeline-arg " + *param.Name + "=<value>"
+				}
+				output += "  flowpipe pipeline run " + *resp.Name + pArg
+			} else {
+				output += "  flowpipe pipeline run " + *resp.Name
+			}
+			output += "\n"
+			fmt.Println(output)
 		}
 	}
 }
 
+// Helper function to format a section
+func formatSection(sectionName string, items interface{}) string {
+	var output string
+	if items != nil {
+		output += sectionName + "\n"
+		switch v := items.(type) {
+		case *map[string]flowpipeapiclient.ModconfigPipelineParam:
+			for _, item := range *v {
+				output += "  " + paramToString(item) + "\n"
+			}
+		case []flowpipeapiclient.ModconfigPipelineOutput:
+			for _, item := range v {
+				output += "  " + outputToString(item) + "\n"
+			}
+		}
+	}
+	return output
+}
+
+// Helper function to convert Param to string
+func paramToString(param flowpipeapiclient.ModconfigPipelineParam) string {
+	return *param.Name + "[*param.Type]: " + *param.Description
+}
+
+// Helper function to convert Output to string
+func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
+	return *output.Name + ": " + *output.Description
+}
 func validatePipelineArgs(pipelineArgs []string) error {
 	validFormat := regexp.MustCompile(`^[^=]+=[^=]+$`)
 	for _, arg := range pipelineArgs {

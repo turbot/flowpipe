@@ -436,6 +436,7 @@ type PipelineParam struct {
 
 type PipelineOutput struct {
 	Name            string         `json:"name"`
+	Description     string         `json:"description,omitempty"`
 	DependsOn       []string       `json:"depends_on,omitempty"`
 	Resolved        bool           `json:"resolved,omitempty"`
 	Sensitive       bool           `json:"sensitive,omitempty"`

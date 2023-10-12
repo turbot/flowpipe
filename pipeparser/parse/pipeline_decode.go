@@ -256,6 +256,11 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 		diags = append(diags, valDiags...)
 	}
 
+	if attr, exists := outputOptions.Attributes[schema.AttributeTypeDescription]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Description)
+		diags = append(diags, valDiags...)
+	}
+
 	if attr, exists := outputOptions.Attributes[schema.AttributeTypeValue]; exists {
 		expr := attr.Expr
 		if len(expr.Variables()) > 0 {
