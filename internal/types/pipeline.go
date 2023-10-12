@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/json"
 	"fmt"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -64,16 +63,6 @@ func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (int
 	}
 
 	return lp.Items, nil
-
-	// else if apiResourceType == "GetPipelineResponse" {
-	// 	lp, ok := r.(*flowpipeapiclient.GetPipelineResponse)
-	// 	if !ok {
-	// 		return nil, perr.BadRequestWithMessage("unable to cast to flowpipeapiclient.FpPipeline")
-	// 	}
-	// 	return []flowpipeapiclient.GetPipelineResponse{*lp}, nil
-	// } else {
-	// 	return nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid resource type: %s", apiResourceType))
-	// }
 }
 
 func (p PrintablePipeline) GetItems() interface{} {
@@ -84,33 +73,20 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 	lp, ok := p.Items.([]flowpipeapiclient.ListPipelineResponseItem)
 
 	if !ok {
-		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Pipeline")
+		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.ListPipelineResponseItem")
 	}
 
 	var tableRows []TableRow
 	for _, item := range lp {
-		var description, documentation, title, tags string
+		var description string
 		if item.Description != nil {
 			description = *item.Description
-		}
-		if item.Documentation != nil {
-			documentation = *item.Documentation
-		}
-		if item.Title != nil {
-			title = *item.Title
-		}
-		if item.Tags != nil {
-			data, _ := json.Marshal(*item.Tags)
-			tags = string(data)
 		}
 
 		cells := []interface{}{
 			*item.Mod,
 			*item.Name,
-			title,
 			description,
-			documentation,
-			tags,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -134,24 +110,9 @@ func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
 			Description: "Pipeline name",
 		},
 		{
-			Name:        "TITLE",
-			Type:        "string",
-			Description: "Pipeline title",
-		},
-		{
 			Name:        "DESCRIPTION",
 			Type:        "string",
 			Description: "Pipeline description",
-		},
-		{
-			Name:        "DOCUMENTATION",
-			Type:        "string",
-			Description: "Pipeline documentation",
-		},
-		{
-			Name:        "TAGS",
-			Type:        "string",
-			Description: "Pipeline tags",
 		},
 	}
 }
