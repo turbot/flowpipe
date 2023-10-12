@@ -49,6 +49,9 @@ const (
 	AttributeTypeType    = "type"
 	AttributeTypeDefault = "default"
 
+	// Pipeline param block
+	AttributeTypeOptional = "optional"
+
 	// Pipeline blocks
 	BlockTypePipelineStepHttp      = "http"
 	BlockTypePipelineStepSleep     = "sleep"

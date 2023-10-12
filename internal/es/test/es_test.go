@@ -735,6 +735,43 @@ func (suite *EsTestSuite) TestParamOverride() {
 	assert.Equal("bar", echoStepsOutput["simple"].(*modconfig.Output).Data["text"])
 }
 
+func (suite *EsTestSuite) TestParamOptional() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{
+		"simple": "bar",
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_param_optional", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 10, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
+	if echoStepsOutput == nil {
+		assert.Fail("echo step output not found")
+		return
+	}
+
+	pipelineParamNull := pex.PipelineOutput["test_output_2"]
+	if pipelineParamNull == nil {
+		assert.Fail("pipeline output not found")
+		return
+	}
+
+	assert.Equal("optional and null", pipelineParamNull)
+}
+
 // func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 // 	assert := assert.New(suite.T())
 

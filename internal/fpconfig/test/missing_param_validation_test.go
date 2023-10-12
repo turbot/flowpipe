@@ -48,3 +48,20 @@ func TestMissingParamValidation(t *testing.T) {
 	assert.Equal(1, len(errs))
 	assert.Equal("Bad Request: missing parameter: address_line_2", errs[0].Error())
 }
+
+func TestMissingParamValidation1(t *testing.T) {
+	assert := assert.New(t)
+
+	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/param_optional.fp")
+	assert.Nil(err, "error found")
+
+	validateMyParam := pipelines["local.pipeline.test_param_optional"]
+	if validateMyParam == nil {
+		assert.Fail("test_param_optional pipeline not found")
+		return
+	}
+
+	stringValid := map[string]interface{}{}
+
+	assert.Equal(0, len(validateMyParam.ValidatePipelineParam(stringValid)))
+}

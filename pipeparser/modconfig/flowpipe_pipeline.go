@@ -81,7 +81,7 @@ func (p *Pipeline) ValidatePipelineParam(params map[string]interface{}) []error 
 	// Lists out all the pipeline params that don't have a default value
 	pipelineParamsWithNoDefaultValue := map[string]bool{}
 	for k, p := range p.Params {
-		if p.Default.IsNull() {
+		if p.Default.IsNull() && !p.Optional {
 			pipelineParamsWithNoDefaultValue[k] = true
 		}
 	}
@@ -122,7 +122,7 @@ func (p *Pipeline) CoercePipelineParams(params map[string]string) (map[string]in
 	// Lists out all the pipeline params that don't have a default value
 	pipelineParamsWithNoDefaultValue := map[string]bool{}
 	for k, p := range p.Params {
-		if p.Default.IsNull() {
+		if p.Default.IsNull() && !p.Optional {
 			pipelineParamsWithNoDefaultValue[k] = true
 		}
 	}
@@ -429,6 +429,7 @@ func (p *Pipeline) setBaseProperties() {
 type PipelineParam struct {
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
+	Optional    bool      `json:"optional,omitempty"`
 	Default     cty.Value `json:"-"`
 	Type        cty.Type  `json:"-"`
 }
