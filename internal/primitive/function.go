@@ -3,7 +3,10 @@ package primitive
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	function "github.com/turbot/flowpipe/internal/functions"
@@ -13,6 +16,8 @@ import (
 )
 
 var functionCache = map[string]*function.Function{}
+
+var functionCacheMutex sync.Mutex
 
 type Function struct{}
 
@@ -27,7 +32,30 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		return nil, err
 	}
 
+	newEnvs := map[string]string{}
+
+	// This must be set outside the function schema
+	if input[schema.AttributeTypeEnv] != nil {
+		newEnvs = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
+	}
+	functionCacheMutex.Lock()
 	fn := functionCache[input[schema.LabelName].(string)]
+
+	if fn != nil {
+		logger.Info("Found cached function, checking cached function env variables", "name", fn.Name)
+
+		less := func(a, b string) bool { return a < b }
+		equalIgnoreOrder := cmp.Diff(newEnvs, fn.Env, cmpopts.SortSlices(less)) == ""
+
+		if !equalIgnoreOrder {
+			logger.Info("Cached function env variables are different, rebuilding function", "name", fn.Name)
+			fn = nil
+			delete(functionCache, input[schema.LabelName].(string))
+		} else {
+			logger.Info("Cached function env variables are the same, using cached function", "name", fn.Name)
+		}
+	}
+	functionCacheMutex.Unlock()
 
 	if fn == nil {
 		var err error
@@ -48,18 +76,16 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		}
 		fn.Src = input[schema.AttributeTypeSrc].(string)
 
+		fn.Env = newEnvs
+
 		err = fn.Load()
 		if err != nil {
 			return nil, err
 		}
 
+		functionCacheMutex.Lock()
 		functionCache[fn.Name] = fn
-	}
-
-	// This must be set outside the function schema
-	if input[schema.AttributeTypeEnv] != nil {
-		// TODO: if env variable changes, we need to rebuild the container
-		fn.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
+		functionCacheMutex.Unlock()
 	}
 
 	if input[schema.AttributeTypeEvent] != nil {

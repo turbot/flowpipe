@@ -1,4 +1,3 @@
-//nolint:forbidigo //TODO: initial import
 package function
 
 import (
@@ -12,6 +11,7 @@ import (
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/runtime"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
@@ -78,6 +78,8 @@ func (v *Version) Build() error {
 // buildImage builds the function image. Should only be called by Build().
 func (v *Version) buildImage() error {
 
+	logger := fplog.Logger(v.Function.runCtx)
+
 	// Tar up the function code for use in the build
 	buildCtx, err := archive.TarWithOptions(v.Function.AbsolutePath, &archive.TarOptions{})
 	if err != nil {
@@ -124,21 +126,22 @@ func (v *Version) buildImage() error {
 		},
 	}
 
-	fmt.Println(buildOptions.Dockerfile)
-
 	resp, err := v.Function.dockerClient.CLI.ImageBuild(v.Function.ctx, buildCtx, buildOptions)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("Building Docker image...")
+	logger.Info("Building Docker image...")
+
 	// Output the build progress
 	_, err = io.Copy(os.Stdout, resp.Body)
 	if err != nil {
+		logger.Error("Error reading build output: "+err.Error(), "error", err)
 		return err
 	}
 
-	fmt.Println("Docker image built successfully.")
+	logger.Info("Docker image built successfully.")
+
 	return nil
 }
