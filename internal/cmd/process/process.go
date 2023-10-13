@@ -1,12 +1,10 @@
 package process
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"math"
-	"os"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -110,25 +108,38 @@ func (ps *pipelineStep) failed() bool {
 	return false
 }
 
+func (ps *pipelineStep) setStartTime(t time.Time) {
+	if ps.startTime == nil || ps.startTime.After(t) {
+		ps.startTime = &t
+	}
+}
+
+func (ps *pipelineStep) setEndTime(t time.Time) {
+	if ps.endTime == nil || ps.endTime.Before(t) {
+		ps.endTime = &t
+	}
+}
+
 // calculates the overall start and end time stamps from the timestamps of the executions of this step
 func (ps *pipelineStep) populateTimeBoundaries() {
 	for _, sel := range ps.executions {
 		if ps.startTime == nil {
-			ps.startTime = sel.startTime
+			ps.startTime = &sel.startTime
 		}
 		if ps.endTime == nil {
-			ps.endTime = sel.endTime
+			ps.endTime = &sel.endTime
 		}
 
 		// check the values
-		if ps.startTime.After(*sel.startTime) {
+		if ps.startTime.After(sel.startTime) {
 			// a step can't have a starttime before the starttime of the containing step
-			ps.startTime = sel.startTime
+			ps.startTime = &sel.startTime
 		}
-		if ps.endTime.Before(*sel.endTime) {
+		if ps.endTime.Before(sel.endTime) {
 			// a step can't have finished after the end of the containing step
-			ps.endTime = sel.endTime
+			ps.endTime = &sel.endTime
 		}
+		_ = "x"
 	}
 }
 
@@ -139,13 +150,13 @@ type stepExecutionLog struct {
 	stepErrors         []string
 	status             string
 	output             *modconfig.Output
-	startTime          *time.Time
-	endTime            *time.Time
+	startTime          time.Time
+	endTime            time.Time
 	childPipeline      *pipelineExecutionLog
 	parentPipelineStep *pipelineStep
 }
 
-func getLogsForProcess(ctx context.Context, execId string) ([]flowpipeapi.ProcessEventLog, error) {
+func fetchLogsForProcess(ctx context.Context, execId string) ([]flowpipeapi.ProcessEventLog, error) {
 	logResponse, _, err := common.GetApiClient().ProcessApi.GetLog(ctx, execId).Execute()
 	if err != nil {
 		return nil, err
@@ -153,41 +164,10 @@ func getLogsForProcess(ctx context.Context, execId string) ([]flowpipeapi.Proces
 	return logResponse.Items, nil
 }
 
-func getLogsFromFileForProcess(ctx context.Context, execId string) ([]flowpipeapi.ProcessEventLog, error) {
-	ret := []flowpipeapi.ProcessEventLog{}
-
-	// file, err := os.Open("/Users/binaek/work/integrated-2023/error.jsonl")
-	// file, err := os.Open("/Users/binaek/work/integrated-2023/success.jsonl")
-	// file, err := os.Open("/Users/binaek/work/integrated-2023/exec_ckk7td5ue8s34p75s1a0.jsonl")
-	// file, err := os.Open("/Users/binaek/work/integrated-2023/exec_ckjuaj5ue8sbv4p29up0.jsonl")
-	file, err := os.Open("/Users/binaek/work/integrated-2023/exec_ckkecb218m4tlt1k2l0g.jsonl") // big one - failed
-	// file, err := os.Open("/Users/binaek/work/integrated-2023/exec_ckkeds218m4tnf66j6fg.jsonl") // big one - success
-	error_helpers.FailOnError(err)
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		var data flowpipeapi.ProcessEventLog
-		if err := json.Unmarshal([]byte(line), &data); err != nil {
-			return nil, err
-		}
-
-		// Process the data as needed
-		ret = append(ret, data)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return ret, nil
-}
-
 func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 
-		logs, err := getLogsForProcess(cmd.Context(), args[0])
+		logs, err := fetchLogsForProcess(cmd.Context(), args[0])
 		error_helpers.FailOnError(err)
 
 		// map keyed {pipeline_execution_id}
@@ -222,8 +202,10 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 
 				// now put it in the proper place as well
 				if len(et.ParentStepExecutionID) != 0 {
+					// this is a child pipeline of another step
 					stepsExecuted[et.ParentStepExecutionID].childPipeline = exec
 				} else {
+					// this is the root pipeline
 					executionLog = exec
 				}
 
@@ -263,7 +245,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					stepExecutionId: et.StepExecutionID,
 					stepName:        et.StepName,
 					// assume that this step was started now - the handler log will overwrite
-					startTime:          &et.Event.CreatedAt,
+					startTime:          et.Event.CreatedAt,
 					parentPipelineStep: theStep,
 				}
 
@@ -276,29 +258,31 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 
 				// put this in the steps executed map, so that we can refer to it easier
 				stepsExecuted[et.StepExecutionID] = stepExecLog
-			case "command.pipeline_step_start", "handler.pipeline_step_started":
+			case "handler.pipeline_step_started":
 				var et event.PipelineStepStarted
 				err := json.Unmarshal([]byte(payload), &et)
 				if err != nil {
 					error_helpers.ShowError(cmd.Context(), err)
 					return
 				}
-				stepsExecuted[et.StepExecutionID].startTime = &et.Event.CreatedAt
+				stepsExecuted[et.StepExecutionID].startTime = et.Event.CreatedAt
+				stepsExecuted[et.StepExecutionID].parentPipelineStep.setStartTime(et.Event.CreatedAt)
 			case "handler.pipeline_step_finished":
 				var et event.PipelineStepFinished
 				err := json.Unmarshal([]byte(payload), &et)
 				if err != nil {
 					error_helpers.ShowError(cmd.Context(), err)
 				}
-				stepsExecuted[et.StepExecutionID].endTime = &et.Event.CreatedAt
+				stepsExecuted[et.StepExecutionID].endTime = et.Event.CreatedAt
 				stepsExecuted[et.StepExecutionID].status = et.Output.Status
-
-				if et.Output.Status == "failed" {
-					for _, se := range et.Output.Errors {
-						stepsExecuted[et.StepExecutionID].stepErrors = append(stepsExecuted[et.StepExecutionID].stepErrors, se.Message)
-					}
-				}
 				stepsExecuted[et.StepExecutionID].output = et.Output
+				stepsExecuted[et.StepExecutionID].stepErrors = []string{}
+				for _, se := range et.Output.Errors {
+					// add in the errors
+					stepsExecuted[et.StepExecutionID].stepErrors = append(stepsExecuted[et.StepExecutionID].stepErrors, se.Message)
+				}
+
+				stepsExecuted[et.StepExecutionID].parentPipelineStep.setEndTime(et.Event.CreatedAt)
 			case "handler.pipeline_canceled":
 				var et event.PipelineCanceled
 				err := json.Unmarshal([]byte(payload), &et)
@@ -366,22 +350,17 @@ func getIndentForLevel(level int) string {
 func renderExecutionLog(ctx context.Context, log *pipelineExecutionLog, level int, width int) []string {
 	lines := []string{}
 	indent := getIndentForLevel(level)
-	// the top level will have this icon
-	icon := "▶️"
-	lines = append(lines, fmt.Sprintf("%s%s %s", indent, icon, log.pipelineName))
-
+	lines = append(lines, fmt.Sprintf("%s⏩ %s", indent, log.pipelineName))
 	for _, step := range log.steps {
 		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
 	}
-
-	pipelineExecFinishLine := fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName)
-	lines = append(lines, pipelineExecFinishLine)
-
+	lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
 	return lines
 }
 
 func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, width int) []string {
-	line := fmt.Sprintf("%s  %s %s", getIndentForLevel(level), getStepIcon(step), step.stepName)
+	icon := getStepIcon(strings.Split(step.stepName, ".")[0], step.failed())
+	line := fmt.Sprintf("%s  %s %s", getIndentForLevel(level), icon, step.stepName)
 	_ = step.endTime.Day()
 	_ = step.startTime.Day()
 	duration := step.endTime.Sub(*step.startTime)
@@ -444,18 +423,18 @@ func humanizeDuration(duration time.Duration) string {
 		int64(remainingMinutes), int64(remainingSeconds))
 }
 
-func getStepIcon(step *pipelineStep) string {
-	if step.failed() {
+func getStepIcon(name string, failed bool) string {
+	if failed {
 		return "❌" //fmt.Sprintf("❌%s", icon)
 	}
 	icon := " "
-	switch strings.Split(step.stepName, ".")[0] {
+	switch name {
 	case "http":
 		icon = "🔗"
 	case "echo":
-		icon = "📜"
+		icon = "🔤"
 	case "pipeline":
-		icon = "║"
+		icon = "║ "
 	case "sleep":
 		icon = "⏳"
 	}
