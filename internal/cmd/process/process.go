@@ -214,8 +214,8 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					}
 					// we have never encountered this step before
 					pipelineSteps[keyInPipelineStepsMap] = ps
+					pipelinesExecuted[et.PipelineExecutionID].steps = append(pipelinesExecuted[et.PipelineExecutionID].steps, ps)
 					theStep = ps
-					pipelinesExecuted[et.PipelineExecutionID].steps = append(pipelinesExecuted[et.PipelineExecutionID].steps, theStep)
 				}
 
 				stepExecLog := &stepExecutionLog{
@@ -372,7 +372,7 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 // TODO: this is salvaged off the internet from https://gist.github.com/harshavardhana/327e0577c4fed9211f65
 // with a minor modification for milliseconds. We should be using a library for this
 func humanizeDuration(duration time.Duration) string {
-	if duration.Milliseconds() < 999.0 {
+	if duration.Milliseconds() < 1000.0 {
 		return fmt.Sprintf("%dms", int64(duration.Milliseconds()))
 	}
 	if duration.Seconds() < 60.0 {
