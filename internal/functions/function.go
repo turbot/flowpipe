@@ -1,4 +1,3 @@
-//nolint:forbidigo //TODO: initial import
 package function
 
 import (
@@ -6,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -24,6 +22,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/flowpipe/internal/runtime"
 	"github.com/turbot/flowpipe/pipeparser/constants"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
@@ -158,14 +157,6 @@ func (fn *Function) GetEnv() []string {
 	return env
 }
 
-// GetDockerfileTemplatePath returns the path to the Dockerfile template.
-// This is the Dockerfile for the function defined in Flowpipe that will
-// be injected into the function image during the build process.
-func (fn *Function) GetDockerfileTemplatePath() string {
-	// This is safe because the runtime has already been validated.
-	return fmt.Sprintf("./internal/runtimes/%s/Dockerfile", fn.Runtime)
-}
-
 // SetUpdatedAt sets the updated at time.
 func (fn *Function) SetUpdatedAt() {
 	now := time.Now()
@@ -213,12 +204,14 @@ func (fn *Function) Pull() error {
 // Validate validates the function fn.
 func (fn *Function) Validate() error {
 
+	logger := fplog.Logger(fn.runCtx)
+
 	if fn.Name == "" {
-		return fmt.Errorf("name required for function")
+		return perr.BadRequestWithMessage("name required for function")
 	}
 
 	if fn.Runtime == "" {
-		return fmt.Errorf("runtime required for function: %s", fn.Name)
+		return perr.BadRequestWithMessage("runtime required for function: " + fn.Name)
 	}
 	validRuntime := false
 	validRuntimes, err := fn.RuntimesAvailable()
@@ -232,12 +225,12 @@ func (fn *Function) Validate() error {
 		}
 	}
 	if !validRuntime {
-		return fmt.Errorf("invalid runtime `%s` requested for function: %s", fn.Runtime, fn.Name)
+		return perr.BadRequestWithMessage(fmt.Sprintf("invalid runtime `%s` requested for function: %s", fn.Runtime, fn.Name))
 	}
 
 	// Validate the src
 	if fn.Src == "" {
-		return fmt.Errorf("src required for function: %s", fn.Name)
+		return perr.BadRequestWithMessage("src required for function: " + fn.Name)
 	}
 	// Convert src to an absolute path
 	workspacePath := viper.GetString(constants.ArgModLocation)
@@ -245,20 +238,20 @@ func (fn *Function) Validate() error {
 	path := filepath.Join(workspacePath, fn.Src)
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return fmt.Errorf("failed to get absolute path to src for function: %s", fn.Name)
+		return perr.BadRequestWithMessage("failed to get absolute path to src for function: " + fn.Name)
 	}
 	srcStat, err := os.Stat(absPath)
 	if err != nil {
-		return fmt.Errorf("src not found for function: %s", fn.Name)
+		return perr.BadRequestWithMessage("src not found for function: " + fn.Name)
 	}
 	if !srcStat.IsDir() {
-		return fmt.Errorf("src must be a directory for function: %s", fn.Name)
+		return perr.BadRequestWithMessage("src must be a directory for function: " + fn.Name)
 	}
 	fn.AbsolutePath = absPath
 
 	// Validate the PullParentImagePeriod
 	if _, err := time.ParseDuration(fn.PullParentImagePeriod); err != nil {
-		log.Printf("invalid pull parent image period `%s` for function: %s", fn.PullParentImagePeriod, fn.Name)
+		logger.Info(fmt.Sprintf("invalid pull parent image period `%s` for function: %s", fn.PullParentImagePeriod, fn.Name), "error", err)
 		fn.PullParentImagePeriod = DefaultPullParentImagePeriod
 	}
 
@@ -266,6 +259,7 @@ func (fn *Function) Validate() error {
 }
 
 func (fn *Function) Watch() error {
+	logger := fplog.Logger(fn.runCtx)
 
 	fn.watcher = watcher.New()
 
@@ -274,7 +268,7 @@ func (fn *Function) Watch() error {
 
 	// Watch all the function directories
 	if err := fn.watcher.AddRecursive(fn.AbsolutePath); err != nil {
-		return fmt.Errorf("failed to add watch for function: %s", fn.Name)
+		return perr.BadRequestWithMessage("failed to add watch for function: " + fn.Name)
 	}
 
 	// Watch for changes and react to them
@@ -283,13 +277,13 @@ func (fn *Function) Watch() error {
 			select {
 			case event := <-fn.watcher.Event:
 				go func() {
-					log.Printf("function watch event: %v", event)
+					logger.Info("function watch event", "event", event)
 					if err := fn.Build(); err != nil {
-						log.Printf("failed to build function %s, got error: %v", fn.Name, err)
+						logger.Error(fmt.Sprintf("failed to build function %s, got error: %v", fn.Name, err), "error", err, "functionName", fn.Name)
 					}
 				}()
 			case err := <-fn.watcher.Error:
-				log.Printf("file watcher error: %v", err)
+				logger.Error("file watcher error", "error", err)
 			case <-fn.watcher.Closed:
 				return
 			}
@@ -301,15 +295,15 @@ func (fn *Function) Watch() error {
 		// TODO - what do we do if this returns an error?
 		err := fn.watcher.Start(time.Millisecond * 100)
 		if err != nil {
-			log.Printf("failed to start file watcher for function %s, got error: %v", fn.Name, err)
+			logger.Error(fmt.Sprintf("failed to start file watcher for function %s, got error: %v", fn.Name, err), "error", err, "functionName", fn.Name)
 		}
 	}()
 
 	return nil
-
 }
 
 func (fn *Function) Start(imageName string) (string, error) {
+	logger := fplog.Logger(fn.runCtx)
 
 	// Only allow the local machine to connect
 	hostIP := "127.0.0.1"
@@ -358,7 +352,7 @@ func (fn *Function) Start(imageName string) (string, error) {
 	v.Port = port
 	fn.Versions[imageName] = v
 
-	fmt.Printf("Docker container started successfully. Lambda function exposed on port %s\n", port)
+	logger.Info("Docker container started successfully. Lambda function exposed on port", "port", port, "functionName", fn.Name, "imageName", imageName, "containerID", resp.ID, "containerName", resp.ID[:12])
 	return resp.ID, nil
 }
 
@@ -401,29 +395,30 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 }
 
 func (fn *Function) Restart(containerID string) (string, error) {
+	logger := fplog.Logger(fn.runCtx)
 
 	newContainerID := ""
 
-	fmt.Printf("restartDockerContainer: %s, %s\n", fn.GetImageTag(), containerID)
+	logger.Info("restartDockerContainer", "imageTag", fn.GetImageTag(), "containerID", containerID)
 
 	// Stop the container
 	err := fn.dockerClient.CLI.ContainerStop(fn.ctx, containerID, container.StopOptions{})
 	if err != nil {
-		fmt.Printf("Container stop failed: %v\n", err)
+		logger.Error("Container stop failed", "error", err)
 		return newContainerID, err
 	}
 
 	// Remove the container
 	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerID, types.ContainerRemoveOptions{})
 	if err != nil {
-		fmt.Printf("Container remove failed: %v\n", err)
+		logger.Error("Container remove failed", "error", err)
 		return newContainerID, err
 	}
 
 	// Run the Docker container again
 	newContainerID, err = fn.Start(fn.CurrentVersionName)
 	if err != nil {
-		fmt.Printf("Container run failed: %v\n", err)
+		logger.Error("Container run failed", "error", err)
 		return newContainerID, err
 	}
 
@@ -447,6 +442,7 @@ func (fn *Function) Build() error {
 }
 
 func (fn *Function) BuildOne() error {
+	logger := fplog.Logger(fn.runCtx)
 
 	// Ensure only one build is running at a time. I feel there is probably
 	// a better way to do this with channels, but this works for now.
@@ -470,7 +466,7 @@ func (fn *Function) BuildOne() error {
 	// Add this version to the list for the function
 	imageName := fn.GetImageTag()
 	fn.Versions[imageName] = Version{}
-	fmt.Println(fn.Versions)
+	logger.Info("Function versions", "versions", fn.Versions)
 
 	// The latest built version is the current version used for new invocations
 	fn.CurrentVersionName = imageName
@@ -481,15 +477,9 @@ func (fn *Function) BuildOne() error {
 // RuntimesAvailable returns a list of available runtimes based on those defined
 // in the runtimes directory.
 func (fn *Function) RuntimesAvailable() ([]string, error) {
-	dirNames := make([]string, 0)
-	files, err := os.ReadDir("./internal/runtimes")
+	dirNames, err := runtime.RuntimesAvailable()
 	if err != nil {
 		return nil, perr.InternalWithMessage("unable to read runtimes directory")
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			dirNames = append(dirNames, file.Name())
-		}
 	}
 	return dirNames, nil
 }
@@ -509,6 +499,7 @@ func (fn *Function) PullParentImageDueNow() bool {
 
 // buildImage builds the function image. Should only be called by Build().
 func (fn *Function) buildImage() error {
+	logger := fplog.Logger(fn.runCtx)
 
 	// Tar up the function code for use in the build
 	buildCtx, err := archive.TarWithOptions(fn.AbsolutePath, &archive.TarOptions{})
@@ -519,7 +510,8 @@ func (fn *Function) buildImage() error {
 
 	// Our Dockerfile is runtime specific and stored outside the user-defined function
 	// code.
-	dockerfileCtx, err := os.Open(fn.GetDockerfileTemplatePath())
+
+	dockerfileCtx, err := runtime.RuntimeDockerfile(fn.Runtime)
 	if err != nil {
 		return perr.InternalWithMessage("unable to open Dockerfile: " + err.Error())
 	}
@@ -557,9 +549,7 @@ func (fn *Function) buildImage() error {
 		},
 	}
 
-	fmt.Println("PullParent:", buildOptions.PullParent)
-	fmt.Println("Dockerfile:", buildOptions.Dockerfile)
-	fmt.Println("Building Docker image...")
+	logger.Info("Building image ...", "PullParent", buildOptions.PullParent, "Dockerfile", buildOptions.Dockerfile, "functionName", fn.Name)
 
 	resp, err := fn.dockerClient.CLI.ImageBuild(fn.ctx, buildCtx, buildOptions)
 	if err != nil {
@@ -578,7 +568,7 @@ func (fn *Function) buildImage() error {
 		return err
 	}
 
-	fmt.Println("Docker image built successfully.")
+	logger.Info("Docker image built successfully.", "functionName", fn.Name)
 	return nil
 }
 

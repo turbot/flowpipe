@@ -12,6 +12,7 @@ import (
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
+	"github.com/turbot/flowpipe/internal/runtime"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
@@ -86,7 +87,7 @@ func (v *Version) buildImage() error {
 
 	// Our Dockerfile is runtime specific and stored outside the user-defined function
 	// code.
-	dockerfileCtx, err := os.Open(v.Function.GetDockerfileTemplatePath())
+	dockerfileCtx, err := runtime.RuntimeDockerfile(v.Function.Runtime)
 	if err != nil {
 		return perr.InternalWithMessage("unable to open Dockerfile: " + err.Error())
 	}
