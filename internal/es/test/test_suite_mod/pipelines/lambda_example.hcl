@@ -5,10 +5,12 @@ variable "aws_region" {
 
 variable "aws_access_key_id" {
     type = string
+    default = "Enter your AWS access key id"
 }
 
 variable "aws_secret_access_key" {
     type = string
+    default = "Enter your AWS secret access key"
 }
 
 pipeline "lambda_example" {
