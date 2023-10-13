@@ -210,20 +210,20 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	}
 
 	assert.Equal(1, len(sleepStepsOutput))
-	sleep1StepOutputs := sleepStepsOutput["sleep_1"].([]*modconfig.Output)
+	sleep1StepOutputs := sleepStepsOutput["sleep_1"].(map[string]*modconfig.Output)
 	if sleep1StepOutputs == nil {
 		assert.Fail("sleep_1 step output not found")
 		return
 	}
 
 	assert.Equal(2, len(sleep1StepOutputs))
-	assert.Equal("1s", sleep1StepOutputs[0].Data["duration"])
-	assert.Equal("2s", sleep1StepOutputs[1].Data["duration"])
+	assert.Equal("1s", sleep1StepOutputs["0"].Data["duration"])
+	assert.Equal("2s", sleep1StepOutputs["1"].Data["duration"])
 
-	assert.Equal(2, len(echoStepsOutput["echo_for_if"].([]*modconfig.Output)))
+	assert.Equal(2, len(echoStepsOutput["echo_for_if"].(map[string]*modconfig.Output)))
 	// First one is OK, the second step should be skipped
-	assert.Equal("finished", echoStepsOutput["echo_for_if"].([]*modconfig.Output)[0].Status)
-	assert.Equal("skipped", echoStepsOutput["echo_for_if"].([]*modconfig.Output)[1].Status)
+	assert.Equal("finished", echoStepsOutput["echo_for_if"].(map[string]*modconfig.Output)["0"].Status)
+	assert.Equal("skipped", echoStepsOutput["echo_for_if"].(map[string]*modconfig.Output)["1"].Status)
 
 	assert.Equal(3, len(pex.PipelineOutput))
 	assert.Equal("sleep 1 output: 1s", pex.PipelineOutput["one"])
@@ -231,20 +231,20 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal("2s", pex.PipelineOutput["indexed"])
 
 	// checking the "echo.literal_for" step
-	assert.Equal(3, len(echoStepsOutput["literal_for"].([]*modconfig.Output)))
+	assert.Equal(3, len(echoStepsOutput["literal_for"].(map[string]*modconfig.Output)))
 
-	assert.Equal("name is bach", echoStepsOutput["literal_for"].([]*modconfig.Output)[0].Data["text"])
-	assert.Equal("name is beethoven", echoStepsOutput["literal_for"].([]*modconfig.Output)[1].Data["text"])
-	assert.Equal("name is mozart", echoStepsOutput["literal_for"].([]*modconfig.Output)[2].Data["text"])
+	assert.Equal("name is bach", echoStepsOutput["literal_for"].(map[string]*modconfig.Output)["0"].Data["text"])
+	assert.Equal("name is beethoven", echoStepsOutput["literal_for"].(map[string]*modconfig.Output)["1"].Data["text"])
+	assert.Equal("name is mozart", echoStepsOutput["literal_for"].(map[string]*modconfig.Output)["2"].Data["text"])
 
 	// checking the "echo.literal_for_from_list" step
-	assert.Equal(3, len(echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)))
+	assert.Equal(3, len(echoStepsOutput["literal_for_from_list"].(map[string]*modconfig.Output)))
 
 	expectedNames := []string{"shostakovitch", "prokofiev", "rachmaninoff"}
 	foundNames := []string{
-		echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[0].Data["text"].(string),
-		echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[1].Data["text"].(string),
-		echoStepsOutput["literal_for_from_list"].([]*modconfig.Output)[2].Data["text"].(string),
+		echoStepsOutput["literal_for_from_list"].(map[string]*modconfig.Output)["shostakovitch"].Data["text"].(string),
+		echoStepsOutput["literal_for_from_list"].(map[string]*modconfig.Output)["prokofiev"].Data["text"].(string),
+		echoStepsOutput["literal_for_from_list"].(map[string]*modconfig.Output)["rachmaninoff"].Data["text"].(string),
 	}
 
 	less := func(a, b string) bool { return a < b }
@@ -484,16 +484,16 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.True(pex.IsComplete())
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["http_step"].([]*modconfig.Output)[0].Data["status_code"])
-	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["http_step"].([]*modconfig.Output)[1].Data["status_code"])
-	assert.Equal(float64(200), pex.AllNativeStepOutputs["http"]["http_step"].([]*modconfig.Output)[2].Data["status_code"])
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["http_step"].(map[string]*modconfig.Output)["0"].Data["status_code"])
+	assert.Equal(float64(404), pex.AllNativeStepOutputs["http"]["http_step"].(map[string]*modconfig.Output)["1"].Data["status_code"])
+	assert.Equal(float64(200), pex.AllNativeStepOutputs["http"]["http_step"].(map[string]*modconfig.Output)["2"].Data["status_code"])
 
-	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[0].Status)
-	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[1].Status)
-	assert.Equal("finished", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[2].Status)
-	assert.Nil(pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[0].Data["text"])
-	assert.Nil(pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[1].Data["text"])
-	assert.Equal("200", pex.AllNativeStepOutputs["echo"]["http_step"].([]*modconfig.Output)[2].Data["text"])
+	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["http_step"].(map[string]*modconfig.Output)["0"].Status)
+	assert.Equal("skipped", pex.AllNativeStepOutputs["echo"]["http_step"].(map[string]*modconfig.Output)["1"].Status)
+	assert.Equal("finished", pex.AllNativeStepOutputs["echo"]["http_step"].(map[string]*modconfig.Output)["2"].Status)
+	assert.Nil(pex.AllNativeStepOutputs["echo"]["http_step"].(map[string]*modconfig.Output)["0"].Data["text"])
+	assert.Nil(pex.AllNativeStepOutputs["echo"]["http_step"].(map[string]*modconfig.Output)["1"].Data["text"])
+	assert.Equal("200", pex.AllNativeStepOutputs["echo"]["http_step"].(map[string]*modconfig.Output)["2"].Data["text"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -641,12 +641,12 @@ func (suite *EsTestSuite) TestHttp() {
 	assert.Equal("finished", echoStepsOutput["output"].(*modconfig.Output).Status)
 	assert.Equal("201", echoStepsOutput["output"].(*modconfig.Output).Data["text"])
 
-	jsonBodyLoopOutputs := echoStepsOutput["body_json_loop"].([]*modconfig.Output)
+	jsonBodyLoopOutputs := echoStepsOutput["body_json_loop"].(map[string]*modconfig.Output)
 	assert.Equal(len(jsonBodyLoopOutputs), 4)
-	assert.Equal("brian may", jsonBodyLoopOutputs[0].Data["text"])
-	assert.Equal("freddie mercury", jsonBodyLoopOutputs[1].Data["text"])
-	assert.Equal("roger taylor", jsonBodyLoopOutputs[2].Data["text"])
-	assert.Equal("john deacon", jsonBodyLoopOutputs[3].Data["text"])
+	assert.Equal("brian may", jsonBodyLoopOutputs["0"].Data["text"])
+	assert.Equal("freddie mercury", jsonBodyLoopOutputs["1"].Data["text"])
+	assert.Equal("roger taylor", jsonBodyLoopOutputs["2"].Data["text"])
+	assert.Equal("john deacon", jsonBodyLoopOutputs["3"].Data["text"])
 }
 
 func (suite *EsTestSuite) TestParam() {
@@ -678,13 +678,13 @@ func (suite *EsTestSuite) TestParam() {
 	assert.Equal("finished", echoStepsOutput["map_echo"].(*modconfig.Output).Status)
 	assert.Equal("felix", echoStepsOutput["map_echo"].(*modconfig.Output).Data["text"])
 
-	assert.Equal(7, len(echoStepsOutput["for_with_list"].([]*modconfig.Output)))
+	assert.Equal(7, len(echoStepsOutput["for_with_list"].(map[string]*modconfig.Output)))
 
-	assert.Equal("finished", echoStepsOutput["for_with_list"].([]*modconfig.Output)[0].Status)
-	assert.Equal("Green Day", echoStepsOutput["for_with_list"].([]*modconfig.Output)[0].Data["text"])
+	assert.Equal("finished", echoStepsOutput["for_with_list"].(map[string]*modconfig.Output)["0"].Status)
+	assert.Equal("Green Day", echoStepsOutput["for_with_list"].(map[string]*modconfig.Output)["0"].Data["text"])
 
-	assert.Equal("finished", echoStepsOutput["for_with_list"].([]*modconfig.Output)[6].Status)
-	assert.Equal("The All-American Rejects", echoStepsOutput["for_with_list"].([]*modconfig.Output)[6].Data["text"])
+	assert.Equal("finished", echoStepsOutput["for_with_list"].(map[string]*modconfig.Output)["6"].Status)
+	assert.Equal("The All-American Rejects", echoStepsOutput["for_with_list"].(map[string]*modconfig.Output)["6"].Data["text"])
 
 	assert.Equal("finished", echoStepsOutput["map_diff_types_string"].(*modconfig.Output).Status)
 	assert.Equal("string", echoStepsOutput["map_diff_types_string"].(*modconfig.Output).Data["text"])
@@ -692,15 +692,15 @@ func (suite *EsTestSuite) TestParam() {
 	assert.Equal("finished", echoStepsOutput["map_diff_types_number"].(*modconfig.Output).Status)
 	assert.Equal("1", echoStepsOutput["map_diff_types_number"].(*modconfig.Output).Data["text"])
 
-	assert.Equal(3, len(echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)))
-	assert.Equal("a", echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)[0].Data["text"])
-	assert.Equal("b", echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)[1].Data["text"])
-	assert.Equal("c", echoStepsOutput["for_each_list_within_map"].([]*modconfig.Output)[2].Data["text"])
+	assert.Equal(3, len(echoStepsOutput["for_each_list_within_map"].(map[string]*modconfig.Output)))
+	assert.Equal("a", echoStepsOutput["for_each_list_within_map"].(map[string]*modconfig.Output)["0"].Data["text"])
+	assert.Equal("b", echoStepsOutput["for_each_list_within_map"].(map[string]*modconfig.Output)["1"].Data["text"])
+	assert.Equal("c", echoStepsOutput["for_each_list_within_map"].(map[string]*modconfig.Output)["2"].Data["text"])
 
-	assert.Equal(7, len(echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)))
-	assert.Equal("0: Green Day", echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)[0].Data["text"])
-	assert.Equal("1: New Found Glory", echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)[1].Data["text"])
-	assert.Equal("2: Sum 41", echoStepsOutput["for_with_list_and_index"].([]*modconfig.Output)[2].Data["text"])
+	assert.Equal(7, len(echoStepsOutput["for_with_list_and_index"].(map[string]*modconfig.Output)))
+	assert.Equal("0: Green Day", echoStepsOutput["for_with_list_and_index"].(map[string]*modconfig.Output)["0"].Data["text"])
+	assert.Equal("1: New Found Glory", echoStepsOutput["for_with_list_and_index"].(map[string]*modconfig.Output)["1"].Data["text"])
+	assert.Equal("2: Sum 41", echoStepsOutput["for_with_list_and_index"].(map[string]*modconfig.Output)["2"].Data["text"])
 }
 
 func (suite *EsTestSuite) TestParamOverride() {

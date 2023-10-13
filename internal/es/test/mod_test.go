@@ -224,17 +224,17 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].([]*modconfig.Output)
+	echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].(map[string]*modconfig.Output)
 	assert.Equal(3, len(echoNameStepOutputs))
-	assert.Equal("artist name: Real Friends", echoNameStepOutputs[0].Data["text"])
-	assert.Equal("artist name: A Day To Remember", echoNameStepOutputs[1].Data["text"])
-	assert.Equal("artist name: The Story So Far", echoNameStepOutputs[2].Data["text"])
+	assert.Equal("artist name: Real Friends", echoNameStepOutputs["0"].Data["text"])
+	assert.Equal("artist name: A Day To Remember", echoNameStepOutputs["1"].Data["text"])
+	assert.Equal("artist name: The Story So Far", echoNameStepOutputs["2"].Data["text"])
 
-	secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].([]*modconfig.Output)
+	secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].(map[string]*modconfig.Output)
 	assert.Equal(3, len(secondStepStepOutputs))
-	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs[0].Data["text"])
-	assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs[1].Data["text"])
-	assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs[2].Data["text"])
+	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs["0"].Data["text"])
+	assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs["1"].Data["text"])
+	assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs["2"].Data["text"])
 
 }
 
@@ -317,11 +317,12 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 		assert.Fail("Pipeline execution not finished")
 		return
 	}
+	assert.Equal("[0] guitar", pex.PipelineOutput["val_1"])
+	assert.Equal("[1] bass", pex.PipelineOutput["val_2"])
+	assert.Equal("[2] drums", pex.PipelineOutput["val_3"])
 
-	assert.Equal(3, len(pex.PipelineOutput["val"].([]interface{})))
-	assert.Equal("[0] guitar", pex.PipelineOutput["val"].([]interface{})[0])
-	assert.Equal("[1] bass", pex.PipelineOutput["val"].([]interface{})[1])
-	assert.Equal("[2] drums", pex.PipelineOutput["val"].([]interface{})[2])
+	assert.Equal(3, len(pex.PipelineOutput["val"].(map[string]interface{})))
+	assert.Equal("[1] bass", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["text"])
 }
 
 func (suite *ModTestSuite) SkipTestDoUntil() {

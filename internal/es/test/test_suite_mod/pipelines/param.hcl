@@ -75,7 +75,16 @@ pipeline "set_param" {
         text = "[${each.key}] ${each.value}"
     }
 
+    output "val_1" {
+        value = step.echo.instruments[0].text
+    }
+    output "val_2" {
+        value = step.echo.instruments[1].text
+    }
+    output "val_3" {
+        value = step.echo.instruments[2].text
+    }
     output "val" {
-        value = step.echo.instruments[*].text
+        value = step.echo.instruments
     }
 }

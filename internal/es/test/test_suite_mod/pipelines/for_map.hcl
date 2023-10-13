@@ -24,14 +24,14 @@ pipeline "for_map" {
     }
 
     output "text_1" {
-        value = step.echo.text_1[0].text
+        value = step.echo.text_1["janis"].text
     }
 
     output "text_2" {
-        value = step.echo.text_1[1].text
+        value = step.echo.text_1["jimi"].text
     }
 
     output "text_3" {
-        value = step.echo.text_1[2].text
+        value = step.echo.text_1["jerry"].text
     }
 }
