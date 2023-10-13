@@ -120,29 +120,6 @@ func (ps *pipelineStep) setEndTime(t time.Time) {
 	}
 }
 
-// calculates the overall start and end time stamps from the timestamps of the executions of this step
-func (ps *pipelineStep) populateTimeBoundaries() {
-	for _, sel := range ps.executions {
-		if ps.startTime == nil {
-			ps.startTime = &sel.startTime
-		}
-		if ps.endTime == nil {
-			ps.endTime = &sel.endTime
-		}
-
-		// check the values
-		if ps.startTime.After(sel.startTime) {
-			// a step can't have a starttime before the starttime of the containing step
-			ps.startTime = &sel.startTime
-		}
-		if ps.endTime.Before(sel.endTime) {
-			// a step can't have finished after the end of the containing step
-			ps.endTime = &sel.endTime
-		}
-		_ = "x"
-	}
-}
-
 type stepExecutionLog struct {
 	execKey            string // the key for for_each -> blank if not for_each step
 	stepExecutionId    string
@@ -316,10 +293,6 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 			default:
 				// Ignore unknown types while loading
 			}
-		}
-
-		for _, ps := range executionLog.steps {
-			ps.populateTimeBoundaries()
 		}
 
 		cols, _, err := gows.GetWinSize()
