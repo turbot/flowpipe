@@ -18,7 +18,7 @@ pipeline "for_each_map" {
 
   step "echo" "for_each_echo" {
     for_each = {
-        "a" = "b"
+        "a" = "b",
         "c" = "d"
     }
     text = "${each.key}: ${each.value}"
@@ -43,20 +43,20 @@ pipeline "parent_pipeline" {
     duration = "2s"
   }
 
-  step "pipeline" "child_pipeline_1" {
+  step "pipeline" "child_pipeline_itr_list" {
     pipeline = pipeline.for_each_list
   }
 
   step "echo" "echo_child_pipeline_1" {
-    text = step.pipeline.child_pipeline_1.for_each_output_1
+    text = step.pipeline.child_pipeline_itr_list.for_each_output_1
   }
 
-  step "pipeline" "child_pipeline_2" {
-    pipeline = pipeline.for_each_list
+  step "pipeline" "child_pipeline_itr_map" {
+    pipeline = pipeline.for_each_map
   }
 
   step "echo" "echo_child_pipeline_2" {
-    text = step.pipeline.child_pipeline_2.for_each_output_1
+    text = step.pipeline.child_pipeline_itr_map.for_each_output_1
   }
 
   // step "pipeline" "foreach_pipeline_step"{
