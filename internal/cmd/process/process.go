@@ -83,7 +83,7 @@ func ProcessListCmd(ctx context.Context) (*cobra.Command, error) {
 	return processGetCmd, nil
 }
 
-type pipelineExecutionLog struct {
+type pipelineExecution struct {
 	executionId  string
 	pipelineName string
 	startTime    *time.Time
@@ -96,7 +96,7 @@ type pipelineStep struct {
 	stepName   string
 	startTime  *time.Time
 	endTime    *time.Time
-	executions []*stepExecutionLog
+	executions []*stepExecution
 }
 
 func (ps *pipelineStep) failed() bool {
@@ -120,7 +120,7 @@ func (ps *pipelineStep) setEndTime(t time.Time) {
 	}
 }
 
-type stepExecutionLog struct {
+type stepExecution struct {
 	execKey            string // the key for for_each -> blank if not for_each step
 	stepExecutionId    string
 	stepName           string
@@ -129,7 +129,7 @@ type stepExecutionLog struct {
 	output             *modconfig.Output
 	startTime          time.Time
 	endTime            time.Time
-	childPipeline      *pipelineExecutionLog
+	childPipeline      *pipelineExecution
 	parentPipelineStep *pipelineStep
 }
 
@@ -148,13 +148,13 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 		error_helpers.FailOnError(err)
 
 		// map keyed {pipeline_execution_id}
-		pipelinesExecuted := map[string]*pipelineExecutionLog{}
+		pipelinesExecuted := map[string]*pipelineExecution{}
 		// map keyed by {step_execution_id}
-		stepsExecuted := map[string]*stepExecutionLog{}
+		stepsExecuted := map[string]*stepExecution{}
 		// map keyed by `{pipeline_execution_id}_{step_name}`
 		pipelineSteps := map[string]*pipelineStep{}
 
-		var executionLog *pipelineExecutionLog = &pipelineExecutionLog{}
+		var executionLog *pipelineExecution = &pipelineExecution{}
 
 		for _, logEntry := range logs {
 			payload := logEntry.GetPayload()
@@ -167,7 +167,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 				if err != nil {
 					error_helpers.ShowError(cmd.Context(), err)
 				}
-				exec := &pipelineExecutionLog{
+				exec := &pipelineExecution{
 					pipelineName: et.Name,
 					executionId:  et.PipelineExecutionID,
 					steps:        []*pipelineStep{},
@@ -208,7 +208,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 				if !gotit {
 					ps := &pipelineStep{
 						stepName:   et.StepName,
-						executions: []*stepExecutionLog{},
+						executions: []*stepExecution{},
 						// assume that this is the start time - it may get overridden by the case "handler.pipeline_step_started"
 						startTime: &et.Event.CreatedAt,
 					}
@@ -218,7 +218,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					theStep = ps
 				}
 
-				stepExecLog := &stepExecutionLog{
+				stepExecLog := &stepExecution{
 					stepExecutionId: et.StepExecutionID,
 					stepName:        et.StepName,
 					// assume that this step was started now - the handler log will overwrite
@@ -303,7 +303,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 
 		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
 		fmt.Println()
-		fmt.Println(strings.Join(lines, "\n"))
+		fmt.Println(strings.Join(lines, "\n\n"))
 		fmt.Println()
 		if executionLog.endTime != nil && executionLog.startTime != nil {
 			fmt.Printf("Total: %s\n", humanizeDuration(executionLog.endTime.Sub(*executionLog.startTime)))
@@ -320,7 +320,7 @@ func getIndentForLevel(level int) string {
 	return indent
 }
 
-func renderExecutionLog(ctx context.Context, log *pipelineExecutionLog, level int, width int) []string {
+func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, width int) []string {
 	lines := []string{}
 	indent := getIndentForLevel(level)
 	lines = append(lines, fmt.Sprintf("%s⏩ %s", indent, log.pipelineName))
@@ -350,6 +350,7 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 			if stepExec.status == "failed" {
 				icon = "❌"
 			}
+			eachLine := fmt.Sprintf("%s    %s [%s]", getIndentForLevel(level), icon, stepExec.execKey)
 			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, width))
 		}
 	}
@@ -408,9 +409,9 @@ func getStepIcon(name string, failed bool) string {
 	case "http":
 		icon = "🔗"
 	case "echo":
-		icon = "🔤"
+		icon = "🆎"
 	case "pipeline":
-		icon = "║ "
+		icon = "♊"
 	case "sleep":
 		icon = "⏳"
 	}
