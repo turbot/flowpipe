@@ -205,6 +205,13 @@ func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfi
 
 			o.Type = ty
 		}
+	} else {
+		o.Type = cty.DynamicPseudoType
+	}
+
+	if attr, exists := paramOptions.Attributes[schema.AttributeTypeOptional]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Optional)
+		diags = append(diags, valDiags...)
 	}
 
 	if attr, exists := paramOptions.Attributes[schema.AttributeTypeDefault]; exists {
@@ -215,6 +222,8 @@ func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfi
 		}
 
 		o.Default = ctyVal
+	} else if o.Optional {
+		o.Default = cty.NullVal(o.Type)
 	}
 
 	if attr, exists := paramOptions.Attributes[schema.AttributeTypeDescription]; exists {
@@ -225,11 +234,6 @@ func decodePipelineParam(block *hcl.Block, parseCtx *ModParseContext) (*modconfi
 		}
 
 		o.Description = ctyVal.AsString()
-	}
-
-	if attr, exists := paramOptions.Attributes[schema.AttributeTypeOptional]; exists {
-		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Optional)
-		diags = append(diags, valDiags...)
 	}
 
 	return o, diags
