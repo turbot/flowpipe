@@ -97,7 +97,11 @@ func WithHTTPAddress(addr string) ManagerOption {
 
 // TODO: is there any point to have a separate "Initialize" and "Start"?
 func (m *Manager) Initialize() error {
+
+	logger := fplog.Logger(m.ctx)
+
 	pipelineDir := viper.GetString(constants.ArgModLocation)
+	logger.Info("Starting Flowpipe", "pipelineDir", pipelineDir)
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
@@ -114,6 +118,7 @@ func (m *Manager) Initialize() error {
 
 		w.SetOnFileWatcherEventMessages(func() {
 			logger := fplog.Logger(m.ctx)
+			logger.Info("Reloading pipelines and triggers")
 			err := m.ReloadPipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 			if err != nil {
 				logger.Error("error reloading pipelines", "error", err)
@@ -127,6 +132,7 @@ func (m *Manager) Initialize() error {
 					logger.Error("error reloading triggers", "error", err)
 				}
 			}
+			logger.Info("Reloaded pipelines and triggers")
 		})
 
 		if err != nil {
@@ -198,11 +204,16 @@ func (m *Manager) Initialize() error {
 	}
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
 
+	var rootModName string
 	if modInfo != nil {
 		inMemoryCache.SetWithTTL("#rootmod.name", modInfo.ShortName, 24*7*52*99*time.Hour)
+		rootModName = modInfo.ShortName
 	} else {
 		inMemoryCache.SetWithTTL("#rootmod.name", "local", 24*7*52*99*time.Hour)
+		rootModName = "local"
 	}
+
+	logger.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
 
 	m.RootMod = modInfo
 
