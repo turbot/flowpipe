@@ -198,13 +198,21 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			if resp.Title != nil {
 				output += "Title: " + *resp.Title + "\n"
 			}
-			output += "Name:  " + *resp.Name + "\n"
+			if resp.Title != nil {
+				output += "Name:  " + *resp.Name + "\n"
+			} else {
+				output += "Name: " + *resp.Name + "\n"
+			}
 			if resp.Tags != nil {
-				output += "Tags:"
+				if resp.Title != nil {
+					output += "Tags:  "
+				} else {
+					output += "Tags: "
+				}
 				isFirstTag := true
 				for k, v := range *resp.Tags {
 					if isFirstTag {
-						output += "  " + k + " = " + v
+						output += k + " = " + v
 						isFirstTag = false
 					} else {
 						output += ", " + k + " = " + v
