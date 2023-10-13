@@ -2,7 +2,6 @@ package execution
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
@@ -642,7 +641,7 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd modconfig.IPipeli
 	var title string
 
 	if se.StepForEach != nil {
-		title = strconv.Itoa(se.StepForEach.Index) + " = "
+		title = se.StepForEach.Key + " = "
 
 		// TODO: this is a bit yuck
 		forEachOutput, ok := se.StepForEach.Output.Get(schema.AttributeTypeValue).(string)
