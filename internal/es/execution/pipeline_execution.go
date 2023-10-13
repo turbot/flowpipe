@@ -115,13 +115,13 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 
 				vm[stepName] = cty.ObjectVal(ctyMap)
 
-			} else if indexedStepOutput, ok := stepOutput.([]*modconfig.Output); ok {
+			} else if indexedStepOutput, ok := stepOutput.(map[string]*modconfig.Output); ok {
 
-				ctyValList := make([]cty.Value, len(indexedStepOutput))
+				ctyValMap := make(map[string]cty.Value)
 
-				var configStepOutputs []map[string]interface{}
+				var configStepOutputs map[string]map[string]interface{}
 				if pe.AllConfigStepOutputs[stepType] != nil && pe.AllConfigStepOutputs[stepType][stepName] != nil {
-					configStepOutputs = pe.AllConfigStepOutputs[stepType][stepName].([]map[string]interface{})
+					configStepOutputs = pe.AllConfigStepOutputs[stepType][stepName].(map[string]map[string]interface{})
 				}
 
 				for i, stepOutput := range indexedStepOutput {
@@ -136,11 +136,11 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 						return nil, err
 					}
 
-					ctyValList[i] = cty.ObjectVal(ctyMap)
+					ctyValMap[i] = cty.ObjectVal(ctyMap)
 
 				}
 
-				vm[stepName] = cty.TupleVal(ctyValList)
+				vm[stepName] = cty.ObjectVal(ctyValMap)
 			}
 
 		}
@@ -434,10 +434,10 @@ type StepExecution struct {
 	StepOutput map[string]interface{} `json:"step_output,omitempty"`
 }
 
-func (se *StepExecution) Index() *int {
+func (se *StepExecution) Key() *string {
 	if se.StepForEach == nil {
 		return nil
 	}
 
-	return &se.StepForEach.Index
+	return &se.StepForEach.Key
 }

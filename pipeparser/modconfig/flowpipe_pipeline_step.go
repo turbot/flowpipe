@@ -37,7 +37,7 @@ var ValidHttpMethods = []string{
 }
 
 type StepForEach struct {
-	Index      int                  `json:"index" binding:"required"`
+	Key        string               `json:"key"  binding:"required"`
 	Output     *Output              `json:"output,omitempty"`
 	TotalCount int                  `json:"total_count" binding:"required"`
 	Each       json.SimpleJSONValue `json:"each"`

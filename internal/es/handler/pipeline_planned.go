@@ -2,12 +2,14 @@ package handler
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/flowpipe/pipeparser/hclhelpers"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -104,9 +106,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		var evalContext *hcl.EvalContext
 
-		// ! This is a slice of map. Each slice represent a step execution, an element of the for_each
-		forEachCtyVals := []map[string]cty.Value{}
-		forEachNextStepAction := []modconfig.NextStepAction{}
+		// ! This is a maps of a map. Each element in the first/parent map represent a step execution, an element of the for_each
+		// ! The second map is the actual value
+		forEachCtyVals := map[string]map[string]cty.Value{}
+		forEachNextStepAction := map[string]modconfig.NextStepAction{}
 		stepForEach := stepDefn.GetForEach()
 
 		// if we have for_each build the list of inputs for the for_each
@@ -138,18 +141,18 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			if val.Type().IsListType() || val.Type().IsSetType() || val.Type().IsTupleType() {
 				listVal := val.AsValueSlice()
 				for i, v := range listVal {
-					forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
+					forEachCtyVals[strconv.Itoa(i)] = map[string]cty.Value{
 						schema.AttributeTypeValue: v,
 						schema.AttributeKey:       cty.NumberIntVal(int64(i)),
-					})
+					}
 				}
 			} else if val.Type().IsMapType() || val.Type().IsObjectType() {
 				mapVal := val.AsValueMap()
 				for k, v := range mapVal {
-					forEachCtyVals = append(forEachCtyVals, map[string]cty.Value{
+					forEachCtyVals[k] = map[string]cty.Value{
 						schema.AttributeTypeValue: v,
 						schema.AttributeKey:       cty.StringVal(k),
-					})
+					}
 				}
 			}
 		}
@@ -158,7 +161,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// the inputs length maybe > 1. If we don't have a for_each, then the inputs length will be
 		// exactly 1
 		//
-		inputs := []modconfig.Input{}
+		inputs := map[string]modconfig.Input{}
 
 		if evalContext == nil {
 			var err error
@@ -188,12 +191,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				if val.False() {
 					logger.Info("if condition not met for step", "step", stepDefn.GetName())
 					calculateInput = false
-					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionSkip)
+					forEachNextStepAction["0"] = modconfig.NextStepActionSkip
 				} else {
-					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
+					forEachNextStepAction["0"] = modconfig.NextStepActionStart
 				}
 			} else {
-				forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
+				forEachNextStepAction["0"] = modconfig.NextStepActionStart
 			}
 
 			if calculateInput {
@@ -203,15 +206,17 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					logger.Error("Error resolving step inputs for single step", "error", err)
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
-				inputs = append(inputs, stepInputs)
+				// There's no for_each, there's only a single input
+				inputs["0"] = stepInputs
 			} else {
 				// If we're to skip the next step, then we need to add a dummy input
-				inputs = append(inputs, map[string]interface{}{})
+				// TODO: do we?
+				inputs["0"] = map[string]interface{}{}
 			}
 		} else {
 
 			// We have for_each!
-			for _, v := range forEachCtyVals {
+			for k, v := range forEachCtyVals {
 
 				// "each" is the magic keyword that will be used to access the current element in the for_each
 				//
@@ -236,12 +241,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					if val.False() {
 						logger.Info("if condition not met for step", "step", stepDefn.GetName())
 						calculateInput = false
-						forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionSkip)
+						forEachNextStepAction[k] = modconfig.NextStepActionSkip
 					} else {
-						forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
+						forEachNextStepAction[k] = modconfig.NextStepActionStart
 					}
 				} else {
-					forEachNextStepAction = append(forEachNextStepAction, modconfig.NextStepActionStart)
+					forEachNextStepAction[k] = modconfig.NextStepActionStart
 				}
 
 				if calculateInput {
@@ -250,20 +255,20 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						logger.Error("Error resolving step inputs for for_each step", "error", err)
 						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					}
-					inputs = append(inputs, stepInputs)
+					inputs[k] = stepInputs
 				} else {
 					// If we're to skip the next step, then we need to add a dummy input
-					inputs = append(inputs, map[string]interface{}{})
+					inputs[k] = map[string]interface{}{}
 				}
 
 			}
 		}
 
 		// If we have a for_each then the input will be expanded to the number of elements in the for_each
-		for i, input := range inputs {
+		for key, input := range inputs {
 
 			// Start each step in parallel
-			go func(nextStep modconfig.NextStep, input modconfig.Input, index int) {
+			go func(nextStep modconfig.NextStep, input modconfig.Input, key string) {
 
 				var forEachControl *modconfig.StepForEach
 
@@ -272,13 +277,17 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				if stepForEach == nil {
 					forEachControl = nil
 				} else {
-					forEachIndex := index
-					forEachCtyVal := forEachCtyVals[index][schema.AttributeTypeValue]
+					forEachCtyVal := forEachCtyVals[key][schema.AttributeTypeValue]
 
 					var title string
 
 					if forEachCtyVal.Type().IsPrimitiveType() {
-						title += forEachCtyVal.AsString()
+						t, err := hclhelpers.CtyToString(forEachCtyVal)
+						if err != nil {
+							logger.Error("Error converting cty to string", "error", err)
+						} else {
+							title += t
+						}
 					} else {
 						title += nextStep.StepName
 					}
@@ -288,14 +297,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					forEachOutput.Data[schema.AttributeTypeValue] = title
 
 					forEachControl = &modconfig.StepForEach{
-						Index:      forEachIndex,
+						Key:        key,
 						Output:     forEachOutput,
 						TotalCount: len(inputs),
 						Each:       json.SimpleJSONValue{Value: forEachCtyVal},
 					}
 				}
 
-				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs, forEachNextStepAction[index]))
+				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs, forEachNextStepAction[key]))
 				if err != nil {
 					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 					if err != nil {
@@ -312,7 +321,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					}
 					return
 				}
-			}(nextStep, input, i)
+			}(nextStep, input, key)
 		}
 	}
 

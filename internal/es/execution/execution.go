@@ -502,16 +502,16 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// text = step.echo.text_1[1].text
 
 				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]*modconfig.Output, et.StepForEach.TotalCount)
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]*modconfig.Output, et.StepForEach.TotalCount)
 				}
 
-				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]*modconfig.Output)[et.StepForEach.Index] = et.Output
+				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]*modconfig.Output)[et.StepForEach.Key] = et.Output
 
 				if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make([]map[string]interface{}, et.StepForEach.TotalCount)
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]map[string]interface{}, et.StepForEach.TotalCount)
 				}
 
-				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].([]map[string]interface{})[et.StepForEach.Index] = et.StepOutput
+				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[et.StepForEach.Key] = et.StepOutput
 			}
 
 			// TODO: Error handling

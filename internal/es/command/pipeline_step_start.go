@@ -188,7 +188,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 					// so the output can refer to it
 					eachValue := map[string]cty.Value{}
 					eachValue[schema.AttributeTypeValue] = cmd.StepForEach.Each.Value
-					eachValue[schema.AttributeKey] = cty.NumberIntVal(int64(cmd.StepForEach.Index))
+					eachValue[schema.AttributeKey] = cty.StringVal(cmd.StepForEach.Key)
 					evalContext.Variables[schema.AttributeEach] = cty.ObjectVal(eachValue)
 				}
 
