@@ -90,38 +90,46 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	// powershell yet - and there's no way to disable powershell in the default generator
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
+	// add all the subcommands
+	err = addCommands(ctx, rootCmd)
+	error_helpers.FailOnError(err)
+
+	return rootCmd, nil
+}
+
+func addCommands(ctx context.Context, rootCmd *cobra.Command) error {
 	// flowpipe service
 	serviceCmd, err := service.ServiceCmd(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rootCmd.AddCommand(serviceCmd)
 
 	pipelineCmd, err := pipeline.PipelineCmd(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rootCmd.AddCommand(pipelineCmd)
 
 	triggerCmd, err := trigger.TriggerCmd(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rootCmd.AddCommand(triggerCmd)
 
 	processCmd, err := process.ProcessCmd(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rootCmd.AddCommand(processCmd)
 
 	modCmd, err := mod.ModCmd(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	rootCmd.AddCommand(modCmd)
 
-	return rootCmd, nil
+	return nil
 }
 
 // initConfig reads in config file and ENV variables if set.
