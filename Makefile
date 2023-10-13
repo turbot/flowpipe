@@ -8,6 +8,9 @@ run-test-mod:
 run-test-mod-functions:
 	P_VAR_var_from_env="from env var" FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/test_suite_mod --functions --log-dir ./tmp --output-dir ./tmp
 
+run-demo:
+	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/integrated2023_functions_and_containers --functions --log-dir ./tmp --output-dir ./tmp
+
 run-pipeline:
 	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/pipelines
 
