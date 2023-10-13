@@ -8,7 +8,9 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/flowpipe/pipeparser/filepaths"
+	"github.com/turbot/go-kit/helpers"
 )
 
 func main() {
@@ -17,8 +19,15 @@ func main() {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 	ctx, err := config.ContextWithConfig(ctx)
+
+	defer func() {
+		if r := recover(); r != nil {
+			error_helpers.ShowError(ctx, helpers.ToError(r))
+		}
+	}()
+
 	if err != nil {
-		panic(err)
+		error_helpers.FailOnError(err)
 	}
 
 	cache.InMemoryInitialize(nil)
