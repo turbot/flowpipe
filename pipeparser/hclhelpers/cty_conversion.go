@@ -561,7 +561,7 @@ func CtyToGoMapInterface(v cty.Value) (map[string]interface{}, error) {
 	}
 	ty := v.Type()
 	if !ty.IsMapType() && !ty.IsObjectType() {
-		return nil, fmt.Errorf("expected list type")
+		return nil, fmt.Errorf("expected map type")
 	}
 
 	res := map[string]interface{}{}
@@ -829,6 +829,11 @@ func ConvertMapOrSliceToCtyValue(data interface{}) (cty.Value, error) {
 }
 
 func ConvertInterfaceToCtyValue(v interface{}) (cty.Value, error) {
+
+	if helpers.IsNil(v) {
+		return cty.NilVal, nil
+	}
+
 	// Use reflection to determine the underlying type and convert it to cty.Value
 	//
 	// file: go-cty/cty/gocty/time_implied.go/func impliedType
