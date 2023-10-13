@@ -4,6 +4,7 @@ import (
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 // The definition of a single Flowpipe Process
@@ -41,18 +42,18 @@ type PrintableProcess struct {
 
 func (PrintableProcess) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
 
-	return nil, nil
 	// apiResourceType := r.GetResourceType()
+
 	// if apiResourceType != "ListProcessResponse" {
-	// 	return nil, fperr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
+	// 	return nil, perr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
 	// }
 
-	// lp, ok := r.(*flowpipeapiclient.ListProcessResponse)
-	// if !ok {
-	// 	return nil, fperr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListProcessResponse")
-	// }
+	lp, ok := r.(*flowpipeapiclient.ListProcessResponse)
+	if !ok {
+		return nil, perr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListProcessResponse")
+	}
 
-	// return lp.Items, nil
+	return lp.Items, nil
 }
 
 func (p PrintableProcess) GetItems() interface{} {
@@ -60,35 +61,44 @@ func (p PrintableProcess) GetItems() interface{} {
 }
 
 func (p PrintableProcess) GetTable() (Table, error) {
-	return Table{}, nil
-	// lp, ok := p.Items.([]flowpipeapiclient.Process)
+	lp, ok := p.Items.([]flowpipeapiclient.Process)
 
-	// if !ok {
-	// 	return Table{}, fperr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Process")
-	// }
+	if !ok {
+		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Process")
+	}
 
-	// var tableRows []TableRow
-	// for _, item := range lp {
-	// 	cells := []interface{}{
-	// 		*item.Type,
-	// 		*item.Name,
-	// 		*item.Parallel,
-	// 	}
-	// 	tableRows = append(tableRows, TableRow{Cells: cells})
-	// }
+	var tableRows []TableRow
+	for _, item := range lp {
+		cells := []interface{}{
+			*item.ExecutionId,
+			*item.Pipeline,
+			*item.Status,
+		}
+		tableRows = append(tableRows, TableRow{Cells: cells})
+	}
 
-	// return Table{
-	// 	Rows:    tableRows,
-	// 	Columns: p.GetColumns(),
-	// }, nil
+	return Table{
+		Rows:    tableRows,
+		Columns: p.GetColumns(),
+	}, nil
 }
 
 func (PrintableProcess) GetColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
-			Name:        "ID",
+			Name:        "EXECUTION_ID",
 			Type:        "string",
-			Description: "The id of the process",
+			Description: "The id of the process execution",
+		},
+		{
+			Name:        "PIPELINE",
+			Type:        "string",
+			Description: "The name of the pipeline",
+		},
+		{
+			Name:        "STATUS",
+			Type:        "string",
+			Description: "The status of the process execution",
 		},
 	}
 }
