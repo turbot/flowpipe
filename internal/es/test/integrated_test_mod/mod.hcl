@@ -1,3 +1,3 @@
-mod "binaek_mod" {
-    title = "Test mod created for Binaek"
+mod "integrated_test_mod" {
+    title = "Test mod"
 }
