@@ -31,7 +31,8 @@ type ProcessOutputData struct {
 type ProcessEventLog struct {
 	EventType string     `json:"event_type"`
 	Timestamp *time.Time `json:"ts"`
-	Payload   []byte     `json:"payload"`
+	// Setting the type as string for now, as the CLI need to print the payload
+	Payload string `json:"payload"`
 }
 
 type PrintableProcess struct {
@@ -98,10 +99,15 @@ type ListProcessResponse struct {
 	NextToken *string   `json:"next_token,omitempty"`
 }
 
-// This type is used by the API to return a list of pipelines.
-type ListProcessLogResponse struct {
+type ListProcessLogJSONResponse struct {
 	Items     []ProcessEventLog `json:"items"`
 	NextToken *string           `json:"next_token,omitempty"`
+}
+
+// This type is used by the API to return a list of proces logs.
+type ListProcessLogResponse struct {
+	Items     []EventLogEntry `json:"items"`
+	NextToken *string         `json:"next_token,omitempty"`
 }
 
 type CmdProcess struct {
