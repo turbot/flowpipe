@@ -106,7 +106,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		}
 
 		for _, value := range pipeLineArgValues {
-			splitData := strings.Split(value, "=")
+			splitData := strings.SplitN(value, "=", 2)
 			pipelineArgs[splitData[0]] = splitData[1]
 		}
 
@@ -224,6 +224,8 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			output += "\nUsage:" + "\n"
 			if resp.Params != nil {
 				var pArg string
+
+				// show the minimal required pipeline args
 				for _, param := range resp.Params {
 					if (param.Default != nil && len(*param.Default) > 0) || (param.Optional != nil && *param.Optional) {
 						continue
@@ -278,7 +280,7 @@ func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
 	return strOutput
 }
 func validatePipelineArgs(pipelineArgs []string) error {
-	validFormat := regexp.MustCompile(`^[^=]+=[^=]+$`)
+	validFormat := regexp.MustCompile(`^[^=]+=.+$`)
 	for _, arg := range pipelineArgs {
 		if !validFormat.MatchString(arg) {
 			return fmt.Errorf("invalid format: %s", arg)
