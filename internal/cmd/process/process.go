@@ -147,6 +147,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 		logs, err := fetchLogsForProcess(cmd.Context(), args[0])
 		error_helpers.FailOnError(err)
 
+		// a set of lookup maps to make updates easier
 		// map keyed {pipeline_execution_id}
 		pipelinesExecuted := map[string]*pipelineExecution{}
 		// map keyed by {step_execution_id}
@@ -295,19 +296,22 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 			}
 		}
 
-		cols, _, err := gows.GetWinSize()
+		cols, rows, err := gows.GetWinSize()
 		if err != nil {
 			error_helpers.ShowError(cmd.Context(), err)
 			return
 		}
 
 		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
-		fmt.Println()
-		fmt.Println(strings.Join(lines, "\n\n"))
-		fmt.Println()
-		if executionLog.endTime != nil && executionLog.startTime != nil {
-			fmt.Printf("Total: %s\n", humanizeDuration(executionLog.endTime.Sub(*executionLog.startTime)))
+
+		// TODO - run this by Nathan
+		joiner := "\n\n"
+		// if the ultimate string will definitely exceed available height, compress it
+		if len(lines)*2 > rows {
+			joiner = "\n"
 		}
+		fmt.Println()
+		fmt.Println(strings.Join(lines, joiner))
 		fmt.Println()
 	}
 }
@@ -327,7 +331,8 @@ func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, 
 	for _, step := range log.steps {
 		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
 	}
-	lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
+	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏩ %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
+	// lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
 	return lines
 }
 
@@ -337,7 +342,7 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 	_ = step.endTime.Day()
 	_ = step.startTime.Day()
 	duration := step.endTime.Sub(*step.startTime)
-	lines := []string{renderLineWithDuration(ctx, line, duration, width)}
+	lines := []string{renderLineWithDuration(ctx, line, duration, "", width)}
 
 	// render the executions
 	for _, stepExec := range step.executions {
@@ -351,16 +356,19 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 				icon = "❌"
 			}
 			eachLine := fmt.Sprintf("%s    %s [%s]", getIndentForLevel(level), icon, stepExec.execKey)
-			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, width))
+			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, "", width))
 		}
 	}
 
 	return lines
 }
 
-func renderLineWithDuration(ctx context.Context, line string, duration time.Duration, width int) string {
+func renderLineWithDuration(ctx context.Context, line string, duration time.Duration, durationPrefix string, width int) string {
 	lineWidth := utf8.RuneCountInString(line)
-	durationString := fmt.Sprintf("%9s", humanizeDuration(duration))  //00h00m00s
+	durationString := fmt.Sprintf("%9s", humanizeDuration(duration)) //00h00m00s
+	if utf8.RuneCountInString(durationPrefix) > 0 {
+		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
+	}
 	durationColumnWidth := utf8.RuneCountInString(durationString) + 2 // accounting for a prepending space
 
 	//{line} {dots} {duration}{durationUnit}
