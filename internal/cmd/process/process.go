@@ -346,7 +346,10 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 			lines = append(lines, subLines...)
 		} else if len(stepExec.execKey) != 0 {
 			duration := stepExec.endTime.Sub(*step.startTime)
-			eachLine := fmt.Sprintf("%s     [%s]", getIndentForLevel(level), stepExec.execKey)
+			icon := "🔄"
+			if stepExec.status == "failed" {
+				icon = "❌"
+			}
 			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, width))
 		}
 	}
