@@ -17,9 +17,7 @@ flowpipe
 # IDE
 .idea/
 .run
-
-# Do not exclude .vscode/launch.json
-.vscode/settings.json
+.vscode/
 
 # temp debug file (that can sometime fail to delete)
 __debug_bin
