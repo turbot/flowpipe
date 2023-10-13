@@ -1,12 +1,12 @@
 pipeline "reduce" {
     param "input" {
         type = list(number)
-        default = [1, 2, 3]
+        default = [1, 2, 3, 4, 5, 6]
     }
 
     step "echo" "echo" {
         for_each = param.input
-        # if = each.value % 2 == 0
+        if = each.value % 2 == 0
         text = "${each.key}: ${each.value}"
     }
 
@@ -40,6 +40,7 @@ pipeline "reduce" {
 
     step "echo" "echo" {
         for_each = param.input
+        if = each.key != "blink_182"
         text = "${each.key}: ${each.value.name}"
     }
 

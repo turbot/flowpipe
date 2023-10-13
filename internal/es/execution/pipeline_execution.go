@@ -94,6 +94,9 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 
 		for stepName, stepOutput := range v {
 			if nonIndexStepOutput, ok := stepOutput.(*modconfig.Output); ok {
+				if nonIndexStepOutput.Status == "skipped" {
+					continue
+				}
 				ctyMap, err := nonIndexStepOutput.AsCtyMap()
 				if err != nil {
 					return nil, err
@@ -125,6 +128,10 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 				}
 
 				for i, stepOutput := range indexedStepOutput {
+					if stepOutput.Status == "skipped" {
+						continue
+					}
+
 					ctyMap, err := stepOutput.AsCtyMap()
 					if err != nil {
 						return nil, err
