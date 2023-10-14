@@ -36,7 +36,7 @@ pipeline "slack_openai_doaws" {
 
         request_headers = {
             Content-Type  = "application/json"
-            Authorization = "Bearer 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"
+            Authorization = "Bearer ${var.openai_token}"
         }
 
         request_body = jsonencode({
