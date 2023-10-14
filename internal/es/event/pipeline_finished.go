@@ -2,6 +2,8 @@ package event
 
 import (
 	"fmt"
+
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelineFinished struct {
@@ -38,7 +40,7 @@ func ForPipelineFinish(cmd *PipelineFinish, pipelineOutput map[string]interface{
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
 		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline start command: %v", cmd)
+			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline start command: %v", cmd))
 		}
 		e.PipelineOutput = pipelineOutput
 		return nil

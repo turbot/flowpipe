@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelineLoaded struct {
@@ -40,7 +41,7 @@ func ForPipelineLoad(cmd *PipelineLoad) PipelineLoadedOption {
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
 		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline load command: %v", cmd)
+			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline load command: %v", cmd))
 		}
 		return nil
 	}

@@ -18,6 +18,9 @@ func (h PipelineStepFinishHandler) NewCommand() interface{} {
 	return &event.PipelineStepFinish{}
 }
 
+// There's only one use case for this, which is to handle the "Pipeline Step" finish command.
+//
+// Pipeline Step = step that launches another pipeline.
 func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineStepFinish)
 	if !ok {

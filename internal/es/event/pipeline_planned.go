@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelinePlanned struct {
@@ -42,7 +43,7 @@ func ForPipelinePlan(cmd *PipelinePlan) PipelinePlannedOption {
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
 		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline plan command: %v", cmd)
+			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline plan command: %v", cmd))
 		}
 		return nil
 	}
