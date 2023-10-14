@@ -293,7 +293,7 @@ func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
 	return strOutput
 }
 func validatePipelineArgs(pipelineArgs []string) error {
-	validFormat := regexp.MustCompile(`^[^=]+=.+$`)
+	validFormat := regexp.MustCompile(`^[\w-]+=[\S\s]+$`)
 	for _, arg := range pipelineArgs {
 		if !validFormat.MatchString(arg) {
 			return fmt.Errorf("invalid format: %s", arg)
