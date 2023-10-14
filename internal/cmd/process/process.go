@@ -296,7 +296,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 			}
 		}
 
-		cols, rows, err := gows.GetWinSize()
+		cols, _, err := gows.GetWinSize()
 		if err != nil {
 			error_helpers.ShowError(cmd.Context(), err)
 			return
@@ -304,14 +304,8 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 
 		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
 
-		// TODO - run this by Nathan
-		joiner := "\n\n"
-		// if the ultimate string will definitely exceed available height, compress it
-		if len(lines)*2 > rows {
-			joiner = "\n"
-		}
 		fmt.Println()
-		fmt.Println(strings.Join(lines, joiner))
+		fmt.Println(strings.Join(lines, "\n"))
 		fmt.Println()
 	}
 }
@@ -331,18 +325,27 @@ func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, 
 	for _, step := range log.steps {
 		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
 	}
-	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏩ %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
+	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️ %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
 	// lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
 	return lines
 }
 
 func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, width int) []string {
 	icon := getStepIcon(strings.Split(step.stepName, ".")[0], step.failed())
+	indent := getIndentForLevel(level)
 	line := fmt.Sprintf("%s  %s %s", getIndentForLevel(level), icon, step.stepName)
 	_ = step.endTime.Day()
 	_ = step.startTime.Day()
 	duration := step.endTime.Sub(*step.startTime)
 	lines := []string{renderLineWithDuration(ctx, line, duration, "", width)}
+
+	if len(step.executions) == 1 {
+		// this is a single step pipeline
+		// print out the error messages and continue
+		for _, se := range step.executions[0].stepErrors {
+			lines = append(lines, fmt.Sprintf("%s      Error: %s", indent, se))
+		}
+	}
 
 	// render the executions
 	for _, stepExec := range step.executions {
@@ -355,8 +358,11 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 			if stepExec.status == "failed" {
 				icon = "❌"
 			}
-			eachLine := fmt.Sprintf("%s    %s [%s]", getIndentForLevel(level), icon, stepExec.execKey)
+			eachLine := fmt.Sprintf("%s    %s [%s]", indent, icon, stepExec.execKey)
 			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, "", width))
+			for _, se := range stepExec.stepErrors {
+				lines = append(lines, fmt.Sprintf("%s        Error: %s", indent, se))
+			}
 		}
 	}
 
