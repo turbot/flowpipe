@@ -63,6 +63,17 @@ func (r *ParseContext) ClearDependencies() {
 // 2) add dependencies to our tree of dependencies
 func (r *ParseContext) AddDependencies(block *hcl.Block, name string, dependencies map[string]*modconfig.ResourceDependency) hcl.Diagnostics {
 	var diags hcl.Diagnostics
+
+	if r.UnresolvedBlocks[name] != nil {
+		diags = append(diags, &hcl.Diagnostic{
+			Severity: hcl.DiagError,
+			Summary:  fmt.Sprintf("duplicate unresolved block name '%s'", name),
+			Detail:   fmt.Sprintf("block '%s' already exists. This could mean that there are unresolved duplicate resources,", name),
+			Subject:  &block.DefRange,
+		})
+		return diags
+	}
+
 	// store unresolved block
 	r.UnresolvedBlocks[name] = &unresolvedBlock{Name: name, Block: block, Dependencies: dependencies}
 

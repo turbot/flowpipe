@@ -8,9 +8,7 @@ import (
 	"github.com/turbot/flowpipe/pipeparser"
 )
 
-// Bug in parsing, if the duplicate triggers not resolved, the duplicate won't be detected.
-// bug found during integrated.
-func SkipBugFailedTestDuplicateTriggers(t *testing.T) {
+func TestDuplicateTriggers(t *testing.T) {
 	assert := assert.New(t)
 
 	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/duplicate_triggers.fp")
@@ -20,7 +18,7 @@ func SkipBugFailedTestDuplicateTriggers(t *testing.T) {
 		return
 	}
 
-	assert.Contains(err.Error(), "Mod defines more than one resource named 'local.trigger.schedule.my_hourly_trigger'")
+	assert.Contains(err.Error(), "duplicate unresolved block name 'trigger.my_hourly_trigger'")
 }
 
 func TestDuplicateTriggersDiffPipeline(t *testing.T) {
