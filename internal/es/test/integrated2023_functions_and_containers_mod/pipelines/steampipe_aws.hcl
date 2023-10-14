@@ -4,10 +4,10 @@ pipeline "steampipe_aws" {
         description = "Run the Steampipe check cli command in the steampipe-aws-compliance container"
         image       = "steampipe-aws-compliance"
         cmd         = ["steampipe", "check", "aws_compliance.benchmark.audit_manager_control_tower_disallow_instances_5_1_1", "--output", "json"]
-        env = {
-            AWS_REGION = var.aws_region
-            AWS_ACCESS_KEY_ID = var.aws_access_key_id
-            AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+        env         = {
+            AWS_REGION              = var.aws_region
+            AWS_ACCESS_KEY_ID       = var.aws_access_key_id
+            AWS_SECRET_ACCESS_KEY   = var.aws_secret_access_key
         }
     }
 
@@ -17,10 +17,10 @@ pipeline "steampipe_aws" {
         if          = each.value.status == "alarm"
         image       = "amazon/aws-cli"
         cmd         = ["s3api", "put-bucket-versioning", "--bucket", element(split(":", each.value.resource), 5), "--versioning-configuration", "Status=Enabled"]
-        env = {
-            AWS_REGION = var.aws_region
-            AWS_ACCESS_KEY_ID = var.aws_access_key_id
-            AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+        env         = {
+            AWS_REGION              = var.aws_region
+            AWS_ACCESS_KEY_ID       = var.aws_access_key_id
+            AWS_SECRET_ACCESS_KEY   = var.aws_secret_access_key
         }
     }
 

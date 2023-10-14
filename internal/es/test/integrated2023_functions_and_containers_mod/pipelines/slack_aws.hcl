@@ -2,8 +2,8 @@ trigger "http" "http_trigger_to_disable_versioning" {
     title    = "Webhook Trigger for Slack /fix command"
     pipeline = pipeline.disable_versioning
     args     = {
-      response_url = parse_query_string(self.request_body).response_url
-      bucket_name = parse_query_string(self.request_body).text
+      response_url  = parse_query_string(self.request_body).response_url
+      bucket_name   = parse_query_string(self.request_body).text
     }
 }
 
@@ -32,19 +32,19 @@ pipeline "disable_versioning" {
         description = "Run the AWS cli command in the aws-cli container"
         image       = "amazon/aws-cli"
         cmd         = ["s3api", "put-bucket-versioning", "--bucket", param.bucket_name, "--versioning-configuration", "Status=Suspended"]
-        
-        env = {
-            AWS_REGION = var.aws_region
-            AWS_ACCESS_KEY_ID = var.aws_access_key_id
-            AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+        env         = {
+            AWS_REGION              = var.aws_region
+            AWS_ACCESS_KEY_ID       = var.aws_access_key_id
+            AWS_SECRET_ACCESS_KEY   = var.aws_secret_access_key
         }
     }
 
     step "http" "done" {
         description = "Respond to slack with the acknowledgement"
         depends_on  = [step.container.container_run_aws]
-        url = param.response_url
-        method = "post"
+        url         = param.response_url
+        method      = "post"
+
         request_body = jsonencode({
             text = "Done"
         })
