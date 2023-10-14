@@ -271,7 +271,12 @@ func formatSection(sectionName string, items interface{}) string {
 
 // Helper function to convert Param to string
 func paramToString(param flowpipeapiclient.FpPipelineParam) string {
-	strOutput := *param.Name + "[" + *param.Type + "]"
+	var strOutput string
+	if param.Optional != nil && *param.Optional {
+		strOutput = *param.Name + "[" + *param.Type + ",Optional]"
+	} else {
+		strOutput = *param.Name + "[" + *param.Type + "]"
+	}
 
 	if param.Description != nil && len(*param.Description) > 0 {
 		strOutput += ": " + *param.Description
