@@ -10,24 +10,6 @@ trigger "http" "http_trigger_to_iam_policy_validation" {
 pipeline "lambda_example" {
 
     # Parameters
-    param "aws_region" {
-      description = "AWS Region"
-      type        = string
-      default     = var.aws_region
-    }
-
-    param "aws_access_key_id" {
-      description = "AWS Access Key ID"
-      type        = string
-      default     = var.aws_access_key_id
-    }
-
-    param "aws_secret_access_key" {
-      description = "AWS Secret Access Key"
-      type        = string
-      default     = var.aws_secret_access_key
-    }
-
     param "body" {
       description = "The body of the request"
       type        = string
@@ -35,12 +17,6 @@ pipeline "lambda_example" {
     param "headers" {
       description = "The headers of the request"
       type        = map
-    }
-
-    param "restricted_actions" {
-      description = "The actions that are not allowed"
-      type        = string
-      default     = "s3:DeleteBucket,s3:DeleteObject"
     }
 
     # Steps
@@ -69,7 +45,7 @@ pipeline "lambda_example" {
       event       = step.function.transform_input_step.result
 
       env = {
-        "restrictedActions" = param.restricted_actions
+        "restrictedActions" = var.restricted_actions
       }
     }
 
@@ -82,10 +58,10 @@ pipeline "lambda_example" {
       event       = step.function.transform_input_step.result
 
       env = {
-        restrictedActions     = param.restricted_actions
-        AWS_REGION            = param.aws_region
-        AWS_ACCESS_KEY_ID     = param.aws_access_key_id
-        AWS_SECRET_ACCESS_KEY = param.aws_secret_access_key
+        restrictedActions     = var.restricted_actions
+        AWS_REGION            = var.aws_region
+        AWS_ACCESS_KEY_ID     = var.aws_access_key_id
+        AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
       }
     }
 
