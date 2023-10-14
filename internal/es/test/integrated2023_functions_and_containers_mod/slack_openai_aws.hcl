@@ -1,5 +1,5 @@
 trigger "http" "slack_doaws_webhook_trigger" {
-    title    = "Webhook Trigger for Slack \\doaws command"
+    title    = "Webhook Trigger for Slack /doaws command"
     pipeline = pipeline.slack_openai_doaws
 
     args     = {
