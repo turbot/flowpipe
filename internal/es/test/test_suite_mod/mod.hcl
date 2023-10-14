@@ -5,6 +5,7 @@ mod "test_suite_mod" {
             version = "1.0.0"
             args = {
                 var_depend_a_one = var.var_one
+                var_depend_a_two = var.var_depend_a_two
             }
         }
     }

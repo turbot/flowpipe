@@ -39,3 +39,9 @@ locals {
 
   locals_four = ["foo", "bar", "baz"]
 }
+
+
+variable "var_depend_a_two" {
+  type = string
+  description = "This is a variable with no default"
+}
