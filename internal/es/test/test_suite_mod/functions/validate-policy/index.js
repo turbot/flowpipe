@@ -8,6 +8,8 @@ let message = ""
 let action = ""
 
 exports.handler = async (event, context) => {
+    console.log("Event: ", JSON.stringify(event))
+
     var policyObject = event.policy
     let policyActions = policyObject.Statement[0].Action
 

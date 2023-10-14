@@ -1,4 +1,4 @@
-trigger "http" "http_trigger_to_iam_policy_validation" {
+trigger "http" "http_trigger_to_iam_policy_validation_2" {
     pipeline = pipeline.lambda_example_two
     args     = {
       body   = self.request_body
