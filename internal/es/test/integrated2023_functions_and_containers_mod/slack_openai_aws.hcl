@@ -9,7 +9,7 @@ pipeline "aws_cli_from_prompt" {
         url = param.response_url
         method = "post"
         request_body = jsonencode({
-            text = "Your Command: ${param.prompt}"
+            text = "Your Request: ${param.prompt}"
         })
     }
     step "http" "open_ai" {
@@ -29,6 +29,7 @@ pipeline "aws_cli_from_prompt" {
                 - Return only the AWS CLI command. Do not add text. Do not explain yourself. Do not format.
                 - I absolutely strictly need it as a JSON array of strings to be passed to the aws-cli docker container.
                 - The AWS CLI command must be syntactically correct and accurate so that it can be run as is.
+                - Do not add 'aws' at the beginning of the command
                 - If the request will be destructive (e.g. delete a resource) then add an extra item to the start of the array with the string DRY_RUN_ONLY.
                 ${param.prompt}
                 EOQ
@@ -36,11 +37,11 @@ pipeline "aws_cli_from_prompt" {
         })
     }
 
-    step "http" "done" {
+    step "http" "done_open_ai" {
         url = param.response_url
         method = "post"
         request_body = jsonencode({
-            text = jsondecode(step.http.open_ai.response_body).choices[0].message.content
+            text = "Generated CLI command: ```${jsondecode(step.http.open_ai.response_body).choices[0].message.content}```"
         })
     }
 
@@ -53,24 +54,24 @@ pipeline "aws_cli_from_prompt" {
         cmd = jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)[0] == "aws" ? slice(jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content), 1, length(jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)) - 1 ) : jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)
         // cmd = ["s3api", "list-buckets", "--query", "Buckets[?Versioning.Status!='Enabled'].Name"]
         env = {
-            AWS_REGION = "us-east-1"
-            AWS_ACCESS_KEY_ID = "AKIAQGDRKHTKBKCJASUB"
-            AWS_SECRET_ACCESS_KEY = "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"
+            AWS_REGION = var.aws_region
+            AWS_ACCESS_KEY_ID = var.aws_access_key_id
+            AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
         }
     }
 
-    step "http" "done_aws" {
+    step "http" "done_container_run_aws_cli" {
         depends_on = [step.container.container_run_aws_cli]
         url = param.response_url
         method = "post"
         request_body = jsonencode({
-            text = length(step.container.container_run_aws_cli.stdout) > 0 ? step.container.container_run_aws_cli.stdout : "${param.prompt} complete! 🚀"
+            text = length(step.container.container_run_aws_cli.stdout) > 0 ? "```${step.container.container_run_aws_cli.stdout}```" : "${param.prompt} complete! 🚀"
         })
     }
 
-    output "response_url" {
-        value = param.response_url
-    }
+    // output "response_url" {
+    //     value = param.response_url
+    // }
 }
 
 trigger "http" "http_trigger_to_open_ai_prompt" {
