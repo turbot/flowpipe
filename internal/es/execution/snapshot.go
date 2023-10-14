@@ -50,7 +50,7 @@ type SnapshotPanelDataRow map[string]interface{}
 func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
-		return nil, fmt.Errorf("pipeline execution %s not found", pipelineExecutionID)
+		return nil, perr.BadRequestWithMessage(fmt.Sprintf("pipeline execution %s not found", pipelineExecutionID))
 	}
 
 	snapshot := &Snapshot{

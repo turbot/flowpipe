@@ -1,6 +1,10 @@
 package event
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/turbot/flowpipe/pipeparser/perr"
+)
 
 type PipelineLoad struct {
 	// Event metadata
@@ -34,7 +38,7 @@ func ForPipelineQueued(e *PipelineQueued) PipelineLoadOption {
 		if e.PipelineExecutionID != "" {
 			cmd.PipelineExecutionID = e.PipelineExecutionID
 		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline queued event: %v", e)
+			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline queued event: %v", e))
 		}
 		return nil
 	}

@@ -65,9 +65,10 @@ const (
 	ArgDatabaseStartTimeout = "database-start-timeout"
 	ArgGitUrlMode           = "git-url-mode"
 
-	ArgOutputDir = "output-dir"
-	ArgLogDir    = "log-dir"
-	ArgFunctions = "functions"
+	ArgOutputDir   = "output-dir"
+	ArgLogDir      = "log-dir"
+	ArgFunctions   = "functions"
+	ArgNoScheduler = "no-scheduler"
 )
 
 // metaquery mode arguments

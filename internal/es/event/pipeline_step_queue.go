@@ -5,6 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 type PipelineStepQueue struct {
@@ -49,7 +50,7 @@ func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOp
 		if e.PipelineExecutionID != "" {
 			cmd.PipelineExecutionID = e.PipelineExecutionID
 		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline planned event: %v", e)
+			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline planned event: %v", e))
 		}
 		return nil
 	}
