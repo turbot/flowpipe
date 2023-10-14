@@ -9,15 +9,21 @@ import (
 
 // The definition of a single Flowpipe Process
 type Process struct {
-	ID       string `json:"execution_id"`
-	Pipeline string `json:"pipeline"`
-	Status   string `json:"status"`
+	ID        string    `json:"execution_id"`
+	Pipeline  string    `json:"pipeline"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Process log payload definition
 type ProcessPayload struct {
-	PipelineName        string `json:"name"`
-	PipelineExecutionID string `json:"pipeline_execution_id"`
+	PipelineName        string              `json:"name"`
+	PipelineExecutionID string              `json:"pipeline_execution_id"`
+	Event               ProcessPayloadEvent `json:"event"`
+}
+
+type ProcessPayloadEvent struct {
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type ProcessOutputData struct {
@@ -72,6 +78,7 @@ func (p PrintableProcess) GetTable() (Table, error) {
 		cells := []interface{}{
 			*item.ExecutionId,
 			*item.Pipeline,
+			*item.CreatedAt,
 			*item.Status,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
@@ -92,6 +99,11 @@ func (PrintableProcess) GetColumns() (columns []TableColumnDefinition) {
 		},
 		{
 			Name:        "PIPELINE",
+			Type:        "string",
+			Description: "The name of the pipeline",
+		},
+		{
+			Name:        "CREATED_AT",
 			Type:        "string",
 			Description: "The name of the pipeline",
 		},

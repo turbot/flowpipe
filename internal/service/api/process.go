@@ -97,8 +97,8 @@ func (api *APIService) listProcess(c *gin.Context) {
 
 				ex, err := execution.NewExecution(c, execution.WithEvent(evt))
 				if err != nil {
-					common.AbortWithError(c, err)
-					return
+					// Skip if the execution is for a different mod
+					continue
 				}
 
 				err = ex.LoadProcess(evt)
@@ -114,9 +114,10 @@ func (api *APIService) listProcess(c *gin.Context) {
 				}
 
 				processList = append(processList, types.Process{
-					ID:       execID,
-					Pipeline: payload.PipelineName,
-					Status:   pex.Status,
+					ID:        execID,
+					Pipeline:  payload.PipelineName,
+					Status:    pex.Status,
+					CreatedAt: payload.Event.CreatedAt,
 				})
 
 				break
