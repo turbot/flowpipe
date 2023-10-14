@@ -1,3 +1,13 @@
+
+trigger "http" "http_trigger_to_iam_policy_validation" {
+    pipeline = pipeline.lambda_example
+    args     = {
+      body   = self.request_body
+      headers = self.request_headers
+      event = jsondecode(jsondecode(self.request_body).Message)
+    }
+}
+
 variable "aws_region" {
     type = string
     default = "asia-southeast1"

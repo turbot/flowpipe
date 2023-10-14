@@ -1,3 +1,4 @@
+
 trigger "http" "http_trigger_to_iam_policy_validation" {
     pipeline = pipeline.lambda_example_two
     args     = {

@@ -15,3 +15,11 @@ pipeline "use_child_pipeline" {
         pipeline = mod_depend_a.pipeline.echo_one_depend_a
     }
 }
+
+trigger "schedule" "my_every_minute_trigger" {
+    schedule = "* * * * *"
+    pipeline = pipeline.use_child_pipeline
+    args = {
+        param_one = "from trigger"
+    }
+}
