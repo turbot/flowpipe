@@ -132,6 +132,7 @@ func (api *APIService) Start() error {
 
 	// Set the gin mode based on our environment, to configure logging etc as appropriate
 	gin.SetMode(viper.GetString("environment"))
+	binding.EnableDecoderDisallowUnknownFields = true
 
 	// Initialize gin
 	router := gin.New()
