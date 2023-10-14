@@ -16,9 +16,9 @@ pipeline "disable_versioning" {
         image = "amazon/aws-cli"
         cmd = ["s3api", "put-bucket-versioning", "--bucket", param.bucket_name, "--versioning-configuration", "Status=Suspended"]
         env = {
-            AWS_REGION = "us-east-1"
-            AWS_ACCESS_KEY_ID = "AKIAQGDRKHTKBKCJASUB"
-            AWS_SECRET_ACCESS_KEY = "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"
+            AWS_REGION = var.aws_region
+            AWS_ACCESS_KEY_ID = var.aws_access_key_id
+            AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
         }
     }
     step "http" "done" {
