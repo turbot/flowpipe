@@ -325,7 +325,7 @@ func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, 
 	for _, step := range log.steps {
 		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
 	}
-	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️ %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
+	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
 	// lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
 	return lines
 }
@@ -371,11 +371,17 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 
 func renderLineWithDuration(ctx context.Context, line string, duration time.Duration, durationPrefix string, width int) string {
 	lineWidth := utf8.RuneCountInString(line)
+
+	// HACK: the "⏹️" has 2 code points
+	if strings.Contains(line, "⏹️") {
+		lineWidth = lineWidth - 2
+	}
+
 	durationString := fmt.Sprintf("%9s", humanizeDuration(duration)) //00h00m00s
 	if utf8.RuneCountInString(durationPrefix) > 0 {
 		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
 	}
-	durationColumnWidth := utf8.RuneCountInString(durationString) + 2 // accounting for a prepending space
+	durationColumnWidth := utf8.RuneCountInString(durationString) + 10 // accounting for a prepending space
 
 	//{line} {dots} {duration}{durationUnit}
 	dotNum := width - (lineWidth + durationColumnWidth + 2 /*accounting for leading and trailing spaces in the dots*/)
@@ -416,14 +422,14 @@ func humanizeDuration(duration time.Duration) string {
 
 func getStepIcon(name string, failed bool) string {
 	if failed {
-		return "❌" //fmt.Sprintf("❌%s", icon)
+		return "🔴" //fmt.Sprintf("❌%s", icon)
 	}
 	icon := " "
 	switch name {
 	case "http":
 		icon = "🔗"
 	case "echo":
-		icon = "🆎"
+		icon = "🔠"
 	case "pipeline":
 		icon = "♊"
 	case "sleep":
