@@ -35,13 +35,14 @@ const (
 	BlockTypeError          = "error"
 
 	// config blocks
-	BlockTypeConnection       = "connection"
-	BlockTypeOptions          = "options"
-	BlockTypeWorkspaceProfile = "workspace"
-	BlockTypePipeline         = "pipeline"
-	BlockTypePipelineStep     = "step"
-	BlockTypePipelineOutput   = "output"
-	BlockTypeTrigger          = "trigger"
+	BlockTypeConnection        = "connection"
+	BlockTypeOptions           = "options"
+	BlockTypeWorkspaceProfile  = "workspace"
+	BlockTypePipeline          = "pipeline"
+	BlockTypePipelineStep      = "step"
+	BlockTypePipelineOutput    = "output"
+	BlockTypeTrigger           = "trigger"
+	BlockTypePipelineBasicAuth = "basic_auth"
 
 	AttributeTypeValue     = "value"
 	AttributeTypeSensitive = "sensitive"
@@ -73,6 +74,9 @@ const (
 	AttributeTypeForEach     = "for_each"
 	AttributeTypeDescription = "description"
 	AttributeTypeIf          = "if"
+	AttributeTypeUsername    = "username"
+	AttributeTypePassword    = "password"
+	AttributeTypeStepName    = "step_name"
 
 	// pipeline attributes
 	AttributeTypeTags          = "tags"

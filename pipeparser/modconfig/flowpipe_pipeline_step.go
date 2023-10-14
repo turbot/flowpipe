@@ -239,6 +239,7 @@ type IPipelineStep interface {
 	AppendDependsOn(...string)
 	GetForEach() hcl.Expression
 	SetAttributes(hcl.Attributes, *hcl.EvalContext) hcl.Diagnostics
+	SetBlockConfig(hcl.Blocks, *hcl.EvalContext) hcl.Diagnostics
 	SetErrorConfig(*ErrorConfig)
 	GetErrorConfig() *ErrorConfig
 	SetOutputConfig(map[string]*PipelineOutput)
@@ -250,6 +251,33 @@ type ErrorConfig struct {
 	Ignore  bool `json:"ignore"`
 	Retries int  `json:"retries"`
 }
+
+type BasicAuthConfig struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+
+	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
+}
+
+func (b *BasicAuthConfig) GetInputs(evalContext *hcl.EvalContext,unresolvedAttributes map[string]hcl.Expression) (*BasicAuthConfig,hcl.Diagnostics) {
+var username,password string
+if unresolvedAttributes[schema.AttributeTypeUsername] != nil {
+	diags := gohcl.DecodeExpression(unresolvedAttributes[schema.AttributeTypeUsername], evalContext, &username)
+		if diags.HasErrors() {
+			return nil, diags
+		}
+		b.Username = username
+}
+	if unresolvedAttributes[schema.AttributeTypePassword] != nil {
+	diags := gohcl.DecodeExpression(unresolvedAttributes[schema.AttributeTypePassword], evalContext, &password)
+		if diags.HasErrors() {
+			return nil, diags
+		}
+		b.Password = password
+}
+		return b,nil
+}
+
 
 func (ec *ErrorConfig) Equals(other *ErrorConfig) bool {
 	if ec == nil || other == nil {
@@ -572,6 +600,7 @@ type PipelineStepHttp struct {
 	Insecure         *bool                  `json:"insecure,omitempty"`
 	RequestBody      *string                `json:"request_body,omitempty"`
 	RequestHeaders   map[string]interface{} `json:"request_headers,omitempty"`
+	BasicAuthConfig  *BasicAuthConfig       `json:"basic_auth_config,omitempty"`
 }
 
 func (p *PipelineStepHttp) Equals(iOther IPipelineStep) bool {
@@ -706,6 +735,18 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		}
 		inputs[schema.AttributeTypeRequestHeaders] = requestHeaders
 	}
+
+	if p.BasicAuthConfig != nil {
+		basicAuth, diags := p.BasicAuthConfig.GetInputs(evalContext,p.UnresolvedAttributes)
+		if diags.HasErrors() {
+			return nil, error_helpers.HclDiagsToError(schema.BlockTypePipelineStep, diags)
+		}
+		basicAuthMap := make(map[string]interface{})
+		basicAuthMap["Username"] = basicAuth.Username
+		basicAuthMap["Password"] = basicAuth.Password
+		inputs[schema.BlockTypePipelineBasicAuth] = basicAuthMap
+	}
+  inputs[schema.AttributeTypeStepName] = p.Name
 
 	return inputs, nil
 }
@@ -851,6 +892,72 @@ func (p *PipelineStepHttp) SetAttributes(hclAttributes hcl.Attributes, evalConte
 	return diags
 }
 
+func (p *PipelineStepHttp) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+
+	basicAuthConfig := &BasicAuthConfig{}
+
+	if basicAuthBlocks := block.ByType()[schema.BlockTypePipelineBasicAuth]; len(basicAuthBlocks) > 0 {
+		if len(basicAuthBlocks) > 1 {
+			return hcl.Diagnostics{&hcl.Diagnostic{
+				Severity: hcl.DiagError,
+				Summary:  "Multiple basic_auth blocks found for step http",
+			}}
+		}
+		basicAuthBlock := basicAuthBlocks[0]
+
+		attributes, diags := basicAuthBlock.Body.JustAttributes()
+		if len(diags) > 0 {
+			return diags
+		}
+
+		if attr, exists := attributes[schema.AttributeTypeUsername]; exists {
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if len(stepDiags) > 0 {
+				diags = append(diags, stepDiags...)
+				return diags
+			}
+
+			if val != cty.NilVal {
+				username, err := hclhelpers.CtyToString(val)
+				if err != nil {
+         diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypeUsername + " attribute to string",
+						Subject:  &attr.Range,
+					})
+					return diags
+				}
+				basicAuthConfig.Username = username
+			}
+
+		}
+
+		if attr, exists := attributes[schema.AttributeTypePassword]; exists {
+			val, stepDiags := dependsOnFromExpressions(attr, evalContext, p)
+			if len(stepDiags) > 0 {
+				diags = append(diags, stepDiags...)
+				return diags
+			}
+
+			if val != cty.NilVal {
+				password, err := hclhelpers.CtyToString(val)
+				if err != nil {
+         diags = append(diags, &hcl.Diagnostic{
+						Severity: hcl.DiagError,
+						Summary:  "Unable to parse " + schema.AttributeTypePassword + " attribute to string",
+						Subject:  &attr.Range,
+					})
+					return diags
+				}
+				basicAuthConfig.Password = password
+			}
+
+		}
+		p.BasicAuthConfig = basicAuthConfig
+	}
+
+	return nil
+}
 type PipelineStepSleep struct {
 	PipelineStepBase
 	Duration string `json:"duration"`
@@ -928,6 +1035,34 @@ func (p *PipelineStepSleep) SetAttributes(hclAttributes hcl.Attributes, evalCont
 	}
 
 	return diags
+}
+
+func (p *PipelineStepSleep) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepEmail) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepEcho) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepQuery) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepPipeline) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepFunction) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepContainer) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
 }
 
 type PipelineStepEmail struct {
@@ -1856,6 +1991,8 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, evalC
 				}
 				p.Args = goVals
 			}
+
+
 
 		default:
 			if !p.IsBaseAttribute(name) {

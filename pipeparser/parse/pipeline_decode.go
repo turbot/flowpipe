@@ -56,6 +56,11 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext,
 		return nil, diags
 	}
 
+	diags = step.SetBlockConfig(stepOptions.Blocks, parseCtx.EvalCtx)
+	if len(diags) > 0 {
+		return nil, diags
+	}
+
 	if errorBlocks := stepOptions.Blocks.ByType()[schema.BlockTypeError]; len(errorBlocks) > 0 {
 		if len(errorBlocks) > 1 {
 			return nil, hcl.Diagnostics{&hcl.Diagnostic{
