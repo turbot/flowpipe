@@ -57,3 +57,5 @@ aws iam create-policy --policy-name my-bad-policy1234 --policy-document '{
     ]
 }'
 ```
+
+Open the AWS console, and navigate to IAM -> Policies -> my-bad-policy1234 and confirm that the policy has a second version with the fixed permissions
