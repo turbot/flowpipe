@@ -18,7 +18,7 @@ pipeline "run_me_controller" {
 
     param "names" {
         type = list(string)
-        default = ["spock"]
+        default = ["spock", "kirk", "sulu"]
     }
 
     step "pipeline" "run" {
@@ -28,5 +28,9 @@ pipeline "run_me_controller" {
         args = {
             name = each.value
         }
+    }
+
+    output "val" {
+        value = step.pipeline.run
     }
 }

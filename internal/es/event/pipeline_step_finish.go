@@ -67,6 +67,13 @@ func WithPipelineExecutionID(id string) PipelineStepFinishOption {
 	}
 }
 
+func WithStepForEach(stepForEach *modconfig.StepForEach) PipelineStepFinishOption {
+	return func(cmd *PipelineStepFinish) error {
+		cmd.StepForEach = stepForEach
+		return nil
+	}
+}
+
 func WithStepExecutionID(id string) PipelineStepFinishOption {
 	return func(cmd *PipelineStepFinish) error {
 		cmd.StepExecutionID = id

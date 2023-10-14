@@ -52,7 +52,11 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		cmd, err := event.NewPipelineStepFinish(
 			event.ForPipelineFinished(e),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
-			event.WithStepExecutionID(parentStepExecution.ID))
+			event.WithStepExecutionID(parentStepExecution.ID),
+
+			// If StepForEach is not nil, it indicates that this pipeline execution is part of
+			// for_each steps
+			event.WithStepForEach(parentStepExecution.StepForEach))
 
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
