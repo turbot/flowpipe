@@ -23,7 +23,7 @@ ngrok http 7103
 On another terminal, find the hook URL:
 
 ```sh
-curl -s http://localhost:7103/api/v0/trigger | jq -r '.items[] | select(.name == "test_suite_mod.trigger.http.http_trigger_to_iam_policy_validation").url'
+curl -s http://localhost:7103/api/v0/trigger | jq -r '.items[] | select(.name == "demo.trigger.http.http_trigger_to_iam_policy_validation").url'
 ```
 
 Build the full hook URL:
