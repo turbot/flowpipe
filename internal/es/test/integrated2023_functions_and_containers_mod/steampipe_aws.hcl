@@ -13,7 +13,8 @@ pipeline "steampipe_aws" {
 
     step "container" "container_run_aws" {
         description = "Run the AWS cli command in the aws-cli container"
-        for_each    = { for k,v in jsondecode(step.container.container_run_steampipe.stdout).groups[0].controls[0].results  : k => v if v.status == "alarm"}
+        for_each    = jsondecode(step.container.container_run_steampipe.stdout).groups[0].controls[0].results
+        if          = each.value.status == "alarm"
         image       = "amazon/aws-cli"
         cmd         = ["s3api", "put-bucket-versioning", "--bucket", element(split(":", each.value.resource), 5), "--versioning-configuration", "Status=Enabled"]
         env = {
