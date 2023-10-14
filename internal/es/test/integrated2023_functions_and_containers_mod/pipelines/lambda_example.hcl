@@ -7,21 +7,6 @@ trigger "http" "http_trigger_to_iam_policy_validation" {
     }
 }
 
-variable "aws_region" {
-    type = string
-    default = "asia-southeast1"
-}
-
-variable "aws_access_key_id" {
-    type = string
-    default = "Enter your AWS access key id"
-}
-
-variable "aws_secret_access_key" {
-    type = string
-    default = "Enter your AWS secret access key"
-}
-
 pipeline "lambda_example" {
 
     param "body" {
@@ -29,13 +14,6 @@ pipeline "lambda_example" {
     }
     param "headers" {
       type = map
-    }
-
-    step "http" "confirm_reply" {
-      if = param.headers["X-Amz-Sns-Message-Type"] == "SubscriptionConfirmation"
-
-      method = "get"
-      url    = jsondecode(param.body)["SubscribeURL"]
     }
 
     param "restricted_actions" {
@@ -60,15 +38,18 @@ pipeline "lambda_example" {
         type = any
     }
 
+    step "http" "confirm_reply" {
+      if = param.headers["X-Amz-Sns-Message-Type"] == "SubscriptionConfirmation"
+
+      method = "get"
+      url    = jsondecode(param.body)["SubscribeURL"]
+    }
+
     step "function" "transform_input_step" {
         runtime = "nodejs:18"
         handler = "index.handler"
         src = "./functions/transform-input"
         event = param.event
-    }
-
-    output "transform_returning_message" {
-        value = step.function.transform_input_step.result
     }
 
     step "function" "validate_policy_step" {
@@ -80,14 +61,6 @@ pipeline "lambda_example" {
         env = {
             "restrictedActions" = param.restricted_actions
         }
-    }
-
-    output "validation_returning_message" {
-        value = step.function.validate_policy_step.result.message
-    }
-
-    output "validation_returning_action" {
-        value = step.function.validate_policy_step.result.action
     }
 
     step "function" "revert_policy_step" {
@@ -103,6 +76,18 @@ pipeline "lambda_example" {
             AWS_ACCESS_KEY_ID = param.aws_access_key_id
             AWS_SECRET_ACCESS_KEY = param.aws_secret_access_key
         }
+    }
+
+    output "transform_returning_message" {
+        value = step.function.transform_input_step.result
+    }
+
+    output "validation_returning_message" {
+        value = step.function.validate_policy_step.result.message
+    }
+
+    output "validation_returning_action" {
+        value = step.function.validate_policy_step.result.action
     }
 
     output "reverting_returning_message" {
