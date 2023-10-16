@@ -7,6 +7,9 @@
 		"source=${localWorkspaceFolder}/../terraform-components,target=/workspaces/terraform-components,type=bind,consistency=cached"
 	],
 
+	"containerEnv": {
+		"GOPRIVATE=github.com/": "github.com/turbot/*"
+	},
 
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
