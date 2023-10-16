@@ -1,9 +1,6 @@
 run:
   timeout: 5m
   modules-download-mode: readonly
-  skip-dirs:
-    # auto generated code
-    - internal/service/api/docs
 
 linters:
   enable:

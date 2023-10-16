@@ -21,6 +21,7 @@ type Email struct {
 }
 
 func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
+	fmt.Println("bad stuff")
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
