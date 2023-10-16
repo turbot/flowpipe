@@ -49,6 +49,11 @@ func (es *ESService) Send(cmd interface{}) error {
 	return err
 }
 
+func (es *ESService) Raise(evt interface{}) error {
+	err := es.eventBus.Publish(es.ctx, evt)
+	return err
+}
+
 func (es *ESService) Start() error {
 	// Convenience
 	logger := fplog.Logger(es.ctx)

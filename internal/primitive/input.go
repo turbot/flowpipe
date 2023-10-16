@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 )
@@ -20,11 +21,23 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	// This is where the actual work is done to setup the approval stuff in slack
 
 	o := modconfig.Output{
-		Data: map[string]interface{}{
-			"container_id": "1234",
-			"stdout":       "hello world",
-			"stderr":       "",
-		},
+		Data: map[string]interface{}{},
+	}
+
+	return &o, nil
+}
+
+func (ip *Input) ProcessOutput(ctx context.Context, requestBody []byte) (*modconfig.Output, error) {
+
+	// TODO: error handling
+
+	var bodyJSON map[string]interface{}
+	err := json.Unmarshal(requestBody, &bodyJSON)
+	if err != nil {
+		return nil, err
+	}
+	o := modconfig.Output{
+		Data: bodyJSON,
 	}
 
 	return &o, nil
