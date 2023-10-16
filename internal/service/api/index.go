@@ -20,7 +20,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
-
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
@@ -133,6 +132,7 @@ func (api *APIService) Start() error {
 
 	// Set the gin mode based on our environment, to configure logging etc as appropriate
 	gin.SetMode(viper.GetString("environment"))
+	binding.EnableDecoderDisallowUnknownFields = true
 
 	// Initialize gin
 	router := gin.New()

@@ -56,6 +56,11 @@ func decodeStep(mod *modconfig.Mod, block *hcl.Block, parseCtx *ModParseContext,
 		return nil, diags
 	}
 
+	diags = step.SetBlockConfig(stepOptions.Blocks, parseCtx.EvalCtx)
+	if len(diags) > 0 {
+		return nil, diags
+	}
+
 	if errorBlocks := stepOptions.Blocks.ByType()[schema.BlockTypeError]; len(errorBlocks) > 0 {
 		if len(errorBlocks) > 1 {
 			return nil, hcl.Diagnostics{&hcl.Diagnostic{
@@ -253,6 +258,11 @@ func decodeOutput(block *hcl.Block, parseCtx *ModParseContext) (*modconfig.Pipel
 
 	if attr, exists := outputOptions.Attributes[schema.AttributeTypeSensitive]; exists {
 		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Sensitive)
+		diags = append(diags, valDiags...)
+	}
+
+	if attr, exists := outputOptions.Attributes[schema.AttributeTypeDescription]; exists {
+		valDiags := gohcl.DecodeExpression(attr.Expr, nil, &o.Description)
 		diags = append(diags, valDiags...)
 	}
 

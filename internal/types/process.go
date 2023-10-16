@@ -4,19 +4,26 @@ import (
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/pipeparser/perr"
 )
 
 // The definition of a single Flowpipe Process
 type Process struct {
-	ID       string `json:"execution_id"`
-	Pipeline string `json:"pipeline"`
-	Status   string `json:"status"`
+	ID        string    `json:"execution_id"`
+	Pipeline  string    `json:"pipeline"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Process log payload definition
 type ProcessPayload struct {
-	PipelineName        string `json:"name"`
-	PipelineExecutionID string `json:"pipeline_execution_id"`
+	PipelineName        string              `json:"name"`
+	PipelineExecutionID string              `json:"pipeline_execution_id"`
+	Event               ProcessPayloadEvent `json:"event"`
+}
+
+type ProcessPayloadEvent struct {
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type ProcessOutputData struct {
@@ -31,7 +38,8 @@ type ProcessOutputData struct {
 type ProcessEventLog struct {
 	EventType string     `json:"event_type"`
 	Timestamp *time.Time `json:"ts"`
-	Payload   []byte     `json:"payload"`
+	// Setting the type as string for now, as the CLI need to print the payload
+	Payload string `json:"payload"`
 }
 
 type PrintableProcess struct {
@@ -40,18 +48,18 @@ type PrintableProcess struct {
 
 func (PrintableProcess) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
 
-	return nil, nil
 	// apiResourceType := r.GetResourceType()
+
 	// if apiResourceType != "ListProcessResponse" {
-	// 	return nil, fperr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
+	// 	return nil, perr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
 	// }
 
-	// lp, ok := r.(*flowpipeapiclient.ListProcessResponse)
-	// if !ok {
-	// 	return nil, fperr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListProcessResponse")
-	// }
+	lp, ok := r.(*flowpipeapiclient.ListProcessResponse)
+	if !ok {
+		return nil, perr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListProcessResponse")
+	}
 
-	// return lp.Items, nil
+	return lp.Items, nil
 }
 
 func (p PrintableProcess) GetItems() interface{} {
@@ -59,35 +67,50 @@ func (p PrintableProcess) GetItems() interface{} {
 }
 
 func (p PrintableProcess) GetTable() (Table, error) {
-	return Table{}, nil
-	// lp, ok := p.Items.([]flowpipeapiclient.Process)
+	lp, ok := p.Items.([]flowpipeapiclient.Process)
 
-	// if !ok {
-	// 	return Table{}, fperr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Process")
-	// }
+	if !ok {
+		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Process")
+	}
 
-	// var tableRows []TableRow
-	// for _, item := range lp {
-	// 	cells := []interface{}{
-	// 		*item.Type,
-	// 		*item.Name,
-	// 		*item.Parallel,
-	// 	}
-	// 	tableRows = append(tableRows, TableRow{Cells: cells})
-	// }
+	var tableRows []TableRow
+	for _, item := range lp {
+		cells := []interface{}{
+			*item.ExecutionId,
+			*item.Pipeline,
+			*item.CreatedAt,
+			*item.Status,
+		}
+		tableRows = append(tableRows, TableRow{Cells: cells})
+	}
 
-	// return Table{
-	// 	Rows:    tableRows,
-	// 	Columns: p.GetColumns(),
-	// }, nil
+	return Table{
+		Rows:    tableRows,
+		Columns: p.GetColumns(),
+	}, nil
 }
 
 func (PrintableProcess) GetColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
-			Name:        "ID",
+			Name:        "EXECUTION_ID",
 			Type:        "string",
-			Description: "The id of the process",
+			Description: "The id of the process execution",
+		},
+		{
+			Name:        "PIPELINE",
+			Type:        "string",
+			Description: "The name of the pipeline",
+		},
+		{
+			Name:        "CREATED_AT",
+			Type:        "string",
+			Description: "The name of the pipeline",
+		},
+		{
+			Name:        "STATUS",
+			Type:        "string",
+			Description: "The status of the process execution",
 		},
 	}
 }
@@ -98,10 +121,15 @@ type ListProcessResponse struct {
 	NextToken *string   `json:"next_token,omitempty"`
 }
 
-// This type is used by the API to return a list of pipelines.
-type ListProcessLogResponse struct {
+type ListProcessLogJSONResponse struct {
 	Items     []ProcessEventLog `json:"items"`
 	NextToken *string           `json:"next_token,omitempty"`
+}
+
+// This type is used by the API to return a list of proces logs.
+type ListProcessLogResponse struct {
+	Items     []EventLogEntry `json:"items"`
+	NextToken *string         `json:"next_token,omitempty"`
 }
 
 type CmdProcess struct {

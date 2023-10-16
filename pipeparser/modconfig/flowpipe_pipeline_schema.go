@@ -275,6 +275,22 @@ var PipelineStepHttpBlockSchema = &hcl.BodySchema{
 			Type:       schema.BlockTypePipelineOutput,
 			LabelNames: []string{schema.LabelName},
 		},
+		{
+			Type: schema.BlockTypePipelineBasicAuth,
+		},
+	},
+}
+
+var PipelineBasicAuthBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name:     schema.AttributeTypeUsername,
+			Required: true,
+		},
+		{
+			Name:     schema.AttributeTypePassword,
+			Required: true,
+		},
 	},
 }
 

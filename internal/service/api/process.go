@@ -24,7 +24,8 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process/:process_id", api.getProcess)
 	router.GET("/process/:process_id/output", api.getProcessOutput)
 	router.POST("/process/:process_id/cmd", api.cmdProcess)
-	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLog)
+	router.GET("/process/:process_id/log/process.json", api.listProcessEventLog)
+	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLogJSONLine)
 	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
 
 }
@@ -96,8 +97,8 @@ func (api *APIService) listProcess(c *gin.Context) {
 
 				ex, err := execution.NewExecution(c, execution.WithEvent(evt))
 				if err != nil {
-					common.AbortWithError(c, err)
-					return
+					// Skip if the execution is for a different mod
+					continue
 				}
 
 				err = ex.LoadProcess(evt)
@@ -113,9 +114,10 @@ func (api *APIService) listProcess(c *gin.Context) {
 				}
 
 				processList = append(processList, types.Process{
-					ID:       execID,
-					Pipeline: payload.PipelineName,
-					Status:   pex.Status,
+					ID:        execID,
+					Pipeline:  payload.PipelineName,
+					Status:    pex.Status,
+					CreatedAt: payload.Event.CreatedAt,
 				})
 
 				break
@@ -299,6 +301,22 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 
 }
 
+// @Summary Get process log
+// @Description Get process log
+// @ID   process_get_log
+// @Tags Process
+// @Produce json
+// / ...
+// @Param process_id path string true "The id of the process" format(^[a-z]{0,32}$)
+// ...
+// @Success 200 {object} types.ListProcessLogJSONResponse
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
+// @Router /process/{process_id}/log/process.json [get]
 func (api *APIService) listProcessEventLog(c *gin.Context) {
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
@@ -316,14 +334,31 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		items = append(items, types.ProcessEventLog{
 			EventType: item.EventType,
 			Timestamp: item.Timestamp,
-			Payload:   item.Payload,
+			Payload:   string(item.Payload),
 		})
 	}
 
-	result := types.ListProcessLogResponse{
+	result := types.ListProcessLogJSONResponse{
 		Items: items,
 	}
 
+	c.JSON(http.StatusOK, result)
+}
+
+func (api *APIService) listProcessEventLogJSONLine(c *gin.Context) {
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	logEntries, err := execution.LoadEventLogEntries(uri.ProcessId)
+	if err != nil {
+		common.AbortWithError(c, err)
+	}
+	result := types.ListProcessLogResponse{
+		Items: logEntries,
+	}
 	c.JSON(http.StatusOK, result)
 }
 

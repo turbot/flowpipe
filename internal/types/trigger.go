@@ -1,7 +1,6 @@
 package types
 
 import (
-	"encoding/json"
 	"fmt"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -32,21 +31,16 @@ type PrintableTrigger struct {
 func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
 
 	apiResourceType := r.GetResourceType()
-	if apiResourceType == "ListTriggerResponse" {
-		lp, ok := r.(*flowpipeapiclient.ListTriggerResponse)
-		if !ok {
-			return nil, fmt.Errorf("unable to cast to flowpipeapiclient.ListTriggerResponse")
-		}
-		return lp.Items, nil
-	} else if apiResourceType == "FpTrigger" {
-		lp, ok := r.(*flowpipeapiclient.FpTrigger)
-		if !ok {
-			return nil, fmt.Errorf("unable to cast to flowpipeapiclient.FpTrigger")
-		}
-		return []flowpipeapiclient.FpTrigger{*lp}, nil
-	} else {
+	if apiResourceType != "ListTriggerResponse" {
 		return nil, fmt.Errorf("invalid resource type: %s", apiResourceType)
 	}
+
+	lp, ok := r.(*flowpipeapiclient.ListTriggerResponse)
+	if !ok {
+		return nil, fmt.Errorf("unable to cast to flowpipeapiclient.ListTriggerResponse")
+	}
+
+	return lp.Items, nil
 }
 
 func (p PrintableTrigger) GetItems() interface{} {
@@ -63,28 +57,15 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 	var tableRows []TableRow
 	for _, item := range lp {
 
-		description, documentation, title, tags := "", "", "", ""
+		var description string
 		if item.Description != nil {
 			description = *item.Description
-		}
-		if item.Documentation != nil {
-			documentation = *item.Documentation
-		}
-		if item.Title != nil {
-			title = *item.Title
-		}
-		if item.Tags != nil {
-			data, _ := json.Marshal(*item.Tags)
-			tags = string(data)
 		}
 		cells := []interface{}{
 			*item.Pipeline,
 			*item.Type,
 			*item.Name,
-			title,
 			description,
-			documentation,
-			tags,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -113,24 +94,9 @@ func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
 			Description: "The name of the trigger",
 		},
 		{
-			Name:        "TITLE",
-			Type:        "string",
-			Description: "The title of the trigger",
-		},
-		{
 			Name:        "DESCRIPTION",
 			Type:        "string",
 			Description: "Trigger description",
-		},
-		{
-			Name:        "DOCUMENTATION",
-			Type:        "string",
-			Description: "Trigger documentation",
-		},
-		{
-			Name:        "TAGS",
-			Type:        "string",
-			Description: "Trigger tags",
 		},
 	}
 }

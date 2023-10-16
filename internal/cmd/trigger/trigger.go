@@ -1,7 +1,9 @@
+//nolint:forbidigo // CLI console output
 package trigger
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/turbot/flowpipe/internal/cmd/common"
@@ -94,18 +96,32 @@ func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		}
 
 		if resp != nil {
-			printer := printers.GetPrinter(cmd)
+			output := "\n"
 
-			printableResource := types.PrintableTrigger{}
-			printableResource.Items, err = printableResource.Transform(resp)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+			if resp.Title != nil {
+				output += "Title:    " + *resp.Title + "\n"
 			}
-
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			output += "Name:     " + *resp.Name + "\n"
+			output += "Pipeline: " + *resp.Pipeline + "\n"
+			output += "Type:     " + *resp.Type + "\n"
+			if resp.Tags != nil {
+				output += "Tags:   "
+				isFirstTag := true
+				for k, v := range *resp.Tags {
+					if isFirstTag {
+						output += "  " + k + " = " + v
+						isFirstTag = false
+					} else {
+						output += ", " + k + " = " + v
+					}
+				}
+				output += "\n"
 			}
+			if resp.Description != nil {
+				output += "\nDescription:\n" + *resp.Description + "\n"
+			}
+			//nolint:forbidigo // CLI console output
+			fmt.Println(output)
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -62,10 +63,20 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 		if requestBodyJSON != nil {
 			_, marshalErr := json.Marshal(requestBodyJSON)
 			if marshalErr != nil {
-				return perr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
+				stepName := i[schema.AttributeTypeStepName].(string)
+				return perr.BadRequestWithMessage("step " + stepName + " error marshaling request body JSON: " + marshalErr.Error())
 			}
 		}
 	}
+
+	if i[schema.AttributeTypeRequestHeaders] != nil {
+		requestHeaders := i[schema.AttributeTypeRequestHeaders].(map[string]interface{})
+		if requestHeaders["Authorization"] != nil && i[schema.BlockTypePipelineBasicAuth] != nil {
+			stepName := i[schema.AttributeTypeStepName].(string)
+			return perr.BadRequestWithMessage("step " + stepName + " should have either basic_auth or authorization header but not both")
+		}
+	}
+
 	return nil
 }
 
@@ -205,6 +216,13 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 	requestHeaders := map[string]interface{}{}
 	if input[schema.AttributeTypeRequestHeaders] != nil {
 		requestHeaders = input[schema.AttributeTypeRequestHeaders].(map[string]interface{})
+	}
+
+	// check for basic_auth
+	if input[schema.BlockTypePipelineBasicAuth] != nil {
+		basicAuth := input[schema.BlockTypePipelineBasicAuth].(map[string]interface{})
+		encodeString := base64.StdEncoding.EncodeToString([]byte(basicAuth["Username"].(string) + ":" + basicAuth["Password"].(string)))
+		requestHeaders["Authorization"] = "Basic " + encodeString
 	}
 
 	// Get the request body

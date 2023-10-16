@@ -30,11 +30,11 @@ func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 	pipelineCmd.AddCommand(pipelineListCmd)
 
-	// pipelineShowCmd, err := PipelineShowCmd(ctx)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// pipelineCmd.AddCommand(pipelineShowCmd)
+	pipelineShowCmd, err := PipelineShowCmd(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pipelineCmd.AddCommand(pipelineShowCmd)
 
 	pipelineRunCmd, err := PipelineRunCmd(ctx)
 	if err != nil {
@@ -106,7 +106,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		}
 
 		for _, value := range pipeLineArgValues {
-			splitData := strings.Split(value, "=")
+			splitData := strings.SplitN(value, "=", 2)
 			pipelineArgs[splitData[0]] = splitData[1]
 		}
 
@@ -193,24 +193,108 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		}
 
 		if resp != nil {
-			printer := printers.GetPrinter(cmd)
+			output := "\n"
 
-			printableResource := types.PrintablePipeline{}
-			printableResource.Items, err = printableResource.Transform(resp)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+			if resp.Title != nil {
+				output += "Title: " + *resp.Title + "\n"
 			}
+			if resp.Title != nil {
+				output += "Name:  " + *resp.Name + "\n"
+			} else {
+				output += "Name: " + *resp.Name + "\n"
+			}
+			if resp.Tags != nil {
+				if resp.Title != nil {
+					output += "Tags:  "
+				} else {
+					output += "Tags: "
+				}
+				isFirstTag := true
+				for k, v := range *resp.Tags {
+					if isFirstTag {
+						output += k + " = " + v
+						isFirstTag = false
+					} else {
+						output += ", " + k + " = " + v
+					}
+				}
+				output += "\n"
+			}
+			if resp.Description != nil {
+				output += "\nDescription:\n" + *resp.Description + "\n"
+			}
+			if resp.Params != nil {
+				output += formatSection("\nParams:", resp.Params)
+			}
+			if resp.Outputs != nil {
+				output += formatSection("\nOutputs:", resp.Outputs)
+			}
+			output += "\nUsage:" + "\n"
+			if resp.Params != nil {
+				var pArg string
 
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+				// show the minimal required pipeline args
+				for _, param := range resp.Params {
+					if (param.Default != nil && len(*param.Default) > 0) || (param.Optional != nil && *param.Optional) {
+						continue
+					}
+					pArg += " --pipeline-arg " + *param.Name + "=<value>"
+				}
+				output += "  flowpipe pipeline run " + *resp.Name + pArg
+			} else {
+				output += "  flowpipe pipeline run " + *resp.Name
 			}
+			output += "\n"
+			//nolint:forbidigo // CLI console output
+			fmt.Println(output)
 		}
 	}
 }
 
+// Helper function to format a section
+func formatSection(sectionName string, items interface{}) string {
+	var output string
+	if items != nil {
+		output += sectionName + "\n"
+		switch v := items.(type) {
+		case []flowpipeapiclient.FpPipelineParam:
+			for _, item := range v {
+				output += "  " + paramToString(item) + "\n"
+			}
+		case []flowpipeapiclient.ModconfigPipelineOutput:
+			for _, item := range v {
+				output += "  " + outputToString(item) + "\n"
+			}
+		}
+	}
+	return output
+}
+
+// Helper function to convert Param to string
+func paramToString(param flowpipeapiclient.FpPipelineParam) string {
+	var strOutput string
+	if param.Optional != nil && *param.Optional {
+		strOutput = *param.Name + "[" + *param.Type + ",Optional]"
+	} else {
+		strOutput = *param.Name + "[" + *param.Type + "]"
+	}
+
+	if param.Description != nil && len(*param.Description) > 0 {
+		strOutput += ": " + *param.Description
+	}
+	return strOutput
+}
+
+// Helper function to convert Output to string
+func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
+	strOutput := *output.Name
+	if output.Description != nil && len(*output.Description) > 0 {
+		strOutput += ": " + *output.Description
+	}
+	return strOutput
+}
 func validatePipelineArgs(pipelineArgs []string) error {
-	validFormat := regexp.MustCompile(`^[^=]+=[^=]+$`)
+	validFormat := regexp.MustCompile(`^[\w-]+=[\S\s]+$`)
 	for _, arg := range pipelineArgs {
 		if !validFormat.MatchString(arg) {
 			return fmt.Errorf("invalid format: %s", arg)
