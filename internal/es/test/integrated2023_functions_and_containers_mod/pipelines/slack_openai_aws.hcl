@@ -1,6 +1,16 @@
-trigger "http" "slack_doaws_webhook_trigger" {
-    title    = "Webhook Trigger for Slack /doaws command"
-    pipeline = pipeline.slack_openai_doaws
+# trigger "http" "slack_doaws_webhook_trigger" {
+#     title    = "Webhook Trigger for Slack /doaws command"
+#     pipeline = pipeline.slack_openai_doaws
+
+#     args     = {
+#       response_url = parse_query_string(self.request_body).response_url
+#       prompt       = parse_query_string(self.request_body).text
+#     }
+# }
+
+trigger "http" "slack_slack_webhook_trigger" {
+    title    = "Webhook Trigger for Slack command"
+    pipeline = pipeline.slack_hello
 
     args     = {
       response_url = parse_query_string(self.request_body).response_url
@@ -8,86 +18,98 @@ trigger "http" "slack_doaws_webhook_trigger" {
     }
 }
 
-pipeline "slack_openai_doaws" {
+
+pipeline "slack_hello" {
 
     param "response_url" {
         description = "The url to respond to slack" 
         type        = string
     }
     param "prompt" {
-        description = "The prompt that the user passed to the doaws command" 
+        description = "The prompt that the user passed to the slack command" 
         type        = string
     }
 
-    step "http" "first_slack_response" {
-        description = "Echo the user's request back to them"
+    # step "http" "first_slack_response" {
+    #     description = "Echo the user's request back to them"
+    #     url         = param.response_url
+    #     method      = "post"
+
+    #     request_body = jsonencode({
+    #         text = "Your Request: ${param.prompt}"
+    #     })
+    # }
+
+    step "http" "hello_world" {
+        description = "test me"
         url         = param.response_url
         method      = "post"
 
         request_body = jsonencode({
-            text = "Your Request: ${param.prompt}"
+            text = "Goodbye"
         })
     }
 
-    step "http" "open_ai" {
-        description  = "Call OpenAI API to generate an AWS cli command to fulfill the users request"
-        url          = "https://api.openai.com/v1/chat/completions"
-        method       = "post"
 
-        request_headers = {
-            Content-Type  = "application/json"
-            Authorization = "Bearer ${var.openai_token}"
-        }
+    # step "http" "open_ai" {
+    #     description  = "Call OpenAI API to generate an AWS cli command to fulfill the users request"
+    #     url          = "https://api.openai.com/v1/chat/completions"
+    #     method       = "post"
 
-        request_body = jsonencode({
-            model       = "gpt-3.5-turbo"
-            temperature = 0.2
-            messages    = [{
-                role    = "user"
-                content = <<EOQ
-                I'd like you to take the command below written in plain text and convert it into an AWS CLI command to perform the requested command. Rules for your response:
-                - Return only the AWS CLI command. Do not add text. Do not explain yourself. Do not format.
-                - I absolutely strictly need it as a JSON array of strings to be passed to the aws-cli docker container.
-                - The AWS CLI command must be syntactically correct and accurate so that it can be run as is.
-                - Do not add 'aws' at the beginning of the command
-                - If the request will be destructive (e.g. delete a resource) then add an extra item to the start of the array with the string DRY_RUN_ONLY.
-                ${param.prompt}
-                EOQ
-            }]
-        })
-    }
+    #     request_headers = {
+    #         Content-Type  = "application/json"
+    #         Authorization = "Bearer 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"
+    #     }
 
-    step "http" "done_open_ai" {
-        description = "Respond to slack with the command that will be run"
-        url         = param.response_url
-        method      = "post"
+    #     request_body = jsonencode({
+    #         model       = "gpt-3.5-turbo"
+    #         temperature = 0.2
+    #         messages    = [{
+    #             role    = "user"
+    #             content = <<EOQ
+    #             I'd like you to take the command below written in plain text and convert it into an AWS CLI command to perform the requested command. Rules for your response:
+    #             - Return only the AWS CLI command. Do not add text. Do not explain yourself. Do not format.
+    #             - I absolutely strictly need it as a JSON array of strings to be passed to the aws-cli docker container.
+    #             - The AWS CLI command must be syntactically correct and accurate so that it can be run as is.
+    #             - Do not add 'aws' at the beginning of the command
+    #             - If the request will be destructive (e.g. delete a resource) then add an extra item to the start of the array with the string DRY_RUN_ONLY.
+    #             ${param.prompt}
+    #             EOQ
+    #         }]
+    #     })
+    # }
 
-        request_body = jsonencode({
-            text = "Generated CLI command: ```${jsondecode(step.http.open_ai.response_body).choices[0].message.content}```"
-        })
-    }
+    # step "http" "done_open_ai" {
+    #     description = "Respond to slack with the command that will be run"
+    #     url         = param.response_url
+    #     method      = "post"
 
-    step "container" "container_run_aws_cli" {
-        description = "Run the generated AWS cli command in the aws-cli container"
-        image       = "amazon/aws-cli"
-        cmd         = jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)[0] == "aws" ? slice(jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content), 1, length(jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)) - 1 ) : jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)
+    #     request_body = jsonencode({
+    #         text = "Generated CLI command: ```${jsondecode(step.http.open_ai.response_body).choices[0].message.content}```"
+    #     })
+    # }
+
+    # step "container" "container_run_aws_cli" {
+    #     description = "Run the generated AWS cli command in the aws-cli container"
+    #     image       = "amazon/aws-cli"
+    #     cmd         = jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)[0] == "aws" ? slice(jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content), 1, length(jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)) - 1 ) : jsondecode(jsondecode(step.http.open_ai.response_body).choices[0].message.content)
         
-        env = {
-            AWS_REGION            = var.aws_region
-            AWS_ACCESS_KEY_ID     = var.aws_access_key_id
-            AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
-        }
-    }
+    #     env = {
+    #         AWS_REGION            = var.aws_region
+    #         AWS_ACCESS_KEY_ID     = var.aws_access_key_id
+    #         AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
+    #     }
+    # }
 
-    step "http" "done_container_run_aws_cli" {
-        description = "Respond to slack with the output from the aws-cli command"
-        url         = param.response_url
-        method      = "post"
+    # step "http" "done_container_run_aws_cli" {
+    #     description = "Respond to slack with the output from the aws-cli command"
+    #     url         = param.response_url
+    #     method      = "post"
         
-        request_body = jsonencode({
-            text = length(step.container.container_run_aws_cli.stdout) > 0 ? "```${step.container.container_run_aws_cli.stdout}```" : "${param.prompt} complete! 🚀"
-        })
-    }
+    #     request_body = jsonencode({
+    #         text = length(step.container.container_run_aws_cli.stdout) > 0 ? "```${step.container.container_run_aws_cli.stdout}```" : "${param.prompt} complete! 🚀"
+    #     })
+    # }
 
     output "aws_command" {
         description = "The aws-cli command generated by OpenAI"
