@@ -16,11 +16,6 @@ jobs:
     name: Lint and Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Flowpipe repository
-        uses: actions/checkout@v3
-        with:
-          path: flowpipe
-
       - name: Add SSH Go Module Private Key
         env:
             SSH_AUTH_SOCK: /tmp/ssh_agent.sock
@@ -35,6 +30,9 @@ jobs:
         run: |
               git config --global url."ssh://git@github.com/".insteadOf https://github.com/
 
+      - name: Checkout Flowpipe repository
+        uses: actions/checkout@v3
+
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
@@ -43,11 +41,9 @@ jobs:
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
-
         with:
           version: v1.54.1
           args: --timeout=15m
-          working-directory: flowpipe
 
       # Install MailHog for SMTP mail testing
       - name: Install MailHog
@@ -56,4 +52,3 @@ jobs:
 
       - name: Run tests
         run: make test
-        working-directory: flowpipe
