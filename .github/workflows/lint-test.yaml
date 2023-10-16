@@ -44,6 +44,7 @@ jobs:
         with:
           version: v1.54.1
           args: --timeout=15m
+          skip-cache: true
 
       # Install MailHog for SMTP mail testing
       - name: Install MailHog
