@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/pipeparser/modconfig"
 	"github.com/turbot/flowpipe/pipeparser/perr"
 	"github.com/turbot/flowpipe/pipeparser/schema"
@@ -107,6 +108,8 @@ func (h *HTTPRequest) Run(ctx context.Context, input modconfig.Input) (*modconfi
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
 func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, error) {
+	logger := fplog.Logger(ctx)
+
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -164,8 +167,23 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	output.Data[schema.AttributeTypeStartedAt] = start
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
+	var bodyString string
+
 	if body != nil {
-		output.Data[schema.AttributeTypeResponseBody] = string(body)
+		bodyString = string(body)
+	}
+
+	if headers["Content-Type"] != nil && strings.Contains(headers["Content-Type"].(string), "application/json") && resp.StatusCode < 400 {
+		var bodyJSON map[string]interface{}
+		err := json.Unmarshal(body, &bodyJSON)
+		if err != nil {
+			logger.Error("Error unmarshalling response body", "error", err)
+			output.Data[schema.AttributeTypeResponseBody] = bodyString
+		} else {
+			output.Data[schema.AttributeTypeResponseBody] = bodyJSON
+		}
+	} else {
+		output.Data[schema.AttributeTypeResponseBody] = bodyString
 	}
 
 	if resp.StatusCode >= 400 {

@@ -67,7 +67,7 @@ func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "success")
+	assert.Contains(output.Get(schema.AttributeTypeResponseBody).(map[string]interface{})["message"], "success")
 }
 
 func TestHTTPMethodGETNotFound(t *testing.T) {
@@ -314,7 +314,6 @@ func TestHTTPMethodDELETE(t *testing.T) {
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{}")
 }
 
 func TestHTTPMethodDELETENotFound(t *testing.T) {
@@ -362,7 +361,9 @@ func TestHTTPMethodPUT(t *testing.T) {
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{\n  \"body\": \"bar\",\n  \"id\": 1,\n  \"title\": \"foo\",\n  \"userId\": 1\n}")
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody).(map[string]interface{})["body"], "bar")
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody).(map[string]interface{})["id"], float64(1))
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody).(map[string]interface{})["title"], "foo")
 }
 
 func TestHTTPMethodPUTWithTextBody(t *testing.T) {
@@ -429,8 +430,7 @@ func TestHTTPMethodPATCH(t *testing.T) {
 	assert.Equal("200 OK", output.Get("status"))
 	assert.Equal(200, output.Get("status_code"))
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Updating the body of the target resource")
-	assert.Equal(output.Get(schema.AttributeTypeResponseBody), "{\n  \"userId\": 1,\n  \"id\": 1,\n  \"title\": \"foo\",\n  \"body\": \"Updating the body of the target resource\"\n}")
+	assert.Equal(output.Get(schema.AttributeTypeResponseBody).(map[string]interface{})["body"], "Updating the body of the target resource")
 }
 
 func TestHTTPMethodPATCHWithTextBody(t *testing.T) {

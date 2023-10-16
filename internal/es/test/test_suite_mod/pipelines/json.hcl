@@ -60,15 +60,15 @@ pipeline "jsonplaceholder_expr" {
     }
 
     step "echo" "body_json" {
-        json = jsondecode(step.http.http_1.response_body)
+        json = step.http.http_1.response_body
     }
 
     step "echo" "body_json_nested" {
-        text = jsondecode(step.http.http_1.response_body)["nested"]["brian"]["may"]
+        text = step.http.http_1.response_body["nested"]["brian"]["may"]
     }
 
     step "echo" "body_json_loop" {
-        for_each = jsondecode(step.http.http_1.response_body)["title"]
+        for_each = step.http.http_1.response_body["title"]
         text = each.value
     }
 
