@@ -8,9 +8,6 @@ on:
       - "v*"
   workflow_dispatch:
 
-env:
-  GOPRIVATE: github.com/turbot/*
-
 jobs:
   golangci:
     name: Lint and Test
@@ -21,19 +18,26 @@ jobs:
         with:
           path: flowpipe
 
-      - name: Add SSH Go Module Private Key
-        env:
-            SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-            mkdir -p ~/.ssh
-            ssh-keyscan github.com >> ~/.ssh/known_hosts
-            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-            ssh-add - <<< "${{ secrets.GO_MODULE_PRIVATE_KEY }}"
-            echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
 
-      - name: Setup access for private go modules
-        run: |
-              git config --global url."ssh://git@github.com/".insteadOf https://github.com/
+      - name: Checkout Terraform Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/terraform-components
+          path: terraform-components
+
+      - name: Checkout Pipe Fittings Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/pipe-fittings
+          path: pipe-fittings
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
