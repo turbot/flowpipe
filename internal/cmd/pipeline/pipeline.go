@@ -78,7 +78,7 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 
 	// Add the pipeline arg flag
 	pipelineRunCmd.Flags().StringArray(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
-	pipelineRunCmd.Flags().String(constants.ArgPipelineExecutionMode, "asynchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.")
+	pipelineRunCmd.Flags().String(constants.ArgPipelineExecutionMode, "synchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.")
 
 	return pipelineRunCmd, nil
 }
