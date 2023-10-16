@@ -63,7 +63,8 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 		if requestBodyJSON != nil {
 			_, marshalErr := json.Marshal(requestBodyJSON)
 			if marshalErr != nil {
-				return perr.BadRequestWithMessage("error marshaling request body JSON: " + marshalErr.Error())
+				stepName := i[schema.AttributeTypeStepName].(string)
+				return perr.BadRequestWithMessage("step " + stepName + " error marshaling request body JSON: " + marshalErr.Error())
 			}
 		}
 	}
@@ -72,7 +73,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 		requestHeaders := i[schema.AttributeTypeRequestHeaders].(map[string]interface{})
 		if requestHeaders["Authorization"] != nil && i[schema.BlockTypePipelineBasicAuth] != nil {
 			stepName := i[schema.AttributeTypeStepName].(string)
-			return perr.BadRequestWithMessage("step block " + stepName + " should have either basic_auth or authorization header")
+			return perr.BadRequestWithMessage("step " + stepName + " should have either basic_auth or authorization header but not both")
 		}
 	}
 

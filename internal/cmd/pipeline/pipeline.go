@@ -245,6 +245,7 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 				output += "  flowpipe pipeline run " + *resp.Name
 			}
 			output += "\n"
+			//nolint:forbidigo // CLI console output
 			fmt.Println(output)
 		}
 	}

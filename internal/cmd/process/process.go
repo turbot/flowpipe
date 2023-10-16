@@ -304,9 +304,9 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 
 		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
 
-		fmt.Println()
-		fmt.Println(strings.Join(lines, "\n"))
-		fmt.Println()
+		fmt.Println()                          //nolint:forbidigo // CLI console output
+		fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
+		fmt.Println()                          //nolint:forbidigo // CLI console output
 	}
 }
 
@@ -397,7 +397,7 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 // with a minor modification for milliseconds. We should be using a library for this
 func humanizeDuration(duration time.Duration) string {
 	if duration.Milliseconds() < 1000.0 {
-		return fmt.Sprintf("%dms", int64(duration.Milliseconds()))
+		return fmt.Sprintf("%dms", duration.Milliseconds())
 	}
 	if duration.Seconds() < 60.0 {
 		return fmt.Sprintf("%ds", int64(duration.Seconds()))

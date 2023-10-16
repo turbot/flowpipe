@@ -1,3 +1,4 @@
+//nolint:forbidigo // CLI console output
 package trigger
 
 import (
@@ -119,6 +120,7 @@ func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			if resp.Description != nil {
 				output += "\nDescription:\n" + *resp.Description + "\n"
 			}
+			//nolint:forbidigo // CLI console output
 			fmt.Println(output)
 		}
 	}
