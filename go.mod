@@ -2,6 +2,12 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
+replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
+
+replace github.com/turbot/terraform-components => ../terraform-components/
+
+replace github.com/turbot/pipe-fittings => ../pipe-fittings/
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/ThreeDotsLabs/watermill v1.2.0
@@ -30,9 +36,9 @@ require (
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/thediveo/enumflag/v2 v2.0.3
-	github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5
+	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/turbot/go-kit v0.8.1
-	github.com/turbot/pipe-fittings v0.0.0-20231016141745-1454290725fc
+	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
 	github.com/unrolled/secure v1.13.0
 	github.com/zclconf/go-cty v1.14.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -171,6 +177,7 @@ require (
 	github.com/oklog/run v1.0.0 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
+	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc4 // indirect
 	github.com/opencontainers/runc v1.1.5 // indirect

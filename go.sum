@@ -859,8 +859,8 @@ github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+W
 github.com/onsi/ginkgo v1.10.1/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
 github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042wbpU=
-github.com/onsi/ginkgo/v2 v2.9.7 h1:06xGQy5www2oN160RtEZoTvnP2sPhEfePYmCDc2szss=
-github.com/onsi/ginkgo/v2 v2.9.7/go.mod h1:cxrmXWykAwTwhQsJOPfdIDiJ+l2RYq7U8hFU+M/1uw0=
+github.com/onsi/ginkgo/v2 v2.11.0 h1:WgqUCUt/lT6yXoQ8Wef0fsNn5cAuMK7+KT9UFRz2tcU=
+github.com/onsi/ginkgo/v2 v2.11.0/go.mod h1:ZhrRA5XmEE3x3rhlzamx/JJvujdZoJ2uvgI7kR0iZvM=
 github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
 github.com/onsi/gomega v1.7.0/go.mod h1:ex+gbHU/CVuBBDIJjb2X0qEXbFg53c61hWP/1CpauHY=
 github.com/onsi/gomega v1.27.10 h1:naR28SdDFlqrG6kScpT8VWpu1xWY5nJRCF3XaYyBjhI=
@@ -1018,16 +1018,10 @@ github.com/thediveo/enumflag/v2 v2.0.3 h1:9Y2S6xowtVWIh7Fz+JKWFdYwb9cM1iWbSbjtUF
 github.com/thediveo/enumflag/v2 v2.0.3/go.mod h1:obz2iwglQIA2Yn00qTpVnQk8hg0WOh7f7U0ZgMsmo9Q=
 github.com/tkrajina/go-reflector v0.5.6 h1:hKQ0gyocG7vgMD2M3dRlYN6WBBOmdoOzJ6njQSepKdE=
 github.com/tkrajina/go-reflector v0.5.6/go.mod h1:ECbqLgccecY5kPmPmXg1MrHW585yMcDkVl6IvJe64T4=
-github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5 h1:VaxPXuDeB3qWLj4DtjnSwKlsma9YUTy8lIYdoIB6Jzw=
-github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
 github.com/turbot/go-kit v0.8.1 h1:Su2RFhwiCAlbVXlG5f3w+t/8vpr1YXwfVfAIXlL+Xbc=
 github.com/turbot/go-kit v0.8.1/go.mod h1:AY17SDL/JnVnqUlQIc0Y9mQ2Gbtw0+IwEX4ErywH9bw=
-github.com/turbot/pipe-fittings v0.0.0-20231016141745-1454290725fc h1:51EvxiQRw6Ag1YcoDScjWG1OsRbrDAadtIfGq9C89xY=
-github.com/turbot/pipe-fittings v0.0.0-20231016141745-1454290725fc/go.mod h1:Baqd9a04aOKjEyQ4s9nK+ZUBsIJAjrhAszddNbz9pww=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 h1:B2gkMJK1m5GYQfmxjO9VREAwdUsGxf48vOzKouoyFIM=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2/go.mod h1:u2ubq9W5/5y6wG481LyulS7vuMOTRPmXAUfGLoVmwnA=
-github.com/turbot/terraform-components v0.0.0-20230904000149-70ed428b19d7 h1:YyVvKBa/EuwpRnSsIBct89Dv1AEU6/gBCPC1KZkwI80=
-github.com/turbot/terraform-components v0.0.0-20230904000149-70ed428b19d7/go.mod h1:6OGkN9/uwQF/yoH3LMmn9IDfqUFf+q95OTdpRtcmxuI=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/twitchyliquid64/golang-asm v0.15.1 h1:SU5vSMR7hnwNxj24w34ZyCi/FmDZTkS4MhqMhdFk5YI=
 github.com/twitchyliquid64/golang-asm v0.15.1/go.mod h1:a1lVb/DtPvCB8fslRZhAngC2+aY1QWCk3Cedj/Gdt08=

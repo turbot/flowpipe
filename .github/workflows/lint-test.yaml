@@ -8,9 +8,6 @@ on:
       - "v*"
   workflow_dispatch:
 
-env:
-  GOPRIVATE: github.com/turbot/*
-
 jobs:
   golangci:
     name: Lint and Test
@@ -18,6 +15,29 @@ jobs:
     steps:
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
+        with:
+          path: flowpipe
+
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
+
+      - name: Checkout Terraform Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/terraform-components
+          path: terraform-components
+
+      - name: Checkout Pipe Fittings Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.GO_MODULE_PRIVATE_KEY }}
+          repository: turbot/pipe-fittings
+          path: pipe-fittingsgola
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
@@ -25,26 +45,13 @@ jobs:
           go-version: '1.21'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
 
-      - name: Add SSH Go Module Private Key
-        env:
-            SSH_AUTH_SOCK: /tmp/ssh_agent.sock
-        run: |
-            mkdir -p ~/.ssh
-            ssh-keyscan github.com >> ~/.ssh/known_hosts
-            ssh-agent -a $SSH_AUTH_SOCK > /dev/null
-            ssh-add - <<< "${{ secrets.GO_MODULE_PRIVATE_KEY }}"
-            echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
-
-      - name: Setup access for private go modules
-        run: |
-              git config --global url."ssh://git@github.com/".insteadOf https://github.com/
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
+
         with:
-          version: v1.54.2
+          version: v1.54.1
           args: --timeout=15m
-          skip-cache: true
+          working-directory: flowpipe
 
       # Install MailHog for SMTP mail testing
       - name: Install MailHog
@@ -53,3 +60,4 @@ jobs:
 
       - name: Run tests
         run: make test
+        working-directory: flowpipe
