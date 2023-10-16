@@ -132,6 +132,7 @@ func ContextFunctions(baseDir string) map[string]function.Function {
 		"zipmap":           stdlib.ZipmapFunc,
 		"is_error":         IsErrorFunc,
 		"error_message":    ErrorMessageFunc,
+		"parse_query_string": ParseQueryString,
 	}
 
 	return ctxFuncs
