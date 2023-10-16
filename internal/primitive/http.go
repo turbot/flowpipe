@@ -189,7 +189,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	if resp.StatusCode >= 400 {
 		message := resp.Status
 		output.Errors = []modconfig.StepError{
-			modconfig.StepError{
+			{
 				Message:   message,
 				ErrorCode: resp.StatusCode,
 			},

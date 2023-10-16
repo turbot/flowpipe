@@ -289,6 +289,12 @@ func (ph *Pipeline) UnmarshalJSON(data []byte) error {
 					return err
 				}
 
+			case schema.BlockTypePipelineStepInput:
+				var step PipelineStepInput
+				if err := json.Unmarshal(stepData, &step); err != nil {
+					return err
+				}
+
 			default:
 				// Handle unrecognized step types or return an error
 				return perr.BadRequestWithMessage(fmt.Sprintf("unrecognized step type '%s'", stepType.StepType))

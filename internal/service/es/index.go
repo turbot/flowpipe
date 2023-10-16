@@ -25,6 +25,7 @@ type ESService struct {
 	ctx        context.Context
 	runID      string
 	commandBus *cqrs.CommandBus
+	eventBus   *cqrs.EventBus
 	router     *message.Router
 
 	RootMod   *modconfig.Mod
@@ -44,6 +45,12 @@ func NewESService(ctx context.Context) (*ESService, error) {
 
 func (es *ESService) Send(cmd interface{}) error {
 	err := es.commandBus.Send(es.ctx, cmd)
+
+	return err
+}
+
+func (es *ESService) Raise(evt interface{}) error {
+	err := es.eventBus.Publish(es.ctx, evt)
 	return err
 }
 
@@ -209,6 +216,8 @@ func (es *ESService) Start() error {
 
 	es.runID = runID
 	es.commandBus = cqrsFacade.CommandBus()
+	es.eventBus = cqrsFacade.EventBus()
+
 	es.router = router
 
 	// processors are based on router, so they will work when router will start

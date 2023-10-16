@@ -103,6 +103,9 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		case schema.BlockTypePipelineStepContainer:
 			p := primitive.Container{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
+		case schema.BlockTypePipelineStepInput:
+			p := primitive.Input{}
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			logger.Error("Unknown step type", "type", stepDefn.GetType())
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
@@ -164,6 +167,10 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			if err != nil {
 				logger.Error("Error publishing event", "error", err)
 			}
+			return
+		} else if stepDefn.GetType() == schema.BlockTypeInput {
+			// If it's an input step, we can't complete the step until the API receives the input's answer
+			logger.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 			return
 		}
 

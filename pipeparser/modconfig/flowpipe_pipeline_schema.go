@@ -588,3 +588,32 @@ var PipelineStepContainerBlockSchema = &hcl.BodySchema{
 		},
 	},
 }
+
+var PipelineStepInputBlockSchema = &hcl.BodySchema{
+	Attributes: []hcl.AttributeSchema{
+		{
+			Name: schema.AttributeTypeTitle,
+		},
+		{
+			Name: schema.AttributeTypeDescription,
+		},
+		{
+			Name: schema.AttributeTypeForEach,
+		},
+		{
+			Name: schema.AttributeTypeDependsOn,
+		},
+		{
+			Name: schema.AttributeTypeIf,
+		},
+	},
+	Blocks: []hcl.BlockHeaderSchema{
+		{
+			Type: schema.BlockTypeError,
+		},
+		{
+			Type:       schema.BlockTypePipelineOutput,
+			LabelNames: []string{schema.LabelName},
+		},
+	},
+}

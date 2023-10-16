@@ -501,6 +501,8 @@ func GetPipelineStepBlockSchema(stepType string) *hcl.BodySchema {
 		return modconfig.PipelineStepFunctionBlockSchema
 	case schema.BlockTypePipelineStepContainer:
 		return modconfig.PipelineStepContainerBlockSchema
+	case schema.BlockTypePipelineStepInput:
+		return modconfig.PipelineStepInputBlockSchema
 	default:
 		return nil
 	}
