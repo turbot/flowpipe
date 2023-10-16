@@ -15,8 +15,8 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/constants"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {

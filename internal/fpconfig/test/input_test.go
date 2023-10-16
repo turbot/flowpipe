@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/pipe-fittings/misc"
 )
 
 func TestInputStep(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/input_step.fp")
+	pipelines, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/input_step.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

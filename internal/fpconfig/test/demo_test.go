@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/pipe-fittings/misc"
 )
 
 func TestDemoPipeline(t *testing.T) {
@@ -15,7 +15,7 @@ func TestDemoPipeline(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	pipelines, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/complex_one.fp")
+	pipelines, _, err := misc.LoadPipelines(ctx, "./test_pipelines/complex_one.fp")
 	assert.Nil(err, "error found")
 	assert.NotNil(pipelines)
 	assert.NotNil(pipelines["local.pipeline.complex_one"])

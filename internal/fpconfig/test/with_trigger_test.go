@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/misc"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 func TestPipelineWithTrigger(t *testing.T) {
@@ -16,7 +16,7 @@ func TestPipelineWithTrigger(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	pipelines, triggers, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/with_trigger.fp")
+	pipelines, triggers, err := misc.LoadPipelines(ctx, "./test_pipelines/with_trigger.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -105,7 +105,7 @@ func TestPipelineWithTriggerSelf(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	_, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/with_trigger_self.fp")
+	_, _, err := misc.LoadPipelines(ctx, "./test_pipelines/with_trigger_self.fp")
 	assert.Nil(err, "error found")
 }
 
@@ -115,7 +115,7 @@ func TestBadTriggerConfig(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 
-	_, _, err := pipeparser.LoadPipelines(ctx, "./test_pipelines/invalid_trigger.fp")
+	_, _, err := misc.LoadPipelines(ctx, "./test_pipelines/invalid_trigger.fp")
 	assert.NotNil(err, "should have some errors")
 
 	assert.Contains(err.Error(), "Failed to decode all mod hcl files:\nMissing required argument: The argument \"pipeline\" is required, but no definition was found.")

@@ -7,10 +7,10 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/constants"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
-	"github.com/turbot/flowpipe/pipeparser/filepaths"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/filepaths"
 )
 
 func main() {

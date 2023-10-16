@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type PipelineStepFinished struct {

@@ -9,7 +9,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
 func TriggerCmd(ctx context.Context) (*cobra.Command, error) {

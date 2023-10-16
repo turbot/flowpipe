@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/pipe-fittings/misc"
 )
 
 func TestDuplicatePipelines(t *testing.T) {
 	assert := assert.New(t)
 
-	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/duplicate_pipelines.fp")
+	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/duplicate_pipelines.fp")
 
 	if err == nil {
 		assert.Fail("expected error not found")

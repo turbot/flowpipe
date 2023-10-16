@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineFinished struct {

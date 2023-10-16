@@ -13,8 +13,8 @@ import (
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
 func PipelineCmd(ctx context.Context) (*cobra.Command, error) {

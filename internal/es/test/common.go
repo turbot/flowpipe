@@ -10,7 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type FlowpipeTestSuite struct {

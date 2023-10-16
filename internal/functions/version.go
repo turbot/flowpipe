@@ -13,7 +13,7 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/runtime"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 type Version struct {

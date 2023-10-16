@@ -3,8 +3,8 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineStepQueued struct {

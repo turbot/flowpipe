@@ -8,14 +8,14 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/pipeparser/cmdconfig"
-	"github.com/turbot/flowpipe/pipeparser/constants"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/modinstaller"
-	"github.com/turbot/flowpipe/pipeparser/parse"
-	"github.com/turbot/flowpipe/pipeparser/utils"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/modinstaller"
+	"github.com/turbot/pipe-fittings/parse"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 // mod management commands

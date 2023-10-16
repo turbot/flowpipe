@@ -8,7 +8,7 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func NodeID(port string) (string, error) {

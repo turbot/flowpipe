@@ -2,8 +2,8 @@ package execution
 
 import (
 	"github.com/turbot/flowpipe/internal/es/db"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*modconfig.Pipeline, error) {

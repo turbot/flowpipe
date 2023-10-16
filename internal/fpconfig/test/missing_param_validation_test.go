@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/pipe-fittings/misc"
 )
 
 func TestMissingParamValidation(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/missing_param_validation.fp")
+	pipelines, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/missing_param_validation.fp")
 	assert.Nil(err, "error found")
 
 	validateMyParam := pipelines["local.pipeline.missing_param_validation_test"]
@@ -52,7 +52,7 @@ func TestMissingParamValidation(t *testing.T) {
 func TestMissingParamValidation1(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/param_optional.fp")
+	pipelines, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/param_optional.fp")
 	assert.Nil(err, "error found")
 
 	validateMyParam := pipelines["local.pipeline.test_param_optional"]

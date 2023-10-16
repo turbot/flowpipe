@@ -1,6 +1,6 @@
 package event
 
-import "github.com/turbot/flowpipe/pipeparser/modconfig"
+import "github.com/turbot/pipe-fittings/modconfig"
 
 type PipelineFail struct {
 	// Event metadata

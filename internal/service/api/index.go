@@ -26,8 +26,8 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
 	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/pipeparser/perr"
-	"github.com/turbot/flowpipe/pipeparser/utils"
+	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 // @title Flowpipe

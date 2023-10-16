@@ -2,7 +2,7 @@ package event
 
 import (
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 // PipelineQueued is published when a pipeline is queued

@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type PipelineStepFinish struct {

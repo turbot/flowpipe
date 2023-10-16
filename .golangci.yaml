@@ -5,12 +5,6 @@ run:
     # auto generated code
     - internal/service/api/docs
 
-issues:
-  exclude-rules:
-    - path: pipeparser/utils/user_input.go
-      linters:
-        - forbidigo
-
 linters:
   enable:
     - asasalint

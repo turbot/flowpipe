@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/pipe-fittings/misc"
 )
 
 func TestAllParam(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/all_param.fp")
+	pipelines, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/all_param.fp")
 	assert.Nil(err, "error found")
 
 	pipeline := pipelines["local.pipeline.all_param"]

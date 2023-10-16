@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/parse"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/misc"
+	"github.com/turbot/pipe-fittings/parse"
+	"github.com/turbot/pipe-fittings/perr"
 
 	filehelpers "github.com/turbot/go-kit/files"
 )
@@ -29,7 +29,7 @@ func TestModWithBadTrigger(t *testing.T) {
 			Include: []string{"**/bad_trigger.hcl"},
 		})
 
-	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_trigger.hcl", parseCtx)
+	_, errorsAndWarnings := misc.LoadModWithFileName("./test_mods", "bad_trigger.hcl", parseCtx)
 
 	if errorsAndWarnings != nil && errorsAndWarnings.Error == nil {
 		assert.Fail("should have an error")
@@ -61,7 +61,7 @@ func TestBadStepReference(t *testing.T) {
 			Include: []string{"**/bad_step_reference.hcl"},
 		})
 
-	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_step_reference.hcl", parseCtx)
+	_, errorsAndWarnings := misc.LoadModWithFileName("./test_mods", "bad_step_reference.hcl", parseCtx)
 
 	if errorsAndWarnings == nil && errorsAndWarnings.Error == nil {
 		assert.Fail("should have an error")
@@ -87,7 +87,7 @@ func TestBadStepReferenceTwo(t *testing.T) {
 			Include: []string{"**/bad_step_reference_two.hcl"},
 		})
 
-	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_step_reference_two.hcl", parseCtx)
+	_, errorsAndWarnings := misc.LoadModWithFileName("./test_mods", "bad_step_reference_two.hcl", parseCtx)
 
 	if errorsAndWarnings == nil && errorsAndWarnings.Error == nil {
 		assert.Fail("should have an error")
@@ -113,7 +113,7 @@ func TestBadPipelineReference(t *testing.T) {
 			Include: []string{"**/bad_pipeline_reference.hcl"},
 		})
 
-	_, errorsAndWarnings := pipeparser.LoadModWithFileName("./test_mods", "bad_pipeline_reference.hcl", parseCtx)
+	_, errorsAndWarnings := misc.LoadModWithFileName("./test_mods", "bad_pipeline_reference.hcl", parseCtx)
 
 	if errorsAndWarnings == nil && errorsAndWarnings.Error == nil {
 		assert.Fail("should have an error")

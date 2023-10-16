@@ -16,13 +16,13 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/constants"
-	"github.com/turbot/flowpipe/pipeparser/filepaths"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/perr"
-	"github.com/turbot/flowpipe/pipeparser/utils"
-	"github.com/turbot/flowpipe/pipeparser/workspace"
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/filepaths"
+	"github.com/turbot/pipe-fittings/misc"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/utils"
+	"github.com/turbot/pipe-fittings/workspace"
 )
 
 // Manager manages and represents the status of the service.
@@ -107,7 +107,7 @@ func (m *Manager) Initialize() error {
 	var triggers map[string]*modconfig.Trigger
 	var modInfo *modconfig.Mod
 
-	if pipeparser.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
+	if misc.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
 
@@ -161,7 +161,7 @@ func (m *Manager) Initialize() error {
 		}
 	} else {
 		var err error
-		pipelines, triggers, err = pipeparser.LoadPipelines(m.ctx, pipelineDir)
+		pipelines, triggers, err = misc.LoadPipelines(m.ctx, pipelineDir)
 		if err != nil {
 			return err
 		}

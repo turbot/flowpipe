@@ -1,7 +1,7 @@
 package primitive
 
 import (
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type Primitive interface {

@@ -6,8 +6,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/perr"
-	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 type PipelineStepStarted EventHandler

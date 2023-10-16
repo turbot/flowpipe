@@ -6,7 +6,7 @@ import (
 	"runtime/debug"
 
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type PipelineFailed struct {

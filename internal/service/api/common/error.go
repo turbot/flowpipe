@@ -10,7 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func AbortWithError(c *gin.Context, err error) {

@@ -15,7 +15,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/pipe-fittings/constants"
 )
 
 type FlowpipeLogger struct {

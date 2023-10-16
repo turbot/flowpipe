@@ -6,8 +6,8 @@ import (
 
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/flowpipe/pipeparser/modconfig"
-	"github.com/turbot/flowpipe/pipeparser/schema"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 type Container struct{}

@@ -4,7 +4,7 @@ import (
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/pipeparser/perr"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 // The definition of a single Flowpipe Process

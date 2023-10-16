@@ -22,11 +22,11 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
-	"github.com/turbot/flowpipe/pipeparser/filepaths"
+	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/filepaths"
+	"github.com/turbot/pipe-fittings/misc"
 
-	pcconstants "github.com/turbot/flowpipe/pipeparser/constants"
+	pcconstants "github.com/turbot/pipe-fittings/constants"
 )
 
 // ④ Now use the FooMode enum flag. If you want a non-zero default, then
@@ -140,15 +140,15 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	// set global containing the configured install dir (create directory if needed)
 
 	// load workspace profile from the configured install dir
-	loader, err := pipeparser.LoadWorkspaceProfile(context.TODO())
+	loader, err := misc.LoadWorkspaceProfile(context.TODO())
 	error_helpers.FailOnError(err)
 
 	// set global workspace profile
-	pipeparser.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
+	misc.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
 
 	var cmd = viper.Get(pcconstants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err = pipeparser.BootstrapViper(loader, cmd)
+	err = misc.BootstrapViper(loader, cmd)
 	error_helpers.FailOnError(err)
 
 	installDir := viper.GetString(pcconstants.ArgInstallDir)

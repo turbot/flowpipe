@@ -8,8 +8,8 @@ import (
 	docker "github.com/turbot/flowpipe/internal/docker"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
-	"github.com/turbot/flowpipe/pipeparser/constants"
-	"github.com/turbot/flowpipe/pipeparser/error_helpers"
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
 func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {

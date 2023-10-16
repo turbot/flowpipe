@@ -7,14 +7,14 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/pipeparser"
+	"github.com/turbot/pipe-fittings/misc"
 	"github.com/zclconf/go-cty/cty"
 )
 
 func TestEmailStep(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
+	pipelines, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -49,7 +49,7 @@ func TestEmailStep(t *testing.T) {
 func TestEmailStepWithParam(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
+	pipelines, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -107,7 +107,7 @@ func TestEmailStepWithParam(t *testing.T) {
 func TestEmailStepInvalidPortFormat(t *testing.T) {
 	assert := assert.New(t)
 
-	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_port.fp")
+	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_port.fp")
 	assert.NotNil(err, "error found")
 
 	assert.Contains(err.Error(), "Unable to convert port into integer")
@@ -116,7 +116,7 @@ func TestEmailStepInvalidPortFormat(t *testing.T) {
 func TestEmailStepInvalidRecipient(t *testing.T) {
 	assert := assert.New(t)
 
-	_, _, err := pipeparser.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_recipient.fp")
+	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_recipient.fp")
 	assert.NotNil(err, "error found")
 	assert.Contains(err.Error(), "Bad Request: expected string type, but got number")
 }

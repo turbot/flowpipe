@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/pipeparser/constants"
+	"github.com/turbot/pipe-fittings/constants"
 )
 
 func LoadEventLogEntries(executionID string) ([]types.EventLogEntry, error) {
