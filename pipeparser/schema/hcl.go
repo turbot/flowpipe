@@ -63,6 +63,7 @@ const (
 	BlockTypePipelineStepPipeline  = "pipeline"
 	BlockTypePipelineStepFunction  = "function"
 	BlockTypePipelineStepContainer = "container"
+	BlockTypePipelineStepInput     = "input"
 
 	// error block
 	AttributeTypeIgnore  = "ignore"

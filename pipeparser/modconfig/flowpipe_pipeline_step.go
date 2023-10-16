@@ -259,25 +259,24 @@ type BasicAuthConfig struct {
 	UnresolvedAttributes map[string]hcl.Expression `json:"-"`
 }
 
-func (b *BasicAuthConfig) GetInputs(evalContext *hcl.EvalContext,unresolvedAttributes map[string]hcl.Expression) (*BasicAuthConfig,hcl.Diagnostics) {
-var username,password string
-if unresolvedAttributes[schema.AttributeTypeUsername] != nil {
-	diags := gohcl.DecodeExpression(unresolvedAttributes[schema.AttributeTypeUsername], evalContext, &username)
+func (b *BasicAuthConfig) GetInputs(evalContext *hcl.EvalContext, unresolvedAttributes map[string]hcl.Expression) (*BasicAuthConfig, hcl.Diagnostics) {
+	var username, password string
+	if unresolvedAttributes[schema.AttributeTypeUsername] != nil {
+		diags := gohcl.DecodeExpression(unresolvedAttributes[schema.AttributeTypeUsername], evalContext, &username)
 		if diags.HasErrors() {
 			return nil, diags
 		}
 		b.Username = username
-}
+	}
 	if unresolvedAttributes[schema.AttributeTypePassword] != nil {
-	diags := gohcl.DecodeExpression(unresolvedAttributes[schema.AttributeTypePassword], evalContext, &password)
+		diags := gohcl.DecodeExpression(unresolvedAttributes[schema.AttributeTypePassword], evalContext, &password)
 		if diags.HasErrors() {
 			return nil, diags
 		}
 		b.Password = password
+	}
+	return b, nil
 }
-		return b,nil
-}
-
 
 func (ec *ErrorConfig) Equals(other *ErrorConfig) bool {
 	if ec == nil || other == nil {
@@ -737,7 +736,7 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 	}
 
 	if p.BasicAuthConfig != nil {
-		basicAuth, diags := p.BasicAuthConfig.GetInputs(evalContext,p.UnresolvedAttributes)
+		basicAuth, diags := p.BasicAuthConfig.GetInputs(evalContext, p.UnresolvedAttributes)
 		if diags.HasErrors() {
 			return nil, error_helpers.HclDiagsToError(schema.BlockTypePipelineStep, diags)
 		}
@@ -746,7 +745,7 @@ func (p *PipelineStepHttp) GetInputs(evalContext *hcl.EvalContext) (map[string]i
 		basicAuthMap["Password"] = basicAuth.Password
 		inputs[schema.BlockTypePipelineBasicAuth] = basicAuthMap
 	}
-  inputs[schema.AttributeTypeStepName] = p.Name
+	inputs[schema.AttributeTypeStepName] = p.Name
 
 	return inputs, nil
 }
@@ -920,7 +919,7 @@ func (p *PipelineStepHttp) SetBlockConfig(block hcl.Blocks, evalContext *hcl.Eva
 			if val != cty.NilVal {
 				username, err := hclhelpers.CtyToString(val)
 				if err != nil {
-         diags = append(diags, &hcl.Diagnostic{
+					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to parse " + schema.AttributeTypeUsername + " attribute to string",
 						Subject:  &attr.Range,
@@ -942,7 +941,7 @@ func (p *PipelineStepHttp) SetBlockConfig(block hcl.Blocks, evalContext *hcl.Eva
 			if val != cty.NilVal {
 				password, err := hclhelpers.CtyToString(val)
 				if err != nil {
-         diags = append(diags, &hcl.Diagnostic{
+					diags = append(diags, &hcl.Diagnostic{
 						Severity: hcl.DiagError,
 						Summary:  "Unable to parse " + schema.AttributeTypePassword + " attribute to string",
 						Subject:  &attr.Range,
@@ -958,6 +957,7 @@ func (p *PipelineStepHttp) SetBlockConfig(block hcl.Blocks, evalContext *hcl.Eva
 
 	return nil
 }
+
 type PipelineStepSleep struct {
 	PipelineStepBase
 	Duration string `json:"duration"`
@@ -1992,8 +1992,6 @@ func (p *PipelineStepPipeline) SetAttributes(hclAttributes hcl.Attributes, evalC
 				p.Args = goVals
 			}
 
-
-
 		default:
 			if !p.IsBaseAttribute(name) {
 				diags = append(diags, &hcl.Diagnostic{
@@ -2187,6 +2185,48 @@ func (p *PipelineStepFunction) SetAttributes(hclAttributes hcl.Attributes, evalC
 				}
 				p.Event = events
 			}
+
+		default:
+			if !p.IsBaseAttribute(name) {
+				diags = append(diags, &hcl.Diagnostic{
+					Severity: hcl.DiagError,
+					Summary:  "Unsupported attribute for Function Step: " + attr.Name,
+					Subject:  &attr.Range,
+				})
+			}
+		}
+	}
+
+	return diags
+}
+
+type PipelineStepInput struct {
+	PipelineStepBase
+}
+
+func (p *PipelineStepInput) Equals(iOther IPipelineStep) bool {
+	// If both pointers are nil, they are considered equal
+	if p == nil && iOther == nil {
+		return true
+	}
+
+	_, ok := iOther.(*PipelineStepInput)
+	if !ok {
+		return false
+	}
+
+	return true
+}
+
+func (*PipelineStepInput) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
+	return nil, nil
+}
+
+func (p *PipelineStepInput) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	diags := p.SetBaseAttributes(hclAttributes)
+
+	for name, attr := range hclAttributes {
+		switch name {
 
 		default:
 			if !p.IsBaseAttribute(name) {
