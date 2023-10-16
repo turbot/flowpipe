@@ -88,7 +88,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	hashString := util.CalculateHash(webhookTriggerName, salt.(string))
 
 	if hashString != webhookTriggerHash {
-		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
+		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for webhook "+webhookTriggerName))
 		return
 	}
 
@@ -127,6 +127,11 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		vars[v.GetMetadata().ResourceName] = v.Value
 	}
 
+	// "self" is a magic variable that contains the request headers and request body
+	// of the webhook.
+	//
+	// We need to build eval context because we have to use HCL evaluation to get
+	// the pipeline args
 	executionVariables["self"] = cty.ObjectVal(selfObject)
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 

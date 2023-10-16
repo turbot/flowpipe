@@ -40,3 +40,15 @@ type WebhookRequestQuery struct {
 type PipelineRequestQuery struct {
 	ExecutionMode *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
 }
+
+type InputRequestUri struct {
+	Input string `json:"input" uri:"input" binding:"required"`
+	Hash  string `json:"hash" uri:"hash" binding:"required"`
+}
+
+type InputRequestQuery struct {
+	ExecutionMode       *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
+	ExecutionID         string  `json:"execution_id" form:"execution_id" binding:"omitempty"`
+	PipelineExecutionID string  `json:"pipeline_execution_id" form:"pipeline_execution_id" binding:"omitempty"`
+	StepExecutionID     string  `json:"step_execution_id" form:"step_execution_id" binding:"omitempty"`
+}

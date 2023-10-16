@@ -168,6 +168,10 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				logger.Error("Error publishing event", "error", err)
 			}
 			return
+		} else if stepDefn.GetType() == schema.BlockTypeInput {
+			// If it's an input step, we can't complete the step until the API receives the input's answer
+			logger.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+			return
 		}
 
 		pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
