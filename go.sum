@@ -1022,8 +1022,8 @@ github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5 h1:VaxPXuDe
 github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
 github.com/turbot/go-kit v0.8.1 h1:Su2RFhwiCAlbVXlG5f3w+t/8vpr1YXwfVfAIXlL+Xbc=
 github.com/turbot/go-kit v0.8.1/go.mod h1:AY17SDL/JnVnqUlQIc0Y9mQ2Gbtw0+IwEX4ErywH9bw=
-github.com/turbot/pipe-fittings v0.0.0-20231016133425-ffde2b823be2 h1:pALlYqRXySM3FJILp/jUMJIsFNiH+wSFZwTwvirDy8Y=
-github.com/turbot/pipe-fittings v0.0.0-20231016133425-ffde2b823be2/go.mod h1:Baqd9a04aOKjEyQ4s9nK+ZUBsIJAjrhAszddNbz9pww=
+github.com/turbot/pipe-fittings v0.0.0-20231016141745-1454290725fc h1:51EvxiQRw6Ag1YcoDScjWG1OsRbrDAadtIfGq9C89xY=
+github.com/turbot/pipe-fittings v0.0.0-20231016141745-1454290725fc/go.mod h1:Baqd9a04aOKjEyQ4s9nK+ZUBsIJAjrhAszddNbz9pww=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 h1:B2gkMJK1m5GYQfmxjO9VREAwdUsGxf48vOzKouoyFIM=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2/go.mod h1:u2ubq9W5/5y6wG481LyulS7vuMOTRPmXAUfGLoVmwnA=
 github.com/turbot/terraform-components v0.0.0-20230904000149-70ed428b19d7 h1:YyVvKBa/EuwpRnSsIBct89Dv1AEU6/gBCPC1KZkwI80=

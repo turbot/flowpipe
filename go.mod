@@ -32,7 +32,7 @@ require (
 	github.com/thediveo/enumflag/v2 v2.0.3
 	github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5
 	github.com/turbot/go-kit v0.8.1
-	github.com/turbot/pipe-fittings v0.0.0-20231016133425-ffde2b823be2
+	github.com/turbot/pipe-fittings v0.0.0-20231016141745-1454290725fc
 	github.com/unrolled/secure v1.13.0
 	github.com/zclconf/go-cty v1.14.0
 	gopkg.in/yaml.v2 v2.4.0
