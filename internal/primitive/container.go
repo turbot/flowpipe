@@ -10,6 +10,28 @@ import (
 	"github.com/turbot/flowpipe/pipeparser/schema"
 )
 
+type Input struct{}
+
+func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
+	return nil
+}
+
+func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+	if err := ip.ValidateInput(ctx, input); err != nil {
+		return nil, err
+	}
+
+	o := modconfig.Output{
+		Data: map[string]interface{}{
+			"container_id": "1234",
+			"stdout":       "hello world",
+			"stderr":       "",
+		},
+	}
+
+	return &o, nil
+}
+
 type Container struct{}
 
 func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {

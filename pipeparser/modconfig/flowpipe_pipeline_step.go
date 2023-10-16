@@ -212,6 +212,12 @@ func NewPipelineStep(stepType, stepName string) IPipelineStep {
 		s := &PipelineStepContainer{}
 		s.UnresolvedAttributes = make(map[string]hcl.Expression)
 		step = s
+
+	case schema.BlockTypePipelineStepInput:
+		s := &PipelineStepInput{}
+		s.UnresolvedAttributes = make(map[string]hcl.Expression)
+		step = s
+
 	default:
 		return nil
 	}
@@ -1062,6 +1068,10 @@ func (p *PipelineStepFunction) SetBlockConfig(block hcl.Blocks, evalContext *hcl
 }
 
 func (p *PipelineStepContainer) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
+	return nil
+}
+
+func (p *PipelineStepInput) SetBlockConfig(block hcl.Blocks, evalContext *hcl.EvalContext) hcl.Diagnostics {
 	return nil
 }
 
@@ -2215,7 +2225,7 @@ func (p *PipelineStepInput) Equals(iOther IPipelineStep) bool {
 		return false
 	}
 
-	return true
+	return p.Name == iOther.GetName()
 }
 
 func (*PipelineStepInput) GetInputs(evalContext *hcl.EvalContext) (map[string]interface{}, error) {
