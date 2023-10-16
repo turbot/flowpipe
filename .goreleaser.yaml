@@ -14,7 +14,6 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
 
     # Default: [ '386', 'amd64', 'arm64' ]
     goarch:
