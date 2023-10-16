@@ -45,7 +45,7 @@ pipeline "lambda_example" {
       event       = step.function.transform_input_step.result
 
       env = {
-        "restrictedActions" = var.restricted_actions
+        "restrictedActions" = "s3:DeleteBucket,s3:DeleteObject"
       }
     }
 
@@ -58,7 +58,7 @@ pipeline "lambda_example" {
       event       = step.function.transform_input_step.result
 
       env = {
-        restrictedActions     = var.restricted_actions
+        restrictedActions     = "s3:DeleteBucket,s3:DeleteObject"
         AWS_REGION            = var.aws_region
         AWS_ACCESS_KEY_ID     = var.aws_access_key_id
         AWS_SECRET_ACCESS_KEY = var.aws_secret_access_key
