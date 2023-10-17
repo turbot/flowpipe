@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 type InputType string
@@ -16,38 +15,17 @@ const (
 )
 
 type Input struct {
-	InputType        InputType
-	InputIntegration InputIntegration
-}
-
-func NewInputPrimitive(inputType InputType) (*Input, error) {
-	switch inputType {
-	case InputTypeSlack:
-		return &Input{
-			InputType:        InputTypeSlack,
-			InputIntegration: &InputIntegrationSlack{},
-		}, nil
-	case InputTypeEmail:
-		return &Input{
-			InputType:        InputTypeEmail,
-			InputIntegration: &InputIntegrationEmail{},
-		}, nil
-
-	default:
-		return nil, perr.BadRequestWithMessage("invalid input type: " + string(inputType))
-	}
-
 }
 
 type InputIntegration interface {
-	PostMessage() error
+	PostMessage(modconfig.Input) error
 	ReceiveMessage() (*modconfig.Output, error)
 }
 
 type InputIntegrationSlack struct {
 }
 
-func (*InputIntegrationSlack) PostMessage() error {
+func (*InputIntegrationSlack) PostMessage(modconfig.Input) error {
 	return nil
 }
 
@@ -58,7 +36,7 @@ func (*InputIntegrationSlack) ReceiveMessage() (*modconfig.Output, error) {
 type InputIntegrationEmail struct {
 }
 
-func (*InputIntegrationEmail) PostMessage() error {
+func (*InputIntegrationEmail) PostMessage(modconfig.Input) error {
 	return nil
 }
 
@@ -76,12 +54,20 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	}
 
 	// This is where the actual work is done to setup the approval stuff in slack
+	inputType := input["type"].(InputType)
 
-	o := modconfig.Output{
-		Data: map[string]interface{}{},
+	var err error
+	switch inputType {
+	case InputTypeSlack:
+		slack := InputIntegrationSlack{}
+		err = slack.PostMessage(input)
+
+	case InputTypeEmail:
+		email := InputIntegrationEmail{}
+		err = email.PostMessage(input)
 	}
 
-	return &o, nil
+	return &modconfig.Output{}, err
 }
 
 func (ip *Input) ProcessOutput(ctx context.Context, requestBody []byte) (*modconfig.Output, error) {
