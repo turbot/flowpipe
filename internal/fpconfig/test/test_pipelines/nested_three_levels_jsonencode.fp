@@ -20,10 +20,6 @@ pipeline "top" {
     output "val" {
         value = step.echo.combine.text
     }
-
-    output "val_two" {
-        value = step.pipeline.middle.val_two
-    }
 }
 
 pipeline "middle" {
