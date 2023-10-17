@@ -11,6 +11,9 @@ run-test-mod-functions:
 run-demo:
 	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/integrated2023_functions_and_containers_mod --functions --log-dir ./tmp --output-dir ./tmp
 
+run-demo-v2:
+	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/integrated2023_week2 --functions --log-dir ./tmp --output-dir ./tmp
+
 run-pipeline:
 	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/pipelines
 
