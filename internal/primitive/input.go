@@ -56,6 +56,8 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		return nil, err
 	}
 
+	return &modconfig.Output{}, nil
+
 	// This is where the actual work is done to setup the approval stuff in slack
 	inputType := input["type"].(InputType)
 
