@@ -154,6 +154,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						schema.AttributeKey:       cty.StringVal(k),
 					}
 				}
+			} else {
+				err := perr.BadRequestWithMessage("for_each must be a list, set, tuple, map or object for step " + stepDefn.GetName())
+				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
 		}
 
@@ -173,7 +176,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		// now resolve the inputs, if there's no for_each then there's just one input
-		if len(forEachCtyVals) == 0 {
+		if stepForEach == nil {
 
 			calculateInput := true
 
@@ -210,10 +213,15 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				inputs["0"] = stepInputs
 			} else {
 				// If we're to skip the next step, then we need to add a dummy input
-				// TODO: do we?
 				inputs["0"] = map[string]interface{}{}
 			}
-		} else {
+		} else if len(forEachCtyVals) == 0 {
+
+			forEachNextStepAction["0"] = modconfig.NextStepActionSkip
+			// If we're to skip the next step, then we need to add a dummy input
+			inputs["0"] = map[string]interface{}{}
+
+		} else if len(forEachCtyVals) > 0 {
 
 			// We have for_each!
 			for k, v := range forEachCtyVals {
