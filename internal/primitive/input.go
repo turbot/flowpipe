@@ -15,6 +15,9 @@ const (
 )
 
 type Input struct {
+	ExecutionID         string
+	PipelineExecutionID string
+	StepExecutionID     string
 }
 
 type InputIntegration interface {

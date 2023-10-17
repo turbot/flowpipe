@@ -104,7 +104,11 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			p := primitive.Container{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepInput:
-			p := primitive.Input{}
+			p := primitive.Input{
+				ExecutionID:         cmd.Event.ExecutionID,
+				PipelineExecutionID: cmd.PipelineExecutionID,
+				StepExecutionID:     cmd.StepExecutionID,
+			}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			logger.Error("Unknown step type", "type", stepDefn.GetType())
