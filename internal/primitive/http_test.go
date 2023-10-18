@@ -349,6 +349,9 @@ func TestHTTPMethodPUT(t *testing.T) {
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
 		schema.AttributeTypeMethod: modconfig.HttpMethodPut,
+		schema.AttributeTypeRequestHeaders: map[string]interface{}{
+			"Content-Type": "application/json",
+		},
 		schema.AttributeTypeRequestBody: `{
 				"id": 1,
 				"title": "foo",
@@ -420,6 +423,9 @@ func TestHTTPMethodPATCH(t *testing.T) {
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
 		schema.AttributeTypeMethod: modconfig.HttpMethodPatch,
+		schema.AttributeTypeRequestHeaders: map[string]interface{}{
+			"Content-Type": "application/json",
+		},
 		schema.AttributeTypeRequestBody: `{
 			"title": "foo",
 			"body": "Updating the body of the target resource"
