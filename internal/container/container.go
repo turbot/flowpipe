@@ -17,10 +17,11 @@ import (
 type Container struct {
 
 	// Configuration
-	Name  string            `json:"name"`
-	Image string            `json:"image"`
-	Cmd   []string          `json:"cmd"`
-	Env   map[string]string `json:"env"`
+	Name       string            `json:"name"`
+	Image      string            `json:"image"`
+	Cmd        []string          `json:"cmd"`
+	Env        map[string]string `json:"env"`
+	EntryPoint []string          `json:"entrypoint"`
 
 	// Runtime information
 	CreatedAt   *time.Time               `json:"created_at,omitempty"`
@@ -77,7 +78,8 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 		Cmd:       []string{},
 		Env:       map[string]string{},
 		Runs:      map[string]*ContainerRun{},
-		//ImageExists: true,
+		// ImageExists: true,
+		EntryPoint: []string{},
 	}
 
 	for _, option := range options {
@@ -94,7 +96,7 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 }
 
 func (c *Container) GetEnv() []string {
-	env := []string{}
+	var env []string
 	for k, v := range c.Env {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
@@ -178,8 +180,9 @@ func (c *Container) Run() (string, error) {
 
 	// Create a container using the specified image
 	createConfig := container.Config{
-		Image: c.Image,
-		Cmd:   c.Cmd,
+		Image:      c.Image,
+		Cmd:        c.Cmd,
+		Entrypoint: c.EntryPoint,
 		Labels: map[string]string{
 			// Set on the container since it's not on the image
 			"io.flowpipe.type": "container",
