@@ -157,7 +157,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		common.AbortWithError(c, err)
 	}
 
-	c.JSON(http.StatusOK, "{}")
+	c.JSON(http.StatusOK, "Bye bye...")
 }
 
 func (api *APIService) runInputGet(c *gin.Context) {
