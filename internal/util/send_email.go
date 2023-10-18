@@ -16,17 +16,17 @@ import (
 func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 
 	// Read sender credential
-	senderEmail := input[schema.AttributeTypeFrom].(string)
-	senderCredential := input[schema.AttributeTypeSenderCredential].(string)
-	host := input[schema.AttributeTypeHost].(string)
+	senderEmail := input[schema.AttributeTypeUsername].(string)
+	senderCredential := input[schema.AttributeTypePassword].(string)
+	host := input[schema.AttributeTypeSmtpServer].(string)
 	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
 
 	// Convert port into integer
 	var portInt int64
-	if port, ok := input[schema.AttributeTypePort].(float64); ok {
+	if port, ok := input[schema.AttributeTypeSmtpPort].(float64); ok {
 		portInt = int64(port)
 	}
-	if port, ok := input[schema.AttributeTypePort].(int64); ok {
+	if port, ok := input[schema.AttributeTypeSmtpPort].(int64); ok {
 		portInt = port
 	}
 

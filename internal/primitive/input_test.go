@@ -53,14 +53,16 @@ func TestIntegrationInputSendEmail(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		"type":                               InputTypeEmail,
-		schema.AttributeTypeSenderName:       "Karan",
-		schema.AttributeTypeFrom:             "karan@turbot.com",
-		schema.AttributeTypeSenderCredential: "ynej zopm efce ziur",
-		schema.AttributeTypeHost:             "smtp.gmail.com",
-		schema.AttributeTypePort:             int64(587),
-		schema.AttributeTypeTo:               []string{"karan@turbot.com"},
-		schema.AttributeTypeSubject:          "Flowpipe mail test",
+		// schema.AttributeTypeSenderName: "Karan",
+
+		schema.AttributeTypeType:       InputTypeEmail,
+		schema.AttributeTypeUsername:   "karan@turbot.com",
+		schema.AttributeTypePassword:   "ynej zopm efce ziur",
+		schema.AttributeTypeSmtpServer: "smtp.gmail.com",
+
+		// schema.AttributeTypePort:    int64(587),
+		// schema.AttributeTypeTo:      []string{"karan@turbot.com"},
+		// schema.AttributeTypeSubject: "Flowpipe mail test",
 	})
 
 	_, err := hr.Run(context.Background(), input)
