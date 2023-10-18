@@ -114,6 +114,13 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		// }
 
 		logger.Debug("stepOutput", "stepOutput", &output)
+	} else {
+		stepOutput, err = input.ProcessOutput(c, inputType, nil)
+		if err != nil {
+			logger.Error("error processing output", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
 	}
 
 	evt := &event.Event{
