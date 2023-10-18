@@ -51,4 +51,5 @@ type InputRequestQuery struct {
 	ExecutionID         string  `json:"execution_id" form:"execution_id" binding:"omitempty"`
 	PipelineExecutionID string  `json:"pipeline_execution_id" form:"pipeline_execution_id" binding:"omitempty"`
 	StepExecutionID     string  `json:"step_execution_id" form:"step_execution_id" binding:"omitempty"`
+	Value               string  `json:"value" form:"value"`
 }

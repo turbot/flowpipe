@@ -24,7 +24,7 @@ import (
 func (api *APIService) InputRegisterAPI(router *gin.RouterGroup) {
 	// router.POST("/input/:input/:hash", api.runInputPost)
 	router.POST("/input/slack/:input/:hash", api.runSlackInputPost)
-	router.GET("/input/:input/:hash", api.runInputGet)
+	router.GET("/input/email/:input/:hash", api.runInputEmailGet)
 }
 
 type JSONPayload struct {
@@ -43,10 +43,10 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		return
 	}
 
-	// input := primitive.Input{}
+	input := primitive.Input{}
 	var stepOutput *modconfig.Output
 
-	if c.Request.Body != nil {
+	if c.Request.Body != nil && inputType == primitive.InputTypeSlack {
 		var err error
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -79,6 +79,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		var decodedText JSONPayload
 		err = json.Unmarshal(rawDecodedText, &decodedText)
+		stepOutput, err = input.ProcessOutput(c, inputType, bodyBytes)
 		if err != nil {
 			common.AbortWithError(c, err)
 			return
@@ -113,6 +114,13 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		// }
 
 		logger.Debug("stepOutput", "stepOutput", &output)
+	} else {
+		stepOutput, err = input.ProcessOutput(c, inputType, nil)
+		if err != nil {
+			logger.Error("error processing output", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
 	}
 
 	evt := &event.Event{
@@ -156,11 +164,9 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
-
-	c.JSON(http.StatusOK, "Bye bye...")
 }
 
-func (api *APIService) runInputGet(c *gin.Context) {
+func (api *APIService) runInputEmailGet(c *gin.Context) {
 	logger := fplog.Logger(api.ctx)
 
 	inputUri := types.InputRequestUri{}
@@ -201,6 +207,12 @@ func (api *APIService) runInputGet(c *gin.Context) {
 	}
 
 	api.runPipeline(c, primitive.InputTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+
+	// c.HTML(http.StatusOK, "index.html", gin.H{
+	// 	"pageTitle": "Hello World",
+	// })
+
+	c.JSON(http.StatusOK, "Thanks for input")
 }
 
 func (api *APIService) runSlackInputPost(c *gin.Context) {
@@ -244,4 +256,18 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 
 	api.runPipeline(c, primitive.InputTypeSlack, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+
+	c.JSON(http.StatusOK, "Bye bye...")
 }
+
+// func renderTemplate(c *gin.Context, tmpl string, data gin.H) {
+// 	t, err := template.New(tmpl).ParseFiles("templates/" + tmpl)
+// 	if err != nil {
+// 		c.String(http.StatusInternalServerError, "Internal server error")
+// 		return
+// 	}
+
+// 	if err := t.Execute(c.Writer, data); err != nil {
+// 		c.String(http.StatusInternalServerError, "Internal server error")
+// 	}
+// }
