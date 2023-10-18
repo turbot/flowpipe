@@ -64,11 +64,19 @@ func (ip *InputIntegrationSlack) PostMessage(input modconfig.Input) error {
 
 	var attachment slack.Attachment
 
-	// TODO: add validation for the slack type and prompt
 	slackType := input[schema.AttributeTypeSlackType].(string)
 	prompt := input[schema.AttributeTypePrompt].(string)
 
-	options := []string{"Approve", "Reject", "Ignore"}
+	// Get the options
+	var options []string
+	if _, ok := input[schema.AttributeTypeOptions].([]string); ok {
+		options = input[schema.AttributeTypeOptions].([]string)
+	}
+	if _, ok := input[schema.AttributeTypeOptions].([]interface{}); ok {
+		for _, v := range input[schema.AttributeTypeOptions].([]interface{}) {
+			options = append(options, v.(string))
+		}
+	}
 
 	// Check for the prompt
 	if slackType == "button" {
@@ -227,6 +235,23 @@ func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 		}
 		if _, ok := i[schema.AttributeTypeSlackType].(string); !ok {
 			return perr.BadRequestWithMessage("Slack input slack type must be a string")
+		}
+
+		// Validate the options
+		var options []string
+		if i[schema.AttributeTypeOptions] == nil {
+			return perr.BadRequestWithMessage("Slack input options must define options")
+		}
+		if _, ok := i[schema.AttributeTypeOptions].([]string); ok {
+			options = i[schema.AttributeTypeOptions].([]string)
+		}
+		if _, ok := i[schema.AttributeTypeOptions].([]interface{}); ok {
+			for _, v := range i[schema.AttributeTypeOptions].([]interface{}) {
+				options = append(options, v.(string))
+			}
+		}
+		if len(options) == 0 {
+			return perr.BadRequestWithMessage("Slack input options must have at least one option")
 		}
 	case string(InputTypeEmail):
 	}
