@@ -1,0 +1,302 @@
+[{
+    "Key": "AdditionalSecurityGroup",
+    "UsePreviousValue": true
+}, {
+    "Key": "AdditionalSecurityGroupForLoadBalancer",
+    "UsePreviousValue": true
+}, {
+    "Key": "AllowSelfSignedCertificate",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiDesiredScale",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiEventsScaleDownCpuThresholdValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiEventsScaleDownThresholdValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiEventsScaleUpCpuThresholdValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiEventsScaleUpThresholdValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiEventsScalingMetrics",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiGatewayWorkspaceRegularExpression",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiMaxScaling",
+    "UsePreviousValue": true
+}, {
+    "Key": "ApiMinScaling",
+    "UsePreviousValue": true
+}, {
+    "Key": "AuditTrailRetentionDays",
+    "UsePreviousValue": true
+}, {
+    "Key": "AutoScalingTargetCPU",
+    "UsePreviousValue": true
+}, {
+    "Key": "CreateApiGateway",
+    "UsePreviousValue": true
+}, {
+    "Key": "CustomApiServiceSecurityGroup",
+    "UsePreviousValue": true
+}, {
+    "Key": "CustomLoadBalancerSecurityGroup",
+    "UsePreviousValue": true
+}, {
+    "Key": "CustomModUpload",
+    "UsePreviousValue": true
+}, {
+    "Key": "CustomOutboundInternetSecurityGroup",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabaseSubnet1Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabaseSubnet2Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabaseSubnet3Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "DevelopmentMode",
+    "UsePreviousValue": true
+}, {
+    "Key": "EBSVolumeSize",
+    "UsePreviousValue": true
+}, {
+    "Key": "EBSVolumeType",
+    "UsePreviousValue": true
+}, {
+    "Key": "ECSAMI",
+    "UsePreviousValue": true
+}, {
+    "Key": "ECSFactoryTaskHardLimit",
+    "UsePreviousValue": true
+}, {
+    "Key": "ECSFactoryTaskSoftLimit",
+    "UsePreviousValue": true
+}, {
+    "Key": "ECSMaxInstanceCount",
+    "UsePreviousValue": true
+}, {
+    "Key": "ECSMinInstanceCount",
+    "UsePreviousValue": true
+}, {
+    "Key": "EventContainerDesiredScale",
+    "UsePreviousValue": true
+}, {
+    "Key": "EventContainerMaxScaling",
+    "UsePreviousValue": true
+}, {
+    "Key": "EventContainerMinScaling",
+    "UsePreviousValue": true
+}, {
+    "Key": "EventsDlqLambdaReservedConcurrency",
+    "UsePreviousValue": true
+}, {
+    "Key": "ExperimentalFeatures",
+    "UsePreviousValue": true
+}, {
+    "Key": "Flags",
+    "UsePreviousValue": true
+}, {
+    "Key": "HttpProxy",
+    "UsePreviousValue": true
+}, {
+    "Key": "HttpsProxy",
+    "UsePreviousValue": true
+}, {
+    "Key": "InboundTrafficCidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "InstallationDomain",
+    "UsePreviousValue": true
+}, {
+    "Key": "InstanceType",
+    "UsePreviousValue": true
+}, {
+    "Key": "LambdaRuntime",
+    "UsePreviousValue": true
+}, {
+    "Key": "LambdaTriggerConcurrencySetting",
+    "UsePreviousValue": true
+}, {
+    "Key": "LdapServerCidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "LicenseKey",
+    "UsePreviousValue": true
+}, {
+    "Key": "LoadBalancerScheme",
+    "UsePreviousValue": true
+}, {
+    "Key": "LogBucketName",
+    "UsePreviousValue": true
+}, {
+    "Key": "LogRetentionDays",
+    "UsePreviousValue": true
+}, {
+    "Key": "ManagedRoute53",
+    "UsePreviousValue": true
+}, {
+    "Key": "MaxEc2InstanceLifetimeInSec",
+    "UsePreviousValue": true
+}, {
+    "Key": "ModInstallDataRetentionDays",
+    "UsePreviousValue": true
+}, {
+    "Key": "ModLambdaMaxMemory",
+    "UsePreviousValue": true
+}, {
+    "Key": "ModLambdaMaxTimeout",
+    "UsePreviousValue": true
+}, {
+    "Key": "ModsCleanup",
+    "UsePreviousValue": true
+}, {
+    "Key": "NatGatewayHighAvailability",
+    "UsePreviousValue": true
+}, {
+    "Key": "NoProxy",
+    "UsePreviousValue": true
+}, {
+    "Key": "OSGuardrails",
+    "UsePreviousValue": true
+}, {
+    "Key": "ParameterDeploymentTrigger",
+    "UsePreviousValue": true
+}, {
+    "Key": "PredefinedDatabaseSubnetIds",
+    "UsePreviousValue": true
+}, {
+    "Key": "PredefinedPublicSubnetIds",
+    "UsePreviousValue": true
+}, {
+    "Key": "PredefinedTurbotSubnetIds",
+    "UsePreviousValue": true
+}, {
+    "Key": "PredefinedVpcId",
+    "UsePreviousValue": true
+}, {
+    "Key": "ProcessLogBucketName",
+    "UsePreviousValue": true
+}, {
+    "Key": "ProcessLogFallbackBucket",
+    "UsePreviousValue": true
+}, {
+    "Key": "ProcessLogRetentionInDays",
+    "UsePreviousValue": true
+}, {
+    "Key": "PublicSubnet1Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "PublicSubnet2Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "PublicSubnet3Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "RegionCode",
+    "UsePreviousValue": true
+}, {
+    "Key": "ReleasePhase",
+    "UsePreviousValue": true
+}, {
+    "Key": "ResourceNamePrefix",
+    "UsePreviousValue": true
+}, {
+    "Key": "RoleCreationScheme",
+    "UsePreviousValue": true
+}, {
+    "Key": "S3BucketArnRoleArn",
+    "UsePreviousValue": true
+}, {
+    "Key": "SecurityPolicy",
+    "UsePreviousValue": true
+}, {
+    "Key": "SmtpPort",
+    "UsePreviousValue": true
+}, {
+    "Key": "SslPolicy",
+    "UsePreviousValue": true
+}, {
+    "Key": "TEFKmsKey",
+    "UsePreviousValue": true
+}, {
+    "Key": "TurbotCertificateArn",
+    "UsePreviousValue": true
+}, {
+    "Key": "TurbotParametersRoleArn",
+    "UsePreviousValue": true
+}, {
+    "Key": "TurbotSubnet1Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "TurbotSubnet2Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "TurbotSubnet3Cidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "UseElastiCache",
+    "UsePreviousValue": true
+}, {
+    "Key": "UseSelfSignedCertificateInALB",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcAlphaCidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcAlphaRegion",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcBetaCidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcBetaId",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcBetaRegion",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcEndpointToAwsServices",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcGammaCidr",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcGammaId",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcGammaRegion",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcPeeringAlphaToBetaId",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcPeeringAlphaToGammaId",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcPeeringBetaToGammaId",
+    "UsePreviousValue": true
+}, {
+    "Key": "WorkerEventsTickLambdaReservedConcurrency",
+    "UsePreviousValue": true
+}, {
+    "Key": "WorkerFactoryLambdaReservedConcurrency",
+    "UsePreviousValue": true
+}, {
+    "Key": "WorkerLambdaMaxDBConnections",
+    "UsePreviousValue": true
+}, {
+    "Key": "WorkerLambdaMemorySize",
+    "UsePreviousValue": true
+}]
+

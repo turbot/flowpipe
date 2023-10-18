@@ -1,0 +1,295 @@
+[
+    {
+        "Key": "AdditionalSecurityGroupForLoadBalancerSsmValue",
+        "Value": "/helix/enterprise/additional_security_group_for_load_balancer"
+    },
+    {
+        "Key": "AllowSelfSignedCertificateSsmValue",
+        "Value": "/helix/enterprise/allow_self_signed_certificate"
+    },
+    {
+        "Key": "AlphaRegionSsmValue",
+        "Value": "/helix/enterprise/alpha_region"
+    },
+    {
+        "Key": "APIContainerReplicaMaxDBConnections",
+        "Value": "50"
+    },
+    {
+        "Key": "ApiDesiredScaleSsmValue",
+        "Value": "/helix/enterprise/api_desired_scale"
+    },
+    {
+        "Key": "ApiEventsScaleDownCpuSsmValue",
+        "Value": "/helix/enterprise/api_events_cpu_scale_down_threshold_value"
+    },
+    {
+        "Key": "ApiEventsScaleDownSsmValue",
+        "Value": "/helix/enterprise/api_events_scale_down_threshold_value"
+    },
+    {
+        "Key": "ApiEventsScaleUpCpuSsmValue",
+        "Value": "/helix/enterprise/api_events_cpu_scale_up_threshold_value"
+    },
+    {
+        "Key": "ApiEventsScaleUpSsmValue",
+        "Value": "/helix/enterprise/api_events_scale_up_threshold_value"
+    },
+    {
+        "Key": "ApiEventsScalingMetricsSsmValue",
+        "Value": "/helix/enterprise/api_events_scaling_metrics_value"
+    },
+    {
+        "Key": "ApiMaxScalingSsmValue",
+        "Value": "/helix/enterprise/api_max_scale"
+    },
+    {
+        "Key": "ApiMinScalingSsmValue",
+        "Value": "/helix/enterprise/api_min_scale"
+    },
+    {
+        "Key": "CertificateArnSsmValue",
+        "Value": "/helix/enterprise/certificate_arn"
+    },
+    {
+        "Key": "CustomModUploadSsmValue",
+        "Value": "/helix/enterprise/custom_mod_upload"
+    },
+    {
+        "Key": "DatabaseSecurityGroupSsmValue",
+        "Value": "/helix/enterprise/db_security_group"
+    },
+    {
+        "Key": "ECSContainersState",
+        "Value": "Running"
+    },
+    {
+        "Key": "ECSFactoryTaskHardLimit",
+        "Value": "0"
+    },
+    {
+        "Key": "ECSFactoryTaskHardLimitSsmValue",
+        "Value": "/helix/enterprise/ecs_factory_task_hard_limit_value"
+    },
+    {
+        "Key": "ECSFactoryTaskSoftLimit",
+        "Value": "0"
+    },
+    {
+        "Key": "ECSFactoryTaskSoftLimitSsmValue",
+        "Value": "/helix/enterprise/ecs_factory_task_soft_limit_value"
+    },
+    {
+        "Key": "EventContainerDesiredScaleSsmValue",
+        "Value": "/helix/enterprise/event_container_desired_scale"
+    },
+    {
+        "Key": "EventContainerMaxScalingSsmValue",
+        "Value": "/helix/enterprise/event_container_max_scale"
+    },
+    {
+        "Key": "EventContainerMinScalingSsmValue",
+        "Value": "/helix/enterprise/event_container_min_scale"
+    },
+    {
+        "Key": "EventsDlqLambdaReservedConcurrency",
+        "Value": "3"
+    },
+    {
+        "Key": "EventsDlqLambdaReservedConcurrencySsmValue",
+        "Value": "/helix/enterprise/events_dlq_lambda_reserved_concurrency"
+    },
+    {
+        "Key": "EventsDlqMessageBatch",
+        "Value": "1"
+    },
+    {
+        "Key": "TurbotCertificateArn",
+        "Value": ""
+    },
+    {
+        "Key": "TurbotApplicationSubnetIds",
+        "Value": ""
+    },
+    {
+        "Key": "TurbotLoadBalancerSubnetIds",
+        "Value": ""
+    },
+    {
+        "Key": "EventsRetryCount",
+        "Value": "3"
+    },
+    {
+        "Key": "FlagsSsmValue",
+        "Value": "/helix/enterprise/flags"
+    },
+    {
+        "Key": "HttpProxySsmValue",
+        "Value": "/helix/enterprise/http_proxy"
+    },
+    {
+        "Key": "HttpsProxySsmValue",
+        "Value": "/helix/enterprise/https_proxy"
+    },
+    {
+        "Key": "InboundTrafficCidrSsmValue",
+        "Value": "/helix/enterprise/load_balancer_inbound_cidr"
+    },
+    {
+        "Key": "InstallationDomainSsmValue",
+        "Value": "/helix/enterprise/installation_domain"
+    },
+    {
+        "Key": "KeyAliasSsmValue",
+        "Value": "/helix/enterprise/transient_key_alias"
+    },
+    {
+        "Key": "LambdaRuntimeSsmValue",
+        "Value": "/helix/enterprise/lambda_runtime"
+    },
+    {
+        "Key": "LambdaTriggerConcurrencySettingSsmValue",
+        "Value": "/helix/enterprise/lambda_trigger_concurrency"
+    },
+    {
+        "Key": "LoadBalancerSchemeSsmValue",
+        "Value": "/helix/enterprise/load_balancer_scheme"
+    },
+    {
+        "Key": "LoadBalancerSecurityGroupSsmValue",
+        "Value": "/helix/enterprise/load_balancer_security_group"
+    },
+    {
+        "Key": "LoadbalancerSubnetIdsSsmValue",
+        "Value": "/helix/enterprise/loadbalancer_subnets"
+    },
+    {
+        "Key": "LogBucketSsmValue",
+        "Value": "/helix/enterprise/log_bucket"
+    },
+    {
+        "Key": "LogRetentionDaysSsmValue",
+        "Value": "/helix/enterprise/log_retention_days"
+    },
+    {
+        "Key": "ManagedRoute53SsmValue",
+        "Value": "/helix/enterprise/managed_route53"
+    },
+    {
+        "Key": "ModLambdaMaxMemory",
+        "Value": "0"
+    },
+    {
+        "Key": "ModLambdaMaxMemorySsmValue",
+        "Value": "/helix/enterprise/mod_lambda_max_memory"
+    },
+    {
+        "Key": "ModLambdaMaxTimeout",
+        "Value": "0"
+    },
+    {
+        "Key": "ModLambdaMaxTimeoutSsmValue",
+        "Value": "/helix/enterprise/mod_lambda_max_timeout"
+    },
+    {
+        "Key": "ModsCleanupSsmValue",
+        "Value": "/helix/enterprise/mods_cleanup"
+    },
+    {
+        "Key": "NoProxySsmValue",
+        "Value": "/helix/enterprise/no_proxy"
+    },
+    {
+        "Key": "OSGuardrailsSsmValue",
+        "Value": "/helix/enterprise/os_guardrails"
+    },
+    {
+        "Key": "OutboundInternetSecurityGroupSsmValue",
+        "Value": "/helix/enterprise/outbound_internet_security_group"
+    },
+    {
+        "Key": "ParameterDeploymentTrigger",
+        "Value": "Green"
+    },
+    {
+        "Key": "ProcessLogFallbackBucketSsmValue",
+        "Value": "/helix/enterprise/process_log_fallback_bucket_name"
+    },
+    {
+        "Key": "RegionsSsmValue",
+        "Value": "/helix/enterprise/regions"
+    },
+    {
+        "Key": "ReleasePhase",
+        "Value": "development"
+    },
+    {
+        "Key": "ResourceNamePrefix",
+        "Value": "helix"
+    },
+    {
+        "Key": "RoleCreationScheme",
+        "Value": "All"
+    },
+    {
+        "Key": "SslPolicySsmValue",
+        "Value": "/helix/enterprise/ssl_policy_for_alb_listener"
+    },
+    {
+        "Key": "TurbotSubnetIdsSsmValue",
+        "Value": "/helix/enterprise/turbot_subnets"
+    },
+    {
+        "Key": "TurbotVpcSsmValue",
+        "Value": "/helix/enterprise/vpc"
+    },
+    {
+        "Key": "UseCustomOutboundInternetSecurityGroup",
+        "Value": "/helix/enterprise/use_custom_outbound_internet_security_group"
+    },
+    {
+        "Key": "WorkerEventsTickLambdaReservedConcurrency",
+        "Value": "0"
+    },
+    {
+        "Key": "WorkerEventsTickLambdaReservedConcurrencySsmValue",
+        "Value": "/helix/enterprise/worker_events_tick_lambda_reserved_concurrency"
+    },
+    {
+        "Key": "WorkerFactoryLambdaReservedConcurrency",
+        "Value": "0"
+    },
+    {
+        "Key": "WorkerFactoryLambdaReservedConcurrencySsmValue",
+        "Value": "/helix/enterprise/worker_factory_lambda_reserved_concurrency"
+    },
+    {
+        "Key": "WorkerLambdaMaxDBConnectionsSsmValue",
+        "Value": "/helix/enterprise/worker_lambda_max_db_connections"
+    },
+    {
+        "Key": "WorkerLambdaMemorySizeSsmValue",
+        "Value": "/helix/enterprise/worker_lambda_memory_size"
+    },
+    {
+        "Key": "WorkerLambdaReservedConcurrencySsmValue",
+        "Value": "/helix/enterprise/worker_lambda_reserved_concurrency"
+    },
+    {
+        "Key": "WorkerPriorityLambdaReservedConcurrencySsmValue",
+        "Value": "/helix/enterprise/worker_priority_lambda_reserved_concurrency"
+    },
+    {
+        "Key": "WorkerLambdaTimeoutSsmValue",
+        "Value": "/helix/enterprise/worker_lambda_timeout"
+    },
+    {
+        "Key": "WorkerRetryLambdaReservedConcurrencySsmValue",
+        "Value": "/helix/enterprise/worker_retry_lambda_reserved_concurrency"
+    },
+    {
+        "Key": "WorkerLambdaMessageBatchSsmValue",
+        "Value": "/helix/enterprise/worker_lambda_message_batch"
+    }
+]
+

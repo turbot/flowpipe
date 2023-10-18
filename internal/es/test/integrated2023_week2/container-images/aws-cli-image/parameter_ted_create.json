@@ -1,0 +1,206 @@
+[{
+    "Key": "AddHiveBucketPolicy",
+    "Value": "true"
+}, {
+    "Key": "AllocatedIops",
+    "Value": "1000"
+}, {
+    "Key": "AllocatedStorage",
+    "Value": "1000"
+}, {
+    "Key": "AllowMajorVersionUpgrade",
+    "Value": "true"
+}, {
+    "Key": "AuditTrailLogGroupNameFormat",
+    "Value": "dynamic"
+}, {
+    "Key": "AuditTrailRetentionDays",
+    "Value": ""
+}, {
+    "Key": "AuditTrailRetentionDaysValue",
+    "Value": "/helix/enterprise/audit_trail_retention_days"
+}, {
+    "Key": "AutomatedBackupPlanRoleArn",
+    "Value": ""
+}, {
+    "Key": "BackupRetentionPeriod",
+    "Value": "1"
+}, {
+    "Key": "BackupVaultNameFormat",
+    "Value": "dynamic"
+}, {
+    "Key": "CacheNodeType",
+    "Value": "cache.t3.small"
+}, {
+    "Key": "CacheNumberOfNodes",
+    "Value": "1"
+}, {
+    "Key": "CopyTagsToSnapshot",
+    "Value": "true"
+}, {
+    "Key": "DailyAutomatedBackup",
+    "Value": "0"
+}, {
+    "Key": "DatabaseMaintenanceWindow",
+    "Value": ""
+}, {
+    "Key": "DatabasePrimaryEndpoint",
+    "Value": ""
+}, {
+    "Key": "DatabaseSubnetGroup",
+    "Value": ""
+}, {
+    "Key": "DatabaseSubnetGroupValue",
+    "Value": "/helix/enterprise/db_subnet_group"
+}, {
+    "Key": "DeadlockTimeout",
+    "Value": "2000"
+}, {
+    "Key": "DeleteAutomatedBackups",
+    "Value": "false"
+}, {
+    "Key": "DeletionProtection",
+    "Value": "false"
+}, {
+    "Key": "ElastiCacheVersion",
+    "Value": "7.0"
+}, {
+    "Key": "EnableMultiAZ",
+    "Value": "false"
+}, {
+    "Key": "EncryptDatabase",
+    "Value": "Hive CMK"
+}, {
+    "Key": "Engine",
+    "Value": "postgres"
+}, {
+    "Key": "EngineFamily",
+    "Value": "postgres12"
+}, {
+    "Key": "EngineVersion",
+    "Value": "12.12"
+}, {
+    "Key": "FailoverInstance",
+    "Value": "false"
+}, {
+    "Key": "FoundationAlphaRegion",
+    "Value": "/helix/enterprise/alpha_region"
+}, {
+    "Key": "FoundationDynamicBucketName",
+    "Value": "/helix/enterprise/dynamic_bucket_name"
+}, {
+    "Key": "FoundationLogBucketNameFormat",
+    "Value": "/helix/enterprise/log_bucket_name_format"
+}, {
+    "Key": "HiveDevelopmentCommands",
+    "Value": "{}"
+}, {
+    "Key": "HiveName",
+    "Value": "turbie10"
+}, {
+    "Key": "HiveRDSParamGroup",
+    "Value": "HiveParamGroup02"
+}, {
+    "Key": "IdleInTransactionSessionTimeout",
+    "Value": "900000"
+}, {
+    "Key": "InstanceClass",
+    "Value": "db.t3.small"
+}, {
+    "Key": "KeyAliasSsmValue",
+    "Value": "/helix/enterprise/foundation_key_alias"
+}, {
+    "Key": "KMSKeyForPerformanceInsights",
+    "Value": "c4491824-4bc4-4e74-8465-e05267c304d8"
+}, {
+    "Key": "LogMinDurationStatement",
+    "Value": "2000"
+}, {
+    "Key": "LogRetentionPeriod",
+    "Value": "10080"
+}, {
+    "Key": "LogStatement",
+    "Value": "ddl"
+}, {
+    "Key": "MasterPassword",
+    "Value": ""
+}, {
+    "Key": "MasterUsername",
+    "Value": "master"
+}, {
+    "Key": "MaxAllocatedStorage",
+    "Value": "0"
+}, {
+    "Key": "MaxConnections",
+    "Value": "600"
+}, {
+    "Key": "MaxConnectionsAlarmThreshold",
+    "Value": "500"
+}, {
+    "Key": "MonthlyAutomatedBackup",
+    "Value": "0"
+}, {
+    "Key": "ParameterDeploymentTrigger",
+    "Value": "Blue"
+}, {
+    "Key": "PerformanceInsights",
+    "Value": "true"
+}, {
+    "Key": "PrimaryRegion",
+    "Value": "ap-southeast-1"
+}, {
+    "Key": "ProcessLogInHiveBucketRetentionDays",
+    "Value": "395"
+}, {
+    "Key": "RdsAdminLoggingLevel",
+    "Value": "disabled"
+}, {
+    "Key": "ReadReplicaEngineVersion",
+    "Value": "12.7"
+}, {
+    "Key": "ReadReplicaInstance",
+    "Value": "false"
+}, {
+    "Key": "RedisEncryptionKey",
+    "Value": "Hive CMK"
+}, {
+    "Key": "ReplicaInstanceClass",
+    "Value": "Same as Primary DB"
+}, {
+    "Key": "ResourceNamePrefix",
+    "Value": "helix"
+}, {
+    "Key": "SharedBuffer",
+    "Value": "{DBInstanceClassMemory/32768}"
+}, {
+    "Key": "StatementTimeout",
+    "Value": "60000"
+}, {
+    "Key": "StorageThroughput",
+    "Value": "125"
+}, {
+    "Key": "StorageType",
+    "Value": "gp2"
+}, {
+    "Key": "TrackFunction",
+    "Value": "none"
+}, {
+    "Key": "UseElastiCache",
+    "Value": "false"
+}, {
+    "Key": "UseIAMAuth",
+    "Value": "true"
+}, {
+    "Key": "VpcSecurityGroups",
+    "Value": ""
+}, {
+    "Key": "VpcSecurityGroupsValue",
+    "Value": "/helix/enterprise/db_security_group"
+}, {
+    "Key": "WalKeepSize",
+    "Value": "2048"
+}, {
+    "Key": "WeeklyAutomatedBackup",
+    "Value": "0"
+}]
+

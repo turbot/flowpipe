@@ -4,18 +4,18 @@ variable "token" {
   default     = "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"
 }
 
-# variable "aws_access_key_id" {
-#   type        = string
-#   description = "AWS Access Key ID"
-# }
+variable "aws_access_key_id" {
+  type        = string
+  description = "AWS Access Key ID"
+}
 
-# variable "aws_secret_access_key" {
-#   type        = string
-#   description = "AWS Secret Access Key"
-# }
+variable "aws_secret_access_key" {
+  type        = string
+  description = "AWS Secret Access Key"
+}
 
-# param "iam_policy_restricted_actions" {
-#   description = "The IAM policy actions to restrict"
-#   type        = string
-#   default     = "s3:DeleteBucket,s3:DeleteObject"
-# }
+variable "aws_region" {
+  description = "The IAM policy actions to restrict"
+  type        = string
+  default     = "ap-southeast-1"
+}

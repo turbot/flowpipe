@@ -1,0 +1,206 @@
+[{
+    "Key": "AddHiveBucketPolicy",
+    "UsePreviousValue": true
+}, {
+    "Key": "AllocatedIops",
+    "UsePreviousValue": true
+}, {
+    "Key": "AllocatedStorage",
+    "UsePreviousValue": true
+}, {
+    "Key": "AllowMajorVersionUpgrade",
+    "UsePreviousValue": true
+}, {
+    "Key": "AuditTrailLogGroupNameFormat",
+    "UsePreviousValue": true
+}, {
+    "Key": "AuditTrailRetentionDays",
+    "UsePreviousValue": true
+}, {
+    "Key": "AuditTrailRetentionDaysValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "AutomatedBackupPlanRoleArn",
+    "UsePreviousValue": true
+}, {
+    "Key": "BackupRetentionPeriod",
+    "UsePreviousValue": true
+}, {
+    "Key": "BackupVaultNameFormat",
+    "UsePreviousValue": true
+}, {
+    "Key": "CacheNodeType",
+    "UsePreviousValue": true
+}, {
+    "Key": "CacheNumberOfNodes",
+    "UsePreviousValue": true
+}, {
+    "Key": "CopyTagsToSnapshot",
+    "UsePreviousValue": true
+}, {
+    "Key": "DailyAutomatedBackup",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabaseMaintenanceWindow",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabasePrimaryEndpoint",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabaseSubnetGroup",
+    "UsePreviousValue": true
+}, {
+    "Key": "DatabaseSubnetGroupValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "DeadlockTimeout",
+    "UsePreviousValue": true
+}, {
+    "Key": "DeleteAutomatedBackups",
+    "UsePreviousValue": true
+}, {
+    "Key": "DeletionProtection",
+    "UsePreviousValue": true
+}, {
+    "Key": "ElastiCacheVersion",
+    "UsePreviousValue": true
+}, {
+    "Key": "EnableMultiAZ",
+    "UsePreviousValue": true
+}, {
+    "Key": "EncryptDatabase",
+    "UsePreviousValue": true
+}, {
+    "Key": "Engine",
+    "UsePreviousValue": true
+}, {
+    "Key": "EngineFamily",
+    "UsePreviousValue": true
+}, {
+    "Key": "EngineVersion",
+    "UsePreviousValue": true
+}, {
+    "Key": "FailoverInstance",
+    "UsePreviousValue": true
+}, {
+    "Key": "FoundationAlphaRegion",
+    "UsePreviousValue": true
+}, {
+    "Key": "FoundationDynamicBucketName",
+    "UsePreviousValue": true
+}, {
+    "Key": "FoundationLogBucketNameFormat",
+    "UsePreviousValue": true
+}, {
+    "Key": "HiveDevelopmentCommands",
+    "UsePreviousValue": true
+}, {
+    "Key": "HiveName",
+    "UsePreviousValue": true
+}, {
+    "Key": "HiveRDSParamGroup",
+    "UsePreviousValue": true
+}, {
+    "Key": "IdleInTransactionSessionTimeout",
+    "UsePreviousValue": true
+}, {
+    "Key": "InstanceClass",
+    "UsePreviousValue": true
+}, {
+    "Key": "KeyAliasSsmValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "KMSKeyForPerformanceInsights",
+    "UsePreviousValue": true
+}, {
+    "Key": "LogMinDurationStatement",
+    "UsePreviousValue": true
+}, {
+    "Key": "LogRetentionPeriod",
+    "UsePreviousValue": true
+}, {
+    "Key": "LogStatement",
+    "UsePreviousValue": true
+}, {
+    "Key": "MasterPassword",
+    "UsePreviousValue": true
+}, {
+    "Key": "MasterUsername",
+    "UsePreviousValue": true
+}, {
+    "Key": "MaxAllocatedStorage",
+    "UsePreviousValue": true
+}, {
+    "Key": "MaxConnections",
+    "UsePreviousValue": true
+}, {
+    "Key": "MaxConnectionsAlarmThreshold",
+    "UsePreviousValue": true
+}, {
+    "Key": "MonthlyAutomatedBackup",
+    "UsePreviousValue": true
+}, {
+    "Key": "ParameterDeploymentTrigger",
+    "UsePreviousValue": true
+}, {
+    "Key": "PerformanceInsights",
+    "UsePreviousValue": true
+}, {
+    "Key": "PrimaryRegion",
+    "UsePreviousValue": true
+}, {
+    "Key": "ProcessLogInHiveBucketRetentionDays",
+    "UsePreviousValue": true
+}, {
+    "Key": "RdsAdminLoggingLevel",
+    "UsePreviousValue": true
+}, {
+    "Key": "ReadReplicaEngineVersion",
+    "UsePreviousValue": true
+}, {
+    "Key": "ReadReplicaInstance",
+    "UsePreviousValue": true
+}, {
+    "Key": "RedisEncryptionKey",
+    "UsePreviousValue": true
+}, {
+    "Key": "ReplicaInstanceClass",
+    "UsePreviousValue": true
+}, {
+    "Key": "ResourceNamePrefix",
+    "UsePreviousValue": true
+}, {
+    "Key": "SharedBuffer",
+    "UsePreviousValue": true
+}, {
+    "Key": "StatementTimeout",
+    "UsePreviousValue": true
+}, {
+    "Key": "StorageThroughput",
+    "UsePreviousValue": true
+}, {
+    "Key": "StorageType",
+    "UsePreviousValue": true
+}, {
+    "Key": "TrackFunction",
+    "UsePreviousValue": true
+}, {
+    "Key": "UseElastiCache",
+    "UsePreviousValue": true
+}, {
+    "Key": "UseIAMAuth",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcSecurityGroups",
+    "UsePreviousValue": true
+}, {
+    "Key": "VpcSecurityGroupsValue",
+    "UsePreviousValue": true
+}, {
+    "Key": "WalKeepSize",
+    "UsePreviousValue": true
+}, {
+    "Key": "WeeklyAutomatedBackup",
+    "UsePreviousValue": true
+}]
+
