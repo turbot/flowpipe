@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -46,6 +47,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 	var stepOutput *modconfig.Output
 
 	if c.Request.Body != nil && inputType == primitive.InputTypeSlack {
+		var prompt, userName string
 		var err error
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
@@ -60,7 +62,9 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		}
 
 		decodedValue = decodedValue[8:]
-		logger.Info("decodedValue", "decodedValue>>>>>", decodedValue)
+
+		// TODO: Remove this log
+		// logger.Info("decodedValue", "decodedValue>>>>>", decodedValue)
 
 		var bodyJSON map[string]interface{}
 		err = json.Unmarshal([]byte(decodedValue), &bodyJSON)
@@ -92,6 +96,23 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		stepExecutionID = decodedText.StepExecutionID
 		executionID = decodedText.ExecutionID
 
+		// TODO: Refactor to extract the prompt in a better way
+		if bodyJSON["original_message"] != nil {
+			originMessage := bodyJSON["original_message"].(map[string]interface{})
+			if originMessage != nil {
+				attachments := originMessage["attachments"].([]interface{})
+				for _, attachment := range attachments {
+					prompt = attachment.(map[string]interface{})["text"].(string)
+					break
+				}
+			}
+		}
+
+		if bodyJSON["user"] != nil {
+			userData := bodyJSON["user"].(map[string]interface{})
+			userName = userData["name"].(string)
+		}
+
 		var value interface{}
 		if bodyJSON["actions"] != nil {
 			for _, action := range bodyJSON["actions"].([]interface{}) {
@@ -117,6 +138,8 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		// }
 
 		logger.Debug("stepOutput", "stepOutput", &output)
+
+		c.JSON(http.StatusOK, fmt.Sprintf("%s %s has selected %v", prompt, userName, value))
 	} else {
 		input := primitive.Input{}
 		stepOutput, err = input.ProcessOutput(c, inputType, nil)
@@ -261,7 +284,7 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 
 	api.runPipeline(c, primitive.InputTypeSlack, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
 
-	c.JSON(http.StatusOK, "Bye bye...")
+	// c.JSON(http.StatusOK, "Bye bye...")
 }
 
 // func renderTemplate(c *gin.Context, tmpl string, data gin.H) {
