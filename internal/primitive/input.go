@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -182,10 +184,37 @@ func (*InputIntegrationSlack) ReceiveMessage(ctx context.Context, requestBody []
 }
 
 type InputIntegrationEmail struct {
+	InputIntegrationBase
 }
 
-func (*InputIntegrationEmail) PostMessage(modconfig.Input) error {
-	return nil
+func (i *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, input modconfig.Input) error {
+	return util.ValidateEmailInput(ctx, input)
+}
+
+func (i *InputIntegrationEmail) PostMessage(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+
+	body := fmt.Sprintf(`
+To review the details and provide your approval, please click on a link below:
+
+Select to approve: %s/api/v0/approve/hash?execution_id=%s&step_execution_id=%s
+
+Select to reject: %s/api/v0/reject/hash?execution_id=%s&step_execution_id=%s
+
+Your prompt response is greatly appreciated.
+
+Best regards,
+Karan
+SD
+Turbot
+		`, input[schema.AttributeTypeResponseUrl], i.ExecutionID, i.StepExecutionID, input[schema.AttributeTypeResponseUrl], i.ExecutionID, i.StepExecutionID)
+
+	input[schema.AttributeTypeBody] = body
+	// Validate the inputs
+	if err := i.ValidateInputIntegrationEmail(ctx, input); err != nil {
+		return nil, err
+	}
+
+	return util.RunSendEmail(ctx, input)
 }
 
 func (*InputIntegrationEmail) ReceiveMessage() (*modconfig.Output, error) {
@@ -268,6 +297,7 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	inputType := input["type"].(string)
 
 	var err error
+	var output *modconfig.Output
 	switch inputType {
 	case string(InputTypeSlack):
 		slack := InputIntegrationSlack{
@@ -280,11 +310,17 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		err = slack.PostMessage(input)
 
 	case string(InputTypeEmail):
-		email := InputIntegrationEmail{}
-		err = email.PostMessage(input)
+		email := InputIntegrationEmail{
+			InputIntegrationBase: InputIntegrationBase{
+				ExecutionID:         ip.ExecutionID,
+				PipelineExecutionID: ip.PipelineExecutionID,
+				StepExecutionID:     ip.StepExecutionID,
+			},
+		}
+		output, err = email.PostMessage(ctx, input)
 	}
 
-	return &modconfig.Output{}, err
+	return output, err
 }
 
 func (ip *Input) ProcessOutput(ctx context.Context, inputType InputType, requestBody []byte) (*modconfig.Output, error) {
