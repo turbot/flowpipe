@@ -451,8 +451,6 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	// This is where the actual work is done to setup the approval stuff in slack
 	inputType := input["type"].(string)
 
-	var err error
-	var output *modconfig.Output
 	switch inputType {
 	case string(InputTypeSlack):
 		slack := InputIntegrationSlack{
@@ -462,7 +460,8 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 				StepExecutionID:     ip.StepExecutionID,
 			},
 		}
-		err = slack.PostMessage(input)
+		err := slack.PostMessage(input)
+		return &modconfig.Output{}, err
 
 	case string(InputTypeEmail):
 		email := InputIntegrationEmail{
@@ -472,10 +471,10 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 				StepExecutionID:     ip.StepExecutionID,
 			},
 		}
-		output, err = email.PostMessage(ctx, input)
+		output, err := email.PostMessage(ctx, input)
+		return output, err
 	}
-
-	return output, err
+	return nil, nil
 }
 
 func (ip *Input) ProcessOutput(c *gin.Context, inputType InputType, requestBody []byte) (*modconfig.Output, error) {

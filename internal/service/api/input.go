@@ -43,7 +43,6 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		return
 	}
 
-	input := primitive.Input{}
 	var stepOutput *modconfig.Output
 
 	if c.Request.Body != nil && inputType == primitive.InputTypeSlack {
@@ -119,6 +118,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		logger.Debug("stepOutput", "stepOutput", &output)
 	} else {
+		input := primitive.Input{}
 		stepOutput, err = input.ProcessOutput(c, inputType, nil)
 		if err != nil {
 			logger.Error("error processing output", "error", err)

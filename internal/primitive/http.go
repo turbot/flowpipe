@@ -243,33 +243,46 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 		requestHeaders["Authorization"] = "Basic " + encodeString
 	}
 
-	// Get the request body
-	requestBody := input[schema.AttributeTypeRequestBody]
-	if requestBody != nil {
-		// Try to unmarshal the request body into JSON
-		var requestBodyJSON map[string]interface{}
-		unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
-		if unmarshalErr != nil {
-			// If unmarshaling fails, assume it's a plain string
-			requestBodyJSON = nil
+	contentType := ""
 
-			// Set the request body as a string
-			inputParams.RequestBody = requestBody.(string)
-
-			// Also, set the content type header to plain text
-			requestHeaders["Content-Type"] = "text/plain"
-		}
-
-		// If the request body is a JSON object
-		if requestBodyJSON != nil {
-			// Set the JSON encoding of the request body
-			requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
-			inputParams.RequestBody = string(requestBodyJSONBytes)
-
-			// Also, set the content type header to application/json
-			requestHeaders["Content-Type"] = "application/json"
-		}
+	if requestHeaders["Content-Type"] != nil {
+		contentType = requestHeaders["Content-Type"].(string)
 	}
+
+	requestBody := input[schema.AttributeTypeRequestBody]
+
+	if strings.Contains(contentType, "application/json") && requestBody != nil {
+		// Get the request body
+
+		if requestBody != nil {
+			// Try to unmarshal the request body into JSON
+			var requestBodyJSON map[string]interface{}
+			unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
+			if unmarshalErr != nil {
+				// If unmarshaling fails, assume it's a plain string
+				requestBodyJSON = nil
+
+				// Set the request body as a string
+				inputParams.RequestBody = requestBody.(string)
+
+				// Also, set the content type header to plain text
+				requestHeaders["Content-Type"] = "text/plain"
+			}
+
+			// If the request body is a JSON object
+			if requestBodyJSON != nil {
+				// Set the JSON encoding of the request body
+				requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
+				inputParams.RequestBody = string(requestBodyJSONBytes)
+
+				// Also, set the content type header to application/json
+				requestHeaders["Content-Type"] = "application/json"
+			}
+		}
+	} else if requestBody != nil {
+		inputParams.RequestBody = requestBody.(string)
+	}
+
 	inputParams.RequestHeaders = requestHeaders
 
 	return inputParams, nil

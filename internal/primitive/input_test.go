@@ -57,7 +57,7 @@ func TestIntegrationInputSendEmail(t *testing.T) {
 
 		schema.AttributeTypeType:       InputTypeEmail,
 		schema.AttributeTypeUsername:   "karan@turbot.com",
-		schema.AttributeTypePassword:   "ynej zopm efce ziur",
+		schema.AttributeTypePassword:   "xxxxxx",
 		schema.AttributeTypeSmtpServer: "smtp.gmail.com",
 
 		// schema.AttributeTypePort:    int64(587),

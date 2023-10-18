@@ -15,7 +15,10 @@ func TestAllParam(t *testing.T) {
 	assert.Nil(err, "error found")
 
 	pipeline := pipelines["local.pipeline.all_param"]
-	assert.NotNil(pipeline)
+	if pipeline == nil {
+		assert.Fail("Pipeline not found")
+		return
+	}
 
 	// all steps must have unresolved attributes
 	for _, step := range pipeline.Steps {

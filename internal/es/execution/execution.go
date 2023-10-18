@@ -92,7 +92,11 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 			return nil, perr.BadRequestWithMessage("invalid pipeline name: " + p.Name())
 		}
 
-		pipelineMap[parts[2]] = p.AsCtyValue()
+		pCty, err := p.CtyValue()
+		if err != nil {
+			return nil, err
+		}
+		pipelineMap[parts[2]] = pCty
 	}
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)

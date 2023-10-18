@@ -1,4 +1,4 @@
-// usage: flowpipe pipeline run create_list --pipeline-arg board_id="BOARD_ID" --pipeline-arg list_name="LIST_NAME"
+// usage: flowpipe pipeline run input_send_email
 pipeline "input_send_email" {
 
   param "email_to" {
@@ -11,7 +11,7 @@ pipeline "input_send_email" {
   }
   param "sender_credential" {
     type    = string
-    default = "ynej zopm efce ziur"
+    default = "xxx"
   }
   param "email_host" {
     type    = string
@@ -31,27 +31,21 @@ pipeline "input_send_email" {
   }
   param "response_url" {
     type    = string
-    default = "https://c74a-103-4-88-14.ngrok-free.app"
+    default = "https://4d0c-103-4-88-14.ngrok-free.app"
   }
 
   step "input" "test_email" {
     type = "email"
 
-    username     = "karan@turbot.com"
-    password     = "ynej zopm efce ziur"
-    smtp_server  = "smtp.gmail.com"
-    smtp_port    = 587
-    response_url = "https://c74a-103-4-88-14.ngrok-free.app"
-    sender_name  = "Karan"
-    // username     = param.email_from
-    // password     = param.sender_credential
-    // smtp_server  = param.email_host
-    // smtp_port    = param.email_port
-    // response_url = param.response_url
-    // sender_name  = param.sender_name
+    username     = param.email_from
+    password     = param.sender_credential
+    smtp_server  = param.email_host
+    smtp_port    = param.email_port
+    response_url = param.response_url
+    sender_name  = param.sender_name
 
-    to      = ["karan@turbot.com"]
-    subject = "Flowpipe Approval"
+    to      = ["${param.email_to}"]
+    subject = param.subject
     options = ["approve", "reject"]
 
     //   options = [
