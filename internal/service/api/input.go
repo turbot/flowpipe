@@ -79,11 +79,15 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		var decodedText JSONPayload
 		err = json.Unmarshal(rawDecodedText, &decodedText)
-		stepOutput, err = input.ProcessOutput(c, inputType, bodyBytes)
 		if err != nil {
 			common.AbortWithError(c, err)
 			return
 		}
+		// stepOutput, err = input.ProcessOutput(c, inputType, bodyBytes)
+		// if err != nil {
+		// 	common.AbortWithError(c, err)
+		// 	return
+		// }
 
 		pipelineExecutionID = decodedText.PipelineExecutionID
 		stepExecutionID = decodedText.StepExecutionID
