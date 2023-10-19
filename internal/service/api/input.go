@@ -118,7 +118,6 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		pipelineExecutionID = decodedText.PipelineExecutionID
 		stepExecutionID = decodedText.StepExecutionID
-		executionID = decodedText.ExecutionID
 
 		// TODO: Refactor to extract the prompt in a better way
 		if bodyJSON["original_message"] != nil {
