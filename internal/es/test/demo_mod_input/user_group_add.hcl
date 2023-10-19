@@ -1,5 +1,13 @@
 
 
+integration "slack" "my_slack_app" {
+  token           = var.slack_token
+
+  # optional - if you want to verify the source
+  #signing_secret  = "Q#$$#@#$$#W"
+}
+
+
 pipeline "user_group_add" {
 
   param "username" {
@@ -21,11 +29,15 @@ pipeline "user_group_add" {
 
   step "input" "approval" {
     type       = "slack"
-    token      = var.slack_token
-    channel    = "#mantix_test"  #"DFL73HHHB"    #"DF8SL4GR5"
+    channel    = "#mantix_test"
     slack_type = "button"
     prompt     = "User ${param.username} has requested to be added to the ${param.group} group. Do you want to approve?"
     options    = ["Approve","Deny"]
+
+    notify {
+      integration = integration.slack.my_slack_app
+    #  channel    = "#mantix_test"
+    }
   }
 
   step "container" "add_user_to_group" {
@@ -58,6 +70,11 @@ pipeline "user_group_add" {
   output "after" {
     value = jsondecode(step.container.after.stdout)
   }
+
+  output "approved" {
+    value = step.input.approval.value == "Approve"
+  }
+
 }
 
 

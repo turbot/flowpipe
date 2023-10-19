@@ -9,4 +9,16 @@ echo $NG_URL/api/v0$FP_URL
 
 
 
-FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ~/src/int2023_week2/demo_mod/ --functions
+
+```bash
+FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/demo_mod_input --functions  --log-dir ./tmp --output-dir ./tmp
+```
+
+/api/v0/input/slack/foo.bar.z/2342342343
+
+
+https://console.aws.amazon.com/console/home
+
+pikachu-aaa
+
+

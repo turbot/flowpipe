@@ -1,4 +1,20 @@
 
+// integration "email" "email_integration" {
+//   // smtp_host = "foo bar baz"
+//   // default_subject = "bar foo baz"
+//   // smtp_username = "baz bar foo"
+
+//   username     = var.smtp_username
+//   password     = var.smtp_password
+//   smtp_server  = var.smtp_server
+//   smtp_port    = var.smtp_port
+//   sender_name  = var.smtp_from
+//   response_url = var.response_url
+
+// }
+
+
+
 pipeline "user_group_remove" {
 
   param "username" {
@@ -11,6 +27,11 @@ pipeline "user_group_remove" {
     description = "The group that the user should be removed from"
   }
 
+  param "auto_approve" {
+    default     = false
+    description = "By default, the request will be routed for approval.  Set to true to skip the approval step."
+  }
+
   step "container" "before" {
     image = "amazon/aws-cli"
     cmd  = ["iam", "list-groups-for-user", "--user-name", param.username]
@@ -18,6 +39,7 @@ pipeline "user_group_remove" {
   }
 
   step "input" "approval" {
+    if           = param.auto_approve == false
     type         = "email"
     to           = ["john@turbot.com"]
     subject      = "Approval Requested"
@@ -30,20 +52,17 @@ pipeline "user_group_remove" {
     smtp_port    = var.smtp_port
     sender_name  = var.smtp_from
     response_url = var.response_url
-    
+      
+    // notify {
+    //   integration = integration.email.email_integration
+    //   #to           = ["john@turbot.com"]
+    //   #subject      = "Approval Requested"
+    // }
+
   }
 
-  // step "input" "approval" {
-  //   type       = "slack"
-  //   token      = var.slack_token
-  //   channel    = "#mantix_test"  #"DFL73HHHB"    #"DF8SL4GR5"
-  //   slack_type = "button"
-  //   prompt     = "User ${param.username} has requested to be removed from the ${param.group} group. Do you want to approve?"
-  //   options    = ["Approve","Deny"]
-  // }
-
   step "container" "remove_user_from_group" {
-    if          = step.input.approval.value == "Approve"
+    if          = param.auto_approve || try(step.input.approval.value == "Approve",false)
     depends_on  = [step.container.before]
     description = "Run the AWS cli command to remove the user"
     image       = "amazon/aws-cli"
