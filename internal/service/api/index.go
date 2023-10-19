@@ -212,6 +212,9 @@ func (api *APIService) Start() error {
 
 	// Single Page App must catch all routes that are not found, it
 	// handles them in a client side router.
+
+	router.Static("templates", "./templates")
+	router.LoadHTMLGlob("templates/*.html")
 	router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method
