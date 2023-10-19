@@ -160,7 +160,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		logger.Debug("stepOutput", "stepOutput", &output)
 
-		c.JSON(http.StatusOK, fmt.Sprintf("%s %s has selected %v", prompt, userName, value))
+		c.String(http.StatusOK, fmt.Sprintf("%s %s has selected \"%v\"", prompt, userName, value))
 	} else {
 		input := primitive.Input{}
 		stepOutput, err = input.ProcessOutput(c, inputType, nil)
