@@ -167,13 +167,16 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	response := types.PipelineExecutionResponse{
-		"flowpipe": map[string]interface{}{
-			"execution_id":          pipelineCmd.Event.ExecutionID,
-			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-		},
-	}
-	c.JSON(http.StatusOK, response)
+	// response := types.PipelineExecutionResponse{
+	// 	"flowpipe": map[string]interface{}{
+	// 		"execution_id":          pipelineCmd.Event.ExecutionID,
+	// 		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+	// 	},
+	// }
+
+	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+	c.String(http.StatusOK, "")
 }
 
 func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue) {
@@ -243,10 +246,14 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		response = map[string]interface{}{}
 	}
 
-	response["flowpipe"] = map[string]interface{}{
-		"execution_id":          pipelineCmd.Event.ExecutionID,
-		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-	}
+	// response["flowpipe"] = map[string]interface{}{
+	// 	"execution_id":          pipelineCmd.Event.ExecutionID,
+	// 	"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+	// }
 
-	c.JSON(http.StatusOK, response)
+	// c.JSON(http.StatusOK, response)
+
+	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+	c.String(http.StatusOK, "")
 }

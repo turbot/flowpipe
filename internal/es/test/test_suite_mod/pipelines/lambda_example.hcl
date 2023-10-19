@@ -4,7 +4,8 @@ trigger "http" "http_trigger_to_iam_policy_validation" {
     args     = {
       body   = self.request_body
       headers = self.request_headers
-      event = jsondecode(jsondecode(self.request_body).Message)
+      event = self.request_body
+      // event = jsondecode(jsondecode(self.request_body).Message)
     }
 }
 
