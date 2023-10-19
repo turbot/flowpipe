@@ -97,6 +97,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	cache.InMemoryInitialize(nil)
 
 	m, err := manager.NewManager(ctx)
+	suite.manager = m
 
 	if err != nil {
 		panic(err)
@@ -513,6 +514,19 @@ func (suite *ModTestSuite) TestForEach() {
 
 	if pex.Status != "failed" {
 		assert.Fail("Pipeline should have failed")
+		return
+	}
+}
+
+func (suite *ModTestSuite) TestIntegrations() {
+	assert := assert.New(suite.T())
+
+	rootMod := suite.manager.RootMod
+	assert.NotNil(rootMod)
+
+	integrations := rootMod.ResourceMaps.Integrations["foo"]
+	if integrations == nil {
+		assert.Fail("Integration foo not found")
 		return
 	}
 }

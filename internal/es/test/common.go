@@ -9,12 +9,14 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type FlowpipeTestSuite struct {
 	esService *es.ESService
+	manager   *manager.Manager
 	ctx       context.Context
 }
 

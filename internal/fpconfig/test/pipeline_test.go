@@ -240,7 +240,7 @@ func TestLoadPipelineInvalidDepends(t *testing.T) {
 	assert.NotNil(err, "error not found")
 
 	// TODO: need to improve the error here, need more context? sub-code?
-	assert.Contains(err.Error(), "Failed to decode all mod hcl files:\ninvalid depends_on 'http.my_step_1' - step 'sleep.sleep_1' does not exist for pipeline local.pipeline.invalid_depends")
+	assert.Contains(err.Error(), "Failed to decode mod:\ninvalid depends_on 'http.my_step_1' - step 'sleep.sleep_1' does not exist for pipeline local.pipeline.invalid_depends")
 }
 
 func TestMarshallUnmarshal(t *testing.T) {

@@ -447,6 +447,21 @@ func (suite *FpTestSuite) TestModVariable() {
 
 }
 
+func (suite *FpTestSuite) TestModMissingVariable() {
+	assert := assert.New(suite.T())
+	_, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_missing_var", []string{".hcl", ".sp"})
+	assert.NotNil(errorAndWarning.Error)
+	assert.Contains(errorAndWarning.Error.Error(), "Unresolved blocks:\n   integration.slack.slack_app_from_var -> var.slack_signing_secret\n     MISSING: var.slack_signing_secret")
+}
+
+// TODO: trigger does not support unresolved variables
+func (suite *FpTestSuite) XTestModMissingVariableTrigger() {
+	assert := assert.New(suite.T())
+	_, errorAndWarning := workspace.LoadWithParams(suite.ctx, "./mod_missing_var_trigger", []string{".hcl", ".sp"})
+	assert.NotNil(errorAndWarning.Error)
+	assert.Contains(errorAndWarning.Error.Error(), "Unresolved blocks:\n   integration.slack.slack_app_from_var -> var.slack_signing_secret\n     MISSING: var.slack_signing_secret")
+}
+
 // In order for 'go test' to run this suite, we need to create
 // a normal test function and pass our suite to suite.Run
 func TestFpTestSuite(t *testing.T) {

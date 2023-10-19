@@ -8,3 +8,6 @@ var_depend_a_two = "I come from the land of flowpipe.vars"
 slack_token = "foo"
 
 signing_secret = "bar"
+
+smtp_username  = "flowpipe_smtp_user"
+// slack_signing_secret = "xxx123"

@@ -118,5 +118,5 @@ func TestBadTriggerConfig(t *testing.T) {
 	_, _, err := misc.LoadPipelines(ctx, "./test_pipelines/invalid_trigger.fp")
 	assert.NotNil(err, "should have some errors")
 
-	assert.Contains(err.Error(), "Failed to decode all mod hcl files:\nMissing required argument: The argument \"pipeline\" is required, but no definition was found.")
+	assert.Contains(err.Error(), "Failed to decode mod:\nMissing required argument: The argument \"pipeline\" is required, but no definition was found.")
 }
