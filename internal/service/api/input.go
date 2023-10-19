@@ -34,17 +34,41 @@ type JSONPayload struct {
 	ExecutionID         string `json:"execution_id"`
 }
 
-func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType, executionID, pipelineExecutionID, stepExecutionID string) *modconfig.Output {
+func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType, executionID, pipelineExecutionID, stepExecutionID string) {
 	logger := fplog.Logger(api.ctx)
 
 	ex, err := execution.NewExecution(api.ctx)
 	if err != nil {
 		logger.Error("error creating execution", "error", err)
 		common.AbortWithError(c, err)
-		return nil
+		return
 	}
 
 	var stepOutput *modconfig.Output
+
+	evt := &event.Event{
+		ExecutionID: executionID,
+	}
+
+	err = ex.LoadProcess(evt)
+	if err != nil {
+		logger.Error("error loading process", "error", err)
+		common.AbortWithError(c, err)
+		return
+	}
+
+	// Find the step start for the step execution id
+	pipelineExecution := ex.PipelineExecutions[pipelineExecutionID]
+	if pipelineExecution == nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution "+pipelineExecutionID+" not found"))
+		return
+	}
+
+	stepExecution := pipelineExecution.StepExecutions[stepExecutionID]
+	if stepExecution == nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage("step execution "+stepExecutionID+" not found"))
+		return
+	}
 
 	if c.Request.Body != nil && inputType == primitive.InputTypeSlack {
 		var prompt, userName string
@@ -52,13 +76,13 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		bodyBytes, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			common.AbortWithError(c, err)
-			return nil
+			return
 		}
 
 		decodedValue, err := url.QueryUnescape(string(bodyBytes))
 		if err != nil {
 			log.Fatal(err)
-			return nil
+			return
 		}
 
 		decodedValue = decodedValue[8:]
@@ -70,21 +94,21 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		err = json.Unmarshal([]byte(decodedValue), &bodyJSON)
 		if err != nil {
 			common.AbortWithError(c, err)
-			return nil
+			return
 		}
 
 		// Decode the callback_id to extract the execution_id, pipeline_execution_id and step_execution_id
 		rawDecodedText, err := base64.StdEncoding.DecodeString(bodyJSON["callback_id"].(string))
 		if err != nil {
 			common.AbortWithError(c, err)
-			return nil
+			return
 		}
 
 		var decodedText JSONPayload
 		err = json.Unmarshal(rawDecodedText, &decodedText)
 		if err != nil {
 			common.AbortWithError(c, err)
-			return nil
+			return
 		}
 		// stepOutput, err = input.ProcessOutput(c, inputType, bodyBytes)
 		// if err != nil {
@@ -162,43 +186,27 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		c.String(http.StatusOK, fmt.Sprintf("%s <@%s> has selected `%v`", prompt, userName, value))
 	} else {
-		input := primitive.Input{}
-		stepOutput, err = input.ProcessOutput(c, inputType, nil)
-		if err != nil {
-			logger.Error("error processing output", "error", err)
-			common.AbortWithError(c, err)
-			return nil
+		if pipelineExecution.Status == "finished" {
+			c.HTML(http.StatusOK, "already-acknowledged-input.html", gin.H{})
+		} else {
+
+			input := primitive.Input{}
+			stepOutput, err = input.ProcessOutput(c, inputType, nil)
+			if err != nil {
+				logger.Error("error processing output", "error", err)
+				common.AbortWithError(c, err)
+				return
+			}
+			c.HTML(http.StatusOK, "acknowledge-input.html", gin.H{
+				"response": stepOutput.Data["value"],
+			})
 		}
-	}
-
-	evt := &event.Event{
-		ExecutionID: executionID,
-	}
-
-	err = ex.LoadProcess(evt)
-	if err != nil {
-		logger.Error("error loading process", "error", err)
-		common.AbortWithError(c, err)
-		return nil
-	}
-
-	// Find the step start for the step execution id
-	pipelineExecution := ex.PipelineExecutions[pipelineExecutionID]
-	if pipelineExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution "+pipelineExecutionID+" not found"))
-		return nil
-	}
-
-	stepExecution := pipelineExecution.StepExecutions[stepExecutionID]
-	if stepExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("step execution "+stepExecutionID+" not found"))
-		return nil
 	}
 
 	pipelineStepFinishedEvent, err := event.NewPipelineStepFinished()
 	if err != nil {
 		common.AbortWithError(c, err)
-		return nil
+		return
 	}
 
 	pipelineStepFinishedEvent.Event = evt
@@ -212,8 +220,6 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
-
-	return stepOutput
 }
 
 func (api *APIService) runInputEmailGet(c *gin.Context) {
@@ -256,16 +262,7 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		// return
 	}
 
-	response := api.runPipeline(c, primitive.InputTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
-
-	// c.HTML(http.StatusOK, "index.html", gin.H{
-	// 	"pageTitle": "Hello World",
-	// })
-
-	// c.JSON(http.StatusOK, "Thanks for input")
-	c.HTML(http.StatusOK, "acknowledge-input.html", gin.H{
-		"response": response.Data["value"],
-	})
+	api.runPipeline(c, primitive.InputTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
 }
 
 func (api *APIService) runSlackInputPost(c *gin.Context) {
@@ -312,15 +309,3 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 
 	// c.JSON(http.StatusOK, "Bye bye...")
 }
-
-// func renderTemplate(c *gin.Context, tmpl string, data gin.H) {
-// 	t, err := template.New(tmpl).ParseFiles("templates/" + tmpl)
-// 	if err != nil {
-// 		c.String(http.StatusInternalServerError, "Internal server error")
-// 		return
-// 	}
-
-// 	if err := t.Execute(c.Writer, data); err != nil {
-// 		c.String(http.StatusInternalServerError, "Internal server error")
-// 	}
-// }
