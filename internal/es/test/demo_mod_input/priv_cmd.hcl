@@ -226,8 +226,6 @@ pipeline "priv_command_list" {
         %{ for g in step.query.list_groups.rows[*].label ~}
         - *${g}*
         %{ endfor ~}
-
-        ${join(", ", step.query.list_groups.rows[*].label)}
         %{ endif }
       EOT
     })
