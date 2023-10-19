@@ -3,9 +3,11 @@ package util
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
+// TODO: Sync up with email step - once the variable names are in sync, we can use the same schema
 func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 
 	// Read sender credential
@@ -42,11 +45,6 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 		}
 	}
 
-	var body string
-	if input[schema.AttributeTypeBody] != nil {
-		body = input[schema.AttributeTypeBody].(string)
-	}
-
 	var senderName string
 	if input[schema.AttributeTypeSenderName] != nil {
 		senderName = input[schema.AttributeTypeSenderName].(string)
@@ -66,58 +64,16 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 		header["Subject"] = input[schema.AttributeTypeSubject].(string)
 	}
 
-	if input[schema.AttributeTypeContentType] != nil && len(input[schema.AttributeTypeContentType].(string)) > 0 {
-		header["Content-Type"] = input[schema.AttributeTypeContentType].(string)
-	}
-
-	if input[schema.AttributeTypeCc] != nil {
-		var cc []string
-
-		// Check if the input is a string slice
-		if _, ok := input[schema.AttributeTypeCc].([]string); ok {
-			cc = input[schema.AttributeTypeCc].([]string)
-		}
-
-		// Check if the input is an interface slice, and the elements are strings
-		if _, ok := input[schema.AttributeTypeCc].([]interface{}); ok {
-			for _, v := range input[schema.AttributeTypeCc].([]interface{}) {
-				cc = append(cc, v.(string))
-			}
-		}
-
-		// if the cc is not empty, add it to the header
-		if len(cc) > 0 {
-			header["Cc"] = strings.Join(cc, ", ")
-		}
-	}
-
-	if input[schema.AttributeTypeBcc] != nil {
-		var bcc []string
-
-		// Check if the input is a string slice
-		if _, ok := input[schema.AttributeTypeBcc].([]string); ok {
-			bcc = input[schema.AttributeTypeBcc].([]string)
-		}
-
-		// Check if the input is an interface slice, and the elements are strings
-		if _, ok := input[schema.AttributeTypeBcc].([]interface{}); ok {
-			for _, v := range input[schema.AttributeTypeBcc].([]interface{}) {
-				bcc = append(bcc, v.(string))
-			}
-		}
-
-		// if the cc is not empty, add it to the header
-		if len(bcc) > 0 {
-			header["Bcc"] = strings.Join(bcc, ", ")
-		}
-	}
+	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
+	header["MIME-version"] = "1.0;"
 
 	// Build the full email message
 	var message string
 	for key, value := range header {
 		message += fmt.Sprintf("%s: %s\r\n", key, value)
 	}
-	message += "\r\n" + body
+
+	message += getTemplateMessage(input)
 
 	// Construct the output
 	output := modconfig.Output{
@@ -152,4 +108,49 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return &output, nil
+}
+
+func getTemplateMessage(input modconfig.Input) string {
+
+	// Read the email template from a file
+	templateFile, err := os.ReadFile("templates/approval-template.html")
+	if err != nil {
+		fmt.Println("Error reading template:", err)
+		// return
+	}
+
+	// Parse the email template
+	tmpl, err := template.New("email").Parse(string(templateFile))
+	if err != nil {
+		fmt.Println("Error parsing template:", err)
+		// return
+	}
+
+	data := struct {
+		ExecutionID         string
+		PipelineExecutionID string
+		StepExecutionID     string
+		Options             []interface{}
+		ResponseUrl         string
+		Prompt              string
+	}{
+		ExecutionID:         input["executionID"].(string),
+		PipelineExecutionID: input["pipelineExecutionID"].(string),
+		StepExecutionID:     input["stepExecutionID"].(string),
+		Options:             input[schema.AttributeTypeOptions].([]interface{}),
+		ResponseUrl:         input[schema.AttributeTypeResponseUrl].(string),
+		Prompt:              input[schema.AttributeTypePrompt].(string),
+	}
+
+	var body strings.Builder
+	// input[schema.AttributeTypeOptions].([]interface{})
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		fmt.Println("Error executing template:", err)
+		// return
+	}
+
+	tempMessage := body.String()
+
+	return tempMessage
 }

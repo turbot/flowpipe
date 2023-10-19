@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/slack-go/slack"
@@ -345,27 +344,10 @@ func (inputEmail *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx conte
 }
 
 func (i *InputIntegrationEmail) PostMessage(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
-	var actions strings.Builder
 
-	for _, option := range input[schema.AttributeTypeOptions].([]interface{}) {
-		actions.WriteString(
-			fmt.Sprintf("Select to %s: %s/api/v0/input/email/foo.bar/hash?execution_id=%s&pipeline_execution_id=%s&step_execution_id=%s&value=%s",
-				option, input[schema.AttributeTypeResponseUrl], i.ExecutionID, i.PipelineExecutionID, i.StepExecutionID, option))
-		actions.WriteString("\n\n")
-	}
-
-	body := fmt.Sprintf(`
-To review the details and provide your approval, please click on a link below:
-
-%s
-Your prompt response is greatly appreciated.
-
-Best regards,
-Karan
-SD
-Turbot`, actions.String())
-
-	input[schema.AttributeTypeBody] = body
+	input["executionID"] = i.ExecutionID
+	input["pipelineExecutionID"] = i.PipelineExecutionID
+	input["stepExecutionID"] = i.StepExecutionID
 
 	// Validate the inputs
 	// if err := i.ValidateInputIntegrationEmail(ctx, input); err != nil {
