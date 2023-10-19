@@ -10,9 +10,7 @@
 //   smtp_port    = var.smtp_port
 //   sender_name  = var.smtp_from
 //   response_url = var.response_url
-
 // }
-
 
 
 pipeline "user_group_remove" {

@@ -55,7 +55,7 @@ pipeline "priv_command_router" {
   }
 
   step "pipeline" "list" {
-    if       = length(step.echo.parse.output.command) > 0 && step.echo.parse.output.command[0] == "list"
+    if       = length(step.echo.parse.output.command) == 0 || step.echo.parse.output.command[0] == "list"
     pipeline = pipeline.priv_command_list
 
     args = {
@@ -91,7 +91,7 @@ pipeline "priv_command_add" {
     type       = "slack"
     #token      = var.slack_token
     channel    = param.channel_id # "#mantix_test" #step.echo.parse.output.channel_id
-    slack_type = "button"
+    slack_type = "select"
     prompt     = "Select the group that you would like to join:"
     options    = step.query.list_groups.rows[*].label
 
@@ -157,7 +157,7 @@ pipeline "priv_command_remove" {
     type       = "slack"
     #token      = var.slack_token
     channel    = param.channel_id
-    slack_type = "button"
+    slack_type = "select"
     prompt     = "You are a member of the following groups.  Select a group to remove:"
     options    = step.query.list_groups.rows[*].label
 
@@ -221,7 +221,7 @@ pipeline "priv_command_list" {
         You are not a member of any groups.
         %{ else }
         You are a member of the following groups: 
-        ${join(", ", step.query.list_groups.rows[*].label)}"
+        ${join(", ", step.query.list_groups.rows[*].label)}
         %{ endif }
       EOT
     })

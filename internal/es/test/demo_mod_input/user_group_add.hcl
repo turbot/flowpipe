@@ -1,10 +1,6 @@
 
-
 integration "slack" "my_slack_app" {
   token           = var.slack_token
-
-  # optional - if you want to verify the source
-  #signing_secret  = "Q#$$#@#$$#W"
 }
 
 
