@@ -20,12 +20,33 @@ integration "email" "email_integration" {
   smtp_username = "baz bar foo"
 }
 
-pipeline "approval" {
+pipeline "approval_with_runtime_param" {
+
+  param "channel_name" {
+    type = string
+  }
+
   step "input" "input" {
     token = "remove this after integrated"
     notify {
       integration = integration.slack.my_slack_app
-      channel = "foo"
+      channel = param.channel_name
+    }
+  }
+}
+
+variable "channel_name" {
+  type = string
+  default = "bar"
+}
+
+pipeline "approval_with_variables" {
+
+  step "input" "input" {
+    token = "remove this after integrated"
+    notify {
+      integration = integration.slack.my_slack_app
+      channel = var.channel_name
     }
   }
 }
