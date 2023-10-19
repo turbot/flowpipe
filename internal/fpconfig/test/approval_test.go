@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/pipe-fittings/misc"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -16,7 +17,7 @@ func TestApproval(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(mod)
 
-	assert.Equal(2, len(mod.ResourceMaps.Integrations))
+	assert.Equal(3, len(mod.ResourceMaps.Integrations))
 
 	integration := mod.ResourceMaps.Integrations["local.integration.slack.my_slack_app"]
 	if integration == nil {
@@ -61,4 +62,11 @@ func TestApproval(t *testing.T) {
 	integrationMap := integrationLink.AsValueMap()
 	assert.NotNil(integrationMap)
 	assert.Equal("xoxp-111111", integrationMap["token"].AsString())
+
+	assert.Equal("remove this after integrated", *inputStep.Token)
+
+	inputsAfterEval, err := inputStep.GetInputs(&hcl.EvalContext{})
+	// the notify should override the inline definition (the inline definition should not be there after integrated 2023)
+
+	assert.Equal("xoxp-111111", inputsAfterEval["token"].(string))
 }

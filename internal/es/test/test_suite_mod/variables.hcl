@@ -45,3 +45,11 @@ variable "var_depend_a_two" {
   type = string
   description = "This is a variable with no default"
 }
+
+variable "slack_token" {
+  type = string
+}
+
+variable "signing_secret" {
+  type = string
+}

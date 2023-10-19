@@ -4,3 +4,7 @@ var_two = "I come from flowpipe.vars file"
 var_three = "override from flowpipe.vars file"
 
 var_depend_a_two = "I come from the land of flowpipe.vars"
+
+slack_token = "foo"
+
+signing_secret = "bar"

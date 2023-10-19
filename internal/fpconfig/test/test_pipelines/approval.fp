@@ -7,6 +7,13 @@ integration "slack" "my_slack_app" {
   signing_secret  = "Q#$$#@#$$#W"
 }
 
+integration "slack" "my_slack_app_two" {
+  token           = "xoxp-111111"
+
+  # optional - if you want to verify the source
+  signing_secret  = "Q#$$#@#$$#W"
+}
+
 integration "email" "email_integration" {
   smtp_host = "foo bar baz"
   default_subject = "bar foo baz"
@@ -16,6 +23,9 @@ integration "email" "email_integration" {
 pipeline "approval" {
 
   step "input" "input" {
+
+    token = "remove this after integrated"
+
     notify {
       integration = integration.slack.my_slack_app
       channel = "foo"
