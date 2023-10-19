@@ -89,8 +89,7 @@ pipeline "priv_command_add" {
 
   step "input" "select_group" {
     type       = "slack"
-    #token      = var.slack_token
-    channel    = param.channel_id # "#mantix_test" #step.echo.parse.output.channel_id
+    channel    = param.channel_id
     slack_type = "select"
     prompt     = "Select the group that you would like to join:"
     options    = step.query.list_groups.rows[*].label
@@ -105,7 +104,7 @@ pipeline "priv_command_add" {
     pipeline = pipeline.user_group_add
 
     args = {
-      username = param.username #step.echo.parse.output.requestor
+      username = param.username
       group    = step.input.select_group.value
     }
   }
@@ -116,7 +115,8 @@ pipeline "priv_command_add" {
     method      = "post"
 
     request_body = jsonencode({
-      text = "Your request has been ${step.pipeline.add_user_to_group.approved == true ? "approved." : "denied."}"
+      mrkdwn = true
+      text = "Your request has been ${step.pipeline.add_user_to_group.approved == true ? "*approved*." : "*denied!*"}"
     })
   }
 
@@ -216,11 +216,17 @@ pipeline "priv_command_list" {
     method      = "post"
 
     request_body = jsonencode({
+      mrkdwn = true
       text = <<-EOT
         %{ if length(step.query.list_groups.rows) == 0 }
         You are not a member of any groups.
         %{ else }
         You are a member of the following groups: 
+
+        %{ for g in step.query.list_groups.rows[*].label ~}
+        - *${g}*
+        %{ endfor ~}
+
         ${join(", ", step.query.list_groups.rows[*].label)}
         %{ endif }
       EOT
