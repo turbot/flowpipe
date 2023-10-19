@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 // TODO: Sync up with email step - once the variable names are in sync, we can use the same schema
 func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 
+	var err error
 	// Read sender credential
 	senderEmail := input[schema.AttributeTypeUsername].(string)
 	senderCredential := input[schema.AttributeTypePassword].(string)
@@ -73,7 +75,11 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 		message += fmt.Sprintf("%s: %s\r\n", key, value)
 	}
 
-	message += getTemplateMessage(input)
+	templateMessage, err := getTemplateMessage(input)
+	if err != nil {
+		return nil, err
+	}
+	message += templateMessage
 
 	// Construct the output
 	output := modconfig.Output{
@@ -84,7 +90,7 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 	addr := host + ":" + fmt.Sprintf("%d", portInt)
 
 	start := time.Now().UTC()
-	err := smtp.SendMail(addr, auth, senderEmail, recipients, []byte(message))
+	err = smtp.SendMail(addr, auth, senderEmail, recipients, []byte(message))
 	finish := time.Now().UTC()
 	if err != nil {
 		if _, ok := err.(*textproto.Error); !ok {
@@ -110,20 +116,18 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 	return &output, nil
 }
 
-func getTemplateMessage(input modconfig.Input) string {
+func getTemplateMessage(input modconfig.Input) (string, error) {
 
 	// Read the email template from a file
 	templateFile, err := os.ReadFile("templates/approval-template.html")
 	if err != nil {
-		fmt.Println("Error reading template:", err)
-		// return
+		return "", perr.BadRequestWithMessage("error while reading the email template")
 	}
 
 	// Parse the email template
 	tmpl, err := template.New("email").Parse(string(templateFile))
 	if err != nil {
-		fmt.Println("Error parsing template:", err)
-		// return
+		return "", perr.BadRequestWithMessage("error while parsing the email template")
 	}
 
 	data := struct {
@@ -146,11 +150,10 @@ func getTemplateMessage(input modconfig.Input) string {
 	// input[schema.AttributeTypeOptions].([]interface{})
 	err = tmpl.Execute(&body, data)
 	if err != nil {
-		fmt.Println("Error executing template:", err)
-		// return
+		return "", perr.BadRequestWithMessage("error while executing the email template")
 	}
 
 	tempMessage := body.String()
 
-	return tempMessage
+	return tempMessage, nil
 }
