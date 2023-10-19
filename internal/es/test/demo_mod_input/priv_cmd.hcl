@@ -116,7 +116,7 @@ pipeline "priv_command_add" {
 
     request_body = jsonencode({
       mrkdwn = true
-      text = "Your request has been ${step.pipeline.add_user_to_group.approved == true ? "*approved*." : "*denied!*"}"
+      text = "Your request to add `${param.username}` to `${step.input.select_group.value}` has been ${step.pipeline.add_user_to_group.approved == true ? "*approved*." : "*denied!*"}"
     })
   }
 
