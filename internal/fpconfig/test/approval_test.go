@@ -67,6 +67,7 @@ func TestApproval(t *testing.T) {
 
 	inputsAfterEval, err := inputStep.GetInputs(&hcl.EvalContext{})
 	// the notify should override the inline definition (the inline definition should not be there after integrated 2023)
+	assert.Nil(err)
 
 	assert.Equal("xoxp-111111", inputsAfterEval["token"].(string))
 }
