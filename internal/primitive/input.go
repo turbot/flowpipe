@@ -92,20 +92,6 @@ func (ip *InputIntegrationSlack) PostMessage(input modconfig.Input) error {
 			Text:       prompt,
 			Color:      "#3AA3E3",
 			CallbackID: encodedText,
-			// Actions: []slack.AttachmentAction{
-			// 	{
-			// 		Name:  "Approve",
-			// 		Text:  "Approve",
-			// 		Type:  "button",
-			// 		Value: "Approve",
-			// 	},
-			// 	{
-			// 		Name:  "Reject",
-			// 		Text:  "Reject",
-			// 		Type:  "button",
-			// 		Value: "Reject",
-			// 	},
-			// },
 		}
 
 		var actions []slack.AttachmentAction
@@ -119,6 +105,33 @@ func (ip *InputIntegrationSlack) PostMessage(input modconfig.Input) error {
 		}
 
 		if len(actions) > 0 {
+			attachment.Actions = actions
+		}
+	} else if slackType == "select" {
+		attachment = slack.Attachment{
+			Text:       prompt,
+			Color:      "#3AA3E3",
+			CallbackID: encodedText,
+		}
+
+		var actions []slack.AttachmentAction
+		var actionOptions []slack.AttachmentActionOption
+		for _, opt := range options {
+			actionOptions = append(actionOptions, slack.AttachmentActionOption{
+				Text:  opt,
+				Value: opt,
+			})
+		}
+
+		if len(actionOptions) > 0 {
+			actions = []slack.AttachmentAction{
+				{
+					Name:    "Choose an option",
+					Text:    "Choose an option",
+					Type:    "select",
+					Options: actionOptions,
+				},
+			}
 			attachment.Actions = actions
 		}
 	}

@@ -119,6 +119,27 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 				if action.(map[string]interface{})["type"] == "button" {
 					value = action.(map[string]interface{})["value"]
 				}
+				if action.(map[string]interface{})["type"] == "select" {
+					/*
+							"actions": [
+						    {
+						      "name": "Choose an option",
+						      "type": "select",
+						      "selected_options": [
+						        {
+						          "value": "Admin"
+						        }
+						      ]
+						    }
+						  ],
+					*/
+					selectedOptions := action.(map[string]interface{})["selected_options"]
+					if selectedOptions != nil {
+						for _, selectedOption := range selectedOptions.([]interface{}) {
+							value = selectedOption.(map[string]interface{})["value"]
+						}
+					}
+				}
 			}
 		}
 
