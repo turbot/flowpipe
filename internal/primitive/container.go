@@ -70,6 +70,10 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		c.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
 	}
 
+	if input[schema.AttributeTypeEntryPoint] != nil {
+		c.EntryPoint = convertToSliceOfString(input[schema.AttributeTypeEntryPoint].([]interface{}))
+	}
+
 	err = c.Load()
 	if err != nil {
 		panic(err)
