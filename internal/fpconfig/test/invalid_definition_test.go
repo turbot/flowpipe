@@ -23,3 +23,11 @@ func TestInvalidStepAttribute(t *testing.T) {
 	assert.NotNil(err)
 	assert.Contains(err.Error(), `Unsupported argument: An argument named "abc" is not expected here.`)
 }
+
+func TestInvalidParams(t *testing.T) {
+	assert := assert.New(t)
+
+	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_params.fp")
+	assert.NotNil(err)
+	assert.Contains(err.Error(), `invalid property path: params.message_retention_duration`)
+}
