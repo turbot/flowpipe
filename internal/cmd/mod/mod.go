@@ -36,16 +36,16 @@ Examples:
     flowpipe mod init
 
     # Install a mod
-    flowpipe mod install github.com/turbot/steampipe-mod-aws-compliance
+    flowpipe mod install github.com/turbot/flowpipe-mod-github
 
     # Update a mod
-    flowpipe mod update github.com/turbot/steampipe-mod-aws-compliance
+    flowpipe mod update github.com/turbot/flowpipe-mod-github
 
     # List installed mods
     flowpipe mod list
 
     # Uninstall a mod
-    flowpipe mod uninstall github.com/turbot/steampipe-mod-aws-compliance
+    flowpipe mod uninstall github.com/turbot/flowpipe-mod-github
 	`,
 	}
 
