@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"github.com/turbot/pipe-fittings/misc"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )
@@ -148,6 +150,19 @@ func (m *Manager) Initialize() error {
 
 		pipelines = mod.ResourceMaps.Pipelines
 		triggers = mod.ResourceMaps.Triggers
+
+		// Return error if functions flag is not set and the pipeline has container or function steps
+		functionFlag := viper.GetBool(constants.ArgFunctions)
+		if !functionFlag {
+			// Check for container or function steps
+			for _, pipeline := range pipelines {
+				for _, step := range pipeline.Steps {
+					if step.GetType() == schema.BlockTypePipelineStepFunction || step.GetType() == schema.BlockTypeContainer {
+						return fmt.Errorf("cannot load pipelines with container or function steps. To use container or function please run flowpipe service start --functions.")
+					}
+				}
+			}
+		}
 
 		for _, dependendMode := range mod.ResourceMaps.Mods {
 			if dependendMode.Name() != mod.Name() {
