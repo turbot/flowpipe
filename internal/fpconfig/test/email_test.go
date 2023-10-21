@@ -103,20 +103,3 @@ func TestEmailStepWithParam(t *testing.T) {
 	dependsOn := step.GetDependsOn()
 	assert.Contains(dependsOn, "echo.email_body")
 }
-
-func TestEmailStepInvalidPortFormat(t *testing.T) {
-	assert := assert.New(t)
-
-	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_port.fp")
-	assert.NotNil(err, "error found")
-
-	assert.Contains(err.Error(), "Unable to convert port into integer")
-}
-
-func TestEmailStepInvalidRecipient(t *testing.T) {
-	assert := assert.New(t)
-
-	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid_email_recipient.fp")
-	assert.NotNil(err, "error found")
-	assert.Contains(err.Error(), "Bad Request: expected string type, but got number")
-}

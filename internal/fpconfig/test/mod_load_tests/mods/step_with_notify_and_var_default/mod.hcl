@@ -1,7 +1,9 @@
+mod "local" {
 
+}
 
 integration "slack" "my_slack_app" {
-  token           = "xoxp-111111"
+  token           = var.slack_token
 
   # optional - if you want to verify the source
   signing_secret  = "Q#$$#@#$$#W"
@@ -20,25 +22,20 @@ integration "email" "email_integration" {
   smtp_username = "baz bar foo"
 }
 
-pipeline "approval_with_runtime_param" {
+// pipeline "approval_with_runtime_param" {
 
-  param "channel_name" {
-    type = string
-  }
+//   param "channel_name" {
+//     type = string
+//   }
 
-  step "input" "input" {
-    token = "remove this after integrated"
-    notify {
-      integration = integration.slack.my_slack_app
-      channel = param.channel_name
-    }
-  }
-}
-
-variable "channel_name" {
-  type = string
-  default = "bar"
-}
+//   step "input" "input" {
+//     token = "remove this after integrated"
+//     notify {
+//       integration = integration.slack.my_slack_app
+//       channel = param.channel_name
+//     }
+//   }
+// }
 
 pipeline "approval_with_variables" {
 
@@ -49,4 +46,13 @@ pipeline "approval_with_variables" {
       channel = var.channel_name
     }
   }
+}
+
+variable "channel_name" {
+  type = string
+  default = "bar"
+}
+
+variable "slack_token" {
+  type = string
 }

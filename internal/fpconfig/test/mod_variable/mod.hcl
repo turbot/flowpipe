@@ -2,6 +2,18 @@ mod "test_mod" {
   title = "my_mod"
 }
 
+variable "schedule_default" {
+  type = string
+  description = "schedule with default value"
+  default =  "5 * * * *"
+}
+
+variable "interval_default" {
+  type = string
+  description = "interval with default value"
+  default = "weekly"
+}
+
 variable "var_one" {
   type        = string
   description = "test variable"

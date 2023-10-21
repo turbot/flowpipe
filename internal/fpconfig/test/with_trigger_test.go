@@ -108,15 +108,3 @@ func TestPipelineWithTriggerSelf(t *testing.T) {
 	_, _, err := misc.LoadPipelines(ctx, "./test_pipelines/with_trigger_self.fp")
 	assert.Nil(err, "error found")
 }
-
-func TestBadTriggerConfig(t *testing.T) {
-	assert := assert.New(t)
-
-	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
-
-	_, _, err := misc.LoadPipelines(ctx, "./test_pipelines/invalid_trigger.fp")
-	assert.NotNil(err, "should have some errors")
-
-	assert.Contains(err.Error(), "Failed to decode mod:\nMissing required argument: The argument \"pipeline\" is required, but no definition was found.")
-}

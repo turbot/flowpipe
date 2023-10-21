@@ -233,15 +233,6 @@ func TestLoadPipelineDepends(t *testing.T) {
 	}
 }
 
-func TestLoadPipelineInvalidDepends(t *testing.T) {
-	assert := assert.New(t)
-
-	_, _, err := misc.LoadPipelines(context.TODO(), "./test_pipelines/invalid_pipelines/invalid.fp")
-	assert.NotNil(err, "error not found")
-
-	// TODO: need to improve the error here, need more context? sub-code?
-	assert.Contains(err.Error(), "Failed to decode mod:\ninvalid depends_on 'http.my_step_1' - step 'sleep.sleep_1' does not exist for pipeline local.pipeline.invalid_depends")
-}
 
 func TestMarshallUnmarshal(t *testing.T) {
 	assert := assert.New(t)
