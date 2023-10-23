@@ -1,4 +1,2 @@
 # in test directory we do want to add .flowpipe because we may be testing mod dependencies
 !.flowpipe
-
-output
