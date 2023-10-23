@@ -524,9 +524,9 @@ func (suite *ModTestSuite) TestIntegrations() {
 	rootMod := suite.manager.RootMod
 	assert.NotNil(rootMod)
 
-	integrations := rootMod.ResourceMaps.Integrations["foo"]
+	integrations := rootMod.ResourceMaps.Integrations["test_suite_mod.integration.slack.slack_app_from_var"]
 	if integrations == nil {
-		assert.Fail("Integration foo not found")
+		assert.Fail("test_suite_mod.integration.slack.slack_app_from_var not found")
 		return
 	}
 }

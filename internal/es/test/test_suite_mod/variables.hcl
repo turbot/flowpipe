@@ -57,3 +57,7 @@ variable "signing_secret" {
 variable "smtp_username" {
   type = string
 }
+
+variable "slack_signing_secret" {
+  type = string
+}

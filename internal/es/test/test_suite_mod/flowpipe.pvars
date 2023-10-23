@@ -10,4 +10,5 @@ slack_token = "foo"
 signing_secret = "bar"
 
 smtp_username  = "flowpipe_smtp_user"
-// slack_signing_secret = "xxx123"
+
+slack_signing_secret = "xxx123"

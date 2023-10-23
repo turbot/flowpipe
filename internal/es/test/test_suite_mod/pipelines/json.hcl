@@ -80,3 +80,36 @@ pipeline "jsonplaceholder_expr" {
         value = step.echo.body_json_nested.text
     }
 }
+
+pipeline "json_array" {
+
+    param "request_body" {
+        type = any
+    }
+
+    step "http" "json_http" {
+        url = "https://jsonplaceholder.typicode.com/posts"
+
+        method = "post"
+
+        request_body = jsonencode(param.request_body)
+
+        request_headers = {
+            Accept = "*/*"
+            Content-Type = "application/json"
+        }
+    }
+
+
+    step "echo" "json" {
+        text = "[\"foo\", \"bar\", \"baz\"]"
+    }
+
+    output "val" {
+        value = jsondecode(step.echo.json.text)
+    }
+
+    output "val_two" {
+        value = step.http.json_http.response_body
+    }
+}
