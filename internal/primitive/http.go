@@ -51,21 +51,20 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 	}
 
 	requestBody := i[schema.AttributeTypeRequestBody]
-	if requestBody != nil {
-		// Try to unmarshal the request body into JSON
-		var requestBodyJSON map[string]interface{}
-		unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
-		if unmarshalErr != nil {
-			// If unmarshaling fails, assume it's a plain string
-			requestBodyJSON = nil
+	if requestBody != nil && i[schema.AttributeTypeRequestHeaders] != nil {
+
+		headers, ok := i[schema.AttributeTypeRequestHeaders].(map[string]interface{})
+		if !ok {
+			return perr.BadRequestWithMessage("request headers must be a map")
 		}
 
-		// If the request body is a JSON object
-		if requestBodyJSON != nil {
-			_, marshalErr := json.Marshal(requestBodyJSON)
-			if marshalErr != nil {
+		if headers["Content-Type"] != nil && strings.Contains(headers["Content-Type"].(string), "application/json") {
+			// Try to unmarshal the request body into JSON
+			var requestBodyJSON interface{}
+			unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
+			if unmarshalErr != nil {
 				stepName := i[schema.AttributeTypeStepName].(string)
-				return perr.BadRequestWithMessage("step " + stepName + " error marshaling request body JSON: " + marshalErr.Error())
+				return perr.BadRequestWithMessage("step " + stepName + " error marshaling request body JSON: " + unmarshalErr.Error())
 			}
 		}
 	}
