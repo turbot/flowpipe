@@ -292,6 +292,42 @@ func (suite *ModTestSuite) TestPipelineWithArgs() {
 	assert.Equal("echo this is the value of var_one", pex.PipelineOutput["val_from_val"])
 }
 
+func (suite *ModTestSuite) TestJsonArray() {
+	// test for a bug where Flowpipe was assuming that JSON must be of map[string]interface{}
+	assert := assert.New(suite.T())
+
+	arrayInput := []string{"a", "b", "c"}
+
+	pipelineInput := &modconfig.Input{
+		"request_body": arrayInput,
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.json_array", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("foo", pex.PipelineOutput["val"].([]interface{})[0])
+	assert.Equal("bar", pex.PipelineOutput["val"].([]interface{})[1])
+	assert.Equal("baz", pex.PipelineOutput["val"].([]interface{})[2])
+
+	// The output is re-formatted this way by jsonplaceholder.typicode.com, the array is turned into a map with the index as the key (as a string)
+	assert.Equal("a", pex.PipelineOutput["val_two"].(map[string]interface{})["0"])
+	assert.Equal("b", pex.PipelineOutput["val_two"].(map[string]interface{})["1"])
+	assert.Equal("c", pex.PipelineOutput["val_two"].(map[string]interface{})["2"])
+}
+
 func (suite *ModTestSuite) TestPipelineWithForLoop() {
 	assert := assert.New(suite.T())
 

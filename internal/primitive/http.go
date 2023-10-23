@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -173,7 +174,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	}
 
 	if headers["Content-Type"] != nil && strings.Contains(headers["Content-Type"].(string), "application/json") && resp.StatusCode < 400 {
-		var bodyJSON map[string]interface{}
+		var bodyJSON interface{}
 		err := json.Unmarshal(body, &bodyJSON)
 		if err != nil {
 			logger.Error("Error unmarshalling response body", "error", err)
@@ -255,7 +256,7 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 
 		if requestBody != nil {
 			// Try to unmarshal the request body into JSON
-			var requestBodyJSON map[string]interface{}
+			var requestBodyJSON interface{}
 			unmarshalErr := json.Unmarshal([]byte(requestBody.(string)), &requestBodyJSON)
 			if unmarshalErr != nil {
 				// If unmarshaling fails, assume it's a plain string
@@ -269,13 +270,15 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 			}
 
 			// If the request body is a JSON object
-			if requestBodyJSON != nil {
+			if helpers.IsNil(requestBodyJSON) {
 				// Set the JSON encoding of the request body
 				requestBodyJSONBytes, _ := json.Marshal(requestBodyJSON)
 				inputParams.RequestBody = string(requestBodyJSONBytes)
 
 				// Also, set the content type header to application/json
 				requestHeaders["Content-Type"] = "application/json"
+			} else {
+				inputParams.RequestBody = requestBody.(string)
 			}
 		}
 	} else if requestBody != nil {
