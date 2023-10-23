@@ -213,26 +213,6 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		return
 	}
 
-	if pex.Status == "failed" {
-		errorString := ""
-		if pex.PipelineOutput != nil && pex.PipelineOutput["errors"] != nil {
-			errorCollection, ok := pex.PipelineOutput["errors"].([]interface{})
-			if ok {
-				for _, err := range errorCollection {
-					errorString += err.(map[string]interface{})["message"].(string) + "; "
-				}
-			}
-		}
-
-		common.AbortWithError(c, perr.InternalWithMessage("pipeline failed: "+errorString))
-		return
-	}
-
-	if pex.Status != expectedState {
-		common.AbortWithError(c, perr.InternalWithMessage("pipeline did not complete"))
-		return
-	}
-
 	response := pex.PipelineOutput
 
 	if response == nil {
@@ -242,12 +222,12 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	response["flowpipe"] = map[string]interface{}{
 		"execution_id":          pipelineCmd.Event.ExecutionID,
 		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+		"status":                pex.Status,
 	}
 
 	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
 	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+	c.Header("flowpipe-status", pex.Status)
 
 	c.JSON(http.StatusOK, response)
-
-	// c.String(http.StatusOK, "")
 }
