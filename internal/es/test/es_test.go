@@ -520,7 +520,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	errors := pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
 	for _, e := range errors {
-		assert.Contains(e.Message, "no such host")
+		assert.Contains(e.Error.Detail, "no such host")
 	}
 
 	// reset ex (so we don't forget if we copy & paste the block)
@@ -549,7 +549,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	errors = pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
 	for _, e := range errors {
-		assert.Contains(e.Message, "no such host")
+		assert.Contains(e.Error.Detail, "no such host")
 	}
 
 	// reset ex (so we don't forget if we copy & paste the block)
@@ -607,7 +607,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// The email step should fail because of the invalid smtp host
 	errors = pex.AllNativeStepOutputs["email"]["test_email"].(*modconfig.Output).Errors
 	for _, e := range errors {
-		assert.Contains(e.Message, "no such host")
+		assert.Contains(e.Error.Detail, "no such host")
 	}
 
 	// reset ex (so we don't forget if we copy & paste the block)

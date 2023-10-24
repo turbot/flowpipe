@@ -219,6 +219,19 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		response = map[string]interface{}{}
 	}
 
+	// TODO: Refactor into a function
+	if response["errors"] != nil {
+		var newErrors []interface{}
+		for _, i := range response["errors"].([]interface{}) {
+			if m, ok := i.(map[string]interface{}); ok {
+				if v, exists := m["error"]; exists {
+					newErrors = append(newErrors, v)
+				}
+			}
+		}
+		response["errors"] = newErrors
+	}
+
 	response["flowpipe"] = map[string]interface{}{
 		"execution_id":          pipelineCmd.Event.ExecutionID,
 		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,

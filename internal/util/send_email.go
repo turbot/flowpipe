@@ -101,11 +101,25 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 		// Refer https://en.wikipedia.org/wiki/List_of_SMTP_server_return_codes for all available error codes
 		smtpErr := err.(*textproto.Error)
 		if smtpErr.Code >= 400 {
-			output.Errors = []modconfig.StepError{
-				{
-					Message:   smtpErr.Msg,
-					ErrorCode: smtpErr.Code,
-				},
+			switch {
+			case smtpErr.Code >= 400 && smtpErr.Code <= 499:
+				output.Errors = []modconfig.StepError{
+					{
+						Error: perr.BadRequestWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
+					},
+				}
+			case smtpErr.Code >= 500 && smtpErr.Code <= 599:
+				output.Errors = []modconfig.StepError{
+					{
+						Error: perr.ServiceUnavailableWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
+					},
+				}
+			default:
+				output.Errors = []modconfig.StepError{
+					{
+						Error: perr.InternalWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
+					},
+				}
 			}
 		}
 	}
