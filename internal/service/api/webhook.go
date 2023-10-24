@@ -181,7 +181,7 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		return
 	}
 
-	waitRetry := 60
+	waitRetry := 60 // TODO: Make configurable potentially via CLI arg
 	waitTime := 1 * time.Second
 	expectedState := "finished"
 
@@ -229,5 +229,9 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
 	c.Header("flowpipe-status", pex.Status)
 
-	c.JSON(http.StatusOK, response)
+	if pex.Status == expectedState {
+		c.JSON(http.StatusOK, response)
+	} else {
+		c.JSON(209, response)
+	}
 }
