@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"log"
 	"net"
@@ -32,9 +31,6 @@ import (
 )
 
 // TODO - Test the changes
-
-//go:embed templates/*.html
-var content embed.FS
 
 // @title Flowpipe
 // @version 0.1.0
@@ -219,7 +215,6 @@ func (api *APIService) Start() error {
 	// Single Page App must catch all routes that are not found, it
 	// handles them in a client side router.
 
-	router.StaticFS("templates", http.FS(content))
 	router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method

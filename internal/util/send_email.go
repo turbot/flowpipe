@@ -7,10 +7,10 @@ import (
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -118,16 +118,15 @@ func RunSendEmail(ctx context.Context, input modconfig.Input) (*modconfig.Output
 
 func getTemplateMessage(input modconfig.Input) (string, error) {
 
-	// Read the email template from a file
-	templateFile, err := os.ReadFile("templates/approval-template.html")
+	templateFile, err := templates.HTMLTemplate("approval-template.html")
 	if err != nil {
-		return "", perr.BadRequestWithMessage("error while reading the email template")
+		return "", perr.InternalWithMessage("error while reading the email template")
 	}
 
 	// Parse the email template
 	tmpl, err := template.New("email").Parse(string(templateFile))
 	if err != nil {
-		return "", perr.BadRequestWithMessage("error while parsing the email template")
+		return "", perr.InternalWithMessage("error while parsing the email template")
 	}
 
 	data := struct {

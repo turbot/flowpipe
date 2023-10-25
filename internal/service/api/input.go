@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -186,9 +188,14 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		c.String(http.StatusOK, fmt.Sprintf("%s <@%s> has selected `%v`", prompt, userName, value))
 	} else {
 		if pipelineExecution.Status == "finished" {
-			c.HTML(http.StatusOK, "already-acknowledged-input.html", gin.H{})
+			alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
+			if err != nil {
+				logger.Error("error reading the template file", "error", err)
+				common.AbortWithError(c, err)
+				return
+			}
+			renderHTMLWithValues(c, string(alreadyAcknowledgedInputTemplate), gin.H{})
 		} else {
-
 			input := primitive.Input{}
 			stepOutput, err = input.ProcessOutput(c, inputType, nil)
 			if err != nil {
@@ -196,9 +203,14 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 				common.AbortWithError(c, err)
 				return
 			}
-			c.HTML(http.StatusOK, "acknowledge-input.html", gin.H{
-				"response": stepOutput.Data["value"],
-			})
+
+			acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
+			if err != nil {
+				logger.Error("error reading the template file", "error", err)
+				common.AbortWithError(c, err)
+				return
+			}
+			renderHTMLWithValues(c, string(acknowledgeInputTemplate), gin.H{"response": stepOutput.Data["value"]})
 		}
 	}
 
@@ -305,6 +317,21 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 
 	api.runPipeline(c, primitive.InputTypeSlack, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+}
 
-	// c.JSON(http.StatusOK, "Bye bye...")
+// Custom function to render HTML with values
+func renderHTMLWithValues(c *gin.Context, templateContent string, data interface{}) {
+	tmpl, err := template.New("html").Parse(templateContent)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to parse template")
+		return
+	}
+
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.Writer.WriteHeader(http.StatusOK)
+
+	if err := tmpl.Execute(c.Writer, data); err != nil {
+		c.String(http.StatusInternalServerError, "Failed to execute template")
+		return
+	}
 }
