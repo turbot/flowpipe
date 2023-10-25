@@ -31,7 +31,9 @@ import (
 	"github.com/turbot/pipe-fittings/utils"
 )
 
-// go:embed templates/*.html static/*
+// TODO - Test the changes
+
+//go:embed templates/*.html
 var content embed.FS
 
 // @title Flowpipe
@@ -217,7 +219,7 @@ func (api *APIService) Start() error {
 	// Single Page App must catch all routes that are not found, it
 	// handles them in a client side router.
 
-	router.StaticFS("static", http.FS(content))
+	router.StaticFS("templates", http.FS(content))
 	router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method
