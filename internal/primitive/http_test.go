@@ -86,8 +86,8 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.ErrorCode)
-		assert.Equal("404 Not Found", e.Message)
+		assert.Equal(404, e.Error.Status)
+		assert.Equal("404 Not Found", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
@@ -112,8 +112,8 @@ func TestHTTPMethodGETUnauthorized(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(401, e.ErrorCode)
-		assert.Equal("401 Unauthorized", e.Message)
+		assert.Equal(401, e.Error.Status)
+		assert.Equal("401 Unauthorized", e.Error.Detail)
 	}
 }
 
@@ -180,8 +180,8 @@ func TestHTTPMethodPOSTNotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.ErrorCode)
-		assert.Equal("404 Not Found", e.Message)
+		assert.Equal(404, e.Error.Status)
+		assert.Equal("404 Not Found", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
@@ -332,8 +332,8 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.ErrorCode)
-		assert.Equal("404 Not Found", e.Message)
+		assert.Equal(404, e.Error.Status)
+		assert.Equal("404 Not Found", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
@@ -406,8 +406,8 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.ErrorCode)
-		assert.Equal("404 Not Found", e.Message)
+		assert.Equal(404, e.Error.Status)
+		assert.Equal("404 Not Found", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
@@ -475,8 +475,8 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.ErrorCode)
-		assert.Equal("404 Not Found", e.Message)
+		assert.Equal(404, e.Error.Status)
+		assert.Equal("404 Not Found", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }

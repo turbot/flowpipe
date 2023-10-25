@@ -3,6 +3,8 @@ package types
 import (
 	"testing"
 
+	"github.com/turbot/pipe-fittings/perr"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/zclconf/go-cty/cty"
@@ -22,10 +24,10 @@ func TestStepAsHclVariables(t *testing.T) {
 
 	stepOutput.Errors = []modconfig.StepError{
 		{
-			Message: "one",
+			Error: perr.ErrorModel{Detail: "one"},
 		},
 		{
-			Message:             "two",
+			Error:               perr.ErrorModel{Detail: "two"},
 			PipelineExecutionID: "1234",
 		},
 	}
@@ -52,7 +54,7 @@ func TestStepAsHclVariables(t *testing.T) {
 	errors := hclVariables["errors"]
 	errorSlice := errors.AsValueSlice()
 	assert.Equal(2, len(errorSlice), "there should be 2 errors")
-	assert.Equal("one", errorSlice[0].AsValueMap()["message"].AsString())
-	assert.Equal("two", errorSlice[1].AsValueMap()["message"].AsString())
+	assert.Equal("one", errorSlice[0].AsValueMap()["error"].AsValueMap()["detail"].AsString())
+	assert.Equal("two", errorSlice[1].AsValueMap()["error"].AsValueMap()["detail"].AsString())
 	assert.Equal("1234", errorSlice[1].AsValueMap()["pipeline_execution_id"].AsString())
 }

@@ -257,7 +257,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 				stepsExecuted[et.StepExecutionID].stepErrors = []string{}
 				for _, se := range et.Output.Errors {
 					// add in the errors
-					stepsExecuted[et.StepExecutionID].stepErrors = append(stepsExecuted[et.StepExecutionID].stepErrors, se.Message)
+					stepsExecuted[et.StepExecutionID].stepErrors = append(stepsExecuted[et.StepExecutionID].stepErrors, se.Error.Detail)
 				}
 
 				stepsExecuted[et.StepExecutionID].parentPipelineStep.setEndTime(et.Event.CreatedAt)
@@ -377,13 +377,13 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 		lineWidth = lineWidth - 2
 	}
 
-	durationString := fmt.Sprintf("%9s", humanizeDuration(duration)) //00h00m00s
+	durationString := fmt.Sprintf("%9s", humanizeDuration(duration)) // 00h00m00s
 	if utf8.RuneCountInString(durationPrefix) > 0 {
 		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
 	}
 	durationColumnWidth := utf8.RuneCountInString(durationString) + 10 // accounting for a prepending space
 
-	//{line} {dots} {duration}{durationUnit}
+	// {line} {dots} {duration}{durationUnit}
 	dotNum := width - (lineWidth + durationColumnWidth + 2 /*accounting for leading and trailing spaces in the dots*/)
 	dots := fmt.Sprintf(" %s ", strings.Repeat(".", dotNum))
 	rendered := fmt.Sprintf("%s%s%s", line, dots, durationString)
@@ -415,14 +415,14 @@ func humanizeDuration(duration time.Duration) string {
 	remainingHours := math.Mod(duration.Hours(), 24)
 	remainingMinutes := math.Mod(duration.Minutes(), 60)
 	remainingSeconds := math.Mod(duration.Seconds(), 60)
-	return fmt.Sprintf("%dd%dh%dm%ds", //00d00h00m00s
+	return fmt.Sprintf("%dd%dh%dm%ds", // 00d00h00m00s
 		int64(duration.Hours()/24), int64(remainingHours),
 		int64(remainingMinutes), int64(remainingSeconds))
 }
 
 func getStepIcon(name string, failed bool) string {
 	if failed {
-		return "🔴" //fmt.Sprintf("❌%s", icon)
+		return "🔴" // fmt.Sprintf("❌%s", icon)
 	}
 	icon := " "
 	switch name {

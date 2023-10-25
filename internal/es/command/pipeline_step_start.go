@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/perr"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -129,7 +130,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			}
 
 			output.Errors = append(output.Errors, modconfig.StepError{
-				Message: primitiveError.Error(),
+				Error: perr.InternalWithMessage(primitiveError.Error()),
 			})
 
 		}

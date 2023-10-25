@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -187,11 +188,9 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	}
 
 	if resp.StatusCode >= 400 {
-		message := resp.Status
 		output.Errors = []modconfig.StepError{
 			{
-				Message:   message,
-				ErrorCode: resp.StatusCode,
+				Error: perr.FromHttpError(fmt.Errorf(resp.Status), resp.StatusCode),
 			},
 		}
 	}
