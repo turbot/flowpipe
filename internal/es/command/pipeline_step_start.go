@@ -2,6 +2,9 @@ package command
 
 import (
 	"context"
+
+	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/pipe-fittings/perr"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -11,7 +14,6 @@ import (
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
-	"github.com/zclconf/go-cty/cty"
 )
 
 type PipelineStepStartHandler CommandHandler
@@ -62,6 +64,18 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 		stepOutput := make(map[string]interface{})
 
+		pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
+
+		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
+		if err != nil {
+			logger.Error("Error building eval context while calculating output", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				logger.Error("Error publishing event", "error", err2)
+			}
+			return
+		}
+
 		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
 		// pipeline_plan phase
 		if cmd.NextStepAction == modconfig.NextStepActionSkip {
@@ -69,7 +83,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 				Status: "skipped",
 			}
 
-			endStep(cmd, output, stepOutput, logger, h, ctx)
+			endStep(cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
 			return
 		}
 
@@ -179,29 +193,15 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			return
 		}
 
-		pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
-
 		// calculate the output blocks
 		for _, outputConfig := range stepDefn.GetOutputConfig() {
 			if outputConfig.UnresolvedValue != nil {
-				evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
-				if err != nil {
-					logger.Error("Error building eval context while calculating output", "error", err)
-					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-					if err2 != nil {
-						logger.Error("Error publishing event", "error", err2)
-					}
-					return
-				}
 
 				stepForEach := stepDefn.GetForEach()
 				if stepForEach != nil {
 					// If there's a for_each in the step definition, we need to insert the "each" magic variable
 					// so the output can refer to it
-					eachValue := map[string]cty.Value{}
-					eachValue[schema.AttributeTypeValue] = cmd.StepForEach.Each.Value
-					eachValue[schema.AttributeKey] = cty.StringVal(cmd.StepForEach.Key)
-					evalContext.Variables[schema.AttributeEach] = cty.ObjectVal(eachValue)
+					evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
 				}
 
 				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
@@ -230,14 +230,35 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		}
 
 		// All other primitives finish immediately.
-		endStep(cmd, output, stepOutput, logger, h, ctx)
+		endStep(cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
 
 	}(ctx, c, h)
 
 	return nil
 }
 
-func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, ctx context.Context) {
+func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, stepDefn modconfig.IPipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
+
+	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+
+	if loopBlock != nil {
+		loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
+		if loopDefn == nil {
+			// We should never get here, because the loop block should have been validated
+			logger.Error("Unknown loop type", "type", stepDefn.GetType())
+		}
+
+		diags := gohcl.DecodeBody(loopBlock, evalContext, loopDefn)
+		if len(diags) > 0 {
+			logger.Error("Error decoding loop block", "error", diags)
+			err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, diags)))
+			if err != nil {
+				logger.Error("Error publishing event", "error", err)
+			}
+			return
+		}
+	}
+
 	e, err := event.NewPipelineStepFinished(
 		event.ForPipelineStepStartToPipelineStepFinished(cmd),
 		event.WithStepOutput(output, stepOutput))
