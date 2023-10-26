@@ -118,21 +118,25 @@ func (m *Manager) Initialize() error {
 
 		w.SetOnFileWatcherEventMessages(func() {
 			logger := fplog.Logger(m.ctx)
-			logger.Info("Reloading pipelines and triggers")
-			err := m.ReloadPipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+			logger.Info("caching pipelines and triggers")
+			err := m.CachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 			if err != nil {
-				logger.Error("error reloading pipelines", "error", err)
+				logger.Error("error caching pipelines and triggers", "error", err)
+			} else {
+				logger.Info("cached pipelines and triggers")
 			}
 
 			// Reload scheduled triggers
+			logger.Info("rescheduling triggers")
 			if m.schedulerService != nil {
 				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
 				err := m.schedulerService.RescheduleTriggers()
 				if err != nil {
-					logger.Error("error reloading triggers", "error", err)
+					logger.Error("error rescheduling triggers", "error", err)
+				} else {
+					logger.Info("rescheduled triggers")
 				}
 			}
-			logger.Info("Reloaded pipelines and triggers")
 		})
 
 		if err != nil {
@@ -231,7 +235,7 @@ func (m *Manager) CalculateTriggerUrl(trigger *modconfig.Trigger) (string, error
 	return "/hook/" + trigger.FullName + "/" + hashString, nil
 }
 
-func (m *Manager) ReloadPipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
+func (m *Manager) CachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
 	m.triggers = triggers
 
 	inMemoryCache := cache.GetCache()
