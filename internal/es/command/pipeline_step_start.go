@@ -257,6 +257,18 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 			}
 			return
 		}
+
+		var err error
+		evalContext, err = execution.AddStepOutputAsResults(cmd.StepName, output, stepOutput, evalContext)
+		if err != nil {
+			logger.Error("Error adding step output as results", "error", err)
+
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				logger.Error("Error publishing event", "error", err2)
+			}
+			return
+		}
 	}
 
 	e, err := event.NewPipelineStepFinished(
