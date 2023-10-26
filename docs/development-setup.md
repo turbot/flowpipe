@@ -2,13 +2,15 @@
 
 ## Local Development
 
-1. Clone both `flowpipe`, `flowpipe-sdk-go` and `terraform-components` in the following directory structure:
+1. Clone `flowpipe`, `flowpipe-sdk-go`, `pipe-fittings` and `terraform-components` in the following directory structure:
     ```
     workspace
        |
        |-- flowpipe
        |
        |-- flowpipe-sdk-go
+       |
+       |-- pipe-fittings
        |
        |-- terraform-components
     ```
