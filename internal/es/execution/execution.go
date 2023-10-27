@@ -101,6 +101,42 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
+	integrationMap := map[string]cty.Value{}
+	for _, p := range pipelineDefn.GetMod().ResourceMaps.Integrations {
+
+		// TODO: this doesn't work with mods
+		parts := strings.Split(p.Name(), ".")
+		if len(parts) != 4 {
+			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
+		}
+
+		integrationType := parts[2]
+		switch integrationType {
+		case string(schema.IntegrationTypeSlack):
+			slackIntegration := p.(*modconfig.SlackIntegration)
+			pCty, err := slackIntegration.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+
+			integrationMap[schema.IntegrationTypeSlack] = cty.MapVal(map[string]cty.Value{
+				parts[3]: pCty,
+			})
+
+		case string(schema.IntegrationTypeEmail):
+			emailIntegration := p.(*modconfig.EmailIntegration)
+			pCty, err := emailIntegration.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+
+			integrationMap[schema.IntegrationTypeEmail] = cty.MapVal(map[string]cty.Value{
+				parts[3]: pCty,
+			})
+		}
+	}
+	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
