@@ -76,6 +76,12 @@ type APIService struct {
 
 	apiPrefixGroup *gin.RouterGroup
 	router         *gin.Engine
+	ModMetadata    RootModMetadata
+}
+
+type RootModMetadata struct {
+	IsStale    bool      `json:"is_stale"`
+	LastLoaded time.Time `json:"last_loaded"`
 }
 
 // APIServiceOption defines a type of function to configures the APIService.
@@ -91,6 +97,10 @@ func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOpti
 		HTTPSHost: viper.GetString("web.https.host"),
 		HTTPSPort: fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPortHttps)),
 		HTTPPort:  fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPort)),
+		ModMetadata: RootModMetadata{
+			IsStale:    false,
+			LastLoaded: time.Now(),
+		},
 	}
 	// Set options
 	for _, opt := range opts {
