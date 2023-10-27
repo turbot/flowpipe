@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -162,34 +163,11 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			output.Status = "finished"
 		}
 
-		// If it's a pipeline step, we need to do something else, we we need to start
-		// a new pipeline execution for the child pipeline
-		if stepDefn.GetType() == schema.AttributeTypePipeline {
-			args := modconfig.Input{}
-			if cmd.StepInput[schema.AttributeTypeArgs] != nil {
-				args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
-			}
-
-			e, err := event.NewPipelineStepStarted(
-				event.ForPipelineStepStart(cmd),
-				event.WithNewChildPipelineExecutionID(),
-				event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
-
-			if err != nil {
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
-				}
-				return
-			}
-			err = h.EventBus.Publish(ctx, &e)
-			if err != nil {
-				logger.Error("Error publishing event", "error", err)
-			}
-			return
-		} else if stepDefn.GetType() == schema.BlockTypeInput {
-			// If it's an input step, we can't complete the step until the API receives the input's answer
-			logger.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+		// We have some special steps that need to be handled differently:
+		// Pipeline Step -> launch a new pipeline
+		// Input Step -> waiting for external event to resume the pipeline
+		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, h, logger)
+		if shouldReturn {
 			return
 		}
 
@@ -237,25 +215,55 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 	return nil
 }
 
+// If it's a pipeline step, we need to do something else, we we need to start
+// a new pipeline execution for the child pipeline
+// If it's an input step, we can't complete the step until the API receives the input's answer
+func specialStepHandler(ctx context.Context, stepDefn modconfig.IPipelineStep, cmd *event.PipelineStepStart, h PipelineStepStartHandler, logger *fplog.FlowpipeLogger) bool {
+
+	if stepDefn.GetType() == schema.AttributeTypePipeline {
+		args := modconfig.Input{}
+		if cmd.StepInput[schema.AttributeTypeArgs] != nil {
+			args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
+		}
+
+		e, err := event.NewPipelineStepStarted(
+			event.ForPipelineStepStart(cmd),
+			event.WithNewChildPipelineExecutionID(),
+			event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
+
+		if err != nil {
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				logger.Error("Error publishing event", "error", err2)
+			}
+			return true
+		}
+
+		err = h.EventBus.Publish(ctx, &e)
+		if err != nil {
+			logger.Error("Error publishing event", "error", err)
+		}
+
+		return true
+	} else if stepDefn.GetType() == schema.BlockTypeInput {
+
+		logger.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+		return true
+	}
+
+	return false
+}
+
 func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, stepDefn modconfig.IPipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 
+	var stepLoop *modconfig.StepLoop
 	if loopBlock != nil {
 		loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
 		if loopDefn == nil {
 			// We should never get here, because the loop block should have been validated
 			logger.Error("Unknown loop type", "type", stepDefn.GetType())
-		}
-
-		diags := gohcl.DecodeBody(loopBlock, evalContext, loopDefn)
-		if len(diags) > 0 {
-			logger.Error("Error decoding loop block", "error", diags)
-			err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, diags)))
-			if err != nil {
-				logger.Error("Error publishing event", "error", err)
-			}
-			return
 		}
 
 		var err error
@@ -269,11 +277,42 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 			}
 			return
 		}
+
+		diags := gohcl.DecodeBody(loopBlock, evalContext, loopDefn)
+		if len(diags) > 0 {
+			logger.Error("Error decoding loop block", "error", diags)
+			err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, diags)))
+			if err != nil {
+				logger.Error("Error publishing event", "error", err)
+			}
+			return
+		}
+
+		if loopDefn.ShouldRun() {
+			// start the loop
+
+			// get the new input
+			newInput, err := loopDefn.UpdateInput(cmd.StepInput)
+			if err != nil {
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return
+			}
+
+			fmt.Println(newInput)
+			stepLoop = &modconfig.StepLoop{
+				Key: "0",
+			}
+		}
+
 	}
 
 	e, err := event.NewPipelineStepFinished(
 		event.ForPipelineStepStartToPipelineStepFinished(cmd),
-		event.WithStepOutput(output, stepOutput))
+		event.WithStepOutput(output, stepOutput),
+		event.WithStepLoop(stepLoop))
 
 	if err != nil {
 		logger.Error("Error creating Pipeline Step Finished event", "error", err)

@@ -470,6 +470,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				shouldBeIndexed = true
 			}
 
+			partOfALoop := et.StepLoop != nil
+
 			// Step the specific step execution status
 			if pe.StepExecutions[et.StepExecutionID] == nil {
 				return perr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)

@@ -18,7 +18,9 @@ func AddEachForEach(stepForEach *modconfig.StepForEach, evalContext *hcl.EvalCon
 	return evalContext
 }
 
+// This function *mutates* the evalContext passed in
 func AddStepOutputAsResults(stepName string, output *modconfig.Output, stepOutput map[string]interface{}, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
+
 	var err error
 	stepNativeOutputMap := map[string]cty.Value{}
 
@@ -39,7 +41,7 @@ func AddStepOutputAsResults(stepName string, output *modconfig.Output, stepOutpu
 	}
 	stepNativeOutputMap["output"] = cty.ObjectVal(stepOutputCtyMap)
 
-	evalContext.Variables["results"] = cty.ObjectVal(stepNativeOutputMap)
+	evalContext.Variables["result"] = cty.ObjectVal(stepNativeOutputMap)
 
 	return evalContext, nil
 }
