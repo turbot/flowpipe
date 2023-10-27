@@ -7,6 +7,11 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
+// ! This event is only for starting Pipeline Step, not a general step start command.
+// !
+// ! For general Step Start command, refer to PipelineStepStart
+//
+// TODO: at one point we should rename this command, make it more clear.
 type PipelineStepStarted struct {
 	// Event metadata
 	Event *Event `json:"event"`

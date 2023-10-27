@@ -19,6 +19,10 @@ func (PipelineStepFinished) NewEvent() interface{} {
 	return &event.PipelineStepFinished{}
 }
 
+// This event handler handles the Pipeline Step Finish.
+//
+// Note that this event is fired by the Pipeline Step Start command handler. This is one of the new non-standard naming
+// for command -> event flow
 func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.PipelineStepFinished)
 	if !ok {

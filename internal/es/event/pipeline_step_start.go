@@ -19,6 +19,7 @@ type PipelineStepStart struct {
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 
 	DelayMs        int                      `json:"delay_ms,omitempty"` // delay start in milliseconds
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
@@ -79,6 +80,13 @@ func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepFor
 		cmd.StepInput = input
 		cmd.StepForEach = stepForEach
 		cmd.NextStepAction = nextStepAction
+		return nil
+	}
+}
+
+func WithStepLoop(stepLoop *modconfig.StepLoop) PipelineStepStartOption {
+	return func(cmd *PipelineStepStart) error {
+		cmd.StepLoop = stepLoop
 		return nil
 	}
 }
