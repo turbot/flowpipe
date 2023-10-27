@@ -272,6 +272,11 @@ func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 	return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].Initializing
 }
 
+func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
+	return false
+	//return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].LoopHold
+}
+
 // TODO: this doesn't work for step execution retry, it assumes that the entire step
 // TODO: must be retried
 func (pe *PipelineExecution) IsStepQueued(stepName string) bool {
@@ -304,8 +309,8 @@ func (pe *PipelineExecution) StartStep(stepFullyQualifiedName string, seID strin
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName string, seID string) {
-	pe.StepStatus[stepFullyQualifiedName].Finish(seID)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName string, seID string, partOfALoop bool) {
+	pe.StepStatus[stepFullyQualifiedName].Finish(seID, partOfALoop)
 }
 
 func (pe *PipelineExecution) FailStep(stepFullyQualifiedName string, seID string) {
@@ -317,6 +322,10 @@ type StepStatus struct {
 	// When the step is initializing it doesn't yet have any executions.
 	// We track it as initializing until the first execution is queued.
 	Initializing bool `json:"initializing"`
+
+	// Indicate that step is in a loop so we don't mark it as finished
+	LoopHold bool `json:"loop_hold"`
+
 	// Step executions that are queued.
 	Queued map[string]bool `json:"queued"`
 	// Step executions that are started.
@@ -331,7 +340,7 @@ type StepStatus struct {
 func (s *StepStatus) IsComplete() bool {
 	// One step can have more than 1 execution, for example if a step has a for_each directive
 	// or retries
-	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0
+	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold
 }
 
 // IsFail returns true if any executions of the step failed.
@@ -381,10 +390,14 @@ func (s *StepStatus) Start(seID string) {
 }
 
 // Finish marks the given execution as finished.
-func (s *StepStatus) Finish(seID string) {
+func (s *StepStatus) Finish(seID string, partOfALoop bool) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
+	}
+
+	if partOfALoop {
+		s.LoopHold = true
 	}
 
 	s.Initializing = false
