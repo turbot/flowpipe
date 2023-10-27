@@ -79,16 +79,10 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}) PipelineStepFinishedOption {
+func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}, stepLoop *modconfig.StepLoop) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
 		e.StepOutput = stepOutput
-		return nil
-	}
-}
-
-func WithStepLoop(stepLoop *modconfig.StepLoop) PipelineStepFinishedOption {
-	return func(e *PipelineStepFinished) error {
 		e.StepLoop = stepLoop
 		return nil
 	}

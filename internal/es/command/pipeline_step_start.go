@@ -2,7 +2,7 @@ package command
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -270,40 +270,52 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 		evalContext, err = execution.AddStepOutputAsResults(cmd.StepName, output, stepOutput, evalContext)
 		if err != nil {
 			logger.Error("Error adding step output as results", "error", err)
-
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
-			}
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
 			return
 		}
 
 		diags := gohcl.DecodeBody(loopBlock, evalContext, loopDefn)
 		if len(diags) > 0 {
 			logger.Error("Error decoding loop block", "error", diags)
-			err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, diags)))
-			if err != nil {
-				logger.Error("Error publishing event", "error", err)
-			}
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
 			return
 		}
 
 		if loopDefn.ShouldRun() {
 			// start the loop
 
-			// get the new input
-			newInput, err := loopDefn.UpdateInput(cmd.StepInput)
-			if err != nil {
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
+			// // get the new input
+			// newInput, err := loopDefn.UpdateInput(cmd.StepInput)
+			// if err != nil {
+			// 	err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			// 	if err2 != nil {
+			// 		logger.Error("Error publishing event", "error", err2)
+			// 	}
+			// 	return
+			// }
+
+			// fmt.Println(newInput)
+
+			// We have to indicate here (before raising the step finish) that this is part of the loop that should be executing, i.e. the step is not actually
+			// "finished" yet.
+			//
+			// Unlike the for_each where we know that there are n number of step executions and the planner launched them all at once, the loop is different.
+			//
+			// The planner has no idea that the step is not yet finished. We have to tell the planner here that it needs to launch another step execution
+
+			currentKey := 0
+			if cmd.StepLoop != nil {
+				previousKey := cmd.StepLoop.Key
+				prevKeyInt, err := strconv.Atoi(previousKey)
+				if err != nil {
+					raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+					return
 				}
-				return
+				currentKey = prevKeyInt + 1
 			}
 
-			fmt.Println(newInput)
 			stepLoop = &modconfig.StepLoop{
-				Key: "0",
+				Key: strconv.Itoa(currentKey),
 			}
 		}
 
@@ -311,20 +323,22 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 
 	e, err := event.NewPipelineStepFinished(
 		event.ForPipelineStepStartToPipelineStepFinished(cmd),
-		event.WithStepOutput(output, stepOutput),
-		event.WithStepLoop(stepLoop))
+		event.WithStepOutput(output, stepOutput, stepLoop))
 
 	if err != nil {
 		logger.Error("Error creating Pipeline Step Finished event", "error", err)
-
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-		if err2 != nil {
-			logger.Error("Error publishing event", "error", err2)
-		}
+		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
 		return
 	}
 
 	err = h.EventBus.Publish(ctx, &e)
+	if err != nil {
+		logger.Error("Error publishing event", "error", err)
+	}
+}
+
+func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h PipelineStepStartHandler, cmd *event.PipelineStepStart, originalError error, logger *fplog.FlowpipeLogger) {
+	err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, originalError)))
 	if err != nil {
 		logger.Error("Error publishing event", "error", err)
 	}
