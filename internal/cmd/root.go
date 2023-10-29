@@ -22,6 +22,7 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/version"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
 	"github.com/turbot/pipe-fittings/misc"
@@ -41,7 +42,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		Use:     constants.Name,
 		Short:   constants.ShortDescription,
 		Long:    constants.LongDescription,
-		Version: constants.Version,
+		Version: version.GetVersion(),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			viper.Set(pcconstants.ConfigKeyActiveCommand, cmd)
 

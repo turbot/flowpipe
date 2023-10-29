@@ -7,18 +7,27 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-  - env:
-      - CGO_ENABLED=0
+  - id: flowpipe
+
+    # Custom ldflags.
+    #
+    # Default: '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
+    # Templates: allowed
+    ldflags:
+      - -s -w -X 'github.com/turbot/flowpipe/version.Version={{.Version}}' -X 'github.com/turbotio/flowpipe/version.BuildTime={{.Date}}' -X 'github.com/turbotio/flowpipe/version.Commit={{.Commit}} -X main.BuiltBy=goreleaser'
 
     # Default: [ 'darwin', 'linux', 'windows' ]
     goos:
-      - linux
+      # - linux
       - darwin
 
     # Default: [ '386', 'amd64', 'arm64' ]
     goarch:
-      - amd64
+      # - amd64
       - arm64
+
+    env:
+      - CGO_ENABLED=0
 
 archives:
   - format: tar.gz
