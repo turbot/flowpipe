@@ -21,11 +21,11 @@ builds:
     # Default: [ 'darwin', 'linux', 'windows' ]
     goos:
       - linux
-      # - darwin
+      - darwin
 
     # Default: [ '386', 'amd64', 'arm64' ]
     goarch:
-      # - amd64
+      - amd64
       - arm64
 
     env:
