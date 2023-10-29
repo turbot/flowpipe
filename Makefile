@@ -30,7 +30,7 @@ beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
 
 release-local:
-	goreleaser release --skip-publish --clean
+	goreleaser release --skip-publish
 
 test:
 	go clean -testcache
