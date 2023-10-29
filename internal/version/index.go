@@ -5,26 +5,26 @@ package version
 // # GitHub action builds are setup with the correct linker flags
 //
 // Local build (Makefile): use the default value in DOCKERFILE
-var Version = "0.0.1-beta.1"
 
-var BuildTime string
-
-var Commit string
-
-var BuiltBy string
+var (
+	version   = "0.0.1-beta.1"
+	buildTime string
+	commit    string
+	builtBy   string
+)
 
 func GetVersion() string {
-	return Version
+	return version
 }
 
 func GetBuildTime() string {
-	return BuildTime
+	return buildTime
 }
 
 func GetCommit() string {
-	return Commit
+	return commit
 }
 
 func GetBuiltBy() string {
-	return BuiltBy
+	return builtBy
 }
