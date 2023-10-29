@@ -14,12 +14,14 @@ builds:
     # Default: '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
     # Templates: allowed
     ldflags:
+      # Go Releaser analyzes your Git repository and identifies the most recent Git tag (typically the highest version number) as the version for your release.
+      # This is how it determinse the value of {{.Version}}.
       - -s -w -X 'github.com/turbot/flowpipe/version.Version={{.Version}}' -X 'github.com/turbotio/flowpipe/version.BuildTime={{.Date}}' -X 'github.com/turbotio/flowpipe/version.Commit={{.Commit}} -X main.BuiltBy=goreleaser'
 
     # Default: [ 'darwin', 'linux', 'windows' ]
     goos:
-      # - linux
-      - darwin
+      - linux
+      # - darwin
 
     # Default: [ '386', 'amd64', 'arm64' ]
     goarch:
