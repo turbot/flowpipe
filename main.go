@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
@@ -13,7 +14,13 @@ import (
 	"github.com/turbot/pipe-fittings/filepaths"
 )
 
+var (
+	version = "1.2.3"
+)
+
 func main() {
+
+	fmt.Println("Flowpipe - " + version)
 	// Create a single, global context for the application
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
