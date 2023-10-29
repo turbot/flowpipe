@@ -2,7 +2,8 @@ package main
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/spf13/viper"
 
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
@@ -15,12 +16,16 @@ import (
 )
 
 var (
-	version = "1.2.3"
+	// This variables will be set by GoReleaser, put it in main package because we put everything else in internal and I couldn't get Go Releaser
+	// to modify the internal package
+	version = "0.0.1-local.1"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "local"
 )
 
 func main() {
 
-	fmt.Println("Flowpipe - " + version)
 	// Create a single, global context for the application
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
@@ -48,6 +53,11 @@ func main() {
 	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
 	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
 	constants.PipesComponentAppName = "flowpipe"
+
+	viper.SetDefault("main.version", version)
+	viper.SetDefault("main.commit", commit)
+	viper.SetDefault("main.date", date)
+	viper.SetDefault("main.builtBy", builtBy)
 
 	// Run the CLI
 	err = cmd.RunCLI(ctx)
