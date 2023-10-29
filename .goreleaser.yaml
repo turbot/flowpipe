@@ -7,8 +7,16 @@ before:
     # you may remove this if you don't need go generate
     - go generate ./...
 builds:
-  - env:
-      - CGO_ENABLED=0
+  - id: flowpipe
+
+    # Custom ldflags.
+    #
+    # Default: '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
+    # Templates: allowed
+    ldflags:
+      # Go Releaser analyzes your Git repository and identifies the most recent Git tag (typically the highest version number) as the version for your release.
+      # This is how it determinse the value of {{.Version}}.
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
     # Default: [ 'darwin', 'linux', 'windows' ]
     goos:
@@ -20,11 +28,12 @@ builds:
       - amd64
       - arm64
 
+    env:
+      - CGO_ENABLED=0
+
 archives:
   - format: tar.gz
     # Additional files/globs
-    files:
-      - pipeline/*.yaml
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
