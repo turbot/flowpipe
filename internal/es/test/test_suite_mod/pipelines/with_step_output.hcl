@@ -35,3 +35,4 @@ pipeline "with_step_output" {
         value = step.echo.second_step[0].text
     }
 }
+

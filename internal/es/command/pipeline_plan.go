@@ -67,18 +67,27 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// Notably each step may also have multiple executions (e.g. in a for
 	// loop). So, we need to track the overall status of the step separately
 	// from the status of each execution.
-	for i, step := range pipelineDefn.Steps {
-		// TODO: this entire failure handling doesn't work since we've moved to HCL.
-		if pe.IsStepFail(step.GetFullyQualifiedName()) {
+	for _, step := range pipelineDefn.Steps {
+		// TODO: error handling
 
-			if !pe.IsStepFinalFailure(pipelineDefn.Steps[i], ex) {
+		// means step has a for_each, each for_each is another "series" of steps
+		//
+		// the planner need to handle them as if they are invidual "steps"
+		//
+		// if there's a problem if one of the n number of for_each, we just want to retry that one
+		//
+		// for example
+		/*
+			   step "echo" "echo {
+					for_each = ["foo", "bar"]
+					text = "foo"
+			   }
 
-				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
-				if !pe.IsStepQueued(step.GetFullyQualifiedName()) {
-					e.NextSteps = append(e.NextSteps, modconfig.NextStep{StepName: step.GetFullyQualifiedName(), DelayMs: 3000})
-				}
-			}
-			continue
+			   this step will generate 2 "index".
+		*/
+
+		if len(pe.StepStatus[step.GetFullyQualifiedName()]) > 1 {
+
 		}
 
 		if pe.IsStepQueued(step.GetFullyQualifiedName()) {
@@ -90,7 +99,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			continue
 		}
 
-		// TODO: or should it?
 		if pe.IsStepInLoopHold(step.GetFullyQualifiedName()) {
 			continue
 		}

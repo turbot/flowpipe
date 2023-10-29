@@ -23,11 +23,43 @@ type PipelineExecution struct {
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 
-	// Status of each step on a per-step basis. Used to determine if dependencies
+	// Status of each step on a per-step index basis. Used to determine if dependencies
 	// have been met etc. Note that each step may have multiple executions, the status
 	// of which are not tracked here.
-	// dependencies have been met, etc. The step status is on a per-step
-	StepStatus map[string]*StepStatus `json:"-"`
+	// dependencies have been met, etc.
+	//
+	// The Step Status used to be per-step, however the addition of for_each means that we now need to expand this
+	// tracking to include the "index" of the step
+	//
+	// for_each have 2 type of results: list or map, however in Flowpipe they are both treated as a map,
+	// the list is simply a map that the key happens to be a string of "0", "1", "2"
+	//
+	/*
+		The data structure of StepStatus is as follow:
+		{
+			"echo.echo": {
+				"0": {
+					xyz
+				},
+				"1": {
+					xyz
+				}
+			},
+			"http.one": {
+				"foo": {
+					zzz
+				},
+				"bar": {
+					yyy
+				}
+			}
+		}
+
+		echo.echo has a for_each which is a list, so the key is the index of the list
+
+		http.one has a for_each which is a map, so the key is the key of the map
+		**/
+	StepStatus map[string]map[string]*StepStatus `json:"-"`
 
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
@@ -252,23 +284,42 @@ func (pe *PipelineExecution) ShouldFail() bool {
 
 // IsComplete returns true if all steps (that have been initialized) are complete.
 func (pe *PipelineExecution) IsComplete() bool {
-	complete := true
-	for _, status := range pe.StepStatus {
-		if !status.IsComplete() {
-			complete = false
-			break
+
+	for _, indexedStatus := range pe.StepStatus {
+		for _, status := range indexedStatus {
+			if !status.IsComplete() {
+				return false
+			}
 		}
 	}
-	return complete
+	return true
 }
 
 // IsStepComplete returns true if all executions of the step are finished.
 func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
-	return pe.StepStatus[stepName] != nil && pe.StepStatus[stepName].IsComplete()
+	if pe.StepStatus[stepName] == nil {
+		return false
+	}
+
+	for _, s := range pe.StepStatus[stepName] {
+		if !s.IsComplete() {
+			return false
+		}
+	}
+	return true
 }
 
 func (pe *PipelineExecution) IsStepFail(stepName string) bool {
-	return pe.StepStatus[stepName] != nil && pe.StepStatus[stepName].IsFail()
+	if pe.StepStatus[stepName] == nil {
+		return false
+	}
+
+	for _, s := range pe.StepStatus[stepName] {
+		if !s.IsFail() {
+			return false
+		}
+	}
+	return true
 }
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
@@ -310,7 +361,16 @@ func (pe *PipelineExecution) Fail(stepName string, stepError ...modconfig.StepEr
 
 // IsStepInitialized returns true if the step has been initialized.
 func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
-	return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].Initializing
+	if pe.StepStatus[stepName] == nil || len(pe.StepStatus[stepName]) == 0 {
+		return false
+	}
+
+	// for _, s := range pe.StepStatus[stepName] {
+	// 	if !s.Initializing {
+	// 		return false
+	// 	}
+	// }
+	return true
 }
 
 func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
@@ -321,7 +381,16 @@ func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
 // TODO: this doesn't work for step execution retry, it assumes that the entire step
 // TODO: must be retried
 func (pe *PipelineExecution) IsStepQueued(stepName string) bool {
-	return pe.StepStatus[stepName] != nil && len(pe.StepStatus[stepName].Queued) > 0
+	if pe.StepStatus[stepName] == nil || len(pe.StepStatus[stepName]) == 0 {
+		return false
+	}
+
+	for _, s := range pe.StepStatus[stepName] {
+		if len(s.Queued) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // InitializeStep initializes the step status for the given step.
@@ -330,32 +399,45 @@ func (pe *PipelineExecution) InitializeStep(stepName string) {
 		// Step is already initialized
 		return
 	}
-	pe.StepStatus[stepName] = &StepStatus{
-		Initializing: true,
-		Queued:       map[string]bool{},
-		Started:      map[string]bool{},
-		Finished:     map[string]bool{},
-		Failed:       map[string]bool{},
-	}
+	pe.StepStatus[stepName] = map[string]*StepStatus{}
+
+	// &StepStatus{
+	// 	Initializing: true,
+	// 	Queued:       map[string]bool{},
+	// 	Started:      map[string]bool{},
+	// 	Finished:     map[string]bool{},
+	// 	Failed:       map[string]bool{},
+	// }
 }
 
 // QueueStep marks the given step execution as queued.
-func (pe *PipelineExecution) QueueStep(stepFullyQualifiedName string, seID string) {
-	pe.StepStatus[stepFullyQualifiedName].Queue(seID)
+func (pe *PipelineExecution) QueueStep(stepFullyQualifiedName, key, seID string) {
+
+	if pe.StepStatus[stepFullyQualifiedName][key] == nil {
+		pe.StepStatus[stepFullyQualifiedName][key] = &StepStatus{
+			Initializing: true,
+			Queued:       map[string]bool{},
+			Started:      map[string]bool{},
+			Finished:     map[string]bool{},
+			Failed:       map[string]bool{},
+		}
+	}
+
+	pe.StepStatus[stepFullyQualifiedName][key].Queue(seID)
 }
 
 // StartStep marks the given step execution as started.
-func (pe *PipelineExecution) StartStep(stepFullyQualifiedName string, seID string) {
-	pe.StepStatus[stepFullyQualifiedName].Start(seID)
+func (pe *PipelineExecution) StartStep(stepFullyQualifiedName, key, seID string) {
+	pe.StepStatus[stepFullyQualifiedName][key].Start(seID)
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName string, seID string, partOfALoop bool) {
-	pe.StepStatus[stepFullyQualifiedName].Finish(seID, partOfALoop)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, partOfALoop bool) {
+	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, partOfALoop)
 }
 
-func (pe *PipelineExecution) FailStep(stepFullyQualifiedName string, seID string) {
-	pe.StepStatus[stepFullyQualifiedName].Fail(seID)
+func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) {
+	pe.StepStatus[stepFullyQualifiedName][key].Fail(seID)
 }
 
 // This needs to be a map because if we have a for loop, each loop will have a different step execution id
