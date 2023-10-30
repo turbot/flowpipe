@@ -446,6 +446,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 
+		// pipeline_step_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
+		// a generic step start event
 		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted
 			err := json.Unmarshal(ele.Payload, &et)
@@ -463,8 +465,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 
-			// TODO: this is not right, we need to set the status of the step execution
-			pe.StartStep(stepDefn.GetFullyQualifiedName(), "0", et.StepExecutionID)
+			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.Key, et.StepExecutionID)
 
 		case "handler.pipeline_step_finished":
 			var et event.PipelineStepFinished

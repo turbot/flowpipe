@@ -316,7 +316,7 @@ func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
 }
 
 func (pe *PipelineExecution) IsStepFail(stepName string) bool {
-	if pe.StepStatus[stepName] == nil || len({
+	if pe.StepStatus[stepName] == nil || len(pe.StepStatus[stepName]) == 0 {
 		return false
 	}
 

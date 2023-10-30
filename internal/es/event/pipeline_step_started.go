@@ -22,6 +22,12 @@ type PipelineStepStarted struct {
 	ChildPipelineExecutionID string          `json:"child_pipeline_execution_id,omitempty"`
 	ChildPipelineName        string          `json:"child_pipeline_name,omitempty"`
 	ChildPipelineArgs        modconfig.Input `json:"child_pipeline_args,omitempty"`
+
+	// The key for a single step is always "0" but say this pipeline step start is part of for_each, the key is
+	// populated with the actual key: "0"/"1"/"2" or "foo"/"bar"/"baz" (for map based for_each)
+	//
+	// This key is only relevant to its immediate parent (if we have multiple nested pipelines)
+	Key string `json:"key"`
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

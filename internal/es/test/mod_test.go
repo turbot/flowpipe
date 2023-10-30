@@ -472,6 +472,97 @@ func (suite *ModTestSuite) TestPipelineWithForEach() {
 	assert.Equal("Hello: sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"])
 }
 
+func (suite *ModTestSuite) TestPipelineForEachTrippleNested() {
+	assert := assert.New(suite.T())
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.run_me_top", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	/* Expected output:
+
+
+		"val": {
+	        "0": {
+	            "output": {},
+	            "val": {
+	                "0": {
+	                    "output": {},
+	                    "val": "bottom: aaa - spock"
+	                },
+	                "1": {
+	                    "output": {},
+	                    "val": "bottom: bbb - spock"
+	                },
+	                "2": {
+	                    "output": {},
+	                    "val": "bottom: ccc - spock"
+	                }
+	            }
+	        },
+	        "1": {
+	            "output": {},
+	            "val": {
+	                "0": {
+	                    "output": {},
+	                    "val": "bottom: aaa - kirk"
+	                },
+	                "1": {
+	                    "output": {},
+	                    "val": "bottom: bbb - kirk"
+	                },
+	                "2": {
+	                    "output": {},
+	                    "val": "bottom: ccc - kirk"
+	                }
+	            }
+	        },
+	        "2": {
+	            "output": {},
+	            "val": {
+	                "0": {
+	                    "output": {},
+	                    "val": "bottom: aaa - sulu"
+	                },
+	                "1": {
+	                    "output": {},
+	                    "val": "bottom: bbb - sulu"
+	                },
+	                "2": {
+	                    "output": {},
+	                    "val": "bottom: ccc - sulu"
+	                }
+	            }
+	        }
+	    }
+		**/
+
+	assert.Equal("bottom: aaa - spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["val"].(map[string]interface{})["0"].(map[string]interface{})["val"])
+	assert.Equal("bottom: bbb - spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["val"].(map[string]interface{})["1"].(map[string]interface{})["val"])
+	assert.Equal("bottom: ccc - spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["val"].(map[string]interface{})["2"].(map[string]interface{})["val"])
+
+	assert.Equal("bottom: aaa - kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["val"].(map[string]interface{})["0"].(map[string]interface{})["val"])
+	assert.Equal("bottom: bbb - kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["val"].(map[string]interface{})["1"].(map[string]interface{})["val"])
+	assert.Equal("bottom: ccc - kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["val"].(map[string]interface{})["2"].(map[string]interface{})["val"])
+
+	assert.Equal("bottom: aaa - sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["val"].(map[string]interface{})["0"].(map[string]interface{})["val"])
+	assert.Equal("bottom: bbb - sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["val"].(map[string]interface{})["1"].(map[string]interface{})["val"])
+	assert.Equal("bottom: ccc - sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["val"].(map[string]interface{})["2"].(map[string]interface{})["val"])
+}
+
 func (suite *ModTestSuite) TestPipelineWithArgs() {
 	assert := assert.New(suite.T())
 
