@@ -286,6 +286,12 @@ func (pe *PipelineExecution) ShouldFail() bool {
 func (pe *PipelineExecution) IsComplete() bool {
 
 	for _, indexedStatus := range pe.StepStatus {
+		// If indexedStatus is nil, then the step hasn't been initialized
+		// TODO: for_each - this concept of step initialization does not work well with for_each when each instance of for_each has a loop
+		if indexedStatus == nil || len(indexedStatus) == 0 {
+			return false
+		}
+
 		for _, status := range indexedStatus {
 			if !status.IsComplete() {
 				return false
@@ -297,7 +303,7 @@ func (pe *PipelineExecution) IsComplete() bool {
 
 // IsStepComplete returns true if all executions of the step are finished.
 func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
-	if pe.StepStatus[stepName] == nil {
+	if pe.StepStatus[stepName] == nil || len(pe.StepStatus[stepName]) == 0 {
 		return false
 	}
 
@@ -310,7 +316,7 @@ func (pe *PipelineExecution) IsStepComplete(stepName string) bool {
 }
 
 func (pe *PipelineExecution) IsStepFail(stepName string) bool {
-	if pe.StepStatus[stepName] == nil {
+	if pe.StepStatus[stepName] == nil || len({
 		return false
 	}
 

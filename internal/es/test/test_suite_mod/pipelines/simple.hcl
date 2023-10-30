@@ -26,3 +26,15 @@ pipeline "simple_two_steps" {
         value = step.echo.echo_two.text
     }
 }
+
+pipeline "simple_for_each" {
+
+    step "echo" "echo" {
+        for_each = ["bar", "baz", "qux"]
+        text = "${each.key}: foo ${each.value}"
+    }
+
+    output "val" {
+        value = step.echo.echo
+    }
+}
