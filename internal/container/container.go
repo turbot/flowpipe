@@ -1,8 +1,6 @@
-//nolint:forbidigo //TODO: initial import
 package container
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -10,18 +8,22 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type Container struct {
 
 	// Configuration
-	Name       string            `json:"name"`
-	Image      string            `json:"image"`
-	Cmd        []string          `json:"cmd"`
-	Env        map[string]string `json:"env"`
-	EntryPoint []string          `json:"entrypoint"`
+	Name            string            `json:"name"`
+	Image           string            `json:"image"`
+	Cmd             []string          `json:"cmd"`
+	Env             map[string]string `json:"env"`
+	EntryPoint      []string          `json:"entrypoint"`
+	RetainArtifacts bool              `json:"retain_artifacts"`
 
 	// Runtime information
 	CreatedAt   *time.Time               `json:"created_at,omitempty"`
@@ -40,6 +42,7 @@ type ContainerRun struct {
 	Status      string `json:"status"`
 	Stdout      string `json:"stdout"`
 	Stderr      string `json:"stderr"`
+	Combined    string `json:"combined"`
 }
 
 // Option defines a function signature for configuring the Docker client.
@@ -81,6 +84,8 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 		// ImageExists: true,
 		EntryPoint: []string{},
 	}
+
+	fc.RetainArtifacts = viper.GetBool(constants.ArgRetainArtifacts)
 
 	for _, option := range options {
 		if err := option(fc); err != nil {
@@ -149,6 +154,7 @@ func (c *Container) SetRunStatus(containerID string, newStatus string) error {
 
 func (c *Container) Run() (string, error) {
 
+	logger := fplog.Logger(c.runCtx)
 	containerID := ""
 
 	start := time.Now()
@@ -157,7 +163,8 @@ func (c *Container) Run() (string, error) {
 	if !c.ImageExists {
 		imageExistsStart := time.Now()
 		imageExists, err := c.dockerClient.ImageExists(c.Image)
-		fmt.Printf("imageExists: %s\n", time.Since(imageExistsStart))
+
+		logger.Info("image exists", "since", time.Since(imageExistsStart), "image", c.Image)
 
 		if err != nil {
 			return containerID, err
@@ -165,7 +172,7 @@ func (c *Container) Run() (string, error) {
 		if !imageExists {
 			imagePullStart := time.Now()
 			err = c.dockerClient.ImagePull(c.Image)
-			fmt.Printf("imagePull elapsed: %s\n", time.Since(imagePullStart))
+			logger.Info("image pull", "elapsed", time.Since(imagePullStart), "image", c.Image)
 			if err != nil {
 				return containerID, err
 			}
@@ -230,7 +237,7 @@ func (c *Container) Run() (string, error) {
 	}
 	containerCreateStart := time.Now()
 	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &container.HostConfig{}, &network.NetworkingConfig{}, nil, "")
-	fmt.Printf("containerCreate elapsed: %s\n", time.Since(containerCreateStart))
+	logger.Info("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, err
 	}
@@ -243,7 +250,7 @@ func (c *Container) Run() (string, error) {
 	// Start the container
 	containerStartStart := time.Now()
 	err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, types.ContainerStartOptions{})
-	fmt.Printf("containerStart elapsed: %s\n", time.Since(containerStartStart))
+	logger.Info("container start", "elapsed", time.Since(containerStartStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, err
 	}
@@ -262,7 +269,7 @@ func (c *Container) Run() (string, error) {
 		}
 	case <-statusCh:
 	}
-	fmt.Printf("containerWait elapsed: %s\n", time.Since(containerWaitStart))
+	logger.Info("container wait", "elapsed", time.Since(containerWaitStart), "image", c.Image, "container", containerResp.ID)
 
 	err = c.SetRunStatus(containerID, "finished")
 	if err != nil {
@@ -270,7 +277,6 @@ func (c *Container) Run() (string, error) {
 	}
 
 	// Retrieve the container output
-	outputBuf := new(bytes.Buffer)
 	containerLogsOptions := types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -281,7 +287,6 @@ func (c *Container) Run() (string, error) {
 	}
 	containerLogsStart := time.Now()
 	reader, err := c.dockerClient.CLI.ContainerLogs(c.ctx, containerID, containerLogsOptions)
-	fmt.Printf("containerLogs elapsed: %s\n", time.Since(containerLogsStart))
 	if err != nil {
 		return containerID, err
 	}
@@ -294,9 +299,9 @@ func (c *Container) Run() (string, error) {
 	}
 	c.Runs[containerID].Stdout = o.Stdout()
 	c.Runs[containerID].Stderr = o.Stderr()
+	c.Runs[containerID].Combined = o.Combined()
 
-	fmt.Printf("%v", outputBuf.Bytes())
-	fmt.Printf("%s", c.Runs[containerID].Stdout)
+	logger.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Combined)
 
 	err = c.SetRunStatus(containerID, "logged")
 	if err != nil {
@@ -304,12 +309,18 @@ func (c *Container) Run() (string, error) {
 	}
 
 	// Remove the container
-	containerRemoveStart := time.Now()
-	err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, types.ContainerRemoveOptions{})
-	fmt.Printf("containerRemove elapsed: %s\n", time.Since(containerRemoveStart))
-	if err != nil {
-		// TODO - do we have to fail here? Perhaps things like not found can be ignored?
-		return containerID, err
+
+	if c.RetainArtifacts {
+		logger.Info("retain artifacts", "name", c.Name)
+	} else {
+		containerRemoveStart := time.Now()
+		err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, types.ContainerRemoveOptions{})
+
+		logger.Info("container remove", "elapsed", time.Since(containerRemoveStart), "image", c.Image, "container", containerResp.ID)
+		if err != nil {
+			// TODO - do we have to fail here? Perhaps things like not found can be ignored?
+			return containerID, err
+		}
 	}
 
 	err = c.SetRunStatus(containerID, "removed")
@@ -317,12 +328,15 @@ func (c *Container) Run() (string, error) {
 		return containerID, err
 	}
 
-	fmt.Printf("container [%s]: %s\n", containerID, time.Since(start))
+	logger.Info("container run", "elapsed", time.Since(start), "image", c.Image, "container", containerResp.ID)
 
 	return containerID, nil
 }
 
 // Cleanup all docker containers for the given container.
 func (c *Container) CleanupArtifacts() error {
+	logger := fplog.Logger(c.runCtx)
+
+	logger.Info("cleanup artifacts", "name", c.Name)
 	return c.dockerClient.CleanupArtifactsForLabel("io.flowpipe.name", c.Name)
 }
