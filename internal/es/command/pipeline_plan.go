@@ -86,8 +86,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			   this step will generate 2 "index".
 		*/
 
+		// This mean the step has been initialized
+		// TODO: change this to do per for_each instance
 		if len(pe.StepStatus[step.GetFullyQualifiedName()]) > 1 {
-
+			continue
 		}
 
 		if pe.IsStepQueued(step.GetFullyQualifiedName()) {
