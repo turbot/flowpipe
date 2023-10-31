@@ -107,7 +107,6 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	for _, p := range pipelineDefn.GetMod().ResourceMaps.Integrations {
 
-		// TODO: this doesn't work with mods
 		parts := strings.Split(p.Name(), ".")
 		if len(parts) != 4 {
 			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
