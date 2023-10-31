@@ -29,7 +29,8 @@ import (
 type Manager struct {
 	ctx context.Context
 
-	RootMod          *modconfig.Mod
+	RootMod *modconfig.Mod
+
 	apiService       *api.APIService
 	esService        *es.ESService
 	schedulerService *scheduler.SchedulerService
@@ -110,11 +111,18 @@ func (m *Manager) Initialize() error {
 	if misc.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
+		if errorAndWarning.Error != nil {
+			return errorAndWarning.Error
+		}
 
 		err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 			logger := fplog.Logger(m.ctx)
 			logger.Error("error watching workspace", "error", e)
+			m.apiService.ModMetadata.IsStale = true
 		})
+		if err != nil {
+			return err
+		}
 
 		w.SetOnFileWatcherEventMessages(func() {
 			logger := fplog.Logger(m.ctx)
@@ -124,6 +132,8 @@ func (m *Manager) Initialize() error {
 				logger.Error("error caching pipelines and triggers", "error", err)
 			} else {
 				logger.Info("cached pipelines and triggers")
+				m.apiService.ModMetadata.IsStale = false
+				m.apiService.ModMetadata.LastLoaded = time.Now()
 			}
 
 			// Reload scheduled triggers
@@ -138,14 +148,6 @@ func (m *Manager) Initialize() error {
 				}
 			}
 		})
-
-		if err != nil {
-			return err
-		}
-
-		if errorAndWarning.Error != nil {
-			return errorAndWarning.Error
-		}
 
 		mod := w.Mod
 		modInfo = mod
