@@ -20,7 +20,7 @@ pipeline "input_one" {
     }
 }
 
-pipeline "input_notify" {
+pipeline "input_slack_notify" {
     param "channel" {
         type = string
         default = "#general"
@@ -33,6 +33,23 @@ pipeline "input_notify" {
         notify {
             integration = integration.slack.dev_app
             channel     = param.channel
+        }
+    }
+}
+
+pipeline "input_email_notify" {
+    param "to" {
+        type = string
+        default = "awesomebob@blahblah.com"
+    }
+
+    step "input" "input" {
+
+        prompt = "Choose an option:"
+
+        notify {
+            integration = integration.email.dev_workspace
+            to          = param.to
         }
     }
 }
