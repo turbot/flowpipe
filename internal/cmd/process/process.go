@@ -399,10 +399,10 @@ func renderPipelineOutput(ctx context.Context, output map[string]any, width int)
 	var lines []string
 	delete(output, "errors")
 	if len(output) >= 1 {
-		lines = append(lines, "Outputs:")
+		lines = append(lines, "\nOutputs:")
 	}
 	for k, v := range output {
-		line := fmt.Sprintf("➡️[%s] %v", k, v)
+		line := fmt.Sprintf("➡️ [%s] %v", k, v)
 		if utf8.RuneCountInString(line) >= width {
 			line = fmt.Sprintf("%s%s", line[0:width-8], "...")
 		}
