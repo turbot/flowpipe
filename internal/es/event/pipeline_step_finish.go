@@ -38,10 +38,11 @@ func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &modconfig.Output{
 			Status: "", // output is only relevant for step
-			Data:   e.PipelineOutput,
+			Data: map[string]interface{}{
+				"output": e.PipelineOutput,
+			},
 		}
 
-		// e.PipelineOutput
 		return nil
 	}
 }
@@ -51,11 +52,12 @@ func ForPipelineFailed(e *PipelineFailed) PipelineStepFinishOption {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &modconfig.Output{
 			Status: "",
-			Data:   e.PipelineOutput,
+			Data: map[string]interface{}{
+				"output": e.PipelineOutput,
+			},
 			Errors: []modconfig.StepError{*e.Error},
 		}
 
-		// e.PipelineOutput
 		return nil
 	}
 }

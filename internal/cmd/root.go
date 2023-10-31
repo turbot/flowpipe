@@ -41,7 +41,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		Use:     constants.Name,
 		Short:   constants.ShortDescription,
 		Long:    constants.LongDescription,
-		Version: constants.Version,
+		Version: viper.GetString("main.version"),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			viper.Set(pcconstants.ConfigKeyActiveCommand, cmd)
 
@@ -61,7 +61,6 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	cwd, err := os.Getwd()
 	error_helpers.FailOnError(err)
 
-	// Command flags
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
 	// Flowpipe API

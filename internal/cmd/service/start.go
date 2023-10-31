@@ -25,6 +25,7 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	serviceStartCmd.Flags().String(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.")
 	serviceStartCmd.Flags().Bool(constants.ArgFunctions, false, "Enable function and container steps.")
 	serviceStartCmd.Flags().Bool(constants.ArgNoScheduler, false, "Disable the scheduler.")
+	serviceStartCmd.Flags().Bool(constants.ArgRetainArtifacts, false, "Retains Docker container artifacts for container step. [EXPERIMENTAL]")
 
 	err := viper.BindPFlag(constants.ArgModLocation, serviceStartCmd.Flags().Lookup(constants.ArgModLocation))
 	if err != nil {
@@ -47,6 +48,11 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 
 	err = viper.BindPFlag(constants.ArgNoScheduler, serviceStartCmd.Flags().Lookup(constants.ArgNoScheduler))
+	if err != nil {
+		error_helpers.FailOnError(err)
+	}
+
+	err = viper.BindPFlag(constants.ArgRetainArtifacts, serviceStartCmd.Flags().Lookup(constants.ArgRetainArtifacts))
 	if err != nil {
 		error_helpers.FailOnError(err)
 	}

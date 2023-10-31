@@ -172,39 +172,11 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		}
 
 		// calculate the output blocks
-		for _, outputConfig := range stepDefn.GetOutputConfig() {
-			if outputConfig.UnresolvedValue != nil {
-
-				stepForEach := stepDefn.GetForEach()
-				if stepForEach != nil {
-					// If there's a for_each in the step definition, we need to insert the "each" magic variable
-					// so the output can refer to it
-					evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
-				}
-
-				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
-				if len(diags) > 0 && diags.HasErrors() {
-					logger.Error("Error calculating output on step start", "error", diags)
-					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-					if err2 != nil {
-						logger.Error("Error publishing event", "error", err2)
-					}
-					return
-				}
-
-				goVal, err := hclhelpers.CtyToGo(ctyValue)
-				if err != nil {
-					logger.Error("Error converting cty value to Go value for output calculation", "error", err)
-					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-					if err2 != nil {
-						logger.Error("Error publishing event", "error", err2)
-					}
-					return
-				}
-				stepOutput[outputConfig.Name] = goVal
-			} else {
-				stepOutput[outputConfig.Name] = outputConfig.Value
-			}
+		// If there's a for_each in the step definition, we need to insert the "each" magic variable
+		// so the output can refer to it
+		evalContext, stepOutput, shouldReturn = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, logger, h, err, stepOutput)
+		if shouldReturn {
+			return
 		}
 
 		// All other primitives finish immediately.
@@ -213,6 +185,44 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 	}(ctx, c, h)
 
 	return nil
+}
+
+// This function mutates stepOutput
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.IPipelineStep, evalContext *hcl.EvalContext, cmd *event.PipelineStepStart, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
+	for _, outputConfig := range stepDefn.GetOutputConfig() {
+		if outputConfig.UnresolvedValue != nil {
+
+			stepForEach := stepDefn.GetForEach()
+			if stepForEach != nil {
+
+				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
+			}
+
+			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
+			if len(diags) > 0 && diags.HasErrors() {
+				logger.Error("Error calculating output on step start", "error", diags)
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return nil, stepOutput, true
+			}
+
+			goVal, err := hclhelpers.CtyToGo(ctyValue)
+			if err != nil {
+				logger.Error("Error converting cty value to Go value for output calculation", "error", err)
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return nil, stepOutput, true
+			}
+			stepOutput[outputConfig.Name] = goVal
+		} else {
+			stepOutput[outputConfig.Name] = outputConfig.Value
+		}
+	}
+	return evalContext, stepOutput, false
 }
 
 // If it's a pipeline step, we need to do something else, we we need to start

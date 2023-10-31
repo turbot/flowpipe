@@ -51,15 +51,15 @@ pipeline "calling_pipeline_with_params" {
     }
 
     output "val" {
-        value = step.pipeline.simple_param.val
+        value = step.pipeline.simple_param.output.val
     }
 
     output "val_expr" {
-        value = step.pipeline.simple_param_expr.val
+        value = step.pipeline.simple_param_expr.output.val
     }
 
     output "val_from_val" {
-        value = step.pipeline.simple_param.from_var
+        value = step.pipeline.simple_param.output.from_var
     }
 }
 

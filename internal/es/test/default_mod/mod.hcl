@@ -18,7 +18,7 @@ pipeline "echo_one" {
     }
 
     output "echo_one_output" {
-        value = step.pipeline.child_pipeline.val
+        value = step.pipeline.child_pipeline.output.val
     }
 }
 
