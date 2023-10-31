@@ -187,9 +187,8 @@ func (c *Container) Run() (string, error) {
 
 	// Create a container using the specified image
 	createConfig := container.Config{
-		Image:      c.Image,
-		Cmd:        c.Cmd,
-		Entrypoint: c.EntryPoint,
+		Image: c.Image,
+		Cmd:   c.Cmd,
 		Labels: map[string]string{
 			// Set on the container since it's not on the image
 			"io.flowpipe.type": "container",
@@ -235,6 +234,12 @@ func (c *Container) Run() (string, error) {
 		AttachStdout: false,
 		AttachStderr: false,
 	}
+
+	// Only override Entrypoint if we pass content to c.EntryPoint
+	if len(c.EntryPoint) != 0 {
+		createConfig.Entrypoint = c.EntryPoint
+	}
+
 	containerCreateStart := time.Now()
 	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &container.HostConfig{}, &network.NetworkingConfig{}, nil, "")
 	logger.Info("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
