@@ -25,7 +25,7 @@ func Initialize(ctx context.Context) error {
 	logger.Info("Initializing Docker client")
 	dc, err := New(WithContext(ctx), WithPingTest())
 	if err != nil {
-		logger.Error("Failed to initialize Docker client", "error", err.Error())
+		logger.Error("Failed to initialize Docker client", "error", err)
 		return err
 	}
 
