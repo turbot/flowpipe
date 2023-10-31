@@ -242,6 +242,13 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
 	c.Header("flowpipe-status", pex.Status)
 
+	if api.ModMetadata.IsStale {
+		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
+		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		c.Header("flowpipe-mod-is-stale", "true")
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(time.RFC3339))
+	}
+
 	if pex.Status == expectedState {
 		c.JSON(http.StatusOK, response)
 	} else {
