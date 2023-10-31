@@ -48,7 +48,7 @@ pipeline "parent_pipeline" {
   }
 
   step "echo" "echo_child_pipeline_1" {
-    text = step.pipeline.child_pipeline_itr_list.for_each_output_1
+    text = step.pipeline.child_pipeline_itr_list.output.for_each_output_1
   }
 
   step "pipeline" "child_pipeline_itr_map" {
@@ -56,7 +56,7 @@ pipeline "parent_pipeline" {
   }
 
   step "echo" "echo_child_pipeline_2" {
-    text = step.pipeline.child_pipeline_itr_map.for_each_output_1
+    text = step.pipeline.child_pipeline_itr_map.output.for_each_output_1
   }
 
   // step "pipeline" "foreach_pipeline_step"{

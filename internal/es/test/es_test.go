@@ -344,7 +344,7 @@ func (suite *EsTestSuite) TestParentChildPipeline() {
 	assert.Equal("finished", pex.Status)
 	// TODO: this doesn't work yet, we need pass the pipeline status up? or does it has its own status?
 	// assert.Equal("finished", pex.AllStepOutputs["pipeline"]["child_pipeline_with_args"].(*modconfig.Output).Status)
-	assert.Equal("child echo step: from parent 24", pex.AllNativeStepOutputs["pipeline"]["child_pipeline_with_args"].(*modconfig.Output).Data["child_output"])
+	assert.Equal("child echo step: from parent 24", pex.AllNativeStepOutputs["pipeline"]["child_pipeline_with_args"].(*modconfig.Output).Data["output"].(map[string]interface{})["child_output"])
 	assert.Equal("child echo step: from parent 24", pex.PipelineOutput["parent_output"])
 	assert.Nil(pex.PipelineOutput["does_not_exist"])
 

@@ -83,7 +83,7 @@ pipeline "priv_command_add" {
         name as label,
         arn as value
       from
-        aws_iam_group    
+        aws_iam_group
     EOQ
   }
 
@@ -116,7 +116,7 @@ pipeline "priv_command_add" {
 
     request_body = jsonencode({
       mrkdwn = true
-      text = "Your request to add `${param.username}` to `${step.input.select_group.value}` has been ${step.pipeline.add_user_to_group.approved == true ? "*approved*." : "*denied!*"}"
+      text = "Your request to add `${param.username}` to `${step.input.select_group.value}` has been ${step.pipeline.add_user_to_group.output.approved == true ? "*approved*." : "*denied!*"}"
     })
   }
 
@@ -125,7 +125,7 @@ pipeline "priv_command_add" {
   }
 
   output "user_group_add" {
-    value = step.pipeline.add_user_to_group.output
+    value = step.pipeline.add_user_to_group.output.output
   }
 }
 
@@ -142,8 +142,8 @@ pipeline "priv_command_remove" {
   step "query" "list_groups" {
     connection_string = "postgres://steampipe@127.0.0.1:9193/steampipe"
     sql = <<-EOQ
-      select 
-        -- name, 
+      select
+        -- name,
         g ->> 'GroupName' as label
       from
         aws_iam_user,
@@ -182,7 +182,7 @@ pipeline "priv_command_remove" {
   }
 
   output "user_group_remove" {
-    value = step.pipeline.remove_user_from_group.output
+    value = step.pipeline.remove_user_from_group.output.output
   }
 }
 
@@ -199,8 +199,8 @@ pipeline "priv_command_list" {
   step "query" "list_groups" {
     connection_string = "postgres://steampipe@127.0.0.1:9193/steampipe"
     sql = <<-EOQ
-      select 
-        -- name, 
+      select
+        -- name,
         g ->> 'GroupName' as label
       from
         aws_iam_user,
@@ -221,7 +221,7 @@ pipeline "priv_command_list" {
         %{ if length(step.query.list_groups.rows) == 0 }
         You are not a member of any groups.
         %{ else }
-        You are a member of the following groups: 
+        You are a member of the following groups:
 
         %{ for g in step.query.list_groups.rows[*].label ~}
         - *${g}*

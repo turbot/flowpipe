@@ -109,11 +109,17 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 					for configuredOutputName, configuredOutputValue := range pe.AllConfigStepOutputs[stepType][stepName].(map[string]interface{}) {
 						configuredOutputMap[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
 						if err != nil {
-							return nil, err
+							return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
 						}
 					}
 
-					ctyMap["output"] = cty.ObjectVal(configuredOutputMap)
+					// we have to merge the output. The only case we have right now is for Pipeline Step. The pipeline has "output" that needs to be merged
+					// with the step output blocks
+					// We have a clash, it's an error
+					ctyMap, err = mergeOutputValues(ctyMap, configuredOutputMap, stepName)
+					if err != nil {
+						return nil, err
+					}
 				}
 
 				vm[stepName] = cty.ObjectVal(ctyMap)
@@ -127,20 +133,35 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 					configStepOutputs = pe.AllConfigStepOutputs[stepType][stepName].(map[string]map[string]interface{})
 				}
 
-				for i, stepOutput := range indexedStepOutput {
+				for i, stepOutput := range indexedStepOutput { // indexStepOutput is the "native" output. For a pipeline step it is the output of the nested pipeline, it will be nested inside an "output" block
 					if stepOutput.Status == "skipped" {
 						continue
 					}
 
-					ctyMap, err := stepOutput.AsCtyMap()
+					ctyMap, err := stepOutput.AsCtyMap() // this is the "native" output of the step
 					if err != nil {
 						return nil, err
 					}
 
 					configuredOutputMap := configStepOutputs[i]
-					ctyMap["output"], err = hclhelpers.ConvertMapToCtyValue(configuredOutputMap)
-					if err != nil {
-						return nil, err
+					if ctyMap["output"].IsNull() {
+						ctyMap["output"], err = hclhelpers.ConvertMapToCtyValue(configuredOutputMap)
+						if err != nil {
+							return nil, perr.InternalWithMessage("Unable to convert map to cty value " + err.Error())
+						}
+					} else {
+						stepOutput := ctyMap["output"].AsValueMap()
+
+						for configuredOutputName, configuredOutputValue := range configuredOutputMap {
+							if !stepOutput[configuredOutputName].IsNull() {
+								return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
+							}
+							stepOutput[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
+							if err != nil {
+								return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
+							}
+						}
+						ctyMap["output"] = cty.ObjectVal(stepOutput)
 					}
 
 					ctyValMap[i] = cty.ObjectVal(ctyMap)
@@ -160,6 +181,26 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 	}
 
 	return executionVariables, nil
+}
+
+func mergeOutputValues(ctyMap map[string]cty.Value, configuredOutputMap map[string]cty.Value, stepName string) (map[string]cty.Value, error) {
+	if ctyMap["output"].IsNull() {
+		ctyMap["output"] = cty.ObjectVal(configuredOutputMap)
+
+	} else {
+		stepOutput := ctyMap["output"].AsValueMap()
+
+		for configuredOutputName, configuredOutputValue := range configuredOutputMap {
+			if !stepOutput[configuredOutputName].IsNull() {
+				return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
+			}
+
+			stepOutput[configuredOutputName] = configuredOutputValue
+		}
+
+		ctyMap["output"] = cty.ObjectVal(stepOutput)
+	}
+	return ctyMap, nil
 }
 
 // PipelineStepExecutions returns a list of step executions for the given

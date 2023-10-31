@@ -14,7 +14,7 @@ pipeline "top" {
 
 
     step "echo" "combine" {
-        text = step.pipeline.middle.val
+        text = step.pipeline.middle.output.val
     }
 
     output "val" {
@@ -22,7 +22,7 @@ pipeline "top" {
     }
 
     output "val_two" {
-        value = step.pipeline.middle.val_two
+        value = step.pipeline.middle.output.val_two
     }
 }
 
@@ -44,7 +44,7 @@ pipeline "middle" {
         json = jsonencode({
           query = <<EOQ
             mutation {
-                createIssue(input: {repositoryId: "${step.pipeline.call_bottom.repository_id}", title: "${param.issue_title}"}
+                createIssue(input: {repositoryId: "${step.pipeline.call_bottom.output.repository_id}", title: "${param.issue_title}"}
                 ) {
                     clientMutationId
                     issue {
