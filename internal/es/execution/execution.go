@@ -602,6 +602,12 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "failed"
 			pe.PipelineOutput = et.PipelineOutput
+			if et.Error != nil {
+				if pe.Errors == nil {
+					pe.Errors = []modconfig.StepError{}
+				}
+				pe.Errors = append(pe.Errors, *et.Error)
+			}
 
 		default:
 			// Ignore unknown types while loading

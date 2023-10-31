@@ -229,6 +229,31 @@ func (suite *ModTestSuite) TestSimpleNestedPipeline() {
 	assert.Equal("two: hello from the middle world", pex.PipelineOutput["val_two"])
 }
 
+func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_with_clash_merged_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution should fail")
+		return
+	}
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "output block 'val' already exists in step 'middle'")
+}
+
 func (suite *ModTestSuite) TestSimpleNestedPipelineWithMergedOutput() {
 	assert := assert.New(suite.T())
 

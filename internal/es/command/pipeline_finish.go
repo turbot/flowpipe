@@ -50,7 +50,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
 			logger.Error("Error building eval context while calculating output in pipeline_finish", "error", err)
-			return err
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
 		for _, output := range pipelineDefn.OutputConfig {

@@ -60,6 +60,21 @@ pipeline "nested_simple_top_with_merged_output" {
     }
 }
 
+pipeline "nested_simple_with_clash_merged_output" {
+
+    step "pipeline" "middle" {
+        pipeline = pipeline.nested_simple_middle
+
+        output "val" {
+            value = "step output"
+        }
+    }
+
+    output "val" {
+        value = step.pipeline.middle.output.val
+    }
+}
+
 pipeline "nested_simple_top_with_for_each" {
 
     step "pipeline" "middle" {
