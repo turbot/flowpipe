@@ -5,7 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	docker "github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/docker"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
@@ -23,7 +23,6 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	serviceStartCmd.Flags().String(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.")
 	serviceStartCmd.Flags().String(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.")
 	serviceStartCmd.Flags().String(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.")
-	serviceStartCmd.Flags().Bool(constants.ArgFunctions, false, "Enable function and container steps.")
 	serviceStartCmd.Flags().Bool(constants.ArgNoScheduler, false, "Disable the scheduler.")
 	serviceStartCmd.Flags().Bool(constants.ArgRetainArtifacts, false, "Retains Docker container artifacts for container step. [EXPERIMENTAL]")
 
@@ -38,11 +37,6 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 	}
 
 	err = viper.BindPFlag(constants.ArgLogDir, serviceStartCmd.Flags().Lookup(constants.ArgLogDir))
-	if err != nil {
-		error_helpers.FailOnError(err)
-	}
-
-	err = viper.BindPFlag(constants.ArgFunctions, serviceStartCmd.Flags().Lookup(constants.ArgFunctions))
 	if err != nil {
 		error_helpers.FailOnError(err)
 	}
@@ -63,11 +57,9 @@ func ServiceStartCmd(ctx context.Context) (*cobra.Command, error) {
 func startManagerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 
-		if viper.GetBool(constants.ArgFunctions) {
-			err := docker.Initialize(ctx)
-			if err != nil {
-				error_helpers.FailOnError(err)
-			}
+		err := docker.Initialize(ctx)
+		if err != nil {
+			error_helpers.FailOnError(err)
 		}
 
 		serviceConfig.Initialize(ctx)
