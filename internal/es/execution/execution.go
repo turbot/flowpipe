@@ -523,6 +523,11 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// for indexed step, you want to be able to access the step as
 				// text = step.echo.text_1[1].text
 
+				if et.StepForEach == nil {
+					// Something is wrong here
+					return perr.InternalWithMessage("StepForEach is nil for a step that should be indexed " + pe.ID)
+				}
+
 				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
 					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]*modconfig.Output, et.StepForEach.TotalCount)
 				}
