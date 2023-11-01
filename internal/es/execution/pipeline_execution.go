@@ -288,7 +288,7 @@ func (pe *PipelineExecution) IsComplete() bool {
 	for _, indexedStatus := range pe.StepStatus {
 		// If indexedStatus is nil, then the step hasn't been initialized
 		// TODO: for_each - this concept of step initialization does not work well with for_each when each instance of for_each has a loop
-		if indexedStatus == nil || len(indexedStatus) == 0 {
+		if len(indexedStatus) == 0 {
 			return false
 		}
 
