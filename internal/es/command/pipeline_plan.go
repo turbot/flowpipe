@@ -118,6 +118,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					StepLoop:    latestStepExecution.StepLoop,
 				})
 			}
+
+			continue
 		}
 
 		if pe.IsStepQueued(step.GetFullyQualifiedName()) {
