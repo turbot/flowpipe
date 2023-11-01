@@ -4,10 +4,12 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -104,20 +106,46 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	for _, nextStep := range e.NextSteps {
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
 
-		var evalContext *hcl.EvalContext
-
 		if nextStep.StepLoop != nil {
+			// Start each step in parallel
+			hasForEach := false
+			inputCount := 1
+			key := "0"
 
+			input := *nextStep.StepLoop.Input
+
+			var foreachOutput modconfig.Output
+
+			forEachCtyVal := cty.StringVal("0")
+			if nextStep.StepForEach != nil {
+				hasForEach = true
+				inputCount = nextStep.StepForEach.TotalCount
+				key = nextStep.StepForEach.Key
+				eachGoVal, err := hclhelpers.CtyToGo(nextStep.StepForEach.Each.Value)
+				if err != nil {
+					logger.Error("Error converting cty to go", "error", err)
+					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				}
+				input[schema.AttributeEach] = eachGoVal
+				foreachOutput = *nextStep.StepForEach.Output
+				forEachCtyVal = nextStep.StepForEach.Each.Value
+
+			}
+			go runStep(ctx, h.CommandBus, e, hasForEach, foreachOutput, forEachCtyVal, inputCount, modconfig.NextStepActionStart, nextStep, input, key)
+
+			continue
 		}
+
+		var evalContext *hcl.EvalContext
 
 		// ! This is a maps of a map. Each element in the first/parent map represent a step execution, an element of the for_each
 		// ! The second map is the actual value
 		forEachCtyVals := map[string]map[string]cty.Value{}
-		forEachNextStepAction := map[string]modconfig.NextStepAction{}
+		forEachNextStepActions := map[string]modconfig.NextStepAction{}
 		stepForEach := stepDefn.GetForEach()
 
 		// if we have for_each build the list of inputs for the for_each
-		if stepForEach != nil {
+		if !helpers.IsNil(stepForEach) {
 			var err error
 			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
@@ -180,7 +208,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		// now resolve the inputs, if there's no for_each then there's just one input
-		if stepForEach == nil {
+		if helpers.IsNil(stepForEach) {
 
 			calculateInput := true
 
@@ -198,12 +226,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				if val.False() {
 					logger.Info("if condition not met for step", "step", stepDefn.GetName())
 					calculateInput = false
-					forEachNextStepAction["0"] = modconfig.NextStepActionSkip
+					forEachNextStepActions["0"] = modconfig.NextStepActionSkip
 				} else {
-					forEachNextStepAction["0"] = modconfig.NextStepActionStart
+					forEachNextStepActions["0"] = modconfig.NextStepActionStart
 				}
 			} else {
-				forEachNextStepAction["0"] = modconfig.NextStepActionStart
+				forEachNextStepActions["0"] = modconfig.NextStepActionStart
 			}
 
 			if calculateInput {
@@ -221,7 +249,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			}
 		} else if len(forEachCtyVals) == 0 {
 
-			forEachNextStepAction["0"] = modconfig.NextStepActionSkip
+			forEachNextStepActions["0"] = modconfig.NextStepActionSkip
 			// If we're to skip the next step, then we need to add a dummy input
 			inputs["0"] = map[string]interface{}{}
 
@@ -253,12 +281,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					if val.False() {
 						logger.Info("if condition not met for step", "step", stepDefn.GetName())
 						calculateInput = false
-						forEachNextStepAction[k] = modconfig.NextStepActionSkip
+						forEachNextStepActions[k] = modconfig.NextStepActionSkip
 					} else {
-						forEachNextStepAction[k] = modconfig.NextStepActionStart
+						forEachNextStepActions[k] = modconfig.NextStepActionStart
 					}
 				} else {
-					forEachNextStepAction[k] = modconfig.NextStepActionStart
+					forEachNextStepActions[k] = modconfig.NextStepActionStart
 				}
 
 				if calculateInput {
@@ -279,67 +307,72 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// If we have a for_each then the input will be expanded to the number of elements in the for_each
 		for key, input := range inputs {
 
-			// Start each step in parallel
-			go func(nextStep modconfig.NextStep, input modconfig.Input, key string) {
+			forEachCtyVal := forEachCtyVals[key][schema.AttributeTypeValue]
 
-				var forEachControl *modconfig.StepForEach
+			var title string
 
-				if stepForEach == nil {
-					// If a step does not have a for_each, we still build a for_each control but with key of "0"
-					forEachControl = &modconfig.StepForEach{
-						Key:        "0",
-						Output:     &modconfig.Output{},
-						TotalCount: 1,
-						Each:       json.SimpleJSONValue{Value: cty.StringVal("0")},
-					}
-				} else {
-					forEachCtyVal := forEachCtyVals[key][schema.AttributeTypeValue]
-
-					var title string
-
-					if forEachCtyVal.Type().IsPrimitiveType() {
-						t, err := hclhelpers.CtyToString(forEachCtyVal)
-						if err != nil {
-							logger.Error("Error converting cty to string", "error", err)
-						} else {
-							title += t
-						}
-					} else {
-						title += nextStep.StepName
-					}
-					forEachOutput := &modconfig.Output{
-						Data: map[string]interface{}{},
-					}
-					forEachOutput.Data[schema.AttributeTypeValue] = title
-
-					forEachControl = &modconfig.StepForEach{
-						Key:        key,
-						Output:     forEachOutput,
-						TotalCount: len(inputs),
-						Each:       json.SimpleJSONValue{Value: forEachCtyVal},
-					}
-				}
-
-				cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs, forEachNextStepAction[key]))
+			if forEachCtyVal.Type().IsPrimitiveType() {
+				t, err := hclhelpers.CtyToString(forEachCtyVal)
 				if err != nil {
-					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-					if err != nil {
-						logger.Error("Error publishing event", "error", err)
-					}
-
-					return
+					logger.Error("Error converting cty to string", "error", err)
+				} else {
+					title += t
 				}
+			} else {
+				title += nextStep.StepName
+			}
+			forEachOutput := modconfig.Output{
+				Data: map[string]interface{}{},
+			}
+			forEachOutput.Data[schema.AttributeTypeValue] = title
 
-				if err := h.CommandBus.Send(ctx, &cmd); err != nil {
-					err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
-					if err != nil {
-						logger.Error("Error publishing event", "error", err)
-					}
-					return
-				}
-			}(nextStep, input, key)
+			// Start each step in parallel
+			go runStep(ctx, h.CommandBus, e, !helpers.IsNil(stepForEach), forEachOutput, forEachCtyVal, len(inputs), forEachNextStepActions[key], nextStep, input, key)
 		}
 	}
 
 	return nil
+}
+
+func runStep(ctx context.Context, commandBus *cqrs.CommandBus, e *event.PipelinePlanned, hasForEach bool, forEachOutput modconfig.Output, forEachCtyVal cty.Value, inputsLength int, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, key string) {
+
+	logger := fplog.Logger(ctx)
+
+	var forEachControl *modconfig.StepForEach
+
+	if !hasForEach {
+		// If a step does not have a for_each, we still build a for_each control but with key of "0"
+		forEachControl = &modconfig.StepForEach{
+			Key:        "0",
+			Output:     &modconfig.Output{},
+			TotalCount: 1,
+			Each:       json.SimpleJSONValue{Value: cty.StringVal("0")},
+		}
+	} else {
+
+		forEachControl = &modconfig.StepForEach{
+			Key:        key,
+			Output:     &forEachOutput,
+			TotalCount: inputsLength,
+			Each:       json.SimpleJSONValue{Value: forEachCtyVal},
+		}
+	}
+
+	cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs, forEachNextStepAction))
+	if err != nil {
+		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		if err != nil {
+			logger.Error("Error publishing event", "error", err)
+		}
+
+		return
+	}
+
+	if err := commandBus.Send(ctx, &cmd); err != nil {
+		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		if err != nil {
+			logger.Error("Error publishing event", "error", err)
+		}
+		return
+	}
 }
