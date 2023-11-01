@@ -106,6 +106,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		var evalContext *hcl.EvalContext
 
+		if nextStep.StepLoop != nil {
+
+		}
+
 		// ! This is a maps of a map. Each element in the first/parent map represent a step execution, an element of the for_each
 		// ! The second map is the actual value
 		forEachCtyVals := map[string]map[string]cty.Value{}

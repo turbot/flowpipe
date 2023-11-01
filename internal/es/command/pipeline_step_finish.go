@@ -23,6 +23,9 @@ func (h PipelineStepFinishHandler) NewCommand() interface{} {
 // There's only one use case for this, which is to handle the "Pipeline Step" finish command.
 //
 // Pipeline Step = step that launches another pipeline.
+//
+// This command is NOT to to be confused with the handling of the "Pipeline Step" operation. That flow:
+// Pipeline Step Start command -> Pipeline Step Finish *event*
 func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) error {
 
 	logger := fplog.Logger(ctx)

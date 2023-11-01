@@ -76,10 +76,6 @@ type PipelineExecution struct {
 
 	// Steps triggered by pipelines in the execution.
 	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
-
-	// TODO: not sure if we need this, it's a different index of the step executions
-	// TODO: but also a way to track the order of execution for a given step
-	StepExecutionOrder map[string][]string `json:"-"`
 }
 
 /*
@@ -233,26 +229,6 @@ func mergeOutputValues(ctyMap map[string]cty.Value, configuredOutputMap map[stri
 		ctyMap["output"] = cty.ObjectVal(stepOutput)
 	}
 	return ctyMap, nil
-}
-
-// PipelineStepExecutions returns a list of step executions for the given
-// pipeline execution ID and step name.
-func (pe *PipelineExecution) OrderedStepExecutions(stepName string) []StepExecution {
-
-	// Find the step execution order first
-	orders := pe.StepExecutionOrder[stepName]
-	if len(orders) == 0 {
-		// TODO: Error?
-		return nil
-	}
-
-	results := make([]StepExecution, len(orders))
-
-	for i, stepExecutionID := range orders {
-		se := pe.StepExecutions[stepExecutionID]
-		results[i] = *se
-	}
-	return results
 }
 
 // IsCanceled returns true if the pipeline has been canceled
@@ -463,6 +439,10 @@ type StepStatus struct {
 	Finished map[string]bool `json:"finished"`
 	// Step executions that are failed.
 	Failed map[string]bool `json:"failed"`
+
+	// There's the step execution in execution, this is the same but in a list for a given step status
+	// The element in this slice should point to the same element in the StepExecutions map (in PipelineExecution)
+	StepExecutions []StepExecution `json:"step_executions"`
 }
 
 // IsComplete returns true if all executions of the step are finished or failed.
@@ -569,6 +549,7 @@ type StepExecution struct {
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 

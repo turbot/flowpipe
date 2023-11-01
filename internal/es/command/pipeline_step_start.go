@@ -300,17 +300,15 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 		if loopDefn.ShouldRun() {
 			// start the loop
 
-			// // get the new input
-			// newInput, err := loopDefn.UpdateInput(cmd.StepInput)
-			// if err != nil {
-			// 	err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
-			// 	if err2 != nil {
-			// 		logger.Error("Error publishing event", "error", err2)
-			// 	}
-			// 	return
-			// }
-
-			// fmt.Println(newInput)
+			// get the new input
+			newInput, err := loopDefn.UpdateInput(cmd.StepInput)
+			if err != nil {
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return
+			}
 
 			// We have to indicate here (before raising the step finish) that this is part of the loop that should be executing, i.e. the step is not actually
 			// "finished" yet.
@@ -331,7 +329,8 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 			}
 
 			stepLoop = &modconfig.StepLoop{
-				Key: strconv.Itoa(currentKey),
+				Key:   strconv.Itoa(currentKey),
+				Input: &newInput,
 			}
 		}
 
