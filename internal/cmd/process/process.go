@@ -90,6 +90,7 @@ type pipelineExecution struct {
 	endTime      *time.Time
 	cancelled    bool
 	steps        []*pipelineStep
+	output       map[string]any
 }
 
 type pipelineStep struct {
@@ -284,6 +285,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					error_helpers.ShowError(cmd.Context(), err)
 				}
 				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
+				pipelinesExecuted[et.PipelineExecutionID].output = et.PipelineOutput
 			case "handler.pipeline_failed":
 				var et event.PipelineFailed
 				err := json.Unmarshal([]byte(payload), &et)
@@ -291,6 +293,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					error_helpers.ShowError(cmd.Context(), err)
 				}
 				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
+				pipelinesExecuted[et.PipelineExecutionID].output = et.PipelineOutput
 			default:
 				// Ignore unknown types while loading
 			}
@@ -327,6 +330,7 @@ func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, 
 	}
 	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
 	// lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
+	lines = append(lines, renderPipelineOutput(ctx, log.output, width)...)
 	return lines
 }
 
@@ -389,6 +393,23 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 	rendered := fmt.Sprintf("%s%s%s", line, dots, durationString)
 
 	return rendered
+}
+
+func renderPipelineOutput(ctx context.Context, output map[string]any, width int) []string {
+	var lines []string
+	delete(output, "errors")
+	if len(output) >= 1 {
+		lines = append(lines, "\nOutputs:")
+	}
+	for k, v := range output {
+		line := fmt.Sprintf("➡️ [%s] %v", k, v)
+		if utf8.RuneCountInString(line) >= width {
+			line = fmt.Sprintf("%s%s", line[0:width-8], "...")
+		}
+		lines = append(lines, line)
+	}
+
+	return lines
 }
 
 // humanizeDuration humanizes time.Duration output to a meaningful value,
