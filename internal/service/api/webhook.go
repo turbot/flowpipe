@@ -48,6 +48,11 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		executionMode = *webhookQuery.ExecutionMode
 	}
 
+	waitRetry := 60
+	if webhookQuery.WaitTime != nil {
+		waitRetry = *webhookQuery.WaitTime
+	}
+
 	webhookTriggerName := webhookUri.Trigger
 	webhookTriggerHash := webhookUri.Hash
 
@@ -163,7 +168,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	}
 
 	if executionMode == "synchronous" {
-		api.waitForPipeline(c, pipelineCmd, 60) // TODO: Figure out best method to override from webhook trigger, query-param?
+		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
 	}
 
