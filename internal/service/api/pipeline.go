@@ -200,6 +200,10 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	if input.ExecutionMode != nil {
 		executionMode = *input.ExecutionMode
 	}
+	waitRetry := 60
+	if input.WaitRetry != nil {
+		waitRetry = *input.WaitRetry
+	}
 
 	// Execute the command
 	if input.Command != "run" {
@@ -243,7 +247,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	}
 
 	if executionMode == "synchronous" {
-		api.waitForPipeline(c, pipelineCmd)
+		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
 	}
 

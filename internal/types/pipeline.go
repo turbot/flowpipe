@@ -50,6 +50,7 @@ type CmdPipeline struct {
 	Args          map[string]interface{} `json:"args,omitempty"`
 	ArgsString    map[string]string      `json:"args_string,omitempty"`
 	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
 }
 
 type PrintablePipeline struct {

@@ -163,7 +163,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	}
 
 	if executionMode == "synchronous" {
-		api.waitForPipeline(c, pipelineCmd)
+		api.waitForPipeline(c, pipelineCmd, 60) // TODO: Figure out best method to override from webhook trigger, query-param?
 		return
 	}
 
@@ -172,7 +172,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	c.String(http.StatusOK, "")
 }
 
-func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue) {
+func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue, waitRetry int) {
 	logger := fplog.Logger(api.ctx)
 
 	ex, err := execution.NewExecution(api.ctx)
@@ -181,7 +181,9 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		return
 	}
 
-	waitRetry := 60 // TODO: Make configurable potentially via CLI arg
+	if waitRetry == 0 {
+		waitRetry = 60
+	}
 	waitTime := 1 * time.Second
 	expectedState := "finished"
 
