@@ -241,6 +241,12 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.IPipelineStep, c
 			event.WithNewChildPipelineExecutionID(),
 			event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
 
+		if cmd.StepForEach != nil {
+			e.Key = cmd.StepForEach.Key
+		} else {
+			e.Key = "0"
+		}
+
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {

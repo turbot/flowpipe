@@ -346,7 +346,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Name:                  et.Name,
 				Args:                  et.Args,
 				Status:                "queued",
-				StepStatus:            map[string]*StepStatus{},
+				StepStatus:            map[string]map[string]*StepStatus{},
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				ParentExecutionID:     et.ParentExecutionID,
 				Errors:                []modconfig.StepError{},
@@ -422,7 +422,21 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe.StepExecutions[et.StepExecutionID].Input = et.StepInput
 			pe.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
 			pe.StepExecutions[et.StepExecutionID].NextStepAction = et.NextStepAction
-			pe.StepStatus[stepDefn.GetFullyQualifiedName()].Queue(et.StepExecutionID)
+
+			if pe.StepStatus[stepDefn.GetFullyQualifiedName()] == nil {
+				pe.StepStatus[stepDefn.GetFullyQualifiedName()] = map[string]*StepStatus{}
+			}
+
+			if pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key] == nil {
+				pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key] = &StepStatus{
+					Queued:   map[string]bool{},
+					Started:  map[string]bool{},
+					Finished: map[string]bool{},
+					Failed:   map[string]bool{},
+				}
+			}
+
+			pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].Queue(et.StepExecutionID)
 
 		case "command.pipeline_step_start":
 			var et event.PipelineStepStart
@@ -432,6 +446,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 
+		// pipeline_step_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
+		// a generic step start event
 		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted
 			err := json.Unmarshal(ele.Payload, &et)
@@ -449,7 +465,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 
-			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
+			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.Key, et.StepExecutionID)
 
 		case "handler.pipeline_step_finished":
 			var et event.PipelineStepFinished
@@ -507,6 +523,11 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// for indexed step, you want to be able to access the step as
 				// text = step.echo.text_1[1].text
 
+				if et.StepForEach == nil {
+					// Something is wrong here
+					return perr.InternalWithMessage("StepForEach is nil for a step that should be indexed " + pe.ID)
+				}
+
 				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
 					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]*modconfig.Output, et.StepForEach.TotalCount)
 				}
@@ -531,11 +552,11 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 					// pe.StepExecutions[et.StepExecutionID].Error = et.Error
 					// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
 					// pe.StepExecutions[et.StepExecutionID].Status = "failed"
-					pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
+					pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 				} else {
 					// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
-					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID, partOfALoop)
+					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, partOfALoop)
 				}
 
 				// TODO: this below comment is not true anymore, keep this here until we refactor how we handle the failure & retries
@@ -548,7 +569,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// 	logger.Trace("Step final failure", "step", stepDefn)
 				// }
 			} else {
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID, partOfALoop)
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, partOfALoop)
 			}
 
 		case "handler.pipeline_canceled":

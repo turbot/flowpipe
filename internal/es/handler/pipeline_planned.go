@@ -280,10 +280,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 				var forEachControl *modconfig.StepForEach
 
-				// TODO: this is not very nice and the only reason we do this is for the snapshot, we should
-				// TODO: refactor this
 				if stepForEach == nil {
-					forEachControl = nil
+					// If a step does not have a for_each, we still build a for_each control but with key of "0"
+					forEachControl = &modconfig.StepForEach{
+						Key:        "0",
+						Output:     &modconfig.Output{},
+						TotalCount: 1,
+						Each:       json.SimpleJSONValue{Value: cty.StringVal("0")},
+					}
 				} else {
 					forEachCtyVal := forEachCtyVals[key][schema.AttributeTypeValue]
 

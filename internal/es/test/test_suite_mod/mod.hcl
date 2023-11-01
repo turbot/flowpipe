@@ -115,7 +115,7 @@ pipeline "expr_depend_and_function" {
     }
 
     # "time"/"for"/"sleep" steps
-     param "time" {
+    param "time" {
         type = list(string)
         default = ["1s", "2s"]
     }
