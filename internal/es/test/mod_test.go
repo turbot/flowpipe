@@ -222,6 +222,31 @@ func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
 
 }
 
+func (suite *ModTestSuite) XSkipTestSimpleLoop() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions), "there should be 3 step executions executed by the loop")
+	assert.Equal("Hello World", pex.PipelineOutput["val"])
+	assert.Equal("Hello World: Hello World", pex.PipelineOutput["val_two"])
+
+}
+
 func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 	assert := assert.New(suite.T())
 

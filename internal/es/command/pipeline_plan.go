@@ -88,8 +88,37 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		// This mean the step has been initialized
 
-		// TODO: change this to do per for_each instance
-		if len(pe.StepStatus[step.GetFullyQualifiedName()]) > 1 {
+		if len(pe.StepStatus[step.GetFullyQualifiedName()]) > 0 {
+
+			// for_each that returns a list will still be a map, but the key of the map is a string
+			// of "0", "1", "2" and so on.
+			for _, stepStatus := range pe.StepStatus[step.GetFullyQualifiedName()] {
+
+				if stepStatus.StepExecutions == nil {
+					continue
+				}
+
+				// find the latest step execution, check if it has a loop that needs to be run
+				latestStepExecution := stepStatus.StepExecutions[len(stepStatus.StepExecutions)-1]
+
+				// TODO: error retry
+
+				// no step loop means we're done here
+				if latestStepExecution.StepLoop == nil || latestStepExecution.StepLoop.LoopCompleted {
+					continue
+				}
+
+				// bypass depends_on check because if we're here, the step has already started so we know that all its
+				// dependencies are met
+				//
+				e.NextSteps = append(e.NextSteps, modconfig.NextStep{
+					StepName:    step.GetFullyQualifiedName(),
+					Action:      modconfig.NextStepActionStart,
+					StepForEach: latestStepExecution.StepForEach,
+					StepLoop:    latestStepExecution.StepLoop,
+				})
+			}
+
 			continue
 		}
 

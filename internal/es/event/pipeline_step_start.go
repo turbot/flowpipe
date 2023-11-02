@@ -74,11 +74,12 @@ func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
 	}
 }
 
-func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, nextStepAction modconfig.NextStepAction) PipelineStepStartOption {
+func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) PipelineStepStartOption {
 	return func(cmd *PipelineStepStart) error {
 		cmd.StepName = name
 		cmd.StepInput = input
 		cmd.StepForEach = stepForEach
+		cmd.StepLoop = stepLoop
 		cmd.NextStepAction = nextStepAction
 		return nil
 	}
