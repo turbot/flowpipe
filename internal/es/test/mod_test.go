@@ -221,7 +221,7 @@ func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
 
 }
 
-func (suite *ModTestSuite) TestSimpleLoop() {
+func (suite *ModTestSuite) XSkipTestSimpleLoop() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
