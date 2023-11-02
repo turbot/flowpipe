@@ -347,7 +347,7 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 		// this is a single step pipeline
 		// print out the error messages and continue
 		for _, se := range step.executions[0].stepErrors {
-			lines = append(lines, fmt.Sprintf("%s      Error: %s", indent, se))
+			lines = append(lines, fmt.Sprintf("%s    └ Error: %s", indent, se))
 		}
 	}
 
@@ -365,7 +365,7 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 			eachLine := fmt.Sprintf("%s    %s [%s]", indent, icon, stepExec.execKey)
 			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, "", width))
 			for _, se := range stepExec.stepErrors {
-				lines = append(lines, fmt.Sprintf("%s        Error: %s", indent, se))
+				lines = append(lines, fmt.Sprintf("%s      └ Error: %s", indent, se))
 			}
 		}
 	}
@@ -381,14 +381,14 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 		lineWidth = lineWidth - 2
 	}
 
-	durationString := fmt.Sprintf("%9s", humanizeDuration(duration)) // 00h00m00s
+	durationString := fmt.Sprintf("%s", humanizeDuration(duration))
 	if utf8.RuneCountInString(durationPrefix) > 0 {
 		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
 	}
-	durationColumnWidth := utf8.RuneCountInString(durationString) + 10 // accounting for a prepending space
+	durationColumnWidth := utf8.RuneCountInString(durationString)
 
 	// {line} {dots} {duration}{durationUnit}
-	dotNum := width - (lineWidth + durationColumnWidth + 2 /*accounting for leading and trailing spaces in the dots*/)
+	dotNum := width - (lineWidth + durationColumnWidth + 3 /*accounting for leading and trailing spaces in the dots*/)
 	dots := fmt.Sprintf(" %s ", strings.Repeat(".", dotNum))
 	rendered := fmt.Sprintf("%s%s%s", line, dots, durationString)
 
@@ -399,12 +399,12 @@ func renderPipelineOutput(ctx context.Context, output map[string]any, width int)
 	var lines []string
 	delete(output, "errors")
 	if len(output) >= 1 {
-		lines = append(lines, "\nOutputs:")
+		lines = append(lines, "\nOutput:")
 	}
 	for k, v := range output {
 		line := fmt.Sprintf("➡️ [%s] %v", k, v)
 		if utf8.RuneCountInString(line) >= width {
-			line = fmt.Sprintf("%s%s", line[0:width-8], "...")
+			line = fmt.Sprintf("%s%s", line[0:width-3], "...")
 		}
 		lines = append(lines, line)
 	}
