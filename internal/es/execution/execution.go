@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -514,11 +515,32 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				pe.AllConfigStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
 			}
 
+			// indexed means the step has a for_each
 			if !shouldBeIndexed {
-				// non for_each step. The step will be accessed such as:
+				// Non for_each step. The step will be accessed such as:
 				// text = step.echo.text_1.text
-				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
-				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
+				//
+				// But now we have loop, we need to actually index this as well,
+				// for for_each step that has loop, it will be double indexed.
+
+				if et.StepLoop != nil {
+					keyString := strconv.Itoa(et.StepLoop.Index)
+
+					if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+						pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = map[string]*modconfig.Output{}
+					}
+
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]*modconfig.Output)[keyString] = et.Output
+
+					if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+						pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = map[string]map[string]interface{}{}
+					}
+
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[keyString] = et.StepOutput
+				} else {
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
+				}
 			} else {
 				// for indexed step, you want to be able to access the step as
 				// text = step.echo.text_1[1].text

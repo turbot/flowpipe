@@ -9,4 +9,14 @@ pipeline "simple_loop" {
             numeric = result.numeric + 1
         }
     }
+
+    output "val_1" {
+        value = step.echo.repeat["0"]
+    }
+    output "val_2" {
+        value = step.echo.repeat["1"]
+    }
+    output "val_3" {
+        value = step.echo.repeat["3"]
+    }
 }

@@ -308,35 +308,8 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.IPipelineStep, ex *Execution) bool {
 
 	return true
-	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
-	// 	// Step not failed, so no need to calculate, return false
-	// 	return false
-	// }
-
-	// var failedStepExecutions []StepExecution
-	// if step.GetError().Retries > 0 && !step.GetError().Ignore {
-	// 	if pe.StepStatus[step.GetFullyQualifiedName()].FailCount() > step.GetError().Retries {
-	// 		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
-
-	// 		if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-	// 			pe.Fail(step.GetFullyQualifiedName(), modconfig.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
-	// 		} else {
-	// 			// Set the error
-	// 			pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
-	// 		}
-	// 		// pe.Fail(step.GetName(), modconfig.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
-	// 		return true
-	// 	} else {
-	// 		return false
-	// 	}
-	// } else if !step.GetError().Ignore {
-	// 	failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
-	// 	pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
-	// 	return true
-	// }
-	// return true
-
 }
+
 func (pe *PipelineExecution) Fail(stepName string, stepError ...modconfig.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
 }
