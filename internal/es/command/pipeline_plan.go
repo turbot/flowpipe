@@ -104,7 +104,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				// TODO: error retry
 
 				// no step loop means we're done here
-				if latestStepExecution.StepLoop == nil {
+				if latestStepExecution.StepLoop == nil || latestStepExecution.StepLoop.LoopCompleted {
 					continue
 				}
 

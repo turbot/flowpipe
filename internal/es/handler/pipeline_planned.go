@@ -107,7 +107,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
 
 		if nextStep.StepLoop != nil {
-			// Start each step in parallel
+			// Special instruction for "loop"
 			hasForEach := false
 			inputCount := 1
 			key := "0"
@@ -116,6 +116,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			var foreachOutput modconfig.Output
 
+			// calculate the for_each control, is it a single step or a for_each step?
 			forEachCtyVal := cty.StringVal("0")
 			if nextStep.StepForEach != nil {
 				hasForEach = true
@@ -129,8 +130,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				input[schema.AttributeEach] = eachGoVal
 				foreachOutput = *nextStep.StepForEach.Output
 				forEachCtyVal = nextStep.StepForEach.Each.Value
-
 			}
+
+			// in a "loop" we should already know the input, it's a side effect of calculating the "IF" attribute of the loop
 			go runStep(ctx, h.CommandBus, e, hasForEach, foreachOutput, forEachCtyVal, inputCount, modconfig.NextStepActionStart, nextStep, input, key)
 
 			continue
@@ -151,6 +153,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			if err != nil {
 				logger.Error("Error building eval context for for_each", "error", err)
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			}
+
+			if stepDefn.GetUnresolvedBodies()["loop"] != nil {
+				// If the execution falls here, it means it's the beginning of the loop
+				// if it's part of a loop, it will be short circuited in the beginning of this for loop
+				evalContext = execution.AddLoop(nil, evalContext)
 			}
 
 			// First we want to evaluate the content of for_each
@@ -205,11 +213,16 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				logger.Error("Error building eval context for step", "error", err)
 				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 			}
+			if stepDefn.GetUnresolvedBodies()["loop"] != nil {
+				// If the execution falls here, it means it's the beginning of the loop
+				// if it's part of a loop, it will be short circuited in the beginning of this for loop
+				evalContext = execution.AddLoop(nil, evalContext)
+			}
+
 		}
 
 		// now resolve the inputs, if there's no for_each then there's just one input
 		if helpers.IsNil(stepForEach) {
-
 			calculateInput := true
 
 			if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
@@ -349,7 +362,6 @@ func runStep(ctx context.Context, commandBus *cqrs.CommandBus, e *event.Pipeline
 			Each:       json.SimpleJSONValue{Value: cty.StringVal("0")},
 		}
 	} else {
-
 		forEachControl = &modconfig.StepForEach{
 			Key:        key,
 			Output:     &forEachOutput,
@@ -358,7 +370,7 @@ func runStep(ctx context.Context, commandBus *cqrs.CommandBus, e *event.Pipeline
 		}
 	}
 
-	cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.DelayMs, forEachNextStepAction))
+	cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, nextStep.DelayMs, forEachNextStepAction))
 	if err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		if err != nil {

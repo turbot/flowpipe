@@ -478,7 +478,12 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				shouldBeIndexed = true
 			}
 
-			partOfALoop := et.StepLoop != nil
+			loopContinue := false
+			if et.StepLoop != nil {
+				if !et.StepLoop.LoopCompleted {
+					loopContinue = true
+				}
+			}
 
 			// Step the specific step execution status
 			if pe.StepExecutions[et.StepExecutionID] == nil {
@@ -554,7 +559,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 				} else {
 					// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
-					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, partOfALoop)
+					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 				}
 
 				// TODO: this below comment is not true anymore, keep this here until we refactor how we handle the failure & retries
@@ -567,7 +572,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// 	logger.Trace("Step final failure", "step", stepDefn)
 				// }
 			} else {
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, partOfALoop)
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 			}
 
 		case "handler.pipeline_canceled":

@@ -414,8 +414,8 @@ func (pe *PipelineExecution) StartStep(stepFullyQualifiedName, key, seID string)
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, partOfALoop bool) {
-	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, partOfALoop)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, loopContinue bool) {
+	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopContinue)
 }
 
 func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) {
@@ -499,14 +499,16 @@ func (s *StepStatus) Start(seID string) {
 }
 
 // Finish marks the given execution as finished.
-func (s *StepStatus) Finish(seID string, partOfALoop bool) {
+func (s *StepStatus) Finish(seID string, loopContinue bool) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
-	if partOfALoop {
+	if loopContinue {
 		s.LoopHold = true
+	} else {
+		s.LoopHold = false
 	}
 
 	s.Initializing = false

@@ -1,7 +1,7 @@
 pipeline "simple_loop" {
 
     step "echo" "repeat" {
-        text  = "iteration"
+        text  = "iteration: ${loop.index}"
         numeric = 1
 
         loop {
