@@ -5,14 +5,14 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/thediveo/enumflag/v2"
+	"github.com/turbot/pipe-fittings/parse"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/thediveo/enumflag/v2"
-
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/mod"
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
@@ -24,7 +24,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
-	"github.com/turbot/pipe-fittings/misc"
+	"github.com/turbot/pipe-fittings/load_mod"
 
 	pcconstants "github.com/turbot/pipe-fittings/constants"
 )
@@ -139,15 +139,15 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	// set global containing the configured install dir (create directory if needed)
 
 	// load workspace profile from the configured install dir
-	loader, err := misc.LoadWorkspaceProfile(context.TODO())
+	loader, err := parse.LoadWorkspaceProfiles(context.TODO())
 	error_helpers.FailOnError(err)
 
 	// set global workspace profile
-	misc.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
+	load_mod.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
 
 	var cmd = viper.Get(pcconstants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err = misc.BootstrapViper(loader, cmd)
+	err = load_mod.BootstrapViper(loader, cmd)
 	error_helpers.FailOnError(err)
 
 	installDir := viper.GetString(pcconstants.ArgInstallDir)
