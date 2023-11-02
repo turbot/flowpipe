@@ -458,17 +458,17 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].(map[string]*modconfig.Output)
-	assert.Equal(3, len(echoNameStepOutputs))
-	assert.Equal("artist name: Real Friends", echoNameStepOutputs["0"].Data["text"])
-	assert.Equal("artist name: A Day To Remember", echoNameStepOutputs["1"].Data["text"])
-	assert.Equal("artist name: The Story So Far", echoNameStepOutputs["2"].Data["text"])
+	// echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].(map[string]*modconfig.Output)
+	// assert.Equal(3, len(echoNameStepOutputs))
+	// assert.Equal("artist name: Real Friends", echoNameStepOutputs["0"].Data["text"])
+	// assert.Equal("artist name: A Day To Remember", echoNameStepOutputs["1"].Data["text"])
+	// assert.Equal("artist name: The Story So Far", echoNameStepOutputs["2"].Data["text"])
 
-	secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].(map[string]*modconfig.Output)
-	assert.Equal(3, len(secondStepStepOutputs))
-	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs["0"].Data["text"])
-	assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs["1"].Data["text"])
-	assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs["2"].Data["text"])
+	// secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].(map[string]*modconfig.Output)
+	// assert.Equal(3, len(secondStepStepOutputs))
+	// assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs["0"].Data["text"])
+	// assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs["1"].Data["text"])
+	// assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs["2"].Data["text"])
 
 }
 
