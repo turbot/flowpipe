@@ -381,7 +381,7 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 		lineWidth = lineWidth - 2
 	}
 
-	durationString := fmt.Sprintf("%s", humanizeDuration(duration))
+	durationString := humanizeDuration(duration)
 	if utf8.RuneCountInString(durationPrefix) > 0 {
 		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
 	}
