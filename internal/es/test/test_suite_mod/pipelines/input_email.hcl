@@ -35,17 +35,15 @@ pipeline "input_send_email" {
   }
 
   step "input" "test_email" {
-    type = "email"
+    # username     = param.email_from
+    # password     = param.sender_credential
+    # smtp_server  = param.email_host
+    # smtp_port    = param.email_port
+    # response_url = param.response_url
+    # sender_name  = param.sender_name
 
-    username     = param.email_from
-    password     = param.sender_credential
-    smtp_server  = param.email_host
-    smtp_port    = param.email_port
-    response_url = param.response_url
-    sender_name  = param.sender_name
-
-    to      = ["${param.email_to}"]
-    subject = param.subject
+    # to      = ["${param.email_to}"]
+    # subject = param.subject
     options = ["approve", "reject"]
 
     //   options = [
