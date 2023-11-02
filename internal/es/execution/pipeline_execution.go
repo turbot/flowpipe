@@ -1,6 +1,9 @@
 package execution
 
 import (
+	"strings"
+
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -58,6 +61,13 @@ type PipelineExecution struct {
 		echo.echo has a for_each which is a list, so the key is the index of the list
 
 		http.one has a for_each which is a map, so the key is the key of the map
+
+		LOOP
+
+		Since we added loop, the data structure can get rather complicated. A loop is simply another map which the key is
+		"0", "1", "2". So in a way like for_each that has a list result.
+
+		If the step has a loop and for_each the data is nested twice, i.e.: ["0"]["1"]
 		**/
 	StepStatus map[string]map[string]*StepStatus `json:"-"`
 
@@ -67,12 +77,6 @@ type PipelineExecution struct {
 
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
 	Errors []modconfig.StepError `json:"errors,omitempty"`
-
-	// The final native/primitive output for all the steps in this pipeline execution.
-	AllNativeStepOutputs ExecutionStepOutputs `json:"-"`
-
-	// The final configured output for all the steps in this pipeline execution.
-	AllConfigStepOutputs ExecutionStepOutputs `json:"-"`
 
 	// Steps triggered by pipelines in the execution.
 	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
@@ -109,99 +113,93 @@ type PipelineExecution struct {
 func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, error) {
 	stepVariables := make(map[string]cty.Value)
 
-	for stepType, v := range pe.AllNativeStepOutputs {
+	pipelineDefn, err := db.GetPipeline(pe.Name)
 
-		if stepVariables[stepType] == cty.NilVal {
+	if err != nil {
+		return nil, err
+	}
+
+	for stepFullName, stepStatus := range pe.StepStatus {
+		parts := strings.Split(stepFullName, ".")
+
+		if len(parts) != 2 {
+			return nil, perr.InternalWithMessage("Invalid step full name: " + stepFullName + " it needs to be in the <step type>.<step name> format.")
+		}
+
+		stepDefn := pipelineDefn.GetStep(stepFullName)
+		stepType := parts[0]
+		stepName := parts[1]
+
+		if stepVariables[stepType].IsNull() {
 			stepVariables[stepType] = cty.ObjectVal(map[string]cty.Value{})
 		}
 
-		vm := stepVariables[stepType].AsValueMap()
-		if vm == nil {
-			vm = map[string]cty.Value{}
+		stepTypeValueMap := stepVariables[stepType].AsValueMap()
+		if stepTypeValueMap == nil {
+			stepTypeValueMap = map[string]cty.Value{}
 		}
 
-		for stepName, stepOutput := range v {
-			if nonIndexStepOutput, ok := stepOutput.(*modconfig.Output); ok {
-				if nonIndexStepOutput.Status == "skipped" {
+		if stepTypeValueMap[stepName].IsNull() {
+			stepTypeValueMap[stepName] = cty.ObjectVal(map[string]cty.Value{})
+		}
+
+		forEach := stepDefn.GetForEach() != nil
+		loop := stepDefn.GetUnresolvedBodies()["loop"] != nil
+
+		if !forEach {
+			if len(stepStatus) > 1 {
+				return nil, perr.InternalWithMessage("Step " + stepFullName + " has more than element in StepStatus. This is unexpected, for a step that does not have for_each there should never be more than 1 element in the StepStatus ")
+			}
+			singleStepStatus := stepStatus["0"]
+
+			if singleStepStatus == nil || len(singleStepStatus.StepExecutions) == 0 {
+				continue
+			}
+
+			// Retry will have multiple step executions per step instance, however we should still structure the data as if
+			// there is no loop
+			//
+			// Similar vein with loop + error retry
+			//
+			// Say we have 3 loops, but the middle one is retried twice we will have 5 step executions:
+			// 0, 1, 1, 1, 2
+			//
+			// But the index in the EvalContext should still be "0", "1", "2"
+
+			singleStepValueMap, err := buildSingleStepStatusOutput(stepName, loop, singleStepStatus)
+
+			if err != nil {
+				return nil, err
+			}
+			stepTypeValueMap[stepName] = cty.ObjectVal(singleStepValueMap)
+		} else {
+			indexedStepNameValueMap := stepTypeValueMap[stepName].AsValueMap()
+			if indexedStepNameValueMap == nil {
+				indexedStepNameValueMap = map[string]cty.Value{}
+			}
+
+			// there is for_each, we need to loop through all the instance of the step and then the step execution for each of that instance
+			for k, singleStepStatus := range stepStatus {
+				if singleStepStatus == nil || len(singleStepStatus.StepExecutions) == 0 {
 					continue
 				}
-				ctyMap, err := nonIndexStepOutput.AsCtyMap()
+				singleStepValueMap, err := buildSingleStepStatusOutput(stepName, loop, singleStepStatus)
+
 				if err != nil {
 					return nil, err
 				}
-
-				// check if there is a configured output (output block on the step) for this step
-				if pe.AllConfigStepOutputs[stepType] != nil && pe.AllConfigStepOutputs[stepType][stepName] != nil {
-					configuredOutputMap := make(map[string]cty.Value)
-
-					for configuredOutputName, configuredOutputValue := range pe.AllConfigStepOutputs[stepType][stepName].(map[string]interface{}) {
-						configuredOutputMap[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
-						if err != nil {
-							return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
-						}
-					}
-
-					// we have to merge the output. The only case we have right now is for Pipeline Step. The pipeline has "output" that needs to be merged
-					// with the step output blocks
-					// We have a clash, it's an error
-					ctyMap, err = mergeOutputValues(ctyMap, configuredOutputMap, stepName)
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				vm[stepName] = cty.ObjectVal(ctyMap)
-
-			} else if indexedStepOutput, ok := stepOutput.(map[string]*modconfig.Output); ok {
-
-				ctyValMap := make(map[string]cty.Value)
-
-				var configStepOutputs map[string]map[string]interface{}
-				if pe.AllConfigStepOutputs[stepType] != nil && pe.AllConfigStepOutputs[stepType][stepName] != nil {
-					configStepOutputs = pe.AllConfigStepOutputs[stepType][stepName].(map[string]map[string]interface{})
-				}
-
-				for i, stepOutput := range indexedStepOutput { // indexStepOutput is the "native" output. For a pipeline step it is the output of the nested pipeline, it will be nested inside an "output" block
-					if stepOutput.Status == "skipped" {
-						continue
-					}
-
-					ctyMap, err := stepOutput.AsCtyMap() // this is the "native" output of the step
-					if err != nil {
-						return nil, err
-					}
-
-					configuredOutputMap := configStepOutputs[i]
-					if ctyMap["output"].IsNull() {
-						ctyMap["output"], err = hclhelpers.ConvertMapToCtyValue(configuredOutputMap)
-						if err != nil {
-							return nil, perr.InternalWithMessage("Unable to convert map to cty value " + err.Error())
-						}
-					} else {
-						stepOutput := ctyMap["output"].AsValueMap()
-
-						for configuredOutputName, configuredOutputValue := range configuredOutputMap {
-							if !stepOutput[configuredOutputName].IsNull() {
-								return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
-							}
-							stepOutput[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
-							if err != nil {
-								return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
-							}
-						}
-						ctyMap["output"] = cty.ObjectVal(stepOutput)
-					}
-
-					ctyValMap[i] = cty.ObjectVal(ctyMap)
-
-				}
-
-				vm[stepName] = cty.ObjectVal(ctyValMap)
+				indexedStepNameValueMap[k] = cty.ObjectVal(singleStepValueMap)
 			}
-
+			stepTypeValueMap[stepName] = cty.ObjectVal(indexedStepNameValueMap)
 		}
 
-		stepVariables[stepType] = cty.ObjectVal(vm)
+		// if forEach {
+		// 	stepStatus.(map[string]*StepStatus)
+		// }
+
+		// if it's part of for_each, then we have the fist level index
+
+		stepVariables[stepType] = cty.ObjectVal(stepTypeValueMap)
 	}
 
 	executionVariables := map[string]cty.Value{
@@ -211,24 +209,53 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 	return executionVariables, nil
 }
 
-func mergeOutputValues(ctyMap map[string]cty.Value, configuredOutputMap map[string]cty.Value, stepName string) (map[string]cty.Value, error) {
-	if ctyMap["output"].IsNull() {
-		ctyMap["output"] = cty.ObjectVal(configuredOutputMap)
+func buildSingleStepStatusOutput(stepName string, loop bool, singleStepStatus *StepStatus) (map[string]cty.Value, error) {
+	// TODO: check for status only have output if finished?
 
-	} else {
-		stepOutput := ctyMap["output"].AsValueMap()
+	var err error
+	var stepNameValueMap map[string]cty.Value
+	if !loop {
+		if len(singleStepStatus.StepExecutions) > 0 {
+			// Get the last step executions
+			lastStepExecution := singleStepStatus.StepExecutions[len(singleStepStatus.StepExecutions)-1]
 
-		for configuredOutputName, configuredOutputValue := range configuredOutputMap {
-			if !stepOutput[configuredOutputName].IsNull() {
-				return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
+			if lastStepExecution.Output != nil {
+				if lastStepExecution.Output.Status == "skipped" {
+					return stepNameValueMap, nil
+				}
+				stepNameValueMap, err = lastStepExecution.Output.AsCtyMap()
+				if err != nil {
+					return nil, err
+				}
 			}
 
-			stepOutput[configuredOutputName] = configuredOutputValue
-		}
+			// do we have configured step output? this is the output block on the step
+			if len(lastStepExecution.StepOutput) > 0 {
+				if stepNameValueMap["output"].IsNull() {
+					stepNameValueMap["output"], err = hclhelpers.ConvertMapToCtyValue(lastStepExecution.StepOutput)
+					if err != nil {
+						return nil, perr.InternalWithMessage("Unable to convert map to cty value " + err.Error())
+					}
+				} else {
+					stepOutput := stepNameValueMap["output"].AsValueMap()
 
-		ctyMap["output"] = cty.ObjectVal(stepOutput)
+					for configuredOutputName, configuredOutputValue := range lastStepExecution.StepOutput {
+						if !stepOutput[configuredOutputName].IsNull() {
+							return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
+						}
+						stepOutput[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
+						if err != nil {
+							return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
+						}
+					}
+					stepNameValueMap["output"] = cty.ObjectVal(stepOutput)
+				}
+			}
+		}
+	} else {
+		return nil, perr.BadRequestWithMessage("loop not implemented (yet)")
 	}
-	return ctyMap, nil
+	return stepNameValueMap, nil
 }
 
 // IsCanceled returns true if the pipeline has been canceled

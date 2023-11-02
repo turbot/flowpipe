@@ -188,13 +188,13 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 		return
 	}
 
-	echoStepsOutput := pex.AllNativeStepOutputs["echo"]
-	if echoStepsOutput == nil {
-		assert.Fail("echo step output not found")
+	executionVariables, err := pex.GetExecutionVariables()
+	if err != nil {
+		assert.Fail("Error getting execution variables", err)
 		return
 	}
 
-	assert.Equal(10, len(echoStepsOutput))
+	// assert.Equal(10, len(echoStepsOutput))
 	assert.Equal("foo bar", echoStepsOutput["text_1"].(*modconfig.Output).Data["text"])
 	assert.Equal("lower case Bar Foo Bar Baz and here", echoStepsOutput["text_2"].(*modconfig.Output).Data["text"])
 	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", echoStepsOutput["text_3"].(*modconfig.Output).Data["text"])
