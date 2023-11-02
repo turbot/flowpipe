@@ -306,6 +306,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 		}
 
 		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
+		lines = append(lines, renderPipelineOutput(cmd.Context(), executionLog.output, cols)...)
 
 		fmt.Println()                          //nolint:forbidigo // CLI console output
 		fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
@@ -329,8 +330,6 @@ func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, 
 		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
 	}
 	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
-	// lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
-	lines = append(lines, renderPipelineOutput(ctx, log.output, width)...)
 	return lines
 }
 
