@@ -76,10 +76,6 @@ type PipelineExecution struct {
 
 	// Steps triggered by pipelines in the execution.
 	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
-
-	// TODO: not sure if we need this, it's a different index of the step executions
-	// TODO: but also a way to track the order of execution for a given step
-	StepExecutionOrder map[string][]string `json:"-"`
 }
 
 /*
@@ -235,26 +231,6 @@ func mergeOutputValues(ctyMap map[string]cty.Value, configuredOutputMap map[stri
 	return ctyMap, nil
 }
 
-// PipelineStepExecutions returns a list of step executions for the given
-// pipeline execution ID and step name.
-func (pe *PipelineExecution) OrderedStepExecutions(stepName string) []StepExecution {
-
-	// Find the step execution order first
-	orders := pe.StepExecutionOrder[stepName]
-	if len(orders) == 0 {
-		// TODO: Error?
-		return nil
-	}
-
-	results := make([]StepExecution, len(orders))
-
-	for i, stepExecutionID := range orders {
-		se := pe.StepExecutions[stepExecutionID]
-		results[i] = *se
-	}
-	return results
-}
-
 // IsCanceled returns true if the pipeline has been canceled
 func (pe *PipelineExecution) IsCanceled() bool {
 	return pe.Status == "canceled"
@@ -332,35 +308,8 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.IPipelineStep, ex *Execution) bool {
 
 	return true
-	// if !pe.IsStepFail(step.GetFullyQualifiedName()) {
-	// 	// Step not failed, so no need to calculate, return false
-	// 	return false
-	// }
-
-	// var failedStepExecutions []StepExecution
-	// if step.GetError().Retries > 0 && !step.GetError().Ignore {
-	// 	if pe.StepStatus[step.GetFullyQualifiedName()].FailCount() > step.GetError().Retries {
-	// 		failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
-
-	// 		if failedStepExecutions[len(failedStepExecutions)-1].Error == nil {
-	// 			pe.Fail(step.GetFullyQualifiedName(), modconfig.StepError{Detail: fperr.InternalWithMessage("change this pipeline error - THERE IS SOMETHING WRONG HERE?")})
-	// 		} else {
-	// 			// Set the error
-	// 			pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
-	// 		}
-	// 		// pe.Fail(step.GetName(), modconfig.StepError{Detail: fperr.InternalWithMessage("change this pipeline error")})
-	// 		return true
-	// 	} else {
-	// 		return false
-	// 	}
-	// } else if !step.GetError().Ignore {
-	// 	failedStepExecutions = ex.PipelineStepExecutions(pe.ID, step.GetFullyQualifiedName())
-	// 	pe.Fail(step.GetFullyQualifiedName(), *failedStepExecutions[len(failedStepExecutions)-1].Error)
-	// 	return true
-	// }
-	// return true
-
 }
+
 func (pe *PipelineExecution) Fail(stepName string, stepError ...modconfig.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
 }
@@ -438,8 +387,8 @@ func (pe *PipelineExecution) StartStep(stepFullyQualifiedName, key, seID string)
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, partOfALoop bool) {
-	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, partOfALoop)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, loopContinue bool) {
+	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopContinue)
 }
 
 func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) {
@@ -463,6 +412,10 @@ type StepStatus struct {
 	Finished map[string]bool `json:"finished"`
 	// Step executions that are failed.
 	Failed map[string]bool `json:"failed"`
+
+	// There's the step execution in execution, this is the same but in a list for a given step status
+	// The element in this slice should point to the same element in the StepExecutions map (in PipelineExecution)
+	StepExecutions []StepExecution `json:"step_executions"`
 }
 
 // IsComplete returns true if all executions of the step are finished or failed.
@@ -519,14 +472,16 @@ func (s *StepStatus) Start(seID string) {
 }
 
 // Finish marks the given execution as finished.
-func (s *StepStatus) Finish(seID string, partOfALoop bool) {
+func (s *StepStatus) Finish(seID string, loopContinue bool) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
-	if partOfALoop {
+	if loopContinue {
 		s.LoopHold = true
+	} else {
+		s.LoopHold = false
 	}
 
 	s.Initializing = false
@@ -569,6 +524,7 @@ type StepExecution struct {
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 

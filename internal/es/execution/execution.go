@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -259,19 +260,12 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
-	// Find the step execution order first
-	orders := pe.StepExecutionOrder[stepName]
-	if len(orders) == 0 {
-		// TODO: Error?
-		return nil
+	results := []StepExecution{}
+
+	for _, se := range pe.StepExecutions {
+		results = append(results, *se)
 	}
 
-	results := make([]StepExecution, len(orders))
-
-	for i, stepExecutionID := range orders {
-		se := pe.StepExecutions[stepExecutionID]
-		results[i] = *se
-	}
 	return results
 }
 
@@ -353,7 +347,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				AllNativeStepOutputs:  ExecutionStepOutputs{},
 				AllConfigStepOutputs:  ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
-				StepExecutionOrder:    map[string][]string{},
 			}
 
 		case "handler.pipeline_started":
@@ -412,7 +405,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				Name:                et.StepName,
 				Status:              "starting",
 			}
-			pe.StepExecutionOrder[et.StepName] = append(pe.StepExecutionOrder[et.StepName], et.StepExecutionID)
 
 			stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
 			if err != nil {
@@ -446,7 +438,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 
-		// pipeline_step_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
+		// handler.pipeline_step_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
 		// a generic step start event
 		case "handler.pipeline_step_started":
 			var et event.PipelineStepStarted
@@ -467,6 +459,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.Key, et.StepExecutionID)
 
+		// this is the generic step finish event that is fired by the command.pipeline_step_start command
 		case "handler.pipeline_step_finished":
 			var et event.PipelineStepFinished
 			err := json.Unmarshal(ele.Payload, &et)
@@ -477,7 +470,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
 			if err != nil {
-				logger.Error("Failed to get step definition - 3", "stepExecutionID", et.StepExecutionID, "error", err)
+				logger.Error("Failed to get step definition", "stepExecutionID", et.StepExecutionID, "error", err)
 				return err
 			}
 
@@ -486,12 +479,21 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				shouldBeIndexed = true
 			}
 
-			partOfALoop := et.StepLoop != nil
+			loopContinue := false
+			if et.StepLoop != nil {
+				if !et.StepLoop.LoopCompleted {
+					loopContinue = true
+				}
+			}
 
 			// Step the specific step execution status
 			if pe.StepExecutions[et.StepExecutionID] == nil {
 				return perr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
 			}
+
+			// pe.StepExecutions[et.StepExecutionID].StepForEach should be set at the beginning of the step execution, not here
+			// StepLoop on the other hand, can only be determined at the end of the step, so this is the right place to do it
+			pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
 
 			if et.Output == nil {
 				// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)
@@ -513,12 +515,32 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				pe.AllConfigStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
 			}
 
+			// indexed means the step has a for_each
 			if !shouldBeIndexed {
-				// non for_each step. The step will be accessed such as:
+				// Non for_each step. The step will be accessed such as:
 				// text = step.echo.text_1.text
-				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
+				//
+				// But now we have loop, we need to actually index this as well,
+				// for for_each step that has loop, it will be double indexed.
 
-				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
+				if et.StepLoop != nil {
+					keyString := strconv.Itoa(et.StepLoop.Index)
+
+					if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+						pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = map[string]*modconfig.Output{}
+					}
+
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]*modconfig.Output)[keyString] = et.Output
+
+					if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
+						pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = map[string]map[string]interface{}{}
+					}
+
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[keyString] = et.StepOutput
+				} else {
+					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
+					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
+				}
 			} else {
 				// for indexed step, you want to be able to access the step as
 				// text = step.echo.text_1[1].text
@@ -541,12 +563,15 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[et.StepForEach.Key] = et.StepOutput
 			}
 
+			// append the Step Execution to the StepStatus (yes it's duplicate data, we may be able to refactor this later)
+			pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions = append(pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions,
+				*pe.StepExecutions[et.StepExecutionID])
+
 			// TODO: Error handling
 			// TODO: ignore error setting -> we need to be able to ignore setting
 			// TODO: is a step failure an immediate end of the pipeline?
 			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
 			if et.Output.HasErrors() {
-
 				// TODO: ignore retries for now (StepFinalFailure)
 				if !stepDefn.GetErrorConfig().Ignore {
 					// pe.StepExecutions[et.StepExecutionID].Error = et.Error
@@ -556,7 +581,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 				} else {
 					// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
-					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, partOfALoop)
+					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 				}
 
 				// TODO: this below comment is not true anymore, keep this here until we refactor how we handle the failure & retries
@@ -569,7 +594,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// 	logger.Trace("Step final failure", "step", stepDefn)
 				// }
 			} else {
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, partOfALoop)
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 			}
 
 		case "handler.pipeline_canceled":
