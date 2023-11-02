@@ -94,6 +94,10 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipeline
 		}
 	}
 
+	// if pex.Status == expectedState {
+	// 	return ex, pex, nil
+	// }
+
 	if !pex.IsComplete() {
 		return ex, pex, fmt.Errorf("not completed")
 	}

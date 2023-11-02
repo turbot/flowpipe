@@ -102,6 +102,47 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
+	integrationMap := map[string]cty.Value{}
+	slackIntegrationMap := map[string]cty.Value{}
+	emailIntegrationMap := map[string]cty.Value{}
+
+	for _, p := range pipelineDefn.GetMod().ResourceMaps.Integrations {
+
+		parts := strings.Split(p.Name(), ".")
+		if len(parts) != 4 {
+			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
+		}
+
+		integrationType := parts[2]
+		switch integrationType {
+		case string(schema.IntegrationTypeSlack):
+			slackIntegration := p.(*modconfig.SlackIntegration)
+			pCty, err := slackIntegration.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+			slackIntegrationMap[parts[3]] = pCty
+
+		case string(schema.IntegrationTypeEmail):
+			emailIntegration := p.(*modconfig.EmailIntegration)
+			pCty, err := emailIntegration.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+			emailIntegrationMap[parts[3]] = pCty
+		}
+	}
+
+	if len(slackIntegrationMap) > 0 {
+		integrationMap[schema.IntegrationTypeSlack] = cty.ObjectVal(slackIntegrationMap)
+	}
+
+	if len(emailIntegrationMap) > 0 {
+		integrationMap[schema.IntegrationTypeEmail] = cty.ObjectVal(emailIntegrationMap)
+	}
+
+	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
