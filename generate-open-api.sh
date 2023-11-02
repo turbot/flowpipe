@@ -1,7 +1,7 @@
 #!/bin/bash
 
 OUTPUT_DIR=internal/service/api/docs
-swag init -o ${OUTPUT_DIR} -g internal/service/api/index.go
+swag init -o ${OUTPUT_DIR} -g internal/service/api/index.go --parseDependency
 
 # TODO:: sed is able to generate the temp file but somehow the permission is broken and it is not able to overwrite the file
 # Using the belw workaround for now. Will take a deep dive later

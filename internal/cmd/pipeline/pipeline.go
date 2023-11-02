@@ -79,6 +79,7 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 	// Add the pipeline arg flag
 	pipelineRunCmd.Flags().StringArray(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
 	pipelineRunCmd.Flags().String(constants.ArgPipelineExecutionMode, "synchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.")
+	pipelineRunCmd.Flags().Int(constants.ArgPipelineWaitTime, 60, "Specify how long the pipeline should wait (in seconds) when run in synchronous execution mode.")
 
 	return pipelineRunCmd, nil
 }
@@ -132,6 +133,26 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 
 		// Set the pipeline execution mode
 		cmdPipelineRun.ExecutionMode = &executionMode
+
+		// Get the pipeline wait time from the flag
+		waitTime := int32(60)
+		pipelineWaitTime, err := cmd.Flags().GetInt(constants.ArgPipelineWaitTime)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("Error getting the value of %s flag", constants.ArgPipelineWaitTime))
+			return
+		}
+		if pipelineWaitTime != 0 {
+			err = validatePipelineWaitTime(pipelineWaitTime)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline wait time validation failed")
+				return
+			}
+
+			waitTime = int32(pipelineWaitTime)
+		}
+
+		// Set the pipeline wait time
+		cmdPipelineRun.WaitRetry = &waitTime
 
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
 		resp, _, err := request.Execute()
@@ -306,6 +327,16 @@ func validatePipelineArgs(pipelineArgs []string) error {
 func validatePipelineExecutionMode(mode string) error {
 	if !helpers.StringSliceContains([]string{"asynchronous", "synchronous"}, mode) {
 		return fmt.Errorf("invalid execution mode: %s", mode)
+	}
+	return nil
+}
+
+func validatePipelineWaitTime(wait int) error {
+	// TODO: Verify if we want min/max validation and appropriate durations
+	mn := 1
+	mx := 3600
+	if wait < mn || wait > mx {
+		return fmt.Errorf("invalid wait time: %d - should be between %d and %d", wait, mn, mx)
 	}
 	return nil
 }
