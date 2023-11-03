@@ -3,7 +3,7 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/app_specific"
+
 	"os"
 	"path"
 	"testing"
@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/config"
+	internalconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -46,16 +47,8 @@ func (suite *ModTestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	app_specific.WorkspaceDataDir = ".flowpipe"
-	app_specific.ModFileName = "mod.hcl"
-	app_specific.DefaultVarsFileName = "flowpipe.pvars"
-	app_specific.DefaultInstallDir = "~/.flowpipe"
-
-	app_specific.ModDataExtension = ".hcl"
-	app_specific.VariablesExtension = ".pvars"
-	app_specific.AutoVariablesExtension = ".auto.pvars"
-	app_specific.EnvInputVarPrefix = "P_VAR_"
-	app_specific.AppName = "flowpipe"
+	// sets app specific constants defined in pipe-fittings
+	internalconstants.SetAppSpecificConstants()
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
