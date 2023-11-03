@@ -360,7 +360,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 }
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
-func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.IPipelineStep, ex *Execution) bool {
+func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.PipelineStep, ex *Execution) bool {
 
 	return true
 }

@@ -30,7 +30,7 @@ type GetPipelineResponse struct {
 	Title         *string                    `json:"title,omitempty"`
 	Documentation *string                    `json:"documentation,omitempty"`
 	Tags          map[string]string          `json:"tags"`
-	Steps         []modconfig.IPipelineStep  `json:"steps,omitempty"`
+	Steps         []modconfig.PipelineStep   `json:"steps,omitempty"`
 	OutputConfig  []modconfig.PipelineOutput `json:"outputs,omitempty"`
 	Params        []FpPipelineParam          `json:"params,omitempty"`
 }

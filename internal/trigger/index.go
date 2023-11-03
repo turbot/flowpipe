@@ -21,11 +21,11 @@ type TriggerRunnerBase struct {
 	EsService *es.ESService
 }
 
-type ITriggerRunner interface {
+type TriggerRunner interface {
 	Run()
 }
 
-func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *modconfig.Trigger) ITriggerRunner {
+func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *modconfig.Trigger) TriggerRunner {
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{

@@ -187,7 +187,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 }
 
 // This function mutates stepOutput
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.IPipelineStep, evalContext *hcl.EvalContext, cmd *event.PipelineStepStart, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.PipelineStepStart, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
@@ -227,7 +227,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.IPipe
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn modconfig.IPipelineStep, cmd *event.PipelineStepStart, h PipelineStepStartHandler, logger *fplog.FlowpipeLogger) bool {
+func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.PipelineStepStart, h PipelineStepStartHandler, logger *fplog.FlowpipeLogger) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
 		args := modconfig.Input{}
@@ -269,7 +269,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.IPipelineStep, c
 	return false
 }
 
-func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, stepDefn modconfig.IPipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
+func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 

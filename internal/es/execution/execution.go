@@ -217,7 +217,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.IPipelineStep, error) {
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
