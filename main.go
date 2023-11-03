@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-
 	"github.com/spf13/viper"
 
 	"github.com/turbot/flowpipe/internal/cache"
@@ -43,16 +42,7 @@ func main() {
 
 	cache.InMemoryInitialize(nil)
 
-	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
-	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
-	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
-
-	constants.PipesComponentModDataExtension = ".hcl"
-	constants.PipesComponentVariablesExtension = ".pvars"
-	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
-	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
-	constants.PipesComponentAppName = "flowpipe"
+	appInit()
 
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
@@ -64,4 +54,38 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+// set app specific constants defined in pipe-fittings
+func appInit() {
+
+	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
+	filepaths.PipesComponentModsFileName = "mod.hcl"
+	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
+	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
+
+	constants.ModDataExtension = ".hcl"
+	constants.VariablesExtension = ".pvars"
+	constants.AutoVariablesExtension = ".auto.pvars"
+	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
+	constants.AppName = "flowpipe"
+
+	//// set the default install dir
+	//installDir, err := files.Tildefy("~/.steampipe")
+	//if err != nil {
+	//	panic(err)
+	//}
+	//constants.DefaultInstallDir = installDir
+	//constants.AppName = "steampipe"
+	//constants.ClientConnectionAppNamePrefix = "steampipe_client"
+	//constants.ServiceConnectionAppNamePrefix = "steampipe_service"
+	//constants.ClientSystemConnectionAppNamePrefix = "steampipe_client_system"
+	//constants.AppVersion = steampipe_version.SteampipeVersion
+	//constants.DefaultWorkspaceDatabase = "local"
+	//
+	//constants.ModDataExtension = ".sp"
+	//
+	//// set the command pre and post hooks
+	//cmdconfig.CustomPreRunHook = localcmdconfig.PreRunHook
+	//cmdconfig.CustomPostRunHook = localcmdconfig.PostRunHook
 }
