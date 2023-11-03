@@ -3,7 +3,6 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -803,7 +802,6 @@ func (suite *ModTestSuite) TestMapReduce() {
 		return
 	}
 
-	fmt.Println(pex.PipelineOutput["val"])
 	assert.Equal(3, len(pex.PipelineOutput["val"].(map[string]interface{})))
 	assert.Equal("green_day: Green Day", pex.PipelineOutput["val"].(map[string]interface{})["green_day"].(map[string]interface{})["text"])
 	assert.Equal("sum_41: Sum 41", pex.PipelineOutput["val"].(map[string]interface{})["sum_41"].(map[string]interface{})["text"])
