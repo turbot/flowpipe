@@ -230,8 +230,8 @@ func buildSingleStepStatusOutput(stepName string, loop bool, singleStepStatus *S
 		stepNameValueMap = map[string]cty.Value{}
 
 		// for each step execution, we need to get the output and add it to the map
-		for index, stepExecution := range singleStepStatus.StepExecutions {
-			indexedStepValueMap, err := BuildSingleStepExecutionOutput(&stepExecution, stepName)
+		for index := range singleStepStatus.StepExecutions {
+			indexedStepValueMap, err := BuildSingleStepExecutionOutput(&singleStepStatus.StepExecutions[index], stepName)
 			if err != nil {
 				return nil, err
 			}

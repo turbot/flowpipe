@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -20,9 +19,6 @@ func (h PipelinePlanHandler) HandlerName() string {
 func (h PipelinePlanHandler) NewCommand() interface{} {
 	return &event.PipelinePlan{}
 }
-
-// Define a mutex.
-var lock sync.Mutex
 
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	logger := fplog.Logger(ctx)
