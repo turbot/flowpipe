@@ -6,7 +6,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/thediveo/enumflag/v2"
-	"github.com/turbot/pipe-fittings/parse"
+	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/load_mod"
+	"github.com/turbot/pipe-fittings/steampipeconfig"
 	"os"
 	"path/filepath"
 	"time"
@@ -22,11 +24,9 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	pcconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
-	"github.com/turbot/pipe-fittings/load_mod"
-
-	pcconstants "github.com/turbot/pipe-fittings/constants"
 )
 
 // ④ Now use the FooMode enum flag. If you want a non-zero default, then
@@ -139,15 +139,15 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	// set global containing the configured install dir (create directory if needed)
 
 	// load workspace profile from the configured install dir
-	loader, err := parse.LoadWorkspaceProfiles(context.TODO())
+	loader, err := load_mod.LoadWorkspaceProfile()
 	error_helpers.FailOnError(err)
 
 	// set global workspace profile
-	load_mod.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
+	steampipeconfig.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
 
 	var cmd = viper.Get(pcconstants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err = load_mod.BootstrapViper(loader, cmd)
+	err = cmdconfig.BootstrapViper(loader, cmd)
 	error_helpers.FailOnError(err)
 
 	installDir := viper.GetString(pcconstants.ArgInstallDir)
