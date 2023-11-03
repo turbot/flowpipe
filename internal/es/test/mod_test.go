@@ -220,7 +220,7 @@ func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
 
 }
 
-func (suite *ModTestSuite) XSkipTestSimpleLoop() {
+func (suite *ModTestSuite) TestSimpleLoop() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
@@ -239,10 +239,92 @@ func (suite *ModTestSuite) XSkipTestSimpleLoop() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions), "there should be 3 step executions executed by the loop")
-	assert.Equal("Hello World", pex.PipelineOutput["val"])
-	assert.Equal("Hello World: Hello World", pex.PipelineOutput["val_two"])
+	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"].(map[string]interface{})["text"])
 
+	// Now check the integrity of the StepStatus
+
+	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
+	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+}
+
+func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop_index", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"].(map[string]interface{})["text"])
+
+	// Now check the integrity of the StepStatus
+
+	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
+	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+	assert.Equal(false, pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.LoopCompleted)
+
+	assert.Equal(1, pex.StepStatus["echo.repeat"]["0"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
+}
+
+func (suite *ModTestSuite) TestLoopWithForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	// We have to use the sleep step here to avoid concurrency issue with the planner
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_sleep", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	// Yeah this is a long test, the sleep is 4 seconds x 3
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 14, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	// Now check the integrity of the StepStatus
+
+	assert.Equal(2, len(pex.StepStatus["sleep.repeat"]), "there should only be 2 elements here because we have a for_each")
+	assert.Equal(3, len(pex.StepStatus["sleep.repeat"]["0"].StepExecutions), "we should have 3 executions in each for_each")
+	assert.Equal(3, len(pex.StepStatus["sleep.repeat"]["1"].StepExecutions), "we should have 3 executions in each for_each")
+
+	assert.Equal(false, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[2].StepLoop.LoopCompleted)
+
+	assert.Equal(false, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[2].StepLoop.LoopCompleted)
+
+	assert.Equal(1, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
+
+	assert.Equal(1, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
 }
 
 func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {

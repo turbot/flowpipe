@@ -35,11 +35,11 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 	}
 
 	// Convenience
-	pe := ex.PipelineExecutions[e.PipelineExecutionID]
+	pex := ex.PipelineExecutions[e.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() || pe.IsPaused() || pe.IsFinishing() || pe.IsFinished() {
+	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
 		return nil
 	}
 

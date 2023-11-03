@@ -1,6 +1,7 @@
 package execution
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -192,13 +193,6 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 			}
 			stepTypeValueMap[stepName] = cty.ObjectVal(indexedStepNameValueMap)
 		}
-
-		// if forEach {
-		// 	stepStatus.(map[string]*StepStatus)
-		// }
-
-		// if it's part of for_each, then we have the fist level index
-
 		stepVariables[stepType] = cty.ObjectVal(stepTypeValueMap)
 	}
 
@@ -210,52 +204,86 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 }
 
 func buildSingleStepStatusOutput(stepName string, loop bool, singleStepStatus *StepStatus) (map[string]cty.Value, error) {
-	// TODO: check for status only have output if finished?
+
+	// TODO: error
+	// TODO: retry
 
 	var err error
 	var stepNameValueMap map[string]cty.Value
 	if !loop {
-		if len(singleStepStatus.StepExecutions) > 0 {
-			// Get the last step executions
-			lastStepExecution := singleStepStatus.StepExecutions[len(singleStepStatus.StepExecutions)-1]
-
-			if lastStepExecution.Output != nil {
-				if lastStepExecution.Output.Status == "skipped" {
-					return stepNameValueMap, nil
-				}
-				stepNameValueMap, err = lastStepExecution.Output.AsCtyMap()
-				if err != nil {
-					return nil, err
-				}
-			}
-
-			// do we have configured step output? this is the output block on the step
-			if len(lastStepExecution.StepOutput) > 0 {
-				if stepNameValueMap["output"].IsNull() {
-					stepNameValueMap["output"], err = hclhelpers.ConvertMapToCtyValue(lastStepExecution.StepOutput)
-					if err != nil {
-						return nil, perr.InternalWithMessage("Unable to convert map to cty value " + err.Error())
-					}
-				} else {
-					stepOutput := stepNameValueMap["output"].AsValueMap()
-
-					for configuredOutputName, configuredOutputValue := range lastStepExecution.StepOutput {
-						if !stepOutput[configuredOutputName].IsNull() {
-							return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
-						}
-						stepOutput[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
-						if err != nil {
-							return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
-						}
-					}
-					stepNameValueMap["output"] = cty.ObjectVal(stepOutput)
-				}
-			}
+		if len(singleStepStatus.StepExecutions) == 0 {
+			return map[string]cty.Value{}, nil
 		}
+
+		// Get the last step executions
+		lastStepExecution := singleStepStatus.StepExecutions[len(singleStepStatus.StepExecutions)-1]
+		stepNameValueMap, err = BuildSingleStepExecutionOutput(&lastStepExecution, stepName)
+		if err != nil {
+			return nil, err
+		}
+
 	} else {
-		return nil, perr.BadRequestWithMessage("loop not implemented (yet)")
+		if len(singleStepStatus.StepExecutions) == 0 {
+			return map[string]cty.Value{}, nil
+		}
+
+		stepNameValueMap = map[string]cty.Value{}
+
+		// for each step execution, we need to get the output and add it to the map
+		for index, stepExecution := range singleStepStatus.StepExecutions {
+			indexedStepValueMap, err := BuildSingleStepExecutionOutput(&stepExecution, stepName)
+			if err != nil {
+				return nil, err
+			}
+
+			// don't use stepExecution.StepLoop.Key because it's intended for HCL expression evaluation
+			// not for arranging the output, the index will always be 1 ahead
+			key := strconv.Itoa(index)
+			stepNameValueMap[key] = cty.ObjectVal(indexedStepValueMap)
+		}
 	}
+
 	return stepNameValueMap, nil
+}
+
+func BuildSingleStepExecutionOutput(lastStepExecution *StepExecution, stepName string) (map[string]cty.Value, error) {
+	var singleStepValueMap map[string]cty.Value
+	var err error
+
+	if lastStepExecution.Output != nil {
+		if lastStepExecution.Output.Status == "skipped" {
+			return singleStepValueMap, nil
+		}
+		singleStepValueMap, err = lastStepExecution.Output.AsCtyMap()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// do we have configured step output? this is the output block on the step
+	if len(lastStepExecution.StepOutput) > 0 {
+		if singleStepValueMap["output"].IsNull() {
+			singleStepValueMap["output"], err = hclhelpers.ConvertMapToCtyValue(lastStepExecution.StepOutput)
+			if err != nil {
+				return nil, perr.InternalWithMessage("Unable to convert map to cty value " + err.Error())
+			}
+		} else {
+			stepOutput := singleStepValueMap["output"].AsValueMap()
+
+			for configuredOutputName, configuredOutputValue := range lastStepExecution.StepOutput {
+				if !stepOutput[configuredOutputName].IsNull() {
+					return nil, perr.BadRequestWithMessage("output block '" + configuredOutputName + "' already exists in step '" + stepName + "'")
+				}
+				stepOutput[configuredOutputName], err = hclhelpers.ConvertInterfaceToCtyValue(configuredOutputValue)
+				if err != nil {
+					return nil, perr.InternalWithMessage("Unable to convert interface to cty value " + err.Error())
+				}
+			}
+			singleStepValueMap["output"] = cty.ObjectVal(stepOutput)
+		}
+	}
+
+	return singleStepValueMap, nil
 }
 
 // IsCanceled returns true if the pipeline has been canceled

@@ -325,7 +325,8 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 		if loopDefn.ShouldRun() {
 			// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
 			//
-			// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index
+			// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index,
+			// do not change the currentIndex to 0
 			currentIndex := 1
 			if cmd.StepLoop != nil {
 				previousIndex := cmd.StepLoop.Index
@@ -346,6 +347,7 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 			// for each of the loop iteration the index changes, so we have to re do it again
 			// ensure that we also have the "each" variable here
 			evalContext = execution.AddLoop(stepLoop, evalContext)
+			evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
 
 			reevaluatedInput, err := stepDefn.GetInputs(evalContext)
 			if err != nil {

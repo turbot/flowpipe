@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -20,8 +21,10 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 	return &event.PipelinePlan{}
 }
 
-func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
+// Define a mutex.
+var lock sync.Mutex
 
+func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	logger := fplog.Logger(ctx)
 
 	evt, ok := c.(*event.PipelinePlan)
@@ -37,11 +40,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Convenience
-	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
+	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() || pe.IsPaused() || pe.IsFinishing() || pe.IsFinished() {
+	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
 		return nil
 	}
 
@@ -88,11 +91,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		// This mean the step has been initialized
 
-		if len(pe.StepStatus[step.GetFullyQualifiedName()]) > 0 {
+		if len(pex.StepStatus[step.GetFullyQualifiedName()]) > 0 {
 
 			// for_each that returns a list will still be a map, but the key of the map is a string
 			// of "0", "1", "2" and so on.
-			for _, stepStatus := range pe.StepStatus[step.GetFullyQualifiedName()] {
+			for _, stepStatus := range pex.StepStatus[step.GetFullyQualifiedName()] {
 
 				if stepStatus.StepExecutions == nil {
 					continue
@@ -105,6 +108,14 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 				// no step loop means we're done here
 				if latestStepExecution.StepLoop == nil || latestStepExecution.StepLoop.LoopCompleted {
+					continue
+				}
+
+				// Just because the loop has not been completed, it doesn't mean the next step is NOT already been started by another planner (!)
+				// check the queue status
+				//
+				// TODO: locking issue
+				if len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
 					continue
 				}
 
@@ -122,16 +133,16 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			continue
 		}
 
-		if pe.IsStepQueued(step.GetFullyQualifiedName()) {
+		if pex.IsStepQueued(step.GetFullyQualifiedName()) {
 			continue
 		}
 
 		// No need to plan if the step has been initialized
-		if pe.IsStepInitialized(step.GetFullyQualifiedName()) {
+		if pex.IsStepInitialized(step.GetFullyQualifiedName()) {
 			continue
 		}
 
-		if pe.IsStepInLoopHold(step.GetFullyQualifiedName()) {
+		if pex.IsStepInLoopHold(step.GetFullyQualifiedName()) {
 			continue
 		}
 
@@ -152,16 +163,16 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				continue
 			}
 
-			if !pe.IsStepComplete(dep) {
+			if !pex.IsStepComplete(dep) {
 				dependendenciesMet = false
 				break
 			}
 
-			if pe.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
+			if pex.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
 				dependendenciesMet = false
 
 				// TODO: final failure is always TRUE for now
-				if pe.IsStepFinalFailure(depStepDefn, ex) {
+				if pex.IsStepFinalFailure(depStepDefn, ex) {
 					// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
 					// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
 					// be ended in the handler/pipeline_planned stage
