@@ -6,7 +6,7 @@ go 1.21.0
 ////
 //replace github.com/turbot/terraform-components => ../terraform-components/
 ////
-//replace github.com/turbot/pipe-fittings => ../pipe-fittings/
+replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0

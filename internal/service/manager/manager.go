@@ -110,7 +110,7 @@ func (m *Manager) Initialize() error {
 
 	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
 
-		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
+		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, ".hcl", ".sp")
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
