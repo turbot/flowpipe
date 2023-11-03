@@ -5,8 +5,8 @@ import (
 	"io"
 
 	"github.com/spf13/cobra"
-	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/constants"
 )
 
 // Inspired by Kubernetes
