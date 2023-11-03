@@ -495,7 +495,15 @@ func (ex *Execution) BuildExecutionFromReader(r io.Reader) error {
 			}
 
 			pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].Queue(et.StepExecutionID)
-
+		case "handler.pipeline_step_queued":
+			var et event.PipelineStepQueued
+			err := json.Unmarshal(ele.Payload, &et)
+			if err != nil {
+				logger.Error("Fail to unmarshall handler.pipeline_step_queued event", "execution", ex.ID, "error", err)
+				return err
+			}
+			pe := ex.PipelineExecutions[et.PipelineExecutionID]
+			pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 		case "command.pipeline_step_start":
 			var et event.PipelineStepStart
 			err := json.Unmarshal(ele.Payload, &et)
