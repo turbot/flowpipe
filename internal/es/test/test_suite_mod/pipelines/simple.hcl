@@ -1,6 +1,14 @@
 pipeline "simple" {
     step "echo" "echo" {
         text = "Hello World"
+
+        output "echo_1" {
+            value = "echo 1"
+        }
+
+        output "echo_2" {
+            value = "echo 2"
+        }
     }
 
     output "val" {
@@ -32,6 +40,10 @@ pipeline "simple_for_each" {
     step "echo" "echo" {
         for_each = ["bar", "baz", "qux"]
         text = "${each.key}: foo ${each.value}"
+
+        output "val" {
+            value = "val is: ${each.value}"
+        }
     }
 
     output "val" {

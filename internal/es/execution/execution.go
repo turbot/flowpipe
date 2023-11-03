@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -385,8 +384,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				ParentStepExecutionID: et.ParentStepExecutionID,
 				ParentExecutionID:     et.ParentExecutionID,
 				Errors:                []modconfig.StepError{},
-				AllNativeStepOutputs:  ExecutionStepOutputs{},
-				AllConfigStepOutputs:  ExecutionStepOutputs{},
 				StepExecutions:        map[string]*StepExecution{},
 			}
 
@@ -515,11 +512,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				return err
 			}
 
-			shouldBeIndexed := false
-			if stepDefn.GetForEach() != nil {
-				shouldBeIndexed = true
-			}
-
 			loopContinue := false
 			if et.StepLoop != nil {
 				if !et.StepLoop.LoopCompleted {
@@ -546,62 +538,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 			if len(et.StepOutput) > 0 {
 				pe.StepExecutions[et.StepExecutionID].StepOutput = et.StepOutput
-			}
-
-			if pe.AllNativeStepOutputs[stepDefn.GetType()] == nil {
-				pe.AllNativeStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
-			}
-
-			if pe.AllConfigStepOutputs[stepDefn.GetType()] == nil {
-				pe.AllConfigStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
-			}
-
-			// indexed means the step has a for_each
-			if !shouldBeIndexed {
-				// Non for_each step. The step will be accessed such as:
-				// text = step.echo.text_1.text
-				//
-				// But now we have loop, we need to actually index this as well,
-				// for for_each step that has loop, it will be double indexed.
-
-				if et.StepLoop != nil {
-					keyString := strconv.Itoa(et.StepLoop.Index)
-
-					if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-						pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = map[string]*modconfig.Output{}
-					}
-
-					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]*modconfig.Output)[keyString] = et.Output
-
-					if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-						pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = map[string]map[string]interface{}{}
-					}
-
-					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[keyString] = et.StepOutput
-				} else {
-					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
-					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
-				}
-			} else {
-				// for indexed step, you want to be able to access the step as
-				// text = step.echo.text_1[1].text
-
-				if et.StepForEach == nil {
-					// Something is wrong here
-					return perr.InternalWithMessage("StepForEach is nil for a step that should be indexed " + pe.ID)
-				}
-
-				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]*modconfig.Output, et.StepForEach.TotalCount)
-				}
-
-				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]*modconfig.Output)[et.StepForEach.Key] = et.Output
-
-				if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]map[string]interface{}, et.StepForEach.TotalCount)
-				}
-
-				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[et.StepForEach.Key] = et.StepOutput
 			}
 
 			// append the Step Execution to the StepStatus (yes it's duplicate data, we may be able to refactor this later)

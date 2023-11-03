@@ -147,7 +147,6 @@ func (suite *ModTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *ModTestSuite) AfterTest(suiteName, testName string) {
-	time.Sleep(2 * time.Second)
 }
 
 func (suite *ModTestSuite) TestSimplestPipeline() {
@@ -458,18 +457,15 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].(map[string]*modconfig.Output)
-	assert.Equal(3, len(echoNameStepOutputs))
-	assert.Equal("artist name: Real Friends", echoNameStepOutputs["0"].Data["text"])
-	assert.Equal("artist name: A Day To Remember", echoNameStepOutputs["1"].Data["text"])
-	assert.Equal("artist name: The Story So Far", echoNameStepOutputs["2"].Data["text"])
+	assert.Equal(3, len(pex.StepStatus["echo.name"]))
+	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
 
-	secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].(map[string]*modconfig.Output)
-	assert.Equal(3, len(secondStepStepOutputs))
-	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs["0"].Data["text"])
-	assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs["1"].Data["text"])
-	assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs["2"].Data["text"])
-
+	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
+	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("second_step: album name: Common Courtesy", pex.StepStatus["echo.second_step"]["1"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("second_step: album name: What You Don't See", pex.StepStatus["echo.second_step"]["2"].StepExecutions[0].Output.Data["text"])
 }
 
 func (suite *ModTestSuite) TestPipelineWithForEach() {
@@ -788,7 +784,7 @@ func (suite *ModTestSuite) TestMapReduce() {
 
 	pipelineInput := &modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_map", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_map", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -806,8 +802,10 @@ func (suite *ModTestSuite) TestMapReduce() {
 		return
 	}
 
-	assert.Equal(2, len(pex.PipelineOutput["val"].(map[string]interface{})))
+	assert.Equal(3, len(pex.PipelineOutput["val"].(map[string]interface{})))
 	assert.Equal("green_day: Green Day", pex.PipelineOutput["val"].(map[string]interface{})["green_day"].(map[string]interface{})["text"])
+	assert.Equal("sum_41: Sum 41", pex.PipelineOutput["val"].(map[string]interface{})["sum_41"].(map[string]interface{})["text"])
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["blink_182"].(map[string]interface{})))
 }
 
 func (suite *ModTestSuite) TestNested() {
