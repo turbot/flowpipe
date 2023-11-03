@@ -349,7 +349,37 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
+	err = ex.BuildExecutionFromReader(f)
+	if err != nil {
+		logger.Error("Failed to build execution from log reader", "execution", ex.ID, "error", err)
+		return err
+	}
+
+	return nil
+}
+
+// LoadFromFile loads an execution from a JSON file.
+func (ex *Execution) LoadJSON(fileName string) error {
+	jsonFile, err := os.Open(fileName)
+	if err != nil {
+		return err
+	}
+	// defer the closing of our jsonFile so that we can parse it later on
+	defer jsonFile.Close()
+	byteValue, err := io.ReadAll(jsonFile)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(byteValue, &ex)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ex *Execution) BuildExecutionFromReader(r io.Reader) error {
+	logger := fplog.Logger(ex.Context)
+	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*20), bufio.MaxScanTokenSize*20)
 	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	for scanner.Scan() {
@@ -393,6 +423,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "started"
+			pe.StartTime = et.Event.CreatedAt
 
 		case "handler.pipeline_resumed":
 			var et event.PipelineStarted
@@ -493,6 +524,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 
 			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.Key, et.StepExecutionID)
+			pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 
 		// this is the generic step finish event that is fired by the command.pipeline_step_start command
 		case "handler.pipeline_step_finished":
@@ -559,6 +591,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			} else {
 				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 			}
+			pe.StepExecutions[et.StepExecutionID].EndTime = et.Event.CreatedAt
 
 		case "handler.pipeline_canceled":
 			var et event.PipelineCanceled
@@ -569,6 +602,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "canceled"
+			pe.EndTime = et.Event.CreatedAt
 
 		case "handler.pipeline_paused":
 			var et event.PipelinePaused
@@ -599,6 +633,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "finished"
+			pe.EndTime = et.Event.CreatedAt
 			pe.PipelineOutput = et.PipelineOutput
 
 		case "handler.pipeline_failed":
@@ -610,6 +645,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			}
 			pe := ex.PipelineExecutions[et.PipelineExecutionID]
 			pe.Status = "failed"
+			pe.EndTime = et.Event.CreatedAt
 			pe.PipelineOutput = et.PipelineOutput
 			if et.Error != nil {
 				if pe.Errors == nil {
@@ -627,25 +663,5 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		return err
 	}
 
-	return nil
-
-}
-
-// LoadFromFile loads an execution from a JSON file.
-func (ex *Execution) LoadJSON(fileName string) error {
-	jsonFile, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	// defer the closing of our jsonFile so that we can parse it later on
-	defer jsonFile.Close()
-	byteValue, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(byteValue, &ex)
-	if err != nil {
-		return err
-	}
 	return nil
 }

@@ -3,6 +3,7 @@ package execution
 import (
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -81,6 +82,9 @@ type PipelineExecution struct {
 
 	// Steps triggered by pipelines in the execution.
 	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
+
+	StartTime time.Time `json:"start_time,omitempty"`
+	EndTime   time.Time `json:"end_time,omitempty"`
 }
 
 /*
@@ -385,7 +389,7 @@ func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 
 func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
 	return false
-	//return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].LoopHold
+	// return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].LoopHold
 }
 
 // TODO: this doesn't work for step execution retry, it assumes that the entire step
@@ -592,6 +596,9 @@ type StepExecution struct {
 	//	}
 	//
 	StepOutput map[string]interface{} `json:"step_output,omitempty"`
+
+	StartTime time.Time `json:"start_time,omitempty"`
+	EndTime   time.Time `json:"end_time,omitempty"`
 }
 
 func (se *StepExecution) Key() *string {
