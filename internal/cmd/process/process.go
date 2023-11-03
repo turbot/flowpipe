@@ -401,7 +401,7 @@ func renderPipelineOutput(ctx context.Context, output map[string]any, width int)
 		lines = append(lines, "\nOutput:")
 	}
 	for k, v := range output {
-		line := fmt.Sprintf("➡️ [%s] %v", k, v)
+		line := fmt.Sprintf("⇒ %s = %v", k, v)
 		if utf8.RuneCountInString(line) >= width {
 			line = fmt.Sprintf("%s%s", line[0:width-3], "...")
 		}
