@@ -17,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/filepaths"
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -108,7 +107,7 @@ func (m *Manager) Initialize() error {
 	var triggers map[string]*modconfig.Trigger
 	var modInfo *modconfig.Mod
 
-	if load_mod.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
+	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
 		if errorAndWarning.Error != nil {

@@ -3,15 +3,14 @@ package main
 import (
 	"context"
 	"github.com/spf13/viper"
+	"github.com/turbot/pipe-fittings/app_specific"
 
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/filepaths"
 )
 
 var (
@@ -59,16 +58,16 @@ func main() {
 // set app specific constants defined in pipe-fittings
 func appInit() {
 
-	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
-	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
-	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
+	app_specific.WorkspaceDataDir = ".flowpipe"
+	app_specific.ModFileName = "mod.hcl"
+	app_specific.DefaultVarsFileName = "flowpipe.pvars"
+	app_specific.DefaultInstallDir = "~/.flowpipe"
 
-	constants.ModDataExtension = ".hcl"
-	constants.VariablesExtension = ".pvars"
-	constants.AutoVariablesExtension = ".auto.pvars"
-	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
-	constants.AppName = "flowpipe"
+	app_specific.ModDataExtension = ".hcl"
+	app_specific.VariablesExtension = ".pvars"
+	app_specific.AutoVariablesExtension = ".auto.pvars"
+	app_specific.EnvInputVarPrefix = "P_VAR_"
+	app_specific.AppName = "flowpipe"
 
 	//// set the default install dir
 	//installDir, err := files.Tildefy("~/.steampipe")

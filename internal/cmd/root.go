@@ -69,7 +69,7 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.PersistentFlags().Bool(constants.ArgTlsInsecure, false, "Skip TLS verification")
 
 	// Common (steampipe, flowpipe) flags
-	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.PipesComponentDefaultInstallDir, "Path to the Config Directory")
+	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory")
 	rootCmd.PersistentFlags().String(pcconstants.ArgModLocation, cwd, "Path to the workspace working directory")
 
 	// ⑤ Define the CLI flag parameters for your wrapped enum flag.
@@ -153,7 +153,7 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	installDir := viper.GetString(pcconstants.ArgInstallDir)
 	ensureInstallDir(filepath.Join(installDir, "internal"))
 
-	salt, err := flowpipeSalt(filepath.Join(installDir, filepaths.PipesComponentInternal, "salt"), 32)
+	salt, err := flowpipeSalt(filepath.Join(installDir, app_specific.Internal, "salt"), 32)
 	if err != nil {
 		error_helpers.FailOnErrorWithMessage(err, err.Error())
 	}

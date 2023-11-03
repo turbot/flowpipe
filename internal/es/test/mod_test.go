@@ -3,6 +3,7 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"os"
 	"path"
 	"testing"
@@ -19,7 +20,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/filepaths"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
@@ -46,16 +46,16 @@ func (suite *ModTestSuite) SetupSuite() {
 		panic(err)
 	}
 
-	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
-	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
-	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
+	app_specific.WorkspaceDataDir = ".flowpipe"
+	app_specific.ModFileName = "mod.hcl"
+	app_specific.DefaultVarsFileName = "flowpipe.pvars"
+	app_specific.DefaultInstallDir = "~/.flowpipe"
 
-	constants.PipesComponentModDataExtension = ".hcl"
-	constants.PipesComponentVariablesExtension = ".pvars"
-	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
-	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
-	constants.PipesComponentAppName = "flowpipe"
+	app_specific.ModDataExtension = ".hcl"
+	app_specific.VariablesExtension = ".pvars"
+	app_specific.AutoVariablesExtension = ".auto.pvars"
+	app_specific.EnvInputVarPrefix = "P_VAR_"
+	app_specific.AppName = "flowpipe"
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
