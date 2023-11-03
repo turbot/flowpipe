@@ -5,7 +5,7 @@ pipeline "simple_loop" {
         numeric = 1
 
         loop {
-            if = result.numeric < 3
+            until = result.numeric < 3
             numeric = result.numeric + 1
         }
     }
@@ -27,7 +27,7 @@ pipeline "simple_loop_index" {
         text  = "iteration: ${loop.index}"
 
         loop {
-            if = loop.index < 2
+            until = loop.index < 2
         }
     }
 
@@ -50,7 +50,7 @@ pipeline "loop_with_for_each" {
         text = "iteration: ${loop.index} - ${each.value}"
 
         loop {
-            if = loop.index < 2
+            until = loop.index < 2
         }
     }
 
@@ -66,7 +66,7 @@ pipeline "loop_with_for_each_sleep" {
         duration = each.value
 
         loop {
-            if = loop.index < 2
+            until = loop.index < 2
         }
     }
 
