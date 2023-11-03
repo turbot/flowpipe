@@ -5,16 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/thediveo/enumflag/v2"
-	"github.com/turbot/pipe-fittings/cmdconfig"
-	"github.com/turbot/pipe-fittings/load_mod"
-	"github.com/turbot/pipe-fittings/steampipeconfig"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/thediveo/enumflag/v2"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/mod"
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
@@ -24,9 +21,13 @@ import (
 	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 	pcconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
+	"github.com/turbot/pipe-fittings/load_mod"
+	"github.com/turbot/pipe-fittings/steampipeconfig"
 )
 
 // ④ Now use the FooMode enum flag. If you want a non-zero default, then
@@ -153,7 +154,8 @@ func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 	installDir := viper.GetString(pcconstants.ArgInstallDir)
 	ensureInstallDir(filepath.Join(installDir, "internal"))
 
-	salt, err := flowpipeSalt(filepath.Join(installDir, app_specific.Internal, "salt"), 32)
+	saltDir := filepath.Join(filepaths.EnsureInternalDir(), "salt")
+	salt, err := flowpipeSalt(saltDir, 32)
 	if err != nil {
 		error_helpers.FailOnErrorWithMessage(err, err.Error())
 	}
@@ -199,7 +201,5 @@ func ensureInstallDir(installDir string) {
 		err = os.MkdirAll(installDir, 0755)
 		error_helpers.FailOnErrorWithMessage(err, fmt.Sprintf("could not create installation directory: %s", installDir))
 	}
-
-	// store as SteampipeDir
-	filepaths.SteampipeDir = installDir
+	app_specific.InstallDir = installDir
 }
