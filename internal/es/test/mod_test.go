@@ -21,6 +21,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/filepaths"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 )
 
@@ -991,6 +992,50 @@ func (suite *ModTestSuite) XXTestHttpPipelines() {
 		assert.Fail("Pipeline execution not finished")
 		return
 	}
+}
+
+func (suite *ModTestSuite) TestPipelineTransformStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(1, len(pex.StepStatus["transform.basic_transform"]))
+	if _, ok := pex.StepStatus["transform.basic_transform"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
+		assert.Fail("Unable to convert output to string")
+		return
+	}
+	assert.Equal("This is a simple transform step", pex.StepStatus["transform.basic_transform"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+
+	assert.Equal(1, len(pex.StepStatus["transform.basic_transform_refers_param"]))
+	if _, ok := pex.StepStatus["transform.basic_transform_refers_param"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(float64); !ok {
+		assert.Fail("Unable to convert output to float64")
+		return
+	}
+	assert.Equal(float64(10), pex.StepStatus["transform.basic_transform_refers_param"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+
+	assert.Equal(1, len(pex.StepStatus["transform.depends_on_transform_step"]))
+	assert.Equal(2, len(pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions))
+	if _, ok := pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue].(string); !ok {
+		assert.Fail("Unable to convert output to string")
+		return
+	}
+	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue])
 }
 
 // TODO : Add back the test to validatet he input step
