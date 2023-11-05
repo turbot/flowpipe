@@ -1031,14 +1031,12 @@ github.com/tklauser/numcpus v0.3.0 h1:ILuRUQBtssgnxw0XXIjKUC56fgnOrFoQQ/4+DeU2bi
 github.com/tklauser/numcpus v0.3.0/go.mod h1:yFGUr7TUHQRAhyqBcEg0Ge34zDBAsIvJJcyE6boqnA8=
 github.com/tkrajina/go-reflector v0.5.6 h1:hKQ0gyocG7vgMD2M3dRlYN6WBBOmdoOzJ6njQSepKdE=
 github.com/tkrajina/go-reflector v0.5.6/go.mod h1:ECbqLgccecY5kPmPmXg1MrHW585yMcDkVl6IvJe64T4=
-github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5 h1:VaxPXuDeB3qWLj4DtjnSwKlsma9YUTy8lIYdoIB6Jzw=
-github.com/turbot/flowpipe-sdk-go v0.0.0-20231016035852-5a36616e23b5/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
 github.com/turbot/flowpipe-sdk-go v0.0.0-20231101151150-31d74c0a92f8 h1:e1Ug7TlQMV9yEDvFth9Wql06sogWemcsKPfbFFzYSNg=
 github.com/turbot/flowpipe-sdk-go v0.0.0-20231101151150-31d74c0a92f8/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
 github.com/turbot/go-kit v0.9.0-rc.2 h1:FJTFS3UBE0ruz52ToiH0D+2NYGFMEwgkhvVj7awiSA4=
 github.com/turbot/go-kit v0.9.0-rc.2/go.mod h1:BrOy6Xeizj+eBzXOOWuBMSzQosirN+IGw9MksKULvd4=
-github.com/turbot/pipe-fittings v0.0.0-20231103181900-fbd2c243784d h1:OO4pxMMb3WNnGb+MWwDcKt0qHP7mDDqYNIhJEcXbzc4=
-github.com/turbot/pipe-fittings v0.0.0-20231103181900-fbd2c243784d/go.mod h1:4IihsxRZb1SWAfN0t94CFJd1YSTZ91ohpDodR5iRy+8=
+github.com/turbot/pipe-fittings v0.0.0-20231105211343-8d63d4769836 h1:5n/fR16yMS/Q/O30nSKZMgLZfPKYPsFyFq3EIP2sV4o=
+github.com/turbot/pipe-fittings v0.0.0-20231105211343-8d63d4769836/go.mod h1:oCAN0fLb42PWIKvfsh2StrLdrFXDchbymnYV3CifV1c=
 github.com/turbot/steampipe-cloud-sdk-go v0.6.0 h1:ufAxOpKS1uq7eejuE5sfEu1+d7QAd0RBjl8Bn6+mIs8=
 github.com/turbot/steampipe-cloud-sdk-go v0.6.0/go.mod h1:M42TMBdMim4bV1YTMxhKyzfSGSMo4CXUkm3wt9w7t1Y=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 h1:B2gkMJK1m5GYQfmxjO9VREAwdUsGxf48vOzKouoyFIM=

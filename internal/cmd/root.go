@@ -26,8 +26,6 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
-	"github.com/turbot/pipe-fittings/load_mod"
-	"github.com/turbot/pipe-fittings/steampipeconfig"
 )
 
 // ④ Now use the FooMode enum flag. If you want a non-zero default, then
@@ -135,20 +133,10 @@ func addCommands(ctx context.Context, rootCmd *cobra.Command) error {
 // initConfig reads in config file and ENV variables if set.
 func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 
-	// Steampipe CLI loads the Workspace Profile here, but it also loads the mod in the parse context.
-	//
-	// set global containing the configured install dir (create directory if needed)
-
-	// load workspace profile from the configured install dir
-	loader, err := load_mod.LoadWorkspaceProfile()
-	error_helpers.FailOnError(err)
-
-	// set global workspace profile
-	steampipeconfig.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
-
 	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err = cmdconfig.BootstrapViper(loader, cmd)
+	err := cmdconfig.BootstrapViper(cmd)
+
 	error_helpers.FailOnError(err)
 
 	installDir := viper.GetString(constants.ArgInstallDir)
