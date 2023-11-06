@@ -1055,7 +1055,6 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 		return
 	}
 
-	assert.Equal(1, len(pex.StepStatus["transform.transform_test"]))
 	assert.Equal(4, len(pex.StepStatus["transform.transform_test"]))
 	if _, ok := pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
 		assert.Fail("Unable to convert output to string")
