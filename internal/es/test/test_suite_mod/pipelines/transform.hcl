@@ -34,3 +34,29 @@ pipeline "pipeline_with_transform_step_string_list" {
     value    = "user if ${each.value}"
   }
 }
+
+pipeline "transform_step_for_map" {
+  param "legends" {
+    type = map
+
+    default = {
+      "janis" = {
+        last_name = "joplin"
+        age       = 27
+      }
+      "jimi" = {
+        last_name = "hendrix"
+        age       = 27
+      }
+      "jerry" = {
+        last_name = "garcia"
+        age       = 53
+      }
+    }
+  }
+
+  step "transform" "text_1" {
+    for_each = param.legends
+    value    = "${each.key} ${each.value.last_name} was ${each.value.age}"
+  }
+}
