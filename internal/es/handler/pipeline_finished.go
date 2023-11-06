@@ -62,7 +62,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
 		}
 
-		return h.CommandBus.Send(ctx, &cmd)
+		return h.CommandBus.Send(ctx, cmd)
 
 	} else {
 		// Generate output data

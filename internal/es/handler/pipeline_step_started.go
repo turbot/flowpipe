@@ -46,7 +46,7 @@ func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))
 		}
-		return h.CommandBus.Send(ctx, &cmd)
+		return h.CommandBus.Send(ctx, cmd)
 	default:
 		err := perr.BadRequestWithMessage("step type cannot be started: " + stepDefn.GetType())
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepStartedToPipelineFail(e, err)))

@@ -49,5 +49,5 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineLoadToPipelineFailed(cmd, err)))
 	}
 
-	return h.EventBus.Publish(ctx, &e)
+	return h.EventBus.Publish(ctx, e)
 }

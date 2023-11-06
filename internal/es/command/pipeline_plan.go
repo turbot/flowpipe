@@ -192,7 +192,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Pipeline has been planned, now publish this event
-	if err := h.EventBus.Publish(ctx, &e); err != nil {
+	if err := h.EventBus.Publish(ctx, e); err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 

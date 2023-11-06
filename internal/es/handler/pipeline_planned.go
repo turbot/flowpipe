@@ -66,13 +66,13 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
-				return h.CommandBus.Send(ctx, &cmd)
+				return h.CommandBus.Send(ctx, cmd)
 			} else {
 				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
-				return h.CommandBus.Send(ctx, &cmd)
+				return h.CommandBus.Send(ctx, cmd)
 			}
 		}
 
@@ -98,7 +98,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
-		return h.CommandBus.Send(ctx, &cmd)
+		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
@@ -379,7 +379,7 @@ func runStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePla
 		return
 	}
 
-	if err := commandBus.Send(ctx, &cmd); err != nil {
+	if err := commandBus.Send(ctx, cmd); err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		if err != nil {
 			logger.Error("Error publishing event", "error", err)

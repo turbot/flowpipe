@@ -254,7 +254,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		err = h.EventBus.Publish(ctx, &e)
+		err = h.EventBus.Publish(ctx, e)
 		if err != nil {
 			logger.Error("Error publishing event", "error", err)
 		}
@@ -387,7 +387,7 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 		return
 	}
 
-	err = h.EventBus.Publish(ctx, &e)
+	err = h.EventBus.Publish(ctx, e)
 	if err != nil {
 		logger.Error("Error publishing event", "error", err)
 	}

@@ -25,7 +25,7 @@ func (e *PipelineQueued) GetEvent() *Event {
 }
 
 func (e *PipelineQueued) HandlerName() string {
-	return "handler.pipeline_queue"
+	return "handler.pipeline_queued"
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

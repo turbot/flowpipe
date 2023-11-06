@@ -88,5 +88,5 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
-	return h.EventBus.Publish(ctx, &e)
+	return h.EventBus.Publish(ctx, e)
 }

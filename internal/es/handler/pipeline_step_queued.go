@@ -40,7 +40,7 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+	if err := h.CommandBus.Send(ctx, cmd); err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {
 			fplog.Logger(ctx).Error("Error publishing event", "error", err)

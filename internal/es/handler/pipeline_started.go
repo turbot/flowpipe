@@ -26,9 +26,9 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineStarted")
 	}
 
-	evt, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
+	cmd, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStartedToPipelineFail(e, err)))
 	}
-	return h.CommandBus.Send(ctx, evt)
+	return h.CommandBus.Send(ctx, cmd)
 }
