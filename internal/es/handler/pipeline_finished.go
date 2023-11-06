@@ -17,8 +17,10 @@ import (
 
 type PipelineFinished EventHandler
 
+var pipelineFinished = event.PipelineFinished{}
+
 func (h PipelineFinished) HandlerName() string {
-	return "handler.pipeline_finished"
+	return pipelineFinished.HandlerName()
 }
 
 func (PipelineFinished) NewEvent() interface{} {

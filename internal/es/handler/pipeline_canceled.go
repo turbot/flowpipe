@@ -10,8 +10,10 @@ import (
 
 type PipelineCanceled EventHandler
 
+var pipelineCanceled = event.PipelineCanceled{}
+
 func (h PipelineCanceled) HandlerName() string {
-	return "handler.pipeline_canceled"
+	return pipelineCanceled.HandlerName()
 }
 
 func (PipelineCanceled) NewEvent() interface{} {

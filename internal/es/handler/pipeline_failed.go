@@ -16,8 +16,10 @@ import (
 
 type PipelineFailed EventHandler
 
+var pipelineFailed = event.PipelineFailed{}
+
 func (h PipelineFailed) HandlerName() string {
-	return "handler.pipeline_failed"
+	return pipelineFailed.HandlerName()
 }
 
 func (PipelineFailed) NewEvent() interface{} {

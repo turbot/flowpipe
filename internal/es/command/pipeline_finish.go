@@ -13,8 +13,10 @@ import (
 
 type PipelineFinishHandler CommandHandler
 
+var pipelineFinish = event.PipelineFinish{}
+
 func (h PipelineFinishHandler) HandlerName() string {
-	return "command.pipeline_finish"
+	return pipelineFinish.HandlerName()
 }
 
 func (h PipelineFinishHandler) NewCommand() interface{} {

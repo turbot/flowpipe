@@ -20,8 +20,10 @@ import (
 
 type PipelinePlanned EventHandler
 
+var pipelinePlanned = event.PipelinePlanned{}
+
 func (h PipelinePlanned) HandlerName() string {
-	return "handler.pipeline_planned"
+	return pipelinePlanned.HandlerName()
 }
 
 func (PipelinePlanned) NewEvent() interface{} {

@@ -10,8 +10,10 @@ import (
 
 type PipelineCancelHandler CommandHandler
 
+var pipelineCancel = event.PipelineCancel{}
+
 func (h PipelineCancelHandler) HandlerName() string {
-	return "command.pipeline_cancel"
+	return pipelineCancel.HandlerName()
 }
 
 func (h PipelineCancelHandler) NewCommand() interface{} {

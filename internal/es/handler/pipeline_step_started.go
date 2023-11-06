@@ -12,15 +12,19 @@ import (
 
 type PipelineStepStarted EventHandler
 
+var pipelineStepStarted = event.PipelineStepStarted{}
+
 func (h PipelineStepStarted) HandlerName() string {
-	return "handler.pipeline_step_started"
+	return pipelineStepStarted.HandlerName()
 }
 
 func (PipelineStepStarted) NewEvent() interface{} {
 	return &event.PipelineStepStarted{}
 }
 
-// This handler only handle with a single event type: pipeline step started (if we want to start a new child pipeline)
+// *
+// * This handler only handle with a single event type: pipeline step started (if we want to start a new child pipeline)
+// *
 func (h PipelineStepStarted) Handle(ctx context.Context, ei interface{}) error {
 	logger := fplog.Logger(ctx)
 

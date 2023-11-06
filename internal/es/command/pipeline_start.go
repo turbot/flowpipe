@@ -10,8 +10,10 @@ import (
 
 type PipelineStartHandler CommandHandler
 
+var pipelineStart = event.PipelineStart{}
+
 func (h PipelineStartHandler) HandlerName() string {
-	return "command.pipeline_start"
+	return pipelineStart.HandlerName()
 }
 
 func (h PipelineStartHandler) NewCommand() interface{} {
