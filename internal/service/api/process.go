@@ -27,7 +27,7 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process/:process_id/log/process.json", api.listProcessEventLog)
 	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLogJSONLine)
 	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
-
+	router.GET("/process/:process_id/execution", api.getProcessExecution)
 }
 
 // @Summary List processs
@@ -400,4 +400,48 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 
 	// Return the JSON content
 	c.Data(http.StatusOK, "application/json", jsonBytes)
+}
+
+// @Summary Get process execution
+// @Description Get process execution
+// @ID   process_get_execution
+// @Tags Process
+// @Accept json
+// @Produce json
+// / ...
+// @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
+// ...
+// @Success 200 {object} execution.Execution
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
+// @Router /process/{process_id}/execution [get]
+func (api *APIService) getProcessExecution(c *gin.Context) {
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	evt := &event.Event{
+		ExecutionID: uri.ProcessId,
+	}
+
+	ex, err := execution.NewExecution(c, execution.WithEvent(evt))
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+
+	}
+
+	err = ex.LoadProcess(evt)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, ex)
 }
