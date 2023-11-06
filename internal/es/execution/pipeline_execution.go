@@ -71,7 +71,7 @@ type PipelineExecution struct {
 
 		If the step has a loop and for_each the data is nested twice, i.e.: ["0"]["1"]
 		**/
-	StepStatus map[string]map[string]*StepStatus `json:"-"`
+	StepStatus map[string]map[string]*StepStatus `json:"step_status,omitempty"`
 
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
@@ -81,7 +81,7 @@ type PipelineExecution struct {
 	Errors []modconfig.StepError `json:"errors,omitempty"`
 
 	// Steps triggered by pipelines in the execution.
-	StepExecutions map[string]*StepExecution `json:"step_executions,omitempty"`
+	StepExecutions map[string]*StepExecution `json:"-"`
 
 	StartTime time.Time `json:"start_time,omitempty"`
 	EndTime   time.Time `json:"end_time,omitempty"`

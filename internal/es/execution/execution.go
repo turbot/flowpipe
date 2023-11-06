@@ -584,6 +584,8 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			pe.StepExecutions[et.StepExecutionID].StepOutput = et.StepOutput
 		}
 
+		pe.StepExecutions[et.StepExecutionID].EndTime = et.Event.CreatedAt
+		// TODO: Fix creating duplicate data as we dereference before appending (moved EndTime above this so it is passed into StepStatus)
 		// append the Step Execution to the StepStatus (yes it's duplicate data, we may be able to refactor this later)
 		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions = append(pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions,
 			*pe.StepExecutions[et.StepExecutionID])
@@ -606,7 +608,6 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		} else {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 		}
-		pe.StepExecutions[et.StepExecutionID].EndTime = et.Event.CreatedAt
 
 	case "handler.pipeline_canceled":
 		var et event.PipelineCanceled
