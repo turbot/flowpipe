@@ -1036,6 +1036,32 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 		return
 	}
 	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue])
+
+	// Pipeline 2
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step_string_list", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(1, len(pex.StepStatus["transform.transform_test"]))
+	assert.Equal(4, len(pex.StepStatus["transform.transform_test"]))
+	if _, ok := pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
+		assert.Fail("Unable to convert output to string")
+		return
+	}
+	assert.Equal("user if roger", pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 }
 
 // TODO : Add back the test to validatet he input step
