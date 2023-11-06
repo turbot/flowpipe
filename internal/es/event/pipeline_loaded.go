@@ -16,6 +16,14 @@ type PipelineLoaded struct {
 	Pipeline *modconfig.Pipeline `json:"pipeline"`
 }
 
+func (e *PipelineLoaded) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineLoaded) HandlerName() string {
+	return "handler.pipeline_loaded"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineLoadedOption func(*PipelineLoaded) error
 

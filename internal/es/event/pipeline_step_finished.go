@@ -25,6 +25,14 @@ type PipelineStepFinished struct {
 	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 }
 
+func (e *PipelineStepFinished) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepFinished) HandlerName() string {
+	return "handler.pipeline_step_finished"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStepFinishedOption func(*PipelineStepFinished) error
 

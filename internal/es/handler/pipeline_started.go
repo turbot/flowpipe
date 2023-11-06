@@ -10,8 +10,10 @@ import (
 
 type PipelineStarted EventHandler
 
+var pipelineStarted = event.PipelineStarted{}
+
 func (h PipelineStarted) HandlerName() string {
-	return "handler.pipeline_started"
+	return pipelineStarted.HandlerName()
 }
 
 func (PipelineStarted) NewEvent() interface{} {
@@ -26,9 +28,9 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineStarted")
 	}
 
-	evt, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
+	cmd, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
 	if err != nil {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStartedToPipelineFail(e, err)))
 	}
-	return h.CommandBus.Send(ctx, evt)
+	return h.CommandBus.Send(ctx, cmd)
 }

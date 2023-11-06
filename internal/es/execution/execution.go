@@ -322,8 +322,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	logger := fplog.Logger(ex.Context)
 
-	logger.Trace("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
-
 	if e.ExecutionID == "" {
 		return perr.BadRequestWithMessage("event execution ID is empty")
 	}
@@ -338,7 +336,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	// Open the event log
 	logPath, err := ex.LogFilePath()
-	logger.Trace("<1> Loading file #2", "execution", ex.ID, "logPath", logPath)
 
 	if err != nil {
 		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
@@ -552,7 +549,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 				// TODO: ignore retries for now (StepFinalFailure)
 				if !stepDefn.GetErrorConfig().Ignore {
 					// pe.StepExecutions[et.StepExecutionID].Error = et.Error
-					// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
 					// pe.StepExecutions[et.StepExecutionID].Status = "failed"
 					pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
@@ -560,16 +556,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 					// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
 					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 				}
-
-				// TODO: this below comment is not true anymore, keep this here until we refactor how we handle the failure & retries
-				// IMPORTANT: we must call this to check if this step is the final failure
-				// this function also sets the internal error tracker of the pe. Not sure if that's right place
-				// to do it
-
-				// stepFinalFailure := pe.IsStepFinalFailure(stepDefn, ex)
-				// if stepFinalFailure {
-				// 	logger.Trace("Step final failure", "step", stepDefn)
-				// }
 			} else {
 				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 			}

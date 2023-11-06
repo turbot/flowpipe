@@ -25,6 +25,14 @@ type PipelineStepStart struct {
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 }
 
+func (e *PipelineStepStart) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepStart) HandlerName() string {
+	return "command.pipeline_step_start"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStepStartOption func(*PipelineStepStart) error
 

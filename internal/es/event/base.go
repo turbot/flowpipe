@@ -54,3 +54,8 @@ func NewParentEvent(child *Event) *Event {
 		CreatedAt:   time.Now().UTC(),
 	}
 }
+
+type CommandEvent interface {
+	GetEvent() *Event
+	HandlerName() string
+}

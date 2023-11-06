@@ -18,8 +18,10 @@ import (
 
 type PipelineStepStartHandler CommandHandler
 
+var pipelineStepStart = event.PipelineStepStart{}
+
 func (h PipelineStepStartHandler) HandlerName() string {
-	return "command.pipeline_step_start"
+	return pipelineStepStart.HandlerName()
 }
 
 func (h PipelineStepStartHandler) NewCommand() interface{} {
@@ -27,6 +29,10 @@ func (h PipelineStepStartHandler) NewCommand() interface{} {
 }
 
 // * This is the handler that will actually execute the primitive
+// *
+// * At the end of the execution it will raise the appropriate event: PipelineStepFinished or PipelineFailed
+// *
+// * Also note the "special" step handler, this is if it needs to launch a child pipeline
 func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 	go func(ctx context.Context, c interface{}, h PipelineStepStartHandler) {
@@ -257,7 +263,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		err = h.EventBus.Publish(ctx, &e)
+		err = h.EventBus.Publish(ctx, e)
 		if err != nil {
 			logger.Error("Error publishing event", "error", err)
 		}
@@ -390,7 +396,7 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 		return
 	}
 
-	err = h.EventBus.Publish(ctx, &e)
+	err = h.EventBus.Publish(ctx, e)
 	if err != nil {
 		logger.Error("Error publishing event", "error", err)
 	}

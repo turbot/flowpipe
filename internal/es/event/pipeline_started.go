@@ -13,6 +13,14 @@ type PipelineStarted struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 }
 
+func (e *PipelineStarted) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStarted) HandlerName() string {
+	return "handler.pipeline_started"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStartedOption func(*PipelineStarted) error
 

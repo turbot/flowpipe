@@ -10,8 +10,10 @@ import (
 
 type PipelineQueued EventHandler
 
+var pipelineQueued = event.PipelineQueued{}
+
 func (h PipelineQueued) HandlerName() string {
-	return "handler.pipeline_queued"
+	return pipelineQueued.HandlerName()
 }
 
 func (PipelineQueued) NewEvent() interface{} {

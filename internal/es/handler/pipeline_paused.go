@@ -10,8 +10,10 @@ import (
 
 type PipelinePaused EventHandler
 
+var pipelinePaused = event.PipelinePaused{}
+
 func (h PipelinePaused) HandlerName() string {
-	return "handler.pipeline_paused"
+	return pipelinePaused.HandlerName()
 }
 
 func (PipelinePaused) NewEvent() interface{} {

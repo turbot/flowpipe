@@ -10,8 +10,10 @@ import (
 
 type PipelineStepQueued EventHandler
 
+var pipelineStepQueued = event.PipelineStepQueued{}
+
 func (h PipelineStepQueued) HandlerName() string {
-	return "handler.pipeline_step_queued"
+	return pipelineStepQueued.HandlerName()
 }
 
 func (PipelineStepQueued) NewEvent() interface{} {
@@ -40,7 +42,7 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+	if err := h.CommandBus.Send(ctx, cmd); err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {
 			fplog.Logger(ctx).Error("Error publishing event", "error", err)
