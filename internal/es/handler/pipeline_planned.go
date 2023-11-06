@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -347,7 +346,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	return nil
 }
 
-func runStep(ctx context.Context, commandBus *cqrs.CommandBus, e *event.PipelinePlanned, hasForEach bool, forEachOutput modconfig.Output, forEachCtyVal cty.Value, inputsLength int, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, key string) {
+func runStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePlanned, hasForEach bool, forEachOutput modconfig.Output, forEachCtyVal cty.Value, inputsLength int, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, key string) {
 
 	logger := fplog.Logger(ctx)
 
