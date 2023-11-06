@@ -10,8 +10,10 @@ import (
 
 type PipelineStartHandler CommandHandler
 
+var pipelineStart = event.PipelineStart{}
+
 func (h PipelineStartHandler) HandlerName() string {
-	return "command.pipeline_start"
+	return pipelineStart.HandlerName()
 }
 
 func (h PipelineStartHandler) NewCommand() interface{} {
@@ -29,5 +31,5 @@ func (h PipelineStartHandler) Handle(ctx context.Context, c interface{}) error {
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStartToPipelineFailed(cmd, err)))
 	}
-	return h.EventBus.Publish(ctx, &e)
+	return h.EventBus.Publish(ctx, e)
 }

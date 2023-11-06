@@ -11,8 +11,10 @@ import (
 
 type PipelineStepQueueHandler CommandHandler
 
+var pipelineStepQueue = event.PipelineStepQueue{}
+
 func (h PipelineStepQueueHandler) HandlerName() string {
-	return "command.pipeline_step_queue"
+	return pipelineStepQueue.HandlerName()
 }
 
 func (h PipelineStepQueueHandler) NewCommand() interface{} {
@@ -39,5 +41,5 @@ func (h PipelineStepQueueHandler) Handle(ctx context.Context, c interface{}) err
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepQueueToPipelineFailed(cmd, err)))
 	}
-	return h.EventBus.Publish(ctx, &e)
+	return h.EventBus.Publish(ctx, e)
 }

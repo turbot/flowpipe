@@ -16,8 +16,10 @@ import (
 
 type PipelineFailed EventHandler
 
+var pipelineFailed = event.PipelineFailed{}
+
 func (h PipelineFailed) HandlerName() string {
-	return "handler.pipeline_failed"
+	return pipelineFailed.HandlerName()
 }
 
 func (PipelineFailed) NewEvent() interface{} {
@@ -54,7 +56,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 			return err
 		}
 
-		return h.CommandBus.Send(ctx, &cmd)
+		return h.CommandBus.Send(ctx, cmd)
 	} else {
 		// Generate output data
 		data, err := ex.PipelineData(e.PipelineExecutionID)

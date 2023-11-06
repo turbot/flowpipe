@@ -9,6 +9,14 @@ type PipelinePlan struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 }
 
+func (e *PipelinePlan) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelinePlan) HandlerName() string {
+	return "command.pipeline_plan"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelinePlanOption func(*PipelinePlan) error
 

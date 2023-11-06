@@ -30,6 +30,14 @@ type PipelineStepStarted struct {
 	Key string `json:"key"`
 }
 
+func (e *PipelineStepStarted) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepStarted) HandlerName() string {
+	return "handler.pipeline_step_started"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStepStartedOption func(*PipelineStepStarted) error
 

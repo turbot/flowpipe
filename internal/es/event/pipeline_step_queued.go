@@ -25,6 +25,14 @@ type PipelineStepQueued struct {
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
 
+func (e *PipelineStepQueued) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepQueued) HandlerName() string {
+	return "handler.pipeline_step_queued"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStepQueuedOption func(*PipelineStepQueued) error
 

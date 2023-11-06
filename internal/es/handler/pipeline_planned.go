@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -21,8 +20,10 @@ import (
 
 type PipelinePlanned EventHandler
 
+var pipelinePlanned = event.PipelinePlanned{}
+
 func (h PipelinePlanned) HandlerName() string {
-	return "handler.pipeline_planned"
+	return pipelinePlanned.HandlerName()
 }
 
 func (PipelinePlanned) NewEvent() interface{} {
@@ -67,13 +68,13 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
-				return h.CommandBus.Send(ctx, &cmd)
+				return h.CommandBus.Send(ctx, cmd)
 			} else {
 				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 				if err != nil {
 					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 				}
-				return h.CommandBus.Send(ctx, &cmd)
+				return h.CommandBus.Send(ctx, cmd)
 			}
 		}
 
@@ -99,7 +100,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		}
-		return h.CommandBus.Send(ctx, &cmd)
+		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
@@ -347,7 +348,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	return nil
 }
 
-func runStep(ctx context.Context, commandBus *cqrs.CommandBus, e *event.PipelinePlanned, hasForEach bool, forEachOutput modconfig.Output, forEachCtyVal cty.Value, inputsLength int, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, key string) {
+func runStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePlanned, hasForEach bool, forEachOutput modconfig.Output, forEachCtyVal cty.Value, inputsLength int, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, key string) {
 
 	logger := fplog.Logger(ctx)
 
@@ -380,7 +381,7 @@ func runStep(ctx context.Context, commandBus *cqrs.CommandBus, e *event.Pipeline
 		return
 	}
 
-	if err := commandBus.Send(ctx, &cmd); err != nil {
+	if err := commandBus.Send(ctx, cmd); err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
 		if err != nil {
 			logger.Error("Error publishing event", "error", err)

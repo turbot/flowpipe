@@ -9,6 +9,14 @@ type PipelinePaused struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+func (e *PipelinePaused) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelinePaused) HandlerName() string {
+	return "handler.pipeline_paused"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelinePausedOption func(*PipelinePaused) error
 
