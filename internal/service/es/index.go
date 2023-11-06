@@ -122,7 +122,7 @@ func (es *ESService) Start() error {
 	// Log to file for creation of state
 	// ! Ensure that the log event middleware is the first middleware to be added in the router
 	// ! so the log entry is written ASAP
-	router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
+	// router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
 
 	plannerControl := middleware.NewPlannerControl(es.ctx)
 	router.AddMiddleware(plannerControl.Middleware)
@@ -152,9 +152,6 @@ func (es *ESService) Start() error {
 				command.PipelineStepFinishHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.PipelineStepQueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.PipelineStepStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.QueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.StartHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.StopHandler{EventBus: &command.FpEventBus{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -167,8 +164,6 @@ func (es *ESService) Start() error {
 		},
 		EventHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.EventHandler {
 			return []cqrs.EventHandler{
-				handler.Failed{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.Loaded{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineCanceled{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineFailed{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineFinished{CommandBus: &handler.FpCommandBus{Cb: cb}},
@@ -181,9 +176,6 @@ func (es *ESService) Start() error {
 				handler.PipelineStepFinished{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineStepQueued{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineStepStarted{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.Queued{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.Started{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.Stopped{CommandBus: &handler.FpCommandBus{Cb: cb}},
 			}
 		},
 		EventsPublisher: eventsPubSub,

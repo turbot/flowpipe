@@ -20,6 +20,14 @@ type PipelineQueued struct {
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 }
 
+func (e *PipelineQueued) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineQueued) HandlerName() string {
+	return "handler.pipeline_queue"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineQueuedOption func(*PipelineQueued) error
 

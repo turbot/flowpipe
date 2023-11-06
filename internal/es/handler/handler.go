@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -20,71 +19,30 @@ type FpCommandBus struct {
 	Cb *cqrs.CommandBus
 }
 
-var (
-	pipelineCancelled    = PipelineCanceled{}
-	pipelineFailed       = PipelineFailed{}
-	pipelineFinished     = PipelineFinished{}
-	pipelineLoaded       = PipelineLoaded{}
-	pipelinePaused       = PipelinePaused{}
-	pipelinePlanned      = PipelinePlanned{}
-	pipelineQueued       = PipelineQueued{}
-	pipelineResumed      = PipelineResumed{}
-	pipelineStarted      = PipelineStarted{}
-	pipelineStepFinished = PipelineStepFinished{}
-	pipelineStepQueued   = PipelineStepQueued{}
-	pipelineStepStarted  = PipelineStepStarted{}
-)
-
 // Send sends command to the command bus.
 func (c FpCommandBus) Send(ctx context.Context, cmd interface{}) error {
 
 	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
 	//
-
-	var eventType string
-	switch cmd.(type) {
-	case event.PipelineCanceled:
-		eventType = pipelineCancelled.HandlerName()
-	case event.PipelineFailed:
-		eventType = pipelineFailed.HandlerName()
-	case event.PipelineFinished:
-		eventType = pipelineFinished.HandlerName()
-	case event.PipelineLoaded:
-		eventType = pipelineLoaded.HandlerName()
-	case event.PipelinePaused:
-		eventType = pipelinePaused.HandlerName()
-	case event.PipelinePlanned:
-		eventType = pipelinePlanned.HandlerName()
-	case event.PipelineQueued:
-		eventType = pipelineQueued.HandlerName()
-	case event.PipelineResumed:
-		eventType = pipelineResumed.HandlerName()
-	case event.PipelineStarted:
-		eventType = pipelineStarted.HandlerName()
-	case event.PipelineStepFinished:
-		eventType = pipelineStepFinished.HandlerName()
-	case event.PipelineStepQueued:
-		eventType = pipelineStepQueued.HandlerName()
-	case event.PipelineStepStarted:
-	default:
-		return perr.BadRequestWithMessage(fmt.Sprintf("invalid command type %T", cmd))
-	}
-
-	err := LogEventMessage(ctx, eventType, cmd)
+	err := LogEventMessage(ctx, cmd)
 	if err != nil {
 		return err
 	}
 	return c.Cb.Send(ctx, cmd)
 }
 
-func LogEventMessage(ctx context.Context, eventType string, cmd interface{}) error {
+func LogEventMessage(ctx context.Context, cmd interface{}) error {
 
-	payload := cmd.(map[string]interface{})
+	commandEvent, ok := cmd.(event.CommandEvent)
+
+	if !ok {
+		return perr.BadRequestWithMessage("event is not a CommandEvent")
+	}
 
 	// executionLogger writes the event to a file
-	executionLogger := fplog.ExecutionLogger(ctx, payload[""])
-	executionLogger.Sugar().Infow("es", "event_type", eventType, "payload", cmd)
+	executionLogger := fplog.ExecutionLogger(ctx, commandEvent.GetEvent().ExecutionID)
+	executionLogger.Sugar().Infow("es", "event_type", commandEvent.HandlerName(), "payload", cmd)
 
 	err := executionLogger.Sync()
 	if err != nil {

@@ -3,9 +3,10 @@ package event
 import (
 	"context"
 	"errors"
-	"github.com/turbot/pipe-fittings/perr"
 	"log"
 	"runtime/debug"
+
+	"github.com/turbot/pipe-fittings/perr"
 
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -22,6 +23,14 @@ type PipelineFailed struct {
 	Error *modconfig.StepError `json:"error,omitempty"`
 
 	PipelineOutput map[string]interface{} `json:"pipeline_output"`
+}
+
+func (e *PipelineFailed) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineFailed) HandlerName() string {
+	return "handler.pipeline_failed"
 }
 
 // PipelineFailedOption is a function that modifies an Execution instance.

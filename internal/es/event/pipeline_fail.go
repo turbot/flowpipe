@@ -2,6 +2,7 @@ package event
 
 import (
 	"errors"
+
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -13,6 +14,14 @@ type PipelineFail struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// Error details
 	Error *modconfig.StepError `json:"error,omitempty"`
+}
+
+func (e *PipelineFail) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineFail) HandlerName() string {
+	return "command.pipeline_fail"
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

@@ -15,6 +15,14 @@ type PipelineFinished struct {
 	PipelineOutput map[string]interface{} `json:"pipeline_output"`
 }
 
+func (e *PipelineFinished) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineFinished) HandlerName() string {
+	return "handler.pipeline_finished"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineFinishedOption func(*PipelineFinished) error
 

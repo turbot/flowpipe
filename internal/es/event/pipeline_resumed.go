@@ -9,6 +9,14 @@ type PipelineResumed struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+func (e *PipelineResumed) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineResumed) HandlerName() string {
+	return "handler.pipeline_resumed"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineResumedOption func(*PipelineResumed) error
 

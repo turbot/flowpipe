@@ -16,6 +16,14 @@ type PipelineStepFinish struct {
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 }
 
+func (e *PipelineStepFinish) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepFinish) HandlerName() string {
+	return "command.pipeline_step_finish"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStepFinishOption func(*PipelineStepFinish) error
 
