@@ -256,7 +256,7 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 
 				// show the minimal required pipeline args
 				for _, param := range resp.Params {
-					if (param.Default != nil && len(*param.Default) > 0) || (param.Optional != nil && *param.Optional) {
+					if (param.Default != nil && len(param.Default) > 0) || (param.Optional != nil && *param.Optional) {
 						continue
 					}
 					pArg += " --pipeline-arg " + *param.Name + "=<value>"

@@ -15,6 +15,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/utils"
@@ -137,9 +138,14 @@ func (api *APIService) getPipeline(c *gin.Context) {
 	pipelineParams := []types.FpPipelineParam{}
 	for _, param := range pipeline.Params {
 
-		var paramDefault string
+		paramDefault := map[string]interface{}{}
 		if !param.Default.IsNull() {
-			paramDefault = param.Default.AsString()
+			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
+			if err != nil {
+				common.AbortWithError(c, perr.NotFoundWithMessage("unable to convert param default to go value: "+param.Name))
+				return
+			}
+			paramDefault[param.Name] = paramDefaultGoVal
 		}
 
 		pipelineParams = append(pipelineParams, types.FpPipelineParam{
@@ -147,7 +153,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 			Description: utils.ToStringPointer(param.Description),
 			Optional:    &param.Optional,
 			Type:        param.Type.FriendlyName(),
-			Default:     &paramDefault,
+			Default:     paramDefault,
 		})
 
 		getPipelineresponse.Params = pipelineParams
