@@ -12,8 +12,10 @@ import (
 
 type PipelinePlanHandler CommandHandler
 
+var pipelinePlan = event.PipelinePlan{}
+
 func (h PipelinePlanHandler) HandlerName() string {
-	return "command.pipeline_plan"
+	return pipelinePlan.HandlerName()
 }
 
 func (h PipelinePlanHandler) NewCommand() interface{} {
@@ -21,7 +23,6 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 }
 
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
-
 	logger := fplog.Logger(ctx)
 
 	evt, ok := c.(*event.PipelinePlan)
@@ -37,11 +38,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Convenience
-	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
+	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() || pe.IsPaused() || pe.IsFinishing() || pe.IsFinished() {
+	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
 		return nil
 	}
 
@@ -67,26 +68,79 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// Notably each step may also have multiple executions (e.g. in a for
 	// loop). So, we need to track the overall status of the step separately
 	// from the status of each execution.
-	for i, step := range pipelineDefn.Steps {
-		// TODO: this entire failure handling doesn't work since we've moved to HCL.
-		if pe.IsStepFail(step.GetFullyQualifiedName()) {
+	for _, step := range pipelineDefn.Steps {
+		// TODO: error handling
 
-			if !pe.IsStepFinalFailure(pipelineDefn.Steps[i], ex) {
+		// means step has a for_each, each for_each is another "series" of steps
+		//
+		// the planner need to handle them as if they are invidual "steps"
+		//
+		// if there's a problem if one of the n number of for_each, we just want to retry that one
+		//
+		// for example
+		/*
+			   step "echo" "echo {
+					for_each = ["foo", "bar"]
+					text = "foo"
+			   }
 
-				// TODO: this won't work with multiple executions of the same step (if we have a FOR step)
-				if !pe.IsStepQueued(step.GetFullyQualifiedName()) {
-					e.NextSteps = append(e.NextSteps, modconfig.NextStep{StepName: step.GetFullyQualifiedName(), DelayMs: 3000})
+			   this step will generate 2 "index".
+		*/
+
+		// This mean the step has been initialized
+
+		if len(pex.StepStatus[step.GetFullyQualifiedName()]) > 0 {
+
+			// for_each that returns a list will still be a map, but the key of the map is a string
+			// of "0", "1", "2" and so on.
+			for _, stepStatus := range pex.StepStatus[step.GetFullyQualifiedName()] {
+
+				if stepStatus.StepExecutions == nil {
+					continue
 				}
+
+				// find the latest step execution, check if it has a loop that needs to be run
+				latestStepExecution := stepStatus.StepExecutions[len(stepStatus.StepExecutions)-1]
+
+				// TODO: error retry
+
+				// no step loop means we're done here
+				if latestStepExecution.StepLoop == nil || latestStepExecution.StepLoop.LoopCompleted {
+					continue
+				}
+
+				// Just because the loop has not been completed, it doesn't mean the next step is NOT already been started by another planner (!)
+				// check the queue status
+				//
+				// TODO: locking issue
+				if len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
+					continue
+				}
+
+				// bypass depends_on check because if we're here, the step has already started so we know that all its
+				// dependencies are met
+				//
+				e.NextSteps = append(e.NextSteps, modconfig.NextStep{
+					StepName:    step.GetFullyQualifiedName(),
+					Action:      modconfig.NextStepActionStart,
+					StepForEach: latestStepExecution.StepForEach,
+					StepLoop:    latestStepExecution.StepLoop,
+				})
 			}
+
 			continue
 		}
 
-		if pe.IsStepQueued(step.GetFullyQualifiedName()) {
+		if pex.IsStepQueued(step.GetFullyQualifiedName()) {
 			continue
 		}
 
 		// No need to plan if the step has been initialized
-		if pe.IsStepInitialized(step.GetFullyQualifiedName()) {
+		if pex.IsStepInitialized(step.GetFullyQualifiedName()) {
+			continue
+		}
+
+		if pex.IsStepInLoopHold(step.GetFullyQualifiedName()) {
 			continue
 		}
 
@@ -107,16 +161,16 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				continue
 			}
 
-			if !pe.IsStepComplete(dep) {
+			if !pex.IsStepComplete(dep) {
 				dependendenciesMet = false
 				break
 			}
 
-			if pe.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
+			if pex.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
 				dependendenciesMet = false
 
 				// TODO: final failure is always TRUE for now
-				if pe.IsStepFinalFailure(depStepDefn, ex) {
+				if pex.IsStepFinalFailure(depStepDefn, ex) {
 					// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
 					// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
 					// be ended in the handler/pipeline_planned stage
@@ -140,7 +194,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Pipeline has been planned, now publish this event
-	if err := h.EventBus.Publish(ctx, &e); err != nil {
+	if err := h.EventBus.Publish(ctx, e); err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 

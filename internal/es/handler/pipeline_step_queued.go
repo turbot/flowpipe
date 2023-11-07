@@ -10,8 +10,10 @@ import (
 
 type PipelineStepQueued EventHandler
 
+var pipelineStepQueued = event.PipelineStepQueued{}
+
 func (h PipelineStepQueued) HandlerName() string {
-	return "handler.pipeline_step_queued"
+	return pipelineStepQueued.HandlerName()
 }
 
 func (PipelineStepQueued) NewEvent() interface{} {
@@ -30,7 +32,7 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	// Step has been queued (but not yet started), so here we just need to start the step
 	// the code should be the same as the pipeline_planned event handler
-	cmd, err := event.NewPipelineStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.StepForEach, e.NextStepAction))
+	cmd, err := event.NewPipelineStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.StepForEach, e.StepLoop, e.NextStepAction))
 	if err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {
@@ -40,7 +42,7 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	if err := h.CommandBus.Send(ctx, &cmd); err != nil {
+	if err := h.CommandBus.Send(ctx, cmd); err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {
 			fplog.Logger(ctx).Error("Error publishing event", "error", err)

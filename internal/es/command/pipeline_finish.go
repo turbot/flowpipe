@@ -13,8 +13,10 @@ import (
 
 type PipelineFinishHandler CommandHandler
 
+var pipelineFinish = event.PipelineFinish{}
+
 func (h PipelineFinishHandler) HandlerName() string {
-	return "command.pipeline_finish"
+	return pipelineFinish.HandlerName()
 }
 
 func (h PipelineFinishHandler) NewCommand() interface{} {
@@ -35,7 +37,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
-	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
+	pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
@@ -47,17 +49,17 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		outputBlock := map[string]interface{}{}
 
 		// If all dependencies met, we then calculate the value of this output
-		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
+		evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 		if err != nil {
 			logger.Error("Error building eval context while calculating output in pipeline_finish", "error", err)
-			return err
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
 		for _, output := range pipelineDefn.OutputConfig {
 			// check if its dependencies have been met
 			dependenciesMet := true
 			for _, dep := range output.DependsOn {
-				if !pe.IsStepComplete(dep) {
+				if !pex.IsStepComplete(dep) {
 					dependenciesMet = false
 					break
 				}
@@ -70,7 +72,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("output", diags)
 				logger.Error("Error calculating output on pipeline finish", "error", err)
-				outputBlock[output.Name] = "Unable to calculate output " + output.Name
+				outputBlock[output.Name] = "Unable to calculate output " + output.Name + ": " + err.Error()
 				continue
 			}
 			val, err := hclhelpers.CtyToGo(ctyValue)
@@ -88,5 +90,5 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 	}
 
-	return h.EventBus.Publish(ctx, &e)
+	return h.EventBus.Publish(ctx, e)
 }

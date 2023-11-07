@@ -24,11 +24,11 @@ pipeline "echo_one_a" {
     }
 
     output "echo_one_output" {
-        value = step.pipeline.child_pipeline.val
+        value = step.pipeline.child_pipeline.output.val
     }
 
     output "echo_one_output_val_var_one" {
-        value = step.pipeline.child_pipeline.val_var_one
+        value = step.pipeline.child_pipeline.output.val_var_one
     }
 }
 
@@ -43,11 +43,11 @@ pipeline "echo_one" {
     }
 
     output "echo_one_output" {
-        value = step.pipeline.child_pipeline.val
+        value = step.pipeline.child_pipeline.output.val
     }
 
     output "echo_one_output_val_var_one" {
-        value = step.pipeline.child_pipeline.val_var_one
+        value = step.pipeline.child_pipeline.output.val_var_one
     }
 }
 
@@ -115,7 +115,7 @@ pipeline "expr_depend_and_function" {
     }
 
     # "time"/"for"/"sleep" steps
-     param "time" {
+    param "time" {
         type = list(string)
         default = ["1s", "2s"]
     }

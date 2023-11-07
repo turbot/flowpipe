@@ -30,6 +30,8 @@ beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
 
 release-local:
+	# --snapshot means that Go Releaser will not check if the repo is dirty to use the latest atg
+	# it simply use the latest commit for the build
 	goreleaser release --snapshot --clean
 
 test:

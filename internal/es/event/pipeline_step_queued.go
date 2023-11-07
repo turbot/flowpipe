@@ -18,10 +18,19 @@ type PipelineStepQueued struct {
 	StepInput       modconfig.Input `json:"input"`
 
 	// for_each controls
-	StepForEach    *modconfig.StepForEach   `json:"step_for_each,omitempty"`
+	StepForEach    *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop       *modconfig.StepLoop
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
+}
+
+func (e *PipelineStepQueued) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepQueued) HandlerName() string {
+	return "handler.pipeline_step_queued"
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -53,6 +62,7 @@ func ForPipelineStepQueue(cmd *PipelineStepQueue) PipelineStepQueuedOption {
 		e.StepName = cmd.StepName
 		e.StepInput = cmd.StepInput
 		e.StepForEach = cmd.StepForEach
+		e.StepLoop = cmd.StepLoop
 		e.NextStepAction = cmd.NextStepAction
 		e.DelayMs = cmd.DelayMs
 		return nil

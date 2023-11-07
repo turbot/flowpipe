@@ -16,6 +16,14 @@ type PipelinePlanned struct {
 	NextSteps []modconfig.NextStep `json:"next_steps"`
 }
 
+func (e *PipelinePlanned) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelinePlanned) HandlerName() string {
+	return "handler.pipeline_planned"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelinePlannedOption func(*PipelinePlanned) error
 

@@ -15,6 +15,14 @@ type PipelineFinish struct {
 	Output              *modconfig.Output `json:"output,omitempty"`
 }
 
+func (e *PipelineFinish) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineFinish) HandlerName() string {
+	return "command.pipeline_finish"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineFinishOption func(*PipelineFinish) error
 

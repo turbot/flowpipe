@@ -7,6 +7,11 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
+// ! This event is only for starting Pipeline Step, not a general step start command.
+// !
+// ! For general Step Start command, refer to PipelineStepStart
+//
+// TODO: at one point we should rename this command, make it more clear.
 type PipelineStepStarted struct {
 	// Event metadata
 	Event *Event `json:"event"`
@@ -17,6 +22,20 @@ type PipelineStepStarted struct {
 	ChildPipelineExecutionID string          `json:"child_pipeline_execution_id,omitempty"`
 	ChildPipelineName        string          `json:"child_pipeline_name,omitempty"`
 	ChildPipelineArgs        modconfig.Input `json:"child_pipeline_args,omitempty"`
+
+	// The key for a single step is always "0" but say this pipeline step start is part of for_each, the key is
+	// populated with the actual key: "0"/"1"/"2" or "foo"/"bar"/"baz" (for map based for_each)
+	//
+	// This key is only relevant to its immediate parent (if we have multiple nested pipelines)
+	Key string `json:"key"`
+}
+
+func (e *PipelineStepStarted) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepStarted) HandlerName() string {
+	return "handler.pipeline_step_started"
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

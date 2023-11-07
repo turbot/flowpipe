@@ -10,8 +10,10 @@ import (
 
 type PipelineLoaded EventHandler
 
+var pipelineLoaded = event.PipelineLoaded{}
+
 func (h PipelineLoaded) HandlerName() string {
-	return "handler.pipeline_loaded"
+	return pipelineLoaded.HandlerName()
 }
 
 func (PipelineLoaded) NewEvent() interface{} {

@@ -29,7 +29,8 @@ import (
 type Manager struct {
 	ctx context.Context
 
-	RootMod          *modconfig.Mod
+	RootMod *modconfig.Mod
+
 	apiService       *api.APIService
 	esService        *es.ESService
 	schedulerService *scheduler.SchedulerService
@@ -110,38 +111,43 @@ func (m *Manager) Initialize() error {
 	if misc.ModFileExists(pipelineDir, filepaths.PipesComponentModsFileName) {
 
 		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, []string{".hcl", ".sp"})
+		if errorAndWarning.Error != nil {
+			return errorAndWarning.Error
+		}
 
 		err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 			logger := fplog.Logger(m.ctx)
 			logger.Error("error watching workspace", "error", e)
+			m.apiService.ModMetadata.IsStale = true
 		})
-
-		w.SetOnFileWatcherEventMessages(func() {
-			logger := fplog.Logger(m.ctx)
-			logger.Info("Reloading pipelines and triggers")
-			err := m.ReloadPipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
-			if err != nil {
-				logger.Error("error reloading pipelines", "error", err)
-			}
-
-			// Reload scheduled triggers
-			if m.schedulerService != nil {
-				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
-				err := m.schedulerService.RescheduleTriggers()
-				if err != nil {
-					logger.Error("error reloading triggers", "error", err)
-				}
-			}
-			logger.Info("Reloaded pipelines and triggers")
-		})
-
 		if err != nil {
 			return err
 		}
 
-		if errorAndWarning.Error != nil {
-			return errorAndWarning.Error
-		}
+		w.SetOnFileWatcherEventMessages(func() {
+			logger := fplog.Logger(m.ctx)
+			logger.Info("caching pipelines and triggers")
+			err := m.CachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+			if err != nil {
+				logger.Error("error caching pipelines and triggers", "error", err)
+			} else {
+				logger.Info("cached pipelines and triggers")
+				m.apiService.ModMetadata.IsStale = false
+				m.apiService.ModMetadata.LastLoaded = time.Now()
+			}
+
+			// Reload scheduled triggers
+			logger.Info("rescheduling triggers")
+			if m.schedulerService != nil {
+				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
+				err := m.schedulerService.RescheduleTriggers()
+				if err != nil {
+					logger.Error("error rescheduling triggers", "error", err)
+				} else {
+					logger.Info("rescheduled triggers")
+				}
+			}
+		})
 
 		mod := w.Mod
 		modInfo = mod
@@ -231,7 +237,7 @@ func (m *Manager) CalculateTriggerUrl(trigger *modconfig.Trigger) (string, error
 	return "/hook/" + trigger.FullName + "/" + hashString, nil
 }
 
-func (m *Manager) ReloadPipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
+func (m *Manager) CachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
 	m.triggers = triggers
 
 	inMemoryCache := cache.GetCache()

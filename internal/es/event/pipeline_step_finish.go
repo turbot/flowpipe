@@ -16,6 +16,14 @@ type PipelineStepFinish struct {
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 }
 
+func (e *PipelineStepFinish) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepFinish) HandlerName() string {
+	return "command.pipeline_step_finish"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineStepFinishOption func(*PipelineStepFinish) error
 
@@ -38,10 +46,11 @@ func ForPipelineFinished(e *PipelineFinished) PipelineStepFinishOption {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &modconfig.Output{
 			Status: "", // output is only relevant for step
-			Data:   e.PipelineOutput,
+			Data: map[string]interface{}{
+				"output": e.PipelineOutput,
+			},
 		}
 
-		// e.PipelineOutput
 		return nil
 	}
 }
@@ -51,11 +60,12 @@ func ForPipelineFailed(e *PipelineFailed) PipelineStepFinishOption {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &modconfig.Output{
 			Status: "",
-			Data:   e.PipelineOutput,
+			Data: map[string]interface{}{
+				"output": e.PipelineOutput,
+			},
 			Errors: []modconfig.StepError{*e.Error},
 		}
 
-		// e.PipelineOutput
 		return nil
 	}
 }

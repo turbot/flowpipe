@@ -20,8 +20,17 @@ type PipelineStepFinished struct {
 	// we don't want the StepOutput accidentally override the native primtive outputs
 	StepOutput map[string]interface{} `json:"step_output,omitempty"`
 
-	// for_each controls
+	// loop controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
+}
+
+func (e *PipelineStepFinished) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineStepFinished) HandlerName() string {
+	return "handler.pipeline_step_finished"
 }
 
 // ExecutionOption is a function that modifies an Execution instance.
@@ -78,10 +87,11 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}) PipelineStepFinishedOption {
+func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}, stepLoop *modconfig.StepLoop) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Output = output
 		e.StepOutput = stepOutput
+		e.StepLoop = stepLoop
 		return nil
 	}
 }

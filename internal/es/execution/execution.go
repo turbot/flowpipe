@@ -101,6 +101,47 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
+	integrationMap := map[string]cty.Value{}
+	slackIntegrationMap := map[string]cty.Value{}
+	emailIntegrationMap := map[string]cty.Value{}
+
+	for _, p := range pipelineDefn.GetMod().ResourceMaps.Integrations {
+
+		parts := strings.Split(p.Name(), ".")
+		if len(parts) != 4 {
+			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
+		}
+
+		integrationType := parts[2]
+		switch integrationType {
+		case string(schema.IntegrationTypeSlack):
+			slackIntegration := p.(*modconfig.SlackIntegration)
+			pCty, err := slackIntegration.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+			slackIntegrationMap[parts[3]] = pCty
+
+		case string(schema.IntegrationTypeEmail):
+			emailIntegration := p.(*modconfig.EmailIntegration)
+			pCty, err := emailIntegration.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+			emailIntegrationMap[parts[3]] = pCty
+		}
+	}
+
+	if len(slackIntegrationMap) > 0 {
+		integrationMap[schema.IntegrationTypeSlack] = cty.ObjectVal(slackIntegrationMap)
+	}
+
+	if len(emailIntegrationMap) > 0 {
+		integrationMap[schema.IntegrationTypeEmail] = cty.ObjectVal(emailIntegrationMap)
+	}
+
+	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
@@ -176,7 +217,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.IPipelineStep, error) {
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -259,19 +300,12 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
-	// Find the step execution order first
-	orders := pe.StepExecutionOrder[stepName]
-	if len(orders) == 0 {
-		// TODO: Error?
-		return nil
+	results := []StepExecution{}
+
+	for _, se := range pe.StepExecutions {
+		results = append(results, *se)
 	}
 
-	results := make([]StepExecution, len(orders))
-
-	for i, stepExecutionID := range orders {
-		se := pe.StepExecutions[stepExecutionID]
-		results[i] = *se
-	}
 	return results
 }
 
@@ -288,8 +322,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	logger := fplog.Logger(ex.Context)
 
-	logger.Trace("<1> execution.LoadProcess #1", "executionID", ex.ID, "event executionID", e.ExecutionID)
-
 	if e.ExecutionID == "" {
 		return perr.BadRequestWithMessage("event execution ID is empty")
 	}
@@ -304,7 +336,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	// Open the event log
 	logPath, err := ex.LogFilePath()
-	logger.Trace("<1> Loading file #2", "execution", ex.ID, "logPath", logPath)
 
 	if err != nil {
 		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
@@ -333,277 +364,12 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 			return err
 		}
 
-		switch ele.EventType {
-		case "handler.pipeline_queued":
-			var et event.PipelineQueued
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
-				return err
-			}
-			ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
-				ID:                    et.PipelineExecutionID,
-				Name:                  et.Name,
-				Args:                  et.Args,
-				Status:                "queued",
-				StepStatus:            map[string]*StepStatus{},
-				ParentStepExecutionID: et.ParentStepExecutionID,
-				ParentExecutionID:     et.ParentExecutionID,
-				Errors:                []modconfig.StepError{},
-				AllNativeStepOutputs:  ExecutionStepOutputs{},
-				AllConfigStepOutputs:  ExecutionStepOutputs{},
-				StepExecutions:        map[string]*StepExecution{},
-				StepExecutionOrder:    map[string][]string{},
-			}
-
-		case "handler.pipeline_started":
-			var et event.PipelineStarted
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "started"
-
-		case "handler.pipeline_resumed":
-			var et event.PipelineStarted
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			// TODO: is this right?
-			pe.Status = "started"
-
-		case "handler.pipeline_planned":
-			var et event.PipelinePlanned
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
-			if err != nil {
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			for _, step := range pd.Steps {
-				pe.InitializeStep(step.GetFullyQualifiedName())
-			}
-
-		// TODO: I'm not sure if this is the right move. Initially I was using this to introduce the concept of a "queue"
-		// TODO: for the step (just like we're queueing the pipeline). But I'm not sure if it's really required, we could just
-		// TODO: delay the start. We need to evolve this as we go.
-		case "command.pipeline_step_queue":
-			var et event.PipelineStepStart
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall command.pipeline_step_queue event", "execution", ex.ID, "error", err)
-				return err
-			}
-			// Set the overall step status
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-
-			pe.StepExecutions[et.StepExecutionID] = &StepExecution{
-				PipelineExecutionID: et.PipelineExecutionID,
-				ID:                  et.StepExecutionID,
-				Name:                et.StepName,
-				Status:              "starting",
-			}
-			pe.StepExecutionOrder[et.StepName] = append(pe.StepExecutionOrder[et.StepName], et.StepExecutionID)
-
-			stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
-			if err != nil {
-				logger.Error("Failed to get step definition - 1", "execution", ex.ID, "stepExecutionID", et.StepExecutionID, "error", err)
-				return err
-			}
-			pe.StepExecutions[et.StepExecutionID].Input = et.StepInput
-			pe.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
-			pe.StepExecutions[et.StepExecutionID].NextStepAction = et.NextStepAction
-			pe.StepStatus[stepDefn.GetFullyQualifiedName()].Queue(et.StepExecutionID)
-
-		case "command.pipeline_step_start":
-			var et event.PipelineStepStart
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall command.pipeline_step_start event", "execution", ex.ID, "error", err)
-				return err
-			}
-
-		case "handler.pipeline_step_started":
-			var et event.PipelineStepStarted
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_step_started event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-
-			// Step the specific step execution status
-			pe.StepExecutions[et.StepExecutionID].Status = "started"
-			stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
-			if err != nil {
-				logger.Error("Failed to get step definition - 2", "stepExecutionID", et.StepExecutionID, "error", err)
-				return err
-			}
-
-			pe.StartStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
-
-		case "handler.pipeline_step_finished":
-			var et event.PipelineStepFinished
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_step_finished event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
-			if err != nil {
-				logger.Error("Failed to get step definition - 3", "stepExecutionID", et.StepExecutionID, "error", err)
-				return err
-			}
-
-			shouldBeIndexed := false
-			if stepDefn.GetForEach() != nil {
-				shouldBeIndexed = true
-			}
-
-			// Step the specific step execution status
-			if pe.StepExecutions[et.StepExecutionID] == nil {
-				return perr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
-			}
-
-			if et.Output == nil {
-				// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)
-				logger.Warn("Step execution has a nil output", "stepExecutionID", et.StepExecutionID, "pipelineExecutionID", pe.ID)
-			} else {
-				pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
-				pe.StepExecutions[et.StepExecutionID].Output = et.Output
-			}
-
-			if len(et.StepOutput) > 0 {
-				pe.StepExecutions[et.StepExecutionID].StepOutput = et.StepOutput
-			}
-
-			if pe.AllNativeStepOutputs[stepDefn.GetType()] == nil {
-				pe.AllNativeStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
-			}
-
-			if pe.AllConfigStepOutputs[stepDefn.GetType()] == nil {
-				pe.AllConfigStepOutputs[stepDefn.GetType()] = map[string]interface{}{}
-			}
-
-			if !shouldBeIndexed {
-				// non for_each step. The step will be accessed such as:
-				// text = step.echo.text_1.text
-				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.Output
-
-				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = et.StepOutput
-			} else {
-				// for indexed step, you want to be able to access the step as
-				// text = step.echo.text_1[1].text
-
-				if pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]*modconfig.Output, et.StepForEach.TotalCount)
-				}
-
-				pe.AllNativeStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]*modconfig.Output)[et.StepForEach.Key] = et.Output
-
-				if pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] == nil {
-					pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()] = make(map[string]map[string]interface{}, et.StepForEach.TotalCount)
-				}
-
-				pe.AllConfigStepOutputs[stepDefn.GetType()][stepDefn.GetName()].(map[string]map[string]interface{})[et.StepForEach.Key] = et.StepOutput
-			}
-
-			// TODO: Error handling
-			// TODO: ignore error setting -> we need to be able to ignore setting
-			// TODO: is a step failure an immediate end of the pipeline?
-			// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
-			if et.Output.HasErrors() {
-
-				// TODO: ignore retries for now (StepFinalFailure)
-				if !stepDefn.GetErrorConfig().Ignore {
-					// pe.StepExecutions[et.StepExecutionID].Error = et.Error
-					// logger.Trace("Setting pipeline step finish error", "stepExecutionID", et.StepExecutionID, "error", et.Error)
-					// pe.StepExecutions[et.StepExecutionID].Status = "failed"
-					pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
-					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
-				} else {
-					// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
-					pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
-				}
-
-				// TODO: this below comment is not true anymore, keep this here until we refactor how we handle the failure & retries
-				// IMPORTANT: we must call this to check if this step is the final failure
-				// this function also sets the internal error tracker of the pe. Not sure if that's right place
-				// to do it
-
-				// stepFinalFailure := pe.IsStepFinalFailure(stepDefn, ex)
-				// if stepFinalFailure {
-				// 	logger.Trace("Step final failure", "step", stepDefn)
-				// }
-			} else {
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepExecutionID)
-			}
-
-		case "handler.pipeline_canceled":
-			var et event.PipelineCanceled
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "canceled"
-
-		case "handler.pipeline_paused":
-			var et event.PipelinePaused
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "paused"
-
-		case "command.pipeline_finish":
-			var et event.PipelineFinished
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "finishing"
-
-		case "handler.pipeline_finished":
-			var et event.PipelineFinished
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "finished"
-			pe.PipelineOutput = et.PipelineOutput
-
-		case "handler.pipeline_failed":
-			var et event.PipelineFailed
-			err := json.Unmarshal(ele.Payload, &et)
-			if err != nil {
-				logger.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
-				return err
-			}
-			pe := ex.PipelineExecutions[et.PipelineExecutionID]
-			pe.Status = "failed"
-			pe.PipelineOutput = et.PipelineOutput
-
-		default:
-			// Ignore unknown types while loading
+		err = ex.AppendEventLogEntry(ele)
+		if err != nil {
+			logger.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", string(ba))
+			return err
 		}
+
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -611,7 +377,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	return nil
-
 }
 
 // LoadFromFile loads an execution from a JSON file.
@@ -630,5 +395,284 @@ func (ex *Execution) LoadJSON(fileName string) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
+	logger := fplog.Logger(ex.Context)
+
+	switch logEntry.EventType {
+	case "handler.pipeline_queued":
+		var et event.PipelineQueued
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
+			return err
+		}
+		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
+			ID:                    et.PipelineExecutionID,
+			Name:                  et.Name,
+			Args:                  et.Args,
+			Status:                "queued",
+			StepStatus:            map[string]map[string]*StepStatus{},
+			ParentStepExecutionID: et.ParentStepExecutionID,
+			ParentExecutionID:     et.ParentExecutionID,
+			Errors:                []modconfig.StepError{},
+			StepExecutions:        map[string]*StepExecution{},
+		}
+
+	case "handler.pipeline_started":
+		var et event.PipelineStarted
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.Status = "started"
+		pe.StartTime = et.Event.CreatedAt
+
+	case "handler.pipeline_resumed":
+		var et event.PipelineStarted
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		// TODO: is this right?
+		pe.Status = "started"
+
+	case "handler.pipeline_planned":
+		var et event.PipelinePlanned
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
+		if err != nil {
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		for _, step := range pd.Steps {
+			pe.InitializeStep(step.GetFullyQualifiedName())
+		}
+
+	// TODO: I'm not sure if this is the right move. Initially I was using this to introduce the concept of a "queue"
+	// TODO: for the step (just like we're queueing the pipeline). But I'm not sure if it's really required, we could just
+	// TODO: delay the start. We need to evolve this as we go.
+	case "command.pipeline_step_queue":
+		var et event.PipelineStepStart
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall command.pipeline_step_queue event", "execution", ex.ID, "error", err)
+			return err
+		}
+		// Set the overall step status
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+
+		pe.StepExecutions[et.StepExecutionID] = &StepExecution{
+			PipelineExecutionID: et.PipelineExecutionID,
+			ID:                  et.StepExecutionID,
+			Name:                et.StepName,
+			Status:              "starting",
+		}
+
+		stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
+		if err != nil {
+			logger.Error("Failed to get step definition - 1", "execution", ex.ID, "stepExecutionID", et.StepExecutionID, "error", err)
+			return err
+		}
+		pe.StepExecutions[et.StepExecutionID].Input = et.StepInput
+		pe.StepExecutions[et.StepExecutionID].StepForEach = et.StepForEach
+		pe.StepExecutions[et.StepExecutionID].NextStepAction = et.NextStepAction
+
+		if pe.StepStatus[stepDefn.GetFullyQualifiedName()] == nil {
+			pe.StepStatus[stepDefn.GetFullyQualifiedName()] = map[string]*StepStatus{}
+		}
+
+		if pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key] == nil {
+			pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key] = &StepStatus{
+				Queued:   map[string]bool{},
+				Started:  map[string]bool{},
+				Finished: map[string]bool{},
+				Failed:   map[string]bool{},
+			}
+		}
+
+		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].Queue(et.StepExecutionID)
+	case "handler.pipeline_step_queued":
+		var et event.PipelineStepQueued
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_step_queued event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
+	case "command.pipeline_step_start":
+		var et event.PipelineStepStart
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall command.pipeline_step_start event", "execution", ex.ID, "error", err)
+			return err
+		}
+
+	// handler.pipeline_step_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
+	// a generic step start event
+	case "handler.pipeline_step_started":
+		var et event.PipelineStepStarted
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_step_started event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+
+		// Step the specific step execution status
+		pe.StepExecutions[et.StepExecutionID].Status = "started"
+		stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
+		if err != nil {
+			logger.Error("Failed to get step definition - 2", "stepExecutionID", et.StepExecutionID, "error", err)
+			return err
+		}
+
+		pe.StartStep(stepDefn.GetFullyQualifiedName(), et.Key, et.StepExecutionID)
+		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
+
+	// this is the generic step finish event that is fired by the command.pipeline_step_start command
+	case "handler.pipeline_step_finished":
+		var et event.PipelineStepFinished
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_step_finished event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
+		if err != nil {
+			logger.Error("Failed to get step definition", "stepExecutionID", et.StepExecutionID, "error", err)
+			return err
+		}
+
+		loopContinue := false
+		if et.StepLoop != nil {
+			if !et.StepLoop.LoopCompleted {
+				loopContinue = true
+			}
+		}
+
+		// Step the specific step execution status
+		if pe.StepExecutions[et.StepExecutionID] == nil {
+			return perr.BadRequestWithMessage("Unable to find step execution " + et.StepExecutionID + " in pipeline execution " + pe.ID)
+		}
+
+		// pe.StepExecutions[et.StepExecutionID].StepForEach should be set at the beginning of the step execution, not here
+		// StepLoop on the other hand, can only be determined at the end of the step, so this is the right place to do it
+		pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
+
+		if et.Output == nil {
+			// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)
+			logger.Warn("Step execution has a nil output", "stepExecutionID", et.StepExecutionID, "pipelineExecutionID", pe.ID)
+		} else {
+			pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
+			pe.StepExecutions[et.StepExecutionID].Output = et.Output
+		}
+
+		if len(et.StepOutput) > 0 {
+			pe.StepExecutions[et.StepExecutionID].StepOutput = et.StepOutput
+		}
+
+		pe.StepExecutions[et.StepExecutionID].EndTime = et.Event.CreatedAt
+		// TODO: Fix creating duplicate data as we dereference before appending (moved EndTime above this so it is passed into StepStatus)
+		// append the Step Execution to the StepStatus (yes it's duplicate data, we may be able to refactor this later)
+		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions = append(pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions,
+			*pe.StepExecutions[et.StepExecutionID])
+
+		// TODO: Error handling
+		// TODO: ignore error setting -> we need to be able to ignore setting
+		// TODO: is a step failure an immediate end of the pipeline?
+		// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
+		if et.Output.HasErrors() {
+			// TODO: ignore retries for now (StepFinalFailure)
+			if !stepDefn.GetErrorConfig().Ignore {
+				// pe.StepExecutions[et.StepExecutionID].Error = et.Error
+				// pe.StepExecutions[et.StepExecutionID].Status = "failed"
+				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
+				pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
+			} else {
+				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
+			}
+		} else {
+			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
+		}
+
+	case "handler.pipeline_canceled":
+		var et event.PipelineCanceled
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.Status = "canceled"
+		pe.EndTime = et.Event.CreatedAt
+
+	case "handler.pipeline_paused":
+		var et event.PipelinePaused
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.Status = "paused"
+
+	case "command.pipeline_finish":
+		var et event.PipelineFinished
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.Status = "finishing"
+
+	case "handler.pipeline_finished":
+		var et event.PipelineFinished
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.Status = "finished"
+		pe.EndTime = et.Event.CreatedAt
+		pe.PipelineOutput = et.PipelineOutput
+
+	case "handler.pipeline_failed":
+		var et event.PipelineFailed
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.Status = "failed"
+		pe.EndTime = et.Event.CreatedAt
+		pe.PipelineOutput = et.PipelineOutput
+		if et.Error != nil {
+			if pe.Errors == nil {
+				pe.Errors = []modconfig.StepError{}
+			}
+			pe.Errors = append(pe.Errors, *et.Error)
+		}
+
+	default:
+		// Ignore unknown types while loading
+	}
+
 	return nil
 }

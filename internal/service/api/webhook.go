@@ -48,6 +48,11 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		executionMode = *webhookQuery.ExecutionMode
 	}
 
+	waitRetry := 60
+	if webhookQuery.WaitTime != nil {
+		waitRetry = *webhookQuery.WaitTime
+	}
+
 	webhookTriggerName := webhookUri.Trigger
 	webhookTriggerHash := webhookUri.Hash
 
@@ -163,7 +168,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	}
 
 	if executionMode == "synchronous" {
-		api.waitForPipeline(c, pipelineCmd)
+		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
 	}
 
@@ -172,7 +177,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	c.String(http.StatusOK, "")
 }
 
-func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue) {
+func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue, waitRetry int) {
 	logger := fplog.Logger(api.ctx)
 
 	ex, err := execution.NewExecution(api.ctx)
@@ -181,7 +186,9 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		return
 	}
 
-	waitRetry := 60 // TODO: Make configurable potentially via CLI arg
+	if waitRetry == 0 {
+		waitRetry = 60
+	}
 	waitTime := 1 * time.Second
 	expectedState := "finished"
 
@@ -241,6 +248,13 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
 	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
 	c.Header("flowpipe-status", pex.Status)
+
+	if api.ModMetadata.IsStale {
+		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
+		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		c.Header("flowpipe-mod-is-stale", "true")
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(time.RFC3339))
+	}
 
 	if pex.Status == expectedState {
 		c.JSON(http.StatusOK, response)

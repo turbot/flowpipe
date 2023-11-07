@@ -30,7 +30,7 @@ type GetPipelineResponse struct {
 	Title         *string                    `json:"title,omitempty"`
 	Documentation *string                    `json:"documentation,omitempty"`
 	Tags          map[string]string          `json:"tags"`
-	Steps         []modconfig.IPipelineStep  `json:"steps,omitempty"`
+	Steps         []modconfig.PipelineStep   `json:"steps,omitempty"`
 	OutputConfig  []modconfig.PipelineOutput `json:"outputs,omitempty"`
 	Params        []FpPipelineParam          `json:"params,omitempty"`
 }
@@ -50,6 +50,7 @@ type CmdPipeline struct {
 	Args          map[string]interface{} `json:"args,omitempty"`
 	ArgsString    map[string]string      `json:"args_string,omitempty"`
 	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
 }
 
 type PrintablePipeline struct {

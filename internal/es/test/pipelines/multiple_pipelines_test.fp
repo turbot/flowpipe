@@ -10,7 +10,7 @@ pipeline "parent_pipeline" {
 
 
     output "parent_output" {
-        value = step.pipeline.child_pipeline.child_output
+        value = step.pipeline.child_pipeline.output.child_output
     }
 }
 
@@ -92,7 +92,7 @@ pipeline "parent_pipeline_with_args" {
     }
 
     output "parent_output" {
-        value = step.pipeline.child_pipeline_with_args.child_output
+        value = step.pipeline.child_pipeline_with_args.output.child_output
     }
 }
 

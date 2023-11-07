@@ -83,6 +83,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 	stdout := c.Runs[containerID].Stdout
 	stderr := c.Runs[containerID].Stderr
+	combined := c.Runs[containerID].Combined
 
 	if err != nil {
 		return nil, err
@@ -93,6 +94,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 			"container_id": containerID,
 			"stdout":       stdout,
 			"stderr":       stderr,
+			"combined":     combined,
 		},
 	}
 

@@ -8,4 +8,5 @@ const (
 	ArgOutput                = "output"
 	ArgPipelineArg           = "pipeline-arg"
 	ArgPipelineExecutionMode = "execution-mode"
+	ArgPipelineWaitTime      = "wait-time"
 )

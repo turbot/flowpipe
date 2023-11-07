@@ -21,11 +21,11 @@ type TriggerRunnerBase struct {
 	EsService *es.ESService
 }
 
-type ITriggerRunner interface {
+type TriggerRunner interface {
 	Run()
 }
 
-func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *modconfig.Trigger) ITriggerRunner {
+func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *modconfig.Trigger) TriggerRunner {
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
@@ -65,6 +65,10 @@ func (tr *TriggerRunnerBase) Run() {
 	// We can only run trigger from root mod
 
 	mod := tr.EsService.RootMod
+	if mod == nil {
+		logger.Info("No root mod detected, cannot schedule triggers")
+		return
+	}
 
 	if modFullName != mod.FullName {
 		logger.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", mod.FullName)

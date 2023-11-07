@@ -21,6 +21,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/filepaths"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 )
 
@@ -147,7 +148,184 @@ func (suite *ModTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (suite *ModTestSuite) AfterTest(suiteName, testName string) {
-	time.Sleep(2 * time.Second)
+}
+
+func (suite *ModTestSuite) TestSimplestPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("Hello World", pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_with_sleep", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("ends", pex.PipelineOutput["val"].(map[string]interface{})["text"])
+	assert.Equal("1s", pex.PipelineOutput["val_sleep"].(map[string]interface{})["0"].(map[string]interface{})["duration"])
+	assert.Equal("2s", pex.PipelineOutput["val_sleep"].(map[string]interface{})["1"].(map[string]interface{})["duration"])
+	assert.Equal("3s", pex.PipelineOutput["val_sleep"].(map[string]interface{})["2"].(map[string]interface{})["duration"])
+}
+
+func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_two_steps", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("Hello World", pex.PipelineOutput["val"])
+	assert.Equal("Hello World: Hello World", pex.PipelineOutput["val_two"])
+
+}
+
+func (suite *ModTestSuite) TestSimpleLoop() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"].(map[string]interface{})["text"])
+
+	// Now check the integrity of the StepStatus
+
+	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
+	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+}
+
+func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop_index", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"].(map[string]interface{})["text"])
+
+	// Now check the integrity of the StepStatus
+
+	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
+	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+	assert.Equal(false, pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.LoopCompleted)
+
+	assert.Equal(1, pex.StepStatus["echo.repeat"]["0"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
+}
+
+func (suite *ModTestSuite) TestLoopWithForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	// We have to use the sleep step here to avoid concurrency issue with the planner
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_sleep", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	// Yeah this is a long test, the sleep is 4 seconds x 3
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 14, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	// Now check the integrity of the StepStatus
+
+	assert.Equal(2, len(pex.StepStatus["sleep.repeat"]), "there should only be 2 elements here because we have a for_each")
+	assert.Equal(3, len(pex.StepStatus["sleep.repeat"]["0"].StepExecutions), "we should have 3 executions in each for_each")
+	assert.Equal(3, len(pex.StepStatus["sleep.repeat"]["1"].StepExecutions), "we should have 3 executions in each for_each")
+
+	assert.Equal(false, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[2].StepLoop.LoopCompleted)
+
+	assert.Equal(false, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[2].StepLoop.LoopCompleted)
+
+	assert.Equal(1, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
+
+	assert.Equal(1, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
 }
 
 func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
@@ -203,6 +381,143 @@ func (suite *ModTestSuite) TestModVars() {
 	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
 }
 
+func (suite *ModTestSuite) TestSimpleNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("hello from the middle world", pex.PipelineOutput["val"])
+	assert.Equal("two: hello from the middle world", pex.PipelineOutput["val_two"])
+}
+
+func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_with_clash_merged_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution should fail")
+		return
+	}
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "output block 'val' already exists in step 'middle'")
+}
+
+func (suite *ModTestSuite) TestSimpleNestedPipelineWithMergedOutput() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_merged_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("hello from the middle world", pex.PipelineOutput["val"])
+	assert.Equal("two: hello from the middle world", pex.PipelineOutput["val_two"])
+	assert.Equal("step output", pex.PipelineOutput["val_step_output"])
+}
+
+func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_for_each", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("hot mulligan", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val_param"])
+	assert.Equal("sugarcult", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val_param"])
+	assert.Equal("the wonder years", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val_param"])
+}
+
+func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEachAndMergedOutput() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_for_each_with_merged_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("band: hot mulligan", pex.PipelineOutput["step_output_1"])
+	assert.Equal("band: sugarcult", pex.PipelineOutput["step_output_2"])
+	assert.Equal("band: the wonder years", pex.PipelineOutput["step_output_3"])
+
+	assert.Equal("hot mulligan", pex.PipelineOutput["val_param_1"])
+	assert.Equal("sugarcult", pex.PipelineOutput["val_param_2"])
+	assert.Equal("the wonder years", pex.PipelineOutput["val_param_3"])
+
+}
+
 func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 	assert := assert.New(suite.T())
 
@@ -225,18 +540,15 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	echoNameStepOutputs := pex.AllNativeStepOutputs["echo"]["name"].(map[string]*modconfig.Output)
-	assert.Equal(3, len(echoNameStepOutputs))
-	assert.Equal("artist name: Real Friends", echoNameStepOutputs["0"].Data["text"])
-	assert.Equal("artist name: A Day To Remember", echoNameStepOutputs["1"].Data["text"])
-	assert.Equal("artist name: The Story So Far", echoNameStepOutputs["2"].Data["text"])
+	assert.Equal(3, len(pex.StepStatus["echo.name"]))
+	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
 
-	secondStepStepOutputs := pex.AllNativeStepOutputs["echo"]["second_step"].(map[string]*modconfig.Output)
-	assert.Equal(3, len(secondStepStepOutputs))
-	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", secondStepStepOutputs["0"].Data["text"])
-	assert.Equal("second_step: album name: Common Courtesy", secondStepStepOutputs["1"].Data["text"])
-	assert.Equal("second_step: album name: What You Don't See", secondStepStepOutputs["2"].Data["text"])
-
+	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
+	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("second_step: album name: Common Courtesy", pex.StepStatus["echo.second_step"]["1"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("second_step: album name: What You Don't See", pex.StepStatus["echo.second_step"]["2"].StepExecutions[0].Output.Data["text"])
 }
 
 func (suite *ModTestSuite) TestPipelineWithForEach() {
@@ -259,9 +571,98 @@ func (suite *ModTestSuite) TestPipelineWithForEach() {
 		return
 	}
 
-	assert.Equal("Hello: spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["val"])
-	assert.Equal("Hello: kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["val"])
-	assert.Equal("Hello: sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["val"])
+	assert.Equal("Hello: spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("Hello: kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("Hello: sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+}
+
+func (suite *ModTestSuite) TestPipelineForEachTrippleNested() {
+	assert := assert.New(suite.T())
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.run_me_top", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	/* Expected output:
+
+
+		"val": {
+	        "0": {
+	            "output": {},
+	            "val": {
+	                "0": {
+	                    "output": {},
+	                    "val": "bottom: aaa - spock"
+	                },
+	                "1": {
+	                    "output": {},
+	                    "val": "bottom: bbb - spock"
+	                },
+	                "2": {
+	                    "output": {},
+	                    "val": "bottom: ccc - spock"
+	                }
+	            }
+	        },
+	        "1": {
+	            "output": {},
+	            "val": {
+	                "0": {
+	                    "output": {},
+	                    "val": "bottom: aaa - kirk"
+	                },
+	                "1": {
+	                    "output": {},
+	                    "val": "bottom: bbb - kirk"
+	                },
+	                "2": {
+	                    "output": {},
+	                    "val": "bottom: ccc - kirk"
+	                }
+	            }
+	        },
+	        "2": {
+	            "output": {},
+	            "val": {
+	                "0": {
+	                    "output": {},
+	                    "val": "bottom: aaa - sulu"
+	                },
+	                "1": {
+	                    "output": {},
+	                    "val": "bottom: bbb - sulu"
+	                },
+	                "2": {
+	                    "output": {},
+	                    "val": "bottom: ccc - sulu"
+	                }
+	            }
+	        }
+	    }
+		**/
+
+	assert.Equal("bottom: aaa - spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: bbb - spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: ccc - spock", pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: aaa - kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: bbb - kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: ccc - kirk", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: aaa - sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: bbb - sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("bottom: ccc - sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"])
 }
 
 func (suite *ModTestSuite) TestPipelineWithArgs() {
@@ -466,7 +867,7 @@ func (suite *ModTestSuite) TestMapReduce() {
 
 	pipelineInput := &modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_map", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_map", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -484,8 +885,10 @@ func (suite *ModTestSuite) TestMapReduce() {
 		return
 	}
 
-	assert.Equal(2, len(pex.PipelineOutput["val"].(map[string]interface{})))
+	assert.Equal(3, len(pex.PipelineOutput["val"].(map[string]interface{})))
 	assert.Equal("green_day: Green Day", pex.PipelineOutput["val"].(map[string]interface{})["green_day"].(map[string]interface{})["text"])
+	assert.Equal("sum_41: Sum 41", pex.PipelineOutput["val"].(map[string]interface{})["sum_41"].(map[string]interface{})["text"])
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["blink_182"].(map[string]interface{})))
 }
 
 func (suite *ModTestSuite) TestNested() {
@@ -590,6 +993,259 @@ func (suite *ModTestSuite) XXTestHttpPipelines() {
 		return
 	}
 }
+
+func (suite *ModTestSuite) TestPipelineTransformStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(1, len(pex.StepStatus["transform.basic_transform"]))
+	if _, ok := pex.StepStatus["transform.basic_transform"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
+		assert.Fail("Unable to convert output to string")
+		return
+	}
+	assert.Equal("This is a simple transform step", pex.StepStatus["transform.basic_transform"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+
+	assert.Equal(1, len(pex.StepStatus["transform.basic_transform_refers_param"]))
+	if _, ok := pex.StepStatus["transform.basic_transform_refers_param"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(float64); !ok {
+		assert.Fail("Unable to convert output to float64")
+		return
+	}
+	assert.Equal(float64(10), pex.StepStatus["transform.basic_transform_refers_param"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+
+	assert.Equal(1, len(pex.StepStatus["transform.depends_on_transform_step"]))
+	assert.Equal(2, len(pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions))
+	if _, ok := pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue].(string); !ok {
+		assert.Fail("Unable to convert output to string")
+		return
+	}
+	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue])
+
+	// Pipeline 2
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step_string_list", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(4, len(pex.StepStatus["transform.transform_test"]))
+	if _, ok := pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
+		assert.Fail("Unable to convert output to string")
+		return
+	}
+	assert.Equal("user if roger", pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+
+	// Pipeline 3
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.transform_step_for_map", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(3, len(pex.StepStatus["transform.text_1"]))
+}
+
+// TODO : Add back the test to validatet he input step
+
+// func (suite *ModTestSuite) TestPipelineInputStep() {
+// 	assert := assert.New(suite.T())
+
+// 	// Slack notify
+// 	pipelineInput := &modconfig.Input{
+// 		"channel": "#random",
+// 	}
+
+// 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_slack_notify", 100*time.Millisecond, pipelineInput)
+// 	if err != nil {
+// 		assert.Fail("Error creating execution", err)
+// 		return
+// 	}
+
+// 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
+// 	if err != nil {
+// 		assert.Fail("Error getting pipeline execution", err.Error())
+// 		return
+// 	}
+// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+
+// 	stepExecutionID := pex.StepExecutionOrder["input.input"][0]
+// 	stepExecution := pex.StepExecutions[stepExecutionID]
+
+// 	assert.NotNil(stepExecution.Input)
+
+// 	stepInput := stepExecution.Input
+
+// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
+// 		assert.Fail("Input should have notifies")
+// 		return
+// 	}
+// 	notifies := stepInput[schema.AttributeTypeNotifies].([]interface{})
+// 	assert.Equal(1, len(notifies))
+
+// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert notify to map[string]interface{}")
+// 		return
+// 	}
+// 	notifyMap := notifies[0].(map[string]interface{})
+// 	assert.Equal("#random", notifyMap[schema.AttributeTypeChannel].(string))
+
+// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert integration to map[string]interface{}")
+// 		return
+// 	}
+// 	integrationMap := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
+// 	assert.Equal("slack", integrationMap[schema.AttributeTypeType].(string))
+// 	assert.Equal("abcde", integrationMap[schema.AttributeTypeToken].(string))
+
+// 	// Email notify
+// 	pipelineInput = &modconfig.Input{}
+
+// 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_email_notify", 100*time.Millisecond, pipelineInput)
+// 	if err != nil {
+// 		assert.Fail("Error creating execution", err)
+// 		return
+// 	}
+
+// 	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
+// 	if err != nil {
+// 		assert.Fail("Error getting pipeline execution", err.Error())
+// 		return
+// 	}
+// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+
+// 	stepExecutionID = pex.StepExecutionOrder["input.input"][0]
+// 	stepExecution = pex.StepExecutions[stepExecutionID]
+
+// 	assert.NotNil(stepExecution.Input)
+
+// 	stepInput = stepExecution.Input
+
+// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
+// 		assert.Fail("Input should have notifies")
+// 		return
+// 	}
+// 	notifies = stepInput[schema.AttributeTypeNotifies].([]interface{})
+// 	assert.Equal(1, len(notifies))
+
+// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert notify to map[string]interface{}")
+// 		return
+// 	}
+// 	notifyMap = notifies[0].(map[string]interface{})
+// 	assert.Equal("awesomebob@blahblah.com", notifyMap[schema.AttributeTypeTo].(string))
+
+// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert integration to map[string]interface{}")
+// 		return
+// 	}
+// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
+// 	assert.Equal("email", integrationMap[schema.AttributeTypeType].(string))
+// 	assert.Equal("foo bar baz", integrationMap[schema.AttributeTypeSmtpHost].(string))
+// 	assert.Equal("bar foo baz", integrationMap[schema.AttributeTypeDefaultSubject].(string))
+// 	assert.Equal("baz bar foo", integrationMap[schema.AttributeTypeSmtpUsername].(string))
+
+// 	// Notifies test
+// 	pipelineInput = &modconfig.Input{
+// 		"channel": "#random",
+// 	}
+
+// 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_notifies", 100*time.Millisecond, pipelineInput)
+// 	if err != nil {
+// 		assert.Fail("Error creating execution", err)
+// 		return
+// 	}
+
+// 	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
+// 	if err != nil {
+// 		assert.Fail("Error getting pipeline execution", err.Error())
+// 		return
+// 	}
+// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+
+// 	stepExecutionID = pex.StepExecutionOrder["input.input"][0]
+// 	stepExecution = pex.StepExecutions[stepExecutionID]
+
+// 	assert.NotNil(stepExecution.Input)
+
+// 	stepInput = stepExecution.Input
+
+// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
+// 		assert.Fail("Input should have notifies")
+// 		return
+// 	}
+// 	notifies = stepInput[schema.AttributeTypeNotifies].([]interface{})
+// 	assert.Equal(2, len(notifies))
+
+// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert notify to map[string]interface{}")
+// 		return
+// 	}
+// 	notifyMap = notifies[0].(map[string]interface{})
+// 	assert.Equal("#random", notifyMap[schema.AttributeTypeChannel].(string))
+
+// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert integration to map[string]interface{}")
+// 		return
+// 	}
+// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
+// 	assert.Equal("slack", integrationMap[schema.AttributeTypeType].(string))
+// 	assert.Equal("abcde", integrationMap[schema.AttributeTypeToken].(string))
+
+// 	if _, ok := notifies[1].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert notify to map[string]interface{}")
+// 		return
+// 	}
+// 	notifyMap = notifies[1].(map[string]interface{})
+// 	assert.Equal("awesomebob@blahblah.com", notifyMap[schema.AttributeTypeTo].(string))
+
+// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
+// 		assert.Fail("Unable to convert integration to map[string]interface{}")
+// 		return
+// 	}
+// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
+// 	assert.Equal("foo bar baz", integrationMap[schema.AttributeTypeSmtpHost].(string))
+// 	assert.Equal("bar foo baz", integrationMap[schema.AttributeTypeDefaultSubject].(string))
+// 	assert.Equal("baz bar foo", integrationMap[schema.AttributeTypeSmtpUsername].(string))
+// 	assert.Equal("email", integrationMap[schema.AttributeTypeType].(string))
+// }
 
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{

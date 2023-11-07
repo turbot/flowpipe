@@ -90,6 +90,7 @@ type pipelineExecution struct {
 	endTime      *time.Time
 	cancelled    bool
 	steps        []*pipelineStep
+	output       map[string]any
 }
 
 type pipelineStep struct {
@@ -284,6 +285,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					error_helpers.ShowError(cmd.Context(), err)
 				}
 				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
+				pipelinesExecuted[et.PipelineExecutionID].output = et.PipelineOutput
 			case "handler.pipeline_failed":
 				var et event.PipelineFailed
 				err := json.Unmarshal([]byte(payload), &et)
@@ -291,6 +293,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 					error_helpers.ShowError(cmd.Context(), err)
 				}
 				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
+				pipelinesExecuted[et.PipelineExecutionID].output = et.PipelineOutput
 			default:
 				// Ignore unknown types while loading
 			}
@@ -303,6 +306,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 		}
 
 		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
+		lines = append(lines, renderPipelineOutput(cmd.Context(), executionLog.output, cols)...)
 
 		fmt.Println()                          //nolint:forbidigo // CLI console output
 		fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
@@ -326,7 +330,6 @@ func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, 
 		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
 	}
 	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
-	// lines = append(lines, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName))
 	return lines
 }
 
@@ -343,7 +346,7 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 		// this is a single step pipeline
 		// print out the error messages and continue
 		for _, se := range step.executions[0].stepErrors {
-			lines = append(lines, fmt.Sprintf("%s      Error: %s", indent, se))
+			lines = append(lines, fmt.Sprintf("%s    └ Error: %s", indent, se))
 		}
 	}
 
@@ -361,7 +364,7 @@ func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, widt
 			eachLine := fmt.Sprintf("%s    %s [%s]", indent, icon, stepExec.execKey)
 			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, "", width))
 			for _, se := range stepExec.stepErrors {
-				lines = append(lines, fmt.Sprintf("%s        Error: %s", indent, se))
+				lines = append(lines, fmt.Sprintf("%s      └ Error: %s", indent, se))
 			}
 		}
 	}
@@ -377,18 +380,35 @@ func renderLineWithDuration(ctx context.Context, line string, duration time.Dura
 		lineWidth = lineWidth - 2
 	}
 
-	durationString := fmt.Sprintf("%9s", humanizeDuration(duration)) // 00h00m00s
+	durationString := humanizeDuration(duration)
 	if utf8.RuneCountInString(durationPrefix) > 0 {
 		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
 	}
-	durationColumnWidth := utf8.RuneCountInString(durationString) + 10 // accounting for a prepending space
+	durationColumnWidth := utf8.RuneCountInString(durationString)
 
 	// {line} {dots} {duration}{durationUnit}
-	dotNum := width - (lineWidth + durationColumnWidth + 2 /*accounting for leading and trailing spaces in the dots*/)
+	dotNum := width - (lineWidth + durationColumnWidth + 3 /*accounting for leading and trailing spaces in the dots*/)
 	dots := fmt.Sprintf(" %s ", strings.Repeat(".", dotNum))
 	rendered := fmt.Sprintf("%s%s%s", line, dots, durationString)
 
 	return rendered
+}
+
+func renderPipelineOutput(ctx context.Context, output map[string]any, width int) []string {
+	var lines []string
+	delete(output, "errors")
+	if len(output) >= 1 {
+		lines = append(lines, "\nOutput:")
+	}
+	for k, v := range output {
+		line := fmt.Sprintf("⇒ %s = %v", k, v)
+		if utf8.RuneCountInString(line) >= width {
+			line = fmt.Sprintf("%s%s", line[0:width-3], "...")
+		}
+		lines = append(lines, line)
+	}
+
+	return lines
 }
 
 // humanizeDuration humanizes time.Duration output to a meaningful value,

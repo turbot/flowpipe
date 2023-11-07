@@ -12,6 +12,14 @@ type PipelineCancel struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+func (e *PipelineCancel) GetEvent() *Event {
+	return e.Event
+}
+
+func (e *PipelineCancel) HandlerName() string {
+	return "command.pipeline_cancel"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineCancelOption func(*PipelineCancel) error
 

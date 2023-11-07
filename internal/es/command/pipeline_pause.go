@@ -11,8 +11,10 @@ import (
 
 type PipelinePauseHandler CommandHandler
 
+var pipelinePause = event.PipelinePause{}
+
 func (h PipelinePauseHandler) HandlerName() string {
-	return "command.pipeline_pause"
+	return pipelinePause.HandlerName()
 }
 
 func (h PipelinePauseHandler) NewCommand() interface{} {
@@ -51,5 +53,5 @@ func (h PipelinePauseHandler) Handle(ctx context.Context, c interface{}) error {
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePauseToPipelineFailed(evt, err)))
 	}
-	return h.EventBus.Publish(ctx, &e)
+	return h.EventBus.Publish(ctx, e)
 }

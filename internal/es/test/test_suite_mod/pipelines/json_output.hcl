@@ -27,6 +27,6 @@ pipeline "parent_json_output" {
     }
 
     output "city" {
-        value = step.pipeline.call_json_output.all.address.city
+        value = step.pipeline.call_json_output.output.all.address.city
     }
 }
