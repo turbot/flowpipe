@@ -410,18 +410,9 @@ func (pe *PipelineExecution) IsStepQueued(stepName string) bool {
 // InitializeStep initializes the step status for the given step.
 func (pe *PipelineExecution) InitializeStep(stepName string) {
 	if pe.StepStatus[stepName] != nil {
-		// Step is already initialized
 		return
 	}
 	pe.StepStatus[stepName] = map[string]*StepStatus{}
-
-	// &StepStatus{
-	// 	Initializing: true,
-	// 	Queued:       map[string]bool{},
-	// 	Started:      map[string]bool{},
-	// 	Finished:     map[string]bool{},
-	// 	Failed:       map[string]bool{},
-	// }
 }
 
 // QueueStep marks the given step execution as queued.

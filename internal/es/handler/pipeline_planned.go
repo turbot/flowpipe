@@ -105,6 +105,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
 	for _, nextStep := range e.NextSteps {
+
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
 
 		if nextStep.StepLoop != nil {
@@ -150,10 +151,18 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// if we have for_each build the list of inputs for the for_each
 		if !helpers.IsNil(stepForEach) {
 			var err error
+
+			stepForEachPlanCmd := event.NewStepForEachPlanFromPipelinePlanned(e, nextStep.StepName)
+			err = h.CommandBus.Send(ctx, stepForEachPlanCmd)
+			if err != nil {
+
+				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
+			}
+
 			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
 				logger.Error("Error building eval context for for_each", "error", err)
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 			}
 
 			if stepDefn.GetUnresolvedBodies()["loop"] != nil {

@@ -119,17 +119,6 @@ func (es *ESService) Start() error {
 
 	router.AddMiddleware(retryer.Middleware)
 
-	// Log to file for creation of state
-	// ! Ensure that the log event middleware is the first middleware to be added in the router
-	// ! so the log entry is written ASAP
-	// router.AddMiddleware(middleware.LogEventMiddlewareWithContext(es.ctx))
-
-	plannerControl := middleware.NewPlannerControl(es.ctx)
-	router.AddMiddleware(plannerControl.Middleware)
-
-	// Delay PipelineStepStart command (if required)
-	// router.AddMiddleware(middleware.PipelineStepStartCommandDelayMiddlewareWithContext(es.ctx))
-
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
 	cqrsFacade, err := cqrs.NewFacade(cqrs.FacadeConfig{
@@ -152,6 +141,7 @@ func (es *ESService) Start() error {
 				command.PipelineStepFinishHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.PipelineStepQueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.PipelineStepStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
+				command.StepForEachPlanHandler{EventBus: &command.FpEventBus{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -176,6 +166,7 @@ func (es *ESService) Start() error {
 				handler.PipelineStepFinished{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineStepQueued{CommandBus: &handler.FpCommandBus{Cb: cb}},
 				handler.PipelineStepStarted{CommandBus: &handler.FpCommandBus{Cb: cb}},
+				handler.StepForEachPlanned{CommandBus: &handler.FpCommandBus{Cb: cb}},
 			}
 		},
 		EventsPublisher: eventsPubSub,
@@ -183,15 +174,6 @@ func (es *ESService) Start() error {
 			// we can reuse subscriber, because all commands have separated topics
 			return eventsPubSub, nil
 		},
-		/*
-			EventsSubscriberConstructor: func(handlerName string) (message.Subscriber, error) {
-				config := amqp.NewDurablePubSubConfig(
-					amqpAddress,
-					amqp.GenerateQueueNameTopicNameWithSuffix(handlerName),
-				)
-				return amqp.NewSubscriber(config, logger)
-			},
-		*/
 		Router:                router,
 		CommandEventMarshaler: cqrsMarshaler,
 		Logger:                wLogger,

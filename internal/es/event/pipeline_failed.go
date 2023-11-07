@@ -60,6 +60,10 @@ func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *Pipel
 	return e
 }
 
+
+
+
+
 // ForPipelineFail returns a PipelineFailedOption that sets the fields of the
 // PipelineFailed event from a PipelineFail command.
 func ForPipelineFail(cmd *PipelineFail, pipelineOutput map[string]interface{}) PipelineFailedOption {

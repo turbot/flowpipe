@@ -443,6 +443,14 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		// TODO: is this right?
 		pe.Status = "started"
 
+	case "command.pipeline_plan":
+		var et event.PipelinePlan
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall command.pipeline_plan event", "execution", ex.ID, "error", err)
+			return err
+		}
+
 	case "handler.pipeline_planned":
 		var et event.PipelinePlanned
 		err := json.Unmarshal(logEntry.Payload, &et)
@@ -450,13 +458,11 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			logger.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
 			return err
 		}
-		pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
-		if err != nil {
-			return err
-		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
-		for _, step := range pd.Steps {
-			pe.InitializeStep(step.GetFullyQualifiedName())
+
+		for _, nextStep := range et.NextSteps {
+			pe.InitializeStep(nextStep.StepName)
 		}
 
 	// TODO: I'm not sure if this is the right move. Initially I was using this to introduce the concept of a "queue"

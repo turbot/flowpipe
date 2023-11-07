@@ -132,6 +132,23 @@ func ForPipelineStepFinishedToPipelineFail(e *PipelineStepFinished, err error) P
 	}
 }
 
+func NewPipelineFailFromPipelinePlanned(e *PipelinePlanned, err error) *PipelineFail {
+	cmd := PipelineFail{}
+	cmd.Event = NewFlowEvent(e.Event)
+	cmd.PipelineExecutionID = e.PipelineExecutionID
+	if err != nil {
+		var errorModel perr.ErrorModel
+		if ok := errors.As(err, &errorModel); !ok {
+			errorModel = perr.InternalWithMessage(err.Error())
+		}
+		cmd.Error = &modconfig.StepError{
+			Error:               errorModel,
+			PipelineExecutionID: e.PipelineExecutionID,
+		}
+	}
+	return &cmd
+}
+
 func ForPipelinePlannedToPipelineFail(e *PipelinePlanned, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
 		cmd.Event = NewFlowEvent(e.Event)
