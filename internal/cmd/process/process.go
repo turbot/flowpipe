@@ -2,9 +2,8 @@ package process
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -14,11 +13,10 @@ import (
 	"github.com/spf13/cobra"
 	flowpipeapi "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 func ProcessCmd(ctx context.Context) (*cobra.Command, error) {
@@ -83,363 +81,6 @@ func ProcessListCmd(ctx context.Context) (*cobra.Command, error) {
 	return processGetCmd, nil
 }
 
-type pipelineExecution struct {
-	executionId  string
-	pipelineName string
-	startTime    *time.Time
-	endTime      *time.Time
-	cancelled    bool
-	steps        []*pipelineStep
-	output       map[string]any
-}
-
-type pipelineStep struct {
-	stepName   string
-	startTime  *time.Time
-	endTime    *time.Time
-	executions []*stepExecution
-}
-
-func (ps *pipelineStep) failed() bool {
-	for _, sel := range ps.executions {
-		if sel.status == "failed" {
-			return true
-		}
-	}
-	return false
-}
-
-func (ps *pipelineStep) setStartTime(t time.Time) {
-	if ps.startTime == nil || ps.startTime.After(t) {
-		ps.startTime = &t
-	}
-}
-
-func (ps *pipelineStep) setEndTime(t time.Time) {
-	if ps.endTime == nil || ps.endTime.Before(t) {
-		ps.endTime = &t
-	}
-}
-
-type stepExecution struct {
-	execKey            string // the key for for_each -> blank if not for_each step
-	stepExecutionId    string
-	stepName           string
-	stepErrors         []string
-	status             string
-	output             *modconfig.Output
-	startTime          time.Time
-	endTime            time.Time
-	childPipeline      *pipelineExecution
-	parentPipelineStep *pipelineStep
-}
-
-func fetchLogsForProcess(ctx context.Context, execId string) ([]flowpipeapi.ProcessEventLog, error) {
-	logResponse, _, err := common.GetApiClient().ProcessApi.GetLog(ctx, execId).Execute()
-	if err != nil {
-		return nil, err
-	}
-	return logResponse.Items, nil
-}
-
-func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-
-		logs, err := fetchLogsForProcess(cmd.Context(), args[0])
-		error_helpers.FailOnError(err)
-
-		// a set of lookup maps to make updates easier
-		// map keyed {pipeline_execution_id}
-		pipelinesExecuted := map[string]*pipelineExecution{}
-		// map keyed by {step_execution_id}
-		stepsExecuted := map[string]*stepExecution{}
-		// map keyed by `{pipeline_execution_id}_{step_name}`
-		pipelineSteps := map[string]*pipelineStep{}
-
-		var executionLog *pipelineExecution = &pipelineExecution{}
-
-		for _, logEntry := range logs {
-			payload := logEntry.GetPayload()
-			eventType := logEntry.GetEventType()
-
-			switch eventType {
-			case "handler.pipeline_queued":
-				var et event.PipelineQueued
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-				exec := &pipelineExecution{
-					pipelineName: et.Name,
-					executionId:  et.PipelineExecutionID,
-					steps:        []*pipelineStep{},
-				}
-				// put it in the map so that we can refer to it later
-				// we will be updating the value in the map
-				// since the value is a pointer, the desired one will get updated as well
-				pipelinesExecuted[et.PipelineExecutionID] = exec
-
-				// now put it in the proper place as well
-				if len(et.ParentStepExecutionID) != 0 {
-					// this is a child pipeline of another step
-					stepsExecuted[et.ParentStepExecutionID].childPipeline = exec
-				} else {
-					// this is the root pipeline
-					executionLog = exec
-				}
-
-			case "handler.pipeline_started":
-				var et event.PipelineStarted
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-
-				pipelinesExecuted[et.PipelineExecutionID].startTime = &et.Event.CreatedAt
-			case "handler.pipeline_step_queued":
-				var et event.PipelineStepQueued
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-					return
-				}
-
-				keyInPipelineStepsMap := fmt.Sprintf("%s_%s", et.PipelineExecutionID, et.StepName)
-				// do we have this in the pipelineSteps map?
-				theStep, gotit := pipelineSteps[keyInPipelineStepsMap]
-				if !gotit {
-					ps := &pipelineStep{
-						stepName:   et.StepName,
-						executions: []*stepExecution{},
-						// assume that this is the start time - it may get overridden by the case "handler.pipeline_step_started"
-						startTime: &et.Event.CreatedAt,
-					}
-					// we have never encountered this step before
-					pipelineSteps[keyInPipelineStepsMap] = ps
-					pipelinesExecuted[et.PipelineExecutionID].steps = append(pipelinesExecuted[et.PipelineExecutionID].steps, ps)
-					theStep = ps
-				}
-
-				stepExecLog := &stepExecution{
-					stepExecutionId: et.StepExecutionID,
-					stepName:        et.StepName,
-					// assume that this step was started now - the handler log will overwrite
-					startTime:          et.Event.CreatedAt,
-					parentPipelineStep: theStep,
-				}
-
-				if et.StepForEach != nil {
-					stepExecLog.execKey = et.StepForEach.Key
-				}
-
-				// this is a pipeline step execution - add it to the pipelineStep
-				theStep.executions = append(theStep.executions, stepExecLog)
-
-				// put this in the steps executed map, so that we can refer to it easier
-				stepsExecuted[et.StepExecutionID] = stepExecLog
-			case "handler.pipeline_step_started":
-				var et event.PipelineStepStarted
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-					return
-				}
-				stepsExecuted[et.StepExecutionID].startTime = et.Event.CreatedAt
-				stepsExecuted[et.StepExecutionID].parentPipelineStep.setStartTime(et.Event.CreatedAt)
-			case "handler.pipeline_step_finished":
-				var et event.PipelineStepFinished
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-				stepsExecuted[et.StepExecutionID].endTime = et.Event.CreatedAt
-				stepsExecuted[et.StepExecutionID].status = et.Output.Status
-				stepsExecuted[et.StepExecutionID].output = et.Output
-				stepsExecuted[et.StepExecutionID].stepErrors = []string{}
-				for _, se := range et.Output.Errors {
-					// add in the errors
-					stepsExecuted[et.StepExecutionID].stepErrors = append(stepsExecuted[et.StepExecutionID].stepErrors, se.Error.Detail)
-				}
-
-				stepsExecuted[et.StepExecutionID].parentPipelineStep.setEndTime(et.Event.CreatedAt)
-			case "handler.pipeline_canceled":
-				var et event.PipelineCanceled
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-				pipelinesExecuted[et.PipelineExecutionID].cancelled = true
-				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
-			case "command.pipeline_fail":
-				var et event.PipelineFail
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-				// record the end tim here - sometimes the handlers do not fire apparently - can't rely on it
-				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
-			case "handler.pipeline_finished":
-				var et event.PipelineFinished
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
-				pipelinesExecuted[et.PipelineExecutionID].output = et.PipelineOutput
-			case "handler.pipeline_failed":
-				var et event.PipelineFailed
-				err := json.Unmarshal([]byte(payload), &et)
-				if err != nil {
-					error_helpers.ShowError(cmd.Context(), err)
-				}
-				pipelinesExecuted[et.PipelineExecutionID].endTime = &et.Event.CreatedAt
-				pipelinesExecuted[et.PipelineExecutionID].output = et.PipelineOutput
-			default:
-				// Ignore unknown types while loading
-			}
-		}
-
-		cols, _, err := gows.GetWinSize()
-		if err != nil {
-			error_helpers.ShowError(cmd.Context(), err)
-			return
-		}
-
-		lines := renderExecutionLog(cmd.Context(), executionLog, 0, cols)
-		lines = append(lines, renderPipelineOutput(cmd.Context(), executionLog.output, cols)...)
-
-		fmt.Println()                          //nolint:forbidigo // CLI console output
-		fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
-		fmt.Println()                          //nolint:forbidigo // CLI console output
-	}
-}
-
-func getIndentForLevel(level int) string {
-	indent := ""
-	for i := 0; i < (level * 2); i++ {
-		indent += " "
-	}
-	return indent
-}
-
-func renderExecutionLog(ctx context.Context, log *pipelineExecution, level int, width int) []string {
-	lines := []string{}
-	indent := getIndentForLevel(level)
-	lines = append(lines, fmt.Sprintf("%s⏩ %s", indent, log.pipelineName))
-	for _, step := range log.steps {
-		lines = append(lines, renderPipelineStep(ctx, step, level, width)...)
-	}
-	lines = append(lines, renderLineWithDuration(ctx, fmt.Sprintf("%s⏹️  %s", indent, log.pipelineName), log.endTime.Sub(*log.startTime), "Total: ", width))
-	return lines
-}
-
-func renderPipelineStep(ctx context.Context, step *pipelineStep, level int, width int) []string {
-	icon := getStepIcon(strings.Split(step.stepName, ".")[0], step.failed())
-	indent := getIndentForLevel(level)
-	line := fmt.Sprintf("%s  %s %s", getIndentForLevel(level), icon, step.stepName)
-	_ = step.endTime.Day()
-	_ = step.startTime.Day()
-	duration := step.endTime.Sub(*step.startTime)
-	lines := []string{renderLineWithDuration(ctx, line, duration, "", width)}
-
-	if len(step.executions) == 1 {
-		// this is a single step pipeline
-		// print out the error messages and continue
-		for _, se := range step.executions[0].stepErrors {
-			lines = append(lines, fmt.Sprintf("%s    └ Error: %s", indent, se))
-		}
-	}
-
-	// render the executions
-	for _, stepExec := range step.executions {
-		if stepExec.childPipeline != nil {
-			subLines := renderExecutionLog(ctx, stepExec.childPipeline, level+2 /* this is a level higher, since we also need to account for the step line */, width)
-			lines = append(lines, subLines...)
-		} else if len(stepExec.execKey) != 0 {
-			duration := stepExec.endTime.Sub(*step.startTime)
-			icon := "🔄"
-			if stepExec.status == "failed" {
-				icon = "❌"
-			}
-			eachLine := fmt.Sprintf("%s    %s [%s]", indent, icon, stepExec.execKey)
-			lines = append(lines, renderLineWithDuration(ctx, eachLine, duration, "", width))
-			for _, se := range stepExec.stepErrors {
-				lines = append(lines, fmt.Sprintf("%s      └ Error: %s", indent, se))
-			}
-		}
-	}
-
-	return lines
-}
-
-func renderLineWithDuration(ctx context.Context, line string, duration time.Duration, durationPrefix string, width int) string {
-	lineWidth := utf8.RuneCountInString(line)
-
-	// HACK: the "⏹️" has 2 code points
-	if strings.Contains(line, "⏹️") {
-		lineWidth = lineWidth - 2
-	}
-
-	durationString := humanizeDuration(duration)
-	if utf8.RuneCountInString(durationPrefix) > 0 {
-		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
-	}
-	durationColumnWidth := utf8.RuneCountInString(durationString)
-
-	// {line} {dots} {duration}{durationUnit}
-	dotNum := width - (lineWidth + durationColumnWidth + 3 /*accounting for leading and trailing spaces in the dots*/)
-	dots := fmt.Sprintf(" %s ", strings.Repeat(".", dotNum))
-	rendered := fmt.Sprintf("%s%s%s", line, dots, durationString)
-
-	return rendered
-}
-
-func renderPipelineOutput(ctx context.Context, output map[string]any, width int) []string {
-	var lines []string
-	delete(output, "errors")
-	if len(output) >= 1 {
-		lines = append(lines, "\nOutput:")
-	}
-	for k, v := range output {
-		line := fmt.Sprintf("⇒ %s = %v", k, v)
-		if utf8.RuneCountInString(line) >= width {
-			line = fmt.Sprintf("%s%s", line[0:width-3], "...")
-		}
-		lines = append(lines, line)
-	}
-
-	return lines
-}
-
-// humanizeDuration humanizes time.Duration output to a meaningful value,
-// golang's default “time.Duration“ output is badly formatted and unreadable.
-// TODO: this is salvaged off the internet from https://gist.github.com/harshavardhana/327e0577c4fed9211f65
-// with a minor modification for milliseconds. We should be using a library for this
-func humanizeDuration(duration time.Duration) string {
-	if duration.Milliseconds() < 1000.0 {
-		return fmt.Sprintf("%dms", duration.Milliseconds())
-	}
-	if duration.Seconds() < 60.0 {
-		return fmt.Sprintf("%ds", int64(duration.Seconds()))
-	}
-	if duration.Minutes() < 60.0 {
-		remainingSeconds := math.Mod(duration.Seconds(), 60)
-		return fmt.Sprintf("%dm%ds", int64(duration.Minutes()), int64(remainingSeconds))
-	}
-	if duration.Hours() < 24.0 {
-		remainingMinutes := math.Mod(duration.Minutes(), 60)
-		remainingSeconds := math.Mod(duration.Seconds(), 60)
-		return fmt.Sprintf("%dh%dm%ds",
-			int64(duration.Hours()), int64(remainingMinutes), int64(remainingSeconds))
-	}
-	remainingHours := math.Mod(duration.Hours(), 24)
-	remainingMinutes := math.Mod(duration.Minutes(), 60)
-	remainingSeconds := math.Mod(duration.Seconds(), 60)
-	return fmt.Sprintf("%dd%dh%dm%ds", // 00d00h00m00s
-		int64(duration.Hours()/24), int64(remainingHours),
-		int64(remainingMinutes), int64(remainingSeconds))
-}
-
 func getStepIcon(name string, failed bool) string {
 	if failed {
 		return "🔴" // fmt.Sprintf("❌%s", icon)
@@ -451,7 +92,7 @@ func getStepIcon(name string, failed bool) string {
 	case "echo":
 		icon = "🔠"
 	case "pipeline":
-		icon = "♊"
+		icon = "♊️"
 	case "sleep":
 		icon = "⏳"
 	}
@@ -527,4 +168,314 @@ func listProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			}
 		}
 	}
+}
+
+func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		apiClient := common.GetApiClient()
+
+		execution, _, err := apiClient.ProcessApi.GetExecution(ctx, args[0]).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
+
+		cols, _, err := gows.GetWinSize()
+		if err != nil {
+			error_helpers.ShowError(cmd.Context(), err)
+			return
+		}
+
+		pe := parseExecution(execution)
+
+		lines := []string{fmt.Sprintf("Execution Id: %s", pe.id)}
+		for _, plKey := range pe.outerKeys {
+			lines = append(lines, renderPipelineExecution(pe.pipelines[plKey], 0, cols)...)
+			lines = append(lines, renderPipelineOutput(pe.pipelines[plKey].output, cols)...)
+		}
+
+		fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
+	}
+}
+
+func parseExecution(execution *flowpipeapi.ExecutionExecution) parsedExecution {
+	var pe parsedExecution
+	pe.pipelines = make(map[string]parsedPipeline)
+	pe.id = *execution.Id
+
+	for k, v := range *execution.PipelineExecutions {
+		if !v.HasParentExecutionId() && !v.HasParentStepExecutionId() {
+			pe.outerKeys = append(pe.outerKeys, k)
+		}
+
+		pe.pipelines[k] = parsePipeline(&v)
+	}
+
+	// Add children to parents
+	for key, _ := range pe.pipelines {
+		for k, v := range pe.pipelines {
+			if v.parentExecutionId != nil && *v.parentExecutionId == key {
+				pe.pipelines[key].childPipelines[k] = &v
+			}
+		}
+	}
+
+	return pe
+}
+
+func parsePipeline(input *flowpipeapi.ExecutionPipelineExecution) parsedPipeline {
+	var pp parsedPipeline
+
+	pp.id = *input.Id
+	pp.name = *input.Name
+	if input.StartTime != nil {
+		pp.startTime, _ = time.Parse(time.RFC3339, *input.StartTime)
+	}
+	if input.EndTime != nil {
+		pp.endTime, _ = time.Parse(time.RFC3339, *input.EndTime)
+	}
+	pp.output = input.PipelineOutput
+
+	pp.steps = parseStepStatuses(input.StepStatus)
+	pp.errorCount = len(input.Errors)
+
+	if input.HasParentExecutionId() {
+		pp.parentExecutionId = input.ParentExecutionId
+	}
+
+	if input.HasParentStepExecutionId() {
+		pp.parentStepExecutionId = input.ParentStepExecutionId
+	}
+
+	pp.childPipelines = make(map[string]*parsedPipeline)
+	return pp
+}
+
+func parseStepStatuses(input *map[string]map[string]flowpipeapi.ExecutionStepStatus) []parsedStepStatus {
+	var output []parsedStepStatus
+
+	for stepName, feMap := range *input {
+		var pss parsedStepStatus
+		pss.name = stepName
+		pss.executions = make(map[string][]parsedStepExecution)
+		pss.earliestStartTime = time.Now()
+		for feKey, execStepStatus := range feMap {
+			var pse []parsedStepExecution
+			for _, se := range execStepStatus.StepExecutions {
+				pse = append(pse, parseStepExecution(&se))
+			}
+			// Sort Executions by time
+			sort.Slice(pse, func(i, j int) bool {
+				return pse[i].startTime.Before(pse[j].startTime)
+			})
+
+			var earliestStartTime time.Time
+			if len(pse) > 0 {
+				earliestStartTime = pse[0].startTime
+			}
+			if earliestStartTime.Before(pss.earliestStartTime) {
+				pss.earliestStartTime = earliestStartTime
+			}
+			pss.executions[feKey] = pse
+
+		}
+		output = append(output, pss)
+	}
+
+	sort.Slice(output, func(i, j int) bool {
+		return output[i].earliestStartTime.Before(output[j].earliestStartTime)
+	})
+
+	return output
+}
+
+func parseStepExecution(input *flowpipeapi.ExecutionStepExecution) parsedStepExecution {
+	var pse parsedStepExecution
+	var op flowpipeapi.ExecutionStepExecutionOutput
+	pse.id = *input.Id
+	pse.name = *input.Name
+	pse.status = *input.Status
+	if input.HasOutput() {
+		op = *input.Output
+	}
+	pse.output = op.Data
+	for _, e := range op.Errors {
+		pse.errors = append(pse.errors, *e.Error)
+	}
+	if input.HasStartTime() {
+		pse.startTime, _ = time.Parse(time.RFC3339, *input.StartTime)
+	}
+	if input.HasEndTime() {
+		pse.endTime, _ = time.Parse(time.RFC3339, *input.EndTime)
+	}
+	return pse
+}
+
+type parsedExecution struct {
+	id        string
+	pipelines map[string]parsedPipeline
+	outerKeys []string
+}
+
+type parsedPipeline struct {
+	id                    string
+	name                  string
+	output                map[string]any
+	startTime             time.Time
+	endTime               time.Time
+	steps                 []parsedStepStatus
+	errorCount            int
+	parentExecutionId     *string
+	parentStepExecutionId *string
+	childPipelines        map[string]*parsedPipeline
+}
+
+type parsedStepStatus struct {
+	name              string
+	earliestStartTime time.Time
+	executions        map[string][]parsedStepExecution
+}
+
+type parsedStepExecution struct {
+	id        string
+	name      string
+	startTime time.Time
+	endTime   time.Time
+	output    map[string]any
+	errors    []flowpipeapi.PerrErrorModel
+	status    string
+}
+
+func renderPipelineExecution(pl parsedPipeline, level int, width int) []string {
+	var out []string
+	indent := strings.Repeat(" ", level*2)
+	out = append(out, fmt.Sprintf("%s⏩ %s", indent, pl.name))
+
+	for _, s := range pl.steps {
+		stepType := strings.Split(s.name, ".")[0]
+		if strings.ToLower(stepType) == "pipeline" {
+			icon := getStepIcon(stepType, false)
+			content := fmt.Sprintf("%s  %s %s", indent, icon, s.name)
+			out = append(out, content)
+			for _, execs := range s.executions {
+				for _, exec := range execs {
+					for _, ppl := range pl.childPipelines {
+						if *ppl.parentExecutionId == pl.id && *ppl.parentStepExecutionId == exec.id {
+							out = append(out, renderPipelineExecution(*ppl, level+2, width)...)
+						}
+					}
+
+				}
+			}
+		} else {
+			if len(s.executions) == 1 && len(s.executions["0"]) == 1 {
+				out = append(out, renderSingleStepExecution(indent, s.executions["0"][0], width)...)
+			} else {
+				out = append(out, renderMultipleStepExecutions(indent, s, width)...)
+			}
+		}
+	}
+
+	duration := pl.endTime.Sub(pl.startTime)
+	durationPrefix := "Success: "
+	if pl.errorCount > 0 {
+		durationPrefix = fmt.Sprintf("%d Error(s): ", pl.errorCount)
+	}
+	out = append(out, renderDurationLine(fmt.Sprintf("%s⏹️  %s", indent, pl.name), durationPrefix, duration, width))
+	return out
+}
+
+func renderPipelineOutput(output map[string]any, width int) []string {
+	var lines []string
+	delete(output, "errors")
+	if len(output) >= 1 {
+		lines = append(lines, "\nOutput:")
+	}
+	for k, v := range output {
+		line := fmt.Sprintf("⇒ %s = %v", k, v)
+		if utf8.RuneCountInString(line) >= width {
+			line = fmt.Sprintf("%s%s", line[0:width-3], "...")
+		}
+		lines = append(lines, line)
+	}
+
+	return lines
+}
+
+func renderDurationLine(content, durationPrefix string, duration time.Duration, width int) string {
+	iconsUsing2CodePoints := []string{"⏹️"}
+	durationString := utils.HumanizeDuration(duration)
+	if utf8.RuneCountInString(durationPrefix) > 0 {
+		durationString = fmt.Sprintf("%s%s", durationPrefix, durationString)
+	}
+
+	contentWidth := utf8.RuneCountInString(content)
+	durationWidth := utf8.RuneCountInString(durationString)
+
+	for _, i := range iconsUsing2CodePoints {
+		if strings.Contains(content, i) {
+			contentWidth -= 2
+		}
+	}
+
+	dotCount := width - (contentWidth + durationWidth + 3)
+	dots := fmt.Sprintf(" %s ", strings.Repeat(".", dotCount))
+	return fmt.Sprintf("%s%s%s", content, dots, durationString)
+}
+
+func renderSingleStepExecution(indent string, se parsedStepExecution, width int) []string {
+	var out []string
+	stepType := strings.Split(se.name, ".")[0]
+	icon := getStepIcon(stepType, se.status == "failed")
+	duration := se.endTime.Sub(se.startTime)
+	content := fmt.Sprintf("%s  %s %s", indent, icon, se.name)
+	out = append(out, renderDurationLine(content, "", duration, width))
+	// Write Errors
+	for _, e := range se.errors {
+		errText := fmt.Sprintf("%s     └ Error: %s", indent, e.Detail)
+		if len(errText) > width {
+			errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
+		}
+		out = append(out, errText)
+	}
+	return out
+}
+
+func renderMultipleStepExecutions(indent string, ss parsedStepStatus, width int) []string {
+	var out []string
+	stepType := strings.Split(ss.name, ".")[0]
+	icon := getStepIcon(stepType, false) // Failures will be on execution not parent line
+	out = append(out, fmt.Sprintf("%s  %s %s", indent, icon, ss.name))
+
+	for forEachKey, execs := range ss.executions {
+		if len(execs) == 1 {
+			content := fmt.Sprintf("%s     └- %s", indent, forEachKey)
+			duration := execs[0].endTime.Sub(execs[0].startTime)
+			out = append(out, renderDurationLine(content, "", duration, width))
+
+			for _, e := range execs[0].errors {
+				errText := fmt.Sprintf("%s     └ Error: %s", indent, e.Detail)
+				if len(errText) > width {
+					errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
+				}
+				out = append(out, errText)
+			}
+		} else {
+			for i, ex := range execs {
+				content := fmt.Sprintf("%s     └- %s ⇒ [%d]", indent, forEachKey, i)
+				duration := ex.endTime.Sub(ex.startTime)
+				out = append(out, renderDurationLine(content, "", duration, width))
+
+				for _, e := range ex.errors {
+					errText := fmt.Sprintf("%s     └ Error: %s", indent, e.Detail)
+					if len(errText) > width {
+						errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
+					}
+					out = append(out, errText)
+				}
+			}
+		}
+	}
+
+	return out
 }
