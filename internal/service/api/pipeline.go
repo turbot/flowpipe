@@ -142,7 +142,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		if !param.Default.IsNull() {
 			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
 			if err != nil {
-				common.AbortWithError(c, perr.NotFoundWithMessage("unable to convert param default to go value: "+param.Name))
+				common.AbortWithError(c, perr.BadRequestWithMessage("unable to convert param default to go value: "+param.Name))
 				return
 			}
 			paramDefault[param.Name] = paramDefaultGoVal
