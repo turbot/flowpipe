@@ -1,8 +1,7 @@
 package event
 
 type StepForEachPlan struct {
-	Event *Event `json:"event"`
-	// Unique identifier for this pipeline execution
+	Event               *Event `json:"event"`
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepName            string `json:"step_name"`
 }

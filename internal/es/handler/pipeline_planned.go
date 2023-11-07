@@ -41,12 +41,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 	}
 
 	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
 	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 	}
 
 	// Convenience
@@ -64,15 +64,15 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		if pe.IsComplete() {
 			if pe.ShouldFail() {
 				// There's no error supplied here because it's the step failure that is causing the pipeline to fail
-				cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, nil))
+				cmd := event.NewPipelineFailFromPipelinePlanned(e, nil)
 				if err != nil {
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 				}
 				return h.CommandBus.Send(ctx, cmd)
 			} else {
 				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
 				if err != nil {
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 				}
 				return h.CommandBus.Send(ctx, cmd)
 			}
@@ -96,9 +96,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	if pipelineInaccessible {
 		logger.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
 		// TODO: what is the error on the pipeline?
-		cmd := event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, perr.InternalWithMessage("pipeline failed")))
+		cmd := event.NewPipelineFailFromPipelinePlanned(e, perr.InternalWithMessage("pipeline failed"))
 		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+			return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		}
 		return h.CommandBus.Send(ctx, cmd)
 	}
@@ -127,10 +127,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				eachGoVal, err := hclhelpers.CtyToGo(nextStep.StepForEach.Each.Value)
 				if err != nil {
 					logger.Error("Error converting cty to go", "error", err)
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 				}
 				input[schema.AttributeEach] = eachGoVal
-				foreachOutput = *nextStep.StepForEach.Output
+				// foreachOutput = *nextStep.StepForEach.Output
 				forEachCtyVal = nextStep.StepForEach.Each.Value
 			}
 
@@ -154,10 +154,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			stepForEachPlanCmd := event.NewStepForEachPlanFromPipelinePlanned(e, nextStep.StepName)
 			err = h.CommandBus.Send(ctx, stepForEachPlanCmd)
-			if err != nil {
 
+			if err != nil {
 				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 			}
+
+			return nil
 
 			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
@@ -185,7 +187,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 			if diags.HasErrors() {
 				err := error_helpers.HclDiagsToError("param", diags)
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 			}
 
 			if val.Type().IsListType() || val.Type().IsSetType() || val.Type().IsTupleType() {
@@ -206,7 +208,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 			} else {
 				err := perr.BadRequestWithMessage("for_each must be a list, set, tuple, map or object for step " + stepDefn.GetName())
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 			}
 		}
 
@@ -221,7 +223,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			evalContext, err = ex.BuildEvalContext(pipelineDefn, pe)
 			if err != nil {
 				logger.Error("Error building eval context for step", "error", err)
-				return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 			}
 			if stepDefn.GetUnresolvedBodies()["loop"] != nil {
 				// If the execution falls here, it means it's the beginning of the loop
@@ -243,7 +245,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					err := error_helpers.HclDiagsToError("diags", diags)
 
 					logger.Error("Error evaluating if condition", "error", err)
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 				}
 
 				if val.False() {
@@ -262,7 +264,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
 					logger.Error("Error resolving step inputs for single step", "error", err)
-					return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 				}
 				// There's no for_each, there's only a single input
 				inputs["0"] = stepInputs
@@ -298,7 +300,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					if len(diags) > 0 {
 						err := error_helpers.HclDiagsToError("diags", diags)
 						logger.Error("Error evaluating if condition", "error", err)
-						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 					}
 
 					if val.False() {
@@ -316,7 +318,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					stepInputs, err := stepDefn.GetInputs(evalContext)
 					if err != nil {
 						logger.Error("Error resolving step inputs for for_each step", "error", err)
-						return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+						return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 					}
 					inputs[k] = stepInputs
 				} else {
@@ -366,15 +368,15 @@ func runStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePla
 	if !hasForEach {
 		// If a step does not have a for_each, we still build a for_each control but with key of "0"
 		forEachControl = &modconfig.StepForEach{
-			Key:        "0",
-			Output:     &modconfig.Output{},
+			Key: "0",
+			// Output:     &modconfig.Output{},
 			TotalCount: 1,
 			Each:       json.SimpleJSONValue{Value: cty.StringVal("0")},
 		}
 	} else {
 		forEachControl = &modconfig.StepForEach{
-			Key:        key,
-			Output:     &forEachOutput,
+			Key: key,
+			// Output:     &forEachOutput,
 			TotalCount: inputsLength,
 			Each:       json.SimpleJSONValue{Value: forEachCtyVal},
 		}
@@ -382,7 +384,7 @@ func runStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePla
 
 	cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, nextStep.DelayMs, forEachNextStepAction))
 	if err != nil {
-		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		err := commandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		if err != nil {
 			logger.Error("Error publishing event", "error", err)
 		}
@@ -391,7 +393,7 @@ func runStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePla
 	}
 
 	if err := commandBus.Send(ctx, cmd); err != nil {
-		err := commandBus.Send(ctx, event.NewPipelineFail(event.ForPipelinePlannedToPipelineFail(e, err)))
+		err := commandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		if err != nil {
 			logger.Error("Error publishing event", "error", err)
 		}

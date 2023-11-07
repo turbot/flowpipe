@@ -644,12 +644,12 @@ func (ex *Execution) StepExecutionNodeRow(panelName string, sd modconfig.Pipelin
 		title = se.StepForEach.Key + " = "
 
 		// TODO: this is a bit yuck
-		forEachOutput, ok := se.StepForEach.Output.Get(schema.AttributeTypeValue).(string)
-		if !ok {
-			title += sd.GetFullyQualifiedName()
-		} else {
-			title += forEachOutput
-		}
+		// forEachOutput, ok := se.StepForEach.Output.Get(schema.AttributeTypeValue).(string)
+		// if !ok {
+		// 	title += sd.GetFullyQualifiedName()
+		// } else {
+		// 	title += forEachOutput
+		// }
 
 	}
 	if title == "" {

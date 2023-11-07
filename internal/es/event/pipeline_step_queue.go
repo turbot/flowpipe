@@ -53,6 +53,27 @@ func NewPipelineStepQueue(opts ...PipelineStepQueueOption) (*PipelineStepQueue, 
 	return e, nil
 }
 
+func NewPipelineStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconfig.NextStep) (*PipelineStepQueue, error) {
+	cmd := &PipelineStepQueue{
+		Event:           NewChildEvent(e.Event),
+		StepExecutionID: util.NewStepExecutionID(),
+	}
+	if e.PipelineExecutionID != "" {
+		cmd.PipelineExecutionID = e.PipelineExecutionID
+	} else {
+		return nil, perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline planned event: %v", e))
+	}
+
+	cmd.StepName = e.StepName
+	cmd.StepInput = nextStep.Input
+	cmd.StepForEach = nextStep.StepForEach
+	cmd.StepLoop = nil
+	cmd.DelayMs = 0
+	cmd.NextStepAction = nextStep.Action
+
+	return cmd, nil
+}
+
 func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOption {
 	return func(cmd *PipelineStepQueue) error {
 		cmd.Event = NewChildEvent(e.Event)
