@@ -36,11 +36,11 @@ type GetPipelineResponse struct {
 }
 
 type FpPipelineParam struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Optional    *bool   `json:"optional,omitempty"`
-	Default     *string `json:"default,omitempty"`
-	Type        string  `json:"type"`
+	Name        string      `json:"name"`
+	Description *string     `json:"description,omitempty"`
+	Optional    *bool       `json:"optional,omitempty"`
+	Default     interface{} `json:"default,omitempty"`
+	Type        string      `json:"type"`
 }
 
 type PipelineExecutionResponse map[string]interface{}
