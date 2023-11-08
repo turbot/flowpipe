@@ -27,13 +27,6 @@ jobs:
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
 
-      - name: Checkout Terraform Components repository
-        uses: actions/checkout@v3
-        with:
-          ssh-key: ${{ secrets.TERRAFORM_COMPONENTS_DEPLOY_PRIVATE_KEY }}
-          repository: turbot/terraform-components
-          path: terraform-components
-
       - name: Checkout Pipe Fittings Components repository
         uses: actions/checkout@v3
         with:

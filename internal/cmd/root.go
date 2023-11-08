@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
-
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/mod"
 	"github.com/turbot/flowpipe/internal/cmd/pipeline"
@@ -20,13 +19,13 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/service"
 	"github.com/turbot/flowpipe/internal/cmd/trigger"
 	"github.com/turbot/flowpipe/internal/config"
-	"github.com/turbot/flowpipe/internal/constants"
+	internalconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
-	"github.com/turbot/pipe-fittings/misc"
-
-	pcconstants "github.com/turbot/pipe-fittings/constants"
 )
 
 // ④ Now use the FooMode enum flag. If you want a non-zero default, then
@@ -38,12 +37,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 
 	// Define our command
 	rootCmd := &cobra.Command{
-		Use:     constants.Name,
-		Short:   constants.ShortDescription,
-		Long:    constants.LongDescription,
+		Use:     internalconstants.Name,
+		Short:   internalconstants.ShortDescription,
+		Long:    internalconstants.LongDescription,
 		Version: viper.GetString("main.version"),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			viper.Set(pcconstants.ConfigKeyActiveCommand, cmd)
+			viper.Set(constants.ConfigKeyActiveCommand, cmd)
 
 			// set up the global viper config with default values from
 			// config files and ENV variables
@@ -64,13 +63,13 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
 	// Flowpipe API
-	rootCmd.PersistentFlags().String(constants.ArgApiHost, "http://localhost", "API server host")
-	rootCmd.PersistentFlags().Int(constants.ArgApiPort, 7103, "API server port")
-	rootCmd.PersistentFlags().Bool(constants.ArgTlsInsecure, false, "Skip TLS verification")
+	rootCmd.PersistentFlags().String(internalconstants.ArgApiHost, "http://localhost", "API server host")
+	rootCmd.PersistentFlags().Int(internalconstants.ArgApiPort, 7103, "API server port")
+	rootCmd.PersistentFlags().Bool(internalconstants.ArgTlsInsecure, false, "Skip TLS verification")
 
 	// Common (steampipe, flowpipe) flags
-	rootCmd.PersistentFlags().String(pcconstants.ArgInstallDir, filepaths.PipesComponentDefaultInstallDir, "Path to the Config Directory")
-	rootCmd.PersistentFlags().String(pcconstants.ArgModLocation, cwd, "Path to the workspace working directory")
+	rootCmd.PersistentFlags().String(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory")
+	rootCmd.PersistentFlags().String(constants.ArgModLocation, cwd, "Path to the workspace working directory")
 
 	// ⑤ Define the CLI flag parameters for your wrapped enum flag.
 	rootCmd.PersistentFlags().Var(
@@ -78,12 +77,12 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 		constants.ArgOutput,
 		"Output format; one of: table, yaml, json")
 
-	error_helpers.FailOnError(viper.BindPFlag(constants.ArgApiHost, rootCmd.PersistentFlags().Lookup(constants.ArgApiHost)))
-	error_helpers.FailOnError(viper.BindPFlag(constants.ArgApiPort, rootCmd.PersistentFlags().Lookup(constants.ArgApiPort)))
-	error_helpers.FailOnError(viper.BindPFlag(constants.ArgTlsInsecure, rootCmd.PersistentFlags().Lookup(constants.ArgTlsInsecure)))
+	error_helpers.FailOnError(viper.BindPFlag(internalconstants.ArgApiHost, rootCmd.PersistentFlags().Lookup(internalconstants.ArgApiHost)))
+	error_helpers.FailOnError(viper.BindPFlag(internalconstants.ArgApiPort, rootCmd.PersistentFlags().Lookup(internalconstants.ArgApiPort)))
+	error_helpers.FailOnError(viper.BindPFlag(internalconstants.ArgTlsInsecure, rootCmd.PersistentFlags().Lookup(internalconstants.ArgTlsInsecure)))
 
-	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgInstallDir, rootCmd.PersistentFlags().Lookup(pcconstants.ArgInstallDir)))
-	error_helpers.FailOnError(viper.BindPFlag(pcconstants.ArgModLocation, rootCmd.PersistentFlags().Lookup(pcconstants.ArgModLocation)))
+	error_helpers.FailOnError(viper.BindPFlag(constants.ArgInstallDir, rootCmd.PersistentFlags().Lookup(constants.ArgInstallDir)))
+	error_helpers.FailOnError(viper.BindPFlag(constants.ArgModLocation, rootCmd.PersistentFlags().Lookup(constants.ArgModLocation)))
 
 	// disable auto completion generation, since we don't want to support
 	// powershell yet - and there's no way to disable powershell in the default generator
@@ -134,26 +133,17 @@ func addCommands(ctx context.Context, rootCmd *cobra.Command) error {
 // initConfig reads in config file and ENV variables if set.
 func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 
-	// Steampipe CLI loads the Workspace Profile here, but it also loads the mod in the parse context.
-	//
-	// set global containing the configured install dir (create directory if needed)
-
-	// load workspace profile from the configured install dir
-	loader, err := misc.LoadWorkspaceProfile(context.TODO())
-	error_helpers.FailOnError(err)
-
-	// set global workspace profile
-	misc.GlobalWorkspaceProfile = loader.GetActiveWorkspaceProfile()
-
-	var cmd = viper.Get(pcconstants.ConfigKeyActiveCommand).(*cobra.Command)
+	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err = misc.BootstrapViper(loader, cmd)
+	err := cmdconfig.BootstrapViper(cmd)
+
 	error_helpers.FailOnError(err)
 
-	installDir := viper.GetString(pcconstants.ArgInstallDir)
+	installDir := viper.GetString(constants.ArgInstallDir)
 	ensureInstallDir(filepath.Join(installDir, "internal"))
 
-	salt, err := flowpipeSalt(filepath.Join(installDir, filepaths.PipesComponentInternal, "salt"), 32)
+	saltDir := filepath.Join(filepaths.EnsureInternalDir(), "salt")
+	salt, err := flowpipeSalt(saltDir, 32)
 	if err != nil {
 		error_helpers.FailOnErrorWithMessage(err, err.Error())
 	}
@@ -199,7 +189,5 @@ func ensureInstallDir(installDir string) {
 		err = os.MkdirAll(installDir, 0755)
 		error_helpers.FailOnErrorWithMessage(err, fmt.Sprintf("could not create installation directory: %s", installDir))
 	}
-
-	// store as SteampipeDir
-	filepaths.SteampipeDir = installDir
+	app_specific.InstallDir = installDir
 }
