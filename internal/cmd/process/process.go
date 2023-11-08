@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -505,7 +504,9 @@ func renderMultipleStepExecutions(indent string, key string, ses []parsedStepExe
 }
 
 func isSimpleType(input any) bool {
-	simpleTypes := []reflect.Kind{
+	kind := reflect.TypeOf(input).Kind()
+	switch kind {
+	case
 		reflect.Bool,
 		reflect.String,
 		reflect.Float32,
@@ -519,7 +520,9 @@ func isSimpleType(input any) bool {
 		reflect.Uint8,
 		reflect.Uint16,
 		reflect.Uint32,
-		reflect.Uint64,
+		reflect.Uint64:
+		return true
+	default:
+		return false
 	}
-	return slices.Contains(simpleTypes, reflect.TypeOf(input).Kind())
 }
