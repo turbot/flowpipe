@@ -5,9 +5,6 @@ go 1.21.0
 replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
 
 //
-replace github.com/turbot/terraform-components => ../terraform-components/
-
-//
 replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
@@ -217,7 +214,7 @@ require (
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
 	github.com/turbot/steampipe-cloud-sdk-go v0.6.0 // indirect
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 // indirect
-	github.com/turbot/terraform-components v0.0.0-20231017100940-c8df9a3a9aab // indirect
+	github.com/turbot/terraform-components v0.0.0-20231108014223-83bd6c20c5af // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
