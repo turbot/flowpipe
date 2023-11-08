@@ -2,7 +2,10 @@ package process
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -418,7 +421,18 @@ func renderPipelineOutput(output map[string]any, width int) []string {
 		lines = append(lines, "\nOutput:")
 	}
 	for k, v := range output {
-		line := fmt.Sprintf("⇒ %s = %v", k, v)
+		var line string
+		if !isSimpleType(v) {
+			jsonData, err := json.Marshal(v)
+			if err != nil {
+				line = fmt.Sprintf("⇒ %s - Error rendering output value.", k)
+			} else {
+				line = fmt.Sprintf("⇒ %s = %s", k, string(jsonData))
+			}
+		} else {
+			line = fmt.Sprintf("⇒ %s = %v", k, v)
+		}
+
 		if utf8.RuneCountInString(line) >= width {
 			line = fmt.Sprintf("%s%s", line[0:width-3], "...")
 		}
@@ -488,4 +502,24 @@ func renderMultipleStepExecutions(indent string, key string, ses []parsedStepExe
 		}
 	}
 	return out
+}
+
+func isSimpleType(input any) bool {
+	simpleTypes := []reflect.Kind{
+		reflect.Bool,
+		reflect.String,
+		reflect.Float32,
+		reflect.Float64,
+		reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64,
+		reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64,
+	}
+	return slices.Contains(simpleTypes, reflect.TypeOf(input).Kind())
 }
