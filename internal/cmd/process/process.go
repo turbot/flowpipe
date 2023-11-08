@@ -208,11 +208,12 @@ func parseExecution(execution *flowpipeapi.ExecutionExecution) parsedExecution {
 	pe.pipelines = make(map[string]parsedPipeline)
 	pe.id = *execution.Id
 
-	for k, v := range *execution.PipelineExecutions {
+	plex := *execution.PipelineExecutions
+	for k := range plex {
+		v := plex[k]
 		if !v.HasParentExecutionId() && !v.HasParentStepExecutionId() {
 			pe.outerKeys = append(pe.outerKeys, k)
 		}
-
 		pe.pipelines[k] = parsePipeline(&v)
 	}
 
@@ -266,7 +267,8 @@ func parseStepStatuses(input *map[string]map[string]flowpipeapi.ExecutionStepSta
 		pss.earliestStartTime = time.Now()
 		for feKey, execStepStatus := range feMap {
 			var pse []parsedStepExecution
-			for _, se := range execStepStatus.StepExecutions {
+			for i := range execStepStatus.StepExecutions {
+				se := execStepStatus.StepExecutions[i]
 				pse = append(pse, parseStepExecution(&se))
 			}
 			// Sort Executions by time
@@ -443,7 +445,7 @@ func renderDurationLine(content, durationPrefix string, duration time.Duration, 
 	}
 
 	dotCount := width - (contentWidth + durationWidth + 3)
-	dots := fmt.Sprintf("%s", strings.Repeat(".", dotCount))
+	dots := strings.Repeat(".", dotCount)
 	return fmt.Sprintf("%s %s %s", content, dots, durationString)
 }
 
