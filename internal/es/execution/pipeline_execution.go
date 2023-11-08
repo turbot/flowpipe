@@ -66,10 +66,7 @@ type PipelineExecution struct {
 
 		LOOP
 
-		Since we added loop, the data structure can get rather complicated. A loop is simply another map which the key is
-		"0", "1", "2". So in a way like for_each that has a list result.
-
-		If the step has a loop and for_each the data is nested twice, i.e.: ["0"]["1"]
+		Loop will be recorded in StepStatus.StepExecution, it's an array
 		**/
 	StepStatus map[string]map[string]*StepStatus `json:"step_status,omitempty"`
 
@@ -449,7 +446,8 @@ func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) 
 type StepStatus struct {
 	// When the step is initializing it doesn't yet have any executions.
 	// We track it as initializing until the first execution is queued.
-	Initializing bool `json:"initializing"`
+	Initializing bool   `json:"initializing"`
+	OverralState string `json:"overral_state"`
 
 	// Indicate that step is in a loop so we don't mark it as finished
 	LoopHold bool `json:"loop_hold"`
@@ -475,7 +473,17 @@ func (s *StepStatus) IsComplete() bool {
 	}
 	// One step can have more than 1 execution, for example if a step has a for_each directive
 	// or retries
+	if s.OverralState == "empty_for_each" {
+		return true
+	}
 	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold
+}
+
+func (s *StepStatus) IsStarted() bool {
+	if s == nil {
+		return false
+	}
+	return s.Initializing || len(s.Queued) > 0 || len(s.Started) > 0 || !s.LoopHold
 }
 
 // IsFail returns true if any executions of the step failed.

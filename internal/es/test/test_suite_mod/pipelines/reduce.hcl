@@ -1,4 +1,4 @@
-pipeline "reduce" {
+pipeline "reduce_list" {
     param "input" {
         type = list(number)
         default = [1, 2, 3, 4, 5, 6]

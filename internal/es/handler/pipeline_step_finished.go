@@ -6,6 +6,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -48,7 +49,18 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 	stepExecution := pex.StepExecutions[e.StepExecutionID]
 	stepName := stepExecution.Name
 
-	if e.StepForEach != nil {
+	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
+	if err != nil {
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
+	}
+
+	stepDefn := pipelineDefn.GetStep(stepName)
+	if stepDefn == nil {
+		logger.Error("step not found", "step_name", stepName)
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, perr.BadRequestWithMessage("step not found"))))
+	}
+
+	if !helpers.IsNil(stepDefn.GetForEach()) {
 		cmd := event.NewStepForEachPlanFromPipelineStepFinished(e, stepName)
 
 		return h.CommandBus.Send(ctx, cmd)

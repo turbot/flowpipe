@@ -615,6 +615,34 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 		}
 
+	case "handler.step_for_each_planned":
+		var et event.StepForEachPlanned
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		stepStatusMap := pe.StepStatus[et.StepName]
+
+		if len(et.NextSteps) == 0 {
+			// this means the for_each step has complete (or failed), mark it as such
+
+			// TODO: I don't think this is the end state
+			if len(stepStatusMap) == 0 {
+				stepStatusMap["0"] = &StepStatus{
+					OverralState: "empty_for_each",
+				}
+			} else {
+				for _, stepStatus := range stepStatusMap {
+					stepStatus.OverralState = "complete_or_fail"
+				}
+			}
+		}
+		pe.StepStatus[et.StepName] = stepStatusMap
+
+		// if there's NextSteps .. then we assume that the step is still running
+
 	case "handler.pipeline_canceled":
 		var et event.PipelineCanceled
 		err := json.Unmarshal(logEntry.Payload, &et)

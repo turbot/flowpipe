@@ -133,8 +133,14 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 
 		// check the current execution if the step is already completed (or failed)
 		stepStatus := stepStatusList[k]
-		if stepStatus.IsComplete() {
-			continue
+		if stepStatus != nil {
+			if stepStatus.IsComplete() {
+				continue
+			}
+
+			if len(stepStatus.Queued) > 0 {
+				continue
+			}
 		}
 
 		// "each" is the magic keyword that will be used to access the current element in the for_each

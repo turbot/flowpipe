@@ -884,6 +884,37 @@ func (suite *ModTestSuite) TestMapReduce() {
 	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["blink_182"].(map[string]interface{})))
 }
 
+func (suite *ModTestSuite) TestListReduce() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_list", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(6, len(pex.PipelineOutput["val"].(map[string]interface{})))
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})))
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})))
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["4"].(map[string]interface{})))
+
+	assert.Equal("1: 2", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["text"])
+}
+
 func (suite *ModTestSuite) TestNested() {
 	assert := assert.New(suite.T())
 
@@ -910,7 +941,7 @@ func (suite *ModTestSuite) TestNested() {
 
 }
 
-func (suite *ModTestSuite) TestForEach() {
+func (suite *ModTestSuite) TestForEachEmptyAndNonCollection() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}

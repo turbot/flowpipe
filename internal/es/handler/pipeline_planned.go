@@ -225,7 +225,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 		}
 
-		if len(inputs) > 0 {
+		if len(inputs) > 1 {
 			logger.Error("A non for_each step has input array bigger than 1")
 			return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, perr.BadRequestWithMessage("A non for_each step has input array bigger than 1")))
 		}
