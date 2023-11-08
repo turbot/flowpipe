@@ -31,7 +31,16 @@ func (h StepForEachPlanned) Handle(ctx context.Context, ei interface{}) error {
 
 	logger.Debug("step_for_each_planned event handler", "event", e)
 
-	for _, nextStep := range e.NextSteps {
+	if len(e.NextSteps) == 0 {
+		logger.Debug("step_for_each_planned event handler - no next steps")
+
+		// If nothing is planned, then we're done for this "step_for_each" step. Run the pipeline planner (not the step_for_each_planner)
+		cmd := event.NewPipelinePlanFromStepForEachPlanned(e)
+		return h.CommandBus.Send(ctx, cmd)
+	}
+
+	for i := range e.NextSteps {
+		nextStep := e.NextSteps[i]
 		runOneStep(ctx, h.CommandBus, e, &nextStep)
 	}
 	return nil
@@ -41,9 +50,7 @@ func runOneStep(ctx context.Context, commandBus *FpCommandBus, e *event.StepForE
 
 	logger := fplog.Logger(ctx)
 
-	var forEachControl *modconfig.StepForEach
-
-	forEachControl = &modconfig.StepForEach{
+	forEachControl := &modconfig.StepForEach{
 		Key: nextStep.StepForEach.Key,
 		// Output:     &forEachOutput,
 		TotalCount: nextStep.StepForEach.TotalCount,

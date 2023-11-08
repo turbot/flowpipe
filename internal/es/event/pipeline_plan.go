@@ -1,6 +1,8 @@
 package event
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type PipelinePlan struct {
 	// Event metadata
@@ -32,6 +34,14 @@ func NewPipelinePlan(opts ...PipelinePlanOption) (*PipelinePlan, error) {
 		}
 	}
 	return e, nil
+}
+
+func NewPipelinePlanFromStepForEachPlanned(e *StepForEachPlanned) *PipelinePlan {
+	cmd := &PipelinePlan{
+		Event:               NewChildEvent(e.Event),
+		PipelineExecutionID: e.PipelineExecutionID,
+	}
+	return cmd
 }
 
 func ForPipelineStarted(e *PipelineStarted) PipelinePlanOption {

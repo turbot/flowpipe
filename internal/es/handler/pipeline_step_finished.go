@@ -45,6 +45,15 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 		return nil
 	}
 
+	stepExecution := pex.StepExecutions[e.StepExecutionID]
+	stepName := stepExecution.Name
+
+	if e.StepForEach != nil {
+		cmd := event.NewStepForEachPlanFromPipelineStepFinished(e, stepName)
+
+		return h.CommandBus.Send(ctx, cmd)
+	}
+
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 	if err != nil {
 		logger.Error("error creating pipeline_plan command", "error", err)

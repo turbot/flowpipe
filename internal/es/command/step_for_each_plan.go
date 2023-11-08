@@ -49,11 +49,11 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 	}
 
 	// Convenience
-	pe := ex.PipelineExecutions[e.PipelineExecutionID]
+	pex := ex.PipelineExecutions[e.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
-	if pe.IsCanceled() || pe.IsPaused() || pe.IsFinishing() || pe.IsFinished() {
+	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
 		return nil
 	}
 
@@ -69,7 +69,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepForEachPlan(e, perr.BadRequestWithMessage("step does not have a for_each")))
 	}
 
-	evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
+	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
 		logger.Error("Error building eval context for for_each", "error", err)
 		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepForEachPlan(e, err))
@@ -123,10 +123,18 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 
 	var nextSteps []modconfig.NextStep
 
+	stepStatusList := pex.StepStatus[e.StepName]
+
 	for k, v := range forEachCtyVals {
 
 		nextStep := modconfig.NextStep{
 			StepName: e.StepName,
+		}
+
+		// check the current execution if the step is already completed (or failed)
+		stepStatus := stepStatusList[k]
+		if stepStatus.IsComplete() {
+			continue
 		}
 
 		// "each" is the magic keyword that will be used to access the current element in the for_each
@@ -137,7 +145,6 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		// check the "IF" block to see if the step should be skipped?
 		// I used to do this in the "step_start" section, but if the IF attribute uses the "each" element, this is the place
 		// to do it
-
 		calculateInput := true
 		if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
 			expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
