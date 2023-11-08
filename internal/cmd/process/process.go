@@ -81,11 +81,12 @@ func ProcessListCmd(ctx context.Context) (*cobra.Command, error) {
 	return processGetCmd, nil
 }
 
-func getStepIcon(name string, failed bool) string {
-	if failed {
-		return "🔴" // fmt.Sprintf("❌%s", icon)
-	}
-	icon := " "
+func getIndentByLevel(level int) string {
+	return strings.Repeat(" ", level*2)
+}
+
+func getIcon(name string) string {
+	icon := "❓"
 	switch name {
 	case "http":
 		icon = "🔗"
@@ -95,6 +96,10 @@ func getStepIcon(name string, failed bool) string {
 		icon = "♊️"
 	case "sleep":
 		icon = "⏳"
+	case "failed":
+		icon = "🔴"
+	case "finished":
+		icon = "✅"
 	}
 	return icon
 }
@@ -190,7 +195,7 @@ func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 
 		lines := []string{fmt.Sprintf("Execution Id: %s", pe.id)}
 		for _, plKey := range pe.outerKeys {
-			lines = append(lines, renderPipelineExecution(pe.pipelines[plKey], 0, cols)...)
+			lines = append(lines, renderPipeline(pe.pipelines[plKey], 0, cols)...)
 			lines = append(lines, renderPipelineOutput(pe.pipelines[plKey].output, cols)...)
 		}
 
@@ -212,14 +217,14 @@ func parseExecution(execution *flowpipeapi.ExecutionExecution) parsedExecution {
 	}
 
 	// Add children to parents
-	for key, _ := range pe.pipelines {
-		for k, v := range pe.pipelines {
-			if v.parentExecutionId != nil && *v.parentExecutionId == key {
-				pe.pipelines[key].childPipelines[k] = &v
-			}
+	for k, v := range *execution.PipelineExecutions {
+		if v.HasParentExecutionId() && v.HasParentStepExecutionId() {
+			parentId := *v.ParentExecutionId
+			parentStepExecId := *v.ParentStepExecutionId
+			child := pe.pipelines[k]
+			pe.pipelines[parentId].childPipelines[parentStepExecId] = &child
 		}
 	}
-
 	return pe
 }
 
@@ -346,35 +351,11 @@ type parsedStepExecution struct {
 	status    string
 }
 
-func renderPipelineExecution(pl parsedPipeline, level int, width int) []string {
+func renderPipeline(pl parsedPipeline, level int, width int) []string {
 	var out []string
-	indent := strings.Repeat(" ", level*2)
+	indent := getIndentByLevel(level)
 	out = append(out, fmt.Sprintf("%s⏩ %s", indent, pl.name))
-
-	for _, s := range pl.steps {
-		stepType := strings.Split(s.name, ".")[0]
-		if strings.ToLower(stepType) == "pipeline" {
-			icon := getStepIcon(stepType, false)
-			content := fmt.Sprintf("%s  %s %s", indent, icon, s.name)
-			out = append(out, content)
-			for _, execs := range s.executions {
-				for _, exec := range execs {
-					for _, ppl := range pl.childPipelines {
-						if *ppl.parentExecutionId == pl.id && *ppl.parentStepExecutionId == exec.id {
-							out = append(out, renderPipelineExecution(*ppl, level+2, width)...)
-						}
-					}
-
-				}
-			}
-		} else {
-			if len(s.executions) == 1 && len(s.executions["0"]) == 1 {
-				out = append(out, renderSingleStepExecution(indent, s.executions["0"][0], width)...)
-			} else {
-				out = append(out, renderMultipleStepExecutions(indent, s, width)...)
-			}
-		}
-	}
+	out = append(out, renderPipelineSteps(pl.steps, &pl, level+1, width)...)
 
 	duration := pl.endTime.Sub(pl.startTime)
 	durationPrefix := "Success: "
@@ -382,6 +363,49 @@ func renderPipelineExecution(pl parsedPipeline, level int, width int) []string {
 		durationPrefix = fmt.Sprintf("%d Error(s): ", pl.errorCount)
 	}
 	out = append(out, renderDurationLine(fmt.Sprintf("%s⏹️  %s", indent, pl.name), durationPrefix, duration, width))
+	return out
+}
+
+func renderPipelineSteps(steps []parsedStepStatus, parent *parsedPipeline, level int, width int) []string {
+	var out []string
+	indent := getIndentByLevel(level)
+
+	for _, step := range steps {
+		stepType := strings.Split(step.name, ".")[0]
+		stepIcon := getIcon(stepType)
+		out = append(out, fmt.Sprintf("%s%s %s", indent, stepIcon, step.name))
+		out = append(out, renderPipelineStepExecutions(stepType, step.executions, parent, level+1, width)...)
+	}
+
+	return out
+}
+
+func renderPipelineStepExecutions(stepType string, execs map[string][]parsedStepExecution, parent *parsedPipeline, level, width int) []string {
+	var out []string
+
+	if strings.ToLower(stepType) == "pipeline" {
+		for _, exec := range execs {
+			for _, e := range exec {
+				if parent.childPipelines[e.id] != nil {
+					cpl := *parent.childPipelines[e.id]
+					out = append(out, renderPipeline(cpl, level+1, width)...)
+				}
+			}
+		}
+	} else {
+		indent := getIndentByLevel(level)
+		if len(execs) == 1 && len(execs["0"]) == 1 {
+			out = append(out, renderSingleStepExecution(indent, execs["0"][0], width)...)
+		} else {
+			for forEachKey, forEachValues := range execs {
+				if len(execs) == 1 {
+					forEachKey = ""
+				}
+				out = append(out, renderMultipleStepExecutions(getIndentByLevel(level), forEachKey, forEachValues, width)...)
+			}
+		}
+	}
+
 	return out
 }
 
@@ -419,20 +443,19 @@ func renderDurationLine(content, durationPrefix string, duration time.Duration, 
 	}
 
 	dotCount := width - (contentWidth + durationWidth + 3)
-	dots := fmt.Sprintf(" %s ", strings.Repeat(".", dotCount))
-	return fmt.Sprintf("%s%s%s", content, dots, durationString)
+	dots := fmt.Sprintf("%s", strings.Repeat(".", dotCount))
+	return fmt.Sprintf("%s %s %s", content, dots, durationString)
 }
 
 func renderSingleStepExecution(indent string, se parsedStepExecution, width int) []string {
 	var out []string
-	stepType := strings.Split(se.name, ".")[0]
-	icon := getStepIcon(stepType, se.status == "failed")
+	icon := getIcon(se.status)
 	duration := se.endTime.Sub(se.startTime)
-	content := fmt.Sprintf("%s  %s %s", indent, icon, se.name)
+	content := fmt.Sprintf("%s%s %s", indent, icon, se.name)
 	out = append(out, renderDurationLine(content, "", duration, width))
 	// Write Errors
 	for _, e := range se.errors {
-		errText := fmt.Sprintf("%s     └ Error: %s", indent, e.Detail)
+		errText := fmt.Sprintf("%s   └ Error: %s", indent, e.Detail)
 		if len(errText) > width {
 			errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
 		}
@@ -441,41 +464,26 @@ func renderSingleStepExecution(indent string, se parsedStepExecution, width int)
 	return out
 }
 
-func renderMultipleStepExecutions(indent string, ss parsedStepStatus, width int) []string {
+func renderMultipleStepExecutions(indent string, key string, ses []parsedStepExecution, width int) []string {
 	var out []string
-	stepType := strings.Split(ss.name, ".")[0]
-	icon := getStepIcon(stepType, false) // Failures will be on execution not parent line
-	out = append(out, fmt.Sprintf("%s  %s %s", indent, icon, ss.name))
 
-	for forEachKey, execs := range ss.executions {
-		if len(execs) == 1 {
-			content := fmt.Sprintf("%s     └- %s", indent, forEachKey)
-			duration := execs[0].endTime.Sub(execs[0].startTime)
-			out = append(out, renderDurationLine(content, "", duration, width))
+	for i, se := range ses {
+		icon := getIcon(se.status)
+		counter := ""
+		if len(ses) > 1 {
+			counter = fmt.Sprintf("[%d]", i+1)
+		}
+		content := fmt.Sprintf("%s%s %s%s", indent, icon, key, counter)
+		duration := se.endTime.Sub(se.startTime)
+		out = append(out, renderDurationLine(content, "", duration, width))
 
-			for _, e := range execs[0].errors {
-				errText := fmt.Sprintf("%s     └ Error: %s", indent, e.Detail)
-				if len(errText) > width {
-					errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
-				}
-				out = append(out, errText)
+		for _, e := range se.errors {
+			errText := fmt.Sprintf("%s  └ Error: %s", indent, e.Detail)
+			if len(errText) > width {
+				errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
 			}
-		} else {
-			for i, ex := range execs {
-				content := fmt.Sprintf("%s     └- %s ⇒ [%d]", indent, forEachKey, i)
-				duration := ex.endTime.Sub(ex.startTime)
-				out = append(out, renderDurationLine(content, "", duration, width))
-
-				for _, e := range ex.errors {
-					errText := fmt.Sprintf("%s     └ Error: %s", indent, e.Detail)
-					if len(errText) > width {
-						errText = fmt.Sprintf("%s%s", errText[0:width-3], "...")
-					}
-					out = append(out, errText)
-				}
-			}
+			out = append(out, errText)
 		}
 	}
-
 	return out
 }
