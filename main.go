@@ -2,17 +2,14 @@ package main
 
 import (
 	"context"
-
 	"github.com/spf13/viper"
-
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	"github.com/turbot/flowpipe/internal/config"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/filepaths"
 )
 
 var (
@@ -43,16 +40,7 @@ func main() {
 
 	cache.InMemoryInitialize(nil)
 
-	filepaths.PipesComponentWorkspaceDataDir = ".flowpipe"
-	filepaths.PipesComponentModsFileName = "mod.hcl"
-	filepaths.PipesComponentDefaultVarsFileName = "flowpipe.pvars"
-	filepaths.PipesComponentDefaultInstallDir = "~/.flowpipe"
-
-	constants.PipesComponentModDataExtension = ".hcl"
-	constants.PipesComponentVariablesExtension = ".pvars"
-	constants.PipesComponentAutoVariablesExtension = ".auto.pvars"
-	constants.PipesComponentEnvInputVarPrefix = "P_VAR_"
-	constants.PipesComponentAppName = "flowpipe"
+	constants.SetAppSpecificConstants()
 
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
