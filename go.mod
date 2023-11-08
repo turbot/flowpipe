@@ -4,8 +4,9 @@ go 1.21.0
 
 replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
 
-//
 replace github.com/turbot/pipe-fittings => ../pipe-fittings/
+
+replace github.com/turbot/go-kit => ../go-kit
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0

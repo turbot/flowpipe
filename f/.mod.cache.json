@@ -1,0 +1,18 @@
+{
+  "github_integrations": {
+    "github.com/turbot/flowpipe-mod-github": {
+      "name": "github.com/turbot/flowpipe-mod-github",
+      "alias": "github",
+      "version": "0.0.1",
+      "constraint": "*",
+      "struct_version": 20220411
+    },
+    "github.com/turbot/flowpipe-mod-slack": {
+      "name": "github.com/turbot/flowpipe-mod-slack",
+      "alias": "slack",
+      "version": "0.0.1",
+      "constraint": "*",
+      "struct_version": 20220411
+    }
+  }
+}

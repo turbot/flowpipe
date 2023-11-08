@@ -50,7 +50,7 @@ Examples:
 	}
 
 	cmd.AddCommand(modInstallCmd())
-	// cmd.AddCommand(modUninstallCmd())
+	cmd.AddCommand(modUninstallCmd())
 	// cmd.AddCommand(modUpdateCmd())
 	// cmd.AddCommand(modListCmd())
 	cmd.AddCommand(modInitCmd())
@@ -115,7 +115,6 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 
 	// if any mod names were passed as args, convert into formed mod names
 	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
-	opts.ModArgs = utils.TrimGitUrls(opts.ModArgs)
 	opts.GitUrlMode = modinstaller.GitUrlMode(gitUrlMode)
 
 	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
@@ -127,95 +126,91 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 	fmt.Println(modinstaller.BuildInstallSummary(installData))
 }
 
-// // uninstall
-// func modUninstallCmd() *cobra.Command {
-// 	var cmd = &cobra.Command{
-// 		Use:   "uninstall",
-// 		Run:   runModUninstallCmd,
-// 		Short: "Uninstall a mod and its dependencies",
-// 		Long:  `Uninstall a mod and its dependencies.`,
-// 	}
+// uninstall
+func modUninstallCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "uninstall",
+		Run:   runModUninstallCmd,
+		Short: "Uninstall a mod and its dependencies",
+		Long:  `Uninstall a mod and its dependencies.`,
+	}
 
-// 	cmdconfig.OnCmd(cmd).
-// 		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after uninstallation is complete").
-// 		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be uninstalled without modifying them").
-// 		AddBoolFlag(constants.ArgHelp, false, "Help for uninstall", cmdconfig.FlagOptions.WithShortHand("h"))
+	cmdconfig.OnCmd(cmd).
+		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after uninstallation is complete").
+		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be uninstalled without modifying them").
+		AddBoolFlag(constants.ArgHelp, false, "Help for uninstall", cmdconfig.FlagOptions.WithShortHand("h"))
+	return cmd
+}
+func runModUninstallCmd(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	utils.LogTime("cmd.runModInstallCmd")
+	defer func() {
+		utils.LogTime("cmd.runModInstallCmd end")
+		if r := recover(); r != nil {
+			error_helpers.ShowError(ctx, helpers.ToError(r))
+			//exitCode = constants.ExitCodeUnknownErrorPanic
+		}
+	}()
 
-// 	return cmd
-// }
+	// try to load the workspace mod definition
+	// - if it does not exist, this will return a nil mod and a nil error
+	workspaceMod, err := parse.LoadModfile(viper.GetString(constants.ArgModLocation))
+	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
+	if workspaceMod == nil {
+		fmt.Println("No mods installed.")
+		return
+	}
+	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
+	installData, err := modinstaller.UninstallWorkspaceDependencies(ctx, opts)
+	error_helpers.FailOnError(err)
+	fmt.Println(modinstaller.BuildUninstallSummary(installData))
+}
 
-// func runModUninstallCmd(cmd *cobra.Command, args []string) {
-// 	ctx := cmd.Context()
-// 	utils.LogTime("cmd.runModInstallCmd")
-// 	defer func() {
-// 		utils.LogTime("cmd.runModInstallCmd end")
-// 		if r := recover(); r != nil {
-// 			error_helpers.ShowError(ctx, helpers.ToError(r))
-// 			exitCode = constants.ExitCodeUnknownErrorPanic
-// 		}
-// 	}()
+// update
+func modUpdateCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "update",
+		Run:   runModUpdateCmd,
+		Short: "Update one or more mods and their dependencies",
+		Long:  `Update one or more mods and their dependencies.`,
+	}
 
-// 	// try to load the workspace mod definition
-// 	// - if it does not exist, this will return a nil mod and a nil error
-// 	workspaceMod, err := parse.LoadModfile(viper.GetString(constants.ArgModLocation))
-// 	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
-// 	if workspaceMod == nil {
-// 		fmt.Println("No mods installed.")
-// 		return
-// 	}
-// 	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
-// 	trimGitUrls(opts)
-// 	installData, err := modinstaller.UninstallWorkspaceDependencies(ctx, opts)
-// 	error_helpers.FailOnError(err)
+	cmdconfig.OnCmd(cmd).
+		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
+		AddBoolFlag(constants.ArgForce, false, "Update mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)").
+		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be updated without modifying them").
+		AddBoolFlag(constants.ArgHelp, false, "Help for update", cmdconfig.FlagOptions.WithShortHand("h"))
 
-// 	fmt.Println(modinstaller.BuildUninstallSummary(installData))
-// }
+	return cmd
+}
 
-// // update
-// func modUpdateCmd() *cobra.Command {
-// 	var cmd = &cobra.Command{
-// 		Use:   "update",
-// 		Run:   runModUpdateCmd,
-// 		Short: "Update one or more mods and their dependencies",
-// 		Long:  `Update one or more mods and their dependencies.`,
-// 	}
+func runModUpdateCmd(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	utils.LogTime("cmd.runModUpdateCmd")
+	defer func() {
+		utils.LogTime("cmd.runModUpdateCmd end")
+		if r := recover(); r != nil {
+			error_helpers.ShowError(ctx, helpers.ToError(r))
+			//exitCode = constants.ExitCodeUnknownErrorPanic
+		}
+	}()
 
-// 	cmdconfig.OnCmd(cmd).
-// 		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
-// 		AddBoolFlag(constants.ArgForce, false, "Update mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)").
-// 		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be updated without modifying them").
-// 		AddBoolFlag(constants.ArgHelp, false, "Help for update", cmdconfig.FlagOptions.WithShortHand("h"))
+	// try to load the workspace mod definition
+	// - if it does not exist, this will return a nil mod and a nil error
+	workspaceMod, err := parse.LoadModfile(viper.GetString(constants.ArgModLocation))
+	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
+	if workspaceMod == nil {
+		fmt.Println("No mods installed.")
+		return
+	}
 
-// 	return cmd
-// }
+	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
 
-// func runModUpdateCmd(cmd *cobra.Command, args []string) {
-// 	ctx := cmd.Context()
-// 	utils.LogTime("cmd.runModUpdateCmd")
-// 	defer func() {
-// 		utils.LogTime("cmd.runModUpdateCmd end")
-// 		if r := recover(); r != nil {
-// 			error_helpers.ShowError(ctx, helpers.ToError(r))
-// 			exitCode = constants.ExitCodeUnknownErrorPanic
-// 		}
-// 	}()
+	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
+	error_helpers.FailOnError(err)
 
-// 	// try to load the workspace mod definition
-// 	// - if it does not exist, this will return a nil mod and a nil error
-// 	workspaceMod, err := parse.LoadModfile(viper.GetString(constants.ArgModLocation))
-// 	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
-// 	if workspaceMod == nil {
-// 		fmt.Println("No mods installed.")
-// 		return
-// 	}
-
-// 	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
-// 	trimGitUrls(opts)
-// 	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
-// 	error_helpers.FailOnError(err)
-
-// 	fmt.Println(modinstaller.BuildInstallSummary(installData))
-// }
+	fmt.Println(modinstaller.BuildInstallSummary(installData))
+}
 
 // // list
 // func modListCmd() *cobra.Command {
@@ -289,13 +284,12 @@ func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath s
 		return nil, err
 	}
 
-	// TODO: this needs the HCL stuff
-	// load up the written mod file so that we get the updated
-	// block ranges
-	// mod, err := parse.LoadModfile(workspacePath)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	//load up the written mod file so that we get the updated
+	//block ranges
+	mod, err := parse.LoadModfile(workspacePath)
+	if err != nil {
+		return nil, err
+	}
 
 	return mod, nil
 }
