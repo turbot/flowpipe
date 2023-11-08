@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -51,8 +52,8 @@ Examples:
 
 	cmd.AddCommand(modInstallCmd())
 	cmd.AddCommand(modUninstallCmd())
-	// cmd.AddCommand(modUpdateCmd())
-	// cmd.AddCommand(modListCmd())
+	cmd.AddCommand(modUpdateCmd())
+	cmd.AddCommand(modListCmd())
 	cmd.AddCommand(modInitCmd())
 	cmd.Flags().BoolP(constants.ArgHelp, "h", false, "Help for mod")
 
@@ -212,49 +213,49 @@ func runModUpdateCmd(cmd *cobra.Command, args []string) {
 	fmt.Println(modinstaller.BuildInstallSummary(installData))
 }
 
-// // list
-// func modListCmd() *cobra.Command {
-// 	var cmd = &cobra.Command{
-// 		Use:   "list",
-// 		Run:   runModListCmd,
-// 		Short: "List currently installed mods",
-// 		Long:  `List currently installed mods.`,
-// 	}
+// list
+func modListCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "list",
+		Run:   runModListCmd,
+		Short: "List currently installed mods",
+		Long:  `List currently installed mods.`,
+	}
 
-// 	cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for list", cmdconfig.FlagOptions.WithShortHand("h"))
-// 	return cmd
-// }
+	cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for list", cmdconfig.FlagOptions.WithShortHand("h"))
+	return cmd
+}
 
-// func runModListCmd(cmd *cobra.Command, _ []string) {
-// 	ctx := cmd.Context()
-// 	utils.LogTime("cmd.runModListCmd")
-// 	defer func() {
-// 		utils.LogTime("cmd.runModListCmd end")
-// 		if r := recover(); r != nil {
-// 			error_helpers.ShowError(ctx, helpers.ToError(r))
-// 			exitCode = constants.ExitCodeUnknownErrorPanic
-// 		}
-// 	}()
+func runModListCmd(cmd *cobra.Command, _ []string) {
+	ctx := cmd.Context()
+	utils.LogTime("cmd.runModListCmd")
+	defer func() {
+		utils.LogTime("cmd.runModListCmd end")
+		if r := recover(); r != nil {
+			error_helpers.ShowError(ctx, helpers.ToError(r))
+			//exitCode = constants.ExitCodeUnknownErrorPanic
+		}
+	}()
 
-// 	// try to load the workspace mod definition
-// 	// - if it does not exist, this will return a nil mod and a nil error
-// 	workspaceMod, err := parse.LoadModfile(viper.GetString(constants.ArgModLocation))
-// 	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
-// 	if workspaceMod == nil {
-// 		fmt.Println("No mods installed.")
-// 		return
-// 	}
+	// try to load the workspace mod definition
+	// - if it does not exist, this will return a nil mod and a nil error
+	workspaceMod, err := parse.LoadModfile(viper.GetString(constants.ArgModLocation))
+	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
+	if workspaceMod == nil {
+		fmt.Println("No mods installed.")
+		return
+	}
 
-// 	opts := modinstaller.NewInstallOpts(workspaceMod)
-// 	installer, err := modinstaller.NewModInstaller(opts)
-// 	error_helpers.FailOnError(err)
+	opts := modinstaller.NewInstallOpts(workspaceMod)
+	installer, err := modinstaller.NewModInstaller(opts)
+	error_helpers.FailOnError(err)
 
-// 	treeString := installer.GetModList()
-// 	if len(strings.Split(treeString, "\n")) > 1 {
-// 		fmt.Println()
-// 	}
-// 	fmt.Println(treeString)
-// }
+	treeString := installer.GetModList()
+	if len(strings.Split(treeString, "\n")) > 1 {
+		fmt.Println()
+	}
+	fmt.Println(treeString)
+}
 
 // // init
 func modInitCmd() *cobra.Command {
@@ -302,54 +303,3 @@ func runModInitCmd(cmd *cobra.Command, args []string) {
 	}
 
 }
-
-// 	utils.LogTime("cmd.runModInitCmd")
-// 	ctx := cmd.Context()
-
-// 	defer func() {
-// 		utils.LogTime("cmd.runModInitCmd end")
-// 		if r := recover(); r != nil {
-// 			error_helpers.ShowError(ctx, helpers.ToError(r))
-// 			exitCode = constants.ExitCodeUnknownErrorPanic
-// 		}
-// 	}()
-// 	workspacePath := viper.GetString(constants.ArgModLocation)
-// 	if _, err := createWorkspaceMod(ctx, cmd, workspacePath); err != nil {
-// 		exitCode = constants.ExitCodeModInitFailed
-// 		error_helpers.FailOnError(err)
-// 	}
-// 	fmt.Printf("Created mod definition file '%s'\n", filepaths.ModFilePath(workspacePath))
-// }
-
-// // helpers
-// func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath string) (*modconfig.Mod, error) {
-// 	if !modinstaller.ValidateModLocation(ctx, workspacePath) {
-// 		return nil, fmt.Errorf("mod %s cancelled", cmd.Name())
-// 	}
-
-// 	if parse.ModfileExists(workspacePath) {
-// 		fmt.Println("Working folder already contains a mod definition file")
-// 		return nil, nil
-// 	}
-// 	mod := modconfig.CreateDefaultMod(workspacePath)
-// 	if err := mod.Save(); err != nil {
-// 		return nil, err
-// 	}
-
-// 	// load up the written mod file so that we get the updated
-// 	// block ranges
-// 	mod, err := parse.LoadModfile(workspacePath)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	return mod, nil
-// }
-
-// // Modifies(trims) the URL if contains http ot https in arguments
-// func trimGitUrls(opts *modinstaller.InstallOpts) {
-// 	for i, url := range opts.ModArgs {
-// 		opts.ModArgs[i] = strings.TrimPrefix(url, "http://")
-// 		opts.ModArgs[i] = strings.TrimPrefix(url, "https://")
-// 	}
-// }
