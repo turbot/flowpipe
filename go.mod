@@ -2,11 +2,13 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-//replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
-////
-//replace github.com/turbot/terraform-components => ../terraform-components/
-////
-//replace github.com/turbot/pipe-fittings => ../pipe-fittings/
+replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
+
+//
+replace github.com/turbot/terraform-components => ../terraform-components/
+
+//
+replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -37,13 +39,16 @@ require (
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/thediveo/enumflag/v2 v2.0.3
-	github.com/turbot/flowpipe-sdk-go v0.0.0-20231101151150-31d74c0a92f8
 	github.com/turbot/go-kit v0.9.0-rc.2
 	// pp-rebuilt branch
-	github.com/turbot/pipe-fittings v0.0.0-20231105211343-8d63d4769836
 	github.com/unrolled/secure v1.13.0
 	github.com/zclconf/go-cty v1.14.1
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
+	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
 )
 
 require (
