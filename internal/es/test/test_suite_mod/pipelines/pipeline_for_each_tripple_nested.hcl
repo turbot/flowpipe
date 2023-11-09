@@ -46,7 +46,7 @@ pipeline "run_me_top" {
     param "names" {
         type = list(string)
         default = ["spock", "kirk", "sulu"]
-        # default = ["spock"]
+        #default = ["spock"]
     }
 
     step "pipeline" "run" {
