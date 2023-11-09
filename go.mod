@@ -36,7 +36,7 @@ require (
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/thediveo/enumflag/v2 v2.0.3
-	github.com/turbot/go-kit v0.9.0-rc.2
+	github.com/turbot/go-kit v0.9.0-rc.3
 	// pp-rebuilt branch
 	github.com/unrolled/secure v1.13.0
 	github.com/zclconf/go-cty v1.14.1
@@ -265,7 +265,7 @@ require (
 
 require (
 	github.com/denisbrodbeck/machineid v1.0.1
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
 	github.com/hashicorp/hcl v1.0.0 // indirect

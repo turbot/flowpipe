@@ -100,9 +100,14 @@ func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			if resp.Title != nil {
 				output += "Title:    " + *resp.Title + "\n"
 			}
+
 			output += "Name:     " + *resp.Name
 			output += "\nPipeline: " + *resp.Pipeline
 			output += "\nType:     " + *resp.Type
+			if resp.Url != nil {
+				output += "\nUrl:      " + *resp.Url
+			}
+
 			if resp.Tags != nil {
 				output += "\nTags:   "
 				isFirstTag := true
