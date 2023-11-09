@@ -53,6 +53,25 @@ func NewPipelineStepQueue(opts ...PipelineStepQueueOption) (*PipelineStepQueue, 
 	return e, nil
 }
 
+func NewPipelineStepQueueFromPipelineStepFinishedForLoop(e *PipelineStepFinished, stepName string) *PipelineStepQueue {
+
+	cmd := &PipelineStepQueue{
+		Event:           NewChildEvent(e.Event),
+		StepExecutionID: util.NewStepExecutionID(),
+	}
+	if e.PipelineExecutionID != "" {
+		cmd.PipelineExecutionID = e.PipelineExecutionID
+	}
+
+	cmd.StepName = stepName
+	cmd.StepInput = *e.StepLoop.Input
+	cmd.StepForEach = e.StepForEach
+	cmd.DelayMs = 0
+	cmd.NextStepAction = modconfig.NextStepActionStart
+
+	return cmd
+}
+
 func NewPipelineStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconfig.NextStep) (*PipelineStepQueue, error) {
 	cmd := &PipelineStepQueue{
 		Event:           NewChildEvent(e.Event),

@@ -102,41 +102,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	for _, nextStep := range e.NextSteps {
 
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
-
-		if nextStep.StepLoop != nil {
-			panic("loop not supported")
-
-			// Special instruction for "loop"
-			// hasForEach := false
-			// inputCount := 1
-			// key := "0"
-
-			// input := *nextStep.StepLoop.Input
-
-			// var foreachOutput modconfig.Output
-
-			// // calculate the for_each control, is it a single step or a for_each step?
-			// forEachCtyVal := cty.StringVal("0")
-			// if nextStep.StepForEach != nil {
-			// 	hasForEach = true
-			// 	inputCount = nextStep.StepForEach.TotalCount
-			// 	key = nextStep.StepForEach.Key
-			// 	eachGoVal, err := hclhelpers.CtyToGo(nextStep.StepForEach.Each.Value)
-			// 	if err != nil {
-			// 		logger.Error("Error converting cty to go", "error", err)
-			// 		return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
-			// 	}
-			// 	input[schema.AttributeEach] = eachGoVal
-			// 	// foreachOutput = *nextStep.StepForEach.Output
-			// 	forEachCtyVal = nextStep.StepForEach.Each.Value
-			// }
-
-			// // in a "loop" we should already know the input, it's a side effect of calculating the "IF" attribute of the loop
-			// go runNonForEachStep(ctx, h.CommandBus, e, hasForEach, foreachOutput, forEachCtyVal, inputCount, modconfig.NextStepActionStart, nextStep, input, key)
-
-			// continue
-		}
-
 		stepForEach := stepDefn.GetForEach()
 
 		// If there's a for each, runs a new command: step_for_each_planner
@@ -153,17 +118,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			// don't return here, but process the next step
 			continue
 		}
-
-		// evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
-		// if err != nil {
-		// 	logger.Error("Error building eval context for step", "error", err)
-		// 	return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
-		// }
-		// if stepDefn.GetUnresolvedBodies()["loop"] != nil {
-		// 	// If the execution falls here, it means it's the beginning of the loop
-		// 	// if it's part of a loop, it will be short circuited in the beginning of this for loop
-		// 	// evalContext = execution.AddLoop(nil, evalContext)
-		// }
 
 		// var title string
 
