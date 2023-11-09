@@ -4,16 +4,15 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineStarted EventHandler
 
-var pipelineStarted = event.PipelineStarted{}
-
 func (h PipelineStarted) HandlerName() string {
-	return pipelineStarted.HandlerName()
+	return execution.PipelineStartedEvent.HandlerName()
 }
 
 func (PipelineStarted) NewEvent() interface{} {

@@ -7,7 +7,7 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-type PipelineStepQueued struct {
+type StepQueued struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Unique identifier for this pipeline execution
@@ -25,21 +25,20 @@ type PipelineStepQueued struct {
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
 
-func (e *PipelineStepQueued) GetEvent() *Event {
+func (e *StepQueued) GetEvent() *Event {
 	return e.Event
 }
 
-func (e *PipelineStepQueued) HandlerName() string {
-	return "handler.pipeline_step_queued"
+func (e *StepQueued) HandlerName() string {
+	return "handler.step_queued"
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineStepQueuedOption func(*PipelineStepQueued) error
+type StepQueuedOption func(*StepQueued) error
 
-// NewPipelineStepQueued creates a new PipelineStepQueued event.
-func NewPipelineStepQueued(opts ...PipelineStepQueuedOption) (*PipelineStepQueued, error) {
+// NewStepQueued creates a new StepQueued event.
+func NewStepQueued(opts ...StepQueuedOption) (*StepQueued, error) {
 	// Defaults
-	e := &PipelineStepQueued{}
+	e := &StepQueued{}
 	// Set options
 	for _, opt := range opts {
 		err := opt(e)
@@ -50,13 +49,13 @@ func NewPipelineStepQueued(opts ...PipelineStepQueuedOption) (*PipelineStepQueue
 	return e, nil
 }
 
-func ForPipelineStepQueue(cmd *PipelineStepQueue) PipelineStepQueuedOption {
-	return func(e *PipelineStepQueued) error {
+func ForStepQueue(cmd *StepQueue) StepQueuedOption {
+	return func(e *StepQueued) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
 		} else {
-			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline start command: %v", cmd))
+			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline step queued: %v", cmd))
 		}
 		e.StepExecutionID = cmd.StepExecutionID
 		e.StepName = cmd.StepName

@@ -12,10 +12,8 @@ import (
 
 type PipelineStepStarted EventHandler
 
-var pipelineStepStarted = event.PipelineStepStarted{}
-
 func (h PipelineStepStarted) HandlerName() string {
-	return pipelineStepStarted.HandlerName()
+	return execution.StepPipelineStarted.HandlerName()
 }
 
 func (PipelineStepStarted) NewEvent() interface{} {

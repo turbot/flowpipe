@@ -4,26 +4,25 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineStepQueued EventHandler
 
-var pipelineStepQueued = event.PipelineStepQueued{}
-
 func (h PipelineStepQueued) HandlerName() string {
-	return pipelineStepQueued.HandlerName()
+	return execution.StepQueuedEvent.HandlerName()
 }
 
 func (PipelineStepQueued) NewEvent() interface{} {
-	return &event.PipelineStepQueued{}
+	return &event.StepQueued{}
 }
 
 func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	logger := fplog.Logger(ctx)
-	e, ok := ei.(*event.PipelineStepQueued)
+	e, ok := ei.(*event.StepQueued)
 
 	if !ok {
 		logger.Error("invalid event type", "expected", "*event.PipelineStepQueued", "actual", ei)
@@ -32,7 +31,7 @@ func (h PipelineStepQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	// Step has been queued (but not yet started), so here we just need to start the step
 	// the code should be the same as the pipeline_planned event handler
-	cmd, err := event.NewPipelineStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.StepForEach, e.StepLoop, e.NextStepAction))
+	cmd, err := event.NewStepStart(event.ForPipelineStepQueued(e), event.WithStep(e.StepName, e.StepInput, e.StepForEach, e.StepLoop, e.NextStepAction))
 	if err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepQueuedToPipelineFail(e, err)))
 		if err != nil {

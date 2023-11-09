@@ -50,7 +50,7 @@ func NewPipelineStepFinished(opts ...PipelineStepFinishedOption) (*PipelineStepF
 	return e, nil
 }
 
-func ForPipelineStepStartToPipelineStepFinished(cmd *PipelineStepStart) PipelineStepFinishedOption {
+func ForPipelineStepStartToPipelineStepFinished(cmd *StepStart) PipelineStepFinishedOption {
 	return func(e *PipelineStepFinished) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {

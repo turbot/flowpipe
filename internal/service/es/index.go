@@ -139,8 +139,8 @@ func (es *ESService) Start() error {
 				command.PipelineResumeHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.PipelineStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.PipelineStepFinishHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineStepQueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineStepStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
+				command.StepQueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
+				command.StepStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
 				command.StepForEachPlanHandler{EventBus: &command.FpEventBus{Eb: eb}},
 			}
 		},

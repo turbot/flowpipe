@@ -60,7 +60,7 @@ func runOneStep(ctx context.Context, commandBus *FpCommandBus, e *event.StepForE
 
 	// nextStep.StepForEach = forEachControl
 
-	cmd, err := event.NewPipelineStepQueueFromStepForEachPlanned(e, nextStep)
+	cmd, err := event.NewStepQueueFromStepForEachPlanned(e, nextStep)
 	if err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFailFromStepForEachPlanned(e, err))
 		if err != nil {

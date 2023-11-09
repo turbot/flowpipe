@@ -55,7 +55,7 @@ func NewPipelineStepStarted(opts ...PipelineStepStartedOption) (*PipelineStepSta
 	return e, nil
 }
 
-func ForPipelineStepStart(cmd *PipelineStepStart) PipelineStepStartedOption {
+func ForPipelineStepStart(cmd *StepStart) PipelineStepStartedOption {
 	return func(e *PipelineStepStarted) error {
 		e.Event = NewChildEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {

@@ -16,10 +16,8 @@ import (
 
 type PipelinePlanHandler CommandHandler
 
-var pipelinePlan = event.PipelinePlan{}
-
 func (h PipelinePlanHandler) HandlerName() string {
-	return pipelinePlan.HandlerName()
+	return execution.PipelinePlanCommand.HandlerName()
 }
 
 func (h PipelinePlanHandler) NewCommand() interface{} {

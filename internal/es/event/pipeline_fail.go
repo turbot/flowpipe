@@ -166,7 +166,7 @@ func ForPipelineStepFinishedToPipelineFail(e *PipelineStepFinished, err error) P
 	}
 }
 
-func ForPipelineStepQueuedToPipelineFail(e *PipelineStepQueued, err error) PipelineFailOption {
+func ForPipelineStepQueuedToPipelineFail(e *StepQueued, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
