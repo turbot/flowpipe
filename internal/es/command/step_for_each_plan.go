@@ -203,9 +203,10 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 
 		forEachCtyVal := forEachCtyVals[k][schema.AttributeTypeValue]
 		forEachControl := &modconfig.StepForEach{
-			Key:        k,
-			TotalCount: len(forEachCtyVals),
-			Each:       json.SimpleJSONValue{Value: forEachCtyVal},
+			ForEachStep: true,
+			Key:         k,
+			TotalCount:  len(forEachCtyVals),
+			Each:        json.SimpleJSONValue{Value: forEachCtyVal},
 		}
 		nextStep.StepForEach = forEachControl
 

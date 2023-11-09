@@ -50,14 +50,15 @@ func runOneStep(ctx context.Context, commandBus *FpCommandBus, e *event.StepForE
 
 	logger := fplog.Logger(ctx)
 
-	forEachControl := &modconfig.StepForEach{
-		Key: nextStep.StepForEach.Key,
-		// Output:     &forEachOutput,
-		TotalCount: nextStep.StepForEach.TotalCount,
-		Each:       nextStep.StepForEach.Each,
-	}
+	// forEachControl := &modconfig.StepForEach{
+	// 	ForEachStep: true,
+	// 	Key:         nextStep.StepForEach.Key,
+	// 	// Output:     &forEachOutput,
+	// 	TotalCount: nextStep.StepForEach.TotalCount,
+	// 	Each:       nextStep.StepForEach.Each,
+	// }
 
-	nextStep.StepForEach = forEachControl
+	// nextStep.StepForEach = forEachControl
 
 	cmd, err := event.NewPipelineStepQueueFromStepForEachPlanned(e, nextStep)
 	if err != nil {

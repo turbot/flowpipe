@@ -80,46 +80,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	for _, stepDefn := range pipelineDefn.Steps {
 
 		// This mean the step has been initialized
-
 		if len(pex.StepStatus[stepDefn.GetFullyQualifiedName()]) > 0 {
-
-			// for_each that returns a list will still be a map, but the key of the map is a string
-			// of "0", "1", "2" and so on.
-			for _, stepStatus := range pex.StepStatus[stepDefn.GetFullyQualifiedName()] {
-
-				if stepStatus.StepExecutions == nil {
-					continue
-				}
-
-				// find the latest step execution, check if it has a loop that needs to be run
-				latestStepExecution := stepStatus.StepExecutions[len(stepStatus.StepExecutions)-1]
-
-				// TODO: error retry
-
-				// no step loop means we're done here
-				if latestStepExecution.StepLoop == nil || latestStepExecution.StepLoop.LoopCompleted {
-					continue
-				}
-
-				// Just because the loop has not been completed, it doesn't mean the next step is NOT already been started by another planner (!)
-				// check the queue status
-				//
-				// TODO: locking issue
-				if len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
-					continue
-				}
-
-				// bypass depends_on check because if we're here, the step has already started so we know that all its
-				// dependencies are met
-				//
-				e.NextSteps = append(e.NextSteps, modconfig.NextStep{
-					StepName:    stepDefn.GetFullyQualifiedName(),
-					Action:      modconfig.NextStepActionStart,
-					StepForEach: latestStepExecution.StepForEach,
-					StepLoop:    latestStepExecution.StepLoop,
-				})
-			}
-
 			continue
 		}
 
@@ -181,7 +142,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		nextStep := modconfig.NextStep{
 			StepName: stepDefn.GetFullyQualifiedName(),
-			Action:   modconfig.NextStepActionStart}
+			Action:   modconfig.NextStepActionStart,
+		}
 
 		// Check if there's a for_each, if there isn't calculate the input
 		// if there is a for_each, don't calculate the input, it's the job of step_for_each_plan to calculate the input

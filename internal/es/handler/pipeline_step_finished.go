@@ -65,6 +65,7 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 	// check if we are in a loop. If we are in a loop start the next loop
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 	if loopBlock != nil && e.StepLoop != nil && !e.StepLoop.LoopCompleted {
+		
 		cmd := event.NewPipelineStepQueueFromPipelineStepFinishedForLoop(e, stepName)
 		if err != nil {
 			err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))

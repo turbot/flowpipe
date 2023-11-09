@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/json"
 )
@@ -119,6 +120,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			continue
 		}
 
+		loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+		var stepLoop *modconfig.StepLoop
+		if loopBlock != nil {
+			stepLoop = &modconfig.StepLoop{
+				Index: 0,
+			}
+		}
+
 		// var title string
 
 		// if forEachCtyVal.Type().IsPrimitiveType() {
@@ -137,25 +146,28 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// forEachOutput.Data[schema.AttributeTypeValue] = title
 
 		// Start each step in parallel
-		runNonForEachStep(ctx, h.CommandBus, e, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, "0")
+		runNonForEachStep(ctx, h.CommandBus, e, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
 
 	}
 
 	return nil
 }
 
-func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePlanned, forEachOutput modconfig.Output, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, key string) {
+func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePlanned, forEachOutput modconfig.Output, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, stepLoop *modconfig.StepLoop) {
 
 	logger := fplog.Logger(ctx)
 
 	// If a step does not have a for_each, we still build a for_each control but with key of "0"
 	forEachControl := &modconfig.StepForEach{
-		Key:        "0",
-		TotalCount: 1,
-		Each:       json.SimpleJSONValue{Value: cty.StringVal("0")},
+		ForEachStep: false,
+		Key:         "0",
+		TotalCount:  1,
+		Each:        json.SimpleJSONValue{Value: cty.StringVal("0")},
 	}
 
 	cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, nextStep.DelayMs, forEachNextStepAction))
+	cmd.StepLoop = stepLoop
+
 	if err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		if err != nil {
