@@ -1029,12 +1029,12 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal(float64(10), pex.StepStatus["transform.basic_transform_refers_param"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 
 	assert.Equal(1, len(pex.StepStatus["transform.depends_on_transform_step"]))
-	assert.Equal(2, len(pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions))
-	if _, ok := pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue].(string); !ok {
+	assert.Equal(1, len(pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions))
+	if _, ok := pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
 		assert.Fail("Unable to convert output to string")
 		return
 	}
-	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue])
+	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 
 	// Pipeline 2
 
@@ -1082,7 +1082,7 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal(3, len(pex.StepStatus["transform.text_1"]))
 }
 
-// TODO : Add back the test to validatet he input step
+// TODO : Add back the test to validate  the input step
 
 // func (suite *ModTestSuite) TestPipelineInputStep() {
 // 	assert := assert.New(suite.T())

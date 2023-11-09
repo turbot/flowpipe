@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -25,7 +26,13 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 	return &event.PipelinePlan{}
 }
 
+// Define a mutex.
+var mu sync.Mutex
+
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
+	mu.Lock()         // Lock the mutex before entering critical section.
+	defer mu.Unlock() // Unlock the mutex when the function exits.
+
 	logger := fplog.Logger(ctx)
 
 	evt, ok := c.(*event.PipelinePlan)
@@ -80,7 +87,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	for _, stepDefn := range pipelineDefn.Steps {
 
 		// This mean the step has been initialized
-		if len(pex.StepStatus[stepDefn.GetFullyQualifiedName()]) > 0 {
+		if pex.StepStatus[stepDefn.GetFullyQualifiedName()] != nil {
 			continue
 		}
 
