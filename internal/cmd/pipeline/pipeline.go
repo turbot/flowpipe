@@ -2,9 +2,11 @@ package pipeline
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
@@ -161,16 +163,28 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			return
 		}
 
-		if resp != nil {
+		if executionMode == "synchronous" {
 			s, err := prettyjson.Marshal(resp)
-
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
 				return
 			}
-
 			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
+		} else {
+			var executionId string
+			var rootPipelineId string
 
+			if resp != nil && resp["flowpipe"] != nil {
+				contents := resp["flowpipe"].(map[string]interface{})
+				executionId = contents["execution_id"].(string)
+				rootPipelineId = contents["pipeline_execution_id"].(string)
+			}
+
+			err := pollEventLogAndRender(ctx, apiClient, executionId, rootPipelineId)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
+				return
+			}
 		}
 	}
 }
@@ -334,6 +348,45 @@ func validatePipelineWaitTime(wait int) error {
 	mx := 3600
 	if wait < mn || wait > mx {
 		return fmt.Errorf("invalid wait time: %d - should be between %d and %d", wait, mn, mx)
+	}
+	return nil
+}
+
+func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APIClient, executionId, rootPipelineId string) error {
+	isComplete := false
+	lastIndexRead := -1
+	for {
+		logs, _, err := client.ProcessApi.GetLog(ctx, executionId).Execute()
+		if err != nil {
+			return err
+		}
+
+		for logIndex, logEntry := range logs.Items {
+			if logIndex > lastIndexRead {
+				// TODO: Transform & Output
+				fmt.Printf("[%s] %v\n", *logEntry.EventType, *logEntry.Payload) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
+				lastIndexRead = logIndex
+
+				if *logEntry.EventType == "handler.pipeline_finished" || *logEntry.EventType == "handler.pipeline_failed" {
+					if logEntry.Payload != nil {
+						payload := make(map[string]any)
+						if err := json.Unmarshal([]byte(*logEntry.Payload), &payload); err != nil {
+							return err
+						}
+
+						if payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == rootPipelineId {
+							isComplete = true
+							break
+						}
+					}
+				}
+			}
+		}
+		if isComplete {
+			break
+		}
+
+		time.Sleep(500 * time.Millisecond)
 	}
 	return nil
 }
