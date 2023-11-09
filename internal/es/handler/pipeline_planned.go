@@ -154,14 +154,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			continue
 		}
 
-		forEachNextStepActions := map[string]modconfig.NextStepAction{}
-
-		// inputs will gather the input data for each step execution, if we have a for_each
-		// the inputs length maybe > 1. If we don't have a for_each, then the inputs length will be
-		// exactly 1
-		//
-		input := nextStep.Input
-
 		// evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		// if err != nil {
 		// 	logger.Error("Error building eval context for step", "error", err)
@@ -191,7 +183,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		// forEachOutput.Data[schema.AttributeTypeValue] = title
 
 		// Start each step in parallel
-		runNonForEachStep(ctx, h.CommandBus, e, modconfig.Output{}, forEachNextStepActions["0"], nextStep, input, "0")
+		runNonForEachStep(ctx, h.CommandBus, e, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, "0")
 
 	}
 
