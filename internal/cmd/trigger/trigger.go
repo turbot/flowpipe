@@ -96,16 +96,15 @@ func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 		}
 
 		if resp != nil {
-			output := "\n"
-
+			output := ""
 			if resp.Title != nil {
 				output += "Title:    " + *resp.Title + "\n"
 			}
-			output += "Name:     " + *resp.Name + "\n"
-			output += "Pipeline: " + *resp.Pipeline + "\n"
-			output += "Type:     " + *resp.Type + "\n"
+			output += "Name:     " + *resp.Name
+			output += "\nPipeline: " + *resp.Pipeline
+			output += "\nType:     " + *resp.Type
 			if resp.Tags != nil {
-				output += "Tags:   "
+				output += "\nTags:   "
 				isFirstTag := true
 				for k, v := range *resp.Tags {
 					if isFirstTag {
@@ -115,10 +114,9 @@ func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 						output += ", " + k + " = " + v
 					}
 				}
-				output += "\n"
 			}
 			if resp.Description != nil {
-				output += "\nDescription:\n" + *resp.Description + "\n"
+				output += "\n\nDescription:\n" + *resp.Description
 			}
 			//nolint:forbidigo // CLI console output
 			fmt.Println(output)
