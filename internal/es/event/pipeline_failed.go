@@ -60,6 +60,40 @@ func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *Pipel
 	return e
 }
 
+func NewPipelineFailedFromStepForEachPlan(cmd *StepForEachPlan, err error) *PipelineFailed {
+	e := &PipelineFailed{}
+
+	var errorModel perr.ErrorModel
+	if ok := errors.As(err, &errorModel); !ok {
+		errorModel = perr.InternalWithMessage(err.Error())
+	}
+
+	e.Event = NewFlowEvent(cmd.Event)
+	e.PipelineExecutionID = cmd.PipelineExecutionID
+	e.Error = &modconfig.StepError{
+		Error:               errorModel,
+		PipelineExecutionID: cmd.PipelineExecutionID,
+	}
+
+	return e
+}
+
+func NewPipelineFailedFromPipelineLoad(cmd *PipelineLoad, err error) *PipelineFailed {
+
+	e := &PipelineFailed{}
+	var errorModel perr.ErrorModel
+	if ok := errors.As(err, &errorModel); !ok {
+		errorModel = perr.InternalWithMessage(err.Error())
+	}
+	e.Event = NewFlowEvent(cmd.Event)
+	e.PipelineExecutionID = cmd.PipelineExecutionID
+	e.Error = &modconfig.StepError{
+		Error:               errorModel,
+		PipelineExecutionID: cmd.PipelineExecutionID,
+	}
+	return e
+}
+
 // ForPipelineFail returns a PipelineFailedOption that sets the fields of the
 // PipelineFailed event from a PipelineFail command.
 func ForPipelineFail(cmd *PipelineFail, pipelineOutput map[string]interface{}) PipelineFailedOption {
@@ -68,24 +102,6 @@ func ForPipelineFail(cmd *PipelineFail, pipelineOutput map[string]interface{}) P
 		e.PipelineExecutionID = cmd.PipelineExecutionID
 		e.Error = cmd.Error
 		e.PipelineOutput = pipelineOutput
-		return nil
-	}
-}
-
-// ForPipelineLoadToPipelineFailed returns a PipelineFailedOption that sets the fields of the
-// PipelineFailed event from a PipelineLoad command.
-func ForPipelineLoadToPipelineFailed(cmd *PipelineLoad, err error) PipelineFailedOption {
-	return func(e *PipelineFailed) error {
-		var errorModel perr.ErrorModel
-		if ok := errors.As(err, &errorModel); !ok {
-			errorModel = perr.InternalWithMessage(err.Error())
-		}
-		e.Event = NewFlowEvent(cmd.Event)
-		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.Error = &modconfig.StepError{
-			Error:               errorModel,
-			PipelineExecutionID: cmd.PipelineExecutionID,
-		}
 		return nil
 	}
 }

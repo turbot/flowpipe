@@ -10,8 +10,10 @@ import (
 
 type PipelineQueueHandler CommandHandler
 
+var pipelineQueue = event.PipelineQueue{}
+
 func (h PipelineQueueHandler) HandlerName() string {
-	return "command.pipeline_queue"
+	return pipelineQueue.HandlerName()
 }
 
 func (h PipelineQueueHandler) NewCommand() interface{} {

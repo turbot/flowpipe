@@ -36,19 +36,19 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	// ? should we have a main store for this rather than creating a new execution instance?
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineLoadToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
 	}
 
 	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineLoadToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
 	}
 
 	e, err := event.NewPipelineLoaded(
 		event.ForPipelineLoad(cmd),
 		event.WithPipelineDefinition(defn))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineLoadToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
 	}
 
 	return h.EventBus.Publish(ctx, e)

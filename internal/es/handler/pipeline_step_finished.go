@@ -6,7 +6,9 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 type PipelineStepFinished EventHandler
@@ -43,6 +45,42 @@ func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error 
 	// more work should be done.
 	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
 		return nil
+	}
+
+	stepExecution := pex.StepExecutions[e.StepExecutionID]
+	stepName := stepExecution.Name
+
+	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
+	if err != nil {
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
+	}
+
+	stepDefn := pipelineDefn.GetStep(stepName)
+	if stepDefn == nil {
+		logger.Error("step not found", "step_name", stepName)
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, perr.BadRequestWithMessage("step not found"))))
+	}
+
+	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
+	// check if we are in a loop. If we are in a loop start the next loop
+	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+	if loopBlock != nil && e.StepLoop != nil && !e.StepLoop.LoopCompleted {
+		
+		cmd := event.NewPipelineStepQueueFromPipelineStepFinishedForLoop(e, stepName)
+		if err != nil {
+			err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
+			if err != nil {
+				logger.Error("Error publishing event", "error", err)
+			}
+			return nil
+		}
+		return h.CommandBus.Send(ctx, cmd)
+	}
+
+	if !helpers.IsNil(stepDefn.GetForEach()) {
+		cmd := event.NewStepForEachPlanFromPipelineStepFinished(e, stepName)
+
+		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))

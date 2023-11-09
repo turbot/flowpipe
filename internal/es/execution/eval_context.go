@@ -22,6 +22,8 @@ func AddEachForEach(stepForEach *modconfig.StepForEach, evalContext *hcl.EvalCon
 func AddLoop(stepLoop *modconfig.StepLoop, evalContext *hcl.EvalContext) *hcl.EvalContext {
 	var loopValue cty.Value
 
+	// Always override the loop variable, this function may be called in a loop
+	// processing more than one step
 	if stepLoop == nil {
 		loopValue = cty.ObjectVal(map[string]cty.Value{
 			"index": cty.NumberIntVal(int64(0)),

@@ -66,10 +66,7 @@ type PipelineExecution struct {
 
 		LOOP
 
-		Since we added loop, the data structure can get rather complicated. A loop is simply another map which the key is
-		"0", "1", "2". So in a way like for_each that has a list result.
-
-		If the step has a loop and for_each the data is nested twice, i.e.: ["0"]["1"]
+		Loop will be recorded in StepStatus.StepExecution, it's an array
 		**/
 	StepStatus map[string]map[string]*StepStatus `json:"step_status,omitempty"`
 
@@ -365,7 +362,6 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.PipelineStep, ex *Execution) bool {
-
 	return true
 }
 
@@ -389,7 +385,6 @@ func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 
 func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
 	return false
-	// return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].LoopHold
 }
 
 // TODO: this doesn't work for step execution retry, it assumes that the entire step
@@ -410,18 +405,9 @@ func (pe *PipelineExecution) IsStepQueued(stepName string) bool {
 // InitializeStep initializes the step status for the given step.
 func (pe *PipelineExecution) InitializeStep(stepName string) {
 	if pe.StepStatus[stepName] != nil {
-		// Step is already initialized
 		return
 	}
 	pe.StepStatus[stepName] = map[string]*StepStatus{}
-
-	// &StepStatus{
-	// 	Initializing: true,
-	// 	Queued:       map[string]bool{},
-	// 	Started:      map[string]bool{},
-	// 	Finished:     map[string]bool{},
-	// 	Failed:       map[string]bool{},
-	// }
 }
 
 // QueueStep marks the given step execution as queued.
@@ -458,7 +444,8 @@ func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) 
 type StepStatus struct {
 	// When the step is initializing it doesn't yet have any executions.
 	// We track it as initializing until the first execution is queued.
-	Initializing bool `json:"initializing"`
+	Initializing bool   `json:"initializing"`
+	OverralState string `json:"overral_state"`
 
 	// Indicate that step is in a loop so we don't mark it as finished
 	LoopHold bool `json:"loop_hold"`
@@ -479,9 +466,22 @@ type StepStatus struct {
 
 // IsComplete returns true if all executions of the step are finished or failed.
 func (s *StepStatus) IsComplete() bool {
+	if s == nil {
+		return false
+	}
 	// One step can have more than 1 execution, for example if a step has a for_each directive
 	// or retries
+	if s.OverralState == "empty_for_each" {
+		return true
+	}
 	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold
+}
+
+func (s *StepStatus) IsStarted() bool {
+	if s == nil {
+		return false
+	}
+	return s.Initializing || len(s.Queued) > 0 || len(s.Started) > 0 || !s.LoopHold
 }
 
 // IsFail returns true if any executions of the step failed.

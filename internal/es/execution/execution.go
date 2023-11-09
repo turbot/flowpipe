@@ -443,6 +443,14 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		// TODO: is this right?
 		pe.Status = "started"
 
+	case "command.pipeline_plan":
+		var et event.PipelinePlan
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall command.pipeline_plan event", "execution", ex.ID, "error", err)
+			return err
+		}
+
 	case "handler.pipeline_planned":
 		var et event.PipelinePlanned
 		err := json.Unmarshal(logEntry.Payload, &et)
@@ -450,13 +458,11 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			logger.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
 			return err
 		}
-		pd, err := ex.PipelineDefinition(et.PipelineExecutionID)
-		if err != nil {
-			return err
-		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
-		for _, step := range pd.Steps {
-			pe.InitializeStep(step.GetFullyQualifiedName())
+
+		for _, nextStep := range et.NextSteps {
+			pe.InitializeStep(nextStep.StepName)
 		}
 
 	// TODO: I'm not sure if this is the right move. Initially I was using this to introduce the concept of a "queue"
@@ -585,6 +591,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		}
 
 		pe.StepExecutions[et.StepExecutionID].EndTime = et.Event.CreatedAt
+
 		// TODO: Fix creating duplicate data as we dereference before appending (moved EndTime above this so it is passed into StepStatus)
 		// append the Step Execution to the StepStatus (yes it's duplicate data, we may be able to refactor this later)
 		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions = append(pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions,
@@ -608,6 +615,34 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		} else {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 		}
+
+	case "handler.step_for_each_planned":
+		var et event.StepForEachPlanned
+		err := json.Unmarshal(logEntry.Payload, &et)
+		if err != nil {
+			logger.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
+			return err
+		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		stepStatusMap := pe.StepStatus[et.StepName]
+
+		if len(et.NextSteps) == 0 {
+			// this means the for_each step has complete (or failed), mark it as such
+
+			// TODO: I don't think this is the end state
+			if len(stepStatusMap) == 0 {
+				stepStatusMap["0"] = &StepStatus{
+					OverralState: "empty_for_each",
+				}
+			} else {
+				for _, stepStatus := range stepStatusMap {
+					stepStatus.OverralState = "complete_or_fail"
+				}
+			}
+		}
+		pe.StepStatus[et.StepName] = stepStatusMap
+
+		// if there's NextSteps .. then we assume that the step is still running
 
 	case "handler.pipeline_canceled":
 		var et event.PipelineCanceled

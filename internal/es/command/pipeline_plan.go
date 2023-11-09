@@ -2,12 +2,16 @@ package command
 
 import (
 	"context"
+	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -22,7 +26,13 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 	return &event.PipelinePlan{}
 }
 
+// Define a mutex.
+var mu sync.Mutex
+
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
+	mu.Lock()         // Lock the mutex before entering critical section.
+	defer mu.Unlock() // Unlock the mutex when the function exits.
+
 	logger := fplog.Logger(ctx)
 
 	evt, ok := c.(*event.PipelinePlan)
@@ -58,6 +68,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
 	}
 
+	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
+	if err != nil {
+		logger.Error("Error building eval context for step", "error", err)
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+	}
+
 	// Each defined step in the pipeline can be in a few states:
 	// - dependencies not met
 	// - queued
@@ -68,89 +84,33 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// Notably each step may also have multiple executions (e.g. in a for
 	// loop). So, we need to track the overall status of the step separately
 	// from the status of each execution.
-	for _, step := range pipelineDefn.Steps {
-		// TODO: error handling
-
-		// means step has a for_each, each for_each is another "series" of steps
-		//
-		// the planner need to handle them as if they are invidual "steps"
-		//
-		// if there's a problem if one of the n number of for_each, we just want to retry that one
-		//
-		// for example
-		/*
-			   step "echo" "echo {
-					for_each = ["foo", "bar"]
-					text = "foo"
-			   }
-
-			   this step will generate 2 "index".
-		*/
+	for _, stepDefn := range pipelineDefn.Steps {
 
 		// This mean the step has been initialized
-
-		if len(pex.StepStatus[step.GetFullyQualifiedName()]) > 0 {
-
-			// for_each that returns a list will still be a map, but the key of the map is a string
-			// of "0", "1", "2" and so on.
-			for _, stepStatus := range pex.StepStatus[step.GetFullyQualifiedName()] {
-
-				if stepStatus.StepExecutions == nil {
-					continue
-				}
-
-				// find the latest step execution, check if it has a loop that needs to be run
-				latestStepExecution := stepStatus.StepExecutions[len(stepStatus.StepExecutions)-1]
-
-				// TODO: error retry
-
-				// no step loop means we're done here
-				if latestStepExecution.StepLoop == nil || latestStepExecution.StepLoop.LoopCompleted {
-					continue
-				}
-
-				// Just because the loop has not been completed, it doesn't mean the next step is NOT already been started by another planner (!)
-				// check the queue status
-				//
-				// TODO: locking issue
-				if len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
-					continue
-				}
-
-				// bypass depends_on check because if we're here, the step has already started so we know that all its
-				// dependencies are met
-				//
-				e.NextSteps = append(e.NextSteps, modconfig.NextStep{
-					StepName:    step.GetFullyQualifiedName(),
-					Action:      modconfig.NextStepActionStart,
-					StepForEach: latestStepExecution.StepForEach,
-					StepLoop:    latestStepExecution.StepLoop,
-				})
-			}
-
+		if pex.StepStatus[stepDefn.GetFullyQualifiedName()] != nil {
 			continue
 		}
 
-		if pex.IsStepQueued(step.GetFullyQualifiedName()) {
+		if pex.IsStepQueued(stepDefn.GetFullyQualifiedName()) {
 			continue
 		}
 
 		// No need to plan if the step has been initialized
-		if pex.IsStepInitialized(step.GetFullyQualifiedName()) {
+		if pex.IsStepInitialized(stepDefn.GetFullyQualifiedName()) {
 			continue
 		}
 
-		if pex.IsStepInLoopHold(step.GetFullyQualifiedName()) {
+		if pex.IsStepInLoopHold(stepDefn.GetFullyQualifiedName()) {
 			continue
 		}
 
 		// If the steps dependencies are not met, then skip it.
 		// TODO - this is completely naive and does not handle cycles.
 		dependendenciesMet := true
-		for _, dep := range step.GetDependsOn() {
+		for _, dep := range stepDefn.GetDependsOn() {
 
 			// Cannot depend on yourself
-			if step.GetFullyQualifiedName() == dep {
+			if stepDefn.GetFullyQualifiedName() == dep {
 				// TODO - issue a warning? How do we issue a warning?
 				continue
 			}
@@ -175,7 +135,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
 					// be ended in the handler/pipeline_planned stage
 					e.NextSteps = append(e.NextSteps, modconfig.NextStep{
-						StepName: step.GetFullyQualifiedName(),
+						StepName: stepDefn.GetFullyQualifiedName(),
 						Action:   modconfig.NextStepActionInaccessible})
 				}
 				break
@@ -187,10 +147,69 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			continue
 		}
 
+		nextStep := modconfig.NextStep{
+			StepName: stepDefn.GetFullyQualifiedName(),
+			Action:   modconfig.NextStepActionStart,
+		}
+
+		// Check if there's a for_each, if there isn't calculate the input
+		// if there is a for_each, don't calculate the input, it's the job of step_for_each_plan to calculate the input
+		stepForEach := stepDefn.GetForEach()
+		if helpers.IsNil(stepForEach) {
+			var nextStepAction modconfig.NextStepAction
+			var input modconfig.Input
+
+			if stepDefn.GetUnresolvedBodies()["loop"] != nil {
+				// If the execution falls here, it means it's the beginning of the loop
+				// if it's part of a loop, it will be short circuited in the beginning of this for loop
+				evalContext = execution.AddLoop(nil, evalContext)
+			}
+
+			calculateInput := true
+
+			// Check if the step needs to run or skip (that's the IF block)
+			if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
+				expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
+
+				val, diags := expr.Value(evalContext)
+				if len(diags) > 0 {
+					err := error_helpers.HclDiagsToError("diags", diags)
+
+					logger.Error("Error evaluating if condition", "error", err)
+					return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+				}
+
+				if val.False() {
+					logger.Info("if condition not met for step", "step", stepDefn.GetName())
+					calculateInput = false
+					nextStepAction = modconfig.NextStepActionSkip
+				} else {
+					nextStepAction = modconfig.NextStepActionStart
+				}
+			} else {
+				nextStepAction = modconfig.NextStepActionStart
+			}
+
+			if calculateInput {
+				// There's no for_each
+				stepInputs, err := stepDefn.GetInputs(evalContext)
+				if err != nil {
+					logger.Error("Error resolving step inputs for single step", "error", err)
+					return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+				}
+				// There's no for_each, there's only a single input
+				input = stepInputs
+			} else {
+				// If we're to skip the next step, then we need to add a dummy input
+				input = map[string]interface{}{}
+			}
+
+			nextStep.Input = input
+			nextStep.Action = nextStepAction
+		}
+
 		// Plan to run the step.
-		e.NextSteps = append(e.NextSteps, modconfig.NextStep{
-			StepName: step.GetFullyQualifiedName(),
-			Action:   modconfig.NextStepActionStart})
+		e.NextSteps = append(e.NextSteps, nextStep)
 	}
 
 	// Pipeline has been planned, now publish this event

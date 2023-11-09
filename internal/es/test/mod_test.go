@@ -781,31 +781,6 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 	assert.Equal("[1] bass", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["text"])
 }
 
-func (suite *ModTestSuite) SkipTestDoUntil() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := &modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.do_until", 500*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-
-	if pex.Status != "finished" {
-		assert.Fail("Pipeline execution not finished")
-		return
-	}
-
-}
-
 func (suite *ModTestSuite) TestJsonAsOutput() {
 	assert := assert.New(suite.T())
 
@@ -884,6 +859,37 @@ func (suite *ModTestSuite) TestMapReduce() {
 	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["blink_182"].(map[string]interface{})))
 }
 
+func (suite *ModTestSuite) TestListReduce() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_list", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(6, len(pex.PipelineOutput["val"].(map[string]interface{})))
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["0"].(map[string]interface{})))
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})))
+	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["4"].(map[string]interface{})))
+
+	assert.Equal("1: 2", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["text"])
+}
+
 func (suite *ModTestSuite) TestNested() {
 	assert := assert.New(suite.T())
 
@@ -910,7 +916,7 @@ func (suite *ModTestSuite) TestNested() {
 
 }
 
-func (suite *ModTestSuite) TestForEach() {
+func (suite *ModTestSuite) TestForEachEmptyAndNonCollection() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
@@ -1023,12 +1029,12 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal(float64(10), pex.StepStatus["transform.basic_transform_refers_param"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 
 	assert.Equal(1, len(pex.StepStatus["transform.depends_on_transform_step"]))
-	assert.Equal(2, len(pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions))
-	if _, ok := pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue].(string); !ok {
+	assert.Equal(1, len(pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions))
+	if _, ok := pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue].(string); !ok {
 		assert.Fail("Unable to convert output to string")
 		return
 	}
-	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[1].Output.Data[schema.AttributeTypeValue])
+	assert.Equal("This is a simple transform step - test123", pex.StepStatus["transform.depends_on_transform_step"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 
 	// Pipeline 2
 
@@ -1076,7 +1082,7 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal(3, len(pex.StepStatus["transform.text_1"]))
 }
 
-// TODO : Add back the test to validatet he input step
+// TODO : Add back the test to validate  the input step
 
 // func (suite *ModTestSuite) TestPipelineInputStep() {
 // 	assert := assert.New(suite.T())

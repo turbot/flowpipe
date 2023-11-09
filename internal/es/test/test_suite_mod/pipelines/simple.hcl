@@ -39,6 +39,7 @@ pipeline "simple_for_each" {
 
     step "echo" "echo" {
         for_each = ["bar", "baz", "qux"]
+
         text = "${each.key}: foo ${each.value}"
 
         output "val" {

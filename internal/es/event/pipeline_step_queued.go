@@ -18,8 +18,8 @@ type PipelineStepQueued struct {
 	StepInput       modconfig.Input `json:"input"`
 
 	// for_each controls
-	StepForEach    *modconfig.StepForEach `json:"step_for_each,omitempty"`
-	StepLoop       *modconfig.StepLoop
+	StepForEach    *modconfig.StepForEach   `json:"step_for_each,omitempty"`
+	StepLoop       *modconfig.StepLoop      `json:"step_loop,omitempty"`
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
