@@ -175,8 +175,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 			var rootPipelineId string
 
 			if resp != nil && resp["flowpipe"] != nil {
-				contents := make(map[string]interface{})
-				contents = resp["flowpipe"].(map[string]interface{})
+				contents := resp["flowpipe"].(map[string]interface{})
 				executionId = contents["execution_id"].(string)
 				rootPipelineId = contents["pipeline_execution_id"].(string)
 			}
