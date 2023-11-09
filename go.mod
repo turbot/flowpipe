@@ -4,7 +4,6 @@ go 1.21.0
 
 replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
 
-//
 replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
@@ -37,7 +36,6 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/thediveo/enumflag/v2 v2.0.3
 	github.com/turbot/go-kit v0.9.0-rc.3
-	// pp-rebuilt branch
 	github.com/unrolled/secure v1.13.0
 	github.com/zclconf/go-cty v1.14.1
 	gopkg.in/yaml.v2 v2.4.0

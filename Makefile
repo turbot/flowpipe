@@ -1,4 +1,3 @@
-
 run-mod:
 	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/default_mod
 
