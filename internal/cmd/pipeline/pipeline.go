@@ -214,21 +214,20 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 		}
 
 		if resp != nil {
-			output := "\n"
-
+			output := ""
 			if resp.Title != nil {
-				output += "Title: " + *resp.Title + "\n"
+				output += "Title: " + *resp.Title
 			}
 			if resp.Title != nil {
-				output += "Name:  " + *resp.Name + "\n"
+				output += "\nName:  " + *resp.Name
 			} else {
-				output += "Name: " + *resp.Name + "\n"
+				output += "Name: " + *resp.Name
 			}
 			if resp.Tags != nil {
 				if resp.Title != nil {
-					output += "Tags:  "
+					output += "\nTags:  "
 				} else {
-					output += "Tags: "
+					output += "\nTags: "
 				}
 				isFirstTag := true
 				for k, v := range *resp.Tags {
@@ -239,10 +238,9 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 						output += ", " + k + " = " + v
 					}
 				}
-				output += "\n"
 			}
 			if resp.Description != nil {
-				output += "\nDescription:\n" + *resp.Description + "\n"
+				output += "\n\nDescription:\n" + *resp.Description + "\n"
 			}
 			if resp.Params != nil {
 				output += formatSection("\nParams:", resp.Params)
@@ -265,7 +263,6 @@ func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 			} else {
 				output += "  flowpipe pipeline run " + *resp.Name
 			}
-			output += "\n"
 			//nolint:forbidigo // CLI console output
 			fmt.Println(output)
 		}
