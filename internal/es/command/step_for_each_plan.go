@@ -28,6 +28,22 @@ func (h StepForEachPlanHandler) NewCommand() interface{} {
 	return &event.StepForEachPlan{}
 }
 
+// means step has a for_each, each for_each is another "series" of steps
+//
+// the planner need to handle them as if they are invidual "steps"
+//
+// if there's a problem if one of the n number of for_each, we just want to retry that one
+//
+// for example
+/*
+	   step "echo" "echo {
+			for_each = ["foo", "bar"]
+			text = "foo"
+	   }
+
+	   this step will generate 2 "index".
+*/
+
 func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error {
 	logger := fplog.Logger(ctx)
 

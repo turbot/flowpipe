@@ -362,7 +362,6 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 
 // Calculate if this step needs to be retried, or this is the final failure of the step
 func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.PipelineStep, ex *Execution) bool {
-
 	return true
 }
 
@@ -386,7 +385,6 @@ func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 
 func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
 	return false
-	// return pe.StepStatus[stepName] != nil && !pe.StepStatus[stepName].LoopHold
 }
 
 // TODO: this doesn't work for step execution retry, it assumes that the entire step
