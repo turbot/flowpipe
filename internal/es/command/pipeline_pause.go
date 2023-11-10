@@ -11,10 +11,8 @@ import (
 
 type PipelinePauseHandler CommandHandler
 
-var pipelinePause = event.PipelinePause{}
-
 func (h PipelinePauseHandler) HandlerName() string {
-	return pipelinePause.HandlerName()
+	return execution.PipelinePauseCommand.HandlerName()
 }
 
 func (h PipelinePauseHandler) NewCommand() interface{} {

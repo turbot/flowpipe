@@ -214,7 +214,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		}
 	}
 
-	pipelineStepFinishedEvent, err := event.NewPipelineStepFinished()
+	pipelineStepFinishedEvent, err := event.NewStepFinished()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return

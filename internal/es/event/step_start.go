@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-type PipelineStepStart struct {
+type StepStart struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
@@ -25,21 +25,20 @@ type PipelineStepStart struct {
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 }
 
-func (e *PipelineStepStart) GetEvent() *Event {
+func (e *StepStart) GetEvent() *Event {
 	return e.Event
 }
 
-func (e *PipelineStepStart) HandlerName() string {
-	return "command.pipeline_step_start"
+func (e *StepStart) HandlerName() string {
+	return "command.step_start"
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineStepStartOption func(*PipelineStepStart) error
+type StepStartOption func(*StepStart) error
 
-// NewPipelineStepStart creates a new PipelineStepStart event.
-func NewPipelineStepStart(opts ...PipelineStepStartOption) (*PipelineStepStart, error) {
+// NewStepStart creates a new StepStart command.
+func NewStepStart(opts ...StepStartOption) (*StepStart, error) {
 	// Defaults
-	e := &PipelineStepStart{
+	e := &StepStart{
 		StepExecutionID: util.NewStepExecutionID(),
 	}
 	// Set options
@@ -52,8 +51,8 @@ func NewPipelineStepStart(opts ...PipelineStepStartOption) (*PipelineStepStart, 
 	return e, nil
 }
 
-func ForPipelinePlanned(e *PipelinePlanned) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
+func ForPipelinePlanned(e *PipelinePlanned) StepStartOption {
+	return func(cmd *StepStart) error {
 		cmd.Event = NewChildEvent(e.Event)
 		if e.PipelineExecutionID != "" {
 			cmd.PipelineExecutionID = e.PipelineExecutionID
@@ -64,8 +63,8 @@ func ForPipelinePlanned(e *PipelinePlanned) PipelineStepStartOption {
 	}
 }
 
-func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
+func ForStepQueued(e *StepQueued) StepStartOption {
+	return func(cmd *StepStart) error {
 
 		if e.StepExecutionID == "" {
 			return perr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
@@ -82,8 +81,8 @@ func ForPipelineStepQueued(e *PipelineStepQueued) PipelineStepStartOption {
 	}
 }
 
-func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
+func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) StepStartOption {
+	return func(cmd *StepStart) error {
 		cmd.StepName = name
 		cmd.StepInput = input
 		cmd.StepForEach = stepForEach
@@ -93,8 +92,8 @@ func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepFor
 	}
 }
 
-func WithStepLoop(stepLoop *modconfig.StepLoop) PipelineStepStartOption {
-	return func(cmd *PipelineStepStart) error {
+func WithStepLoop(stepLoop *modconfig.StepLoop) StepStartOption {
+	return func(cmd *StepStart) error {
 		cmd.StepLoop = stepLoop
 		return nil
 	}

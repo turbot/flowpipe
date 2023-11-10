@@ -16,10 +16,8 @@ import (
 
 type PipelinePlanned EventHandler
 
-var pipelinePlanned = event.PipelinePlanned{}
-
 func (h PipelinePlanned) HandlerName() string {
-	return pipelinePlanned.HandlerName()
+	return execution.PipelinePlannedEvent.HandlerName()
 }
 
 func (PipelinePlanned) NewEvent() interface{} {
@@ -165,7 +163,7 @@ func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.P
 		Each:        json.SimpleJSONValue{Value: cty.StringVal("0")},
 	}
 
-	cmd, err := event.NewPipelineStepQueue(event.PipelineStepQueueForPipelinePlanned(e), event.PipelineStepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, nextStep.DelayMs, forEachNextStepAction))
+	cmd, err := event.NewStepQueue(event.StepQueueForPipelinePlanned(e), event.StepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, nextStep.DelayMs, forEachNextStepAction))
 	cmd.StepLoop = stepLoop
 
 	if err != nil {

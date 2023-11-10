@@ -11,10 +11,8 @@ import (
 
 type PipelineResumeHandler CommandHandler
 
-var pipelineResume = event.PipelineResume{}
-
 func (h PipelineResumeHandler) HandlerName() string {
-	return pipelineResume.HandlerName()
+	return execution.PipelineResumeCommand.HandlerName()
 }
 
 func (h PipelineResumeHandler) NewCommand() interface{} {

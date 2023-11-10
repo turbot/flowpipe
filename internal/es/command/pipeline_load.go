@@ -11,10 +11,8 @@ import (
 
 type PipelineLoadHandler CommandHandler
 
-var pipelineLoad = event.PipelineLoad{}
-
 func (h PipelineLoadHandler) HandlerName() string {
-	return pipelineLoad.HandlerName()
+	return execution.PipelineLoadCommand.HandlerName()
 }
 
 func (h PipelineLoadHandler) NewCommand() interface{} {

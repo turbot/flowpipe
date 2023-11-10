@@ -8,7 +8,7 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-type PipelineStepQueue struct {
+type StepQueue struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
@@ -26,21 +26,20 @@ type PipelineStepQueue struct {
 	NextStepAction modconfig.NextStepAction `json:"action,omitempty"`
 }
 
-func (e *PipelineStepQueue) GetEvent() *Event {
+func (e *StepQueue) GetEvent() *Event {
 	return e.Event
 }
 
-func (e *PipelineStepQueue) HandlerName() string {
-	return "command.pipeline_step_queue"
+func (e *StepQueue) HandlerName() string {
+	return "command.step_queue"
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineStepQueueOption func(*PipelineStepQueue) error
+type StepQueueOption func(*StepQueue) error
 
-// NewPipelineStepQueue creates a new PipelineStepQueue event.
-func NewPipelineStepQueue(opts ...PipelineStepQueueOption) (*PipelineStepQueue, error) {
+// NewStepQueue creates a new StepQueue event.
+func NewStepQueue(opts ...StepQueueOption) (*StepQueue, error) {
 	// Defaults
-	e := &PipelineStepQueue{
+	e := &StepQueue{
 		StepExecutionID: util.NewStepExecutionID(),
 	}
 	// Set options
@@ -53,9 +52,9 @@ func NewPipelineStepQueue(opts ...PipelineStepQueueOption) (*PipelineStepQueue, 
 	return e, nil
 }
 
-func NewPipelineStepQueueFromPipelineStepFinishedForLoop(e *PipelineStepFinished, stepName string) *PipelineStepQueue {
+func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName string) *StepQueue {
 
-	cmd := &PipelineStepQueue{
+	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),
 		StepExecutionID: util.NewStepExecutionID(),
 	}
@@ -73,8 +72,8 @@ func NewPipelineStepQueueFromPipelineStepFinishedForLoop(e *PipelineStepFinished
 	return cmd
 }
 
-func NewPipelineStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconfig.NextStep) (*PipelineStepQueue, error) {
-	cmd := &PipelineStepQueue{
+func NewStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconfig.NextStep) (*StepQueue, error) {
+	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),
 		StepExecutionID: util.NewStepExecutionID(),
 	}
@@ -94,8 +93,8 @@ func NewPipelineStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep 
 	return cmd, nil
 }
 
-func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOption {
-	return func(cmd *PipelineStepQueue) error {
+func StepQueueForPipelinePlanned(e *PipelinePlanned) StepQueueOption {
+	return func(cmd *StepQueue) error {
 		cmd.Event = NewChildEvent(e.Event)
 		if e.PipelineExecutionID != "" {
 			cmd.PipelineExecutionID = e.PipelineExecutionID
@@ -106,8 +105,8 @@ func PipelineStepQueueForPipelinePlanned(e *PipelinePlanned) PipelineStepQueueOp
 	}
 }
 
-func PipelineStepQueueWithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, delayMs int, nextStepAction modconfig.NextStepAction) PipelineStepQueueOption {
-	return func(cmd *PipelineStepQueue) error {
+func StepQueueWithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, delayMs int, nextStepAction modconfig.NextStepAction) StepQueueOption {
+	return func(cmd *StepQueue) error {
 		cmd.StepName = name
 		cmd.StepInput = input
 		cmd.StepForEach = stepForEach

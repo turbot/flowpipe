@@ -6,7 +6,11 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
-type PipelineStepFinished struct {
+// StepFinished event is when a step (any step step has completed). This is an event that will be handled
+// by an Event Handler (StepFinishedHandler)
+//
+// Do not confuse this with Pipeline Step Finish **command** which is raised when a child pipeline has finished
+type StepFinished struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
@@ -25,21 +29,20 @@ type PipelineStepFinished struct {
 	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 }
 
-func (e *PipelineStepFinished) GetEvent() *Event {
+func (e *StepFinished) GetEvent() *Event {
 	return e.Event
 }
 
-func (e *PipelineStepFinished) HandlerName() string {
-	return "handler.pipeline_step_finished"
+func (e *StepFinished) HandlerName() string {
+	return "handler.step_finished"
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineStepFinishedOption func(*PipelineStepFinished) error
+type StepFinishedOption func(*StepFinished) error
 
-// NewPipelineStepFinished creates a new PipelineStepFinished event.
-func NewPipelineStepFinished(opts ...PipelineStepFinishedOption) (*PipelineStepFinished, error) {
+// NewStepFinished creates a new StepFinished event.
+func NewStepFinished(opts ...StepFinishedOption) (*StepFinished, error) {
 	// Defaults
-	e := &PipelineStepFinished{}
+	e := &StepFinished{}
 	// Set options
 	for _, opt := range opts {
 		err := opt(e)
@@ -50,8 +53,8 @@ func NewPipelineStepFinished(opts ...PipelineStepFinishedOption) (*PipelineStepF
 	return e, nil
 }
 
-func ForPipelineStepStartToPipelineStepFinished(cmd *PipelineStepStart) PipelineStepFinishedOption {
-	return func(e *PipelineStepFinished) error {
+func ForStepStartToStepFinished(cmd *StepStart) StepFinishedOption {
+	return func(e *StepFinished) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
@@ -68,8 +71,8 @@ func ForPipelineStepStartToPipelineStepFinished(cmd *PipelineStepStart) Pipeline
 	}
 }
 
-func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
-	return func(e *PipelineStepFinished) error {
+func ForPipelineStepFinish(cmd *StepPipelineFinish) StepFinishedOption {
+	return func(e *StepFinished) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
@@ -87,8 +90,8 @@ func ForPipelineStepFinish(cmd *PipelineStepFinish) PipelineStepFinishedOption {
 	}
 }
 
-func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}, stepLoop *modconfig.StepLoop) PipelineStepFinishedOption {
-	return func(e *PipelineStepFinished) error {
+func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}, stepLoop *modconfig.StepLoop) StepFinishedOption {
+	return func(e *StepFinished) error {
 		e.Output = output
 		e.StepOutput = stepOutput
 		e.StepLoop = stepLoop

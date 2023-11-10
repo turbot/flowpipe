@@ -16,32 +16,30 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-type PipelineStepStartHandler CommandHandler
+type StepStartHandler CommandHandler
 
-var pipelineStepStart = event.PipelineStepStart{}
-
-func (h PipelineStepStartHandler) HandlerName() string {
-	return pipelineStepStart.HandlerName()
+func (h StepStartHandler) HandlerName() string {
+	return execution.StepStartCommand.HandlerName()
 }
 
-func (h PipelineStepStartHandler) NewCommand() interface{} {
-	return &event.PipelineStepStart{}
+func (h StepStartHandler) NewCommand() interface{} {
+	return &event.StepStart{}
 }
 
 // * This is the handler that will actually execute the primitive
 // *
-// * At the end of the execution it will raise the appropriate event: PipelineStepFinished or PipelineFailed
+// * At the end of the execution it will raise the appropriate event: StepFinished or PipelineFailed
 // *
-// * Also note the "special" step handler, this is if it needs to launch a child pipeline
-func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) error {
+// * Also note the "special" step handler for launching child pipelines
+func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
-	go func(ctx context.Context, c interface{}, h PipelineStepStartHandler) {
+	go func(ctx context.Context, c interface{}, h StepStartHandler) {
 
 		logger := fplog.Logger(ctx)
 
-		cmd, ok := c.(*event.PipelineStepStart)
+		cmd, ok := c.(*event.StepStart)
 		if !ok {
-			logger.Error("invalid command type", "expected", "*event.PipelineStepStart", "actual", c)
+			logger.Error("invalid command type", "expected", "*event.StepStart", "actual", c)
 			return
 		}
 
@@ -49,7 +47,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		if err != nil {
 			logger.Error("Error loading pipeline execution", "error", err)
 
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -60,7 +58,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		if err != nil {
 			logger.Error("Error loading pipeline definition", "error", err)
 
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -75,7 +73,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
 			logger.Error("Error building eval context while calculating output", "error", err)
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -136,7 +134,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			logger.Error("Unknown step type", "type", stepDefn.GetType())
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -196,7 +194,7 @@ func (h PipelineStepStartHandler) Handle(ctx context.Context, c interface{}) err
 }
 
 // This function mutates stepOutput
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.PipelineStepStart, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, logger *fplog.FlowpipeLogger, h StepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
@@ -209,7 +207,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 && diags.HasErrors() {
 				logger.Error("Error calculating output on step start", "error", diags)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
 					logger.Error("Error publishing event", "error", err2)
 				}
@@ -219,7 +217,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 			goVal, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {
 				logger.Error("Error converting cty value to Go value for output calculation", "error", err)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
 					logger.Error("Error publishing event", "error", err2)
 				}
@@ -236,7 +234,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.PipelineStepStart, h PipelineStepStartHandler, logger *fplog.FlowpipeLogger) bool {
+func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, h StepStartHandler, logger *fplog.FlowpipeLogger) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
 		args := modconfig.Input{}
@@ -244,8 +242,8 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
 		}
 
-		e, err := event.NewPipelineStepStarted(
-			event.ForPipelineStepStart(cmd),
+		e, err := event.NewStepPipelineStarted(
+			event.ForStepStart(cmd),
 			event.WithNewChildPipelineExecutionID(),
 			event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
 
@@ -256,7 +254,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 		}
 
 		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -278,7 +276,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 	return false
 }
 
-func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h PipelineStepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
+func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 
@@ -368,7 +366,7 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 			// get the new input
 			newInput, err := loopDefn.UpdateInput(reevaluatedInput)
 			if err != nil {
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, err)))
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
 					logger.Error("Error publishing event", "error", err2)
 				}
@@ -386,8 +384,8 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 
 	}
 
-	e, err := event.NewPipelineStepFinished(
-		event.ForPipelineStepStartToPipelineStepFinished(cmd),
+	e, err := event.NewStepFinished(
+		event.ForStepStartToStepFinished(cmd),
 		event.WithStepOutput(output, stepOutput, stepLoop))
 
 	if err != nil {
@@ -402,8 +400,8 @@ func endStep(cmd *event.PipelineStepStart, output *modconfig.Output, stepOutput 
 	}
 }
 
-func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h PipelineStepStartHandler, cmd *event.PipelineStepStart, originalError error, logger *fplog.FlowpipeLogger) {
-	err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepStartToPipelineFailed(cmd, originalError)))
+func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepStartHandler, cmd *event.StepStart, originalError error, logger *fplog.FlowpipeLogger) {
+	err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, originalError)))
 	if err != nil {
 		logger.Error("Error publishing event", "error", err)
 	}

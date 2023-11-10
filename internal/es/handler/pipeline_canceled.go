@@ -4,16 +4,15 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineCanceled EventHandler
 
-var pipelineCanceled = event.PipelineCanceled{}
-
 func (h PipelineCanceled) HandlerName() string {
-	return pipelineCanceled.HandlerName()
+	return execution.PipelineCanceledEvent.HandlerName()
 }
 
 func (PipelineCanceled) NewEvent() interface{} {

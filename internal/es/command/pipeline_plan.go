@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -16,22 +15,15 @@ import (
 
 type PipelinePlanHandler CommandHandler
 
-var pipelinePlan = event.PipelinePlan{}
-
 func (h PipelinePlanHandler) HandlerName() string {
-	return pipelinePlan.HandlerName()
+	return execution.PipelinePlanCommand.HandlerName()
 }
 
 func (h PipelinePlanHandler) NewCommand() interface{} {
 	return &event.PipelinePlan{}
 }
 
-// Define a mutex.
-var mu sync.Mutex
-
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
-	mu.Lock()         // Lock the mutex before entering critical section.
-	defer mu.Unlock() // Unlock the mutex when the function exits.
 
 	logger := fplog.Logger(ctx)
 

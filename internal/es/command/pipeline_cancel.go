@@ -4,16 +4,15 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineCancelHandler CommandHandler
 
-var pipelineCancel = event.PipelineCancel{}
-
 func (h PipelineCancelHandler) HandlerName() string {
-	return pipelineCancel.HandlerName()
+	return execution.PipelineCancelCommand.HandlerName()
 }
 
 func (h PipelineCancelHandler) NewCommand() interface{} {
