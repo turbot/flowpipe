@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -181,7 +182,7 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 				rootPipelineId = contents["pipeline_execution_id"].(string)
 			}
 
-			err := pollEventLogAndRender(ctx, apiClient, executionId, rootPipelineId)
+			err := pollEventLogAndRender(ctx, apiClient, executionId, rootPipelineId, cmd.OutOrStdout())
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
 				return
@@ -353,32 +354,48 @@ func validatePipelineWaitTime(wait int) error {
 	return nil
 }
 
-func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APIClient, executionId, rootPipelineId string) error {
+func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APIClient, executionId, rootPipelineId string, w io.Writer) error {
 	isComplete := false
 	lastIndexRead := -1
+	printer := printers.LogLinePrinter{}
 	for {
 		logs, _, err := client.ProcessApi.GetLog(ctx, executionId).Execute()
 		if err != nil {
 			return err
 		}
 
-		for logIndex, logEntry := range logs.Items {
+		printableResource := types.PrintableLogLine{}
+		printableResource.Items, err = printableResource.Transform(logs)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+		}
+
+		var render []types.LogLine
+		for logIndex, logEntry := range printableResource.Items.([]types.LogLine) {
 			if logIndex > lastIndexRead {
-				// TODO: Transform & Output
-				fmt.Printf("[%s] %v\n", *logEntry.EventType, *logEntry.Payload) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
 				lastIndexRead = logIndex
+				render = append(render, logEntry)
+			}
+		}
 
-				if *logEntry.EventType == event.HandlerPipelineFinished || *logEntry.EventType == event.HandlerPipelineFailed {
-					if logEntry.Payload != nil {
-						payload := make(map[string]any)
-						if err := json.Unmarshal([]byte(*logEntry.Payload), &payload); err != nil {
-							return err
-						}
+		printableResource.Items = render
+		err = printer.PrintResource(ctx, printableResource, w)
+		if err != nil {
 
-						if payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == rootPipelineId {
-							isComplete = true
-							break
-						}
+		}
+
+		// Check logs received for termination/completion of execution
+		for _, logEntry := range logs.Items {
+			if *logEntry.EventType == event.HandlerPipelineFinished || *logEntry.EventType == event.HandlerPipelineFailed {
+				if logEntry.Payload != nil {
+					payload := make(map[string]any)
+					if err := json.Unmarshal([]byte(*logEntry.Payload), &payload); err != nil {
+						return err
+					}
+
+					if payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == rootPipelineId {
+						isComplete = true
+						break
 					}
 				}
 			}
