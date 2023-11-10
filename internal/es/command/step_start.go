@@ -279,6 +279,14 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 
 func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
+	if output.Status == "failed" {
+		stepRetry := handleError(ctx, h, cmd, stepDefn)
+		if stepRetry != nil {
+			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
+
+		}
+	}
+
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 
 	var stepLoop *modconfig.StepLoop
@@ -414,8 +422,6 @@ func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepSt
 // retry
 // error
 func handleError(ctx context.Context, h StepStartHandler, e *event.StepStart, stepDefn modconfig.PipelineStep) *modconfig.StepRetry {
-	logger := fplog.Logger(ctx)
-
 	// we have error, check the if there's a retry block
 	retryConfig := stepDefn.GetRetryConfig()
 
