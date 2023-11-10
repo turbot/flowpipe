@@ -67,6 +67,7 @@ func NewStepQueueFromPipelineStepFinished(e *StepFinished, stepName string) *Ste
 	cmd.StepInput = *e.StepLoop.Input
 	cmd.StepForEach = e.StepForEach
 	cmd.StepLoop = e.StepLoop
+	cmd.StepRetry = e.StepRetry
 	cmd.DelayMs = 0
 	cmd.NextStepAction = modconfig.NextStepActionStart
 

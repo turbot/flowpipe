@@ -432,8 +432,8 @@ func (pe *PipelineExecution) StartStep(stepFullyQualifiedName, key, seID string)
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, loopContinue bool) {
-	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopContinue)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, loopHold, errorHold bool) {
+	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopHold, errorHold)
 }
 
 func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) {
@@ -484,14 +484,14 @@ func (s *StepStatus) IsComplete() bool {
 	if s.OverralState == "empty_for_each" {
 		return true
 	}
-	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold
+	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold && !s.ErrorHold
 }
 
 func (s *StepStatus) IsStarted() bool {
 	if s == nil {
 		return false
 	}
-	return s.Initializing || len(s.Queued) > 0 || len(s.Started) > 0 || !s.LoopHold
+	return s.Initializing || len(s.Queued) > 0 || len(s.Started) > 0 || !s.LoopHold || !s.ErrorHold
 }
 
 // IsFail returns true if any executions of the step failed.
@@ -541,17 +541,14 @@ func (s *StepStatus) Start(seID string) {
 }
 
 // Finish marks the given execution as finished.
-func (s *StepStatus) Finish(seID string, loopContinue bool) {
+func (s *StepStatus) Finish(seID string, loopHold, errorHold bool) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
-	if loopContinue {
-		s.LoopHold = true
-	} else {
-		s.LoopHold = false
-	}
+	s.LoopHold = loopHold
+	s.ErrorHold = errorHold
 
 	s.Initializing = false
 

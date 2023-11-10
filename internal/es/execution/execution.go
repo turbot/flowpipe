@@ -602,11 +602,14 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			return err
 		}
 
-		loopContinue := false
-		if et.StepLoop != nil {
-			if !et.StepLoop.LoopCompleted {
-				loopContinue = true
-			}
+		loopHold := false
+		if et.StepLoop != nil && !et.StepLoop.LoopCompleted {
+			loopHold = true
+		}
+
+		errorHold := false
+		if et.StepRetry != nil && !et.StepRetry.RetryCompleted {
+			errorHold = true
 		}
 
 		// Step the specific step execution status
@@ -650,10 +653,10 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 				pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 			} else {
 				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 			}
 		} else {
-			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
+			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 		}
 
 	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"

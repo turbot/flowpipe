@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 // StepFinished event is when a step (any step step has completed). This is an event that will be handled
@@ -54,22 +55,27 @@ func NewStepFinished(opts ...StepFinishedOption) (*StepFinished, error) {
 	return e, nil
 }
 
-func ForStepStartToStepFinished(cmd *StepStart) StepFinishedOption {
-	return func(e *StepFinished) error {
-		e.Event = NewFlowEvent(cmd.Event)
-		if cmd.PipelineExecutionID != "" {
-			e.PipelineExecutionID = cmd.PipelineExecutionID
-		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline step start command: %v", e)
-		}
-		if cmd.StepExecutionID != "" {
-			e.StepExecutionID = cmd.StepExecutionID
-		} else {
-			return fmt.Errorf("missing step execution ID in pipeline step start command: %v", e)
-		}
-		e.StepForEach = cmd.StepForEach
-		return nil
+func NewStepFinishedFromStepStart(cmd *StepStart, output *modconfig.Output, stepOutput map[string]interface{}, stepLoop *modconfig.StepLoop) (*StepFinished, error) {
+	e := StepFinished{
+		Event: NewFlowEvent(cmd.Event),
 	}
+	if cmd.PipelineExecutionID != "" {
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+	} else {
+		return nil, perr.BadRequestWithMessage("missing pipeline execution ID in pipeline step start command")
+	}
+	if cmd.StepExecutionID != "" {
+		e.StepExecutionID = cmd.StepExecutionID
+	} else {
+		return nil, perr.BadRequestWithMessage("missing step execution ID in pipeline step start command")
+	}
+	e.StepForEach = cmd.StepForEach
+
+	e.Output = output
+	e.StepOutput = stepOutput
+	e.StepLoop = stepLoop
+
+	return &e, nil
 }
 
 func ForPipelineStepFinish(cmd *StepPipelineFinish) StepFinishedOption {
@@ -87,15 +93,6 @@ func ForPipelineStepFinish(cmd *StepPipelineFinish) StepFinishedOption {
 		}
 		e.Output = cmd.Output
 		e.StepForEach = cmd.StepForEach
-		return nil
-	}
-}
-
-func WithStepOutput(output *modconfig.Output, stepOutput map[string]interface{}, stepLoop *modconfig.StepLoop) StepFinishedOption {
-	return func(e *StepFinished) error {
-		e.Output = output
-		e.StepOutput = stepOutput
-		e.StepLoop = stepLoop
 		return nil
 	}
 }

@@ -52,6 +52,32 @@ func NewStepStart(opts ...StepStartOption) (*StepStart, error) {
 	return e, nil
 }
 
+func NewStepStartFromStepQueued(e *StepQueued) (*StepStart, error) {
+
+	cmd := &StepStart{
+		Event: NewChildEvent(e.Event),
+	}
+	if e.StepExecutionID == "" {
+		return nil, perr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
+	}
+
+	if e.PipelineExecutionID != "" {
+		cmd.PipelineExecutionID = e.PipelineExecutionID
+	} else {
+		return nil, perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline step queued: %v", e))
+	}
+	cmd.StepExecutionID = e.StepExecutionID
+
+	cmd.StepName = e.StepName
+	cmd.StepInput = e.StepInput
+	cmd.StepForEach = e.StepForEach
+	cmd.StepLoop = e.StepLoop
+	cmd.StepRetry = e.StepRetry
+	cmd.NextStepAction = e.NextStepAction
+
+	return cmd, nil
+}
+
 func ForPipelinePlanned(e *PipelinePlanned) StepStartOption {
 	return func(cmd *StepStart) error {
 		cmd.Event = NewChildEvent(e.Event)
@@ -60,35 +86,6 @@ func ForPipelinePlanned(e *PipelinePlanned) StepStartOption {
 		} else {
 			return fmt.Errorf("missing pipeline execution ID in pipeline planned event: %v", e)
 		}
-		return nil
-	}
-}
-
-func ForStepQueued(e *StepQueued) StepStartOption {
-	return func(cmd *StepStart) error {
-
-		if e.StepExecutionID == "" {
-			return perr.BadRequestWithMessage("missing step execution ID in pipeline step queued event")
-		}
-
-		cmd.Event = NewChildEvent(e.Event)
-		if e.PipelineExecutionID != "" {
-			cmd.PipelineExecutionID = e.PipelineExecutionID
-		} else {
-			return fmt.Errorf("missing pipeline execution ID in pipeline planned event: %v", e)
-		}
-		cmd.StepExecutionID = e.StepExecutionID
-		return nil
-	}
-}
-
-func WithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) StepStartOption {
-	return func(cmd *StepStart) error {
-		cmd.StepName = name
-		cmd.StepInput = input
-		cmd.StepForEach = stepForEach
-		cmd.StepLoop = stepLoop
-		cmd.NextStepAction = nextStepAction
 		return nil
 	}
 }

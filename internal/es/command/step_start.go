@@ -283,7 +283,26 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 		stepRetry := handleError(ctx, h, cmd, stepDefn)
 		if stepRetry != nil {
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
+			e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
+			if err != nil {
+				logger.Error("Error creating Pipeline Step Finished event", "error", err)
+				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+				return
+			}
 
+			e.StepRetry = stepRetry
+
+			if err != nil {
+				logger.Error("Error creating Pipeline Step Finished event", "error", err)
+				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+				return
+			}
+
+			err = h.EventBus.Publish(ctx, e)
+			if err != nil {
+				logger.Error("Error publishing event", "error", err)
+			}
+			return
 		}
 	}
 
@@ -390,13 +409,9 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 			stepLoop.Input = nil
 			stepLoop.LoopCompleted = true
 		}
-
 	}
 
-	e, err := event.NewStepFinished(
-		event.ForStepStartToStepFinished(cmd),
-		event.WithStepOutput(output, stepOutput, stepLoop))
-
+	e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, stepLoop)
 	if err != nil {
 		logger.Error("Error creating Pipeline Step Finished event", "error", err)
 		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
