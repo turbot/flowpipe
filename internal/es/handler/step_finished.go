@@ -11,23 +11,24 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-type PipelineStepFinished EventHandler
+type StepFinished EventHandler
 
-var pipelineStepFinished = event.PipelineStepFinished{}
-
-func (h PipelineStepFinished) HandlerName() string {
-	return pipelineStepFinished.HandlerName()
+func (h StepFinished) HandlerName() string {
+	return execution.StepFinishedEvent.HandlerName()
 }
 
-func (PipelineStepFinished) NewEvent() interface{} {
-	return &event.PipelineStepFinished{}
+func (StepFinished) NewEvent() interface{} {
+	return &event.StepFinished{}
 }
 
-func (h PipelineStepFinished) Handle(ctx context.Context, ei interface{}) error {
-	e, ok := ei.(*event.PipelineStepFinished)
+// This is the generic step finish event handler that is fired by the step_start command
+//
+// Do not confuse this with pipeline_step_finish **command** which is raised when a child pipeline has finished
+func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
+	e, ok := ei.(*event.StepFinished)
 	if !ok {
-		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.PipelineStepFinished", "actual", ei)
-		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineStepFinished")
+		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.StepFinished", "actual", ei)
+		return perr.BadRequestWithMessage("invalid event type expected *event.StepFinished")
 	}
 
 	logger := fplog.Logger(ctx)

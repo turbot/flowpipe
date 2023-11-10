@@ -4,16 +4,15 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelinePaused EventHandler
 
-var pipelinePaused = event.PipelinePaused{}
-
 func (h PipelinePaused) HandlerName() string {
-	return pipelinePaused.HandlerName()
+	return execution.PipelinePausedEvent.HandlerName()
 }
 
 func (PipelinePaused) NewEvent() interface{} {

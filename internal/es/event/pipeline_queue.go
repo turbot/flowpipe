@@ -48,7 +48,7 @@ func NewPipelineQueue(opts ...PipelineQueueOption) (*PipelineQueue, error) {
 
 // ForPipelineQueue returns a PipelineQueueOption that sets the fields of the
 // PipelineQueue event from a PipelineQueue command.
-func ForPipelineStepStartedToPipelineQueue(e *PipelineStepStarted) PipelineQueueOption {
+func ForPipelineStepStartedToPipelineQueue(e *StepPipelineStarted) PipelineQueueOption {
 	return func(cmd *PipelineQueue) error {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.PipelineExecutionID = e.ChildPipelineExecutionID

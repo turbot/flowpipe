@@ -52,7 +52,7 @@ func NewStepQueue(opts ...StepQueueOption) (*StepQueue, error) {
 	return e, nil
 }
 
-func NewStepQueueFromPipelineStepFinishedForLoop(e *PipelineStepFinished, stepName string) *StepQueue {
+func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName string) *StepQueue {
 
 	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),

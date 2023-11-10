@@ -68,7 +68,7 @@ func ForPipelineResumed(e *PipelineResumed) PipelinePlanOption {
 	}
 }
 
-func ForPipelineStepFinished(e *PipelineStepFinished) PipelinePlanOption {
+func ForPipelineStepFinished(e *StepFinished) PipelinePlanOption {
 	return func(cmd *PipelinePlan) error {
 		cmd.Event = NewFlowEvent(e.Event)
 		if e.PipelineExecutionID != "" {

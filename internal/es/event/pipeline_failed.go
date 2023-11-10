@@ -268,7 +268,7 @@ func ForStepStartToPipelineFailed(cmd *StepStart, err error) PipelineFailedOptio
 	}
 }
 
-func ForPipelineStepFinishToPipelineFailed(cmd *PipelineStepFinish, err error) PipelineFailedOption {
+func ForPipelineStepFinishToPipelineFailed(cmd *StepPipelineFinish, err error) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {

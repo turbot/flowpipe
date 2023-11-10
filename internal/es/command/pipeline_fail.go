@@ -13,10 +13,8 @@ import (
 
 type PipelineFailHandler CommandHandler
 
-var pipelineFail = event.PipelineFail{}
-
 func (h PipelineFailHandler) HandlerName() string {
-	return pipelineFail.HandlerName()
+	return execution.PipelineFailCommand.HandlerName()
 }
 
 func (h PipelineFailHandler) NewCommand() interface{} {

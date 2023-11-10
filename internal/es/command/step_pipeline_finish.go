@@ -10,16 +10,14 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-type PipelineStepFinishHandler CommandHandler
+type StepPipelineFinishHandler CommandHandler
 
-var pipelineStepFinish = event.PipelineStepFinish{}
-
-func (h PipelineStepFinishHandler) HandlerName() string {
-	return pipelineStepFinish.HandlerName()
+func (h StepPipelineFinishHandler) HandlerName() string {
+	return execution.StepPipelineFinishCommand.HandlerName()
 }
 
-func (h PipelineStepFinishHandler) NewCommand() interface{} {
-	return &event.PipelineStepFinish{}
+func (h StepPipelineFinishHandler) NewCommand() interface{} {
+	return &event.StepPipelineFinish{}
 }
 
 // There's only one use case for this, which is to handle the "Pipeline Step" finish command.
@@ -28,10 +26,10 @@ func (h PipelineStepFinishHandler) NewCommand() interface{} {
 //
 // This command is NOT to to be confused with the handling of the "Pipeline Step" operation. That flow:
 // Pipeline Step Start command -> Pipeline Step Finish *event*
-func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) error {
+func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) error {
 
 	logger := fplog.Logger(ctx)
-	cmd, ok := c.(*event.PipelineStepFinish)
+	cmd, ok := c.(*event.StepPipelineFinish)
 	if !ok {
 		logger.Error("invalid command type", "expected", "*event.PipelineStepFinish", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineStepFinish")
@@ -115,7 +113,7 @@ func (h PipelineStepFinishHandler) Handle(ctx context.Context, c interface{}) er
 		}
 	}
 
-	e, err := event.NewPipelineStepFinished(event.ForPipelineStepFinish(cmd))
+	e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
 	e.StepOutput = stepOutput
 
 	if err != nil {

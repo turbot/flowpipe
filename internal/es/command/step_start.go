@@ -242,8 +242,8 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
 		}
 
-		e, err := event.NewPipelineStepStarted(
-			event.ForPipelineStepStart(cmd),
+		e, err := event.NewStepPipelineStarted(
+			event.ForStepStart(cmd),
 			event.WithNewChildPipelineExecutionID(),
 			event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
 
@@ -384,8 +384,8 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 
 	}
 
-	e, err := event.NewPipelineStepFinished(
-		event.ForPipelineStepStartToPipelineStepFinished(cmd),
+	e, err := event.NewStepFinished(
+		event.ForStepStartToStepFinished(cmd),
 		event.WithStepOutput(output, stepOutput, stepLoop))
 
 	if err != nil {

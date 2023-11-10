@@ -400,21 +400,39 @@ func (ex *Execution) LoadJSON(fileName string) error {
 
 // Events
 var (
-	PipelineQueuedEvent  = event.PipelineQueued{}
-	PipelineStartedEvent = event.PipelineStarted{}
-	PipelineResumedEvent = event.PipelineResumed{}
-	PipelinePlannedEvent = event.PipelinePlanned{}
+	PipelineQueuedEvent   = event.PipelineQueued{}
+	PipelineStartedEvent  = event.PipelineStarted{}
+	PipelineResumedEvent  = event.PipelineResumed{}
+	PipelinePlannedEvent  = event.PipelinePlanned{}
+	PipelineCanceledEvent = event.PipelineCanceled{}
+	PipelinePausedEvent   = event.PipelinePaused{}
+	PipelineFinishedEvent = event.PipelineFinished{}
+	PipelineFailedEvent   = event.PipelineFailed{}
+	PipelineLoadedEvent   = event.PipelineLoaded{}
 
-	StepQueuedEvent     = event.StepQueued{}
-	StepPipelineStarted = event.PipelineStepStarted{}
+	StepQueuedEvent          = event.StepQueued{}
+	StepFinishedEvent        = event.StepFinished{} // this is the generic step finish event that is fired by the command.step_start command
+	StepForEachPlannedEvent  = event.StepForEachPlanned{}
+	StepPipelineStartedEvent = event.StepPipelineStarted{} // this event is fired for a specific step type: pipeline step (step that launches a pipeline)
+
 )
 
 // Commands
 var (
-	PipelinePlanCommand = event.PipelinePlan{}
+	PipelineCancelCommand = event.PipelineCancel{}
+	PipelinePlanCommand   = event.PipelinePlan{}
+	PipelineFinishCommand = event.PipelineFinish{}
+	PipelineFailCommand   = event.PipelineFail{}
+	PipelineLoadCommand   = event.PipelineLoad{}
+	PipelinePauseCommand  = event.PipelinePause{}
+	PipelineQueueCommand  = event.PipelineQueue{}
+	PipelineResumeCommand = event.PipelineResume{}
+	PipelineStartCommand  = event.PipelineStart{}
 
 	StepQueueCommand = event.StepQueue{}
 	StepStartCommand = event.StepStart{}
+
+	StepPipelineFinishCommand = event.StepPipelineFinish{} // this command is fired when a child pipeline has finished. This is to inform the parent pipeline to continue the execution
 )
 
 func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
@@ -547,13 +565,13 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			return err
 		}
 
-	// handler.pipeline_step_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
+	// handler.step_pipeline_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
 	// a generic step start event
-	case StepPipelineStarted.HandlerName(): //  "handler.pipeline_step_started"
-		var et event.PipelineStepStarted
+	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
+		var et event.StepPipelineStarted
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_step_started event", "execution", ex.ID, "error", err)
+			logger.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -570,11 +588,11 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 
 	// this is the generic step finish event that is fired by the command.step_start command
-	case "handler.pipeline_step_finished":
-		var et event.PipelineStepFinished
+	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
+		var et event.StepFinished
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_step_finished event", "execution", ex.ID, "error", err)
+			logger.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -638,7 +656,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopContinue)
 		}
 
-	case "handler.step_for_each_planned":
+	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
 		var et event.StepForEachPlanned
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
@@ -666,7 +684,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 
 		// if there's NextSteps .. then we assume that the step is still running
 
-	case "handler.pipeline_canceled":
+	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
 		var et event.PipelineCanceled
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
@@ -677,7 +695,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.Status = "canceled"
 		pe.EndTime = et.Event.CreatedAt
 
-	case "handler.pipeline_paused":
+	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
 		var et event.PipelinePaused
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
@@ -687,7 +705,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "paused"
 
-	case "command.pipeline_finish":
+	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
 		var et event.PipelineFinished
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
@@ -697,7 +715,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "finishing"
 
-	case "handler.pipeline_finished":
+	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
 		var et event.PipelineFinished
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
@@ -709,7 +727,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.EndTime = et.Event.CreatedAt
 		pe.PipelineOutput = et.PipelineOutput
 
-	case "handler.pipeline_failed":
+	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
 		var et event.PipelineFailed
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {

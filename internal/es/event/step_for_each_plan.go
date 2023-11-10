@@ -22,7 +22,7 @@ func NewStepForEachPlanFromPipelinePlanned(e *PipelinePlanned, stepName string) 
 	}
 }
 
-func NewStepForEachPlanFromPipelineStepFinished(e *PipelineStepFinished, stepName string) *StepForEachPlan {
+func NewStepForEachPlanFromPipelineStepFinished(e *StepFinished, stepName string) *StepForEachPlan {
 	return &StepForEachPlan{
 		Event:               e.Event,
 		PipelineExecutionID: e.PipelineExecutionID,

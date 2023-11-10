@@ -9,10 +9,8 @@ import (
 
 // ! This event is only for starting Pipeline Step, not a general step start command.
 // !
-// ! For general Step Start command, refer to PipelineStepStart
-//
-// TODO: at one point we should rename this command, make it more clear.
-type PipelineStepStarted struct {
+// ! For general Step Start command, refer to StepStart
+type StepPipelineStarted struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
@@ -30,21 +28,20 @@ type PipelineStepStarted struct {
 	Key string `json:"key"`
 }
 
-func (e *PipelineStepStarted) GetEvent() *Event {
+func (e *StepPipelineStarted) GetEvent() *Event {
 	return e.Event
 }
 
-func (e *PipelineStepStarted) HandlerName() string {
-	return "handler.pipeline_step_started"
+func (e *StepPipelineStarted) HandlerName() string {
+	return "handler.step_pipeline_started"
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineStepStartedOption func(*PipelineStepStarted) error
+type StepPipelineStartedOption func(*StepPipelineStarted) error
 
-// NewPipelineStepStarted creates a new PipelineStepStarted event.
-func NewPipelineStepStarted(opts ...PipelineStepStartedOption) (*PipelineStepStarted, error) {
+// NewStepPipelineStarted creates a new StepPipelineStarted event.
+func NewStepPipelineStarted(opts ...StepPipelineStartedOption) (*StepPipelineStarted, error) {
 	// Defaults
-	e := &PipelineStepStarted{}
+	e := &StepPipelineStarted{}
 	// Set options
 	for _, opt := range opts {
 		err := opt(e)
@@ -55,8 +52,8 @@ func NewPipelineStepStarted(opts ...PipelineStepStartedOption) (*PipelineStepSta
 	return e, nil
 }
 
-func ForPipelineStepStart(cmd *StepStart) PipelineStepStartedOption {
-	return func(e *PipelineStepStarted) error {
+func ForStepStart(cmd *StepStart) StepPipelineStartedOption {
+	return func(e *StepPipelineStarted) error {
 		e.Event = NewChildEvent(cmd.Event)
 		if cmd.PipelineExecutionID != "" {
 			e.PipelineExecutionID = cmd.PipelineExecutionID
@@ -74,8 +71,8 @@ func ForPipelineStepStart(cmd *StepStart) PipelineStepStartedOption {
 
 // WithNewChildPipelineExecutionID returns a PipelineStepStartedOption that sets
 // the ChildPipelineExecutionID to a new ID.
-func WithNewChildPipelineExecutionID() PipelineStepStartedOption {
-	return func(e *PipelineStepStarted) error {
+func WithNewChildPipelineExecutionID() StepPipelineStartedOption {
+	return func(e *StepPipelineStarted) error {
 		e.ChildPipelineExecutionID = util.NewPipelineExecutionID()
 		return nil
 	}
@@ -83,15 +80,15 @@ func WithNewChildPipelineExecutionID() PipelineStepStartedOption {
 
 // WithChildPipelineExecutionID returns a PipelineStepStartedOption that sets
 // the ChildPipelineExecutionID to the given ID.
-func WithChildPipelineExecutionID(id string) PipelineStepStartedOption {
-	return func(e *PipelineStepStarted) error {
+func WithChildPipelineExecutionID(id string) StepPipelineStartedOption {
+	return func(e *StepPipelineStarted) error {
 		e.ChildPipelineExecutionID = id
 		return nil
 	}
 }
 
-func WithChildPipeline(name string, args modconfig.Input) PipelineStepStartedOption {
-	return func(cmd *PipelineStepStarted) error {
+func WithChildPipeline(name string, args modconfig.Input) StepPipelineStartedOption {
+	return func(cmd *StepPipelineStarted) error {
 		cmd.ChildPipelineName = name
 		cmd.ChildPipelineArgs = args
 		return nil

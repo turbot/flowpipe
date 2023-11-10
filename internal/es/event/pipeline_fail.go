@@ -91,11 +91,13 @@ func ForPipelineLoadedToPipelineFail(e *PipelineLoaded, err error) PipelineFailO
 
 func ForPipelineQueuedToPipelineFail(e *PipelineQueued, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
+		cmd.Event = NewFlowEvent(e.Event)
+
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Event = NewFlowEvent(e.Event)
+
 		cmd.PipelineExecutionID = e.PipelineExecutionID
 		cmd.Error = &modconfig.StepError{
 			Error:               errorModel,
@@ -106,11 +108,12 @@ func ForPipelineQueuedToPipelineFail(e *PipelineQueued, err error) PipelineFailO
 
 func ForPipelineStartedToPipelineFail(e *PipelineStarted, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
+		cmd.Event = NewFlowEvent(e.Event)
+
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
 		cmd.Error = &modconfig.StepError{
 			Error:               errorModel,
@@ -121,11 +124,13 @@ func ForPipelineStartedToPipelineFail(e *PipelineStarted, err error) PipelineFai
 
 func ForPipelineResumedToPipelineFail(e *PipelineResumed, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
+		cmd.Event = NewFlowEvent(e.Event)
+
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Event = NewFlowEvent(e.Event)
+
 		cmd.PipelineExecutionID = e.PipelineExecutionID
 		cmd.Error = &modconfig.StepError{
 			Error:               errorModel,
@@ -134,13 +139,15 @@ func ForPipelineResumedToPipelineFail(e *PipelineResumed, err error) PipelineFai
 	}
 }
 
-func ForPipelineStepStartedToPipelineFail(e *PipelineStepStarted, err error) PipelineFailOption {
+func ForStepPipelineStartedToPipelineFail(e *StepPipelineStarted, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
+		cmd.Event = NewFlowEvent(e.Event)
+
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Event = NewFlowEvent(e.Event)
+
 		cmd.PipelineExecutionID = e.PipelineExecutionID
 		cmd.Error = &modconfig.StepError{
 			Error:               errorModel,
@@ -149,12 +156,14 @@ func ForPipelineStepStartedToPipelineFail(e *PipelineStepStarted, err error) Pip
 	}
 }
 
-func ForPipelineStepFinishedToPipelineFail(e *PipelineStepFinished, err error) PipelineFailOption {
+func ForPipelineStepFinishedToPipelineFail(e *StepFinished, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
+		var errorModel perr.ErrorModel
+
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
+
 		if err != nil {
-			var errorModel perr.ErrorModel
 			if ok := errors.As(err, &errorModel); !ok {
 				errorModel = perr.InternalWithMessage(err.Error())
 			}
@@ -166,7 +175,7 @@ func ForPipelineStepFinishedToPipelineFail(e *PipelineStepFinished, err error) P
 	}
 }
 
-func ForPipelineStepQueuedToPipelineFail(e *StepQueued, err error) PipelineFailOption {
+func ForStepQueuedToPipelineFail(e *StepQueued, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
@@ -183,12 +192,14 @@ func ForPipelineStepQueuedToPipelineFail(e *StepQueued, err error) PipelineFailO
 
 func ForPipelineFinishedToPipelineFail(e *PipelineFinished, err error) PipelineFailOption {
 	return func(cmd *PipelineFail) {
+		cmd.Event = NewFlowEvent(e.Event)
+		cmd.PipelineExecutionID = e.PipelineExecutionID
+
 		var errorModel perr.ErrorModel
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Event = NewFlowEvent(e.Event)
-		cmd.PipelineExecutionID = e.PipelineExecutionID
+
 		cmd.Error = &modconfig.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,

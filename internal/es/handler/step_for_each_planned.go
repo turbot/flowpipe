@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -11,10 +12,8 @@ import (
 
 type StepForEachPlanned EventHandler
 
-var stepForEachPlanned = event.StepForEachPlanned{}
-
 func (h StepForEachPlanned) HandlerName() string {
-	return stepForEachPlanned.HandlerName()
+	return execution.StepForEachPlannedEvent.HandlerName()
 }
 
 func (StepForEachPlanned) NewEvent() interface{} {

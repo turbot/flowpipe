@@ -63,7 +63,7 @@ func ForPipelinePlanned(e *PipelinePlanned) StepStartOption {
 	}
 }
 
-func ForPipelineStepQueued(e *StepQueued) StepStartOption {
+func ForStepQueued(e *StepQueued) StepStartOption {
 	return func(cmd *StepStart) error {
 
 		if e.StepExecutionID == "" {
