@@ -38,3 +38,15 @@ pipeline "bad_http_ignored" {
         value = step.echo.bad_http_if_error_true
     }
 }
+
+
+pipeline "error_retry_throw" {
+
+    step "http" "bad_http" {
+        url = "http://api.open-notify.org/astros.jsons"
+
+        retry {
+            retries = 2
+        }
+    }
+}

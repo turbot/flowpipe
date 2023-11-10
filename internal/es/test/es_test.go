@@ -806,7 +806,6 @@ func (suite *EsTestSuite) TestChildPipeline() {
 	// TODO: - Check child pipeline status
 	// TODO: - Add status on pipeline step
 	// TODO: - add multiple childs
-	// TODO: - add more levels (not just 1)
 }
 
 func (suite *EsTestSuite) TestStepOutput() {

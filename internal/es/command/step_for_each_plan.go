@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"strconv"
+	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -44,7 +45,12 @@ func (h StepForEachPlanHandler) NewCommand() interface{} {
 	   this step will generate 2 "index".
 */
 
+var stepForEachPlanMu sync.Mutex
+
 func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error {
+	stepForEachPlanMu.Lock()
+	defer stepForEachPlanMu.Unlock()
+
 	logger := fplog.Logger(ctx)
 
 	e, ok := c.(*event.StepForEachPlan)

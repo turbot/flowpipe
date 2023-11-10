@@ -1134,168 +1134,29 @@ func (suite *ModTestSuite) TestModVars() {
 }
 
 // TODO : Add back the test to validate  the input step
+func (suite *ModTestSuite) TestErrorRetry() {
+	assert := assert.New(suite.T())
 
-// func (suite *ModTestSuite) TestPipelineInputStep() {
-// 	assert := assert.New(suite.T())
+	pipelineInput := &modconfig.Input{}
 
-// 	// Slack notify
-// 	pipelineInput := &modconfig.Input{
-// 		"channel": "#random",
-// 	}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_throw", 500*time.Millisecond, pipelineInput)
 
-// 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_slack_notify", 100*time.Millisecond, pipelineInput)
-// 	if err != nil {
-// 		assert.Fail("Error creating execution", err)
-// 		return
-// 	}
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
 
-// 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-// 	if err != nil {
-// 		assert.Fail("Error getting pipeline execution", err.Error())
-// 		return
-// 	}
-// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
 
-// 	stepExecutionID := pex.StepExecutionOrder["input.input"][0]
-// 	stepExecution := pex.StepExecutions[stepExecutionID]
-
-// 	assert.NotNil(stepExecution.Input)
-
-// 	stepInput := stepExecution.Input
-
-// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
-// 		assert.Fail("Input should have notifies")
-// 		return
-// 	}
-// 	notifies := stepInput[schema.AttributeTypeNotifies].([]interface{})
-// 	assert.Equal(1, len(notifies))
-
-// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap := notifies[0].(map[string]interface{})
-// 	assert.Equal("#random", notifyMap[schema.AttributeTypeChannel].(string))
-
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("slack", integrationMap[schema.AttributeTypeType].(string))
-// 	assert.Equal("abcde", integrationMap[schema.AttributeTypeToken].(string))
-
-// 	// Email notify
-// 	pipelineInput = &modconfig.Input{}
-
-// 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_email_notify", 100*time.Millisecond, pipelineInput)
-// 	if err != nil {
-// 		assert.Fail("Error creating execution", err)
-// 		return
-// 	}
-
-// 	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-// 	if err != nil {
-// 		assert.Fail("Error getting pipeline execution", err.Error())
-// 		return
-// 	}
-// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
-
-// 	stepExecutionID = pex.StepExecutionOrder["input.input"][0]
-// 	stepExecution = pex.StepExecutions[stepExecutionID]
-
-// 	assert.NotNil(stepExecution.Input)
-
-// 	stepInput = stepExecution.Input
-
-// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
-// 		assert.Fail("Input should have notifies")
-// 		return
-// 	}
-// 	notifies = stepInput[schema.AttributeTypeNotifies].([]interface{})
-// 	assert.Equal(1, len(notifies))
-
-// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap = notifies[0].(map[string]interface{})
-// 	assert.Equal("awesomebob@blahblah.com", notifyMap[schema.AttributeTypeTo].(string))
-
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("email", integrationMap[schema.AttributeTypeType].(string))
-// 	assert.Equal("foo bar baz", integrationMap[schema.AttributeTypeSmtpHost].(string))
-// 	assert.Equal("bar foo baz", integrationMap[schema.AttributeTypeDefaultSubject].(string))
-// 	assert.Equal("baz bar foo", integrationMap[schema.AttributeTypeSmtpUsername].(string))
-
-// 	// Notifies test
-// 	pipelineInput = &modconfig.Input{
-// 		"channel": "#random",
-// 	}
-
-// 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_notifies", 100*time.Millisecond, pipelineInput)
-// 	if err != nil {
-// 		assert.Fail("Error creating execution", err)
-// 		return
-// 	}
-
-// 	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-// 	if err != nil {
-// 		assert.Fail("Error getting pipeline execution", err.Error())
-// 		return
-// 	}
-// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
-
-// 	stepExecutionID = pex.StepExecutionOrder["input.input"][0]
-// 	stepExecution = pex.StepExecutions[stepExecutionID]
-
-// 	assert.NotNil(stepExecution.Input)
-
-// 	stepInput = stepExecution.Input
-
-// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
-// 		assert.Fail("Input should have notifies")
-// 		return
-// 	}
-// 	notifies = stepInput[schema.AttributeTypeNotifies].([]interface{})
-// 	assert.Equal(2, len(notifies))
-
-// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap = notifies[0].(map[string]interface{})
-// 	assert.Equal("#random", notifyMap[schema.AttributeTypeChannel].(string))
-
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("slack", integrationMap[schema.AttributeTypeType].(string))
-// 	assert.Equal("abcde", integrationMap[schema.AttributeTypeToken].(string))
-
-// 	if _, ok := notifies[1].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap = notifies[1].(map[string]interface{})
-// 	assert.Equal("awesomebob@blahblah.com", notifyMap[schema.AttributeTypeTo].(string))
-
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("foo bar baz", integrationMap[schema.AttributeTypeSmtpHost].(string))
-// 	assert.Equal("bar foo baz", integrationMap[schema.AttributeTypeDefaultSubject].(string))
-// 	assert.Equal("baz bar foo", integrationMap[schema.AttributeTypeSmtpUsername].(string))
-// 	assert.Equal("email", integrationMap[schema.AttributeTypeType].(string))
-// }
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+}
 
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{

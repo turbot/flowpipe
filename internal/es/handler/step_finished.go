@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -62,11 +63,15 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, perr.BadRequestWithMessage("step not found"))))
 	}
 
+	if e.Output != nil && (len(e.Output.Errors) > 0 || e.Output.Status == "failed") {
+		h.handleError(ctx, e, stepDefn)
+		return nil
+	}
+
 	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
 	// check if we are in a loop. If we are in a loop start the next loop
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 	if loopBlock != nil && e.StepLoop != nil && !e.StepLoop.LoopCompleted {
-
 		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(e, stepName)
 		if err != nil {
 			err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
@@ -91,4 +96,14 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	return h.CommandBus.Send(ctx, cmd)
+}
+
+// errors are handled in the following order:
+//
+// throw, in the order that they appear
+// retry
+// error
+func (h StepFinished) handleError(ctx context.Context, e *event.StepFinished, stepDefn modconfig.PipelineStep) {
+	// we have error, check the if there's a retry block
+
 }
