@@ -447,8 +447,18 @@ type StepStatus struct {
 	Initializing bool   `json:"initializing"`
 	OverralState string `json:"overral_state"`
 
-	// Indicate that step is in a loop so we don't mark it as finished
+	//
+	// Both LoopHold and ErrorHold must be resolved **before** the "finish" event is called, i.e. it needs to be calculated at the
+	// end of "step start command" and "step pipeline finish" command.
+	//
+	// It can't be calculated at the "finish" event because it's already too late. If the planner see that it has an finish
+	// event without either a LoopHold or ErrorHold, it will mark the step as completed or failed
+	//
+	// Indicates that step is in a loop so we don't mark it as finished
 	LoopHold bool `json:"loop_hold"`
+
+	// Indicates that a step is in retry loop so we don't mark it as failed
+	ErrorHold bool `json:"error_hold"`
 
 	// Step executions that are queued.
 	Queued map[string]bool `json:"queued"`

@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -315,7 +316,7 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 		evalContext := execution.AddLoop(cmd.StepLoop, evalContext)
 
 		// We have to evaluate the loop body here before the index is incremented to determine if the loop should run
-		// we will have to re-evulate the loop body again after the index is incremented to get the correct values
+		// we will have to re-evaluate the loop body again after the index is incremented to get the correct values
 		diags := gohcl.DecodeBody(loopBlock, evalContext, loopDefn)
 		if len(diags) > 0 {
 			logger.Error("Error decoding loop block", "error", diags)
@@ -405,4 +406,38 @@ func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepSt
 	if err != nil {
 		logger.Error("Error publishing event", "error", err)
 	}
+}
+
+// errors are handled in the following order:
+//
+// throw, in the order that they appear
+// retry
+// error
+func handleError(ctx context.Context, h StepStartHandler, e *event.StepStart, stepDefn modconfig.PipelineStep) *modconfig.StepRetry {
+	logger := fplog.Logger(ctx)
+
+	// we have error, check the if there's a retry block
+	retryConfig := stepDefn.GetRetryConfig()
+
+	if helpers.IsNil(retryConfig) {
+		// there's no retry config ... nothing to retry
+		return nil
+	}
+
+	stepRetry := e.StepRetry
+
+	// if step retry == nil means this is the first time we encountered this issue
+	if stepRetry == nil {
+		stepRetry = &modconfig.StepRetry{
+			Index: 0,
+		}
+	}
+
+	stepRetry.Index = stepRetry.Index + 1
+	if stepRetry.Index > retryConfig.Retries {
+		// we have exhausted all retries, we need to fail the pipeline
+		return nil
+	}
+
+	return stepRetry
 }

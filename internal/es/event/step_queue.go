@@ -20,6 +20,7 @@ type StepQueue struct {
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
 
 	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 
@@ -52,7 +53,7 @@ func NewStepQueue(opts ...StepQueueOption) (*StepQueue, error) {
 	return e, nil
 }
 
-func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName string) *StepQueue {
+func NewStepQueueFromPipelineStepFinished(e *StepFinished, stepName string) *StepQueue {
 
 	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),

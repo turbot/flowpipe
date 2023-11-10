@@ -27,6 +27,7 @@ type StepFinished struct {
 	// loop controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
 	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
 }
 
 func (e *StepFinished) GetEvent() *Event {
