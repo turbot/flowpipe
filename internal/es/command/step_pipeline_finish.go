@@ -80,43 +80,47 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	//
 	// As long as they are in 2 different property: Output (native output, happens also to be called "output" for pipeline step) and StepOutput (also referred to configured step output)
 	// we will be OK
-	for _, outputConfig := range stepDefn.GetOutputConfig() {
-		if outputConfig.UnresolvedValue != nil {
+	if len(cmd.Output.Errors) == 0 {
+		for _, outputConfig := range stepDefn.GetOutputConfig() {
+			if outputConfig.UnresolvedValue != nil {
 
-			stepForEach := stepDefn.GetForEach()
-			if stepForEach != nil {
-				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
-			}
-
-			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
-			if len(diags) > 0 && diags.HasErrors() {
-				logger.Error("Error calculating output on step start", "error", diags)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
+				stepForEach := stepDefn.GetForEach()
+				if stepForEach != nil {
+					evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
 				}
-				return nil
-			}
 
-			goVal, err := hclhelpers.CtyToGo(ctyValue)
-			if err != nil {
-				logger.Error("Error converting cty value to Go value for output calculation", "error", err)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
+				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
+				if len(diags) > 0 && diags.HasErrors() {
+					logger.Error("Error calculating output on step start", "error", diags)
+					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+					if err2 != nil {
+						logger.Error("Error publishing event", "error", err2)
+					}
+					return nil
 				}
-				return nil
+
+				goVal, err := hclhelpers.CtyToGo(ctyValue)
+				if err != nil {
+					logger.Error("Error converting cty value to Go value for output calculation", "error", err)
+					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+					if err2 != nil {
+						logger.Error("Error publishing event", "error", err2)
+					}
+					return nil
+				}
+				stepOutput[outputConfig.Name] = goVal
+			} else {
+				stepOutput[outputConfig.Name] = outputConfig.Value
 			}
-			stepOutput[outputConfig.Name] = goVal
-		} else {
-			stepOutput[outputConfig.Name] = outputConfig.Value
 		}
 	}
 
 	e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
 	e.StepOutput = stepOutput
 
-	if err != nil {
+	if err != nil || len(cmd.Output.Errors) > 0 {
+		cmd.Output.Status = "failed"
+		err = cmd.Output.Errors[0].Error
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
 	}
 	return h.EventBus.Publish(ctx, e)

@@ -102,6 +102,18 @@ func ForPipelineFail(cmd *PipelineFail, pipelineOutput map[string]interface{}) P
 		e.PipelineExecutionID = cmd.PipelineExecutionID
 		e.Error = cmd.Error
 		e.PipelineOutput = pipelineOutput
+
+		pipelineOutputErrors := pipelineOutput["errors"]
+
+		if stepErr, ok := pipelineOutputErrors.([]modconfig.StepError); ok {
+			for i := 0; i < len(stepErr); i++ {
+				e.Error = &modconfig.StepError{
+					Error:               stepErr[i].Error,
+					PipelineExecutionID: cmd.PipelineExecutionID,
+					StepExecutionID:     stepErr[i].StepExecutionID,
+				}
+			}
+		}
 		return nil
 	}
 }
