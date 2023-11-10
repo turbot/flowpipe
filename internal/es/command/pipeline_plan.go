@@ -172,7 +172,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				}
 
 				if val.False() {
-					logger.Info("if condition not met for step", "step", stepDefn.GetName())
+					logger.Debug("if condition not met for step", "step", stepDefn.GetName())
 					calculateInput = false
 					nextStepAction = modconfig.NextStepActionSkip
 				} else {
