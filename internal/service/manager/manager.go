@@ -109,8 +109,7 @@ func (m *Manager) Initialize() error {
 	var modInfo *modconfig.Mod
 
 	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
-
-		w, errorAndWarning := workspace.LoadWithParams(m.ctx, pipelineDir, ".hcl", ".sp")
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, pipelineDir, ".hcl", ".sp")
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
