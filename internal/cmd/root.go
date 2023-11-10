@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"os"
 	"path/filepath"
 	"time"
@@ -133,10 +134,13 @@ func addCommands(ctx context.Context, rootCmd *cobra.Command) error {
 // initConfig reads in config file and ENV variables if set.
 func initGlobalConfig() *error_helpers.ErrorAndWarnings {
 
+	// load workspace profile from the configured install dir
+	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
+	error_helpers.FailOnError(err)
+
 	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err := cmdconfig.BootstrapViper(cmd)
-
+	err = cmdconfig.BootstrapViper(loader, cmd)
 	error_helpers.FailOnError(err)
 
 	installDir := viper.GetString(constants.ArgInstallDir)
