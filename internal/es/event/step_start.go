@@ -30,7 +30,7 @@ func (e *StepStart) GetEvent() *Event {
 }
 
 func (e *StepStart) HandlerName() string {
-	return "command.step_start"
+	return CommandStepStart
 }
 
 type StepStartOption func(*StepStart) error

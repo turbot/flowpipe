@@ -20,7 +20,7 @@ func (e *PipelineFinish) GetEvent() *Event {
 }
 
 func (e *PipelineFinish) HandlerName() string {
-	return "command.pipeline_finish"
+	return CommandPipelineFinish
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

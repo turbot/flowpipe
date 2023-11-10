@@ -14,7 +14,7 @@ func (e *PipelineCanceled) GetEvent() *Event {
 }
 
 func (e *PipelineCanceled) HandlerName() string {
-	return "handler.pipeline_canceled"
+	return HandlerPipelineCancelled
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

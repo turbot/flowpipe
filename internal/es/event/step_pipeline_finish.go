@@ -24,7 +24,7 @@ func (e *StepPipelineFinish) GetEvent() *Event {
 }
 
 func (e *StepPipelineFinish) HandlerName() string {
-	return "command.step_pipeline_finish"
+	return CommandStepPipelineFinish
 }
 
 type StepPipelineFinishOption func(*StepPipelineFinish) error

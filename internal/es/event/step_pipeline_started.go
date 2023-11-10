@@ -33,7 +33,7 @@ func (e *StepPipelineStarted) GetEvent() *Event {
 }
 
 func (e *StepPipelineStarted) HandlerName() string {
-	return "handler.step_pipeline_started"
+	return HandlerStepPipelineStarted
 }
 
 type StepPipelineStartedOption func(*StepPipelineStarted) error

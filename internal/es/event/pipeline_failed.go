@@ -30,7 +30,7 @@ func (e *PipelineFailed) GetEvent() *Event {
 }
 
 func (e *PipelineFailed) HandlerName() string {
-	return "handler.pipeline_failed"
+	return HandlerPipelineFailed
 }
 
 // PipelineFailedOption is a function that modifies an Execution instance.

@@ -14,7 +14,7 @@ func (e *PipelinePaused) GetEvent() *Event {
 }
 
 func (e *PipelinePaused) HandlerName() string {
-	return "handler.pipeline_paused"
+	return HandlerPipelinePaused
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

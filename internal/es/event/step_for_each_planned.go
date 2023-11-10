@@ -14,7 +14,7 @@ func (e *StepForEachPlanned) GetEvent() *Event {
 }
 
 func (e *StepForEachPlanned) HandlerName() string {
-	return "handler.step_for_each_planned"
+	return HandlerStepForEachPlanned
 }
 
 func NewStepForEachPlannedFromStepForEachPlan(cmd *StepForEachPlan, nextSteps []modconfig.NextStep) *StepForEachPlanned {

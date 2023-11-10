@@ -34,7 +34,7 @@ func (e *StepFinished) GetEvent() *Event {
 }
 
 func (e *StepFinished) HandlerName() string {
-	return "handler.step_finished"
+	return HandlerStepFinished
 }
 
 type StepFinishedOption func(*StepFinished) error

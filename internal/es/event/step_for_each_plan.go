@@ -11,7 +11,7 @@ func (e *StepForEachPlan) GetEvent() *Event {
 }
 
 func (e *StepForEachPlan) HandlerName() string {
-	return "command.step_for_each_plan"
+	return CommandStepForEachPlan
 }
 
 func NewStepForEachPlanFromPipelinePlanned(e *PipelinePlanned, stepName string) *StepForEachPlan {

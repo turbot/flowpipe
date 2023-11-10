@@ -17,7 +17,7 @@ func (e *PipelineResume) GetEvent() *Event {
 }
 
 func (e *PipelineResume) HandlerName() string {
-	return "command.pipeline_resume"
+	return CommandPipelineResume
 }
 
 // ExecutionOption is a function that modifies an Execution instance.

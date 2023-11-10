@@ -30,7 +30,7 @@ func (e *StepQueued) GetEvent() *Event {
 }
 
 func (e *StepQueued) HandlerName() string {
-	return "handler.step_queued"
+	return HandlerStepQueued
 }
 
 type StepQueuedOption func(*StepQueued) error

@@ -31,7 +31,7 @@ func (e *StepQueue) GetEvent() *Event {
 }
 
 func (e *StepQueue) HandlerName() string {
-	return "command.step_queue"
+	return CommandStepQueue
 }
 
 type StepQueueOption func(*StepQueue) error

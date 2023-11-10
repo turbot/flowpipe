@@ -13,6 +13,7 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
@@ -367,7 +368,7 @@ func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APICli
 				fmt.Printf("[%s] %v\n", *logEntry.EventType, *logEntry.Payload) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
 				lastIndexRead = logIndex
 
-				if *logEntry.EventType == "handler.pipeline_finished" || *logEntry.EventType == "handler.pipeline_failed" {
+				if *logEntry.EventType == event.HandlerPipelineFinished || *logEntry.EventType == event.HandlerPipelineFailed {
 					if logEntry.Payload != nil {
 						payload := make(map[string]any)
 						if err := json.Unmarshal([]byte(*logEntry.Payload), &payload); err != nil {
