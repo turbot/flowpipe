@@ -80,7 +80,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	//
 	// As long as they are in 2 different property: Output (native output, happens also to be called "output" for pipeline step) and StepOutput (also referred to configured step output)
 	// we will be OK
-	if len(cmd.Output.Errors) == 0 {
+	if !cmd.Output.HasErrors() {
 		for _, outputConfig := range stepDefn.GetOutputConfig() {
 			if outputConfig.UnresolvedValue != nil {
 
@@ -116,12 +116,10 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 
 	e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
-	e.StepOutput = stepOutput
-
-	if err != nil || len(cmd.Output.Errors) > 0 {
-		cmd.Output.Status = "failed"
-		err = cmd.Output.Errors[0].Error
+	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
 	}
+	e.StepOutput = stepOutput
+
 	return h.EventBus.Publish(ctx, e)
 }

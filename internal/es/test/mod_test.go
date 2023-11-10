@@ -1082,6 +1082,33 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal(3, len(pex.StepStatus["transform.text_1"]))
 }
 
+func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
+
+	// bad_http_not_ignored pipeline
+	assert := assert.New(suite.T())
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.validate_error", 200*time.Millisecond, nil)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil || (err != nil && err.Error() != "not completed") {
+		assert.Fail("Invalid pipeline status", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("failed", pex.Status)
+	assert.NotNil(pex.Errors)
+
+	assert.NotNil(pex.StepStatus["pipeline.pipeline_step"]["0"].StepExecutions[0].Output.Errors)
+
+	assert.NotNil(pex.PipelineOutput["errors"])
+	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error"].(map[string]interface{})["status"])
+}
+
 // TODO : Add back the test to validate  the input step
 
 // func (suite *ModTestSuite) TestPipelineInputStep() {
