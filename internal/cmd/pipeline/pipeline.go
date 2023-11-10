@@ -381,7 +381,7 @@ func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APICli
 		printableResource.Items = render
 		err = printer.PrintResource(ctx, printableResource, w)
 		if err != nil {
-
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
 
 		// Check logs received for termination/completion of execution
