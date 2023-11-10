@@ -29,8 +29,8 @@ func (e *StepPipelineFinish) HandlerName() string {
 
 type StepPipelineFinishOption func(*StepPipelineFinish) error
 
-// NewPipelineStepFinish creates a new StepPipelineFinish event.
-func NewPipelineStepFinish(opts ...StepPipelineFinishOption) (*StepPipelineFinish, error) {
+// NewStepPipelineFinish creates a new StepPipelineFinish event.
+func NewStepPipelineFinish(opts ...StepPipelineFinishOption) (*StepPipelineFinish, error) {
 	// Defaults
 	e := &StepPipelineFinish{}
 	// Set options

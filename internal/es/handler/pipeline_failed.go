@@ -44,7 +44,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if parentStepExecution != nil {
-		cmd, err := event.NewPipelineStepFinish(
+		cmd, err := event.NewStepPipelineFinish(
 			event.ForPipelineFailed(e),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
 			event.WithStepExecutionID(parentStepExecution.ID))

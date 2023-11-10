@@ -49,7 +49,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	if parentStepExecution != nil {
 
-		cmd, err := event.NewPipelineStepFinish(
+		cmd, err := event.NewStepPipelineFinish(
 			event.ForPipelineFinished(e),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
 			event.WithStepExecutionID(parentStepExecution.ID),
