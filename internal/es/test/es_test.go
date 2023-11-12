@@ -498,6 +498,11 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(404), pex.StepStatus["http.http_step"]["1"].StepExecutions[0].Output.Data["status_code"])
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
+	if pex.StepStatus["echo.http_step"] == nil {
+		assert.Fail("echo.http_step not found in StepStatus: " + cmd.Event.ExecutionID)
+		return
+	}
+
 	assert.Equal("skipped", pex.StepStatus["echo.http_step"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("skipped", pex.StepStatus["echo.http_step"]["1"].StepExecutions[0].Output.Status)
 	assert.Equal("finished", pex.StepStatus["echo.http_step"]["2"].StepExecutions[0].Output.Status)
