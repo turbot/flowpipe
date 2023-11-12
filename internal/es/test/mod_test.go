@@ -1133,7 +1133,6 @@ func (suite *ModTestSuite) TestModVars() {
 	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
 }
 
-// TODO : Add back the test to validate  the input step
 func (suite *ModTestSuite) TestErrorRetry() {
 	assert := assert.New(suite.T())
 
@@ -1203,7 +1202,80 @@ func (suite *ModTestSuite) TestErrorInForEach() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["1"].StepExecutions[0].Output.Errors[0].Error.Status)
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
 
+func (suite *ModTestSuite) TestErrorInForEachNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// There are 3 instances on the for_each, all of them failed just one time (no retry configured)
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
+
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// There are 3 instances on the for_each, all of them failed just one time (no retry configured)
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
+
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(0, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors))
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
 }
 
 func TestModTestingSuite(t *testing.T) {

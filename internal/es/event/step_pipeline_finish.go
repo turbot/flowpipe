@@ -61,7 +61,7 @@ func ForPipelineFailed(e *PipelineFailed) StepPipelineFinishOption {
 	return func(cmd *StepPipelineFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
 		cmd.Output = &modconfig.Output{
-			Status: "",
+			Status: "failed",
 			Data: map[string]interface{}{
 				"output": e.PipelineOutput,
 			},
