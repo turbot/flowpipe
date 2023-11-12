@@ -138,8 +138,6 @@ func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {
 func (suite *EsTestSuite) AfterTest(suiteName, testName string) {
 }
 
-// All methods that begin with "Test" are run as tests within a
-// suite.
 func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert := assert.New(suite.T())
 
@@ -604,22 +602,26 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
 	// end pipeline test
+}
+
+func (suite *EsTestSuite) TestBadEmail() {
+	assert := assert.New(suite.T())
 
 	// bad_email_with_expr
-	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_email_with_expr", 1*time.Second, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "bad_email_with_expr", 1*time.Second, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	ex, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
 
-	pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
+	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil || pipelineDefn == nil {
 		assert.Fail("Pipeline definition not found", err)
 	}
@@ -649,7 +651,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.NotNil(pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Errors)
 
 	// The email step should fail because of the invalid smtp host
-	errors = pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Errors
+	errors := pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Errors
 	for _, e := range errors {
 		assert.Contains(e.Error.Detail, "no such host")
 	}
