@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -499,11 +500,11 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
 	if pex.StepStatus["echo.http_step"] == nil {
-		// Replace 'file.json' with the path to your JSON file
-		fileName := "./output/" + cmd.Event.ExecutionID + ".json"
+		filename := fmt.Sprintf("%s.jsonl", cmd.Event.ExecutionID)
+		p := filepath.Join(viper.GetString(constants.ArgLogDir), filename)
 
 		// Open the file
-		file, err := os.Open(fileName)
+		file, err := os.Open(p)
 		if err != nil {
 			assert.Fail("Error opening file:", err)
 			return
