@@ -506,12 +506,19 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
+	s, err := prettyjson.Marshal(pex.StepStatus)
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+	fmt.Println(string(s)) //nolint:forbidigo // test
+
 	assert.Equal(3, len(pex.StepStatus["echo.name"]))
 	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
 
-	s, err := prettyjson.Marshal(pex.StepStatus["echo.second_step"])
+	s, err = prettyjson.Marshal(pex.StepStatus["echo.second_step"])
 	if err != nil {
 		assert.Fail("Error marshalling pipeline output", err)
 		return
