@@ -3,7 +3,6 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"fmt"
 
 	"os"
 	"path"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -506,24 +504,17 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	s, err := prettyjson.Marshal(pex.StepStatus)
-	if err != nil {
-		assert.Fail("Error marshalling pipeline output", err)
-		return
-	}
-	fmt.Println(string(s)) //nolint:forbidigo // test
+	// s, err := prettyjson.Marshal(pex.StepStatus)
+	// if err != nil {
+	// 	assert.Fail("Error marshalling pipeline output", err)
+	// 	return
+	// }
+	// fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal(3, len(pex.StepStatus["echo.name"]))
 	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
-
-	s, err = prettyjson.Marshal(pex.StepStatus["echo.second_step"])
-	if err != nil {
-		assert.Fail("Error marshalling pipeline output", err)
-		return
-	}
-	fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
 	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
@@ -1119,13 +1110,6 @@ func (suite *ModTestSuite) TestModVars() {
 		return
 	}
 
-	s, err := prettyjson.Marshal(pex.PipelineOutput)
-	if err != nil {
-		assert.Fail("Error marshalling pipeline output", err)
-		return
-	}
-	fmt.Println(string(s)) //nolint:forbidigo // test
-
 	assert.Equal("Hello World: this is the value of var_one", pex.PipelineOutput["echo_one_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_two_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file and Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_three_output"])
@@ -1276,6 +1260,40 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
 	assert.Equal(0, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors))
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) XTestErrorThrowSimple() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// The step should be executed 3 times. First attempt + 2 retries
+	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 }
 
 func TestModTestingSuite(t *testing.T) {

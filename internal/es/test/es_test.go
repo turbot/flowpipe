@@ -261,7 +261,7 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 }
 
 // TODO: VH 2021-10-11 - this test is failing, we need to fix it
-func (suite *EsTestSuite) XSkipTestIfConditionsOnSteps() {
+func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert := assert.New(suite.T())
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "if", 100*time.Millisecond, nil)
@@ -291,8 +291,7 @@ func (suite *EsTestSuite) XSkipTestIfConditionsOnSteps() {
 		return
 	}
 
-	// TODO: VH 2023-11-10 investigate why in some cases the output is not there
-	// assert.Equal(5, len(echoStepsOutput))
+	assert.Equal(5, len(echoStepsOutput))
 
 	// TODO: we have to check this in the StepStatus now rather than the AllStepOutput attribute (that was removed)
 	// assert.Equal("finished", echoStepsOutput["text_true"].(*modconfig.Output).Status)
@@ -302,10 +301,10 @@ func (suite *EsTestSuite) XSkipTestIfConditionsOnSteps() {
 	// assert.Equal("skipped", echoStepsOutput["text_3"].(*modconfig.Output).Status)
 
 	assert.Equal("foo", echoStepsOutput["text_true"].AsValueMap()["text"].AsString())
-	// assert.Equal(0, len(echoStepsOutput["text_false"].AsValueMap()))
+	assert.Equal(0, len(echoStepsOutput["text_false"].AsValueMap()))
 	assert.Equal("foo", echoStepsOutput["text_1"].AsValueMap()["text"].AsString())
 	assert.Equal("bar", echoStepsOutput["text_2"].AsValueMap()["text"].AsString())
-	// assert.Equal(0, len(echoStepsOutput["text_3"].AsValueMap()))
+	assert.Equal(0, len(echoStepsOutput["text_3"].AsValueMap()))
 }
 
 func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
