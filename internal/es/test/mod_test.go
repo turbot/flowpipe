@@ -1248,8 +1248,4 @@ func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
 	})
-
-	suite.Run(t, &ModTestSuite2{
-		FlowpipeTestSuite: &FlowpipeTestSuite{},
-	})
 }

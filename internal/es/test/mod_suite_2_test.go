@@ -3,11 +3,14 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"fmt"
+	"testing"
 
 	"os"
 	"path"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -149,14 +152,29 @@ func (suite *ModTestSuite2) TestModVars() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
+
 	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
 		return
 	}
+
+	fmt.Printf("Pipeline output %v", pex.PipelineOutput)
+	s, err := prettyjson.Marshal(pex.PipelineOutput)
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+	fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
 
 	assert.Equal("Hello World: this is the value of var_one", pex.PipelineOutput["echo_one_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_two_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file and Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_three_output"])
 	assert.Equal("value of locals_one", pex.PipelineOutput["echo_four_output"])
 	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
+}
+
+func TestModTestingSuite2(t *testing.T) {
+	suite.Run(t, &ModTestSuite2{
+		FlowpipeTestSuite: &FlowpipeTestSuite{},
+	})
 }
