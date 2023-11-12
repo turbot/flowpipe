@@ -158,13 +158,12 @@ func (suite *ModTestSuite2) TestModVars() {
 		return
 	}
 
-	fmt.Printf("Pipeline output %v", pex.PipelineOutput)
 	s, err := prettyjson.Marshal(pex.PipelineOutput)
 	if err != nil {
 		assert.Fail("Error marshalling pipeline output", err)
 		return
 	}
-	fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
+	fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal("Hello World: this is the value of var_one", pex.PipelineOutput["echo_one_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_two_output"])

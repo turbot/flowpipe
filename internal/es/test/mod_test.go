@@ -3,6 +3,7 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"fmt"
 
 	"os"
 	"path"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -508,6 +510,13 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
+
+	s, err := prettyjson.Marshal(pex.StepStatus["echo.second_step"])
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+	fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
 	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
