@@ -350,7 +350,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*20), bufio.MaxScanTokenSize*20)
+	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
 	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	for scanner.Scan() {
 

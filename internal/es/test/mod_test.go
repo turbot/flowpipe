@@ -3,6 +3,7 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"fmt"
 
 	"os"
 	"path"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -345,35 +347,6 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
 }
 
-func (suite *ModTestSuite) TestModVars() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := &modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_with_variable", 100*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-	if pex.Status != "finished" {
-		assert.Fail("Pipeline execution not finished")
-		return
-	}
-
-	assert.Equal("Hello World: this is the value of var_one", pex.PipelineOutput["echo_one_output"])
-	assert.Equal("Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_two_output"])
-	assert.Equal("Hello World Two: I come from flowpipe.vars file and Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_three_output"])
-	assert.Equal("value of locals_one", pex.PipelineOutput["echo_four_output"])
-	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
-}
-
 func (suite *ModTestSuite) TestSimpleNestedPipeline() {
 	assert := assert.New(suite.T())
 
@@ -533,10 +506,24 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
+	s, err := prettyjson.Marshal(pex.StepStatus)
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+	fmt.Println(string(s)) //nolint:forbidigo // test
+
 	assert.Equal(3, len(pex.StepStatus["echo.name"]))
 	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
+
+	s, err = prettyjson.Marshal(pex.StepStatus["echo.second_step"])
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+	fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
 	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
@@ -1080,6 +1067,70 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	}
 
 	assert.Equal(3, len(pex.StepStatus["transform.text_1"]))
+}
+
+func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
+
+	// bad_http_not_ignored pipeline
+	assert := assert.New(suite.T())
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.validate_error", 200*time.Millisecond, nil)
+
+	if err != nil {
+		assert.Fail("Error running pipeline", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil || (err != nil && err.Error() != "not completed") {
+		assert.Fail("Invalid pipeline status", err)
+		return
+	}
+
+	assert.True(pex.IsComplete())
+	assert.Equal("failed", pex.Status)
+	assert.NotNil(pex.Errors)
+
+	assert.NotNil(pex.StepStatus["pipeline.pipeline_step"]["0"].StepExecutions[0].Output.Errors)
+
+	assert.NotNil(pex.PipelineOutput["errors"])
+	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error"].(map[string]interface{})["status"])
+}
+
+func (suite *ModTestSuite) TestModVars() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_with_variable", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	s, err := prettyjson.Marshal(pex.PipelineOutput)
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+	fmt.Println(string(s)) //nolint:forbidigo // test
+
+	assert.Equal("Hello World: this is the value of var_one", pex.PipelineOutput["echo_one_output"])
+	assert.Equal("Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_two_output"])
+	assert.Equal("Hello World Two: I come from flowpipe.vars file and Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_three_output"])
+	assert.Equal("value of locals_one", pex.PipelineOutput["echo_four_output"])
+	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
 }
 
 // TODO : Add back the test to validate  the input step
