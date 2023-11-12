@@ -3,6 +3,9 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path"
 	"testing"
@@ -499,6 +502,37 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
 	if pex.StepStatus["echo.http_step"] == nil {
+		// Replace 'file.json' with the path to your JSON file
+		fileName := "./output/" + cmd.Event.ExecutionID + ".json"
+
+		// Open the file
+		file, err := os.Open(fileName)
+		if err != nil {
+			assert.Fail("Error opening file:", err)
+			return
+		}
+		defer file.Close()
+
+		// Read the file
+		byteValue, err := io.ReadAll(file)
+		if err != nil {
+			assert.Fail("Error reading file:", err)
+			return
+		}
+
+		// Assuming the JSON is in a format like {"key": "value"}
+		var result map[string]interface{}
+
+		// Unmarshal the JSON data into the map
+		err = json.Unmarshal(byteValue, &result)
+		if err != nil {
+			assert.Fail("Error parsing JSON:", err)
+			return
+		}
+
+		// Print the data
+		fmt.Println(result) //nolint:forbidigo // test
+
 		assert.Fail("echo.http_step not found in StepStatus: " + cmd.Event.ExecutionID)
 		return
 	}
