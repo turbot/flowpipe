@@ -64,7 +64,15 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	// Check if we are in a retry block
 	if e.StepRetry != nil && !e.StepRetry.RetryCompleted {
-		cmd := event.NewStepQueueFromPipelineStepFinished(e, stepName)
+		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(e, stepName)
+		return h.CommandBus.Send(ctx, cmd)
+	} else if e.StepRetry != nil {
+		// this means we have an error BUT the retry has been exhausted, run the planner
+		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
+		if err != nil {
+			logger.Error("error creating pipeline_plan command", "error", err)
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
+		}
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
@@ -72,7 +80,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 	// check if we are in a loop. If we are in a loop start the next loop
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 	if loopBlock != nil && e.StepLoop != nil && !e.StepLoop.LoopCompleted {
-		cmd := event.NewStepQueueFromPipelineStepFinished(e, stepName)
+		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(e, stepName)
 		return h.CommandBus.Send(ctx, cmd)
 	}
 

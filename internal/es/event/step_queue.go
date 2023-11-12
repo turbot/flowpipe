@@ -53,7 +53,7 @@ func NewStepQueue(opts ...StepQueueOption) (*StepQueue, error) {
 	return e, nil
 }
 
-func NewStepQueueFromPipelineStepFinished(e *StepFinished, stepName string) *StepQueue {
+func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName string) *StepQueue {
 
 	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),
@@ -65,6 +65,27 @@ func NewStepQueueFromPipelineStepFinished(e *StepFinished, stepName string) *Ste
 
 	cmd.StepName = stepName
 	cmd.StepInput = *e.StepLoop.Input
+	cmd.StepForEach = e.StepForEach
+	cmd.StepLoop = e.StepLoop
+	cmd.StepRetry = e.StepRetry
+	cmd.DelayMs = 0
+	cmd.NextStepAction = modconfig.NextStepActionStart
+
+	return cmd
+}
+
+func NewStepQueueFromPipelineStepFinishedForRetry(e *StepFinished, stepName string) *StepQueue {
+
+	cmd := &StepQueue{
+		Event:           NewChildEvent(e.Event),
+		StepExecutionID: util.NewStepExecutionID(),
+	}
+	if e.PipelineExecutionID != "" {
+		cmd.PipelineExecutionID = e.PipelineExecutionID
+	}
+
+	cmd.StepName = stepName
+	cmd.StepInput = *e.StepRetry.Input
 	cmd.StepForEach = e.StepForEach
 	cmd.StepLoop = e.StepLoop
 	cmd.StepRetry = e.StepRetry
