@@ -50,3 +50,29 @@ pipeline "error_retry_throw" {
         }
     }
 }
+
+
+pipeline "error_in_for_each" {
+
+    step "http" "bad_http" {
+        for_each = ["bad_1.json", "bad_2.json", "bad_3.json"]
+        url = "http://api.open-notify.org/${each.value}"
+    }
+
+    output "val" {
+        value = step.http.bad_http
+    }
+}
+
+pipeline "error_in_for_each_nested_pipeline" {
+
+    step "http" "bad_http" {
+        for_each = ["bad_1.json", "bad_2.json", "bad_3.json"]
+        url = "http://api.open-notify.org/${each.value}"
+    }
+
+    output "val" {
+        value = step.http.bad_http
+    }
+}
+
