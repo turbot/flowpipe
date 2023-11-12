@@ -243,6 +243,29 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
 }
 
+// We can't do this test until we solved the concurrency issue with for_each
+func (suite *ModTestSuite) XTestLoopWithForEachAndNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_and_nested_pipeline", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.NotNil(pex)
+
+}
+
 func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
 	assert := assert.New(suite.T())
 
