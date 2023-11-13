@@ -46,11 +46,11 @@ pipeline "simple_loop_index" {
 pipeline "loop_with_for_each" {
 
     step "echo" "repeat" {
-        for_each = ["oasis", "blur"]
+        for_each = ["oasis", "blur", "radiohead"]
         text = "iteration: ${loop.index} - ${each.value}"
 
         loop {
-            until = loop.index < 2
+            until = loop.index < 3
         }
     }
 
@@ -79,10 +79,12 @@ pipeline "loop_with_for_each_and_nested_pipeline" {
 
     step "pipeline" "repeat" {
         for_each = ["oasis", "blur", "radiohead"]
+        # for_each = ["oasis"]
         pipeline = pipeline.nested_echo
 
         args = {
             name = each.value
+            loop_index = loop.index
         }
 
         loop {
@@ -101,11 +103,15 @@ pipeline "nested_echo" {
         type = string
     }
 
+    param "loop_index" {
+        type = number
+    }
+
     step "transform" "echo" {
-        value = param.name
+        value = "${param.loop_index}: ${param.name}"
     }
 
     output "val" {
-        value = step.transform.echo
+        value = step.transform.echo.value
     }
 }

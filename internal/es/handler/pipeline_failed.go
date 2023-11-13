@@ -52,6 +52,9 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 			// If StepForEach is not nil, it indicates that this pipeline execution is part of
 			// for_each steps
 			event.WithStepForEach(parentStepExecution.StepForEach))
+		cmd.StepRetry = parentStepExecution.StepRetry
+		cmd.StepInput = parentStepExecution.Input
+		cmd.StepLoop = parentStepExecution.StepLoop
 
 		if err != nil {
 			logger.Error("pipeline_failed error creating pipeline step finish event", "error", err)

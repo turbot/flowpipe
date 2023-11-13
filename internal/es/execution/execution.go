@@ -564,6 +564,8 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
+		pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
+		pe.StepExecutions[et.StepExecutionID].StepRetry = et.StepRetry
 
 	// handler.step_pipeline_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
 	// a generic step start event
@@ -618,8 +620,11 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		}
 
 		// pe.StepExecutions[et.StepExecutionID].StepForEach should be set at the beginning of the step execution, not here
-		// StepLoop on the other hand, can only be determined at the end of the step, so this is the right place to do it
+		// StepLoop on the other hand, can only be determined at the end of the step. The "LoopCompleted" and "RetryCompleted"
+		// are calculated at the end of the step, so we need to overwrite whatever the StepLoop and StepRetry that we have in the beginning
+		// of the step execution
 		pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
+		pe.StepExecutions[et.StepExecutionID].StepRetry = et.StepRetry
 
 		if et.Output == nil {
 			// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)

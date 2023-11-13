@@ -48,7 +48,6 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if parentStepExecution != nil {
-
 		cmd, err := event.NewStepPipelineFinish(
 			event.ForPipelineFinished(e),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
@@ -57,6 +56,10 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 			// If StepForEach is not nil, it indicates that this pipeline execution is part of
 			// for_each steps
 			event.WithStepForEach(parentStepExecution.StepForEach))
+
+		cmd.StepRetry = parentStepExecution.StepRetry
+		cmd.StepInput = parentStepExecution.Input
+		cmd.StepLoop = parentStepExecution.StepLoop
 
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
