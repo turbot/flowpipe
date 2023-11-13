@@ -1,8 +1,9 @@
-package constants
+package cmdconfig
 
 import (
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
@@ -31,4 +32,6 @@ func SetAppSpecificConstants() {
 	//app_specific.ServiceConnectionAppNamePrefix
 	app_specific.WorkspaceIgnoreFile = ".flowpipeignore"
 	app_specific.WorkspaceDataDir = ".flowpipe"
+	// set the command pre and post hooks
+	cmdconfig.CustomPreRunHook = preRunHook
 }

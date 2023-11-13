@@ -5,8 +5,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
+	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/config"
-	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -22,7 +22,6 @@ var (
 )
 
 func main() {
-
 	// Create a single, global context for the application
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
@@ -33,15 +32,16 @@ func main() {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
 		}
 	}()
-
 	if err != nil {
 		error_helpers.FailOnError(err)
 	}
 
 	cache.InMemoryInitialize(nil)
 
-	constants.SetAppSpecificConstants()
+	localcmdconfig.SetAppSpecificConstants()
 
+	// TODO kai can we pass these into SetAppSpecificConstants?
+	//  look into namespacing of config
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
 	viper.SetDefault("main.date", date)
