@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
@@ -18,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
@@ -164,9 +162,7 @@ func pipelineRunCmd() *cobra.Command {
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.").
-		AddStringFlag(constants.ArgPipelineExecutionMode, "synchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.").
-		AddIntFlag(constants.ArgPipelineWaitTime, 60, "Specify how long the pipeline should wait (in seconds) when run in synchronous execution mode.")
+		AddStringArrayFlag(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
 
 	return cmd
 }
@@ -201,46 +197,6 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 		// Set the pipeline args
 		cmdPipelineRun.ArgsString = &pipelineArgs
 
-		// Get the pipeline execution mode from the flag
-		executionMode := "asynchronous"
-		pipelineExecutionMode, err := cmd.Flags().GetString(constants.ArgPipelineExecutionMode)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of execution-mode flag")
-			return
-		}
-
-		if pipelineExecutionMode != "" {
-			err = validatePipelineExecutionMode(pipelineExecutionMode)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline execution mode validation failed")
-				return
-			}
-			executionMode = pipelineExecutionMode
-		}
-
-		// Set the pipeline execution mode
-		cmdPipelineRun.ExecutionMode = &executionMode
-
-		// Get the pipeline wait time from the flag
-		waitTime := int32(60)
-		pipelineWaitTime, err := cmd.Flags().GetInt(constants.ArgPipelineWaitTime)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("Error getting the value of %s flag", constants.ArgPipelineWaitTime))
-			return
-		}
-		if pipelineWaitTime != 0 {
-			err = validatePipelineWaitTime(pipelineWaitTime)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline wait time validation failed")
-				return
-			}
-
-			waitTime = int32(pipelineWaitTime)
-		}
-
-		// Set the pipeline wait time
-		cmdPipelineRun.WaitRetry = &waitTime
-
 		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
 		resp, _, err := request.Execute()
 		if err != nil {
@@ -248,28 +204,19 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 			return
 		}
 
-		if executionMode == "synchronous" {
-			s, err := prettyjson.Marshal(resp)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
-				return
-			}
-			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
-		} else {
-			var executionId string
-			var rootPipelineId string
+		var executionId string
+		var rootPipelineId string
 
-			if resp != nil && resp["flowpipe"] != nil {
-				contents := resp["flowpipe"].(map[string]interface{})
-				executionId = contents["execution_id"].(string)
-				rootPipelineId = contents["pipeline_execution_id"].(string)
-			}
+		if resp != nil && resp["flowpipe"] != nil {
+			contents := resp["flowpipe"].(map[string]interface{})
+			executionId = contents["execution_id"].(string)
+			rootPipelineId = contents["pipeline_execution_id"].(string)
+		}
 
-			err := pollEventLogAndRender(ctx, apiClient, executionId, rootPipelineId, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
-				return
-			}
+		err = pollEventLogAndRender(ctx, apiClient, executionId, rootPipelineId, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
+			return
 		}
 	}
 }
@@ -323,23 +270,6 @@ func validatePipelineArgs(pipelineArgs []string) error {
 		if !validFormat.MatchString(arg) {
 			return fmt.Errorf("invalid format: %s", arg)
 		}
-	}
-	return nil
-}
-
-func validatePipelineExecutionMode(mode string) error {
-	if !helpers.StringSliceContains([]string{"asynchronous", "synchronous"}, mode) {
-		return fmt.Errorf("invalid execution mode: %s", mode)
-	}
-	return nil
-}
-
-func validatePipelineWaitTime(wait int) error {
-	// TODO: Verify if we want min/max validation and appropriate durations
-	mn := 1
-	mx := 3600
-	if wait < mn || wait > mx {
-		return fmt.Errorf("invalid wait time: %d - should be between %d and %d", wait, mn, mx)
 	}
 	return nil
 }
