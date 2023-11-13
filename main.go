@@ -22,11 +22,11 @@ var (
 )
 
 func main() {
-
+	// Create a single, global context for the application
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
 	ctx, err := config.ContextWithConfig(ctx)
-	// Create a single, global context for the application
+
 	defer func() {
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
@@ -40,8 +40,8 @@ func main() {
 
 	localcmdconfig.SetAppSpecificConstants()
 
-	// TODO kai look into namespacing of config
-	// can we pass these into SetAppSpecificConstants?
+	// TODO kai can we pass these into SetAppSpecificConstants?
+	//  look into namespacing of config
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
 	viper.SetDefault("main.date", date)
