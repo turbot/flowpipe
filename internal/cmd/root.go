@@ -2,9 +2,6 @@ package cmd
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -69,40 +66,3 @@ func rootCommand(ctx context.Context) *cobra.Command {
 }
 
 // Assumes that the install dir exists
-func flowpipeSalt(filename string, length int) (string, error) {
-	// Check if the salt file exists
-	if _, err := os.Stat(filename); err == nil {
-		// If the file exists, read the salt from it
-		saltBytes, err := os.ReadFile(filename)
-		if err != nil {
-			return "", err
-		}
-		return string(saltBytes), nil
-	}
-
-	// If the file does not exist, generate a new salt
-	salt := make([]byte, length)
-	_, err := rand.Read(salt)
-	if err != nil {
-		return "", err
-	}
-
-	// Encode the salt as a hexadecimal string
-	saltHex := hex.EncodeToString(salt)
-
-	// Write the salt to the file
-	err = os.WriteFile(filename, []byte(saltHex), 0600)
-	if err != nil {
-		return "", err
-	}
-
-	return saltHex, nil
-}
-
-func ensureInstallDir(installDir string) {
-	if _, err := os.Stat(installDir); os.IsNotExist(err) {
-		err = os.MkdirAll(installDir, 0755)
-		error_helpers.FailOnErrorWithMessage(err, fmt.Sprintf("could not create installation directory: %s", installDir))
-	}
-	app_specific.InstallDir = installDir
-}
