@@ -10,7 +10,7 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-func ServiceStartCmd() *cobra.Command {
+func serviceStartCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use: "start",
 		Run: startManagerFunc(),
@@ -18,9 +18,9 @@ func ServiceStartCmd() *cobra.Command {
 
 	cmdconfig.
 		OnCmd(cmd).
-		AddStringFlag(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.").
-		AddStringFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
-		AddStringFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.").
+		AddFilepathFlag(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.").
+		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
+		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.").
 		AddBoolFlag(constants.ArgNoScheduler, false, "Disable the scheduler.").
 		AddBoolFlag(constants.ArgRetainArtifacts, false, "Retains Docker container artifacts for container step. [EXPERIMENTAL]").
 		AddBoolFlag(constants.ArgInput, true, "Enable interactive prompts")
