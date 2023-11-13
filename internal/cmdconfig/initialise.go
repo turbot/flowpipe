@@ -30,7 +30,9 @@ func initGlobalConfig() {
 		cmdconfig.WithConfigDefaults(configDefaults),
 		cmdconfig.WithDirectoryEnvMappings(dirEnvMappings))
 
-	error_helpers.FailOnError(err)
+	// set the rest of the defaults from ENV
+	// ENV takes precedence over any default configuration
+	cmdconfig.SetDefaultsFromEnv(envMappings)
 
 	installDir := viper.GetString(constants.ArgInstallDir)
 	ensureInstallDir(filepath.Join(installDir, "internal"))
