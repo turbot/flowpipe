@@ -1,25 +1,22 @@
 package cmdconfig
 
 import (
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/turbot/pipe-fittings/cmdconfig"
-	"github.com/turbot/pipe-fittings/modconfig"
-	"path/filepath"
-)
-
-import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/filepaths"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 func initGlobalConfig() {
