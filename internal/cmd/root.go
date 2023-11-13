@@ -5,48 +5,31 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/config"
-	internalconstants "github.com/turbot/flowpipe/internal/constants"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/filepaths"
 )
 
-// ④ Now use the FooMode enum flag. If you want a non-zero default, then
-// simply set it here, such as in "foomode = Bar".
+// variable used to assign the output mode flag
 var outputMode types.OutputMode
 
 // Build the cobra command that handles our command line tool.
 func rootCommand(ctx context.Context) *cobra.Command {
 	// Define our command
 	rootCmd := &cobra.Command{
-		Use:     internalconstants.Name,
-		Short:   internalconstants.ShortDescription,
-		Long:    internalconstants.LongDescription,
+		Use:     app_specific.AppName,
+		Short:   localconstants.FlowpipeShortDescription,
+		Long:    localconstants.FlowpipeLongDescription,
 		Version: viper.GetString("main.version"),
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			viper.Set(constants.ConfigKeyActiveCommand, cmd)
-
-			// set up the global viper config with default values from
-			// config files and ENV variables
-
-			// TODO: this creates '~' directory in the source when we run the test. Find a solution.
-			_ = initGlobalConfig()
-
-			return nil
-		},
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
 
@@ -60,9 +43,9 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	cmdconfig.
 		OnCmd(rootCmd).
 		// Flowpipe API
-		AddPersistentStringFlag(internalconstants.ArgApiHost, "http://localhost", "API server host").
-		AddPersistentIntFlag(internalconstants.ArgApiPort, 7103, "API server port").
-		AddPersistentBoolFlag(internalconstants.ArgTlsInsecure, false, "Skip TLS verification").
+		AddPersistentStringFlag(localconstants.ArgApiHost, "http://localhost", "API server host").
+		AddPersistentIntFlag(localconstants.ArgApiPort, 7103, "API server port").
+		AddPersistentBoolFlag(localconstants.ArgTlsInsecure, false, "Skip TLS verification").
 		// Common (steampipe, flowpipe) flags
 		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").
 		AddPersistentFilepathFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory").
@@ -83,31 +66,6 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	rootCmd.AddCommand(modCmd())
 
 	return rootCmd
-}
-
-// initConfig reads in config file and ENV variables if set.
-func initGlobalConfig() *error_helpers.ErrorAndWarnings {
-	// load workspace profile from the configured install dir
-	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
-	error_helpers.FailOnError(err)
-
-	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
-	// set-up viper with defaults from the env and default workspace profile
-	cmdconfig.BootstrapViper(loader, cmd)
-	error_helpers.FailOnError(err)
-
-	installDir := viper.GetString(constants.ArgInstallDir)
-	ensureInstallDir(filepath.Join(installDir, "internal"))
-
-	saltDir := filepath.Join(filepaths.EnsureInternalDir(), "salt")
-	salt, err := flowpipeSalt(saltDir, 32)
-	if err != nil {
-		error_helpers.FailOnErrorWithMessage(err, err.Error())
-	}
-
-	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
-
-	return nil
 }
 
 // Assumes that the install dir exists

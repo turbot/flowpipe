@@ -3,7 +3,6 @@ package es_test
 // Basic imports
 import (
 	"context"
-
 	"os"
 	"path"
 	"testing"
@@ -15,8 +14,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
+	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/config"
-	internalconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -48,7 +47,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	}
 
 	// sets app specific constants defined in pipe-fittings
-	internalconstants.SetAppSpecificConstants()
+	localcmdconfig.SetAppSpecificConstants()
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
