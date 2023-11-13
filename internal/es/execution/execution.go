@@ -554,8 +554,6 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			logger.Error("Fail to unmarshall handler.step_queued event", "execution", ex.ID, "error", err)
 			return err
 		}
-		pe := ex.PipelineExecutions[et.PipelineExecutionID]
-		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 
 	case StepStartCommand.HandlerName(): // "command.step_start"
 		var et event.StepStart
@@ -564,6 +562,8 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			logger.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
 			return err
 		}
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 
 	// handler.step_pipeline_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
 	// a generic step start event
