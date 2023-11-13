@@ -48,8 +48,5 @@ func main() {
 	viper.SetDefault("main.builtBy", builtBy)
 
 	// Run the CLI
-	err = cmd.RunCLI(ctx)
-	if err != nil {
-		panic(err)
-	}
+	cmd.RunCLI(ctx)
 }

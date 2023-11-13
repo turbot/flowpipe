@@ -14,11 +14,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
 	"github.com/turbot/flowpipe/internal/cache"
-	"github.com/turbot/flowpipe/internal/cmd/mod"
-	"github.com/turbot/flowpipe/internal/cmd/pipeline"
-	"github.com/turbot/flowpipe/internal/cmd/process"
-	"github.com/turbot/flowpipe/internal/cmd/service"
-	"github.com/turbot/flowpipe/internal/cmd/trigger"
 	"github.com/turbot/flowpipe/internal/config"
 	internalconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
@@ -34,8 +29,7 @@ import (
 var outputMode types.OutputMode
 
 // Build the cobra command that handles our command line tool.
-func RootCommand(ctx context.Context) (*cobra.Command, error) {
-
+func rootCommand(ctx context.Context) *cobra.Command {
 	// Define our command
 	rootCmd := &cobra.Command{
 		Use:     internalconstants.Name,
@@ -63,84 +57,45 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 
 	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
-	// Flowpipe API
-	rootCmd.PersistentFlags().String(internalconstants.ArgApiHost, "http://localhost", "API server host")
-	rootCmd.PersistentFlags().Int(internalconstants.ArgApiPort, 7103, "API server port")
-	rootCmd.PersistentFlags().Bool(internalconstants.ArgTlsInsecure, false, "Skip TLS verification")
+	cmdconfig.
+		OnCmd(rootCmd).
+		// Flowpipe API
+		AddPersistentStringFlag(internalconstants.ArgApiHost, "http://localhost", "API server host").
+		AddPersistentIntFlag(internalconstants.ArgApiPort, 7103, "API server port").
+		AddPersistentBoolFlag(internalconstants.ArgTlsInsecure, false, "Skip TLS verification").
+		// Common (steampipe, flowpipe) flags
+		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").
+		AddPersistentFilepathFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory")
 
-	// Common (steampipe, flowpipe) flags
-	rootCmd.PersistentFlags().String(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory")
-	rootCmd.PersistentFlags().String(constants.ArgModLocation, cwd, "Path to the workspace working directory")
-
-	// ⑤ Define the CLI flag parameters for your wrapped enum flag.
+	// Define the CLI flag parameters for your wrapped enum flag.
 	rootCmd.PersistentFlags().Var(
 		enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
 		constants.ArgOutput,
 		"Output format; one of: table, yaml, json")
-
-	error_helpers.FailOnError(viper.BindPFlag(internalconstants.ArgApiHost, rootCmd.PersistentFlags().Lookup(internalconstants.ArgApiHost)))
-	error_helpers.FailOnError(viper.BindPFlag(internalconstants.ArgApiPort, rootCmd.PersistentFlags().Lookup(internalconstants.ArgApiPort)))
-	error_helpers.FailOnError(viper.BindPFlag(internalconstants.ArgTlsInsecure, rootCmd.PersistentFlags().Lookup(internalconstants.ArgTlsInsecure)))
-
-	error_helpers.FailOnError(viper.BindPFlag(constants.ArgInstallDir, rootCmd.PersistentFlags().Lookup(constants.ArgInstallDir)))
-	error_helpers.FailOnError(viper.BindPFlag(constants.ArgModLocation, rootCmd.PersistentFlags().Lookup(constants.ArgModLocation)))
 
 	// disable auto completion generation, since we don't want to support
 	// powershell yet - and there's no way to disable powershell in the default generator
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// add all the subcommands
-	err = addCommands(ctx, rootCmd)
-	error_helpers.FailOnError(err)
+	rootCmd.AddCommand(serviceCmd())
+	rootCmd.AddCommand(pipelineCmd())
+	rootCmd.AddCommand(triggerCmd())
+	rootCmd.AddCommand(processCmd())
+	rootCmd.AddCommand(modCmd())
 
-	return rootCmd, nil
-}
-
-func addCommands(ctx context.Context, rootCmd *cobra.Command) error {
-	// flowpipe service
-	serviceCmd, err := service.ServiceCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(serviceCmd)
-
-	pipelineCmd, err := pipeline.PipelineCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(pipelineCmd)
-
-	triggerCmd, err := trigger.TriggerCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(triggerCmd)
-
-	processCmd, err := process.ProcessCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(processCmd)
-
-	modCmd, err := mod.ModCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(modCmd)
-
-	return nil
+	return rootCmd
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initGlobalConfig() *error_helpers.ErrorAndWarnings {
-
 	// load workspace profile from the configured install dir
 	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
 	error_helpers.FailOnError(err)
 
 	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
 	// set-up viper with defaults from the env and default workspace profile
-	err = cmdconfig.BootstrapViper(loader, cmd)
+	cmdconfig.BootstrapViper(loader, cmd)
 	error_helpers.FailOnError(err)
 
 	installDir := viper.GetString(constants.ArgInstallDir)

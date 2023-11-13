@@ -1,9 +1,10 @@
-package pipeline
+package cmd
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 	"io"
 	"regexp"
 	"strings"
@@ -21,76 +22,158 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
-
-	pipelineCmd := &cobra.Command{
+// pipeline commands
+func pipelineCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "pipeline",
 		Short: "Pipeline commands",
 	}
 
-	pipelineListCmd, err := PipelineListCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineListCmd)
+	cmd.AddCommand(pipelineListCmd())
+	cmd.AddCommand(pipelineShowCmd())
+	cmd.AddCommand(pipelineRunCmd())
 
-	pipelineShowCmd, err := PipelineShowCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineShowCmd)
-
-	pipelineRunCmd, err := PipelineRunCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineRunCmd)
-
-	return pipelineCmd, nil
-
+	return cmd
 }
 
-func PipelineListCmd(ctx context.Context) (*cobra.Command, error) {
-
-	var serviceStartCmd = &cobra.Command{
+// list
+func pipelineListCmd() *cobra.Command {
+	var cmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
-		Run:  listPipelineFunc(ctx),
+		Run:  listPipelineFunc(),
 	}
 
-	return serviceStartCmd, nil
+	return cmd
 }
 
-func PipelineShowCmd(ctx context.Context) (*cobra.Command, error) {
+func listPipelineFunc() func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
+		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
-	var serviceStartCmd = &cobra.Command{
+		apiClient := common.GetApiClient()
+		resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
+
+		if resp != nil {
+			printer := printers.GetPrinter(cmd)
+
+			printableResource := types.PrintablePipeline{}
+			printableResource.Items, err = printableResource.Transform(resp)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
+			}
+
+			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			}
+		}
+	}
+}
+
+// show
+func pipelineShowCmd() *cobra.Command {
+	var cmd = &cobra.Command{
 		Use:  "show <pipeline-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  showPipelineFunc(ctx),
+		Run:  showPipelineFunc(),
 	}
 
-	return serviceStartCmd, nil
+	return cmd
 }
 
-func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
+func showPipelineFunc() func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
+		apiClient := common.GetApiClient()
+		resp, _, err := apiClient.PipelineApi.Get(context.Background(), args[0]).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
 
-	var pipelineRunCmd = &cobra.Command{
+		if resp != nil {
+			output := ""
+			if resp.Title != nil {
+				output += "Title: " + *resp.Title
+			}
+			if resp.Title != nil {
+				output += "\nName:  " + *resp.Name
+			} else {
+				output += "Name: " + *resp.Name
+			}
+			if resp.Tags != nil {
+				if resp.Title != nil {
+					output += "\nTags:  "
+				} else {
+					output += "\nTags: "
+				}
+				isFirstTag := true
+				for k, v := range *resp.Tags {
+					if isFirstTag {
+						output += k + " = " + v
+						isFirstTag = false
+					} else {
+						output += ", " + k + " = " + v
+					}
+				}
+			}
+			if resp.Description != nil {
+				output += "\n\nDescription:\n" + *resp.Description + "\n"
+			}
+			if resp.Params != nil {
+				output += formatSection("\nParams:", resp.Params)
+			}
+			if resp.Outputs != nil {
+				output += formatSection("\nOutputs:", resp.Outputs)
+			}
+			output += "\nUsage:" + "\n"
+			if resp.Params != nil {
+				var pArg string
+
+				// show the minimal required pipeline args
+				for _, param := range resp.Params {
+					if (param.Default != nil && len(param.Default) > 0) || (param.Optional != nil && *param.Optional) {
+						continue
+					}
+					pArg += " --pipeline-arg " + *param.Name + "=<value>"
+				}
+				output += "  flowpipe pipeline run " + *resp.Name + pArg
+			} else {
+				output += "  flowpipe pipeline run " + *resp.Name
+			}
+			//nolint:forbidigo // CLI console output
+			fmt.Println(output)
+		}
+	}
+}
+
+// run
+func pipelineRunCmd() *cobra.Command {
+	var cmd = &cobra.Command{
 		Use:  "run <pipeline-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  runPipelineFunc(ctx),
+		Run:  runPipelineFunc(),
 	}
 
 	// Add the pipeline arg flag
-	pipelineRunCmd.Flags().StringArray(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
-	pipelineRunCmd.Flags().String(constants.ArgPipelineExecutionMode, "synchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.")
-	pipelineRunCmd.Flags().Int(constants.ArgPipelineWaitTime, 60, "Specify how long the pipeline should wait (in seconds) when run in synchronous execution mode.")
+	cmdconfig.OnCmd(cmd).
+		AddStringArrayFlag(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.").
+		AddStringFlag(constants.ArgPipelineExecutionMode, "synchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.").
+		AddIntFlag(constants.ArgPipelineWaitTime, 60, "Specify how long the pipeline should wait (in seconds) when run in synchronous execution mode.")
 
-	return pipelineRunCmd, nil
+	return cmd
 }
 
-func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-
+		ctx := cmd.Context()
 		// API client
 		apiClient := common.GetApiClient()
 		cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
@@ -191,100 +274,6 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 	}
 }
 
-func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
-		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
-
-		apiClient := common.GetApiClient()
-		resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
-		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
-		}
-
-		if resp != nil {
-			printer := printers.GetPrinter(cmd)
-
-			printableResource := types.PrintablePipeline{}
-			printableResource.Items, err = printableResource.Transform(resp)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-			}
-
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
-			}
-		}
-	}
-}
-
-func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		apiClient := common.GetApiClient()
-		resp, _, err := apiClient.PipelineApi.Get(context.Background(), args[0]).Execute()
-		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
-		}
-
-		if resp != nil {
-			output := ""
-			if resp.Title != nil {
-				output += "Title: " + *resp.Title
-			}
-			if resp.Title != nil {
-				output += "\nName:  " + *resp.Name
-			} else {
-				output += "Name: " + *resp.Name
-			}
-			if resp.Tags != nil {
-				if resp.Title != nil {
-					output += "\nTags:  "
-				} else {
-					output += "\nTags: "
-				}
-				isFirstTag := true
-				for k, v := range *resp.Tags {
-					if isFirstTag {
-						output += k + " = " + v
-						isFirstTag = false
-					} else {
-						output += ", " + k + " = " + v
-					}
-				}
-			}
-			if resp.Description != nil {
-				output += "\n\nDescription:\n" + *resp.Description + "\n"
-			}
-			if resp.Params != nil {
-				output += formatSection("\nParams:", resp.Params)
-			}
-			if resp.Outputs != nil {
-				output += formatSection("\nOutputs:", resp.Outputs)
-			}
-			output += "\nUsage:" + "\n"
-			if resp.Params != nil {
-				var pArg string
-
-				// show the minimal required pipeline args
-				for _, param := range resp.Params {
-					if (param.Default != nil && len(param.Default) > 0) || (param.Optional != nil && *param.Optional) {
-						continue
-					}
-					pArg += " --pipeline-arg " + *param.Name + "=<value>"
-				}
-				output += "  flowpipe pipeline run " + *resp.Name + pArg
-			} else {
-				output += "  flowpipe pipeline run " + *resp.Name
-			}
-			//nolint:forbidigo // CLI console output
-			fmt.Println(output)
-		}
-	}
-}
-
 // Helper function to format a section
 func formatSection(sectionName string, items interface{}) string {
 	var output string
@@ -327,6 +316,7 @@ func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
 	}
 	return strOutput
 }
+
 func validatePipelineArgs(pipelineArgs []string) error {
 	validFormat := regexp.MustCompile(`^[\w-]+=[\S\s]+$`)
 	for _, arg := range pipelineArgs {
