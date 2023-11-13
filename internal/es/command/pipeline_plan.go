@@ -33,6 +33,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
 
+	plannerMutex := event.GetPlannerMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer plannerMutex.Unlock()
+
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
 		logger.Error("pipeline_plan: Error loading pipeline execution", "error", err)

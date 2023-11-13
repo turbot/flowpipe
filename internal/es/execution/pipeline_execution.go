@@ -314,8 +314,17 @@ func (pe *PipelineExecution) ShouldFail() bool {
 
 }
 
-// IsComplete returns true if all steps (that have been initialized) are complete.
+// IsComplete returns true if all steps are complete.
 func (pe *PipelineExecution) IsComplete() bool {
+	pipeline, err := db.GetPipeline(pe.Name)
+	if err != nil {
+		// TODO: what do we do here?
+		return false
+	}
+
+	if len(pe.StepStatus) != len(pipeline.Steps) {
+		return false
+	}
 
 	for _, indexedStatus := range pe.StepStatus {
 		// If indexedStatus is nil, then the step hasn't been initialized
@@ -432,8 +441,8 @@ func (pe *PipelineExecution) StartStep(stepFullyQualifiedName, key, seID string)
 }
 
 // FinishStep marks the given step execution as started.
-func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, loopContinue bool) {
-	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopContinue)
+func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string, loopHold, errorHold bool) {
+	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopHold, errorHold)
 }
 
 func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) {
@@ -447,8 +456,18 @@ type StepStatus struct {
 	Initializing bool   `json:"initializing"`
 	OverralState string `json:"overral_state"`
 
-	// Indicate that step is in a loop so we don't mark it as finished
+	//
+	// Both LoopHold and ErrorHold must be resolved **before** the "finish" event is called, i.e. it needs to be calculated at the
+	// end of "step start command" and "step pipeline finish" command.
+	//
+	// It can't be calculated at the "finish" event because it's already too late. If the planner see that it has an finish
+	// event without either a LoopHold or ErrorHold, it will mark the step as completed or failed
+	//
+	// Indicates that step is in a loop so we don't mark it as finished
 	LoopHold bool `json:"loop_hold"`
+
+	// Indicates that a step is in retry loop so we don't mark it as failed
+	ErrorHold bool `json:"error_hold"`
 
 	// Step executions that are queued.
 	Queued map[string]bool `json:"queued"`
@@ -474,14 +493,14 @@ func (s *StepStatus) IsComplete() bool {
 	if s.OverralState == "empty_for_each" {
 		return true
 	}
-	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold
+	return !s.Initializing && len(s.Queued) == 0 && len(s.Started) == 0 && !s.LoopHold && !s.ErrorHold
 }
 
 func (s *StepStatus) IsStarted() bool {
 	if s == nil {
 		return false
 	}
-	return s.Initializing || len(s.Queued) > 0 || len(s.Started) > 0 || !s.LoopHold
+	return s.Initializing || len(s.Queued) > 0 || len(s.Started) > 0 || !s.LoopHold || !s.ErrorHold
 }
 
 // IsFail returns true if any executions of the step failed.
@@ -531,17 +550,14 @@ func (s *StepStatus) Start(seID string) {
 }
 
 // Finish marks the given execution as finished.
-func (s *StepStatus) Finish(seID string, loopContinue bool) {
+func (s *StepStatus) Finish(seID string, loopHold, errorHold bool) {
 	// Can't finish if the step already set to fail (safety check)
 	if s.Failed[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
 
-	if loopContinue {
-		s.LoopHold = true
-	} else {
-		s.LoopHold = false
-	}
+	s.LoopHold = loopHold
+	s.ErrorHold = errorHold
 
 	s.Initializing = false
 

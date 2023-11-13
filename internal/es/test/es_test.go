@@ -3,8 +3,12 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -135,8 +139,6 @@ func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {
 func (suite *EsTestSuite) AfterTest(suiteName, testName string) {
 }
 
-// All methods that begin with "Test" are run as tests within a
-// suite.
 func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert := assert.New(suite.T())
 
@@ -196,7 +198,12 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 
 	echoStepsOutput := executionVariables["step"].AsValueMap()["echo"].AsValueMap()
 
+	if len(echoStepsOutput) != 10 {
+		assert.Fail("Invalid number of steps", len(echoStepsOutput))
+		return
+	}
 	assert.Equal(10, len(echoStepsOutput))
+
 	assert.Equal("foo bar", echoStepsOutput["text_1"].AsValueMap()["text"].AsString())
 	assert.Equal("lower case Bar Foo Bar Baz and here", echoStepsOutput["text_2"].AsValueMap()["text"].AsString())
 	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", echoStepsOutput["text_3"].AsValueMap()["text"].AsString())
@@ -258,16 +265,16 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 }
 
 // TODO: VH 2021-10-11 - this test is failing, we need to fix it
-func (suite *EsTestSuite) XSkipTestIfConditionsOnSteps() {
+func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "if", 100*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "if", 500*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -288,8 +295,7 @@ func (suite *EsTestSuite) XSkipTestIfConditionsOnSteps() {
 		return
 	}
 
-	// TODO: VH 2023-11-10 investigate why in some cases the output is not there
-	// assert.Equal(5, len(echoStepsOutput))
+	assert.Equal(5, len(echoStepsOutput))
 
 	// TODO: we have to check this in the StepStatus now rather than the AllStepOutput attribute (that was removed)
 	// assert.Equal("finished", echoStepsOutput["text_true"].(*modconfig.Output).Status)
@@ -299,10 +305,10 @@ func (suite *EsTestSuite) XSkipTestIfConditionsOnSteps() {
 	// assert.Equal("skipped", echoStepsOutput["text_3"].(*modconfig.Output).Status)
 
 	assert.Equal("foo", echoStepsOutput["text_true"].AsValueMap()["text"].AsString())
-	// assert.Equal(0, len(echoStepsOutput["text_false"].AsValueMap()))
+	assert.Equal(0, len(echoStepsOutput["text_false"].AsValueMap()))
 	assert.Equal("foo", echoStepsOutput["text_1"].AsValueMap()["text"].AsString())
 	assert.Equal("bar", echoStepsOutput["text_2"].AsValueMap()["text"].AsString())
-	// assert.Equal(0, len(echoStepsOutput["text_3"].AsValueMap()))
+	assert.Equal(0, len(echoStepsOutput["text_3"].AsValueMap()))
 }
 
 func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
@@ -498,6 +504,42 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(404), pex.StepStatus["http.http_step"]["1"].StepExecutions[0].Output.Data["status_code"])
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
+	if pex.StepStatus["echo.http_step"] == nil {
+		filename := fmt.Sprintf("%s.jsonl", cmd.Event.ExecutionID)
+		p := filepath.Join(viper.GetString(constants.ArgLogDir), filename)
+
+		// Open the file
+		file, err := os.Open(p)
+		if err != nil {
+			assert.Fail("Error opening file:", err)
+			return
+		}
+		defer file.Close()
+
+		// Read the file
+		byteValue, err := io.ReadAll(file)
+		if err != nil {
+			assert.Fail("Error reading file:", err)
+			return
+		}
+
+		// Assuming the JSON is in a format like {"key": "value"}
+		var result map[string]interface{}
+
+		// Unmarshal the JSON data into the map
+		err = json.Unmarshal(byteValue, &result)
+		if err != nil {
+			assert.Fail("Error parsing JSON:", err)
+			return
+		}
+
+		// Print the data
+		fmt.Println(result) //nolint:forbidigo // test
+
+		assert.Fail("echo.http_step not found in StepStatus: " + cmd.Event.ExecutionID)
+		return
+	}
+
 	assert.Equal("skipped", pex.StepStatus["echo.http_step"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("skipped", pex.StepStatus["echo.http_step"]["1"].StepExecutions[0].Output.Status)
 	assert.Equal("finished", pex.StepStatus["echo.http_step"]["2"].StepExecutions[0].Output.Status)
@@ -566,22 +608,26 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
 	// end pipeline test
+}
+
+func (suite *EsTestSuite) TestBadEmail() {
+	assert := assert.New(suite.T())
 
 	// bad_email_with_expr
-	_, cmd, err = runPipeline(suite.FlowpipeTestSuite, "bad_email_with_expr", 1*time.Second, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "bad_email_with_expr", 1*time.Second, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	ex, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
+	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
 
-	pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
+	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil || pipelineDefn == nil {
 		assert.Fail("Pipeline definition not found", err)
 	}
@@ -611,7 +657,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.NotNil(pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Errors)
 
 	// The email step should fail because of the invalid smtp host
-	errors = pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Errors
+	errors := pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Errors
 	for _, e := range errors {
 		assert.Contains(e.Error.Detail, "no such host")
 	}
@@ -806,7 +852,6 @@ func (suite *EsTestSuite) TestChildPipeline() {
 	// TODO: - Check child pipeline status
 	// TODO: - Add status on pipeline step
 	// TODO: - add multiple childs
-	// TODO: - add more levels (not just 1)
 }
 
 func (suite *EsTestSuite) TestStepOutput() {

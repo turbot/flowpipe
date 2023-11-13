@@ -74,3 +74,38 @@ pipeline "loop_with_for_each_sleep" {
         value = step.sleep.repeat
     }
 }
+
+pipeline "loop_with_for_each_and_nested_pipeline" {
+
+    step "pipeline" "repeat" {
+        for_each = ["oasis", "blur", "radiohead"]
+        pipeline = pipeline.nested_echo
+
+        args = {
+            name = each.value
+        }
+
+        loop {
+            until = loop.index < 2
+        }
+    }
+
+    output "val" {
+        value = step.pipeline.repeat
+    }
+}
+
+pipeline "nested_echo" {
+
+    param "name" {
+        type = string
+    }
+
+    step "transform" "echo" {
+        value = param.name
+    }
+
+    output "val" {
+        value = step.transform.echo
+    }
+}

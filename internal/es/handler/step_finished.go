@@ -62,25 +62,31 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, perr.BadRequestWithMessage("step not found"))))
 	}
 
-	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
-	// check if we are in a loop. If we are in a loop start the next loop
-	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
-	if loopBlock != nil && e.StepLoop != nil && !e.StepLoop.LoopCompleted {
-
-		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(e, stepName)
+	// Check if we are in a retry block
+	if e.StepRetry != nil && !e.StepRetry.RetryCompleted {
+		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(e, stepName)
+		return h.CommandBus.Send(ctx, cmd)
+	} else if e.StepRetry != nil {
+		// this means we have an error BUT the retry has been exhausted, run the planner
+		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 		if err != nil {
-			err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
-			if err != nil {
-				logger.Error("Error publishing event", "error", err)
-			}
-			return nil
+			logger.Error("error creating pipeline_plan command", "error", err)
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
 		}
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
+	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
+	// check if we are in a loop. If we are in a loop start the next loop
+	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+	if loopBlock != nil && e.StepLoop != nil && !e.StepLoop.LoopCompleted {
+		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(e, stepName)
+		return h.CommandBus.Send(ctx, cmd)
+	}
+
+	// If the step is a for each step, run the for each planner, not the pipeline planner
 	if !helpers.IsNil(stepDefn.GetForEach()) {
 		cmd := event.NewStepForEachPlanFromPipelineStepFinished(e, stepName)
-
 		return h.CommandBus.Send(ctx, cmd)
 	}
 

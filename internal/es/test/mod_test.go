@@ -3,7 +3,6 @@ package es_test
 // Basic imports
 import (
 	"context"
-	"fmt"
 
 	"os"
 	"path"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -243,6 +241,29 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 
 	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
 	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+}
+
+// We can't do this test until we solved the concurrency issue with for_each
+func (suite *ModTestSuite) XTestLoopWithForEachAndNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_and_nested_pipeline", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.NotNil(pex)
+
 }
 
 func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
@@ -506,24 +527,17 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	s, err := prettyjson.Marshal(pex.StepStatus)
-	if err != nil {
-		assert.Fail("Error marshalling pipeline output", err)
-		return
-	}
-	fmt.Println(string(s)) //nolint:forbidigo // test
+	// s, err := prettyjson.Marshal(pex.StepStatus)
+	// if err != nil {
+	// 	assert.Fail("Error marshalling pipeline output", err)
+	// 	return
+	// }
+	// fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal(3, len(pex.StepStatus["echo.name"]))
 	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
-
-	s, err = prettyjson.Marshal(pex.StepStatus["echo.second_step"])
-	if err != nil {
-		assert.Fail("Error marshalling pipeline output", err)
-		return
-	}
-	fmt.Println(string(s)) //nolint:forbidigo // test
 
 	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
 	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
@@ -1119,13 +1133,6 @@ func (suite *ModTestSuite) TestModVars() {
 		return
 	}
 
-	s, err := prettyjson.Marshal(pex.PipelineOutput)
-	if err != nil {
-		assert.Fail("Error marshalling pipeline output", err)
-		return
-	}
-	fmt.Println(string(s)) //nolint:forbidigo // test
-
 	assert.Equal("Hello World: this is the value of var_one", pex.PipelineOutput["echo_one_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_two_output"])
 	assert.Equal("Hello World Two: I come from flowpipe.vars file and Hello World Two: I come from flowpipe.vars file", pex.PipelineOutput["echo_three_output"])
@@ -1133,169 +1140,184 @@ func (suite *ModTestSuite) TestModVars() {
 	assert.Equal("10 AND Hello World Two: I come from flowpipe.vars file AND value of locals_one", pex.PipelineOutput["echo_five_output"])
 }
 
-// TODO : Add back the test to validate  the input step
+func (suite *ModTestSuite) TestErrorRetry() {
+	assert := assert.New(suite.T())
 
-// func (suite *ModTestSuite) TestPipelineInputStep() {
-// 	assert := assert.New(suite.T())
+	pipelineInput := &modconfig.Input{}
 
-// 	// Slack notify
-// 	pipelineInput := &modconfig.Input{
-// 		"channel": "#random",
-// 	}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_throw", 500*time.Millisecond, pipelineInput)
 
-// 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_slack_notify", 100*time.Millisecond, pipelineInput)
-// 	if err != nil {
-// 		assert.Fail("Error creating execution", err)
-// 		return
-// 	}
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
 
-// 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-// 	if err != nil {
-// 		assert.Fail("Error getting pipeline execution", err.Error())
-// 		return
-// 	}
-// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
 
-// 	stepExecutionID := pex.StepExecutionOrder["input.input"][0]
-// 	stepExecution := pex.StepExecutions[stepExecutionID]
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
 
-// 	assert.NotNil(stepExecution.Input)
+	// The step should be executed 3 times. First attempt + 2 retries
+	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
 
-// 	stepInput := stepExecution.Input
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
+}
 
-// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
-// 		assert.Fail("Input should have notifies")
-// 		return
-// 	}
-// 	notifies := stepInput[schema.AttributeTypeNotifies].([]interface{})
-// 	assert.Equal(1, len(notifies))
+func (suite *ModTestSuite) TestErrorInForEach() {
+	assert := assert.New(suite.T())
 
-// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap := notifies[0].(map[string]interface{})
-// 	assert.Equal("#random", notifyMap[schema.AttributeTypeChannel].(string))
+	pipelineInput := &modconfig.Input{}
 
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("slack", integrationMap[schema.AttributeTypeType].(string))
-// 	assert.Equal("abcde", integrationMap[schema.AttributeTypeToken].(string))
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each", 500*time.Millisecond, pipelineInput)
 
-// 	// Email notify
-// 	pipelineInput = &modconfig.Input{}
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
 
-// 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_email_notify", 100*time.Millisecond, pipelineInput)
-// 	if err != nil {
-// 		assert.Fail("Error creating execution", err)
-// 		return
-// 	}
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
 
-// 	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-// 	if err != nil {
-// 		assert.Fail("Error getting pipeline execution", err.Error())
-// 		return
-// 	}
-// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
 
-// 	stepExecutionID = pex.StepExecutionOrder["input.input"][0]
-// 	stepExecution = pex.StepExecutions[stepExecutionID]
+	// There are 3 instances on the for_each, all of them failed just one time (no retry configured)
+	assert.Equal(1, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["http.bad_http"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["http.bad_http"]["2"].StepExecutions))
 
-// 	assert.NotNil(stepExecution.Input)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["2"].StepExecutions[0].Output.Status)
 
-// 	stepInput = stepExecution.Input
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["1"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
 
-// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
-// 		assert.Fail("Input should have notifies")
-// 		return
-// 	}
-// 	notifies = stepInput[schema.AttributeTypeNotifies].([]interface{})
-// 	assert.Equal(1, len(notifies))
+func (suite *ModTestSuite) TestErrorInForEachNestedPipeline() {
+	assert := assert.New(suite.T())
 
-// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap = notifies[0].(map[string]interface{})
-// 	assert.Equal("awesomebob@blahblah.com", notifyMap[schema.AttributeTypeTo].(string))
+	pipelineInput := &modconfig.Input{}
 
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("email", integrationMap[schema.AttributeTypeType].(string))
-// 	assert.Equal("foo bar baz", integrationMap[schema.AttributeTypeSmtpHost].(string))
-// 	assert.Equal("bar foo baz", integrationMap[schema.AttributeTypeDefaultSubject].(string))
-// 	assert.Equal("baz bar foo", integrationMap[schema.AttributeTypeSmtpUsername].(string))
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
-// 	// Notifies test
-// 	pipelineInput = &modconfig.Input{
-// 		"channel": "#random",
-// 	}
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
 
-// 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_notifies", 100*time.Millisecond, pipelineInput)
-// 	if err != nil {
-// 		assert.Fail("Error creating execution", err)
-// 		return
-// 	}
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
 
-// 	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-// 	if err != nil {
-// 		assert.Fail("Error getting pipeline execution", err.Error())
-// 		return
-// 	}
-// 	assert.Equal(1, len(pex.StepExecutionOrder["input.input"]))
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
 
-// 	stepExecutionID = pex.StepExecutionOrder["input.input"][0]
-// 	stepExecution = pex.StepExecutions[stepExecutionID]
+	// There are 3 instances on the for_each, all of them failed just one time (no retry configured)
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
 
-// 	assert.NotNil(stepExecution.Input)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
 
-// 	stepInput = stepExecution.Input
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
 
-// 	if _, ok := stepInput[schema.AttributeTypeNotifies].([]interface{}); !ok {
-// 		assert.Fail("Input should have notifies")
-// 		return
-// 	}
-// 	notifies = stepInput[schema.AttributeTypeNotifies].([]interface{})
-// 	assert.Equal(2, len(notifies))
+func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
+	assert := assert.New(suite.T())
 
-// 	if _, ok := notifies[0].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap = notifies[0].(map[string]interface{})
-// 	assert.Equal("#random", notifyMap[schema.AttributeTypeChannel].(string))
+	pipelineInput := &modconfig.Input{}
 
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("slack", integrationMap[schema.AttributeTypeType].(string))
-// 	assert.Equal("abcde", integrationMap[schema.AttributeTypeToken].(string))
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works", 500*time.Millisecond, pipelineInput)
 
-// 	if _, ok := notifies[1].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert notify to map[string]interface{}")
-// 		return
-// 	}
-// 	notifyMap = notifies[1].(map[string]interface{})
-// 	assert.Equal("awesomebob@blahblah.com", notifyMap[schema.AttributeTypeTo].(string))
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
 
-// 	if _, ok := notifyMap[schema.AttributeTypeIntegration].(map[string]interface{}); !ok {
-// 		assert.Fail("Unable to convert integration to map[string]interface{}")
-// 		return
-// 	}
-// 	integrationMap = notifyMap[schema.AttributeTypeIntegration].(map[string]interface{})
-// 	assert.Equal("foo bar baz", integrationMap[schema.AttributeTypeSmtpHost].(string))
-// 	assert.Equal("bar foo baz", integrationMap[schema.AttributeTypeDefaultSubject].(string))
-// 	assert.Equal("baz bar foo", integrationMap[schema.AttributeTypeSmtpUsername].(string))
-// 	assert.Equal("email", integrationMap[schema.AttributeTypeType].(string))
-// }
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// There are 3 instances on the for_each, all of them failed just one time (no retry configured)
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
+
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(0, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors))
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) XTestErrorThrowSimple() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// The step should be executed 3 times. First attempt + 2 retries
+	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
+}
 
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{

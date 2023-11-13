@@ -28,7 +28,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	e := ei.(*event.PipelineFailed)
 
 	logger := fplog.Logger(ctx)
-	logger.Error("pipeline_failed handler", "event", e)
+	logger.Debug("pipeline_failed handler", "event", e)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -98,6 +98,9 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 			filePath := path.Join(viper.GetString(constants.ArgOutputDir), e.Event.ExecutionID+".sps")
 			_ = os.WriteFile(filePath, jsonStr, 0600)
 		}
+		// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
+		event.ReleaseEventLogMutex(e.Event.ExecutionID)
+		event.ReleasePlannerMutex(e.Event.ExecutionID)
 	}
 
 	return nil
