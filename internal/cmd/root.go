@@ -64,5 +64,3 @@ func rootCommand(ctx context.Context) *cobra.Command {
 
 	return rootCmd
 }
-
-// Assumes that the install dir exists
