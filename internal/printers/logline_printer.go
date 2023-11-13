@@ -14,6 +14,9 @@ func (p LogLinePrinter) PrintResource(ctx context.Context, r types.PrintableReso
 	lines := r.GetItems().([]types.LogLine)
 
 	for _, line := range lines {
+		if line.IsError {
+			line.Message = fmt.Sprintf("%s%s%s", "\x1b[31m", line.Message, "\x1b[0m")
+		}
 		msg := buildLogLinePrefix(line)
 		msg += line.Message
 		msg += "\n"
