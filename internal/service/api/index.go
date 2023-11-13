@@ -20,7 +20,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
-	"github.com/turbot/flowpipe/internal/constants"
+	internalconstants "github.com/turbot/flowpipe/internal/constants"
+	 "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
@@ -89,14 +90,16 @@ type APIServiceOption func(*APIService) error
 
 // NewAPIService creates a new APIService.
 func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOption) (*APIService, error) {
+	 GET PORT FROM HOST
+	 HTTPS PORT???
 	// Defaults
 	api := &APIService{
 		ctx:       ctx,
 		EsService: es,
 		Status:    "initialized",
 		HTTPSHost: viper.GetString("web.https.host"),
-		HTTPSPort: fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPortHttps)),
-		HTTPPort:  fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPort)),
+		HTTPSPort: fmt.Sprintf("%d", viper.GetInt(constants.ArgPortHttps)),
+		HTTPPort:  fmt.Sprintf("%d", viper.GetInt(constants.ArgPort)),
 		ModMetadata: RootModMetadata{
 			IsStale:    false,
 			LastLoaded: time.Now(),

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/docker"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -10,19 +11,19 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-func serviceCmd() *cobra.Command {
+func serverCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "service",
+		Use:   "server",
 		Args:  cobra.NoArgs,
-		Short: "Service commands",
+		Short: "Server commands",
 	}
 
-	cmd.AddCommand(serviceStartCmd())
+	cmd.AddCommand(serverStartCmd())
 
 	return cmd
 }
 
-func serviceStartCmd() *cobra.Command {
+func serverStartCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use: "start",
 		Run: startManagerFunc(),
@@ -33,6 +34,10 @@ func serviceStartCmd() *cobra.Command {
 		AddFilepathFlag(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.").
 		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
 		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.").
+		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
+		// TODO KAI check default
+		AddIntFlag(constants.ArgPortHttps, localconstants.DefaultServerPort, "HTTPS server port.").
+		AddIntFlag(constants.ArgListen, localconstants.DefaultServerPort, "HTTPS server port.").
 		AddBoolFlag(constants.ArgNoScheduler, false, "Disable the scheduler.").
 		AddBoolFlag(constants.ArgRetainArtifacts, false, "Retains Docker container artifacts for container step. [EXPERIMENTAL]").
 		AddBoolFlag(constants.ArgInput, true, "Enable interactive prompts")
@@ -48,7 +53,7 @@ func startManagerFunc() func(cmd *cobra.Command, args []string) {
 			error_helpers.FailOnError(err)
 		}
 
-		serviceConfig.Initialize(ctx)
+		serviceConfig.Initialize()
 
 		m, err := manager.NewManager(ctx)
 

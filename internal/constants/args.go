@@ -1,11 +1,8 @@
 package constants
 
 const (
-	ArgApiHost               = "api-host"
-	ArgApiPort               = "api-port"
-	ArgApiPortHttps          = "api-port-https"
-	ArgTlsInsecure           = "insecure"
-	ArgPipelineArg           = "pipeline-arg"
+	ArgTlsInsecure = "insecure"
+
 	ArgPipelineExecutionMode = "execution-mode"
 	ArgPipelineWaitTime      = "wait-time"
 )

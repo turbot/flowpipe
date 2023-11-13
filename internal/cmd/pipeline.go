@@ -162,7 +162,7 @@ func pipelineRunCmd() *cobra.Command {
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgPipelineArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
+		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
 
 	return cmd
 }
@@ -176,7 +176,7 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 
 		// Get the pipeline args from the flag
 		pipelineArgs := map[string]string{}
-		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgPipelineArg)
+		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgArg)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of pipeline-arg flag")
 			return
