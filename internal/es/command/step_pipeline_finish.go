@@ -7,7 +7,9 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/hclhelpers"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 type StepPipelineFinishHandler CommandHandler
@@ -73,6 +75,40 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 	stepOutput := make(map[string]interface{})
 
+	if cmd.Output.Status == "failed" {
+		stepRetry := calculateRetry(ctx, cmd.StepRetry, stepDefn)
+
+		if stepRetry != nil {
+			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
+			stepRetry.Input = &cmd.StepInput
+		} else {
+			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
+			stepRetry = &modconfig.StepRetry{
+				RetryCompleted: true,
+			}
+		}
+
+		e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
+		if err != nil {
+			logger.Error("Error creating Pipeline Step Finished event", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				logger.Error("Error publishing event", "error", err2)
+			}
+		}
+		e.StepRetry = stepRetry
+		// e.StepLoop = cmd.StepLoop
+		err = h.EventBus.Publish(ctx, e)
+
+		if err != nil {
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				logger.Error("Error publishing event", "error", err2)
+			}
+		}
+		return nil
+	}
+
 	// Calculate the configured step output
 	//
 	// Ignore the merging here, the nested pipeline output is also called "output", but that merging is done later
@@ -115,7 +151,22 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		}
 	}
 
+	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+	var stepLoop *modconfig.StepLoop
+	if loopBlock != nil {
+		var err error
+		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, evalContext, stepDefn.GetName(), cmd.Output, stepOutput)
+		if err != nil {
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				logger.Error("Error publishing event", "error", err2)
+			}
+		}
+	}
+
 	e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
+	e.StepLoop = stepLoop
+
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
 	}

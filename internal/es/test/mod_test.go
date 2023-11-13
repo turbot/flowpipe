@@ -243,8 +243,7 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
 }
 
-// We can't do this test until we solved the concurrency issue with for_each
-func (suite *ModTestSuite) XTestLoopWithForEachAndNestedPipeline() {
+func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
@@ -263,6 +262,70 @@ func (suite *ModTestSuite) XTestLoopWithForEachAndNestedPipeline() {
 	}
 
 	assert.NotNil(pex)
+
+	// We should have 3 for_each and each for_each has an exact 3 iterations.
+	// check the output, it should not double up on the iteration count
+
+	assert.Equal(3, len(pex.StepStatus["pipeline.repeat"]))
+	assert.Equal(3, len(pex.StepStatus["pipeline.repeat"]["0"].StepExecutions))
+	assert.Equal(3, len(pex.StepStatus["pipeline.repeat"]["1"].StepExecutions))
+	assert.Equal(3, len(pex.StepStatus["pipeline.repeat"]["2"].StepExecutions))
+
+	assert.Equal("0: oasis", pex.StepStatus["pipeline.repeat"]["0"].StepExecutions[0].Output.Data["output"].(map[string]interface{})["val"])
+	assert.Equal("1: oasis", pex.StepStatus["pipeline.repeat"]["0"].StepExecutions[1].Output.Data["output"].(map[string]interface{})["val"])
+	assert.Equal("2: oasis", pex.StepStatus["pipeline.repeat"]["0"].StepExecutions[2].Output.Data["output"].(map[string]interface{})["val"])
+
+	assert.Equal("0: blur", pex.StepStatus["pipeline.repeat"]["1"].StepExecutions[0].Output.Data["output"].(map[string]interface{})["val"])
+	assert.Equal("1: blur", pex.StepStatus["pipeline.repeat"]["1"].StepExecutions[1].Output.Data["output"].(map[string]interface{})["val"])
+	assert.Equal("2: blur", pex.StepStatus["pipeline.repeat"]["1"].StepExecutions[2].Output.Data["output"].(map[string]interface{})["val"])
+
+	assert.Equal("0: radiohead", pex.StepStatus["pipeline.repeat"]["2"].StepExecutions[0].Output.Data["output"].(map[string]interface{})["val"])
+	assert.Equal("1: radiohead", pex.StepStatus["pipeline.repeat"]["2"].StepExecutions[1].Output.Data["output"].(map[string]interface{})["val"])
+	assert.Equal("2: radiohead", pex.StepStatus["pipeline.repeat"]["2"].StepExecutions[2].Output.Data["output"].(map[string]interface{})["val"])
+}
+
+func (suite *ModTestSuite) TestLoopWithForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.NotNil(pex)
+
+	// We should have 3 for_each and each for_each has an exact 4 iterations.
+	// check the output, it should not double up on the iteration count
+
+	assert.Equal(3, len(pex.StepStatus["echo.repeat"]))
+	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["1"].StepExecutions))
+	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["2"].StepExecutions))
+
+	assert.Equal("iteration: 0 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("iteration: 1 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].Output.Data["text"])
+	assert.Equal("iteration: 2 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].Output.Data["text"])
+	assert.Equal("iteration: 3 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[3].Output.Data["text"])
+
+	assert.Equal("iteration: 0 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("iteration: 1 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[1].Output.Data["text"])
+	assert.Equal("iteration: 2 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[2].Output.Data["text"])
+	assert.Equal("iteration: 3 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[3].Output.Data["text"])
+
+	assert.Equal("iteration: 0 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("iteration: 1 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[1].Output.Data["text"])
+	assert.Equal("iteration: 2 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[2].Output.Data["text"])
+	assert.Equal("iteration: 3 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[3].Output.Data["text"])
 
 }
 
@@ -301,7 +364,7 @@ func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
 	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
 }
 
-func (suite *ModTestSuite) TestLoopWithForEach() {
+func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}

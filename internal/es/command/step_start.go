@@ -280,148 +280,45 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	if output.Status == "failed" {
-		stepRetry := handleError(ctx, h, cmd, stepDefn)
+		stepRetry := calculateRetry(ctx, cmd.StepRetry, stepDefn)
 		if stepRetry != nil {
-			stepRetry.Input = &cmd.StepInput
-
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
-			e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
-			if err != nil {
-				logger.Error("Error creating Pipeline Step Finished event", "error", err)
-				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
-				return
-			}
-			e.StepRetry = stepRetry
-			err = h.EventBus.Publish(ctx, e)
-			if err != nil {
-				logger.Error("Error publishing event", "error", err)
-			}
-			return
+			stepRetry.Input = &cmd.StepInput
 		} else {
 			// we have exhausted our retry, do not try to loop call step finish immediately
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
-			stepRetry := &modconfig.StepRetry{
+			stepRetry = &modconfig.StepRetry{
 				RetryCompleted: true,
 			}
-
-			e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
-			if err != nil {
-				logger.Error("Error creating Pipeline Step Finished event", "error", err)
-				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
-				return
-			}
-			e.StepRetry = stepRetry
-			err = h.EventBus.Publish(ctx, e)
-			if err != nil {
-				logger.Error("Error publishing event", "error", err)
-			}
-			return
-
 		}
+
+		e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
+		if err != nil {
+			logger.Error("Error creating Pipeline Step Finished event", "error", err)
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+			return
+		}
+		e.StepRetry = stepRetry
+
+		// Don't forget to carry whatever the current loop config is
+		e.StepLoop = cmd.StepLoop
+		err = h.EventBus.Publish(ctx, e)
+		if err != nil {
+			logger.Error("Error publishing event", "error", err)
+		}
+		return
+
 	}
 
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
-
 	var stepLoop *modconfig.StepLoop
 	if loopBlock != nil {
-		loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
-		if loopDefn == nil {
-			// We should never get here, because the loop block should have been validated
-			logger.Error("Unknown loop type", "type", stepDefn.GetType())
-		}
-
 		var err error
-		evalContext, err = execution.AddStepOutputAsResults(cmd.StepName, output, stepOutput, evalContext)
+		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, evalContext, cmd.StepName, output, stepOutput)
 		if err != nil {
-			logger.Error("Error adding step output as results", "error", err)
+			logger.Error("Error calculating loop", "error", err)
 			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
 			return
-		}
-
-		// If this is the first iteration of the loop, the cmd.StepLoop should be nil
-		// thus the loop.index in the evaluation context should be 0
-		//
-		// this allows evaluation such as:
-		/*
-
-			step "echo" "echo" {
-				text = "foo"
-
-				loop {
-					if = loop.index < 2
-				}
-			}
-		**/
-		//
-		// Because this IF is still part of the Iteration 0 loop.index should be 0
-		evalContext := execution.AddLoop(cmd.StepLoop, evalContext)
-
-		// We have to evaluate the loop body here before the index is incremented to determine if the loop should run
-		// we will have to re-evaluate the loop body again after the index is incremented to get the correct values
-		diags := gohcl.DecodeBody(loopBlock, evalContext, loopDefn)
-		if len(diags) > 0 {
-			logger.Error("Error decoding loop block", "error", diags)
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
-			return
-		}
-
-		// We have to indicate here (before raising the step finish) that this is part of the loop that should be executing, i.e. the step is not actually
-		// "finished" yet.
-		//
-		// Unlike the for_each where we know that there are n number of step executions and the planner launched them all at once, the loop is different.
-		//
-		// The planner has no idea that the step is not yet finished. We have to tell the planner here that it needs to launch another step execution
-		if loopDefn.ShouldRun() {
-			// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
-			//
-			// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index,
-			// do not change the currentIndex to 0
-			currentIndex := 1
-			if cmd.StepLoop != nil {
-				previousIndex := cmd.StepLoop.Index
-				currentIndex = previousIndex + 1
-			}
-
-			stepLoop = &modconfig.StepLoop{
-				Index: currentIndex,
-				// Input: &newInput,
-			}
-
-			// first we need to evaluate the input for the step, this is to support:
-			/*
-				step "echo" "echo" {
-					text = "iteration: ${loop.index}"
-				}
-			**/
-			// for each of the loop iteration the index changes, so we have to re do it again
-			// ensure that we also have the "each" variable here
-			evalContext = execution.AddLoop(stepLoop, evalContext)
-			evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
-
-			reevaluatedInput, err := stepDefn.GetInputs(evalContext)
-			if err != nil {
-				logger.Error("Error re-evaluating inputs for step", "error", err)
-				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
-				return
-			}
-
-			// get the new input
-			newInput, err := loopDefn.UpdateInput(reevaluatedInput)
-			if err != nil {
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
-				}
-				return
-			}
-
-			stepLoop.Input = &newInput
-		} else {
-			stepLoop = cmd.StepLoop
-			// complete the loop
-			// input is not required here
-			stepLoop.Input = nil
-			stepLoop.LoopCompleted = true
 		}
 	}
 
@@ -450,7 +347,7 @@ func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepSt
 // throw, in the order that they appear
 // retry
 // error
-func handleError(ctx context.Context, h StepStartHandler, e *event.StepStart, stepDefn modconfig.PipelineStep) *modconfig.StepRetry {
+func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep) *modconfig.StepRetry {
 	// we have error, check the if there's a retry block
 	retryConfig := stepDefn.GetRetryConfig()
 
@@ -458,8 +355,6 @@ func handleError(ctx context.Context, h StepStartHandler, e *event.StepStart, st
 		// there's no retry config ... nothing to retry
 		return nil
 	}
-
-	stepRetry := e.StepRetry
 
 	// if step retry == nil means this is the first time we encountered this issue
 	if stepRetry == nil {
@@ -475,4 +370,105 @@ func handleError(ctx context.Context, h StepStartHandler, e *event.StepStart, st
 	}
 
 	return stepRetry
+}
+
+func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep,
+	evalContext *hcl.EvalContext, stepName string, output *modconfig.Output, stepOutput map[string]interface{}) (*modconfig.StepLoop, error) {
+
+	logger := fplog.Logger(ctx)
+
+	loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
+	if loopDefn == nil {
+		// We should never get here, because the loop block should have been validated
+		logger.Error("Unknown loop type", "type", stepDefn.GetType())
+		return nil, perr.InternalWithMessage("unkonwn loop type: " + stepDefn.GetType())
+	}
+
+	loopEvalContext, err := execution.AddStepOutputAsResults(stepName, output, stepOutput, evalContext)
+	if err != nil {
+		logger.Error("Error adding step output as results", "error", err)
+		return nil, perr.InternalWithMessage("error adding step output as results: " + err.Error())
+	}
+
+	// If this is the first iteration of the loop, the cmd.StepLoop should be nil
+	// thus the loop.index in the evaluation context should be 0
+	//
+	// this allows evaluation such as:
+	/*
+
+		step "echo" "echo" {
+			text = "foo"
+
+			loop {
+				if = loop.index < 2
+			}
+		}
+	**/
+	//
+	// Because this IF is still part of the Iteration 0 loop.index should be 0
+	loopEvalContext = execution.AddLoop(stepLoop, loopEvalContext)
+
+	// We have to evaluate the loop body here before the index is incremented to determine if the loop should run
+	// we will have to re-evaluate the loop body again after the index is incremented to get the correct values
+	diags := gohcl.DecodeBody(loopBlock, loopEvalContext, loopDefn)
+	if len(diags) > 0 {
+		return nil, perr.InternalWithMessage("error decoding loop block: " + diags.Error())
+	}
+
+	// We have to indicate here (before raising the step finish) that this is part of the loop that should be executing, i.e. the step is not actually
+	// "finished" yet.
+	//
+	// Unlike the for_each where we know that there are n number of step executions and the planner launched them all at once, the loop is different.
+	//
+	// The planner has no idea that the step is not yet finished. We have to tell the planner here that it needs to launch another step execution
+	if loopDefn.ShouldRun() {
+		// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
+		//
+		// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index,
+		// do not change the currentIndex to 0
+		currentIndex := 1
+		if stepLoop != nil {
+			previousIndex := stepLoop.Index
+			currentIndex = previousIndex + 1
+		}
+
+		newStepLoop := &modconfig.StepLoop{
+			Index: currentIndex,
+			// Input: &newInput,
+		}
+
+		// first we need to evaluate the input for the step, this is to support:
+		/*
+			step "echo" "echo" {
+				text = "iteration: ${loop.index}"
+			}
+		**/
+		// for each of the loop iteration the index changes, so we have to re do it again
+		// ensure that we also have the "each" variable here
+		evalContext = execution.AddLoop(newStepLoop, evalContext)
+		evalContext = execution.AddEachForEach(stepForEach, evalContext)
+
+		reevaluatedInput, err := stepDefn.GetInputs(evalContext)
+		if err != nil {
+			logger.Error("Error re-evaluating inputs for step", "error", err)
+			return nil, perr.InternalWithMessage("error re-evaluating inputs for step: " + err.Error())
+
+		}
+
+		// get the new input
+		newInput, err := loopDefn.UpdateInput(reevaluatedInput)
+		if err != nil {
+			return nil, perr.InternalWithMessage("error updating input for loop: " + err.Error())
+		}
+
+		newStepLoop.Input = &newInput
+		return newStepLoop, nil
+	}
+
+	newStepLoop := stepLoop
+	// complete the loop
+	// input is not required here
+	stepLoop.Input = nil
+	stepLoop.LoopCompleted = true
+	return newStepLoop, nil
 }

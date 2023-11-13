@@ -18,7 +18,6 @@ pipeline "run_me_middle" {
     param "names" {
         type = list(string)
         default = ["aaa", "bbb", "ccc"]
-        # default = ["aaa"]
     }
 
     param "name" {

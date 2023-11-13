@@ -17,6 +17,9 @@ type StepPipelineFinish struct {
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
+	StepInput   modconfig.Input        `json:"step_input,omitempty"`
 }
 
 func (e *StepPipelineFinish) GetEvent() *Event {
