@@ -65,13 +65,11 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		AddPersistentBoolFlag(internalconstants.ArgTlsInsecure, false, "Skip TLS verification").
 		// Common (steampipe, flowpipe) flags
 		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").
-		AddPersistentFilepathFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory")
-
-	// Define the CLI flag parameters for your wrapped enum flag.
-	rootCmd.PersistentFlags().Var(
-		enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
-		constants.ArgOutput,
-		"Output format; one of: table, yaml, json")
+		AddPersistentFilepathFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory").
+		// Define the CLI flag parameters for wrapped enum flag.
+		AddPersistentVarFlag(enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
+			constants.ArgOutput,
+			"Output format; one of: table, yaml, json")
 
 	// disable auto completion generation, since we don't want to support
 	// powershell yet - and there's no way to disable powershell in the default generator
