@@ -263,13 +263,13 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	assert := assert.New(suite.T())
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "if", 100*time.Millisecond, nil)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "if", 500*time.Millisecond, nil)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return

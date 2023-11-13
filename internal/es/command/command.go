@@ -2,10 +2,17 @@ package command
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"path"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -40,14 +47,42 @@ func LogEventMessage(ctx context.Context, evt interface{}) error {
 		return perr.BadRequestWithMessage("event is not a CommandEvent")
 	}
 
-	// executionLogger writes the event to a file
-	executionLogger := fplog.ExecutionLogger(ctx, commandEvent.GetEvent().ExecutionID)
-	executionLogger.Sugar().Infow("es", "event_type", commandEvent.HandlerName(), "payload", evt)
+	logMessage := event.EventLogEntry{
+		Level:     "info",
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Caller:    "command",
+		Message:   "es",
+		EventType: commandEvent.HandlerName(),
+		Payload:   evt,
+	}
 
-	err := executionLogger.Sync()
+	// Marshal the struct to JSON
+	fileData, err := json.Marshal(logMessage) // No indent, single line
 	if err != nil {
-		// logger.Error("failed to sync execution logger", "error", err)
-		return err
+		log.Fatalf("Error marshalling JSON: %v", err)
+	}
+
+	fileName := path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
+
+	writeMutex := event.GetMutex(commandEvent.GetEvent().ExecutionID)
+	writeMutex.Lock()
+	defer writeMutex.Unlock()
+
+	// Append the JSON data to a file
+	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return perr.InternalWithMessage("Error opening file " + err.Error())
+	}
+	defer file.Close()
+
+	_, err = file.Write(fileData)
+	if err != nil {
+		return perr.InternalWithMessage("Error writing to file " + err.Error())
+	}
+
+	_, err = file.WriteString("\n")
+	if err != nil {
+		return perr.InternalWithMessage("Error writing to file " + err.Error())
 	}
 
 	return nil

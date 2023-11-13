@@ -98,6 +98,8 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 			filePath := path.Join(viper.GetString(constants.ArgOutputDir), e.Event.ExecutionID+".sps")
 			_ = os.WriteFile(filePath, jsonStr, 0600)
 		}
+		// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
+		event.ReleaseMutex(e.Event.ExecutionID)
 	}
 
 	return nil
