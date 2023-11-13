@@ -314,8 +314,17 @@ func (pe *PipelineExecution) ShouldFail() bool {
 
 }
 
-// IsComplete returns true if all steps (that have been initialized) are complete.
+// IsComplete returns true if all steps are complete.
 func (pe *PipelineExecution) IsComplete() bool {
+	pipeline, err := db.GetPipeline(pe.Name)
+	if err != nil {
+		// TODO: what do we do here?
+		return false
+	}
+
+	if len(pe.StepStatus) != len(pipeline.Steps) {
+		return false
+	}
 
 	for _, indexedStatus := range pe.StepStatus {
 		// If indexedStatus is nil, then the step hasn't been initialized

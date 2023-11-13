@@ -59,6 +59,10 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		return perr.BadRequestWithMessage("invalid command type expected *event.StepForEachPlan")
 	}
 
+	plannerMutex := event.GetPlannerMutex(e.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer plannerMutex.Unlock()
+
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepForEachPlan(e, err))

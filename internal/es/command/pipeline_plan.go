@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -24,11 +23,7 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 	return &event.PipelinePlan{}
 }
 
-var pipelinePlanMu sync.Mutex
-
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
-	pipelinePlanMu.Lock()
-	defer pipelinePlanMu.Unlock()
 
 	logger := fplog.Logger(ctx)
 
@@ -37,6 +32,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		logger.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
+
+	plannerMutex := event.GetPlannerMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer plannerMutex.Unlock()
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {

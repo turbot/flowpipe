@@ -198,7 +198,12 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 
 	echoStepsOutput := executionVariables["step"].AsValueMap()["echo"].AsValueMap()
 
+	if len(echoStepsOutput) != 10 {
+		assert.Fail("Invalid number of steps", len(echoStepsOutput))
+		return
+	}
 	assert.Equal(10, len(echoStepsOutput))
+
 	assert.Equal("foo bar", echoStepsOutput["text_1"].AsValueMap()["text"].AsString())
 	assert.Equal("lower case Bar Foo Bar Baz and here", echoStepsOutput["text_2"].AsValueMap()["text"].AsString())
 	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", echoStepsOutput["text_3"].AsValueMap()["text"].AsString())

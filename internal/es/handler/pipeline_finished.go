@@ -101,7 +101,8 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		_ = os.WriteFile(filePath, jsonStr, 0600)
 
 		// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
-		event.ReleaseMutex(e.Event.ExecutionID)
+		event.ReleaseEventLogMutex(e.Event.ExecutionID)
+		event.ReleasePlannerMutex(e.Event.ExecutionID)
 	}
 
 	return nil

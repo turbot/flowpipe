@@ -64,9 +64,9 @@ func LogEventMessage(ctx context.Context, cmd interface{}) error {
 
 	fileName := path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
 
-	writeMutex := event.GetMutex(commandEvent.GetEvent().ExecutionID)
-	writeMutex.Lock()
-	defer writeMutex.Unlock()
+	executionMutex := event.GetEventLogMutex(commandEvent.GetEvent().ExecutionID)
+	executionMutex.Lock()
+	defer executionMutex.Unlock()
 
 	// Append the JSON data to a file
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

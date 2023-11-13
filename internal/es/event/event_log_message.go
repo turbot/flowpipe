@@ -15,7 +15,7 @@ type EventLogEntry struct {
 var eventLogWriteMutexes = make(map[string]*sync.Mutex)
 var eventLogWriteMutexLock sync.Mutex
 
-func GetMutex(executionId string) *sync.Mutex {
+func GetEventLogMutex(executionId string) *sync.Mutex {
 	eventLogWriteMutexLock.Lock()
 	defer eventLogWriteMutexLock.Unlock()
 
@@ -28,9 +28,32 @@ func GetMutex(executionId string) *sync.Mutex {
 	}
 }
 
-func ReleaseMutex(executionId string) {
+func ReleaseEventLogMutex(executionId string) {
 	eventLogWriteMutexLock.Lock()
 	defer eventLogWriteMutexLock.Unlock()
 
 	delete(eventLogWriteMutexes, executionId)
+}
+
+var plannerMutexes = make(map[string]*sync.Mutex)
+var plannerMutexeLock sync.Mutex
+
+func GetPlannerMutex(executionId string) *sync.Mutex {
+	plannerMutexeLock.Lock()
+	defer plannerMutexeLock.Unlock()
+
+	if mutex, exists := plannerMutexes[executionId]; exists {
+		return mutex
+	} else {
+		newMutex := &sync.Mutex{}
+		plannerMutexes[executionId] = newMutex
+		return newMutex
+	}
+}
+
+func ReleasePlannerMutex(executionId string) {
+	plannerMutexeLock.Lock()
+	defer plannerMutexeLock.Unlock()
+
+	delete(plannerMutexes, executionId)
 }
