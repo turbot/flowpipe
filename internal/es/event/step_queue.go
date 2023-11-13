@@ -22,8 +22,6 @@ type StepQueue struct {
 	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
 
-	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
-
 	NextStepAction modconfig.NextStepAction `json:"action,omitempty"`
 }
 
@@ -68,7 +66,6 @@ func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName strin
 	cmd.StepForEach = e.StepForEach
 	cmd.StepLoop = e.StepLoop
 	cmd.StepRetry = e.StepRetry
-	cmd.DelayMs = 0
 	cmd.NextStepAction = modconfig.NextStepActionStart
 
 	return cmd
@@ -89,7 +86,6 @@ func NewStepQueueFromPipelineStepFinishedForRetry(e *StepFinished, stepName stri
 	cmd.StepForEach = e.StepForEach
 	cmd.StepLoop = e.StepLoop
 	cmd.StepRetry = e.StepRetry
-	cmd.DelayMs = 0
 	cmd.NextStepAction = modconfig.NextStepActionStart
 
 	return cmd
@@ -110,7 +106,6 @@ func NewStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconf
 	cmd.StepInput = nextStep.Input
 	cmd.StepForEach = nextStep.StepForEach
 	cmd.StepLoop = nil
-	cmd.DelayMs = 0
 	cmd.NextStepAction = nextStep.Action
 
 	return cmd, nil
@@ -128,13 +123,12 @@ func StepQueueForPipelinePlanned(e *PipelinePlanned) StepQueueOption {
 	}
 }
 
-func StepQueueWithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, delayMs int, nextStepAction modconfig.NextStepAction) StepQueueOption {
+func StepQueueWithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) StepQueueOption {
 	return func(cmd *StepQueue) error {
 		cmd.StepName = name
 		cmd.StepInput = input
 		cmd.StepForEach = stepForEach
 		cmd.StepLoop = stepLoop
-		cmd.DelayMs = delayMs
 		cmd.NextStepAction = nextStepAction
 		return nil
 	}

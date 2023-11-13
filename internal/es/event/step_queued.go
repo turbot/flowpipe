@@ -22,8 +22,6 @@ type StepQueued struct {
 	StepLoop       *modconfig.StepLoop      `json:"step_loop,omitempty"`
 	StepRetry      *modconfig.StepRetry     `json:"step_retry,omitempty"`
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
-
-	DelayMs int `json:"delay_ms,omitempty"` // delay start in milliseconds
 }
 
 func (e *StepQueued) GetEvent() *Event {
@@ -65,7 +63,6 @@ func ForStepQueue(cmd *StepQueue) StepQueuedOption {
 		e.StepLoop = cmd.StepLoop
 		e.StepRetry = cmd.StepRetry
 		e.NextStepAction = cmd.NextStepAction
-		e.DelayMs = cmd.DelayMs
 		return nil
 	}
 }

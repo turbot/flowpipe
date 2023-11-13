@@ -1174,6 +1174,57 @@ func (suite *ModTestSuite) TestErrorRetry() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 }
 
+func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_backoff", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 60, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// The step should be executed 3 times. First attempt + 2 retries
+	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
+
+	// There must be at least 2 second delay between StepExecution #1 and StepExecution #2
+	step1EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].EndTime
+	step2StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].StartTime
+
+	duration := step2StartTime.Sub(step1EndTime)
+	if duration < 2*time.Second {
+		assert.Fail("The gap should be at least 2 seconds but " + duration.String())
+	}
+
+	step2EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].EndTime
+	step3StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].StartTime
+
+	duration = step3StartTime.Sub(step2EndTime)
+	if duration < 2*time.Second {
+		assert.Fail("The gap should be at least 2 seconds but " + duration.String())
+	}
+}
+
 func (suite *ModTestSuite) TestErrorInForEach() {
 	assert := assert.New(suite.T())
 

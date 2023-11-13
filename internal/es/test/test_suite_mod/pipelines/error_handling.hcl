@@ -41,12 +41,22 @@ pipeline "bad_http_ignored" {
 
 
 pipeline "error_retry_throw" {
-
     step "http" "bad_http" {
-        url = "http://api.open-notify.org/astros.jsons"
+        url = "http://api.google.com/astros.jsons"
 
         retry {
             retries = 2
+        }
+    }
+}
+
+pipeline "error_retry_with_backoff" {
+    step "http" "bad_http" {
+        url = "http://api.google.com/astros.jsons"
+
+        retry {
+            retries = 2
+            backoff = "2s"
         }
     }
 }
@@ -56,7 +66,7 @@ pipeline "error_in_for_each" {
 
     step "http" "bad_http" {
         for_each = ["bad_1.json", "bad_2.json", "bad_3.json"]
-        url = "http://api.open-notify.org/${each.value}"
+        url = "http://api.google.com/${each.value}"
     }
 
     output "val" {

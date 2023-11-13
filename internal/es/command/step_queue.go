@@ -29,11 +29,53 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	logger := fplog.Logger(ctx)
+	if cmd.StepRetry != nil {
+		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+		if err != nil {
+			logger.Error("step_queue: Error loading pipeline execution", "error", err)
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+		}
 
-	if cmd.DelayMs > 0 {
-		logger.Info("Sleeping for delay_ms", "delayMs", cmd.DelayMs)
-		time.Sleep(time.Duration(cmd.DelayMs) * time.Millisecond)
-		logger.Info("Sleeping for delay_ms complete", "delayMs", cmd.DelayMs)
+		pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+		if err != nil {
+			logger.Error("Error loading pipeline definition", "error", err)
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+		}
+
+		stepDefn := pipelineDefn.GetStep(cmd.StepName)
+
+		if stepDefn.GetRetryConfig().Backoff != nil {
+			// If there's backoff, create the sleep in a separate go routine
+			go func() {
+				duration, _ := time.ParseDuration(*stepDefn.GetRetryConfig().Backoff)
+
+				logger.Info("Delaying step start for", "duration", duration, "stepName", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID)
+				start := time.Now().UTC()
+				time.Sleep(duration)
+				finish := time.Now().UTC()
+
+				logger.Info("Delaying step start complete", "duration", duration, "stepName", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "start", start, "finish", finish)
+
+				e, err := event.NewStepQueued(event.ForStepQueue(cmd))
+				if err != nil {
+					logger.Error("Error creating step queued event", "error", err)
+					err = h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+					if err != nil {
+						logger.Error("Error publishing pipeline failed event", "error", err)
+					}
+				}
+				err = h.EventBus.Publish(ctx, e)
+				if err != nil {
+					logger.Error("Error publishing step queued event", "error", err)
+					err = h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+					if err != nil {
+						logger.Error("Error publishing pipeline failed event", "error", err)
+					}
+				}
+			}()
+
+			return nil
+		}
 	}
 
 	e, err := event.NewStepQueued(event.ForStepQueue(cmd))

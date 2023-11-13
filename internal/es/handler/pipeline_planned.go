@@ -163,7 +163,7 @@ func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.P
 		Each:        json.SimpleJSONValue{Value: cty.StringVal("0")},
 	}
 
-	cmd, err := event.NewStepQueue(event.StepQueueForPipelinePlanned(e), event.StepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, nextStep.DelayMs, forEachNextStepAction))
+	cmd, err := event.NewStepQueue(event.StepQueueForPipelinePlanned(e), event.StepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, forEachNextStepAction))
 	cmd.StepLoop = stepLoop
 
 	if err != nil {

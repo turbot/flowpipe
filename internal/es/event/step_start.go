@@ -22,7 +22,6 @@ type StepStart struct {
 	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
 	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
 
-	DelayMs        int                      `json:"delay_ms,omitempty"` // delay start in milliseconds
 	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
 }
 
