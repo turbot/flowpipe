@@ -13,10 +13,11 @@ import (
 	"github.com/spf13/cobra"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/cmdconfig"
+	constants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 

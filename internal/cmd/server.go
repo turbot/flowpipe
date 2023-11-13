@@ -15,18 +15,8 @@ func serverCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server",
 		Args:  cobra.NoArgs,
-		Short: "Server commands",
-	}
-
-	cmd.AddCommand(serverStartCmd())
-
-	return cmd
-}
-
-func serverStartCmd() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use: "start",
-		Run: startManagerFunc(),
+		Short: "Start the Flowpipe server",
+		Run:   startServerFunc(),
 	}
 
 	cmdconfig.
@@ -45,7 +35,7 @@ func serverStartCmd() *cobra.Command {
 	return cmd
 }
 
-func startManagerFunc() func(cmd *cobra.Command, args []string) {
+func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
 		err := docker.Initialize(ctx)

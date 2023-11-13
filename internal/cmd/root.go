@@ -2,19 +2,14 @@ package cmd
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
-	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
-	serviceconfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
@@ -69,8 +64,8 @@ func rootCommand(ctx context.Context) *cobra.Command {
 func validateArgs() error {
 	// TODO add tests
 	// ensure port is provided with host
-	if viper.IsSet(localconstants.ArgHost) {
-		url, err := url.Parse(viper.GetString(localconstants.ArgHost))
+	if viper.IsSet(constants.ArgHost) {
+		url, err := url.Parse(viper.GetString(constants.ArgHost))
 		if err != nil || url.Port() == "" {
 			// TODO KAI finalise error
 			return fmt.Errorf("invalid 'host' argument: must be of form http://<host>:<port>")

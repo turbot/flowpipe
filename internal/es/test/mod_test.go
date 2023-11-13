@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -78,13 +77,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
-	ctx := context.Background()
-
-	ctx = fplog.ContextWithLogger(ctx)
-	ctx, err = config.ContextWithConfig(ctx)
-	if err != nil {
-		panic(err)
-	}
+	ctx := fplog.ContextWithLogger(context.Background())
 
 	suite.ctx = ctx
 

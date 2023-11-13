@@ -1,17 +1,17 @@
 run-mod:
-	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/default_mod
+	FLOWPIPE_LOG_LEVEL=INFO go run . server --mod-location ./internal/es/test/default_mod
 
 run-test-mod:
-	P_VAR_var_from_env="from env var" FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/test_suite_mod --log-dir ./tmp --output-dir ./tmp
+	P_VAR_var_from_env="from env var" FLOWPIPE_LOG_LEVEL=INFO go run . server --mod-location ./internal/es/test/test_suite_mod --log-dir ./tmp --output-dir ./tmp
 
 run-test-mod-functions:
-	P_VAR_var_from_env="from env var" FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/test_suite_mod --functions --log-dir ./tmp --output-dir ./tmp
+	P_VAR_var_from_env="from env var" FLOWPIPE_LOG_LEVEL=INFO go run . server --mod-location ./internal/es/test/test_suite_mod --functions --log-dir ./tmp --output-dir ./tmp
 
 run-pipeline:
-	FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/pipelines
+	FLOWPIPE_LOG_LEVEL=INFO go run . server --mod-location ./internal/es/test/pipelines
 
 run-trace:
-	FLOWPIPE_LOG_LEVEL=INFO FLOWPIPE_TRACE_LEVEL=INFO go run . service start --mod-location ./internal/es/test/pipelines
+	FLOWPIPE_LOG_LEVEL=INFO FLOWPIPE_TRACE_LEVEL=INFO go run . server --mod-location ./internal/es/test/pipelines
 
 clean-tmp:
 	rm -rf ./tmp/*
