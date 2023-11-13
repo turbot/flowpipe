@@ -27,6 +27,7 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineCanceled")
 	}
 
-	logger.Info("[4] pipeline_canceled event handler", "event", e)
+	event.ReleaseEventLogMutex(e.Event.ExecutionID)
+
 	return nil
 }

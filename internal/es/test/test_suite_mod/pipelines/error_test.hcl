@@ -12,7 +12,7 @@ pipeline "validate_error" {
 pipeline "execute_http" {
 
   step "http" "http_step" {
-    url    = "https://steampipe.io/asdlkfjasdlfkjnotfound/"
+    url    = "https://google.com/foobar.json"
     method = "get"
   }
 

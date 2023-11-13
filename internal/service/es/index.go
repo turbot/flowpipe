@@ -113,12 +113,6 @@ func (es *ESService) Start() error {
 	// Recoverer handles panics from handlers.
 	router.AddMiddleware(middleware.PanicRecovererMiddleware(es.ctx))
 
-	retryer := middleware.Retry{
-		MaxRetries: 0,
-	}
-
-	router.AddMiddleware(retryer.Middleware)
-
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
 	cqrsFacade, err := cqrs.NewFacade(cqrs.FacadeConfig{

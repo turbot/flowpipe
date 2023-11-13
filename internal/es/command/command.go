@@ -64,7 +64,7 @@ func LogEventMessage(ctx context.Context, evt interface{}) error {
 
 	fileName := path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
 
-	executionMutex := event.GetEventLogMutex(commandEvent.GetEvent().ExecutionID)
+	executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
 	executionMutex.Lock()
 	defer executionMutex.Unlock()
 

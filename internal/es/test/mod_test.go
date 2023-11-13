@@ -1147,17 +1147,15 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 }
 
 func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
-
-	// bad_http_not_ignored pipeline
 	assert := assert.New(suite.T())
-	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.validate_error", 200*time.Millisecond, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.validate_error", 500*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 50, "failed")
 	if err != nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return

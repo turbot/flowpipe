@@ -12,48 +12,25 @@ type EventLogEntry struct {
 	Payload   interface{} `json:"payload"`
 }
 
-var eventLogWriteMutexes = make(map[string]*sync.Mutex)
-var eventLogWriteMutexLock sync.Mutex
+var eventStoreWriteMutexes = make(map[string]*sync.Mutex)
+var eventStoreWriteMutexLock sync.Mutex
 
-func GetEventLogMutex(executionId string) *sync.Mutex {
-	eventLogWriteMutexLock.Lock()
-	defer eventLogWriteMutexLock.Unlock()
+func GetEventStoreMutex(executionId string) *sync.Mutex {
+	eventStoreWriteMutexLock.Lock()
+	defer eventStoreWriteMutexLock.Unlock()
 
-	if mutex, exists := eventLogWriteMutexes[executionId]; exists {
+	if mutex, exists := eventStoreWriteMutexes[executionId]; exists {
 		return mutex
 	} else {
 		newMutex := &sync.Mutex{}
-		eventLogWriteMutexes[executionId] = newMutex
+		eventStoreWriteMutexes[executionId] = newMutex
 		return newMutex
 	}
 }
 
 func ReleaseEventLogMutex(executionId string) {
-	eventLogWriteMutexLock.Lock()
-	defer eventLogWriteMutexLock.Unlock()
+	eventStoreWriteMutexLock.Lock()
+	defer eventStoreWriteMutexLock.Unlock()
 
-	delete(eventLogWriteMutexes, executionId)
-}
-
-var plannerMutexes = make(map[string]*sync.Mutex)
-var plannerMutexeLock sync.Mutex
-
-func GetPlannerMutex(executionId string) *sync.Mutex {
-	plannerMutexeLock.Lock()
-	defer plannerMutexeLock.Unlock()
-
-	if mutex, exists := plannerMutexes[executionId]; exists {
-		return mutex
-	} else {
-		newMutex := &sync.Mutex{}
-		plannerMutexes[executionId] = newMutex
-		return newMutex
-	}
-}
-
-func ReleasePlannerMutex(executionId string) {
-	plannerMutexeLock.Lock()
-	defer plannerMutexeLock.Unlock()
-
-	delete(plannerMutexes, executionId)
+	delete(eventStoreWriteMutexes, executionId)
 }

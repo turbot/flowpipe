@@ -103,7 +103,6 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		}
 		// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
 		event.ReleaseEventLogMutex(e.Event.ExecutionID)
-		event.ReleasePlannerMutex(e.Event.ExecutionID)
 	}
 
 	return nil
