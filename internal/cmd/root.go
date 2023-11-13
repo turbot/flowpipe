@@ -29,8 +29,7 @@ import (
 var outputMode types.OutputMode
 
 // Build the cobra command that handles our command line tool.
-func RootCommand(ctx context.Context) (*cobra.Command, error) {
-
+func rootCommand(ctx context.Context) *cobra.Command {
 	// Define our command
 	rootCmd := &cobra.Command{
 		Use:     internalconstants.Name,
@@ -79,20 +78,13 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// add all the subcommands
-	addCommands(rootCmd)
-	error_helpers.FailOnError(err)
-
-	return rootCmd, nil
-}
-
-func addCommands(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(serviceCmd())
 	rootCmd.AddCommand(pipelineCmd())
 	rootCmd.AddCommand(triggerCmd())
 	rootCmd.AddCommand(processCmd())
 	rootCmd.AddCommand(modCmd())
 
-	return
+	return rootCmd
 }
 
 // initConfig reads in config file and ENV variables if set.

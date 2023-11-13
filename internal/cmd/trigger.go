@@ -18,21 +18,20 @@ func triggerCmd() *cobra.Command {
 		Short: "Trigger commands",
 	}
 
-	cmd.AddCommand(TriggerListCmd())
+	cmd.AddCommand(triggerListCmd())
 	cmd.AddCommand(TriggerShowCmd())
 
 	return cmd
 }
 
-func TriggerListCmd() *cobra.Command {
-
-	var triggerListCmd = &cobra.Command{
+func triggerListCmd() *cobra.Command {
+	var cmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
 		Run:  listTriggerFunc(),
 	}
 
-	return triggerListCmd
+	return cmd
 }
 
 func TriggerShowCmd() *cobra.Command {
