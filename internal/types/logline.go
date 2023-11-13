@@ -6,8 +6,10 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/utils"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type LogLine struct {
@@ -20,30 +22,61 @@ type LogLine struct {
 	RetryIndex *int // TODO: This isn't implemented in EventLog yet, placeholder.
 }
 
-func LogLinesFromEventLog(eventLogEntry flowpipeapiclient.ProcessEventLog) ([]LogLine, error) {
-	var out []LogLine
+type LogLineRegistryItem struct {
+	Name    string
+	Started time.Time
+}
 
+func LogLinesFromEventLog(eventLogEntry flowpipeapiclient.ProcessEventLog, registry map[string]LogLineRegistryItem) ([]LogLine, error) {
+	var out []LogLine
 	eventType := *eventLogEntry.EventType
 
 	switch eventType {
+	case event.HandlerPipelineQueued:
+		var p event.PipelineQueued
+		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal %s event: %v", p.HandlerName(), err)
+		}
+		registry[p.PipelineExecutionID] = LogLineRegistryItem{
+			Name:    p.Name,
+			Started: p.Event.CreatedAt,
+		}
 	case event.HandlerPipelineStarted:
-		// TODO: Need `pipeline_name` for display
 		var p event.PipelineStarted
 		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal %s event: %v", p.HandlerName(), err)
 		}
+
+		name := "unknown"
+		if entry, exists := registry[p.PipelineExecutionID]; exists {
+			name = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
+			registry[p.PipelineExecutionID] = LogLineRegistryItem{
+				Name:    entry.Name,
+				Started: p.Event.CreatedAt,
+			}
+		}
+
 		out = append(out, LogLine{
-			Name:    "TODO-GET-ME",
+			Name:    name,
 			Message: fmt.Sprintf("Starting pipeline: %s", p.PipelineExecutionID),
 		})
 	case event.HandlerPipelineFinished:
-		// TODO: Need `pipeline_name` for display
 		var p event.PipelineFinished
 		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal %s event: %v", p.HandlerName(), err)
 		}
+
+		name := "unknown"
+		started := p.Event.CreatedAt
+		if entry, exists := registry[p.PipelineExecutionID]; exists {
+			name = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
+			started = entry.Started
+		}
+		duration := p.Event.CreatedAt.Sub(started)
+
 		for k, v := range p.PipelineOutput {
 			var value string
 			if !isSimpleType(v) {
@@ -56,30 +89,48 @@ func LogLinesFromEventLog(eventLogEntry flowpipeapiclient.ProcessEventLog) ([]Lo
 				value = v.(string)
 			}
 			out = append(out, LogLine{
-				Name:    "TODO-GET-ME",
+				Name:    name,
 				Message: fmt.Sprintf("Output: %s = %s", k, value),
 			})
 		}
 		out = append(out, LogLine{
-			Name:    "TODO-GET-ME",
-			Message: fmt.Sprintf("Complete: %s", p.PipelineExecutionID),
+			Name:    name,
+			Message: fmt.Sprintf("Complete: %s %s", utils.HumanizeDuration(duration), p.PipelineExecutionID),
 		})
 	case event.HandlerPipelineFailed:
-		// TODO: Need `pipeline_name` for display
 		var p event.PipelineFailed
 		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal %s event: %v", p.HandlerName(), err)
 		}
+
+		name := "unknown"
+		started := p.Event.CreatedAt
+		if entry, exists := registry[p.PipelineExecutionID]; exists {
+			name = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
+			started = entry.Started
+		}
+		duration := p.Event.CreatedAt.Sub(started)
+
 		output := p.PipelineOutput
 		errors := output["errors"].([]interface{})
 		out = append(out, LogLine{
-			Name:    "TODO-GET-ME",
-			Message: fmt.Sprintf("Failed with %d error(s): %s", len(errors), p.PipelineExecutionID),
+			Name:    name,
+			Message: fmt.Sprintf("Failed with %d error(s): %s %s", len(errors), utils.HumanizeDuration(duration), p.PipelineExecutionID),
 			IsError: true,
 		})
+	case event.HandlerStepQueued:
+		var p event.StepQueued
+		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
+		if err != nil {
+			return nil, fmt.Errorf("failed to unmarshal %s event: %v", p.HandlerName(), err)
+		}
+		registry[p.StepExecutionID] = LogLineRegistryItem{
+			Name:    p.StepName,
+			Started: p.Event.CreatedAt,
+		}
+
 	case event.CommandStepStart:
-		// TODO: Need `pipeline_name` for display
 		var p event.StepStart
 		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
 		if err != nil {
@@ -87,6 +138,14 @@ func LogLinesFromEventLog(eventLogEntry flowpipeapiclient.ProcessEventLog) ([]Lo
 		}
 
 		if p.NextStepAction == "start" { // TODO: Add line for skipped steps?
+			pipeline := registry[p.PipelineExecutionID]
+			pipelineName := strings.Split(pipeline.Name, ".")[len(strings.Split(pipeline.Name, "."))-1]
+
+			registry[p.StepExecutionID] = LogLineRegistryItem{
+				Name:    p.StepName,
+				Started: p.Event.CreatedAt,
+			}
+
 			stepType := strings.Split(p.StepName, ".")[0]
 			stepName := strings.Split(p.StepName, ".")[1]
 			stepText := "Starting"
@@ -111,7 +170,7 @@ func LogLinesFromEventLog(eventLogEntry flowpipeapiclient.ProcessEventLog) ([]Lo
 			}
 
 			startLine := LogLine{
-				Name:     "TODO-GET-ME",
+				Name:     pipelineName,
 				StepName: &stepName,
 				Message:  stepText,
 			}
@@ -124,40 +183,62 @@ func LogLinesFromEventLog(eventLogEntry flowpipeapiclient.ProcessEventLog) ([]Lo
 			}
 
 			// TODO: Add lines for inputs?
-			// TODO: Check for errors & output
 			out = append(out, startLine)
 		}
 
 	case event.HandlerStepFinished:
-		// TODO: Need `pipeline_name` for display
-		// TODO: Need `step_name` for display (could extract from error on failure... but no option on success)
 		var p event.StepFinished
 		err := json.Unmarshal([]byte(*eventLogEntry.Payload), &p)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal %s event: %v", p.HandlerName(), err)
 		}
 
-		name := "TODO-GET-ME"
-		stepName := "TODO_GET_STEP_NAME"
+		if p.Output != nil && p.Output.Status != "skipped" {
+			pipeline := registry[p.PipelineExecutionID]
+			pipelineName := strings.Split(pipeline.Name, ".")[len(strings.Split(pipeline.Name, "."))-1]
+			step := registry[p.StepExecutionID]
+			stepType := strings.Split(step.Name, ".")[0]
+			stepName := strings.Split(step.Name, ".")[1]
+			duration := p.Event.CreatedAt.Sub(step.Started)
 
-		if p.Output != nil && p.Output.Status == "failed" {
-			out = append(out, LogLine{
-				Name:     name,
-				StepName: &stepName,
-				Message:  fmt.Sprintf("Failed: %s", p.Output.Errors[0].Error.Detail),
-				IsError:  true,
-			})
-		} else {
-			suffix := ""
-			// TODO: Set suffix based on stepType (once we have stepName to obtain the type)
-			out = append(out, LogLine{
-				Name:     name,
-				StepName: &stepName,
-				Message:  fmt.Sprintf("Complete: %s", suffix),
-				IsError:  true,
-			})
+			if p.Output != nil && p.Output.Status == "failed" {
+				line := LogLine{
+					Name:     pipelineName,
+					StepName: &stepName,
+					Message:  fmt.Sprintf("Failed: %s %s", utils.HumanizeDuration(duration), p.Output.Errors[0].Error.Detail),
+					IsError:  true,
+				}
+				if p.StepForEach != nil && p.StepForEach.ForEachStep {
+					line.ForEachKey = &p.StepForEach.Key
+				}
+				if p.StepLoop != nil {
+					line.LoopIndex = &p.StepLoop.Index
+				}
+				out = append(out, line)
+			} else {
+				output := p.Output.Data
+				suffix := ""
+				switch stepType {
+				case "echo":
+					suffix = output["text"].(string)
+				case "http":
+					suffix = fmt.Sprintf("%v", output["status_code"].(float64))
+				}
+
+				line := LogLine{
+					Name:     pipelineName,
+					StepName: &stepName,
+					Message:  fmt.Sprintf("Complete: %s %s", utils.HumanizeDuration(duration), suffix),
+				}
+				if p.StepForEach != nil && p.StepForEach.ForEachStep {
+					line.ForEachKey = &p.StepForEach.Key
+				}
+				if p.StepLoop != nil {
+					line.LoopIndex = &p.StepLoop.Index
+				}
+				out = append(out, line)
+			}
 		}
-
 	}
 
 	return out, nil
@@ -207,8 +288,9 @@ func (PrintableLogLine) Transform(r flowpipeapiclient.FlowpipeAPIResource) (inte
 	}
 
 	var logLines []LogLine
+	mappingRegistry := make(map[string]LogLineRegistryItem)
 	for _, i := range temp.Items {
-		parsed, err := LogLinesFromEventLog(i)
+		parsed, err := LogLinesFromEventLog(i, mappingRegistry)
 		if err != nil {
 			return nil, perr.BadRequestWithMessage("unable to parse event log entry")
 		}
