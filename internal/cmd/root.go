@@ -14,11 +14,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
 	"github.com/turbot/flowpipe/internal/cache"
-	"github.com/turbot/flowpipe/internal/cmd/mod"
-	"github.com/turbot/flowpipe/internal/cmd/pipeline"
-	"github.com/turbot/flowpipe/internal/cmd/process"
-	"github.com/turbot/flowpipe/internal/cmd/service"
-	"github.com/turbot/flowpipe/internal/cmd/trigger"
 	"github.com/turbot/flowpipe/internal/config"
 	internalconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
@@ -90,50 +85,24 @@ func RootCommand(ctx context.Context) (*cobra.Command, error) {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// add all the subcommands
-	err = addCommands(ctx, rootCmd)
+	err = addCommands(rootCmd)
 	error_helpers.FailOnError(err)
 
 	return rootCmd, nil
 }
 
-func addCommands(ctx context.Context, rootCmd *cobra.Command) error {
-	// flowpipe service
-	serviceCmd, err := service.ServiceCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(serviceCmd)
-
-	pipelineCmd, err := pipeline.PipelineCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(pipelineCmd)
-
-	triggerCmd, err := trigger.TriggerCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(triggerCmd)
-
-	processCmd, err := process.ProcessCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(processCmd)
-
-	modCmd, err := mod.ModCmd(ctx)
-	if err != nil {
-		return err
-	}
-	rootCmd.AddCommand(modCmd)
+func addCommands(rootCmd *cobra.Command) error {
+	rootCmd.AddCommand(serviceCmd())
+	rootCmd.AddCommand(pipelineCmd())
+	rootCmd.AddCommand(triggerCmd())
+	rootCmd.AddCommand(processCmd())
+	rootCmd.AddCommand(modCmd())
 
 	return nil
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initGlobalConfig() *error_helpers.ErrorAndWarnings {
-
 	// load workspace profile from the configured install dir
 	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
 	error_helpers.FailOnError(err)

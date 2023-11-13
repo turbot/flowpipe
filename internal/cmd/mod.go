@@ -1,5 +1,5 @@
 //nolint:forbidigo // CLI command, expect some fmt.Println
-package mod
+package cmd
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 )
 
 // mod management commands
-func ModCmd(ctx context.Context) (*cobra.Command, error) {
+func modCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "mod [command]",
 		Args:  cobra.NoArgs,
@@ -57,7 +57,7 @@ Examples:
 	cmd.AddCommand(modInitCmd())
 	cmd.Flags().BoolP(constants.ArgHelp, "h", false, "Help for mod")
 
-	return cmd, nil
+	return cmd
 }
 
 // install
@@ -78,11 +78,6 @@ func modInstallCmd() *cobra.Command {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// cmdconfig.OnCmd(cmd).
-	// 	AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after installation is complete").
-	// 	AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be installed/updated/uninstalled without modifying them").
-	// 	AddBoolFlag(constants.ArgForce, false, "Install mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)").
 
 	return cmd
 }
@@ -140,8 +135,10 @@ func modUninstallCmd() *cobra.Command {
 		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after uninstallation is complete").
 		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be uninstalled without modifying them").
 		AddBoolFlag(constants.ArgHelp, false, "Help for uninstall", cmdconfig.FlagOptions.WithShortHand("h"))
+
 	return cmd
 }
+
 func runModUninstallCmd(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 	utils.LogTime("cmd.runModInstallCmd")

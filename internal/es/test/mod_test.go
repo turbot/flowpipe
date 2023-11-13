@@ -504,7 +504,8 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithMergedOutput() {
 		return
 	}
 
-	assert.Equal("hello from the middle world", pex.PipelineOutput["val"])
+	assert.Equal("hello fr"+
+		"om the middle world", pex.PipelineOutput["val"])
 	assert.Equal("two: hello from the middle world", pex.PipelineOutput["val_two"])
 	assert.Equal("step output", pex.PipelineOutput["val_step_output"])
 }

@@ -1,5 +1,5 @@
 //nolint:forbidigo // CLI console output
-package trigger
+package cmd
 
 import (
 	"context"
@@ -12,53 +12,43 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-func TriggerCmd(ctx context.Context) (*cobra.Command, error) {
-
-	triggerCmd := &cobra.Command{
+func triggerCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "trigger",
 		Short: "Trigger commands",
 	}
 
-	triggerListCmd, err := TriggerListCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	triggerCmd.AddCommand(triggerListCmd)
+	cmd.AddCommand(TriggerListCmd())
+	cmd.AddCommand(TriggerShowCmd())
 
-	triggerShowCmd, err := TriggerShowCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	triggerCmd.AddCommand(triggerShowCmd)
-
-	return triggerCmd, nil
-
+	return cmd
 }
 
-func TriggerListCmd(ctx context.Context) (*cobra.Command, error) {
+func TriggerListCmd() *cobra.Command {
 
 	var triggerListCmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
-		Run:  listTriggerFunc(ctx),
+		Run:  listTriggerFunc(),
 	}
 
-	return triggerListCmd, nil
+	return triggerListCmd
 }
 
-func TriggerShowCmd(ctx context.Context) (*cobra.Command, error) {
+func TriggerShowCmd() *cobra.Command {
 
 	var triggerShowCmd = &cobra.Command{
 		Use:  "show <trigger-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  showTriggerFunc(ctx),
+		Run:  showTriggerFunc(),
 	}
 
-	return triggerShowCmd, nil
+	return triggerShowCmd
 }
 
-func listTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func listTriggerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
@@ -86,8 +76,9 @@ func listTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 	}
 }
 
-func showTriggerFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func showTriggerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		apiClient := common.GetApiClient()
 		resp, _, err := apiClient.TriggerApi.Get(context.Background(), args[0]).Execute()
 		if err != nil {

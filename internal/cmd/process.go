@@ -1,9 +1,10 @@
-package process
+package cmd
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/constants"
 	"reflect"
 	"sort"
 	"strings"
@@ -21,66 +22,51 @@ import (
 	"github.com/turbot/pipe-fittings/utils"
 )
 
-func ProcessCmd(ctx context.Context) (*cobra.Command, error) {
-
-	processCmd := &cobra.Command{
+func processCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "process",
 		Short: "Process commands",
 	}
 
-	processGetCmd, err := ProcessGetCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	processCmd.AddCommand(processGetCmd)
+	cmd.AddCommand(ProcessGetCmd())
+	cmd.AddCommand(ProcessListCmd())
+	cmd.AddCommand(ProcessLogCmd())
 
-	processListCmd, err := ProcessListCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	processCmd.AddCommand(processListCmd)
-
-	processLogCmd, err := ProcessLogCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	processCmd.AddCommand(processLogCmd)
-
-	return processCmd, nil
+	return cmd
 
 }
 
-func ProcessLogCmd(ctx context.Context) (*cobra.Command, error) {
+func ProcessLogCmd() *cobra.Command {
 	var processLogCmd = &cobra.Command{
 		Use:  "log <execution-id>",
 		Args: cobra.ExactArgs(1),
-		Run:  logProcessFunc(ctx),
+		Run:  logProcessFunc(),
 	}
-	return processLogCmd, nil
+	return processLogCmd
 }
 
-func ProcessGetCmd(ctx context.Context) (*cobra.Command, error) {
-
+func ProcessGetCmd() *cobra.Command {
 	var processGetCmd = &cobra.Command{
 		Use:  "get <execution-id>",
 		Args: cobra.ExactArgs(1),
-		Run:  getProcessFunc(ctx),
+		Run:  getProcessFunc(),
 	}
 
-	processGetCmd.Flags().BoolP("output-only", "", false, "Get pipeline execution output only")
+	cmdconfig.
+		OnCmd(processGetCmd).
+		AddBoolFlag(constants.ArgOutputOnly, false, "Get pipeline execution output only")
 
-	return processGetCmd, nil
+	return processGetCmd
 }
 
-func ProcessListCmd(ctx context.Context) (*cobra.Command, error) {
-
+func ProcessListCmd() *cobra.Command {
 	var processGetCmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
-		Run:  listProcessFunc(ctx),
+		Run:  listProcessFunc(),
 	}
 
-	return processGetCmd, nil
+	return processGetCmd
 }
 
 func getIndentByLevel(level int) string {
@@ -106,9 +92,9 @@ func getIcon(name string) string {
 	return icon
 }
 
-func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func getProcessFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-
+		ctx := cmd.Context()
 		apiClient := common.GetApiClient()
 
 		outputOnly, _ := cmd.Flags().GetBool("output-only")
@@ -147,8 +133,9 @@ func getProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string)
 	}
 }
 
-func listProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func listProcessFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
@@ -177,8 +164,9 @@ func listProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 	}
 }
 
-func logProcessFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func logProcessFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		apiClient := common.GetApiClient()
 
 		execution, _, err := apiClient.ProcessApi.GetExecution(ctx, args[0]).Execute()

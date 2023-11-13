@@ -1,4 +1,4 @@
-package pipeline
+package cmd
 
 import (
 	"context"
@@ -21,63 +21,48 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-func PipelineCmd(ctx context.Context) (*cobra.Command, error) {
-
-	pipelineCmd := &cobra.Command{
+func pipelineCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "pipeline",
 		Short: "Pipeline commands",
 	}
 
-	pipelineListCmd, err := PipelineListCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineListCmd)
+	cmd.AddCommand(PipelineListCmd())
+	cmd.AddCommand(PipelineShowCmd())
+	cmd.AddCommand(PipelineRunCmd())
 
-	pipelineShowCmd, err := PipelineShowCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineShowCmd)
-
-	pipelineRunCmd, err := PipelineRunCmd(ctx)
-	if err != nil {
-		return nil, err
-	}
-	pipelineCmd.AddCommand(pipelineRunCmd)
-
-	return pipelineCmd, nil
+	return cmd
 
 }
 
-func PipelineListCmd(ctx context.Context) (*cobra.Command, error) {
+func PipelineListCmd() *cobra.Command {
 
 	var serviceStartCmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
-		Run:  listPipelineFunc(ctx),
+		Run:  listPipelineFunc(),
 	}
 
-	return serviceStartCmd, nil
+	return serviceStartCmd
 }
 
-func PipelineShowCmd(ctx context.Context) (*cobra.Command, error) {
+func PipelineShowCmd() *cobra.Command {
 
 	var serviceStartCmd = &cobra.Command{
 		Use:  "show <pipeline-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  showPipelineFunc(ctx),
+		Run:  showPipelineFunc(),
 	}
 
-	return serviceStartCmd, nil
+	return serviceStartCmd
 }
 
-func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
+func PipelineRunCmd() *cobra.Command {
 
 	var pipelineRunCmd = &cobra.Command{
 		Use:  "run <pipeline-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  runPipelineFunc(ctx),
+		Run:  runPipelineFunc(),
 	}
 
 	// Add the pipeline arg flag
@@ -85,12 +70,12 @@ func PipelineRunCmd(ctx context.Context) (*cobra.Command, error) {
 	pipelineRunCmd.Flags().String(constants.ArgPipelineExecutionMode, "synchronous", "Specify the pipeline execution mode. Supported values: asynchronous, synchronous.")
 	pipelineRunCmd.Flags().Int(constants.ArgPipelineWaitTime, 60, "Specify how long the pipeline should wait (in seconds) when run in synchronous execution mode.")
 
-	return pipelineRunCmd, nil
+	return pipelineRunCmd
 }
 
-func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-
+		ctx := cmd.Context()
 		// API client
 		apiClient := common.GetApiClient()
 		cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
@@ -191,8 +176,9 @@ func runPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string
 	}
 }
 
-func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func listPipelineFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
@@ -220,8 +206,9 @@ func listPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []strin
 	}
 }
 
-func showPipelineFunc(ctx context.Context) func(cmd *cobra.Command, args []string) {
+func showPipelineFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
+		ctx := cmd.Context()
 		apiClient := common.GetApiClient()
 		resp, _, err := apiClient.PipelineApi.Get(context.Background(), args[0]).Execute()
 		if err != nil {
