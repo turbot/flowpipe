@@ -106,6 +106,16 @@ pipeline "nested_with_http" {
     }
 }
 
+pipeline "bad_http_pipeline" {
+    step "http" "http" {
+        url = "http://google.com/bad.json"
+    }
+
+    output "val" {
+        value = step.http.http
+    }
+}
+
 pipeline "error_in_for_each_nested_pipeline_one_works" {
 
     step "pipeline" "http" {
@@ -118,5 +128,18 @@ pipeline "error_in_for_each_nested_pipeline_one_works" {
 
     output "val" {
         value = step.pipeline.http
+    }
+}
+
+
+pipeline "error_retry_with_nested_pipeline" {
+
+    step "pipeline" "http" {
+        pipeline = pipeline.bad_http_pipeline
+
+        retry {
+            retries = 3
+            backoff = "1s"
+        }
     }
 }

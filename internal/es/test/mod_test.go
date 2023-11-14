@@ -1421,6 +1421,51 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipeline() {
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
 }
 
+func (suite *ModTestSuite) TestErrorRetryWithNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_nested_pipeline", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// 4 executions in total. 1 initial attempt + 3 retries
+	assert.Equal(4, len(pex.StepStatus["pipeline.http"]["0"].StepExecutions))
+
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[1].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[2].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[3].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[3].Output.Errors[0].Error.Status)
+
+	step1EndTime := pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].EndTime
+	step2StartTime := pex.StepStatus["pipeline.http"]["0"].StepExecutions[1].StartTime
+
+	duration := step2StartTime.Sub(step1EndTime)
+	if duration < 1*time.Second {
+		assert.Fail("The gap should be at least 1 second but " + duration.String())
+	}
+}
+
 func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert := assert.New(suite.T())
 
