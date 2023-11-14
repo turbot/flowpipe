@@ -19,7 +19,7 @@ func (h PipelineLoadHandler) NewCommand() interface{} {
 	return &event.PipelineLoad{}
 }
 
-// Path from here:
+// * Path from here:
 // * PipelineLoad command handler -> PipelineLoaded event handler -> PipelineStart command
 func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineLoad)
@@ -28,10 +28,6 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineLoad")
 	}
 
-	// ? new execution here? is it because I'm finally running the pipeline?
-	// ? doesn't look like the execution is used for anything else apart from loading a pipeline definition
-	// ? and we need the execution "instance" so we can get the pipeline name from the pipeline execution id
-	// ? should we have a main store for this rather than creating a new execution instance?
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
@@ -42,12 +38,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
 	}
 
-	e, err := event.NewPipelineLoaded(
-		event.ForPipelineLoad(cmd),
-		event.WithPipelineDefinition(defn))
-	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
-	}
+	e := event.NewPipelineLoadedFromPipelineLoad(cmd, defn)
 
 	return h.EventBus.Publish(ctx, e)
 }

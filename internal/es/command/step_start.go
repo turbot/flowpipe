@@ -405,7 +405,7 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 			} else {
 				message = "Unkonwn error"
 			}
-			stepErr := perr.InternalWithMessage(message)
+			stepErr := perr.BadRequestWithMessage(message)
 			return &stepErr, nil
 		}
 	}

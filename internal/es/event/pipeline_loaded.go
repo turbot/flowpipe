@@ -1,10 +1,7 @@
 package event
 
 import (
-	"fmt"
-
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 type PipelineLoaded struct {
@@ -24,41 +21,13 @@ func (e *PipelineLoaded) HandlerName() string {
 	return HandlerPipelineLoaded
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineLoadedOption func(*PipelineLoaded) error
-
 // NewPipelineLoaded creates a new PipelineLoaded event.
-func NewPipelineLoaded(opts ...PipelineLoadedOption) (*PipelineLoaded, error) {
+func NewPipelineLoadedFromPipelineLoad(cmd *PipelineLoad, pipeline *modconfig.Pipeline) *PipelineLoaded {
 	// Defaults
-	e := &PipelineLoaded{}
-	// Set options
-	for _, opt := range opts {
-		err := opt(e)
-		if err != nil {
-			return e, err
-		}
+	e := &PipelineLoaded{
+		Event:               NewFlowEvent(cmd.Event),
+		PipelineExecutionID: cmd.PipelineExecutionID,
+		Pipeline:            pipeline,
 	}
-	return e, nil
-}
-
-// ForPipelineLoad returns a PipelineLoadedOption that sets the fields of the
-// PipelineLoaded event from a PipelineLoad command.
-func ForPipelineLoad(cmd *PipelineLoad) PipelineLoadedOption {
-	return func(e *PipelineLoaded) error {
-		e.Event = NewFlowEvent(cmd.Event)
-		if cmd.PipelineExecutionID != "" {
-			e.PipelineExecutionID = cmd.PipelineExecutionID
-		} else {
-			return perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline load command: %v", cmd))
-		}
-		return nil
-	}
-}
-
-// WithPipeline sets the Pipeline of the PipelineLoaded event.
-func WithPipelineDefinition(pipeline *modconfig.Pipeline) PipelineLoadedOption {
-	return func(e *PipelineLoaded) error {
-		e.Pipeline = pipeline
-		return nil
-	}
+	return e
 }
