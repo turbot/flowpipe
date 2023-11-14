@@ -110,8 +110,17 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		}
 	}
 
-	// we need this to calculate the throw and loop, so might as well add it here for convenience
+	// We need this to calculate the throw and loop, so might as well add it here for convenience
+	//
+	// If there's an error calculating the eval context, we have 2 options:
+	// 1) raise pipeline_failed event, or
+	// 2) set the output as "failed" and raise step_finish event
+	//
+	// I can see there are merit for both. #2 is usually the right way because we can ignore error, however this type
+	// of problem, e.g. building eval context failure due to clash in the step output, is a configuration error, so I think
+	// it should raise pipeline_failed event directly
 	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), cmd.Output, stepOutput, evalContext)
+
 	if err != nil {
 		logger.Error("Error adding step output as results", "error", err)
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))

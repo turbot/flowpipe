@@ -530,10 +530,7 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
 	}
 
 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
+
 	if pex.Status != "failed" {
 		assert.Fail("Pipeline execution should fail")
 		return

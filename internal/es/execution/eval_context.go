@@ -68,7 +68,7 @@ func AddStepOutputAsResults(stepName string, output *modconfig.Output, stepOutpu
 			if nestedOutputValueMap[k].IsNull() {
 				nestedOutputValueMap[k] = v
 			} else {
-				return evalContext, perr.InternalWithMessage("step output already contains value for key: " + k)
+				return evalContext, perr.InternalWithMessage("output block '" + k + "' already exists in step '" + stepName + "'")
 			}
 		}
 
