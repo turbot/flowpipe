@@ -325,7 +325,7 @@ func getStackTrace() string {
 		if !ok {
 			break
 		}
-		fmt.Fprintf(buf, "%s:%d (0x%x)\n", file, line, pc)
+		fmt.Fprintf(buf, "%s:%d (0x%x)\n", file, line, pc) //nolint:forbidigo // exception
 	}
 	return buf.String()
 }
