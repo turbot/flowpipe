@@ -320,7 +320,7 @@ func (ex *Execution) LogFilePath() (string, error) {
 
 func getStackTrace() string {
 	buf := new(bytes.Buffer)
-	for i := 5; ; i++ {
+	for i := 20; ; i++ {
 		pc, file, line, ok := runtime.Caller(i)
 		if !ok {
 			break
