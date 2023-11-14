@@ -46,7 +46,7 @@ pipeline "simple_loop_index" {
 pipeline "loop_with_for_each" {
 
     step "echo" "repeat" {
-        for_each = ["oasis", "blur", "radiohead"]
+        for_each = ["oasis", "blur", "radiohead", "the verve", "the beatles"]
         text = "iteration: ${loop.index} - ${each.value}"
 
         loop {
@@ -58,6 +58,19 @@ pipeline "loop_with_for_each" {
         value = step.echo.repeat
     }
 }
+
+pipeline "lots_of_for_each" {
+
+    step "echo" "repeat" {
+        for_each = ["oasis", "blur", "radiohead", "the verve", "the beatles", "the rolling stones", "the sex pistols"]
+        text = "name: ${each.value}"
+    }
+
+    output "val" {
+        value = step.echo.repeat
+    }
+}
+
 
 pipeline "loop_with_for_each_sleep" {
 
