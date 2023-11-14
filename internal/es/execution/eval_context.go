@@ -59,7 +59,21 @@ func AddStepOutputAsResults(stepName string, output *modconfig.Output, stepOutpu
 			return evalContext, perr.InternalWithMessage("unable to convert step output to cty map: " + err.Error())
 		}
 	}
-	stepNativeOutputMap["output"] = cty.ObjectVal(stepOutputCtyMap)
+
+	if stepNativeOutputMap["output"].IsNull() {
+		stepNativeOutputMap["output"] = cty.ObjectVal(stepOutputCtyMap)
+	} else {
+		nestedOutputValueMap := stepNativeOutputMap["output"].AsValueMap()
+		for k, v := range stepOutputCtyMap {
+			if nestedOutputValueMap[k].IsNull() {
+				nestedOutputValueMap[k] = v
+			} else {
+				return evalContext, perr.InternalWithMessage("output block '" + k + "' already exists in step '" + stepName + "'")
+			}
+		}
+
+		stepNativeOutputMap["output"] = cty.ObjectVal(nestedOutputValueMap)
+	}
 
 	evalContext.Variables["result"] = cty.ObjectVal(stepNativeOutputMap)
 
