@@ -37,10 +37,10 @@ pipeline "simple_two_steps" {
 
 pipeline "simple_for_each" {
 
-    step "echo" "echo" {
+    step "transform" "echo" {
         for_each = ["bar", "baz", "qux"]
 
-        text = "${each.key}: foo ${each.value}"
+        value = "${each.key}: foo ${each.value}"
 
         output "val" {
             value = "val is: ${each.value}"
@@ -48,6 +48,6 @@ pipeline "simple_for_each" {
     }
 
     output "val" {
-        value = step.echo.echo
+        value = step.transform.echo
     }
 }

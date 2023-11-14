@@ -285,6 +285,52 @@ func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
 	assert.Equal("2: radiohead", pex.StepStatus["pipeline.repeat"]["2"].StepExecutions[2].Output.Data["output"].(map[string]interface{})["val"])
 }
 
+func (suite *ModTestSuite) TestSimpleForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_for_each", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.NotNil(pex)
+
+	// We should have 3 for_each and each for_each has exactly 1 execution.
+	// check the output, it should not double up on the iteration count
+	assert.Equal(3, len(pex.StepStatus["transform.echo"]))
+	assert.Equal(1, len(pex.StepStatus["transform.echo"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["transform.echo"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["transform.echo"]["2"].StepExecutions))
+
+	// Print out the step status if the step executions is not exactly 1
+	if len(pex.StepStatus["transform.echo"]["0"].StepExecutions) != 1 ||
+		len(pex.StepStatus["transform.echo"]["1"].StepExecutions) != 1 ||
+		len(pex.StepStatus["transform.echo"]["2"].StepExecutions) != 1 {
+		s, err := prettyjson.Marshal(pex.StepStatus["echo.repeat"])
+
+		if err != nil {
+			assert.Fail("Error marshalling pipeline output", err)
+			return
+		}
+
+		fmt.Println(string(s)) //nolint:forbidigo // test
+	}
+
+	assert.Equal("0: foo bar", pex.StepStatus["transform.echo"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("1: foo baz", pex.StepStatus["transform.echo"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("2: foo qux", pex.StepStatus["transform.echo"]["2"].StepExecutions[0].Output.Data["value"])
+}
+
 func (suite *ModTestSuite) TestLoopWithForEach() {
 	assert := assert.New(suite.T())
 
