@@ -8,7 +8,7 @@ pipeline "error_with_throw_simple" {
         }
 
         retry {
-            retries = 1
+            retries = 2
         }
     }
 }
@@ -24,7 +24,7 @@ pipeline "error_with_throw_simple_nested_pipeline" {
         }
 
         retry {
-            retries = 1
+            retries = 2
         }
     }
 }
