@@ -1,13 +1,17 @@
 package cmdconfig
 
 import (
+	serviceconfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 )
 
-// TODO add in service defaults
-var configDefaults = map[string]any{
-	// TODO default max memory????
+// global config defaults
+var configDefaults = map[string]any{}
+
+// command specific config defaults (keyed by comand name)
+var cmdSpecificDefaults = map[string]map[string]any{
+	"server": serviceconfig.ConfigDefaults,
 }
 
 // environment variable mappings for directory paths which must be set as part of the viper bootstrap process

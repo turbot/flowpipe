@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"time"
@@ -25,6 +26,9 @@ func initGlobalConfig() {
 	error_helpers.FailOnError(err)
 
 	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
+
+	// get the config defaults for this command
+	configDefaults := getConfigDefaults(cmd)
 	// set-up viper with defaults from the env and default workspace profile
 	cmdconfig.BootstrapViper(loader, cmd,
 		cmdconfig.WithConfigDefaults(configDefaults),
@@ -42,6 +46,18 @@ func initGlobalConfig() {
 	error_helpers.FailOnError(err)
 
 	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
+}
+
+// build defaults, combine global and cmd specific defaults
+func getConfigDefaults(cmd *cobra.Command) map[string]any {
+	var res = map[string]any{}
+	maps.Copy(res, configDefaults)
+
+	cmdSpecificDefaults, ok := cmdSpecificDefaults[cmd.Name()]
+	if ok {
+		maps.Copy(res, cmdSpecificDefaults)
+	}
+	return res
 }
 
 // Assumes that the install dir exists

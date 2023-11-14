@@ -67,6 +67,7 @@ var ConfigDefaults = map[string]any{
 	"api.workspace.snapshot.jwt.signing.method": "HS256",
 }
 
+// TODO KAI WHAT IS THIS FOR? IS IT NEEDED
 func Initialize() {
 
 	//

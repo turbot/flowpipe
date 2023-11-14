@@ -17,6 +17,16 @@ func serverCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		Short: "Start the Flowpipe server",
 		Run:   startServerFunc(),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			err := docker.Initialize(ctx)
+			if err != nil {
+				return err
+			}
+
+			serviceConfig.Initialize()
+			return nil
+		},
 	}
 
 	cmdconfig.
@@ -38,13 +48,6 @@ func serverCmd() *cobra.Command {
 func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
-		err := docker.Initialize(ctx)
-		if err != nil {
-			error_helpers.FailOnError(err)
-		}
-
-		serviceConfig.Initialize()
-
 		m, err := manager.NewManager(ctx)
 
 		if err != nil {

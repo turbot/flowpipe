@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/service/inprocess"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"io"
 	"os"
 	"path"
@@ -19,11 +21,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/utils"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -48,9 +47,7 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
+	error_helpers.FailOnError(err)
 
 	// clear the output dir before each test
 	outputPath := path.Join(cwd, "output")
@@ -80,34 +77,10 @@ func (suite *EsTestSuite) SetupSuite() {
 	// We use the cache to store the pipelines
 	cache.InMemoryInitialize(nil)
 
-	m, err := manager.NewManager(ctx)
-
-	if err != nil {
-		panic(err)
-	}
-
-	err = m.Initialize()
-	if err != nil {
-		panic(err)
-	}
-
-	// We don't do manager.Start() here because we don't want to start the API and Scheduler service
-
-	esService, err := es.NewESService(ctx)
-	if err != nil {
-		panic(err)
-	}
-	err = esService.Start()
-	if err != nil {
-		panic(err)
-	}
-	esService.Status = "running"
-	esService.StartedAt = utils.TimeNow()
+	esService, err := inprocess.Initialize(ctx)
+	error_helpers.FailOnError(err)
 
 	suite.esService = esService
-
-	// Give some time for Watermill to fully start
-	time.Sleep(2 * time.Second)
 
 	suite.SetupSuiteRunCount++
 }

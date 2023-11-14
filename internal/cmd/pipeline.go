@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/service/inprocess"
+	"io"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"regexp"
@@ -170,33 +173,53 @@ func pipelineRunCmd() *cobra.Command {
 
 func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		// API client
-		apiClient := common.GetApiClient()
-		cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
-
-		// Get the pipeline args from the flag
-		pipelineArgs := map[string]string{}
-		pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgArg)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of pipeline-arg flag")
-			return
+		// if a host is set, use it to connect to API server
+		if viper.IsSet(constants.ArgHost) {
+			runPipelineOnServer(cmd, args)
 		}
 
-		// validate the pipeline arg input
-		err = validatePipelineArgs(pipeLineArgValues)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline argument validation failed")
-			return
-		}
+		runPipelineInProcess(cmd, args)
 
-		for _, value := range pipeLineArgValues {
-			splitData := strings.SplitN(value, "=", 2)
-			pipelineArgs[splitData[0]] = splitData[1]
-		}
+	}
+}
 
-		// Set the pipeline args
-		cmdPipelineRun.ArgsString = &pipelineArgs
+func runPipelineInProcess(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+
+	_, err := inprocess.Initialize(ctx)
+	error_helpers.FailOnError(err)
+
+}
+
+func runPipelineOnServer(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+
+	// API client
+	apiClient := common.GetApiClient()
+	cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
+
+	// Get the pipeline args from the flag
+	pipelineArgs := map[string]string{}
+	pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgArg)
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of pipeline-arg flag")
+		return
+	}
+
+	// validate the pipeline arg input
+	err = validatePipelineArgs(pipeLineArgValues)
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline argument validation failed")
+		return
+	}
+
+	for _, value := range pipeLineArgValues {
+		splitData := strings.SplitN(value, "=", 2)
+		pipelineArgs[splitData[0]] = splitData[1]
+	}
+
+	// Set the pipeline args
+	cmdPipelineRun.ArgsString = &pipelineArgs
 
 		resp, _, err := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun).Execute()
 		if err != nil {

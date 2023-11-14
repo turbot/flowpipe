@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -15,12 +14,11 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
-	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )
@@ -98,14 +96,13 @@ func WithHTTPAddress(addr string) ManagerOption {
 
 // TODO: is there any point to have a separate "Initialize" and "Start"?
 func (m *Manager) Initialize() error {
-
 	logger := fplog.Logger(m.ctx)
 
 	pipelineDir := viper.GetString(constants.ArgModLocation)
 	logger.Info("Starting Flowpipe", "pipelineDir", pipelineDir)
 
-	var pipelines map[string]*modconfig.Pipeline
-	var triggers map[string]*modconfig.Trigger
+	var pipelines = map[string]*modconfig.Pipeline{}
+	var triggers = map[string]*modconfig.Trigger{}
 	var modInfo *modconfig.Mod
 
 	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
@@ -126,7 +123,8 @@ func (m *Manager) Initialize() error {
 		w.SetOnFileWatcherEventMessages(func() {
 			logger := fplog.Logger(m.ctx)
 			logger.Info("caching pipelines and triggers")
-			err := m.CachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+			m.triggers = w.Mod.ResourceMaps.Triggers
+			trigger.CachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 			if err != nil {
 				logger.Error("error caching pipelines and triggers", "error", err)
 			} else {
@@ -151,19 +149,9 @@ func (m *Manager) Initialize() error {
 		mod := w.Mod
 		modInfo = mod
 
-		pipelines = mod.ResourceMaps.Pipelines
-		triggers = mod.ResourceMaps.Triggers
+		pipelines = workspace.GetWorkspaceResourcesOfType[*modconfig.Pipeline](w)
+		triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
 
-		for _, dependendMode := range mod.ResourceMaps.Mods {
-			if dependendMode.Name() != mod.Name() {
-				for _, pipeline := range dependendMode.ResourceMaps.Pipelines {
-					pipelines[pipeline.Name()] = pipeline
-				}
-				for _, trigger := range dependendMode.ResourceMaps.Triggers {
-					triggers[trigger.Name()] = trigger
-				}
-			}
-		}
 	} else {
 		var err error
 		pipelines, triggers, err = load_mod.LoadPipelines(m.ctx, pipelineDir)
@@ -174,100 +162,22 @@ func (m *Manager) Initialize() error {
 
 	m.triggers = triggers
 
-	inMemoryCache := cache.GetCache()
-	var pipelineNames []string
-
-	for _, p := range pipelines {
-		pipelineNames = append(pipelineNames, p.Name())
-
-		// TODO: how long to set the timeout?
-		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
-	}
-
-	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
-	runMode := os.Getenv("RUN_MODE")
-
-	var triggerNames []string
-	for _, trigger := range triggers {
-		triggerNames = append(triggerNames, trigger.Name())
-
-		// if it's a webhook trigger, calculate the URL
-		_, ok := trigger.Config.(*modconfig.TriggerHttp)
-		if ok {
-			if !strings.HasPrefix(runMode, "TEST") {
-				triggerUrl, err := m.CalculateTriggerUrl(trigger)
-				if err != nil {
-					return err
-				}
-				trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
-			}
-		}
-
-		// TODO: how long to set the timeout?
-		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
-
-	}
-	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
-
 	var rootModName string
 	if modInfo != nil {
-		inMemoryCache.SetWithTTL("#rootmod.name", modInfo.ShortName, 24*7*52*99*time.Hour)
 		rootModName = modInfo.ShortName
 	} else {
-		inMemoryCache.SetWithTTL("#rootmod.name", "local", 24*7*52*99*time.Hour)
 		rootModName = "local"
+	}
+
+	cache.GetCache().SetWithTTL("#rootmod.name", rootModName, 24*7*52*99*time.Hour)
+	err := trigger.CachePipelinesAndTriggers(pipelines, triggers)
+	if err != nil {
+		return err
 	}
 
 	logger.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
 
 	m.RootMod = modInfo
-
-	return nil
-}
-
-func (m *Manager) CalculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		return "", perr.InternalWithMessage("salt not found")
-	}
-
-	hashString := util.CalculateHash(trigger.FullName, salt.(string))
-
-	return "/hook/" + trigger.FullName + "/" + hashString, nil
-}
-
-func (m *Manager) CachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
-	m.triggers = triggers
-
-	inMemoryCache := cache.GetCache()
-	var pipelineNames []string
-
-	for _, p := range pipelines {
-		pipelineNames = append(pipelineNames, p.Name())
-
-		// TODO: how do we want to do this?
-		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
-	}
-
-	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
-
-	var triggerNames []string
-	for _, trigger := range triggers {
-		triggerNames = append(triggerNames, trigger.Name())
-
-		// if it's a webhook trigger, calculate the URL
-		_, ok := trigger.Config.(*modconfig.TriggerHttp)
-		if ok {
-			triggerUrl, err := m.CalculateTriggerUrl(trigger)
-			if err != nil {
-				return err
-			}
-			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
-		}
-
-		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
-	}
-	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
 
 	return nil
 }
