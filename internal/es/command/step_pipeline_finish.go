@@ -73,7 +73,74 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		}
 		return nil
 	}
+
 	stepOutput := make(map[string]interface{})
+
+	// Calculate the configured step output
+	//
+	// Ignore the merging here, the nested pipeline output is also called "output", but that merging is done later
+	// when we build the evalContext.
+	//
+	// As long as they are in 2 different property: Output (native output, happens also to be called "output" for pipeline step) and StepOutput (also referred to configured step output)
+	// we will be OK
+	for _, outputConfig := range stepDefn.GetOutputConfig() {
+		if outputConfig.UnresolvedValue != nil {
+
+			stepForEach := stepDefn.GetForEach()
+			if stepForEach != nil {
+				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
+			}
+
+			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
+			if len(diags) > 0 && diags.HasErrors() {
+				logger.Error("Error calculating output on step start", "error", diags)
+				stepOutput[outputConfig.Name] = "Error calculating output " + diags.Error()
+				continue
+			}
+
+			goVal, err := hclhelpers.CtyToGo(ctyValue)
+			if err != nil {
+				logger.Error("Error converting cty value to Go value for output calculation", "error", err)
+				stepOutput[outputConfig.Name] = "Error calculating output " + err.Error()
+				continue
+			}
+			stepOutput[outputConfig.Name] = goVal
+		} else {
+			stepOutput[outputConfig.Name] = outputConfig.Value
+		}
+	}
+
+	// we need this to calculate the throw and loop, so might as well add it here for convenience
+	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), cmd.Output, stepOutput, evalContext)
+	if err != nil {
+		logger.Error("Error adding step output as results", "error", err)
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			logger.Error("Error publishing event", "error", err2)
+		}
+		return nil
+	}
+
+	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
+	if err != nil {
+		logger.Error("Error calculating throw", "error", err)
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			logger.Error("Error publishing event", "error", err2)
+		}
+		return nil
+	}
+
+	if stepError != nil {
+		logger.Debug("Step error calculated from throw", "error", stepError)
+		cmd.Output.Status = "failed"
+		cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
+			PipelineExecutionID: cmd.PipelineExecutionID,
+			StepExecutionID:     cmd.StepExecutionID,
+			Step:                stepDefn.GetName(),
+			Error:               *stepError,
+		})
+	}
 
 	if cmd.Output.Status == "failed" {
 		stepRetry := calculateRetry(ctx, cmd.StepRetry, stepDefn)
@@ -109,53 +176,11 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		return nil
 	}
 
-	// Calculate the configured step output
-	//
-	// Ignore the merging here, the nested pipeline output is also called "output", but that merging is done later
-	// when we build the evalContext.
-	//
-	// As long as they are in 2 different property: Output (native output, happens also to be called "output" for pipeline step) and StepOutput (also referred to configured step output)
-	// we will be OK
-	if !cmd.Output.HasErrors() {
-		for _, outputConfig := range stepDefn.GetOutputConfig() {
-			if outputConfig.UnresolvedValue != nil {
-
-				stepForEach := stepDefn.GetForEach()
-				if stepForEach != nil {
-					evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
-				}
-
-				ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
-				if len(diags) > 0 && diags.HasErrors() {
-					logger.Error("Error calculating output on step start", "error", diags)
-					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
-					if err2 != nil {
-						logger.Error("Error publishing event", "error", err2)
-					}
-					return nil
-				}
-
-				goVal, err := hclhelpers.CtyToGo(ctyValue)
-				if err != nil {
-					logger.Error("Error converting cty value to Go value for output calculation", "error", err)
-					err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
-					if err2 != nil {
-						logger.Error("Error publishing event", "error", err2)
-					}
-					return nil
-				}
-				stepOutput[outputConfig.Name] = goVal
-			} else {
-				stepOutput[outputConfig.Name] = outputConfig.Value
-			}
-		}
-	}
-
 	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 	var stepLoop *modconfig.StepLoop
 	if loopBlock != nil {
 		var err error
-		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, evalContext, stepDefn.GetName(), cmd.Output, stepOutput)
+		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
 			if err2 != nil {

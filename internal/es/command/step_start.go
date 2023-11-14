@@ -279,6 +279,37 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 
 func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
+	// we need this to calculate the throw and loop, so might as well add it here for convenience
+	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), output, stepOutput, evalContext)
+	if err != nil {
+		logger.Error("Error adding step output as results", "error", err)
+		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+		return
+	}
+
+	// errors are handled in the following order:
+	//
+	// throw, in the order that they appear
+	// retry
+	// error
+	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
+	if err != nil {
+		logger.Error("Error calculating throw", "error", err)
+		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+		return
+	}
+
+	if stepError != nil {
+		logger.Debug("Step error calculated from throw", "error", stepError)
+		output.Status = "failed"
+		output.Errors = append(output.Errors, modconfig.StepError{
+			PipelineExecutionID: cmd.PipelineExecutionID,
+			StepExecutionID:     cmd.StepExecutionID,
+			Step:                cmd.StepName,
+			Error:               *stepError,
+		})
+	}
+
 	if output.Status == "failed" {
 		stepRetry := calculateRetry(ctx, cmd.StepRetry, stepDefn)
 		if stepRetry != nil {
@@ -314,7 +345,7 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 	var stepLoop *modconfig.StepLoop
 	if loopBlock != nil {
 		var err error
-		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, evalContext, cmd.StepName, output, stepOutput)
+		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			logger.Error("Error calculating loop", "error", err)
 			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
@@ -342,11 +373,46 @@ func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepSt
 	}
 }
 
-// errors are handled in the following order:
-//
-// throw, in the order that they appear
-// retry
-// error
+// This function returns 2 error. The first error is the result of the "throw" calculation, the second
+// error is system error that should lead directly to pipeline fail
+func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*perr.ErrorModel, error) {
+	logger := fplog.Logger(ctx)
+
+	throwConfigs := stepDefn.GetThrowConfig()
+	if len(throwConfigs) == 0 {
+		return nil, nil
+	}
+
+	for _, throwConfig := range throwConfigs {
+		throwDefn := modconfig.ThrowConfig{}
+
+		if throwConfig.Unresolved {
+			diags := gohcl.DecodeBody(throwConfig.UnresolvedBody, evalContext, &throwDefn)
+
+			if len(diags) > 0 && diags.HasErrors() {
+				logger.Error("Error calculating throw", "error", diags)
+				return nil, perr.InternalWithMessage("error calculating throw: " + diags.Error())
+			}
+		} else {
+			throwDefn = throwConfig
+		}
+
+		if throwDefn.If {
+			logger.Info("Throwing error")
+			var message string
+			if throwDefn.Message != nil {
+				message = *throwDefn.Message
+			} else {
+				message = "Unkonwn error"
+			}
+			stepErr := perr.InternalWithMessage(message)
+			return &stepErr, nil
+		}
+	}
+
+	return nil, nil
+}
+
 func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep) *modconfig.StepRetry {
 	// we have error, check the if there's a retry block
 	retryConfig := stepDefn.GetRetryConfig()
@@ -372,8 +438,7 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	return stepRetry
 }
 
-func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep,
-	evalContext *hcl.EvalContext, stepName string, output *modconfig.Output, stepOutput map[string]interface{}) (*modconfig.StepLoop, error) {
+func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
 
 	logger := fplog.Logger(ctx)
 
@@ -382,12 +447,6 @@ func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.
 		// We should never get here, because the loop block should have been validated
 		logger.Error("Unknown loop type", "type", stepDefn.GetType())
 		return nil, perr.InternalWithMessage("unkonwn loop type: " + stepDefn.GetType())
-	}
-
-	loopEvalContext, err := execution.AddStepOutputAsResults(stepName, output, stepOutput, evalContext)
-	if err != nil {
-		logger.Error("Error adding step output as results", "error", err)
-		return nil, perr.InternalWithMessage("error adding step output as results: " + err.Error())
 	}
 
 	// If this is the first iteration of the loop, the cmd.StepLoop should be nil
@@ -406,7 +465,7 @@ func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.
 	**/
 	//
 	// Because this IF is still part of the Iteration 0 loop.index should be 0
-	loopEvalContext = execution.AddLoop(stepLoop, loopEvalContext)
+	loopEvalContext := execution.AddLoop(stepLoop, evalContext)
 
 	// We have to evaluate the loop body here before the index is incremented to determine if the loop should run
 	// we will have to re-evaluate the loop body again after the index is incremented to get the correct values

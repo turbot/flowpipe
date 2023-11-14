@@ -360,6 +360,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		var ele types.EventLogEntry
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
+
 			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba))
 			return err
 		}
