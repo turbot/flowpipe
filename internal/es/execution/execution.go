@@ -2,12 +2,14 @@ package execution
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
@@ -316,6 +318,18 @@ func (ex *Execution) LogFilePath() (string, error) {
 	return filepath.Abs(p)
 }
 
+func getStackTrace() string {
+	buf := new(bytes.Buffer)
+	for i := 5; ; i++ {
+		pc, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		fmt.Fprintf(buf, "%s:%d (0x%x)\n", file, line, pc)
+	}
+	return buf.String()
+}
+
 // This function loads the event log file (the .jsonl file) continously and update the
 // ex.PipelineExecutions and ex.StepExecutions
 func (ex *Execution) LoadProcess(e *event.Event) error {
@@ -360,8 +374,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		var ele types.EventLogEntry
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
-
-			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba))
+			stackTrace := getStackTrace()
+			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba), "stackTrace", stackTrace)
 			return err
 		}
 
