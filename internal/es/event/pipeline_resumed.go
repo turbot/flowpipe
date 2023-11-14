@@ -17,28 +17,12 @@ func (e *PipelineResumed) HandlerName() string {
 	return HandlerPipelineResumed
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineResumedOption func(*PipelineResumed) error
-
 // NewPipelineResumed creates a new PipelineResumed event.
-func NewPipelineResumed(opts ...PipelineResumedOption) (*PipelineResumed, error) {
-	// Defaults
-	e := &PipelineResumed{}
-	// Set options
-	for _, opt := range opts {
-		err := opt(e)
-		if err != nil {
-			return e, err
-		}
+func NewPipelineResumedFromPipelineResume(evt *PipelineResume) *PipelineResumed {
+	e := &PipelineResumed{
+		Event:               NewFlowEvent(evt.Event),
+		PipelineExecutionID: evt.PipelineExecutionID,
+		Reason:              evt.Reason,
 	}
-	return e, nil
-}
-
-func ForPipelineResume(evt *PipelineResume) PipelineResumedOption {
-	return func(e *PipelineResumed) error {
-		e.Event = NewFlowEvent(evt.Event)
-		e.PipelineExecutionID = evt.PipelineExecutionID
-		e.Reason = evt.Reason
-		return nil
-	}
+	return e
 }

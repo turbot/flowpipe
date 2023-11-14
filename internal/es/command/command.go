@@ -41,7 +41,7 @@ func (c FpEventBus) Publish(ctx context.Context, event interface{}) error {
 }
 
 func (c FpEventBus) PublishWithLock(ctx context.Context, event interface{}, lock *sync.Mutex) error {
-	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
+	// Unfortunately we need to save the event log *before* we send this command to Watermill. This mean we have to figure out what the
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
 	//
 	err := LogEventMessage(ctx, event, lock)

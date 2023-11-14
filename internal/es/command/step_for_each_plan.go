@@ -61,7 +61,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		plannerMutex.Unlock()
 	}()
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
+	ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(e.Event))
 	if err != nil {
 		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, e, err)
 	}

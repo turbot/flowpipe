@@ -27,9 +27,6 @@ func (h PipelineCancelHandler) Handle(ctx context.Context, c interface{}) error 
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineCancel")
 	}
 
-	e, err := event.NewPipelineCanceled(event.ForPipelineCancel(evt))
-	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineCancelToPipelineFailed(evt, err)))
-	}
+	e := event.NewPipelineCanceledFromPipelineCancel(evt)
 	return h.EventBus.Publish(ctx, e)
 }

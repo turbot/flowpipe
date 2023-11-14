@@ -126,26 +126,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			}
 		}
 
-		// var title string
-
-		// if forEachCtyVal.Type().IsPrimitiveType() {
-		// 	t, err := hclhelpers.CtyToString(forEachCtyVal)
-		// 	if err != nil {
-		// 		logger.Error("Error converting cty to string", "error", err)
-		// 	} else {
-		// 		title += t
-		// 	}
-		// } else {
-		// 	title += nextStep.StepName
-		// }
-		// forEachOutput := modconfig.Output{
-		// 	Data: map[string]interface{}{},
-		// }
-		// forEachOutput.Data[schema.AttributeTypeValue] = title
-
 		// Start each step in parallel
 		runNonForEachStep(ctx, h.CommandBus, e, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
-
 	}
 
 	return nil

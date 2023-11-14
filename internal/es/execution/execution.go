@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -40,6 +41,8 @@ type Execution struct {
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
+
+	Lock *sync.Mutex `json:"-"`
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
@@ -205,6 +208,20 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 
 }
 
+// There are only 2 use cases for creator of Execution to provide the lock:
+// 1) pipeline planner, and
+// 2) step for each planner
+//
+// # Any other use case we should let the execution object aquire its own lock
+//
+// NOTE: ensure that WithLock is called *before* WithEvent is called
+func WithLock(lock *sync.Mutex) ExecutionOption {
+	return func(ex *Execution) error {
+		ex.Lock = lock
+		return nil
+	}
+}
+
 func WithID(id string) ExecutionOption {
 	return func(ex *Execution) error {
 		ex.ID = id
@@ -333,6 +350,19 @@ func getStackTrace() string {
 // This function loads the event log file (the .jsonl file) continously and update the
 // ex.PipelineExecutions and ex.StepExecutions
 func (ex *Execution) LoadProcess(e *event.Event) error {
+
+	// Attempt to aquire the execution lock if it's not given. If the execution lock is given then we assume the calling
+	// function is responsible for locking & unlocking the event load process.
+	var localLock *sync.Mutex
+	if ex.Lock == nil {
+		localLock = event.GetEventStoreMutex(e.ExecutionID)
+		localLock.Lock()
+		defer func() {
+			if localLock != nil {
+				localLock.Unlock()
+			}
+		}()
+	}
 
 	logger := fplog.Logger(ex.Context)
 

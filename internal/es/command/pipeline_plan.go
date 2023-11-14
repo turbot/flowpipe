@@ -40,7 +40,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
+	ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(evt.Event))
 	if err != nil {
 		logger.Error("pipeline_plan: Error loading pipeline execution", "error", err)
 		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)

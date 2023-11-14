@@ -49,9 +49,7 @@ func (h PipelineResumeHandler) Handle(ctx context.Context, c interface{}) error 
 		return perr.BadRequestWithMessage("Can't resume pipeline execution that is not paused")
 	}
 
-	e, err := event.NewPipelineResumed(event.ForPipelineResume(evt))
-	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineResumeToPipelineFailed(evt, err)))
-	}
+	e := event.NewPipelineResumedFromPipelineResume(evt)
+
 	return h.EventBus.Publish(ctx, e)
 }

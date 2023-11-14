@@ -17,30 +17,11 @@ func (e *PipelineCanceled) HandlerName() string {
 	return HandlerPipelineCancelled
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
-type PipelineCanceledOption func(*PipelineCanceled) error
-
-// NewPipelineCanceled creates a new PipelineCanceled event.
-func NewPipelineCanceled(opts ...PipelineCanceledOption) (*PipelineCanceled, error) {
-	// Defaults
-	e := &PipelineCanceled{}
-	// Set options
-	for _, opt := range opts {
-		err := opt(e)
-		if err != nil {
-			return e, err
-		}
+func NewPipelineCanceledFromPipelineCancel(cmd *PipelineCancel) *PipelineCanceled {
+	e := &PipelineCanceled{
+		Event:               NewFlowEvent(cmd.Event),
+		PipelineExecutionID: cmd.PipelineExecutionID,
+		Reason:              cmd.Reason,
 	}
-	return e, nil
-}
-
-// ForPipelineCancel returns a PipelineCanceledOption that sets the fields of the
-// PipelineCanceled event from a PipelineCancel command.
-func ForPipelineCancel(cmd *PipelineCancel) PipelineCanceledOption {
-	return func(e *PipelineCanceled) error {
-		e.Event = NewFlowEvent(cmd.Event)
-		e.PipelineExecutionID = cmd.PipelineExecutionID
-		e.Reason = cmd.Reason
-		return nil
-	}
+	return e
 }
