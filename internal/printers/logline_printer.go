@@ -3,6 +3,7 @@ package printers
 import (
 	"context"
 	"fmt"
+	"github.com/fatih/color"
 	"github.com/turbot/flowpipe/internal/types"
 	"io"
 )
@@ -15,7 +16,7 @@ func (p LogLinePrinter) PrintResource(ctx context.Context, r types.PrintableReso
 
 	for _, line := range lines {
 		if line.IsError {
-			line.Message = fmt.Sprintf("%s%s%s", "\x1b[31m", line.Message, "\x1b[0m")
+			line.Message = color.RedString(line.Message)
 		}
 		msg := buildLogLinePrefix(line)
 		msg += line.Message
