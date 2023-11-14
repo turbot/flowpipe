@@ -204,19 +204,14 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 			return
 		}
 
-		var executionId string
-		var rootPipelineId string
-
 		if resp != nil && resp["flowpipe"] != nil {
-			contents := resp["flowpipe"].(map[string]interface{})
-			executionId = contents["execution_id"].(string)
-			rootPipelineId = contents["pipeline_execution_id"].(string)
-		}
+			contents := resp["flowpipe"].(map[string]any)
 
-		err = pollEventLogAndRender(ctx, apiClient, executionId, rootPipelineId, cmd.OutOrStdout())
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
-			return
+			err = pollEventLogAndRender(ctx, apiClient, contents, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
+				return
+			}
 		}
 	}
 }
@@ -274,12 +269,41 @@ func validatePipelineArgs(pipelineArgs []string) error {
 	return nil
 }
 
-func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APIClient, executionId, rootPipelineId string, w io.Writer) error {
+func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APIClient, input map[string]any, w io.Writer) error {
 	isComplete := false
 	lastIndexRead := -1
 	printer := printers.LogLinePrinter{}
+
+	exId := input["execution_id"].(string)
+	pId := input["pipeline_execution_id"].(string)
+	stale := false
+	loadTime := ""
+	if input["is_stale"] != nil && input["is_stale"].(bool) {
+		stale = true
+		loadTime = input["last_loaded"].(string)
+	}
+
+	// Print Execution ID / Stale Info
+	pi := types.PrintableLogLine{}
+	intro := []types.LogLine{
+		{Name: "Execution", Message: exId},
+	}
+	if stale {
+		intro = append(intro, types.LogLine{
+			Name:    "Execution",
+			Message: fmt.Sprintf("Mod is Stale, last loaded: %s", loadTime),
+			IsError: true,
+		})
+	}
+	pi.Items = intro
+	err := printer.PrintResource(ctx, pi, w)
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing introduction")
+	}
+
+	// Render Processed Log Lines
 	for {
-		logs, _, err := client.ProcessApi.GetLog(ctx, executionId).Execute()
+		logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
 		if err != nil {
 			return err
 		}
@@ -313,7 +337,7 @@ func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APICli
 						return err
 					}
 
-					if payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == rootPipelineId {
+					if payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == pId {
 						isComplete = true
 						break
 					}
