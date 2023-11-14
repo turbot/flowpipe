@@ -37,15 +37,13 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
 	plannerMutex.Lock()
 	defer func() {
-		if r := recover(); r != nil {
-			plannerMutex.Unlock()
-		}
+		plannerMutex.Unlock()
 	}()
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
 	if err != nil {
 		logger.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-		return h.unlockAndRaiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
 	}
 
 	// Convenience
@@ -54,26 +52,25 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
 	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
-		plannerMutex.Unlock()
 		return nil
 	}
 
 	pipelineDefn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
 	if err != nil {
 		logger.Error("Error loading pipeline definition", "error", err)
-		return h.unlockAndRaiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
 	}
 
 	// Create a new PipelinePlanned event
 	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(evt))
 	if err != nil {
-		return h.unlockAndRaiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
 	}
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
 		logger.Error("Error building eval context for step", "error", err)
-		return h.unlockAndRaiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
 	}
 
 	// Each defined step in the pipeline can be in a few states:
@@ -215,15 +212,13 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Pipeline has been planned, now publish this event
-	plannerMutex.Unlock()
-	if err := h.EventBus.Publish(ctx, e); err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+	if err := h.EventBus.PublishWithLock(ctx, e, plannerMutex); err != nil {
+		return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)), plannerMutex)
 	}
 
 	return nil
 }
 
-func (h PipelinePlanHandler) unlockAndRaiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, evt *event.PipelinePlan, err error) error {
-	plannerMutex.Unlock()
-	return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+func (h PipelinePlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, evt *event.PipelinePlan, err error) error {
+	return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)), plannerMutex)
 }

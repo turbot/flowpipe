@@ -3,6 +3,7 @@ package es_test
 // Basic imports
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -303,13 +305,26 @@ func (suite *ModTestSuite) TestLoopWithForEach() {
 
 	assert.NotNil(pex)
 
-	// We should have 3 for_each and each for_each has an exact 4 iterations.
+	// We should have 3 for_each and each for_each has exactly 4 iterations.
 	// check the output, it should not double up on the iteration count
-
 	assert.Equal(3, len(pex.StepStatus["echo.repeat"]))
 	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
 	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["1"].StepExecutions))
 	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["2"].StepExecutions))
+
+	// Print out the step status if the step executions is not exactly 4
+	if len(pex.StepStatus["echo.repeat"]["0"].StepExecutions) != 4 ||
+		len(pex.StepStatus["echo.repeat"]["1"].StepExecutions) != 4 ||
+		len(pex.StepStatus["echo.repeat"]["2"].StepExecutions) != 4 {
+		s, err := prettyjson.Marshal(pex.StepStatus["echo.repeat"])
+
+		if err != nil {
+			assert.Fail("Error marshalling pipeline output", err)
+			return
+		}
+
+		fmt.Println(string(s)) //nolint:forbidigo // test
+	}
 
 	assert.Equal("iteration: 0 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[0].Output.Data["text"])
 	assert.Equal("iteration: 1 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].Output.Data["text"])

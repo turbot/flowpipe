@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -31,7 +32,7 @@ func (c FpEventBus) Publish(ctx context.Context, event interface{}) error {
 	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
 	//
-	err := LogEventMessage(ctx, event)
+	err := LogEventMessage(ctx, event, nil)
 	if err != nil {
 		return err
 	}
@@ -39,7 +40,19 @@ func (c FpEventBus) Publish(ctx context.Context, event interface{}) error {
 	return c.Eb.Publish(ctx, event)
 }
 
-func LogEventMessage(ctx context.Context, evt interface{}) error {
+func (c FpEventBus) PublishWithLock(ctx context.Context, event interface{}, lock *sync.Mutex) error {
+	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
+	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
+	//
+	err := LogEventMessage(ctx, event, lock)
+	if err != nil {
+		return err
+	}
+
+	return c.Eb.Publish(ctx, event)
+}
+
+func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) error {
 
 	commandEvent, ok := evt.(event.CommandEvent)
 
@@ -64,9 +77,11 @@ func LogEventMessage(ctx context.Context, evt interface{}) error {
 
 	fileName := path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
 
-	executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
-	executionMutex.Lock()
-	defer executionMutex.Unlock()
+	if lock == nil {
+		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
+		executionMutex.Lock()
+		defer executionMutex.Unlock()
+	}
 
 	// Append the JSON data to a file
 	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
