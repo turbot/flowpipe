@@ -1206,10 +1206,12 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 		assert.Fail("Unable to convert output to string")
 		return
 	}
-	assert.Equal("user if roger", pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+	assert.Equal("user is brian", pex.StepStatus["transform.transform_test"]["0"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+	assert.Equal("user is freddie", pex.StepStatus["transform.transform_test"]["1"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+	assert.Equal("user is john", pex.StepStatus["transform.transform_test"]["2"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
+	assert.Equal("user is roger", pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 
 	// Pipeline 3
-
 	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.transform_step_for_map", 200*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -1227,6 +1229,9 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	}
 
 	assert.Equal(3, len(pex.StepStatus["transform.text_1"]))
+	assert.Equal("janis joplin was 27", pex.PipelineOutput["text_1"].(map[string]interface{})["janis"].(map[string]interface{})["value"])
+	assert.Equal("jimi hendrix was 27", pex.PipelineOutput["text_1"].(map[string]interface{})["jimi"].(map[string]interface{})["value"])
+	assert.Equal("jerry garcia was 53", pex.PipelineOutput["text_1"].(map[string]interface{})["jerry"].(map[string]interface{})["value"])
 }
 
 func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
