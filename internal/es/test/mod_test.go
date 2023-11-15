@@ -244,7 +244,7 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
 }
 
-func (suite *ModTestSuite) XTestLoopWithForEachAndNestedPipeline() {
+func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
@@ -331,7 +331,7 @@ func (suite *ModTestSuite) TestSimpleForEach() {
 	assert.Equal("2: foo qux", pex.StepStatus["transform.echo"]["2"].StepExecutions[0].Output.Data["value"])
 }
 
-func (suite *ModTestSuite) XTestLoopWithForEach() {
+func (suite *ModTestSuite) TestLoopWithForEach() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
@@ -1342,6 +1342,38 @@ func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 	if duration < 2*time.Second {
 		assert.Fail("The gap should be at least 2 seconds but " + duration.String())
 	}
+}
+
+func (suite *ModTestSuite) TestForEachAndForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_and_for_each", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// must check length to ensure that we're not duplicating the run (common issues with for_each)
+	assert.Equal(3, len(pex.PipelineOutput["first"].(map[string]interface{})))
+	assert.Equal(3, len(pex.PipelineOutput["second"].(map[string]interface{})))
+
+	assert.Equal("bach", pex.PipelineOutput["first"].(map[string]interface{})["0"].(map[string]interface{})["value"])
+	assert.Equal("mozart", pex.PipelineOutput["first"].(map[string]interface{})["1"].(map[string]interface{})["value"])
+	assert.Equal("beethoven", pex.PipelineOutput["first"].(map[string]interface{})["2"].(map[string]interface{})["value"])
+
+	assert.Equal("coltrane", pex.PipelineOutput["second"].(map[string]interface{})["0"].(map[string]interface{})["value"])
+	assert.Equal("davis", pex.PipelineOutput["second"].(map[string]interface{})["1"].(map[string]interface{})["value"])
+	assert.Equal("monk", pex.PipelineOutput["second"].(map[string]interface{})["2"].(map[string]interface{})["value"])
 }
 
 func (suite *ModTestSuite) TestErrorInForEach() {

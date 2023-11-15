@@ -46,7 +46,7 @@ pipeline "simple_loop_index" {
 pipeline "loop_with_for_each" {
 
     step "echo" "repeat" {
-        for_each = ["oasis", "blur", "radiohead", "the verve", "the beatles"]
+        for_each = ["oasis", "blur", "radiohead"]
         text = "iteration: ${loop.index} - ${each.value}"
 
         loop {

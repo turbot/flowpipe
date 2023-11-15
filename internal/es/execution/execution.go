@@ -732,6 +732,18 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 					stepStatus.OverralState = "complete_or_fail"
 				}
 			}
+		} else {
+			for _, v := range et.NextSteps {
+				if stepStatusMap[v.StepForEach.Key] == nil {
+					stepStatusMap[v.StepForEach.Key] = &StepStatus{
+						Initializing: true,
+						Queued:       map[string]bool{},
+						Started:      map[string]bool{},
+						Finished:     map[string]bool{},
+						Failed:       map[string]bool{},
+					}
+				}
+			}
 		}
 		pe.StepStatus[et.StepName] = stepStatusMap
 

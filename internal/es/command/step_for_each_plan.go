@@ -161,7 +161,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 				continue
 			}
 
-			if len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
+			if stepStatus.Initializing || len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
 				continue
 			}
 		}
