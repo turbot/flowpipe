@@ -85,3 +85,28 @@ pipeline "transform_step_for_map" {
     value = step.transform.text_1
   }
 }
+
+pipeline "transform_loop" {
+    step "transform" "foo" {
+        value = "loop: ${loop.index}"
+
+        loop {
+            until = loop.index < 2
+            value = "loop: ${loop.index}"
+        }
+    }
+
+    output "val" {
+        value = step.transform.foo
+    }
+
+    output "val_1" {
+        value = step.transform.foo[0].value
+    }
+    output "val_2" {
+        value = step.transform.foo[1].value
+    }
+    output "val_3" {
+        value = step.transform.foo[2].value
+    }
+}

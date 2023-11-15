@@ -13,22 +13,6 @@ pipeline "error_with_throw_simple" {
     }
 }
 
-pipeline "error_with_throw_and_recover" {
-    step "transform" "foo" {
-        value = "loop: ${loop.index}"
-
-        loop {
-            until = loop.index < 2
-            value = "loop: ${loop.index}"
-        }
-    }
-
-    output "val" {
-        value = step.transform.foo
-    }
-}
-
-
 pipeline "error_with_throw_simple_nested_pipeline" {
     step "pipeline" "foo" {
 

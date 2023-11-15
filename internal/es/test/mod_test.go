@@ -1374,6 +1374,32 @@ func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 	}
 }
 
+func (suite *ModTestSuite) TestTransformLoop() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.transform_loop", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(3, len(pex.StepStatus["transform.foo"]["0"].StepExecutions))
+
+	assert.Equal("loop: 0", pex.PipelineOutput["val_1"])
+	assert.Equal("loop: 1", pex.PipelineOutput["val_2"])
+	assert.Equal("loop: 2", pex.PipelineOutput["val_3"])
+}
+
 func (suite *ModTestSuite) TestForEachAndForEach() {
 	assert := assert.New(suite.T())
 
