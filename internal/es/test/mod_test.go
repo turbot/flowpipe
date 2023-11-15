@@ -1551,6 +1551,57 @@ func (suite *ModTestSuite) TestParamAny() {
 	assert.Equal(float64(42), pex.PipelineOutput["val"])
 }
 
+func (suite *ModTestSuite) TestTypedParamAny() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{
+		"param_any": "hello as string",
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.typed_any_param", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("hello as string", pex.PipelineOutput["val"])
+
+	// now re-run the pipeline with param_any as an int
+	pipelineInput = &modconfig.Input{
+		"param_any": 42,
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.typed_any_param", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(float64(42), pex.PipelineOutput["val"])
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

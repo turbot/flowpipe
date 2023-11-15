@@ -103,3 +103,18 @@ pipeline "any_param" {
         value = step.transform.echo.value
     }
 }
+
+pipeline "typed_any_param" {
+
+    param "param_any" {
+        type = any
+    }
+
+    step "transform" "echo" {
+        value = param.param_any
+    }
+
+    output "val" {
+        value = step.transform.echo.value
+    }
+}
