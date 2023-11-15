@@ -148,6 +148,14 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 
 	stepStatusList := pex.StepStatus[e.StepName]
 
+	// forEachCtyVals is a map the key is either a string of "0", "1", "2" (string! not index of a slice)
+	// or a string of a key in a map when the for_each is against a map attributes:
+	//  {
+	//     foo: bar
+	//     baz: quz
+	//   }
+	//
+	//  in the above map the key are foo and baz
 	for k, v := range forEachCtyVals {
 
 		nextStep := modconfig.NextStep{
@@ -161,7 +169,8 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 				continue
 			}
 
-			if stepStatus.Initializing || len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 {
+			if stepStatus.Initializing || len(stepStatus.Queued) > 0 || len(stepStatus.Started) > 0 || len(stepStatus.Finished) > 0 || len(stepStatus.Failed) > 0 ||
+				stepStatus.ErrorHold || stepStatus.LoopHold {
 				continue
 			}
 		}

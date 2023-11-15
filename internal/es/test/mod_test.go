@@ -331,6 +331,32 @@ func (suite *ModTestSuite) TestSimpleForEach() {
 	assert.Equal("2: foo qux", pex.StepStatus["transform.echo"]["2"].StepExecutions[0].Output.Data["value"])
 }
 
+func (suite *ModTestSuite) TestForEachOneAndForEachTwo() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_one_and_for_each_two", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.NotNil(pex)
+
+	// Count how many step executions in each Step to ensure we don't have duplicate executions
+	assert.Equal(1, len(pex.StepStatus["transform.first"]["0"].StepExecutions))
+	assert.Equal(12, len(pex.StepStatus["transform.echo"]))
+	assert.Equal(1, len(pex.StepStatus["transform.last"]["0"].StepExecutions))
+}
+
 func (suite *ModTestSuite) XTestLoopWithForEach() {
 	assert := assert.New(suite.T())
 
@@ -386,7 +412,6 @@ func (suite *ModTestSuite) XTestLoopWithForEach() {
 	assert.Equal("iteration: 1 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[1].Output.Data["text"])
 	assert.Equal("iteration: 2 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[2].Output.Data["text"])
 	assert.Equal("iteration: 3 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[3].Output.Data["text"])
-
 }
 
 func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
