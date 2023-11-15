@@ -515,7 +515,7 @@ func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.
 		}
 
 		// get the new input
-		newInput, err := loopDefn.UpdateInput(reevaluatedInput)
+		newInput, err := loopDefn.UpdateInput(reevaluatedInput, evalContext)
 		if err != nil {
 			return nil, perr.InternalWithMessage("error updating input for loop: " + err.Error())
 		}
