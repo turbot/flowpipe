@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/turbot/pipe-fittings/cmdconfig"
-	"io"
 	"regexp"
 	"strings"
 	"time"
@@ -197,8 +196,7 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 		// Set the pipeline args
 		cmdPipelineRun.ArgsString = &pipelineArgs
 
-		request := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun)
-		resp, _, err := request.Execute()
+		resp, _, err := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun).Execute()
 		if err != nil {
 			error_helpers.ShowError(ctx, err)
 			return
@@ -206,11 +204,73 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 
 		if resp != nil && resp["flowpipe"] != nil {
 			contents := resp["flowpipe"].(map[string]any)
+			executionId := ""
+			pipelineId := ""
+			stale := false
+			lastLoaded := ""
 
-			err = pollEventLogAndRender(ctx, apiClient, contents, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when polling event log")
+			if s, ok := contents["execution_id"].(string); !ok {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining execution_id")
 				return
+			} else {
+				executionId = s
+			}
+			if s, ok := contents["pipeline_execution_id"].(string); !ok {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
+				return
+			} else {
+				pipelineId = s
+			}
+			if contents["is_stale"] != nil {
+				stale = true
+				lastLoaded = contents["last_loaded"].(string)
+			}
+
+			lastIndex := -1
+			// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
+			printer := printers.StringPrinter{}
+			printableResource := types.PrintableParsedEvent{}
+			printableResource.Registry = make(map[string]types.ParsedEventRegistryItem)
+
+			// print execution_id / stale info
+			var header []any
+			header = append(header, types.ParsedHeader{
+				ExecutionId: executionId,
+				IsStale:     stale,
+				LastLoaded:  lastLoaded,
+			})
+			printableResource.Items = header
+			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
+				return
+			}
+
+			// poll logs & print
+			for {
+				exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollServerEventLog)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
+					return
+				}
+
+				printableResource.Items, err = printableResource.Transform(logs)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, "Error parsing logs")
+					return
+				}
+
+				err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, "Error printing logs")
+					return
+				}
+
+				lastIndex = i
+
+				if exit {
+					break
+				}
 			}
 		}
 	}
@@ -269,86 +329,49 @@ func validatePipelineArgs(pipelineArgs []string) error {
 	return nil
 }
 
-func pollEventLogAndRender(ctx context.Context, client *flowpipeapiclient.APIClient, input map[string]any, w io.Writer) error {
-	isComplete := false
-	lastIndexRead := -1
-	printer := printers.LogLinePrinter{}
+func pollEventLog(ctx context.Context, executionId, rootPipelineId string, lastIndex int, pollFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)) (bool, int, types.ProcessEventLogs, error) {
+	return pollFunc(ctx, executionId, rootPipelineId, lastIndex)
+}
 
-	exId := input["execution_id"].(string)
-	pId := input["pipeline_execution_id"].(string)
-	stale := false
-	loadTime := ""
-	if input["is_stale"] != nil && input["is_stale"].(bool) {
-		stale = true
-		loadTime = input["last_loaded"].(string)
-	}
-
-	// Print Execution ID / Stale Info
-	pi := types.PrintableLogLine{}
-	intro := []types.LogLine{
-		{Name: "Execution", Message: exId},
-	}
-	if stale {
-		intro = append(intro, types.LogLine{
-			Name:    "Execution",
-			Message: fmt.Sprintf("Mod is Stale, last loaded: %s", loadTime),
-			IsError: true,
-		})
-	}
-	pi.Items = intro
-	err := printer.PrintResource(ctx, pi, w)
+func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+	complete := false
+	var out types.ProcessEventLogs
+	client := common.GetApiClient()
+	logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
 	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing introduction")
+		return false, last, nil, err
 	}
 
-	// Render Processed Log Lines
-	for {
-		logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
-		if err != nil {
-			return err
-		}
+	// check we have new event logs to parse
+	if len(logs.Items)-1 > last {
+		for index, item := range logs.Items {
+			if index > last {
+				ts, err := time.Parse(time.RFC3339Nano, *item.Ts)
+				if err != nil {
+					return false, 0, nil, fmt.Errorf("error parsing timestamp from %s", *item.Ts)
+				}
+				out = append(out, types.ProcessEventLog{
+					EventType: *item.EventType,
+					Timestamp: &ts,
+					Payload:   *item.Payload,
+				})
 
-		printableResource := types.PrintableLogLine{}
-		printableResource.Items, err = printableResource.Transform(logs)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-		}
+				last = index
 
-		var render []types.LogLine
-		for logIndex, logEntry := range printableResource.Items.([]types.LogLine) {
-			if logIndex > lastIndexRead {
-				lastIndexRead = logIndex
-				render = append(render, logEntry)
-			}
-		}
-
-		printableResource.Items = render
-		err = printer.PrintResource(ctx, printableResource, w)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
-		}
-
-		// Check logs received for termination/completion of execution
-		for _, logEntry := range logs.Items {
-			if *logEntry.EventType == event.HandlerPipelineFinished || *logEntry.EventType == event.HandlerPipelineFailed {
-				if logEntry.Payload != nil {
+				// check to see if event logs complete
+				if item.EventType != nil && (*item.EventType == event.HandlerPipelineFinished || *item.EventType == event.HandlerPipelineFailed) {
 					payload := make(map[string]any)
-					if err := json.Unmarshal([]byte(*logEntry.Payload), &payload); err != nil {
-						return err
+					if err := json.Unmarshal([]byte(*item.Payload), &payload); err != nil {
+						return false, 0, nil, fmt.Errorf("error parsing payload from %s", *item.Payload)
 					}
-
-					if payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == pId {
-						isComplete = true
-						break
-					}
+					complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 				}
 			}
 		}
-		if isComplete {
-			break
-		}
-
-		time.Sleep(500 * time.Millisecond)
 	}
-	return nil
+
+	return complete, last, out, nil
 }
+
+// TODO: Implement when we have local execution
+// func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {}
