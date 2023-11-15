@@ -88,3 +88,18 @@ pipeline "set_param" {
         value = step.echo.instruments
     }
 }
+
+pipeline "any_param" {
+
+    param "param_any" {
+
+    }
+
+    step "transform" "echo" {
+        value = param.param_any
+    }
+
+    output "val" {
+        value = step.transform.echo.value
+    }
+}

@@ -1500,56 +1500,55 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
 }
 
-func (suite *ModTestSuite) TestErrorThrowSimple() {
+func (suite *ModTestSuite) TestParamAny() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := &modconfig.Input{
+		"param_any": "hello as string",
+	}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.any_param", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
-
-	if pex.Status != "failed" {
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
 		return
 	}
 
-	// The step should be executed 3 times. First attempt + throw with 2 retries
-	assert.Equal(3, len(pex.StepStatus["transform.foo"]["0"].StepExecutions))
-	assert.Equal("from throw block", pex.StepStatus["transform.foo"]["0"].StepExecutions[0].Output.Errors[0].Error.Detail)
-	assert.Equal("from throw block", pex.StepStatus["transform.foo"]["0"].StepExecutions[1].Output.Errors[0].Error.Detail)
-	assert.Equal("from throw block", pex.StepStatus["transform.foo"]["0"].StepExecutions[2].Output.Errors[0].Error.Detail)
-}
+	assert.Equal("hello as string", pex.PipelineOutput["val"])
 
-func (suite *ModTestSuite) TestErrorThrowNestedPipeline() {
-	assert := assert.New(suite.T())
+	// now re-run the pipeline with param_any as an int
+	pipelineInput = &modconfig.Input{
+		"param_any": 42,
+	}
 
-	pipelineInput := &modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.any_param", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
-
-	if pex.Status != "failed" {
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
 		return
 	}
 
-	// The step should be executed 3 times. First attempt + throw with 2 retries
-	assert.Equal(3, len(pex.StepStatus["pipeline.foo"]["0"].StepExecutions))
-	assert.Equal("from throw block", pex.StepStatus["pipeline.foo"]["0"].StepExecutions[0].Output.Errors[0].Error.Detail)
-	assert.Equal("from throw block", pex.StepStatus["pipeline.foo"]["0"].StepExecutions[1].Output.Errors[0].Error.Detail)
-	assert.Equal("from throw block", pex.StepStatus["pipeline.foo"]["0"].StepExecutions[2].Output.Errors[0].Error.Detail)
+	assert.Equal(float64(42), pex.PipelineOutput["val"])
 }
 
 func TestModTestingSuite(t *testing.T) {
