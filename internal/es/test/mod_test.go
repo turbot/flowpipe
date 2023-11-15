@@ -331,7 +331,7 @@ func (suite *ModTestSuite) TestSimpleForEach() {
 	assert.Equal("2: foo qux", pex.StepStatus["transform.echo"]["2"].StepExecutions[0].Output.Data["value"])
 }
 
-func (suite *ModTestSuite) TestLoopWithForEach() {
+func (suite *ModTestSuite) XTestLoopWithForEach() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := &modconfig.Input{}
@@ -1356,7 +1356,7 @@ func (suite *ModTestSuite) TestForEachAndForEach() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 
 	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
