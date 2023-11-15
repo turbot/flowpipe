@@ -8,18 +8,10 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"strings"
 	"time"
 )
 
-func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
-
-	// TODO better name validation - how is it normally done?
-	parts := strings.Split(pipelineName, ".")
-	if len(parts) != 3 {
-		pipelineName = "local.pipeline." + pipelineName
-	}
-
+func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName string, initialWaitTime time.Duration, args modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(ctx),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
@@ -27,7 +19,7 @@ func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName stri
 	}
 
 	if args != nil {
-		pipelineCmd.Args = *args
+		pipelineCmd.Args = args
 	}
 
 	if err := esService.Send(pipelineCmd); err != nil {

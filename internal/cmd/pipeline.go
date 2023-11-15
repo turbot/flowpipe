@@ -14,13 +14,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/common"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/inprocess"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/cmdconfig"
-	constants "github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
@@ -43,38 +45,36 @@ func pipelineListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
-		Run:  listPipelineFunc(),
+		Run:  listPipelineFunc,
 	}
 
 	return cmd
 }
 
-func listPipelineFunc() func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
-		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
+func listPipelineFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
+	nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
-		apiClient := common.GetApiClient()
-		resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+
+	if resp != nil {
+		printer := printers.GetPrinter(cmd)
+
+		printableResource := types.PrintablePipeline{}
+		printableResource.Items, err = printableResource.Transform(resp)
 		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
 		}
 
-		if resp != nil {
-			printer := printers.GetPrinter(cmd)
-
-			printableResource := types.PrintablePipeline{}
-			printableResource.Items, err = printableResource.Transform(resp)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-			}
-
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
-			}
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
 	}
 }
@@ -84,75 +84,73 @@ func pipelineShowCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "show <pipeline-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  showPipelineFunc(),
+		Run:  showPipelineFunc,
 	}
 
 	return cmd
 }
 
-func showPipelineFunc() func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		apiClient := common.GetApiClient()
-		resp, _, err := apiClient.PipelineApi.Get(context.Background(), args[0]).Execute()
-		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
-		}
+func showPipelineFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.PipelineApi.Get(context.Background(), args[0]).Execute()
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
 
-		if resp != nil {
-			output := ""
+	if resp != nil {
+		output := ""
+		if resp.Title != nil {
+			output += "Title: " + *resp.Title
+		}
+		if resp.Title != nil {
+			output += "\nName:  " + *resp.Name
+		} else {
+			output += "Name: " + *resp.Name
+		}
+		if resp.Tags != nil {
 			if resp.Title != nil {
-				output += "Title: " + *resp.Title
-			}
-			if resp.Title != nil {
-				output += "\nName:  " + *resp.Name
+				output += "\nTags:  "
 			} else {
-				output += "Name: " + *resp.Name
+				output += "\nTags: "
 			}
-			if resp.Tags != nil {
-				if resp.Title != nil {
-					output += "\nTags:  "
+			isFirstTag := true
+			for k, v := range *resp.Tags {
+				if isFirstTag {
+					output += k + " = " + v
+					isFirstTag = false
 				} else {
-					output += "\nTags: "
-				}
-				isFirstTag := true
-				for k, v := range *resp.Tags {
-					if isFirstTag {
-						output += k + " = " + v
-						isFirstTag = false
-					} else {
-						output += ", " + k + " = " + v
-					}
+					output += ", " + k + " = " + v
 				}
 			}
-			if resp.Description != nil {
-				output += "\n\nDescription:\n" + *resp.Description + "\n"
-			}
-			if resp.Params != nil {
-				output += formatSection("\nParams:", resp.Params)
-			}
-			if resp.Outputs != nil {
-				output += formatSection("\nOutputs:", resp.Outputs)
-			}
-			output += "\nUsage:" + "\n"
-			if resp.Params != nil {
-				var pArg string
-
-				// show the minimal required pipeline args
-				for _, param := range resp.Params {
-					if (param.Default != nil && len(param.Default) > 0) || (param.Optional != nil && *param.Optional) {
-						continue
-					}
-					pArg += " --pipeline-arg " + *param.Name + "=<value>"
-				}
-				output += "  flowpipe pipeline run " + *resp.Name + pArg
-			} else {
-				output += "  flowpipe pipeline run " + *resp.Name
-			}
-			//nolint:forbidigo // CLI console output
-			fmt.Println(output)
 		}
+		if resp.Description != nil {
+			output += "\n\nDescription:\n" + *resp.Description + "\n"
+		}
+		if resp.Params != nil {
+			output += formatSection("\nParams:", resp.Params)
+		}
+		if resp.Outputs != nil {
+			output += formatSection("\nOutputs:", resp.Outputs)
+		}
+		output += "\nUsage:" + "\n"
+		if resp.Params != nil {
+			var pArg string
+
+			// show the minimal required pipeline args
+			for _, param := range resp.Params {
+				if (param.Default != nil && len(param.Default) > 0) || (param.Optional != nil && *param.Optional) {
+					continue
+				}
+				pArg += " --pipeline-arg " + *param.Name + "=<value>"
+			}
+			output += "  flowpipe pipeline run " + *resp.Name + pArg
+		} else {
+			output += "  flowpipe pipeline run " + *resp.Name
+		}
+		//nolint:forbidigo // CLI console output
+		fmt.Println(output)
 	}
 }
 
@@ -166,7 +164,7 @@ func pipelineRunCmd() *cobra.Command {
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
+		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.").
 		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
 		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.")
 
@@ -203,20 +201,31 @@ func getPipelineArgs(cmd *cobra.Command) map[string]string {
 func runPipelineInProcess(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 
-	// extract the pipeline args from the flags
-	//pipelineArgs := getPipelineArgs(cmd)
-
 	esService, err := inprocess.Initialize(ctx)
 	error_helpers.FailOnError(err)
-
+	// construct the pipeline name _after_ initializing so the cache is initialized
+	// extract the pipeline args from the flags
 	defer func() {
 		// TODO ignore shutdown error?
 		_ = esService.Stop()
 	}()
 
+	pipelineName := constructPipelineFullyQualifiedName(args[0])
+	pipelineArgs := getPipelineArgs(cmd)
+	pipelineDefn, err := db.GetPipeline(pipelineName)
+	error_helpers.FailOnError(err)
+	var coercedArgs map[string]interface{}
+	if len(pipelineArgs) > 0 {
+		var errs []error
+		coercedArgs, errs = pipelineDefn.CoercePipelineParams(pipelineArgs)
+		if len(errs) > 0 {
+			error_helpers.FailOnError(error_helpers.CombineErrors(errs...))
+		}
+	}
+
 	// todo parse args???
 	// todo get wait time from args
-	_, pipelineCmd, err := inprocess.RunPipeline(ctx, esService, "test_suite_mod.pipeline.simple", 100*time.Millisecond, nil)
+	_, pipelineCmd, err := inprocess.RunPipeline(ctx, esService, pipelineName, 100*time.Millisecond, coercedArgs)
 	error_helpers.FailOnErrorWithMessage(err, "Error creating execution")
 
 	_, _, err = inprocess.GetPipelineExAndWait(ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
@@ -224,10 +233,31 @@ func runPipelineInProcess(cmd *cobra.Command, args []string) {
 
 }
 
+// todo kai this is copied from internal/service/api/pipeline.go
+// unify
+func constructPipelineFullyQualifiedName(pipelineName string) string {
+	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
+	// For example: foo.pipeline.bar
+	// However, since foo is the top level mod, we should be able to just run the pipeline bar
+	splitPipelineName := strings.Split(pipelineName, ".")
+	// If the pipeline name provided is not fully qualified
+	if len(splitPipelineName) == 1 {
+		// Get the root mod name from the cache
+		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
+			if rootModName, ok := rootModNameCached.(string); ok {
+				// Prepend the root mod name to the pipeline name to get the fully qualified name
+				pipelineName = fmt.Sprintf("%s.pipeline.%s", rootModName, pipelineName)
+			}
+		}
+	}
+	return pipelineName
+}
+
 func runPipelineOnServer(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 
-	// extract th epipeline args from the flags
+	pipelineName := args[0]
+	// extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
 
 	// API client

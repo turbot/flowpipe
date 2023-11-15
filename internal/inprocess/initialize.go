@@ -30,7 +30,7 @@ func Initialize(ctx context.Context) (*es.ESService, error) {
 		if errorAndWarning.Error != nil {
 			return nil, errorAndWarning.Error
 		}
-		rootModName = w.Mod.Name()
+		rootModName = w.Mod.ShortName
 
 		pipelines = workspace.GetWorkspaceResourcesOfType[*modconfig.Pipeline](w)
 		triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
