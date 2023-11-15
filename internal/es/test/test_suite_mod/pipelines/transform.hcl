@@ -18,6 +18,23 @@ pipeline "pipeline_with_transform_step" {
   step "transform" "depends_on_transform_step" {
     value = "${step.transform.basic_transform.value} - test123"
   }
+
+  step "transform" "number" {
+    value = 23
+  }
+
+  output "basic_transform" {
+    value = step.transform.basic_transform.value
+  }
+
+  output "depends_on_transform_step" {
+    value = step.transform.depends_on_transform_step.value
+  }
+
+  output "number" {
+    value = step.transform.number.value
+
+  }
 }
 
 pipeline "pipeline_with_transform_step_string_list" {
@@ -31,7 +48,11 @@ pipeline "pipeline_with_transform_step_string_list" {
 
    step "transform" "transform_test" {
     for_each = param.users
-    value    = "user if ${each.value}"
+    value    = "user is ${each.value}"
+  }
+
+  output "transform_test" {
+    value = step.transform.transform_test
   }
 }
 
@@ -58,5 +79,9 @@ pipeline "transform_step_for_map" {
   step "transform" "text_1" {
     for_each = param.legends
     value    = "${each.key} ${each.value.last_name} was ${each.value.age}"
+  }
+
+  output "text_1" {
+    value = step.transform.text_1
   }
 }

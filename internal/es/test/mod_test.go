@@ -1557,6 +1557,30 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
 }
 
+func (suite *ModTestSuite) TestPipelineWithTransformStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("This is a simple transform step", pex.PipelineOutput["basic_transform"])
+	assert.Equal("This is a simple transform step - test123", pex.PipelineOutput["depends_on_transform_step"])
+	assert.Equal(float64(23), pex.PipelineOutput["number"])
+}
+
 func (suite *ModTestSuite) TestParamAny() {
 	assert := assert.New(suite.T())
 
