@@ -25,7 +25,6 @@ func Initialize(ctx context.Context) (*es.ESService, error) {
 	var rootModName string
 	modLocation := viper.GetString(constants.ArgModLocation)
 	if load_mod.ModFileExists(modLocation, app_specific.ModFileName) {
-
 		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(ctx, modLocation, ".hcl", ".sp")
 		// TODO kai what about warnings
 		if errorAndWarning.Error != nil {

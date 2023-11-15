@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/service/inprocess"
 	"io"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/pipe-fittings/cmdconfig"
@@ -14,9 +12,11 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/inprocess"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/cmdconfig"
@@ -161,62 +161,78 @@ func pipelineRunCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "run <pipeline-name>",
 		Args: cobra.ExactArgs(1),
-		Run:  runPipelineFunc(),
+		Run:  runPipelineFunc,
 	}
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
 		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
+		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
+		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.")
 
 	return cmd
 }
 
-func runPipelineFunc() func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		// if a host is set, use it to connect to API server
-		if viper.IsSet(constants.ArgHost) {
-			runPipelineOnServer(cmd, args)
-		}
+func runPipelineFunc(cmd *cobra.Command, args []string) {
+	// if a host is set, use it to connect to API server
+	if viper.IsSet(constants.ArgHost) {
+		runPipelineOnServer(cmd, args)
 
+	} else {
 		runPipelineInProcess(cmd, args)
-
 	}
+
+}
+
+func getPipelineArgs(cmd *cobra.Command) map[string]string {
+	pipelineArgs := map[string]string{}
+	pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgArg)
+	error_helpers.FailOnErrorWithMessage(err, "Error getting the value of pipeline-arg flag")
+
+	// validate the pipeline arg input
+	err = validatePipelineArgs(pipeLineArgValues)
+	error_helpers.FailOnErrorWithMessage(err, "Pipeline argument validation failed")
+
+	for _, value := range pipeLineArgValues {
+		splitData := strings.SplitN(value, "=", 2)
+		pipelineArgs[splitData[0]] = splitData[1]
+	}
+	return pipelineArgs
 }
 
 func runPipelineInProcess(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 
-	_, err := inprocess.Initialize(ctx)
+	// extract the pipeline args from the flags
+	//pipelineArgs := getPipelineArgs(cmd)
+
+	esService, err := inprocess.Initialize(ctx)
 	error_helpers.FailOnError(err)
+
+	defer func() {
+		// TODO ignore shutdown error?
+		_ = esService.Stop()
+	}()
+
+	// todo parse args???
+	// todo get wait time from args
+	_, pipelineCmd, err := inprocess.RunPipeline(ctx, esService, "test_suite_mod.pipeline.simple", 100*time.Millisecond, nil)
+	error_helpers.FailOnErrorWithMessage(err, "Error creating execution")
+
+	_, _, err = inprocess.GetPipelineExAndWait(ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	error_helpers.FailOnErrorWithMessage(err, "Error getting pipeline execution")
 
 }
 
 func runPipelineOnServer(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 
+	// extract th epipeline args from the flags
+	pipelineArgs := getPipelineArgs(cmd)
+
 	// API client
 	apiClient := common.GetApiClient()
 	cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
-
-	// Get the pipeline args from the flag
-	pipelineArgs := map[string]string{}
-	pipeLineArgValues, err := cmd.Flags().GetStringArray(constants.ArgArg)
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error getting the value of pipeline-arg flag")
-		return
-	}
-
-	// validate the pipeline arg input
-	err = validatePipelineArgs(pipeLineArgValues)
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Pipeline argument validation failed")
-		return
-	}
-
-	for _, value := range pipeLineArgValues {
-		splitData := strings.SplitN(value, "=", 2)
-		pipelineArgs[splitData[0]] = splitData[1]
-	}
 
 	// Set the pipeline args
 	cmdPipelineRun.ArgsString = &pipelineArgs

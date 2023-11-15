@@ -37,7 +37,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	cmdconfig.
 		OnCmd(rootCmd).
 		// Flowpipe API
-		AddPersistentStringFlag(constants.ArgHost, localconstants.DefaultHost, "API server host, including the port number").
+		AddPersistentStringFlag(constants.ArgHost, "", "API server host, including the port number").
 		AddPersistentBoolFlag(localconstants.ArgTlsInsecure, false, "Skip TLS verification").
 		// Common (steampipe, flowpipe) flags
 		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").

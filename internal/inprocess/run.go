@@ -1,43 +1,36 @@
-package es_test
+package inprocess
 
 import (
 	"context"
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"strings"
+	"time"
 )
 
-type FlowpipeTestSuite struct {
-	esService *es.ESService
-	manager   *manager.Manager
-	ctx       context.Context
-}
+func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
 
-func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
-
-	parts := strings.Split(name, ".")
+	// TODO better name validation - how is it normally done?
+	parts := strings.Split(pipelineName, ".")
 	if len(parts) != 3 {
-		name = "local.pipeline." + name
+		pipelineName = "local.pipeline." + pipelineName
 	}
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(suite.ctx),
+		Event:               event.NewExecutionEvent(ctx),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                name,
+		Name:                pipelineName,
 	}
 
 	if args != nil {
 		pipelineCmd.Args = *args
 	}
 
-	if err := suite.esService.Send(pipelineCmd); err != nil {
+	if err := esService.Send(pipelineCmd); err != nil {
 		return nil, nil, fmt.Errorf("error sending pipeline command: %w", err)
 
 	}
@@ -46,7 +39,7 @@ func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Dur
 	time.Sleep(initialWaitTime)
 
 	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -59,9 +52,9 @@ func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Dur
 	return ex, pipelineCmd, nil
 }
 
-func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
+func GetPipelineExAndWait(ctx context.Context, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
 	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -93,10 +86,6 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipeline
 			break
 		}
 	}
-
-	// if pex.Status == expectedState {
-	// 	return ex, pex, nil
-	// }
 
 	if !pex.IsComplete() {
 		return ex, pex, fmt.Errorf("not completed")

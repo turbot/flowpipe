@@ -42,7 +42,7 @@ func processGetCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "get <execution-id>",
 		Args: cobra.ExactArgs(1),
-		Run:  getProcessFunc(),
+		Run:  getProcessFunc,
 	}
 
 	cmdconfig.
@@ -52,44 +52,42 @@ func processGetCmd() *cobra.Command {
 	return cmd
 }
 
-func getProcessFunc() func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		apiClient := common.GetApiClient()
+func getProcessFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	apiClient := common.GetApiClient()
 
-		outputOnly, _ := cmd.Flags().GetBool("output-only")
+	outputOnly, _ := cmd.Flags().GetBool("output-only")
 
-		if outputOnly {
-			output, _, err := apiClient.ProcessApi.GetOutput(ctx, args[0]).Execute()
-			if err != nil {
-				error_helpers.ShowError(ctx, err)
-				return
-			}
-
-			s, err := prettyjson.Marshal(output)
-
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
-				return
-			}
-
-			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
-		} else {
-			ex, _, err := apiClient.ProcessApi.Get(ctx, args[0]).Execute()
-			if err != nil {
-				error_helpers.ShowError(ctx, err)
-				return
-			}
-
-			s, err := prettyjson.Marshal(ex)
-
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
-				return
-			}
-
-			fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
+	if outputOnly {
+		output, _, err := apiClient.ProcessApi.GetOutput(ctx, args[0]).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
 		}
+
+		s, err := prettyjson.Marshal(output)
+
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
+			return
+		}
+
+		fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
+	} else {
+		ex, _, err := apiClient.ProcessApi.Get(ctx, args[0]).Execute()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
+
+		s, err := prettyjson.Marshal(ex)
+
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when calling `colorjson.Marshal`")
+			return
+		}
+
+		fmt.Println(string(s)) //nolint:forbidigo // console output, but we may change it to a different formatter in the future
 	}
 }
 
@@ -98,38 +96,36 @@ func processLogCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "log <execution-id>",
 		Args: cobra.ExactArgs(1),
-		Run:  logProcessFunc(),
+		Run:  logProcessFunc,
 	}
 	return cmd
 }
 
-func logProcessFunc() func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		apiClient := common.GetApiClient()
+func logProcessFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	apiClient := common.GetApiClient()
 
-		execution, _, err := apiClient.ProcessApi.GetExecution(ctx, args[0]).Execute()
-		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
-		}
-
-		cols, _, err := gows.GetWinSize()
-		if err != nil {
-			error_helpers.ShowError(cmd.Context(), err)
-			return
-		}
-
-		pe := parseExecution(execution)
-
-		lines := []string{fmt.Sprintf("Execution Id: %s", pe.id)}
-		for _, plKey := range pe.outerKeys {
-			lines = append(lines, renderPipeline(pe.pipelines[plKey], 0, cols)...)
-			lines = append(lines, renderPipelineOutput(pe.pipelines[plKey].output, cols)...)
-		}
-
-		fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
+	execution, _, err := apiClient.ProcessApi.GetExecution(ctx, args[0]).Execute()
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
 	}
+
+	cols, _, err := gows.GetWinSize()
+	if err != nil {
+		error_helpers.ShowError(cmd.Context(), err)
+		return
+	}
+
+	pe := parseExecution(execution)
+
+	lines := []string{fmt.Sprintf("Execution Id: %s", pe.id)}
+	for _, plKey := range pe.outerKeys {
+		lines = append(lines, renderPipeline(pe.pipelines[plKey], 0, cols)...)
+		lines = append(lines, renderPipelineOutput(pe.pipelines[plKey].output, cols)...)
+	}
+
+	fmt.Println(strings.Join(lines, "\n")) //nolint:forbidigo // CLI console output
 }
 
 // list
@@ -137,39 +133,37 @@ func processListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "list",
 		Args: cobra.NoArgs,
-		Run:  listProcessFunc(),
+		Run:  listProcessFunc,
 	}
 
 	return cmd
 }
 
-func listProcessFunc() func(cmd *cobra.Command, args []string) {
-	return func(cmd *cobra.Command, args []string) {
-		ctx := cmd.Context()
-		limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
-		nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
+func listProcessFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
+	nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
-		apiClient := common.GetApiClient()
+	apiClient := common.GetApiClient()
 
-		processes, _, err := apiClient.ProcessApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
+	processes, _, err := apiClient.ProcessApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+
+	if processes != nil {
+		printer := printers.GetPrinter(cmd)
+
+		printableResource := types.PrintableProcess{}
+		printableResource.Items, err = printableResource.Transform(processes)
 		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
 		}
 
-		if processes != nil {
-			printer := printers.GetPrinter(cmd)
-
-			printableResource := types.PrintableProcess{}
-			printableResource.Items, err = printableResource.Transform(processes)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-			}
-
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
-			}
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
 	}
 }
