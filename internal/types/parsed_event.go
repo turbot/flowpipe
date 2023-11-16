@@ -400,7 +400,12 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						prefix.ForEachKey = &e.StepForEach.Key
 					}
 					if e.StepLoop != nil {
-						prefix.LoopIndex = &e.StepLoop.Index
+						if e.StepLoop.LoopCompleted {
+							prefix.LoopIndex = &e.StepLoop.Index
+						} else {
+							i := e.StepLoop.Index - 1
+							prefix.LoopIndex = &i
+						}
 					}
 					if e.StepRetry != nil {
 						prefix.RetryIndex = &e.StepRetry.Index
