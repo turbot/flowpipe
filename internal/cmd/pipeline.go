@@ -94,7 +94,7 @@ func listPipelineRemote() (*types.ListPipelineResponse, error) {
 	apiClient := common.GetApiClient()
 	resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
 
-	// map the API data typ einto the internal data type
+	// map the API data type into the internal data type
 	return types.ListPipelineResponseFromAPI(resp), err
 }
 
