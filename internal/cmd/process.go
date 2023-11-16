@@ -98,6 +98,9 @@ func processLogCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run:  logProcessFunc,
 	}
+	// initialize hooks
+	cmdconfig.OnCmd(cmd)
+
 	return cmd
 }
 
@@ -135,6 +138,8 @@ func processListCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 		Run:  listProcessFunc,
 	}
+	// initialize hooks
+	cmdconfig.OnCmd(cmd)
 
 	return cmd
 }

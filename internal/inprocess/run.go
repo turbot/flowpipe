@@ -16,10 +16,7 @@ func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName stri
 		Event:               event.NewExecutionEvent(ctx),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                pipelineName,
-	}
-
-	if args != nil {
-		pipelineCmd.Args = args
+		Args:                args,
 	}
 
 	if err := esService.Send(pipelineCmd); err != nil {

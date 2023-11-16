@@ -56,10 +56,18 @@ func (api *APIService) listPipelines(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list pipelines request", "next_token", nextToken, "limit", limit)
 
-	pipelines, err := db.ListAllPipelines()
+	result, err := ListPipelines()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func ListPipelines() (*types.ListPipelineResponse, error) {
+	pipelines, err := db.ListAllPipelines()
+	if err != nil {
+		return nil, err
 	}
 
 	// Convert the list of pipelines to FpPipeline type
@@ -81,11 +89,10 @@ func (api *APIService) listPipelines(c *gin.Context) {
 	})
 
 	// TODO: paging, filter, sorting
-	result := types.ListPipelineResponse{
+	result := &types.ListPipelineResponse{
 		Items: listPipelineResponseItems,
 	}
-
-	c.JSON(http.StatusOK, result)
+	return result, nil
 }
 
 // @Summary Get pipeline
@@ -112,20 +119,29 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
-
-	pipelineCached, found := cache.GetCache().Get(pipelineName)
-	if !found {
-		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline not found"))
+	getPipelineresponse, err := GetPipeline(uri.PipelineName)
+	if err != nil {
+		common.AbortWithError(c, err)
 		return
+	}
+
+	c.JSON(http.StatusOK, getPipelineresponse)
+}
+
+func GetPipeline(pipelineName string) (*types.GetPipelineResponse, error) {
+	pipelineFullName := constructPipelineFullyQualifiedName(pipelineName)
+
+	pipelineCached, found := cache.GetCache().Get(pipelineFullName)
+	if !found {
+		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
 	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
 	if !ok {
-		return
+		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	getPipelineresponse := types.GetPipelineResponse{
+	resp := &types.GetPipelineResponse{
 		Name:          pipeline.Name(),
 		Description:   pipeline.Description,
 		Mod:           pipeline.GetMod().FullName,
@@ -136,15 +152,14 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		OutputConfig:  pipeline.OutputConfig,
 	}
 
-	pipelineParams := []types.FpPipelineParam{}
+	var pipelineParams []types.FpPipelineParam
 	for _, param := range pipeline.Params {
 
 		paramDefault := map[string]interface{}{}
 		if !param.Default.IsNull() {
 			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
 			if err != nil {
-				common.AbortWithError(c, perr.BadRequestWithMessage("unable to convert param default to go value: "+param.Name))
-				return
+				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
 			}
 			paramDefault[param.Name] = paramDefaultGoVal
 		}
@@ -157,10 +172,9 @@ func (api *APIService) getPipeline(c *gin.Context) {
 			Default:     paramDefault,
 		})
 
-		getPipelineresponse.Params = pipelineParams
+		resp.Params = pipelineParams
 	}
-
-	c.JSON(http.StatusOK, getPipelineresponse)
+	return resp, nil
 }
 
 // @Summary Execute a pipeline command

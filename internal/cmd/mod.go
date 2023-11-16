@@ -69,7 +69,9 @@ func modInstallCmd() *cobra.Command {
 		Long:  `Install one or more mods and their dependencies.`,
 	}
 
-	cmdconfig.OnCmd(cmd).AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
+	// setup hooks and flags
+	cmdconfig.OnCmd(cmd).
+		AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
 
 	var gitUrlModeEnum = modinstaller.GitUrlModeHTTPS
 
@@ -102,9 +104,8 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 	// if no mod was loaded, create a default
 	if workspaceMod == nil {
 		workspaceMod, err = createWorkspaceMod(ctx, cmd, workspacePath)
-		if err != nil {
-			error_helpers.FailOnError(err)
-		}
+		error_helpers.FailOnError(err)
+
 	}
 
 	gitUrlMode := viper.GetString(constants.ArgGitUrlMode)
