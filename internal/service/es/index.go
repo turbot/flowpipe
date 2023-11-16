@@ -103,15 +103,15 @@ func (es *ESService) Start() error {
 	// https://watermill.io/docs/messages-router/#middleware
 	//
 	// List of available middlewares you can find in message/router/middleware.
-
 	//
 	// IMPORTANT: middleware order:
 	// 1. panic recoverer
-	// 2. retry (to ack message after panic recoverer)
-	// 3. log event (?)
+	// 2. anything else
 	//
 	// Recoverer handles panics from handlers.
 	router.AddMiddleware(middleware.PanicRecovererMiddleware(es.ctx))
+
+	// router.AddMiddleware(middleware.EventMiddleware(es.ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
