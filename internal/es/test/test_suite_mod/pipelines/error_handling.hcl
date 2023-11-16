@@ -1,7 +1,7 @@
 pipeline "bad_http_ignored" {
     description = "Ignored bad HTTP step."
     step "http" "my_step_1" {
-        url = "http://api.open-notify.org/astros.jsons"
+        url = "http://google.com/astros.jsons"
         error {
             ignore = true
         }
@@ -135,6 +135,26 @@ pipeline "error_in_for_each_nested_pipeline_one_works" {
         value = step.pipeline.http
     }
 }
+
+pipeline "error_in_for_each_nested_pipeline_one_works_error_ignored" {
+
+    step "pipeline" "http" {
+        for_each = ["bad_1.json", "astros.json", "bad_3.json"]
+        pipeline = pipeline.nested_with_http
+        args = {
+            file = each.value
+        }
+
+        error {
+            ignore = true
+        }
+    }
+
+    output "val" {
+        value = step.pipeline.http
+    }
+}
+
 
 
 pipeline "error_retry_with_nested_pipeline" {

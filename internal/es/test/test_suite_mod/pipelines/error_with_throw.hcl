@@ -14,6 +14,22 @@ pipeline "error_with_throw_simple" {
     }
 }
 
+pipeline "error_with_throw_but_ignored" {
+    step "transform" "foo" {
+        value = "bar"
+
+        throw {
+            if = result.value == "bar"
+            message = "from throw block"
+        }
+
+        error {
+            ignored = true
+        }
+    }
+}
+
+
 
 pipeline "error_with_multiple_throws" {
     step "transform" "foo" {
