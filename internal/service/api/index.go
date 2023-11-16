@@ -226,7 +226,7 @@ func (api *APIService) Start() error {
 
 	// Server setup with graceful shutdown
 	api.httpServer = &http.Server{
-		Addr:              fmt.Sprintf("%s:%s", api.HTTPAddress, api.HTTPPort),
+		Addr:              fmt.Sprintf("%s:%d", api.HTTPAddress, api.HTTPPort),
 		Handler:           router,
 		ReadHeaderTimeout: 60 * time.Second,
 	}

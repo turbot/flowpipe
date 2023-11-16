@@ -32,10 +32,9 @@ type ExecutionMode int
 type Manager struct {
 	ctx context.Context
 
-	RootMod *modconfig.Mod
-
-	apiService *api.APIService
-	*es.ESService
+	RootMod          *modconfig.Mod
+	ESService        *es.ESService
+	apiService       *api.APIService
 	schedulerService *scheduler.SchedulerService
 
 	triggers map[string]*modconfig.Trigger
