@@ -3,6 +3,7 @@ package container
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -265,6 +266,7 @@ func (c *Container) Run() (string, error) {
 	}
 
 	// Wait for the container to finish
+	var exitCode int64
 	containerWaitStart := time.Now()
 	statusCh, errCh := c.dockerClient.CLI.ContainerWait(c.ctx, containerID, container.WaitConditionNotRunning)
 	select {
@@ -272,7 +274,9 @@ func (c *Container) Run() (string, error) {
 		if err != nil {
 			return containerID, err
 		}
-	case <-statusCh:
+	case status := <-statusCh:
+		// Set the status code of the container run
+		exitCode = status.StatusCode
 	}
 	logger.Info("container wait", "elapsed", time.Since(containerWaitStart), "image", c.Image, "container", containerResp.ID)
 
@@ -334,6 +338,16 @@ func (c *Container) Run() (string, error) {
 	}
 
 	logger.Info("container run", "elapsed", time.Since(start), "image", c.Image, "container", containerResp.ID)
+
+	// If the container exited with a non-zero exit code, return an error with bad request status
+	if exitCode != 0 {
+		return containerID, perr.ErrorModel{
+			Type:   perr.ErrorCodeBadRequest,
+			Title:  fmt.Sprintf("%d", exitCode),
+			Status: http.StatusBadRequest,
+			Detail: o.Stderr(),
+		}
+	}
 
 	return containerID, nil
 }

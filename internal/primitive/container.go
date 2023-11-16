@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -79,6 +80,11 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		panic(err)
 	}
 
+	// Construct the output
+	output := modconfig.Output{
+		Data: map[string]interface{}{},
+	}
+
 	containerID, err := c.Run()
 
 	stdout := c.Runs[containerID].Stdout
@@ -86,17 +92,22 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	combined := c.Runs[containerID].Combined
 
 	if err != nil {
-		return nil, err
+		if _, ok := err.(perr.ErrorModel); !ok {
+			return nil, err
+		}
+
+		e := err.(perr.ErrorModel)
+		output.Errors = []modconfig.StepError{
+			{
+				Error: e,
+			},
+		}
 	}
 
-	o := modconfig.Output{
-		Data: map[string]interface{}{
-			"container_id": containerID,
-			"stdout":       stdout,
-			"stderr":       stderr,
-			"combined":     combined,
-		},
-	}
+	output.Data["container_id"] = containerID
+	output.Data["stdout"] = stdout
+	output.Data["stderr"] = stderr
+	output.Data["combined"] = combined
 
-	return &o, nil
+	return &output, nil
 }
