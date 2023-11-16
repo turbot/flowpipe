@@ -1596,16 +1596,16 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored(
 func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1652,16 +1652,16 @@ func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_multiple_throws", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_with_multiple_throws", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1680,16 +1680,16 @@ func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
 func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return

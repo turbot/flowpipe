@@ -264,35 +264,35 @@ func runPipelineRemote(cmd *cobra.Command, args []string) {
 	// Set the pipeline args
 	cmdPipelineRun.ArgsString = &pipelineArgs
 
-		resp, _, err := apiClient.PipelineApi.Cmd(ctx, args[0]).Request(*cmdPipelineRun).Execute()
-		if err != nil {
-			error_helpers.ShowError(ctx, err)
+	resp, _, err := apiClient.PipelineApi.Cmd(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+
+	if resp != nil && resp["flowpipe"] != nil {
+		contents := resp["flowpipe"].(map[string]any)
+		executionId := ""
+		pipelineId := ""
+		stale := false
+		lastLoaded := ""
+
+		if s, ok := contents["execution_id"].(string); !ok {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining execution_id")
 			return
+		} else {
+			executionId = s
 		}
-
-		if resp != nil && resp["flowpipe"] != nil {
-			contents := resp["flowpipe"].(map[string]any)
-			executionId := ""
-			pipelineId := ""
-			stale := false
-			lastLoaded := ""
-
-			if s, ok := contents["execution_id"].(string); !ok {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining execution_id")
-				return
-			} else {
-				executionId = s
-			}
-			if s, ok := contents["pipeline_execution_id"].(string); !ok {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
-				return
-			} else {
-				pipelineId = s
-			}
-			if contents["is_stale"] != nil {
-				stale = true
-				lastLoaded = contents["last_loaded"].(string)
-			}
+		if s, ok := contents["pipeline_execution_id"].(string); !ok {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
+			return
+		} else {
+			pipelineId = s
+		}
+		if contents["is_stale"] != nil {
+			stale = true
+			lastLoaded = contents["last_loaded"].(string)
+		}
 
 			lastIndex := -1
 			// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
@@ -320,31 +320,30 @@ func runPipelineRemote(cmd *cobra.Command, args []string) {
 				return
 			}
 
-			// poll logs & print
-			for {
-				exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollServerEventLog)
-				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
-					return
-				}
+		// poll logs & print
+		for {
+			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollServerEventLog)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
+				return
+			}
 
-				printableResource.Items, err = printableResource.Transform(logs)
-				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, "Error parsing logs")
-					return
-				}
+			printableResource.Items, err = printableResource.Transform(logs)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error parsing logs")
+				return
+			}
 
-				err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, "Error printing logs")
-					return
-				}
+			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error printing logs")
+				return
+			}
 
-				lastIndex = i
+			lastIndex = i
 
-				if exit {
-					break
-				}
+			if exit {
+				break
 			}
 		}
 	}
