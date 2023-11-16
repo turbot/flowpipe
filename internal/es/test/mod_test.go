@@ -1294,7 +1294,7 @@ func (suite *ModTestSuite) TestErrorRetry() {
 
 	pipelineInput := &modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_throw", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -1611,10 +1611,9 @@ func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 		return
 	}
 
-	assert.Equal(3, len(pex.Errors))
+	// retry does not catch throw, so there should only be 1 step execution here
+	assert.Equal(1, len(pex.Errors))
 	assert.Equal("from throw block", pex.Errors[0].Error.Detail)
-	assert.Equal("from throw block", pex.Errors[1].Error.Detail)
-	assert.Equal("from throw block", pex.Errors[2].Error.Detail)
 }
 
 func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
@@ -1640,10 +1639,9 @@ func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
 		return
 	}
 
-	assert.Equal(3, len(pex.Errors))
+	// retry does not catch throw, so there should only be 1 step execution here
+	assert.Equal(1, len(pex.Errors))
 	assert.Equal("from throw block bar", pex.Errors[0].Error.Detail)
-	assert.Equal("from throw block bar", pex.Errors[1].Error.Detail)
-	assert.Equal("from throw block bar", pex.Errors[2].Error.Detail)
 }
 
 func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
@@ -1669,10 +1667,8 @@ func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
 		return
 	}
 
-	assert.Equal(3, len(pex.Errors))
+	assert.Equal(1, len(pex.Errors))
 	assert.Equal("from throw block", pex.Errors[0].Error.Detail)
-	assert.Equal("from throw block", pex.Errors[1].Error.Detail)
-	assert.Equal("from throw block", pex.Errors[2].Error.Detail)
 }
 
 func (suite *ModTestSuite) TestPipelineWithTransformStep() {

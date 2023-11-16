@@ -45,7 +45,7 @@ pipeline "one_error" {
     }
 }
 
-pipeline "error_retry_throw" {
+pipeline "error_retry" {
     step "http" "bad_http" {
         url = "http://api.google.com/astros.jsons"
 

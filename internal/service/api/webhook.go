@@ -226,19 +226,8 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		response = map[string]interface{}{}
 	}
 
-	// TODO: Refactor into a function
 	if response["errors"] != nil {
-		var newErrors []modconfig.StepError
-		for _, i := range response["errors"].([]modconfig.StepError) {
-			newErrors = append(newErrors, i)
-		}
-		response["errors"] = newErrors
-	}
-
-	response["flowpipe"] = map[string]interface{}{
-		"execution_id":          pipelineCmd.Event.ExecutionID,
-		"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-		"status":                pex.Status,
+		response["errors"] = response["errors"].([]modconfig.StepError)
 	}
 
 	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)

@@ -131,6 +131,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
+	errorFromThrow := false
 	if err != nil {
 		logger.Error("Error calculating throw", "error", err)
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
@@ -142,6 +143,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	if stepError != nil {
 		logger.Debug("Step error calculated from throw", "error", stepError)
+		errorFromThrow = true
 		cmd.Output.Status = "failed"
 		cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
@@ -152,7 +154,12 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 
 	if cmd.Output.Status == "failed" {
-		stepRetry := calculateRetry(ctx, cmd.StepRetry, stepDefn)
+		var stepRetry *modconfig.StepRetry
+		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
+		// to "complete" the error
+		if !errorFromThrow {
+			stepRetry = calculateRetry(ctx, cmd.StepRetry, stepDefn)
+		}
 
 		if stepRetry != nil {
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error

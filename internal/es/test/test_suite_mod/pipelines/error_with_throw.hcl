@@ -7,6 +7,7 @@ pipeline "error_with_throw_simple" {
             message = "from throw block"
         }
 
+        # retry does not catch throw, so there should only be 1 step execution here
         retry {
             retries = 2
         }
@@ -28,6 +29,7 @@ pipeline "error_with_multiple_throws" {
             message = "from throw block bar"
         }
 
+        # retry does not catch throw, so there should only be 1 step execution here
         retry {
             retries = 2
         }

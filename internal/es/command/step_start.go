@@ -292,6 +292,7 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 	// throw, in the order that they appear
 	// retry
 	// error
+	errorFromThrow := false
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
 	if err != nil {
 		logger.Error("Error calculating throw", "error", err)
@@ -301,6 +302,7 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 
 	if stepError != nil {
 		logger.Debug("Step error calculated from throw", "error", stepError)
+		errorFromThrow = true
 		output.Status = "failed"
 		output.Errors = append(output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
@@ -311,7 +313,14 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 	}
 
 	if output.Status == "failed" {
-		stepRetry := calculateRetry(ctx, cmd.StepRetry, stepDefn)
+		var stepRetry *modconfig.StepRetry
+
+		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
+		// to "complete" the error
+		if !errorFromThrow {
+			stepRetry = calculateRetry(ctx, cmd.StepRetry, stepDefn)
+		}
+
 		if stepRetry != nil {
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
 			stepRetry.Input = &cmd.StepInput
