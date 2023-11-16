@@ -199,7 +199,7 @@ func (p ParsedEventWithOutput) String() string {
 // ParsedErrorEvent is a ParsedEvent which Failed.
 type ParsedErrorEvent struct {
 	ParsedEvent
-	Errors   []any
+	Errors   []modconfig.StepError
 	Duration *string
 }
 
@@ -207,11 +207,10 @@ func (p ParsedErrorEvent) String() string {
 	out := ""
 	pre := p.ParsedEventPrefix.String()
 
-	for _, e := range p.Errors {
-		if er, ok := e.(modconfig.StepError); ok {
-			out += fmt.Sprintf("%s %s: %s\n", pre, color.RedString(er.Error.Title), color.RedString(er.Error.Detail))
+	if p.Type != event.HandlerPipelineFailed {
+		for _, e := range p.Errors {
+			out += fmt.Sprintf("%s %s: %s\n", pre, color.RedString(e.Error.Title), color.RedString(e.Error.Detail))
 		}
-
 	}
 
 	duration := ""
@@ -313,10 +312,6 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 					started = entry.Started
 				}
 				duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
-				var errors []any
-				if e, ok := e.PipelineOutput["errors"].([]any); ok {
-					errors = append(errors, e...)
-				}
 				parsed := ParsedErrorEvent{
 					ParsedEvent: ParsedEvent{
 						ParsedEventPrefix: ParsedEventPrefix{
@@ -326,7 +321,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						Type: log.EventType,
 					},
 					Duration: &duration,
-					Errors:   errors,
+					Errors:   e.Errors,
 				}
 				out = append(out, parsed)
 			case event.HandlerStepQueued:
@@ -424,10 +419,6 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						}
 						out = append(out, parsed)
 					case "failed":
-						var errors []any
-						for _, er := range e.Output.Errors {
-							errors = append(errors, er)
-						}
 						parsed := ParsedErrorEvent{
 							ParsedEvent: ParsedEvent{
 								ParsedEventPrefix: prefix,
@@ -435,7 +426,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 								StepType:          stepType,
 							},
 							Duration: &duration,
-							Errors:   errors,
+							Errors:   e.Output.Errors,
 						}
 						out = append(out, parsed)
 					}
