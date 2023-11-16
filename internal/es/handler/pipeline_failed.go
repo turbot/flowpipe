@@ -79,6 +79,14 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 			return err
 		}
 
+		pipelineErrors := e.Errors
+		if len(pipelineErrors) > 0 {
+			if e.PipelineOutput == nil {
+				e.PipelineOutput = map[string]interface{}{}
+			}
+			e.PipelineOutput["errors"] = pipelineErrors
+		}
+
 		if len(pipelineDefn.OutputConfig) > 0 || (e.PipelineOutput != nil && e.PipelineOutput["errors"] != nil) {
 			data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 		}

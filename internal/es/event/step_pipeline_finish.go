@@ -68,9 +68,8 @@ func ForPipelineFailed(e *PipelineFailed) StepPipelineFinishOption {
 			Data: map[string]interface{}{
 				"output": e.PipelineOutput,
 			},
-			Errors: []modconfig.StepError{*e.Error},
+			Errors: e.Errors,
 		}
-
 		return nil
 	}
 }

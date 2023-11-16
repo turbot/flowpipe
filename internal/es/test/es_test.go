@@ -336,7 +336,7 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 	assert.Equal(float64(404), pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
 
 	assert.NotNil(pex.PipelineOutput["errors"])
-	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error"].(map[string]interface{})["status"])
+	assert.Equal(int(404), pex.PipelineOutput["errors"].([]modconfig.StepError)[0].Error.Status)
 }
 
 func (suite *EsTestSuite) TestParentChildPipeline() {

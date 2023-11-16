@@ -1256,7 +1256,7 @@ func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
 	assert.NotNil(pex.StepStatus["pipeline.pipeline_step"]["0"].StepExecutions[0].Output.Errors)
 
 	assert.NotNil(pex.PipelineOutput["errors"])
-	assert.Equal(float64(404), pex.PipelineOutput["errors"].([]interface{})[0].(map[string]interface{})["error"].(map[string]interface{})["status"])
+	assert.Equal(int(404), pex.PipelineOutput["errors"].([]modconfig.StepError)[0].Error.Status)
 }
 
 func (suite *ModTestSuite) TestModVars() {
@@ -1586,6 +1586,93 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
 	assert.Equal(0, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors))
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) TestErrorWithThrowSimple() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(3, len(pex.Errors))
+	assert.Equal("from throw block", pex.Errors[0].Error.Detail)
+	assert.Equal("from throw block", pex.Errors[1].Error.Detail)
+	assert.Equal("from throw block", pex.Errors[2].Error.Detail)
+}
+
+func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_multiple_throws", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(3, len(pex.Errors))
+	assert.Equal("from throw block bar", pex.Errors[0].Error.Detail)
+	assert.Equal("from throw block bar", pex.Errors[1].Error.Detail)
+	assert.Equal("from throw block bar", pex.Errors[2].Error.Detail)
+}
+
+func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal(3, len(pex.Errors))
+	assert.Equal("from throw block", pex.Errors[0].Error.Detail)
+	assert.Equal("from throw block", pex.Errors[1].Error.Detail)
+	assert.Equal("from throw block", pex.Errors[2].Error.Detail)
 }
 
 func (suite *ModTestSuite) TestPipelineWithTransformStep() {

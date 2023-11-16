@@ -39,6 +39,11 @@ pipeline "bad_http_ignored" {
     }
 }
 
+pipeline "one_error" {
+    step "http" "bad_http" {
+        url = "http://api.google.com/astros.jsons"
+    }
+}
 
 pipeline "error_retry_throw" {
     step "http" "bad_http" {

@@ -228,13 +228,9 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 
 	// TODO: Refactor into a function
 	if response["errors"] != nil {
-		var newErrors []interface{}
-		for _, i := range response["errors"].([]interface{}) {
-			if m, ok := i.(map[string]interface{}); ok {
-				if v, exists := m["error"]; exists {
-					newErrors = append(newErrors, v)
-				}
-			}
+		var newErrors []modconfig.StepError
+		for _, i := range response["errors"].([]modconfig.StepError) {
+			newErrors = append(newErrors, i)
 		}
 		response["errors"] = newErrors
 	}

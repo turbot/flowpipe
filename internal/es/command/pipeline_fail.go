@@ -92,8 +92,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		pipelineErrors = append(pipelineErrors, *cmd.Error)
 	}
 
-	// TODO: this mechanism of collecting errors won't work when we have retries
-	// TODO: we will need to decide which error should we include. The last one? All of them?
 	for _, stepExecution := range pe.StepExecutions {
 		stepDefn := pipelineDefn.GetStep(stepExecution.Name)
 		if err != nil {
@@ -106,12 +104,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 	}
 
-	if len(pipelineErrors) > 0 {
-		if output == nil {
-			output = map[string]interface{}{}
-		}
-		output["errors"] = pipelineErrors
-	}
-
-	return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFail(cmd, output)))
+	pipelineFailedEvent := event.NewPipelineFailedFromPipelineFail(cmd, output, pipelineErrors)
+	return h.EventBus.Publish(ctx, pipelineFailedEvent)
 }

@@ -398,7 +398,6 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 		}
 
 		if throwDefn.If {
-			logger.Info("Throwing error")
 			var message string
 			if throwDefn.Message != nil {
 				message = *throwDefn.Message

@@ -803,11 +803,27 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.Status = "failed"
 		pe.EndTime = et.Event.CreatedAt
 		pe.PipelineOutput = et.PipelineOutput
-		if et.Error != nil {
-			if pe.Errors == nil {
-				pe.Errors = []modconfig.StepError{}
+
+		if pe.PipelineOutput == nil {
+			pe.PipelineOutput = map[string]interface{}{}
+		}
+		pe.PipelineOutput["errors"] = et.Errors
+
+		// TODO: this is a bit messy
+		// pe.Errors are "collected" as we call the pe.Fail() function above during the 'handler.step_finished' handling
+		// but **some** thing may call pipeline_failed directly, bypassing the "step_finish" operation (TODO: not sure if this is valid)
+		// in that case we need to check et.Errors and "merge" them
+		for _, err := range et.Errors {
+			found := false
+			for _, peErr := range pe.Errors {
+				if err.Error.Instance == peErr.Error.Instance {
+					found = true
+					break
+				}
 			}
-			pe.Errors = append(pe.Errors, *et.Error)
+			if !found {
+				pe.Errors = append(pe.Errors, err)
+			}
 		}
 
 	default:

@@ -374,6 +374,7 @@ func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.PipelineStep, ex 
 	return true
 }
 
+// TODO: this is where we collect the failures so the "ShouldFail" test works .. not sure if this is the correct place?
 func (pe *PipelineExecution) Fail(stepName string, stepError ...modconfig.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
 }

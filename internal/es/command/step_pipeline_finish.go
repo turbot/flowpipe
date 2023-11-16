@@ -41,7 +41,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	if err != nil {
 		logger.Error("Error loading pipeline execution", "error", err)
 
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
 			logger.Error("Error publishing event", "error", err2)
 		}
@@ -52,7 +52,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	if err != nil {
 		logger.Error("Error loading pipeline definition", "error", err)
 
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
 			logger.Error("Error publishing event", "error", err2)
 		}
@@ -67,7 +67,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	if err != nil {
 		logger.Error("Error building eval context", "error", err)
 
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
 			logger.Error("Error publishing event", "error", err2)
 		}
@@ -123,7 +123,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	if err != nil {
 		logger.Error("Error adding step output as results", "error", err)
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
 			logger.Error("Error publishing event", "error", err2)
 		}
@@ -133,7 +133,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
 	if err != nil {
 		logger.Error("Error calculating throw", "error", err)
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
 			logger.Error("Error publishing event", "error", err2)
 		}
@@ -167,7 +167,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
 		if err != nil {
 			logger.Error("Error creating Pipeline Step Finished event", "error", err)
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -177,7 +177,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		err = h.EventBus.Publish(ctx, e)
 
 		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -191,7 +191,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		var err error
 		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
 				logger.Error("Error publishing event", "error", err2)
 			}
@@ -202,7 +202,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	e.StepLoop = stepLoop
 
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStepFinishToPipelineFailed(cmd, err)))
+		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 	}
 	e.StepOutput = stepOutput
 
