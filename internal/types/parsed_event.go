@@ -41,6 +41,14 @@ type ParsedEventPrefix struct {
 	cg               *color.DynamicColorGenerator
 }
 
+func NewPrefix(fullPipelineName string, colorGenerator *color.DynamicColorGenerator) ParsedEventPrefix {
+	return ParsedEventPrefix{
+		FullPipelineName: fullPipelineName,
+		PipelineName:     strings.Split(fullPipelineName, ".")[len(strings.Split(fullPipelineName, "."))-1],
+		cg:               colorGenerator,
+	}
+}
+
 func (p ParsedEventPrefix) String() string {
 	plString := aurora.Green(p.PipelineName)
 
@@ -268,12 +276,9 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 					fullName = entry.Name
 				}
 				parsed := ParsedEvent{
-					ParsedEventPrefix: ParsedEventPrefix{
-						FullPipelineName: fullName,
-						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
-					},
-					Type:    log.EventType,
-					Message: fmt.Sprintf("Starting: %s", e.PipelineExecutionID),
+					ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
+					Type:              log.EventType,
+					Message:           fmt.Sprintf("Starting: %s", e.PipelineExecutionID),
 				}
 				out = append(out, parsed)
 			case event.HandlerPipelineFinished:
@@ -292,11 +297,8 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 
 				parsed := ParsedEventWithOutput{
 					ParsedEvent: ParsedEvent{
-						ParsedEventPrefix: ParsedEventPrefix{
-							FullPipelineName: fullName,
-							PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
-						},
-						Type: log.EventType,
+						ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
+						Type:              log.EventType,
 					},
 					Duration: &duration,
 					Output:   e.PipelineOutput,
@@ -320,6 +322,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						ParsedEventPrefix: ParsedEventPrefix{
 							FullPipelineName: fullName,
 							PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
+							cg:               p.ColorGenerator,
 						},
 						Type: log.EventType,
 					},
@@ -346,18 +349,14 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 				if e.NextStepAction == "start" { // TODO: handle 'skip' steps?
 					p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
 
-					pl := p.Registry[e.PipelineExecutionID]
-					pipelineName := strings.Split(pl.Name, ".")[len(strings.Split(pl.Name, "."))-1]
+					pipeline := p.Registry[e.PipelineExecutionID]
 					fullStepName := e.StepName
 					stepType := strings.Split(e.StepName, ".")[0]
 					stepName := strings.Split(e.StepName, ".")[1]
 
-					prefix := ParsedEventPrefix{
-						FullPipelineName: pl.Name,
-						PipelineName:     pipelineName,
-						FullStepName:     &fullStepName,
-						StepName:         &stepName,
-					}
+					prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
+					prefix.FullStepName = &fullStepName
+					prefix.StepName = &stepName
 					if e.StepForEach != nil && e.StepForEach.ForEachStep {
 						prefix.ForEachKey = &e.StepForEach.Key
 					}
@@ -388,17 +387,13 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 				if e.Output != nil && e.Output.Status != "skipped" {
 					pipeline := p.Registry[e.PipelineExecutionID]
 					step := p.Registry[e.StepExecutionID]
-					pipelineName := strings.Split(pipeline.Name, ".")[len(strings.Split(pipeline.Name, "."))-1]
 					stepType := strings.Split(step.Name, ".")[0]
 					stepName := strings.Split(step.Name, ".")[1]
 					duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(step.Started))
 
-					prefix := ParsedEventPrefix{
-						FullPipelineName: pipeline.Name,
-						PipelineName:     pipelineName,
-						FullStepName:     &step.Name,
-						StepName:         &stepName,
-					}
+					prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
+					prefix.FullStepName = &step.Name
+					prefix.StepName = &stepName
 					if e.StepForEach != nil && e.StepForEach.ForEachStep {
 						prefix.ForEachKey = &e.StepForEach.Key
 					}
