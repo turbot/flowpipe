@@ -4,9 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"github.com/turbot/flowpipe/internal/color"
-	"github.com/turbot/pipe-fittings/cmdconfig"
 	"regexp"
 	"strings"
 	"time"
@@ -16,6 +13,7 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/common"
+	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/service/api"
@@ -278,31 +276,31 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 			lastLoaded = contents["last_loaded"].(string)
 		}
 
-			lastIndex := -1
-			// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
-			cg, err := color.NewDynamicColorGenerator(0, 16)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
-				return
-			}
-			printer := printers.StringPrinter{}
-			printableResource := types.PrintableParsedEvent{}
-			printableResource.Registry = make(map[string]types.ParsedEventRegistryItem)
-			printableResource.ColorGenerator = cg
+		lastIndex := -1
+		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
+		cg, err := color.NewDynamicColorGenerator(0, 16)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
+			return
+		}
+		printer := printers.StringPrinter{}
+		printableResource := types.PrintableParsedEvent{}
+		printableResource.Registry = make(map[string]types.ParsedEventRegistryItem)
+		printableResource.ColorGenerator = cg
 
-			// print execution_id / stale info
-			var header []any
-			header = append(header, types.ParsedHeader{
-				ExecutionId: executionId,
-				IsStale:     stale,
-				LastLoaded:  lastLoaded,
-			})
-			printableResource.Items = header
-			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
-				return
-			}
+		// print execution_id / stale info
+		var header []any
+		header = append(header, types.ParsedHeader{
+			ExecutionId: executionId,
+			IsStale:     stale,
+			LastLoaded:  lastLoaded,
+		})
+		printableResource.Items = header
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
+			return
+		}
 
 		// poll logs & print
 		for {
