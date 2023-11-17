@@ -17,28 +17,32 @@ import (
 	"time"
 )
 
+const grayScaleIndex = uint8(3)
+
 type ParsedHeader struct {
-	ExecutionId string
-	IsStale     bool
-	LastLoaded  string
+	ExecutionId string `json:"execution_id"`
+	IsStale     bool   `json:"is_stale"`
+	LastLoaded  string `json:"last_loaded"`
 }
 
 func (p ParsedHeader) String() string {
-	out := fmt.Sprintf("[%s] %s\n", aurora.BrightGreen("Execution"), p.ExecutionId)
+	left := aurora.Gray(grayScaleIndex, "[")
+	right := aurora.Gray(grayScaleIndex, "]")
+	out := fmt.Sprintf("%s%s%s %s\n", left, aurora.BrightGreen("Execution"), right, p.ExecutionId)
 	if p.IsStale {
-		out += fmt.Sprintf("[%s] %s\n", aurora.BrightRed("Stale"), aurora.Sprintf(aurora.Red("Mod is stale, last loaded: %s"), p.LastLoaded))
+		out += fmt.Sprintf("%s%s%s %s\n", left, aurora.BrightRed("Stale"), right, aurora.Sprintf(aurora.Red("Mod is stale, last loaded: %s"), p.LastLoaded))
 	}
 	return out
 }
 
 type ParsedEventPrefix struct {
-	FullPipelineName string
-	PipelineName     string
-	FullStepName     *string
-	StepName         *string
-	ForEachKey       *string
-	LoopIndex        *int
-	RetryIndex       *int
+	FullPipelineName string  `json:"full_pipeline_name"`
+	PipelineName     string  `json:"pipeline_name"`
+	FullStepName     *string `json:"full_step_name,omitempty"`
+	StepName         *string `json:"step_name,omitempty"`
+	ForEachKey       *string `json:"for_each_key,omitempty"`
+	LoopIndex        *int    `json:"loop_index,omitempty"`
+	RetryIndex       *int    `json:"retry_index,omitempty"`
 	cg               *color.DynamicColorGenerator
 }
 
@@ -51,7 +55,7 @@ func NewPrefix(fullPipelineName string, colorGenerator *color.DynamicColorGenera
 }
 
 func (p ParsedEventPrefix) getRetryString() string {
-	if p.RetryIndex == nil {
+	if p.RetryIndex == nil || *p.RetryIndex == 0 {
 		return ""
 	}
 	return aurora.Sprintf(aurora.Index(8, "#%d"), *p.RetryIndex)
@@ -110,58 +114,22 @@ func (p ParsedEventPrefix) String() string {
 	stepString := p.getStepString(eachString, loopString)
 	pipelineString := p.getPipelineString()
 
+	left := aurora.Gray(grayScaleIndex, "[")
+	right := aurora.Gray(grayScaleIndex, "]")
+	dot := aurora.Gray(grayScaleIndex, ".")
+
 	if stepString == "" {
-		return fmt.Sprintf("[%s]", pipelineString)
+		return fmt.Sprintf("%s%s%s", left, pipelineString, right)
 	} else {
-		return fmt.Sprintf("[%s.%s]%s", pipelineString, stepString, retryString)
-	}
-}
-
-func (p ParsedEventPrefix) StringOld() string {
-	plString := aurora.Green(p.PipelineName)
-
-	retryString := ""
-	if p.RetryIndex != nil {
-		retryString = aurora.Sprintf(aurora.Gray(25, "#%d"), *p.RetryIndex)
-	}
-
-	loopString := ""
-	if p.LoopIndex != nil {
-		loopString = aurora.Sprintf(aurora.Red("%d"), *p.LoopIndex)
-	}
-
-	feString := ""
-	if p.ForEachKey != nil {
-		if loopString != "" {
-			feString = fmt.Sprintf("%s%s%s", aurora.Sprintf(aurora.Cyan("%s["), *p.ForEachKey), loopString, aurora.Cyan("]"))
-		} else {
-			feString = aurora.Sprintf(aurora.Cyan(*p.ForEachKey))
-		}
-	}
-
-	stepString := ""
-	if p.StepName != nil {
-		if feString != "" {
-			stepString = fmt.Sprintf("%s%s%s", aurora.Sprintf(aurora.Magenta("%s["), *p.StepName), feString, aurora.Magenta("]"))
-		} else if loopString != "" {
-			stepString = fmt.Sprintf("%s%s%s", aurora.Sprintf(aurora.Magenta("%s["), *p.StepName), loopString, aurora.Magenta("]"))
-		} else {
-			stepString = aurora.Sprintf(aurora.Magenta("%s"), *p.StepName)
-		}
-	}
-
-	if stepString != "" {
-		return fmt.Sprintf("[%s.%s]%s", plString, stepString, retryString)
-	} else {
-		return fmt.Sprintf("[%s]", plString)
+		return fmt.Sprintf("%s%s%s%s%s%s", left, pipelineString, dot, stepString, retryString, right)
 	}
 }
 
 type ParsedEvent struct {
 	ParsedEventPrefix
-	Type     string
-	StepType string
-	Message  string
+	Type     string `json:"event_type"`
+	StepType string `json:"step_type"`
+	Message  string `json:"message"`
 }
 
 func (p ParsedEvent) String() string {
@@ -174,7 +142,7 @@ func (p ParsedEvent) String() string {
 
 type ParsedEventWithInput struct {
 	ParsedEvent
-	Input map[string]any
+	Input map[string]any `json:"input"`
 }
 
 func (p ParsedEventWithInput) String() string {
@@ -183,7 +151,7 @@ func (p ParsedEventWithInput) String() string {
 
 	stepString := ""
 	if p.StepType != "" {
-		stepString = fmt.Sprintf(": %s step.", aurora.Blue(p.StepType))
+		stepString = fmt.Sprintf(" %s step", aurora.Blue(p.StepType))
 	}
 
 	out += fmt.Sprintf("%s Starting%s\n", pre, stepString)
@@ -202,14 +170,14 @@ func (p ParsedEventWithInput) String() string {
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s Input: %s = %s\n", pre, aurora.Blue(k), aurora.BrightBlue(valueString))
+		out += fmt.Sprintf("%s Arg %s = %s\n", pre, aurora.Blue(k), aurora.BrightBlue(valueString))
 	}
 	return out
 }
 
 type ParsedEventWithArgs struct {
 	ParsedEvent
-	Args map[string]any
+	Args map[string]any `json:"args"`
 }
 
 func (p ParsedEventWithArgs) String() string {
@@ -232,7 +200,7 @@ func (p ParsedEventWithArgs) String() string {
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s Arg: %s = %s\n", pre, aurora.Blue(k), valueString)
+		out += fmt.Sprintf("%s Arg %s = %s\n", pre, aurora.Blue(k), valueString)
 	}
 	return out
 }
@@ -263,22 +231,22 @@ func (p ParsedEventWithOutput) String() string {
 					valueString = string(s)
 				}
 			}
-			out += fmt.Sprintf("%s %s: %s = %s\n", pre, "Output", aurora.Blue(k), valueString)
+			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", aurora.Blue(k), valueString)
 		}
 	}
 	duration := ""
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s: %s\n", pre, aurora.BrightGreen("Complete"), aurora.Yellow(duration))
+	out += fmt.Sprintf("%s %s %s\n", pre, aurora.BrightGreen("Complete"), aurora.Italic(aurora.Index(153, duration)))
 	return out
 }
 
 // ParsedErrorEvent is a ParsedEvent which Failed.
 type ParsedErrorEvent struct {
 	ParsedEvent
-	Errors   []modconfig.StepError
-	Duration *string
+	Errors   []modconfig.StepError `json:"errors"`
+	Duration *string               `json:"duration,omitempty"`
 }
 
 func (p ParsedErrorEvent) String() string {
@@ -295,7 +263,7 @@ func (p ParsedErrorEvent) String() string {
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s: %s\n", pre, aurora.Sprintf(aurora.BrightRed("Failed with %d error(s)"), len(p.Errors)), aurora.Yellow(duration))
+	out += fmt.Sprintf("%s %s %s\n", pre, aurora.Sprintf(aurora.BrightRed("Failed with %d error(s)"), len(p.Errors)), aurora.Italic(aurora.Index(153, duration)))
 	return out
 }
 
