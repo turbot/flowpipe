@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -241,14 +240,18 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 	var resp map[string]any
 	var err error
+	var pollServerEventLogFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = runPipelineRemote(cmd, args)
 		if err != nil {
 			// TOTO
 		}
+
+		pollServerEventLogFunc = pollServerEventLog
 	} else {
 		resp, err = runPipelineLocal(cmd, args)
+		pollServerEventLogFunc = pollLocalEventLog
 	}
 
 	if resp != nil && resp["flowpipe"] != nil {
@@ -304,7 +307,8 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 
 		// poll logs & print
 		for {
-			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollServerEventLog)
+
+			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollServerEventLogFunc)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
 				return
@@ -362,7 +366,7 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 	}()
 
 	// construct the pipeline name _after_ initializing so the cache is initialized
-	pipelineName := constructPipelineFullyQualifiedName(args[0])
+	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
 
 	// extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
@@ -390,26 +394,6 @@ func getPipelineArgs(cmd *cobra.Command) map[string]string {
 		pipelineArgs[splitData[0]] = splitData[1]
 	}
 	return pipelineArgs
-}
-
-// todo kai this is copied from internal/service/api/pipeline.go
-// unify
-func constructPipelineFullyQualifiedName(pipelineName string) string {
-	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
-	// For example: foo.pipeline.bar
-	// However, since foo is the top level mod, we should be able to just run the pipeline bar
-	splitPipelineName := strings.Split(pipelineName, ".")
-	// If the pipeline name provided is not fully qualified
-	if len(splitPipelineName) == 1 {
-		// Get the root mod name from the cache
-		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
-			if rootModName, ok := rootModNameCached.(string); ok {
-				// Prepend the root mod name to the pipeline name to get the fully qualified name
-				pipelineName = fmt.Sprintf("%s.pipeline.%s", rootModName, pipelineName)
-			}
-		}
-	}
-	return pipelineName
 }
 
 // Helper function to format a section
@@ -510,4 +494,6 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 }
 
 // TODO: Implement when we have local execution
-// func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {}
+func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+	return true, 0, nil, nil
+}

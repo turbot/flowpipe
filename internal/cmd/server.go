@@ -19,12 +19,8 @@ func serverCmd() *cobra.Command {
 		Short: "Start the Flowpipe server",
 		Run:   startServerFunc(),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			ctx := cmd.Context()
-			err := docker.Initialize(ctx)
-			if err != nil {
-				return err
-			}
 
+			// TODO KAI look at whether this is really needed
 			serviceConfig.Initialize()
 			return nil
 		},
@@ -48,10 +44,11 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
 
+		error_helpers.FailOnError(docker.Initialize(ctx))
+
 		m, err := manager.NewManager(ctx,
 			manager.WithServerConfig(viper.GetString(constants.ArgListen), viper.GetInt(constants.ArgPort)),
 		).Start()
-
 		error_helpers.FailOnError(err)
 
 		// Block until we receive a signal

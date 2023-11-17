@@ -131,7 +131,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 }
 
 func GetPipeline(pipelineName string) (*types.GetPipelineResponse, error) {
-	pipelineFullName := constructPipelineFullyQualifiedName(pipelineName)
+	pipelineFullName := ConstructPipelineFullyQualifiedName(pipelineName)
 
 	pipelineCached, found := cache.GetCache().Get(pipelineFullName)
 	if !found {
@@ -210,7 +210,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		return
 	}
 
-	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
+	pipelineName := ConstructPipelineFullyQualifiedName(uri.PipelineName)
 
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
@@ -288,7 +288,7 @@ func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es
 	return response, pipelineCmd, nil
 }
 
-func constructPipelineFullyQualifiedName(pipelineName string) string {
+func ConstructPipelineFullyQualifiedName(pipelineName string) string {
 	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
 	// For example: foo.pipeline.bar
 	// However, since foo is the top level mod, we should be able to just run the pipeline bar
