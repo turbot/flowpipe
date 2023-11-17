@@ -2,7 +2,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 	"os"
@@ -112,8 +111,8 @@ func (m *Manager) initializeResources() error {
 	pipelineDir := viper.GetString(constants.ArgModLocation)
 	logger.Info("Starting Flowpipe", "pipelineDir", pipelineDir)
 
-	var pipelines = map[string]*modconfig.Pipeline{}
-	var triggers = map[string]*modconfig.Trigger{}
+	var pipelines map[string]*modconfig.Pipeline
+	var triggers map[string]*modconfig.Trigger
 	var modInfo *modconfig.Mod
 
 	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
@@ -179,7 +178,7 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 		logger := fplog.Logger(m.ctx)
 		logger.Info("caching pipelines and triggers")
 		m.triggers = w.Mod.ResourceMaps.Triggers
-		m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 		if err != nil {
 			logger.Error("error caching pipelines and triggers", "error", err)
 		} else {
@@ -289,13 +288,6 @@ func (m *Manager) Stop() error {
 }
 
 func (m *Manager) InterruptHandler() {
-	fmt.Println("IN")
-	defer func() {
-		fmt.Println("OUT")
-		if r := recover(); r != nil {
-			fmt.Println(r)
-		}
-	}()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	done := make(chan bool, 1)

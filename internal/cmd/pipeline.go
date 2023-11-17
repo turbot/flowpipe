@@ -244,14 +244,14 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = runPipelineRemote(cmd, args)
-		if err != nil {
-			// TOTO
-		}
 
 		pollServerEventLogFunc = pollServerEventLog
 	} else {
 		resp, err = runPipelineLocal(cmd, args)
 		pollServerEventLogFunc = pollLocalEventLog
+	}
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error executing pipeline")
 	}
 
 	if resp != nil && resp["flowpipe"] != nil {

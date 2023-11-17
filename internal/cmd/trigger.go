@@ -49,6 +49,10 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	} else {
 		resp, err = listTriggerLocal(cmd, args)
 	}
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error listing triggers transforming")
+		return
+	}
 
 	if resp != nil {
 		printer := printers.GetPrinter(cmd)

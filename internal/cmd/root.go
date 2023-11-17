@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -59,17 +57,4 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	rootCmd.AddCommand(modCmd())
 
 	return rootCmd
-}
-
-func validateArgs() error {
-	// TODO add tests
-	// ensure port is provided with host
-	if viper.IsSet(constants.ArgHost) {
-		url, err := url.Parse(viper.GetString(constants.ArgHost))
-		if err != nil || url.Port() == "" {
-			// TODO KAI finalise error
-			return fmt.Errorf("invalid 'host' argument: must be of form http://<host>:<port>")
-		}
-	}
-	return nil
 }
