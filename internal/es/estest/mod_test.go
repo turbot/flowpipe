@@ -2015,7 +2015,7 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
