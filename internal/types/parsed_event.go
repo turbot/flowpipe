@@ -8,6 +8,7 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/utils"
@@ -49,12 +50,79 @@ func NewPrefix(fullPipelineName string, colorGenerator *color.DynamicColorGenera
 	}
 }
 
+func (p ParsedEventPrefix) getRetryString() string {
+	if p.RetryIndex == nil {
+		return ""
+	}
+	return aurora.Sprintf(aurora.Index(8, "#%d"), *p.RetryIndex)
+}
+
+func (p ParsedEventPrefix) getPipelineString() string {
+	c := p.cg.GetColorForElement(p.PipelineName)
+	return aurora.Sprintf(aurora.Index(c, p.PipelineName))
+}
+
+func (p ParsedEventPrefix) getLoopString() string {
+	if p.LoopIndex == nil || p.StepName == nil {
+		return ""
+	}
+
+	key := fmt.Sprintf("%s.%s.%s.%d", p.PipelineName, *p.StepName, types.SafeString(p.ForEachKey), *p.LoopIndex)
+	c := p.cg.GetColorForElement(key)
+	return aurora.Sprintf(aurora.Index(c, *p.LoopIndex))
+}
+
+func (p ParsedEventPrefix) getForEachString(loopString string) string {
+	if p.ForEachKey == nil || p.StepName == nil {
+		return ""
+	}
+
+	key := fmt.Sprintf("%s.%s.%s", p.PipelineName, *p.StepName, *p.ForEachKey)
+	c := p.cg.GetColorForElement(key)
+
+	if loopString != "" {
+		return aurora.Sprintf("%s%s%s", aurora.Index(c, *p.ForEachKey+"["), loopString, aurora.Index(c, "]"))
+	} else {
+		return aurora.Sprintf(aurora.Index(c, *p.ForEachKey))
+	}
+}
+
+func (p ParsedEventPrefix) getStepString(eachString string, loopString string) string {
+	if p.StepName == nil {
+		return ""
+	}
+
+	key := fmt.Sprintf("%s.%s", p.PipelineName, *p.StepName)
+	c := p.cg.GetColorForElement(key)
+	if eachString != "" {
+		return aurora.Sprintf("%s%s%s", aurora.Index(c, *p.StepName+"["), eachString, aurora.Index(c, "]"))
+	} else if loopString != "" {
+		return aurora.Sprintf("%s%s%s", aurora.Index(c, *p.StepName+"["), loopString, aurora.Index(c, "]"))
+	} else {
+		return fmt.Sprintf("%s", aurora.Index(c, *p.StepName))
+	}
+}
+
 func (p ParsedEventPrefix) String() string {
+	retryString := p.getRetryString()
+	loopString := p.getLoopString()
+	eachString := p.getForEachString(loopString)
+	stepString := p.getStepString(eachString, loopString)
+	pipelineString := p.getPipelineString()
+
+	if stepString == "" {
+		return fmt.Sprintf("[%s]", pipelineString)
+	} else {
+		return fmt.Sprintf("[%s.%s]%s", pipelineString, stepString, retryString)
+	}
+}
+
+func (p ParsedEventPrefix) StringOld() string {
 	plString := aurora.Green(p.PipelineName)
 
 	retryString := ""
 	if p.RetryIndex != nil {
-		retryString = aurora.Sprintf(aurora.Blue("#%d"), *p.RetryIndex)
+		retryString = aurora.Sprintf(aurora.Gray(25, "#%d"), *p.RetryIndex)
 	}
 
 	loopString := ""
@@ -125,7 +193,7 @@ func (p ParsedEventWithInput) String() string {
 		}
 		valueString := ""
 		if isSimpleType(v) {
-			valueString = fmt.Sprintf("%v", aurora.BrightBlue(v))
+			valueString = fmt.Sprintf("%v", v)
 		} else {
 			s, err := prettyjson.Marshal(v)
 			if err != nil {
@@ -164,7 +232,7 @@ func (p ParsedEventWithArgs) String() string {
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s Arg: %s = %s\n", pre, aurora.Blue(k), aurora.BrightBlue(valueString))
+		out += fmt.Sprintf("%s Arg: %s = %s\n", pre, aurora.Blue(k), valueString)
 	}
 	return out
 }
@@ -186,7 +254,7 @@ func (p ParsedEventWithOutput) String() string {
 			}
 			valueString := ""
 			if isSimpleType(v) {
-				valueString = aurora.Sprintf(aurora.BrightBlue("%v"), v)
+				valueString = fmt.Sprintf("%v", aurora.BrightBlue(v))
 			} else {
 				s, err := prettyjson.Marshal(v)
 				if err != nil {
@@ -195,7 +263,7 @@ func (p ParsedEventWithOutput) String() string {
 					valueString = string(s)
 				}
 			}
-			out += fmt.Sprintf("%s %s: %s = %s\n", pre, "Output", aurora.Blue(k), aurora.BrightBlue(valueString))
+			out += fmt.Sprintf("%s %s: %s = %s\n", pre, "Output", aurora.Blue(k), valueString)
 		}
 	}
 	duration := ""
