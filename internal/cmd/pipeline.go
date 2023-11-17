@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"regexp"
 	"strings"
@@ -228,9 +229,15 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 
 			lastIndex := -1
 			// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
+			cg, err := color.NewDynamicColorGenerator(0, 16)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
+				return
+			}
 			printer := printers.StringPrinter{}
 			printableResource := types.PrintableParsedEvent{}
 			printableResource.Registry = make(map[string]types.ParsedEventRegistryItem)
+			printableResource.ColorGenerator = cg
 
 			// print execution_id / stale info
 			var header []any
@@ -240,7 +247,7 @@ func runPipelineFunc() func(cmd *cobra.Command, args []string) {
 				LastLoaded:  lastLoaded,
 			})
 			printableResource.Items = header
-			err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
 				return

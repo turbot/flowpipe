@@ -3,9 +3,10 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
 	"github.com/hokaccha/go-prettyjson"
+	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -22,9 +23,9 @@ type ParsedHeader struct {
 }
 
 func (p ParsedHeader) String() string {
-	out := fmt.Sprintf("[%s] %s\n", color.HiGreenString("Execution"), p.ExecutionId)
+	out := fmt.Sprintf("[%s] %s\n", aurora.BrightGreen("Execution"), p.ExecutionId)
 	if p.IsStale {
-		out += fmt.Sprintf("[%s] %s\n", color.HiRedString("Stale"), color.RedString("Mod is stale, last loaded: %s", p.LastLoaded))
+		out += fmt.Sprintf("[%s] %s\n", aurora.BrightRed("Stale"), aurora.Sprintf(aurora.Red("Mod is stale, last loaded: %s"), p.LastLoaded))
 	}
 	return out
 }
@@ -37,38 +38,39 @@ type ParsedEventPrefix struct {
 	ForEachKey       *string
 	LoopIndex        *int
 	RetryIndex       *int
+	cg               *color.DynamicColorGenerator
 }
 
 func (p ParsedEventPrefix) String() string {
-	plString := color.GreenString("%s", p.PipelineName)
+	plString := aurora.Green(p.PipelineName)
 
 	retryString := ""
 	if p.RetryIndex != nil {
-		retryString = color.BlueString("#%d", *p.RetryIndex)
+		retryString = aurora.Sprintf(aurora.Blue("#%d"), *p.RetryIndex)
 	}
 
 	loopString := ""
 	if p.LoopIndex != nil {
-		loopString = color.RedString("%d", *p.LoopIndex)
+		loopString = aurora.Sprintf(aurora.Red("%d"), *p.LoopIndex)
 	}
 
 	feString := ""
 	if p.ForEachKey != nil {
 		if loopString != "" {
-			feString = fmt.Sprintf("%s%s%s", color.CyanString("%s[", *p.ForEachKey), loopString, color.CyanString("]"))
+			feString = fmt.Sprintf("%s%s%s", aurora.Sprintf(aurora.Cyan("%s["), *p.ForEachKey), loopString, aurora.Cyan("]"))
 		} else {
-			feString = color.CyanString("%s", *p.ForEachKey)
+			feString = aurora.Sprintf(aurora.Cyan(*p.ForEachKey))
 		}
 	}
 
 	stepString := ""
 	if p.StepName != nil {
 		if feString != "" {
-			stepString = fmt.Sprintf("%s%s%s", color.MagentaString("%s[", *p.StepName), feString, color.MagentaString("]"))
+			stepString = fmt.Sprintf("%s%s%s", aurora.Sprintf(aurora.Magenta("%s["), *p.StepName), feString, aurora.Magenta("]"))
 		} else if loopString != "" {
-			stepString = fmt.Sprintf("%s%s%s", color.MagentaString("%s[", *p.StepName), loopString, color.MagentaString("]"))
+			stepString = fmt.Sprintf("%s%s%s", aurora.Sprintf(aurora.Magenta("%s["), *p.StepName), loopString, aurora.Magenta("]"))
 		} else {
-			stepString = color.MagentaString("%s", *p.StepName)
+			stepString = aurora.Sprintf(aurora.Magenta("%s"), *p.StepName)
 		}
 	}
 
@@ -105,7 +107,7 @@ func (p ParsedEventWithInput) String() string {
 
 	stepString := ""
 	if p.StepType != "" {
-		stepString = fmt.Sprintf(": %s step.", color.BlueString(p.StepType))
+		stepString = fmt.Sprintf(": %s step.", aurora.Blue(p.StepType))
 	}
 
 	out += fmt.Sprintf("%s Starting%s\n", pre, stepString)
@@ -115,16 +117,16 @@ func (p ParsedEventWithInput) String() string {
 		}
 		valueString := ""
 		if isSimpleType(v) {
-			valueString = color.HiBlueString("%v", v)
+			valueString = fmt.Sprintf("%v", aurora.BrightBlue(v))
 		} else {
 			s, err := prettyjson.Marshal(v)
 			if err != nil {
-				valueString = color.RedString("error parsing value")
+				valueString = aurora.Sprintf(aurora.Red("error parsing value"))
 			} else {
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s Input: %s = %s\n", pre, color.BlueString(k), color.HiBlueString(valueString))
+		out += fmt.Sprintf("%s Input: %s = %s\n", pre, aurora.Blue(k), aurora.BrightBlue(valueString))
 	}
 	return out
 }
@@ -145,16 +147,16 @@ func (p ParsedEventWithArgs) String() string {
 		}
 		valueString := ""
 		if isSimpleType(v) {
-			valueString = color.HiBlueString("%v", v)
+			valueString = fmt.Sprintf("%v", aurora.BrightBlue(v))
 		} else {
 			s, err := prettyjson.Marshal(v)
 			if err != nil {
-				valueString = color.RedString("error parsing value")
+				valueString = aurora.Sprintf(aurora.Red("error parsing value"))
 			} else {
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s Arg: %s = %s\n", pre, color.BlueString(k), color.HiBlueString(valueString))
+		out += fmt.Sprintf("%s Arg: %s = %s\n", pre, aurora.Blue(k), aurora.BrightBlue(valueString))
 	}
 	return out
 }
@@ -176,23 +178,23 @@ func (p ParsedEventWithOutput) String() string {
 			}
 			valueString := ""
 			if isSimpleType(v) {
-				valueString = color.HiBlueString("%v", v)
+				valueString = aurora.Sprintf(aurora.BrightBlue("%v"), v)
 			} else {
 				s, err := prettyjson.Marshal(v)
 				if err != nil {
-					valueString = color.RedString("error parsing value")
+					valueString = aurora.Sprintf(aurora.Red("error parsing value"))
 				} else {
 					valueString = string(s)
 				}
 			}
-			out += fmt.Sprintf("%s %s: %s = %s\n", pre, "Output", color.BlueString(k), color.HiBlueString(valueString))
+			out += fmt.Sprintf("%s %s: %s = %s\n", pre, "Output", aurora.Blue(k), aurora.BrightBlue(valueString))
 		}
 	}
 	duration := ""
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s: %s\n", pre, color.HiGreenString("Complete"), color.YellowString("%s", duration))
+	out += fmt.Sprintf("%s %s: %s\n", pre, aurora.BrightGreen("Complete"), aurora.Yellow(duration))
 	return out
 }
 
@@ -209,7 +211,7 @@ func (p ParsedErrorEvent) String() string {
 
 	if p.Type != event.HandlerPipelineFailed {
 		for _, e := range p.Errors {
-			out += fmt.Sprintf("%s %s: %s\n", pre, color.RedString(e.Error.Title), color.RedString(e.Error.Detail))
+			out += fmt.Sprintf("%s %s: %s\n", pre, aurora.Red(e.Error.Title), aurora.Red(e.Error.Detail))
 		}
 	}
 
@@ -217,7 +219,7 @@ func (p ParsedErrorEvent) String() string {
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s: %s\n", pre, color.HiRedString("Failed with %d error(s)", len(p.Errors)), color.YellowString("%s", duration))
+	out += fmt.Sprintf("%s %s: %s\n", pre, aurora.Sprintf(aurora.BrightRed("Failed with %d error(s)"), len(p.Errors)), aurora.Yellow(duration))
 	return out
 }
 
@@ -227,8 +229,9 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items    interface{}
-	Registry map[string]ParsedEventRegistryItem
+	Items          interface{}
+	Registry       map[string]ParsedEventRegistryItem
+	ColorGenerator *color.DynamicColorGenerator
 }
 
 func (p PrintableParsedEvent) GetItems() interface{} {
