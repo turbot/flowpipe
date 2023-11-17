@@ -28,6 +28,7 @@ func triggerCmd() *cobra.Command {
 	return cmd
 }
 
+// list
 func triggerListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:  "list",
@@ -38,16 +39,6 @@ func triggerListCmd() *cobra.Command {
 	return cmd
 }
 
-func triggerShowCmd() *cobra.Command {
-	var triggerShowCmd = &cobra.Command{
-		Use:  "show <trigger-name>",
-		Args: cobra.ExactArgs(1),
-		Run:  showTriggerFunc,
-	}
-
-	return triggerShowCmd
-}
-
 func listTriggerFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 	var resp *types.ListTriggerResponse
@@ -56,7 +47,7 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = listTriggerRemote(ctx)
 	} else {
-		resp, err = listTriggerInProcess(cmd, args)
+		resp, err = listTriggerLocal(cmd, args)
 	}
 
 	if resp != nil {
@@ -75,7 +66,21 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func listTriggerInProcess(cmd *cobra.Command, args []string) (*types.ListTriggerResponse, error) {
+func listTriggerRemote(ctx context.Context) (*types.ListTriggerResponse, error) {
+	limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
+	nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
+
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.TriggerApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
+	if err != nil {
+		return nil, err
+
+	}
+	// map the API data type into the internal data type
+	return types.ListTriggerResponseFromAPI(resp), err
+}
+
+func listTriggerLocal(cmd *cobra.Command, args []string) (*types.ListTriggerResponse, error) {
 	ctx := cmd.Context()
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
@@ -93,18 +98,16 @@ func listTriggerInProcess(cmd *cobra.Command, args []string) (*types.ListTrigger
 	return api.ListTriggers()
 }
 
-func listTriggerRemote(ctx context.Context) (*types.ListTriggerResponse, error) {
-	limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
-	nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
+// show
 
-	apiClient := common.GetApiClient()
-	resp, _, err := apiClient.TriggerApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
-	if err != nil {
-		return nil, err
-
+func triggerShowCmd() *cobra.Command {
+	var triggerShowCmd = &cobra.Command{
+		Use:  "show <trigger-name>",
+		Args: cobra.ExactArgs(1),
+		Run:  showTriggerFunc,
 	}
-	// map the API data type into the internal data type
-	return types.ListTriggerResponseFromAPI(resp), err
+
+	return triggerShowCmd
 }
 
 func showTriggerFunc(cmd *cobra.Command, args []string) {
@@ -116,7 +119,7 @@ func showTriggerFunc(cmd *cobra.Command, args []string) {
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = getTriggerRemote(ctx, triggerName)
 	} else {
-		resp, err = getTriggerInProcess(ctx, triggerName)
+		resp, err = getTriggerLocal(ctx, triggerName)
 	}
 
 	if err != nil {
@@ -157,7 +160,17 @@ func showTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func getTriggerInProcess(ctx context.Context, triggerName string) (*types.FpTrigger, error) {
+func getTriggerRemote(ctx context.Context, name string) (*types.FpTrigger, error) {
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.TriggerApi.Get(ctx, name).Execute()
+	if err != nil {
+		return nil, err
+	}
+	t := types.FpTriggerFromAPI(*resp)
+	return &t, nil
+}
+
+func getTriggerLocal(ctx context.Context, triggerName string) (*types.FpTrigger, error) {
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
@@ -168,14 +181,4 @@ func getTriggerInProcess(ctx context.Context, triggerName string) (*types.FpTrig
 
 	// try to fetch the pipeline from the cache
 	return api.GetTrigger(triggerName)
-}
-
-func getTriggerRemote(ctx context.Context, name string) (*types.FpTrigger, error) {
-	apiClient := common.GetApiClient()
-	resp, _, err := apiClient.TriggerApi.Get(ctx, name).Execute()
-	if err != nil {
-		return nil, err
-	}
-	t := types.FpTriggerFromAPI(*resp)
-	return &t, nil
 }

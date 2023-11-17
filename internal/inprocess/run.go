@@ -13,7 +13,7 @@ import (
 
 func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName string, initialWaitTime time.Duration, args modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(ctx),
+		Event:               event.NewExecutionEvent(),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                pipelineName,
 		Args:                args,

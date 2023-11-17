@@ -50,7 +50,6 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 
 		m, err := manager.NewManager(ctx,
 			manager.WithServerConfig(viper.GetString(constants.ArgListen), viper.GetInt(constants.ArgPort)),
-			manager.WithESService(true),
 		).Start()
 
 		error_helpers.FailOnError(err)

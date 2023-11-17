@@ -43,15 +43,8 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	executionMode := "asynchronous"
-	if webhookQuery.ExecutionMode != nil {
-		executionMode = *webhookQuery.ExecutionMode
-	}
-
-	waitRetry := 60
-	if webhookQuery.WaitTime != nil {
-		waitRetry = *webhookQuery.WaitTime
-	}
+	executionMode := webhookQuery.GetExecutionMode()
+	waitRetry := webhookQuery.GetWaitTime()
 
 	webhookTriggerName := webhookUri.Trigger
 	webhookTriggerHash := webhookUri.Hash
@@ -155,7 +148,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	pipelineName := pipeline.AsValueMap()["name"].AsString()
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(c),
+		Event:               event.NewExecutionEvent(),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                pipelineName,
 	}

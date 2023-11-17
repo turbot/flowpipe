@@ -96,7 +96,7 @@ func (tr *TriggerRunnerBase) Run() {
 	}
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(tr.Ctx),
+		Event:               event.NewExecutionEvent(),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                pipelineName,
 		Args:                pipelineArgs,

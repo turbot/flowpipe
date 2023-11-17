@@ -16,9 +16,7 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/inprocess"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -63,7 +61,7 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = listPipelineRemote()
 	} else {
-		resp, err = listPipelineInProcess(cmd, args)
+		resp, err = listPipelineLocal(cmd, args)
 	}
 
 	if err != nil {
@@ -98,7 +96,7 @@ func listPipelineRemote() (*types.ListPipelineResponse, error) {
 	return types.ListPipelineResponseFromAPI(resp), err
 }
 
-func listPipelineInProcess(cmd *cobra.Command, args []string) (*types.ListPipelineResponse, error) {
+func listPipelineLocal(cmd *cobra.Command, args []string) (*types.ListPipelineResponse, error) {
 	ctx := cmd.Context()
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
@@ -138,7 +136,7 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = getPipelineRemote(pipelineName)
 	} else {
-		resp, err = getPipelineInProcess(ctx, pipelineName)
+		resp, err = getPipelineLocal(ctx, pipelineName)
 	}
 
 	if err != nil {
@@ -211,7 +209,7 @@ func getPipelineRemote(pipelineName string) (*types.GetPipelineResponse, error) 
 	return types.GetPipelineResponseFromAPI(resp), err
 }
 
-func getPipelineInProcess(ctx context.Context, pipelineName string) (*types.GetPipelineResponse, error) {
+func getPipelineLocal(ctx context.Context, pipelineName string) (*types.GetPipelineResponse, error) {
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
@@ -242,35 +240,21 @@ func pipelineRunCmd() *cobra.Command {
 }
 
 func runPipelineFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	var resp map[string]any
+	var err error
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
-		runPipelineRemote(cmd, args)
+		resp, err = runPipelineRemote(cmd, args)
+		if err != nil {
+			// TOTO
+		}
 	} else {
-		runPipelineInProcess(cmd, args)
-	}
-}
-
-func runPipelineRemote(cmd *cobra.Command, args []string) {
-	ctx := cmd.Context()
-
-	pipelineName := args[0]
-	// extract the pipeline args from the flags
-	pipelineArgs := getPipelineArgs(cmd)
-
-	// API client
-	apiClient := common.GetApiClient()
-	cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
-
-	// Set the pipeline args
-	cmdPipelineRun.ArgsString = &pipelineArgs
-
-	resp, _, err := apiClient.PipelineApi.Cmd(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
-	if err != nil {
-		error_helpers.ShowError(ctx, err)
-		return
+		resp, err = runPipelineLocal(cmd, args)
 	}
 
 	if resp != nil && resp["flowpipe"] != nil {
+
 		contents := resp["flowpipe"].(map[string]any)
 		executionId := ""
 		pipelineId := ""
@@ -349,11 +333,30 @@ func runPipelineRemote(cmd *cobra.Command, args []string) {
 	}
 }
 
-func runPipelineInProcess(cmd *cobra.Command, args []string) {
+func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
+	ctx := cmd.Context()
+
+	pipelineName := args[0]
+	// extract the pipeline args from the flags
+	pipelineArgs := getPipelineArgs(cmd)
+
+	// API client
+	apiClient := common.GetApiClient()
+	cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
+
+	// Set the pipeline args
+	cmdPipelineRun.ArgsString = &pipelineArgs
+
+	resp, _, err := apiClient.PipelineApi.Cmd(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
+
+	return resp, err
+}
+
+func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error) {
 	ctx := cmd.Context()
 
 	// create and start the manager in local mode (i.e. do not set listen address)
-	m, err := manager.NewManager(ctx, manager.WithESService(true)).Start()
+	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 	defer func() {
 		// TODO ignore shutdown error?
@@ -362,26 +365,17 @@ func runPipelineInProcess(cmd *cobra.Command, args []string) {
 
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := constructPipelineFullyQualifiedName(args[0])
+
 	// extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
-	pipelineDefn, err := db.GetPipeline(pipelineName)
-	error_helpers.FailOnError(err)
-	var coercedArgs map[string]interface{}
-	if len(pipelineArgs) > 0 {
-		var errs []error
-		coercedArgs, errs = pipelineDefn.CoercePipelineParams(pipelineArgs)
-		if len(errs) > 0 {
-			error_helpers.FailOnError(error_helpers.CombineErrors(errs...))
-		}
+
+	input := types.CmdPipeline{
+		Command:    "run",
+		ArgsString: pipelineArgs,
 	}
 
-	// todo parse args???
-	// todo get wait time from args
-	_, pipelineCmd, err := inprocess.RunPipeline(ctx, m.ESService, pipelineName, 100*time.Millisecond, coercedArgs)
-	error_helpers.FailOnErrorWithMessage(err, "Error creating execution")
-
-	_, _, err = inprocess.GetPipelineExAndWait(ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
-	error_helpers.FailOnErrorWithMessage(err, "Error getting pipeline execution")
+	resp, _, err := api.ExecutePipeline(input, pipelineName, m.ESService)
+	return resp, err
 }
 
 func getPipelineArgs(cmd *cobra.Command) map[string]string {

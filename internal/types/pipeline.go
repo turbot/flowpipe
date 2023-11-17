@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -88,7 +89,7 @@ func GetPipelineResponseFromAPI(apiResp *flowpipeapiclient.GetPipelineResponse) 
 		OutputConfig: make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
 	}
 
-	// TODO KAI >???????
+	//// TODO KAI >???????
 	//for _, s := range apiResp.Steps {
 	//	res.Steps = append(res.Steps)
 	//}
@@ -114,6 +115,21 @@ type CmdPipeline struct {
 	ArgsString    map[string]string      `json:"args_string,omitempty"`
 	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
 	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
+}
+
+func (c *CmdPipeline) GetExecutionMode() string {
+	executionMode := localconstants.DefaultExecutionMode
+	if c.ExecutionMode != nil {
+		executionMode = *c.ExecutionMode
+	}
+	return executionMode
+}
+
+func (c *CmdPipeline) GetWaitRetry() int {
+	if c.WaitRetry != nil {
+		return *c.WaitRetry
+	}
+	return localconstants.DefaultWaitRetry
 }
 
 type PrintablePipeline struct {

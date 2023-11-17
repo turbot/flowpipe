@@ -47,8 +47,10 @@ type Manager struct {
 	HTTPPort    int
 
 	// which services should we start
-	startES  bool
-	startAPI bool
+	// event sourcing service
+	startES bool
+	// api service and scheduler service
+	serverMode bool
 
 	Status    string
 	StartedAt *time.Time
@@ -74,9 +76,9 @@ func (m *Manager) Start() (*Manager, error) {
 	fplog.Logger(m.ctx).Debug("Manager starting")
 	defer fplog.Logger(m.ctx).Debug("Manager started")
 
-	// initialize - load and cache triggers and pipelines
+	// initializeResources - load and cache triggers and pipelines
 	// if we are in server mode and there is a modfile, setup the file watcher
-	if err := m.initialize(); err != nil {
+	if err := m.initializeResources(); err != nil {
 		return nil, err
 	}
 
@@ -87,7 +89,7 @@ func (m *Manager) Start() (*Manager, error) {
 		}
 	}
 
-	if m.startAPI {
+	if m.serverMode {
 		if err := m.startAPIService(); err != nil {
 			return nil, err
 		}
@@ -104,7 +106,7 @@ func (m *Manager) Start() (*Manager, error) {
 
 // load and cache triggers and pipelines
 // if we are in server mode and there is a modfile, setup the file watcher
-func (m *Manager) initialize() error {
+func (m *Manager) initializeResources() error {
 	logger := fplog.Logger(m.ctx)
 
 	pipelineDir := viper.GetString(constants.ArgModLocation)
@@ -121,7 +123,7 @@ func (m *Manager) initialize() error {
 		}
 
 		// if we are running in server mode, setup the file watcher
-		if m.startAPI {
+		if m.serverMode {
 			if err := m.setupWatcher(w); err != nil {
 				return err
 			}

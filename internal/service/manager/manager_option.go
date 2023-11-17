@@ -21,16 +21,17 @@ func WithRaftAddress(addr string) ManagerOption {
 	}
 }
 
+func WithESService() ManagerOption {
+	return func(m *Manager) {
+		m.startES = true
+	}
+}
+
 func WithServerConfig(addr string, port int) ManagerOption {
 	return func(m *Manager) {
 		m.HTTPAddress = addr
 		m.HTTPPort = port
-		m.startAPI = true
-	}
-}
-
-func WithESService(enabled bool) ManagerOption {
-	return func(m *Manager) {
-		m.startES = enabled
+		m.serverMode = true
+		m.startES = true
 	}
 }
