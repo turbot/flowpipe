@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
@@ -87,6 +88,12 @@ func (suite *ModTestSuite) SetupSuite() {
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 	suite.esService = m.ESService
+
+	err = docker.Initialize(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	suite.manager = m
 
 	// Give some time for Watermill to fully start
@@ -2013,10 +2020,10 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	if pex.Status != "finished" {
-		assert.Fail("Pipeline execution not finished")
-		return
-	}
+	assert.Equal("failed", pex.Status)
+	assert.NotNil(pex.Errors)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "InvalidClientTokenId")
 }
 
 func TestModTestingSuite(t *testing.T) {

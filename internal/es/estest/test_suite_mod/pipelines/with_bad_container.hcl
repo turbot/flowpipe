@@ -15,10 +15,7 @@ pipeline "with_bad_container" {
     step "container" "container_run" {
         image = "amazon/aws-cli"
 
-        cmd = concat(
-          ["aws", "sts"],
-          ["get-caller-identity"]
-        )
+        cmd = ["sts", "get-caller-identity"]
 
         env = {
             AWS_REGION = param.aws_region
