@@ -33,7 +33,6 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: prehook_and_GetWorkspaceResourcesOfType
 
       - uses: actions/setup-go@v4
         with:
