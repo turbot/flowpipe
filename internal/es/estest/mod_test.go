@@ -2026,6 +2026,34 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 	assert.Contains(pex.Errors[0].Error.Detail, "InvalidClientTokenId")
 }
 
+func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_bad_container_with_is_error", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1500*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// The pipeline step should faile due to the invalid credentials, but the pipeline should continue
+	assert.Equal(1, len(pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal(400, pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+
+	// The second step checks if the first step failed and it should be skipped
+	assert.Equal(1, len(pex.StepStatus["pipeline.delete_s3_bucket"]["0"].StepExecutions))
+	assert.Equal("skipped", pex.StepStatus["pipeline.delete_s3_bucket"]["0"].StepExecutions[0].Output.Status)
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
