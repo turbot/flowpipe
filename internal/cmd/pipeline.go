@@ -129,6 +129,7 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	var resp *types.GetPipelineResponse
 	var err error
 	pipelineName := args[0]
+
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = getPipelineRemote(pipelineName)

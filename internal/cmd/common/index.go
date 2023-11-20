@@ -3,10 +3,10 @@ package common
 import (
 	"crypto/tls"
 	"errors"
-	"github.com/spf13/viper"
 	"net"
 	"net/http"
 
+	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/pipe-fittings/constants"
 )
