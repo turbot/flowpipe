@@ -103,10 +103,6 @@ func listPipelineLocal(cmd *cobra.Command, args []string) (*types.ListPipelineRe
 		_ = m.Stop()
 	}()
 
-	// TODO KAI do we need
-	//Give some time for Watermill to fully start
-	//	time.Sleep(2 * time.Second)
-
 	// now list the pipelines
 	return api.ListPipelines()
 }
@@ -365,6 +361,9 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 		// TODO ignore shutdown error?
 		_ = m.Stop()
 	}()
+
+	//Give some time for Watermill to fully start
+	time.Sleep(2 * time.Second)
 
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])

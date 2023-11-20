@@ -94,10 +94,6 @@ func listTriggerLocal(cmd *cobra.Command, args []string) (*types.ListTriggerResp
 		_ = m.Stop()
 	}()
 
-	// TODO KAI do we need
-	//Give some time for Watermill to fully start
-	//	time.Sleep(2 * time.Second)
-
 	// now list the pipelines
 	return api.ListTriggers()
 }

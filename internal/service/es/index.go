@@ -205,6 +205,5 @@ func (es *ESService) Stop() error {
 	logger.Debug("ES stopping")
 	defer logger.Debug("ES stopped")
 
-	es.router.Close()
-	return nil
+	return es.router.Close()
 }

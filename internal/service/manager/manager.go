@@ -256,8 +256,8 @@ func (m *Manager) Stop() error {
 	logger := fplog.Logger(m.ctx)
 	defer func() {
 		// this is causing "inappropriate ioctl for device" error: https://github.com/uber-go/zap/issues/880
-		//nolint:errcheck // we don't care if this fails
-		logger.Sync()
+		// we don't care if this fails
+		_ = logger.Sync()
 	}()
 
 	if m.apiService != nil {
