@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/pipe-fittings/perr"
@@ -22,6 +23,41 @@ type FpTrigger struct {
 type ListTriggerResponse struct {
 	Items     []FpTrigger `json:"items"`
 	NextToken *string     `json:"next_token,omitempty"`
+}
+
+func (o ListTriggerResponse) GetResourceType() string {
+	return "ListTriggerResponse"
+}
+
+func ListTriggerResponseFromAPI(apiResp *flowpipeapiclient.ListTriggerResponse) *ListTriggerResponse {
+	if apiResp == nil {
+		return nil
+	}
+
+	var res = &ListTriggerResponse{
+		NextToken: apiResp.NextToken,
+	}
+	for i, apiItem := range apiResp.Items {
+		res.Items[i] = FpTriggerFromAPI(apiItem)
+	}
+	return res
+}
+
+func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
+	res := FpTrigger{
+		Name:          typehelpers.SafeString(apiTrigger.Name),
+		Type:          typehelpers.SafeString(apiTrigger.Type),
+		Description:   apiTrigger.Description,
+		Pipeline:      typehelpers.SafeString(apiTrigger.Pipeline),
+		Url:           apiTrigger.Url,
+		Title:         apiTrigger.Title,
+		Documentation: apiTrigger.Documentation,
+		Tags:          make(map[string]string),
+	}
+	if apiTrigger.Tags != nil {
+		res.Tags = *apiTrigger.Tags
+	}
+	return res
 }
 
 type PrintableTrigger struct {

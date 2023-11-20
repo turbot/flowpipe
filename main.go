@@ -6,7 +6,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -23,18 +22,13 @@ var (
 
 func main() {
 	// Create a single, global context for the application
-	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
-	ctx, err := config.ContextWithConfig(ctx)
+	ctx := fplog.ContextWithLogger(context.Background())
 
 	defer func() {
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
 		}
 	}()
-	if err != nil {
-		error_helpers.FailOnError(err)
-	}
 
 	cache.InMemoryInitialize(nil)
 

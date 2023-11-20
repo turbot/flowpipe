@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
-	"github.com/turbot/flowpipe/internal/config"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -30,18 +29,13 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
 
-	c := config.GetConfigFromContext(ctx)
-
 	cwd, err := os.Getwd()
 	error_helpers.FailOnError(err)
-
-	rootCmd.Flags().StringVar(&c.ConfigPath, "config-path", "", "config file (default is $HOME/.flowpipe/flowpipe.yaml)")
 
 	cmdconfig.
 		OnCmd(rootCmd).
 		// Flowpipe API
-		AddPersistentStringFlag(localconstants.ArgApiHost, "http://localhost", "API server host").
-		AddPersistentIntFlag(localconstants.ArgApiPort, 7103, "API server port").
+		AddPersistentStringFlag(constants.ArgHost, "", "API server host, including the port number").
 		AddPersistentBoolFlag(localconstants.ArgTlsInsecure, false, "Skip TLS verification").
 		// Common (steampipe, flowpipe) flags
 		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").
@@ -56,7 +50,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// add all the subcommands
-	rootCmd.AddCommand(serviceCmd())
+	rootCmd.AddCommand(serverCmd())
 	rootCmd.AddCommand(pipelineCmd())
 	rootCmd.AddCommand(triggerCmd())
 	rootCmd.AddCommand(processCmd())

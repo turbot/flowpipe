@@ -1,40 +1,29 @@
-package es_test
+package estest
 
 import (
-	"context"
 	"fmt"
-	"strings"
-	"time"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"strings"
+	"time"
 )
 
-type FlowpipeTestSuite struct {
-	esService *es.ESService
-	manager   *manager.Manager
-	ctx       context.Context
-}
-
-func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args *modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
-
+func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 3 {
 		name = "local.pipeline." + name
 	}
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(suite.ctx),
+		Event:               event.NewExecutionEvent(),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
 		Name:                name,
 	}
 
 	if args != nil {
-		pipelineCmd.Args = *args
+		pipelineCmd.Args = args
 	}
 
 	if err := suite.esService.Send(pipelineCmd); err != nil {

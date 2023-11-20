@@ -48,10 +48,19 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
-	triggers, err := db.ListAllTriggers()
+	result, err := ListTriggers()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+
+	c.JSON(http.StatusOK, result)
+}
+
+func ListTriggers() (*types.ListTriggerResponse, error) {
+	triggers, err := db.ListAllTriggers()
+	if err != nil {
+		return nil, err
 	}
 
 	// Convert the list of triggers to FpTrigger type
@@ -90,11 +99,10 @@ func (api *APIService) listTriggers(c *gin.Context) {
 		return fpTriggers[i].Name < fpTriggers[j].Name
 	})
 
-	result := types.ListTriggerResponse{
+	result := &types.ListTriggerResponse{
 		Items: fpTriggers,
 	}
-
-	c.JSON(http.StatusOK, result)
+	return result, nil
 }
 
 // @Summary Get trigger
@@ -123,6 +131,16 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	}
 	triggerName := uri.TriggerName
 
+	fpTrigger, err := GetTrigger(triggerName)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, fpTrigger)
+}
+
+func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 	// If we run the API server with a mod foo, in order get the trigger, the API needs the fully-qualified name of the trigger.
 	// For example: foo.trigger.trigger_type.bar
 	// However, since foo is the top level mod, we should be able to just get the trigger bar
@@ -141,20 +159,19 @@ func (api *APIService) getTrigger(c *gin.Context) {
 
 	triggerCached, found := cache.GetCache().Get(triggerName)
 	if !found {
-		common.AbortWithError(c, perr.NotFoundWithMessage("trigger not found"))
-		return
+		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
 	trigger, ok := triggerCached.(*modconfig.Trigger)
 	if !ok {
-		return
+		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
 	// Get the pipeline name from the trigger
 	pipelineInfo := trigger.GetPipeline().AsValueMap()
 	pipelineName := pipelineInfo["name"].AsString()
 
-	fpTrigger := types.FpTrigger{
+	fpTrigger := &types.FpTrigger{
 		Name:          trigger.FullName,
 		Type:          modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
 		Description:   trigger.Description,
@@ -167,6 +184,5 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
 		fpTrigger.Url = &tc.Url
 	}
-
-	c.JSON(http.StatusOK, fpTrigger)
+	return fpTrigger, nil
 }

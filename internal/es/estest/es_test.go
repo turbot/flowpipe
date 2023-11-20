@@ -1,4 +1,4 @@
-package es_test
+package estest
 
 // Basic imports
 import (
@@ -18,13 +18,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
-	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/utils"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -49,9 +47,7 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
-	if err != nil {
-		panic(err)
-	}
+	error_helpers.FailOnError(err)
 
 	// clear the output dir before each test
 	outputPath := path.Join(cwd, "output")
@@ -74,47 +70,18 @@ func (suite *EsTestSuite) SetupSuite() {
 	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
-	ctx := context.Background()
-
-	ctx = fplog.ContextWithLogger(ctx)
-	ctx, err = config.ContextWithConfig(ctx)
-	if err != nil {
-		panic(err)
-	}
+	ctx := fplog.ContextWithLogger(context.Background())
 
 	suite.ctx = ctx
 
 	// We use the cache to store the pipelines
 	cache.InMemoryInitialize(nil)
 
-	m, err := manager.NewManager(ctx)
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	error_helpers.FailOnError(err)
 
-	if err != nil {
-		panic(err)
-	}
-
-	err = m.Initialize()
-	if err != nil {
-		panic(err)
-	}
-
-	// We don't do manager.Start() here because we don't want to start the API and Scheduler service
-
-	esService, err := es.NewESService(ctx)
-	if err != nil {
-		panic(err)
-	}
-	err = esService.Start()
-	if err != nil {
-		panic(err)
-	}
-	esService.Status = "running"
-	esService.StartedAt = utils.TimeNow()
-
-	suite.esService = esService
-
-	// Give some time for Watermill to fully start
-	time.Sleep(2 * time.Second)
+	suite.esService = m.ESService
 
 	suite.SetupSuiteRunCount++
 }
@@ -745,7 +712,7 @@ func (suite *EsTestSuite) TestParam() {
 func (suite *EsTestSuite) TestParamOverride() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"simple": "bar",
 	}
 
@@ -771,7 +738,7 @@ func (suite *EsTestSuite) TestParamOverride() {
 func (suite *EsTestSuite) TestParamOptional() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"simple": "bar",
 	}
 
@@ -802,7 +769,7 @@ func (suite *EsTestSuite) TestParamOptional() {
 func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"simple": "bar",
 	}
 
@@ -828,7 +795,7 @@ func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 func (suite *EsTestSuite) TestChildPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"simple": "bar",
 	}
 

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/docker"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -10,22 +12,18 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-func serviceCmd() *cobra.Command {
+func serverCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "service",
+		Use:   "server",
 		Args:  cobra.NoArgs,
-		Short: "Service commands",
-	}
+		Short: "Start the Flowpipe server",
+		Run:   startServerFunc(),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
 
-	cmd.AddCommand(serviceStartCmd())
-
-	return cmd
-}
-
-func serviceStartCmd() *cobra.Command {
-	var cmd = &cobra.Command{
-		Use: "start",
-		Run: startManagerFunc(),
+			// TODO KAI look at whether this is really needed
+			serviceConfig.Initialize()
+			return nil
+		},
 	}
 
 	cmdconfig.
@@ -33,6 +31,8 @@ func serviceStartCmd() *cobra.Command {
 		AddFilepathFlag(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.").
 		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
 		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.").
+		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
+		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "listen address port.").
 		AddBoolFlag(constants.ArgNoScheduler, false, "Disable the scheduler.").
 		AddBoolFlag(constants.ArgRetainArtifacts, false, "Retains Docker container artifacts for container step. [EXPERIMENTAL]").
 		AddBoolFlag(constants.ArgInput, true, "Enable interactive prompts")
@@ -40,31 +40,16 @@ func serviceStartCmd() *cobra.Command {
 	return cmd
 }
 
-func startManagerFunc() func(cmd *cobra.Command, args []string) {
+func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
-		err := docker.Initialize(ctx)
-		if err != nil {
-			error_helpers.FailOnError(err)
-		}
 
-		serviceConfig.Initialize(ctx)
+		error_helpers.FailOnError(docker.Initialize(ctx))
 
-		m, err := manager.NewManager(ctx)
-
-		if err != nil {
-			error_helpers.FailOnError(err)
-		}
-
-		err = m.Initialize()
-		if err != nil {
-			error_helpers.FailOnError(err)
-		}
-
-		err = m.Start()
-		if err != nil {
-			error_helpers.FailOnError(err)
-		}
+		m, err := manager.NewManager(ctx,
+			manager.WithServerConfig(viper.GetString(constants.ArgListen), viper.GetInt(constants.ArgPort)),
+		).Start()
+		error_helpers.FailOnError(err)
 
 		// Block until we receive a signal
 		m.InterruptHandler()

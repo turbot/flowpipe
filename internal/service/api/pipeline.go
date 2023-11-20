@@ -9,10 +9,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
+	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -56,10 +58,18 @@ func (api *APIService) listPipelines(c *gin.Context) {
 
 	fplog.Logger(api.ctx).Info("received list pipelines request", "next_token", nextToken, "limit", limit)
 
-	pipelines, err := db.ListAllPipelines()
+	result, err := ListPipelines()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+	c.JSON(http.StatusOK, result)
+}
+
+func ListPipelines() (*types.ListPipelineResponse, error) {
+	pipelines, err := db.ListAllPipelines()
+	if err != nil {
+		return nil, err
 	}
 
 	// Convert the list of pipelines to FpPipeline type
@@ -81,11 +91,10 @@ func (api *APIService) listPipelines(c *gin.Context) {
 	})
 
 	// TODO: paging, filter, sorting
-	result := types.ListPipelineResponse{
+	result := &types.ListPipelineResponse{
 		Items: listPipelineResponseItems,
 	}
-
-	c.JSON(http.StatusOK, result)
+	return result, nil
 }
 
 // @Summary Get pipeline
@@ -112,20 +121,29 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
-
-	pipelineCached, found := cache.GetCache().Get(pipelineName)
-	if !found {
-		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline not found"))
+	getPipelineresponse, err := GetPipeline(uri.PipelineName)
+	if err != nil {
+		common.AbortWithError(c, err)
 		return
+	}
+
+	c.JSON(http.StatusOK, getPipelineresponse)
+}
+
+func GetPipeline(pipelineName string) (*types.GetPipelineResponse, error) {
+	pipelineFullName := ConstructPipelineFullyQualifiedName(pipelineName)
+
+	pipelineCached, found := cache.GetCache().Get(pipelineFullName)
+	if !found {
+		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
 	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
 	if !ok {
-		return
+		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	getPipelineresponse := types.GetPipelineResponse{
+	resp := &types.GetPipelineResponse{
 		Name:          pipeline.Name(),
 		Description:   pipeline.Description,
 		Mod:           pipeline.GetMod().FullName,
@@ -136,15 +154,14 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		OutputConfig:  pipeline.OutputConfig,
 	}
 
-	pipelineParams := []types.FpPipelineParam{}
+	var pipelineParams []types.FpPipelineParam
 	for _, param := range pipeline.Params {
 
 		paramDefault := map[string]interface{}{}
 		if !param.Default.IsNull() {
 			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
 			if err != nil {
-				common.AbortWithError(c, perr.BadRequestWithMessage("unable to convert param default to go value: "+param.Name))
-				return
+				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
 			}
 			paramDefault[param.Name] = paramDefaultGoVal
 		}
@@ -157,10 +174,9 @@ func (api *APIService) getPipeline(c *gin.Context) {
 			Default:     paramDefault,
 		})
 
-		getPipelineresponse.Params = pipelineParams
+		resp.Params = pipelineParams
 	}
-
-	c.JSON(http.StatusOK, getPipelineresponse)
+	return resp, nil
 }
 
 // @Summary Execute a pipeline command
@@ -182,87 +198,33 @@ func (api *APIService) getPipeline(c *gin.Context) {
 // @Failure 500 {object} perr.ErrorModel
 // @Router /pipeline/{pipeline_name}/cmd [post]
 func (api *APIService) cmdPipeline(c *gin.Context) {
-
 	var uri types.PipelineRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
-	pipelineName := constructPipelineFullyQualifiedName(uri.PipelineName)
 
-	pipelineDefn, err := db.GetPipeline(pipelineName)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	// Validate input data
 	var input types.CmdPipeline
 	if err := c.ShouldBindJSON(&input); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
-	executionMode := "asynchronous"
-	if input.ExecutionMode != nil {
-		executionMode = *input.ExecutionMode
-	}
-	waitRetry := 60
-	if input.WaitRetry != nil {
-		waitRetry = *input.WaitRetry
-	}
+	pipelineName := ConstructPipelineFullyQualifiedName(uri.PipelineName)
 
-	// Execute the command
-	if input.Command != "run" {
-		common.AbortWithError(c, perr.BadRequestWithMessage("invalid command"))
-		return
-	}
+	executionMode := input.GetExecutionMode()
+	waitRetry := input.GetWaitRetry()
 
-	if len(input.Args) > 0 && len(input.ArgsString) > 0 {
-		common.AbortWithError(c, perr.BadRequestWithMessage("args and args_string are mutually exclusive"))
-		return
-	}
-
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(c),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                pipelineDefn.Name(),
-	}
-
-	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-		errs := pipelineDefn.ValidatePipelineParam(input.Args)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
+	response, pipelineCmd, err := ExecutePipeline(input, pipelineName, api.EsService)
+	if err != nil {
+		{
+			common.AbortWithError(c, err)
 			return
 		}
-		pipelineCmd.Args = input.Args
-
-	} else if len(input.ArgsString) > 0 {
-		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			common.AbortWithError(c, perr.BadRequestWithMessage(strings.Join(errStrs, "; ")))
-			return
-		}
-		pipelineCmd.Args = args
 	}
-
-	if err := api.EsService.Send(pipelineCmd); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	if executionMode == "synchronous" {
+	if executionMode == localconstants.ExecutionModeSynchronous {
 		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
-	}
-
-	response := types.PipelineExecutionResponse{
-		"flowpipe": map[string]interface{}{
-			"execution_id":          pipelineCmd.Event.ExecutionID,
-			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-		},
 	}
 
 	if api.ModMetadata.IsStale {
@@ -275,7 +237,58 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func constructPipelineFullyQualifiedName(pipelineName string) string {
+func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+	pipelineDefn, err := db.GetPipeline(pipelineName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Execute the command
+	if input.Command != "run" {
+		return nil, nil, perr.BadRequestWithMessage("invalid command")
+	}
+
+	if len(input.Args) > 0 && len(input.ArgsString) > 0 {
+		return nil, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
+	}
+
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewExecutionEvent(),
+		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Name:                pipelineDefn.Name(),
+	}
+
+	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
+		errs := pipelineDefn.ValidatePipelineParam(input.Args)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		}
+		pipelineCmd.Args = input.Args
+
+	} else if len(input.ArgsString) > 0 {
+		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		}
+		pipelineCmd.Args = args
+	}
+
+	if err := esService.Send(pipelineCmd); err != nil {
+		return nil, nil, err
+	}
+
+	response := types.PipelineExecutionResponse{
+		"flowpipe": map[string]interface{}{
+			"execution_id":          pipelineCmd.Event.ExecutionID,
+			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+		},
+	}
+	return response, pipelineCmd, nil
+}
+
+func ConstructPipelineFullyQualifiedName(pipelineName string) string {
 	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
 	// For example: foo.pipeline.bar
 	// However, since foo is the top level mod, we should be able to just run the pipeline bar

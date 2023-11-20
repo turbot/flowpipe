@@ -1,4 +1,4 @@
-package es_test
+package estest
 
 // Basic imports
 import (
@@ -17,14 +17,12 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/config"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
-	"github.com/turbot/pipe-fittings/utils"
 )
 
 type ModTestSuite struct {
@@ -78,45 +76,18 @@ func (suite *ModTestSuite) SetupSuite() {
 	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
-	ctx := context.Background()
-
-	ctx = fplog.ContextWithLogger(ctx)
-	ctx, err = config.ContextWithConfig(ctx)
-	if err != nil {
-		panic(err)
-	}
+	ctx := fplog.ContextWithLogger(context.Background())
 
 	suite.ctx = ctx
 
 	// We use the cache to store the pipelines
 	cache.InMemoryInitialize(nil)
 
-	m, err := manager.NewManager(ctx)
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	error_helpers.FailOnError(err)
+	suite.esService = m.ESService
 	suite.manager = m
-
-	if err != nil {
-		panic(err)
-	}
-
-	err = m.Initialize()
-	if err != nil {
-		panic(err)
-	}
-
-	// We don't do manager.Start() here because we don't want to start the API and Scheduler service
-
-	esService, err := es.NewESService(ctx)
-	if err != nil {
-		panic(err)
-	}
-	err = esService.Start()
-	if err != nil {
-		panic(err)
-	}
-	esService.Status = "running"
-	esService.StartedAt = utils.TimeNow()
-
-	suite.esService = esService
 
 	// Give some time for Watermill to fully start
 	time.Sleep(2 * time.Second)
@@ -147,7 +118,7 @@ func (suite *ModTestSuite) AfterTest(suiteName, testName string) {
 func (suite *ModTestSuite) TestSimplestPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
 
@@ -169,7 +140,7 @@ func (suite *ModTestSuite) TestSimplestPipeline() {
 func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_with_sleep", 100*time.Millisecond, pipelineInput)
 
@@ -194,7 +165,7 @@ func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
 func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_two_steps", 100*time.Millisecond, pipelineInput)
 
@@ -218,7 +189,7 @@ func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
 func (suite *ModTestSuite) TestSimpleLoop() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop", 100*time.Millisecond, pipelineInput)
 
@@ -247,7 +218,7 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_and_nested_pipeline", 100*time.Millisecond, pipelineInput)
 
@@ -288,7 +259,7 @@ func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
 func (suite *ModTestSuite) TestSimpleForEach() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_for_each", 100*time.Millisecond, pipelineInput)
 
@@ -334,7 +305,7 @@ func (suite *ModTestSuite) TestSimpleForEach() {
 func (suite *ModTestSuite) TestForEachOneAndForEachTwo() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_one_and_for_each_two", 100*time.Millisecond, pipelineInput)
 
@@ -360,7 +331,7 @@ func (suite *ModTestSuite) TestForEachOneAndForEachTwo() {
 func (suite *ModTestSuite) XTestLoopWithForEach() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each", 100*time.Millisecond, pipelineInput)
 
@@ -417,7 +388,7 @@ func (suite *ModTestSuite) XTestLoopWithForEach() {
 func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop_index", 100*time.Millisecond, pipelineInput)
 
@@ -452,7 +423,7 @@ func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
 func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	// We have to use the sleep step here to avoid concurrency issue with the planner
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_sleep", 100*time.Millisecond, pipelineInput)
@@ -495,7 +466,7 @@ func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
@@ -519,7 +490,7 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 func (suite *ModTestSuite) TestSimpleNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top", 100*time.Millisecond, pipelineInput)
 
@@ -545,7 +516,7 @@ func (suite *ModTestSuite) TestSimpleNestedPipeline() {
 func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_with_clash_merged_output", 100*time.Millisecond, pipelineInput)
 
@@ -567,7 +538,7 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
 func (suite *ModTestSuite) TestSimpleNestedPipelineWithMergedOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_merged_output", 100*time.Millisecond, pipelineInput)
 
@@ -595,7 +566,7 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithMergedOutput() {
 func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEach() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_for_each", 100*time.Millisecond, pipelineInput)
 
@@ -622,7 +593,7 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEach() {
 func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEachAndMergedOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_for_each_with_merged_output", 100*time.Millisecond, pipelineInput)
 
@@ -654,7 +625,7 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEachAndMergedOutput() 
 func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_step_output", 100*time.Millisecond, pipelineInput)
 
@@ -693,7 +664,7 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 
 func (suite *ModTestSuite) TestPipelineWithForEach() {
 	assert := assert.New(suite.T())
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.run_me_controller", 100*time.Millisecond, pipelineInput)
 	if err != nil {
@@ -718,7 +689,7 @@ func (suite *ModTestSuite) TestPipelineWithForEach() {
 
 func (suite *ModTestSuite) TestPipelineForEachTrippleNested() {
 	assert := assert.New(suite.T())
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.run_me_top", 100*time.Millisecond, pipelineInput)
 	if err != nil {
@@ -808,7 +779,7 @@ func (suite *ModTestSuite) TestPipelineForEachTrippleNested() {
 func (suite *ModTestSuite) TestPipelineWithArgs() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.calling_pipeline_with_params", 100*time.Millisecond, pipelineInput)
 
@@ -839,7 +810,7 @@ func (suite *ModTestSuite) TestJsonArray() {
 
 	arrayInput := []string{"a", "b", "c"}
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"request_body": arrayInput,
 	}
 
@@ -872,7 +843,7 @@ func (suite *ModTestSuite) TestJsonArray() {
 func (suite *ModTestSuite) TestPipelineWithForLoop() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_map", 100*time.Millisecond, pipelineInput)
 
@@ -931,7 +902,7 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 func (suite *ModTestSuite) TestJsonAsOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.json_output", 500*time.Millisecond, pipelineInput)
 
@@ -980,7 +951,7 @@ func (suite *ModTestSuite) TestJsonAsOutput() {
 func (suite *ModTestSuite) TestMapReduce() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_map", 100*time.Millisecond, pipelineInput)
 
@@ -1009,7 +980,7 @@ func (suite *ModTestSuite) TestMapReduce() {
 func (suite *ModTestSuite) TestListReduce() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_list", 100*time.Millisecond, pipelineInput)
 
@@ -1040,7 +1011,7 @@ func (suite *ModTestSuite) TestListReduce() {
 func (suite *ModTestSuite) TestNested() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.top", 500*time.Millisecond, pipelineInput)
 	if err != nil {
@@ -1066,7 +1037,7 @@ func (suite *ModTestSuite) TestNested() {
 func (suite *ModTestSuite) TestForEachEmptyAndNonCollection() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_empty_test", 500*time.Millisecond, pipelineInput)
 
@@ -1119,12 +1090,12 @@ func (suite *ModTestSuite) TestIntegrations() {
 func (suite *ModTestSuite) XXTestHttpPipelines() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.http_post_url_encoded", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
-		assert.Fail("Error creating execution", err)
+		assert.Fail("Error creating executio¡n", err)
 		return
 	}
 
@@ -1143,7 +1114,7 @@ func (suite *ModTestSuite) XXTestHttpPipelines() {
 func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 200*time.Millisecond, pipelineInput)
 	if err != nil {
@@ -1262,7 +1233,7 @@ func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
 func (suite *ModTestSuite) TestModVars() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_with_variable", 100*time.Millisecond, pipelineInput)
 
@@ -1292,7 +1263,7 @@ func (suite *ModTestSuite) TestModVars() {
 func (suite *ModTestSuite) TestErrorRetry() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry", 500*time.Millisecond, pipelineInput)
 
@@ -1326,7 +1297,7 @@ func (suite *ModTestSuite) TestErrorRetry() {
 func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_backoff", 500*time.Millisecond, pipelineInput)
 
@@ -1377,7 +1348,7 @@ func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 func (suite *ModTestSuite) TestTransformLoop() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.transform_loop", 500*time.Millisecond, pipelineInput)
 
@@ -1403,7 +1374,7 @@ func (suite *ModTestSuite) TestTransformLoop() {
 func (suite *ModTestSuite) TestForEachAndForEach() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_and_for_each", 500*time.Millisecond, pipelineInput)
 
@@ -1435,7 +1406,7 @@ func (suite *ModTestSuite) TestForEachAndForEach() {
 func (suite *ModTestSuite) TestErrorInForEach() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each", 500*time.Millisecond, pipelineInput)
 
@@ -1472,7 +1443,7 @@ func (suite *ModTestSuite) TestErrorInForEach() {
 func (suite *ModTestSuite) TestErrorInForEachNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
@@ -1509,7 +1480,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipeline() {
 func (suite *ModTestSuite) TestErrorRetryWithNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
@@ -1554,7 +1525,7 @@ func (suite *ModTestSuite) TestErrorRetryWithNestedPipeline() {
 func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works", 500*time.Millisecond, pipelineInput)
 
@@ -1591,7 +1562,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works_error_ignored", 500*time.Millisecond, pipelineInput)
 
@@ -1624,7 +1595,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored(
 func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
 
@@ -1652,7 +1623,7 @@ func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_but_ignored", 500*time.Millisecond, pipelineInput)
 
@@ -1680,7 +1651,7 @@ func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_multiple_throws", 500*time.Millisecond, pipelineInput)
 
@@ -1708,7 +1679,7 @@ func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
 func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
@@ -1735,7 +1706,7 @@ func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
 func (suite *ModTestSuite) TestPipelineWithTransformStep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 500*time.Millisecond, pipelineInput)
 
@@ -1759,7 +1730,7 @@ func (suite *ModTestSuite) TestPipelineWithTransformStep() {
 func (suite *ModTestSuite) TestParamAny() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"param_any": "hello as string",
 	}
 
@@ -1783,7 +1754,7 @@ func (suite *ModTestSuite) TestParamAny() {
 	assert.Equal("hello as string", pex.PipelineOutput["val"])
 
 	// now re-run the pipeline with param_any as an int
-	pipelineInput = &modconfig.Input{
+	pipelineInput = modconfig.Input{
 		"param_any": 42,
 	}
 
@@ -1810,7 +1781,7 @@ func (suite *ModTestSuite) TestParamAny() {
 func (suite *ModTestSuite) TestTypedParamAny() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{
+	pipelineInput := modconfig.Input{
 		"param_any": "hello as string",
 	}
 
@@ -1834,7 +1805,7 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 	assert.Equal("hello as string", pex.PipelineOutput["val"])
 
 	// now re-run the pipeline with param_any as an int
-	pipelineInput = &modconfig.Input{
+	pipelineInput = modconfig.Input{
 		"param_any": 42,
 	}
 

@@ -10,7 +10,7 @@ import (
 )
 
 // preRunHook is a function that is executed before the PreRun of every command handler
-func preRunHook(cmd *cobra.Command, args []string) {
+func preRunHook(cmd *cobra.Command, args []string) error {
 	viper.Set(constants.ConfigKeyActiveCommand, cmd)
 	viper.Set(constants.ConfigKeyActiveCommandArgs, args)
 
@@ -20,6 +20,7 @@ func preRunHook(cmd *cobra.Command, args []string) {
 
 	// set the max memory if specified
 	setMemoryLimit(cmd.Context())
+	return nil
 }
 
 func setMemoryLimit(ctx context.Context) {

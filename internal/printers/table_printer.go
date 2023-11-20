@@ -18,7 +18,6 @@ type TablePrinter struct {
 }
 
 func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer) error {
-
 	table, err := items.GetTable()
 
 	if err != nil {
@@ -26,7 +25,6 @@ func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableRe
 	}
 	err = p.Delegate.PrintResource(ctx, table, writer)
 	return err
-
 }
 
 // Inspired by Kubernetes

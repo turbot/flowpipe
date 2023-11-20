@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"reflect"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
-	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
@@ -61,19 +59,16 @@ type APIService struct {
 
 	EsService *es.ESService
 
-	httpServer  *http.Server
-	httpsServer *http.Server
+	httpServer *http.Server
 
-	HTTPPort string `json:"http_port,omitempty"`
-
-	HTTPSHost string `json:"https_host,omitempty"`
-	HTTPSPort string `json:"https_port,omitempty"`
+	HTTPAddress string
+	HTTPPort    int
 
 	// Status tracking for the API service.
-	Status    string     `json:"status"`
-	StartedAt *time.Time `json:"started_at,omitempty"`
-	StoppedAt *time.Time `json:"stopped_at,omitempty"`
+	Status    string
+	StartedAt *time.Time
 
+	StoppedAt      *time.Time `json:"stopped_at,omitempty"`
 	apiPrefixGroup *gin.RouterGroup
 	router         *gin.Engine
 	ModMetadata    RootModMetadata
@@ -94,9 +89,6 @@ func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOpti
 		ctx:       ctx,
 		EsService: es,
 		Status:    "initialized",
-		HTTPSHost: viper.GetString("web.https.host"),
-		HTTPSPort: fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPortHttps)),
-		HTTPPort:  fmt.Sprintf("%d", viper.GetInt(constants.ArgApiPort)),
 		ModMetadata: RootModMetadata{
 			IsStale:    false,
 			LastLoaded: time.Now(),
@@ -112,23 +104,20 @@ func NewAPIService(ctx context.Context, es *es.ESService, opts ...APIServiceOpti
 	return api, nil
 }
 
-// WithHTTPSAddress sets the host and port of the API HTTPS service from the given
+// WithHTTPAddress sets the host and port of the API HTTPS service from the given
 // address string in host:port format.
-func WithHTTPSAddress(addr string) APIServiceOption {
+func WithHTTPAddress(addr string) APIServiceOption {
 	return func(api *APIService) error {
-		if addr == "" {
-			return nil
-		}
-		host, port, err := net.SplitHostPort(addr)
-		if err != nil {
-			return err
-		}
-		if host != "" {
-			api.HTTPSHost = host
-		}
-		if port != "" {
-			api.HTTPSPort = port
-		}
+		api.HTTPAddress = addr
+
+		return nil
+	}
+}
+
+// WithHTTPPort sets port of the API HTTP service
+func WithHTTPPort(port int) APIServiceOption {
+	return func(api *APIService) error {
+		api.HTTPPort = port
 		return nil
 	}
 }
@@ -237,13 +226,7 @@ func (api *APIService) Start() error {
 
 	// Server setup with graceful shutdown
 	api.httpServer = &http.Server{
-		Addr:              fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPPort),
-		Handler:           router,
-		ReadHeaderTimeout: 60 * time.Second,
-	}
-
-	api.httpsServer = &http.Server{
-		Addr:              fmt.Sprintf("%s:%s", api.HTTPSHost, api.HTTPSPort),
+		Addr:              fmt.Sprintf("%s:%d", api.HTTPAddress, api.HTTPPort),
 		Handler:           router,
 		ReadHeaderTimeout: 60 * time.Second,
 	}
@@ -286,14 +269,6 @@ func (api *APIService) Stop() error {
 			return err
 		}
 		fplog.Logger(api.ctx).Debug("API HTTP server stopped")
-	}
-
-	if api.httpsServer != nil {
-		if err := api.httpsServer.Shutdown(ctxWithTimeout); err != nil {
-			// TODO - wrap error
-			return err
-		}
-		fplog.Logger(api.ctx).Debug("API HTTPS server stopped")
 	}
 
 	api.StoppedAt = utils.TimeNow()

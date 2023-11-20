@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/util"
@@ -20,7 +19,7 @@ type PayloadWithEvent struct {
 	Event *Event `json:"event"`
 }
 
-func NewExecutionEvent(ctx context.Context) *Event {
+func NewExecutionEvent() *Event {
 	return &Event{
 		ExecutionID: util.NewExecutionID(),
 		CreatedAt:   time.Now().UTC(),

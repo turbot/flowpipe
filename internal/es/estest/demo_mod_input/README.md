@@ -11,7 +11,7 @@ echo $NG_URL/api/v0$FP_URL
 
 
 ```bash
-FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/test/demo_mod_input --functions  --log-dir ./tmp --output-dir ./tmp
+FLOWPIPE_LOG_LEVEL=INFO go run . service start --mod-location ./internal/es/estest/demo_mod_input --functions  --log-dir ./tmp --output-dir ./tmp
 ```
 
 /api/v0/input/slack/foo.bar.z/2342342343

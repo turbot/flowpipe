@@ -1,5 +1,7 @@
 package types
 
+import localconstants "github.com/turbot/flowpipe/internal/constants"
+
 // APIVersionRequestURI defines the requested API version.
 type APIVersionRequestURI struct {
 	APIVersion string `uri:"api_version" binding:"required,flowpipe_api_version"`
@@ -36,6 +38,21 @@ type WebhookRequestUri struct {
 type WebhookRequestQuery struct {
 	ExecutionMode *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
 	WaitTime      *int    `json:"wait_time" form:"wait_time" binding:"omitempty"`
+}
+
+func (c *WebhookRequestQuery) GetExecutionMode() string {
+	executionMode := localconstants.DefaultExecutionMode
+	if c.ExecutionMode != nil {
+		executionMode = *c.ExecutionMode
+	}
+	return executionMode
+}
+
+func (c *WebhookRequestQuery) GetWaitTime() int {
+	if c.WaitTime != nil {
+		return *c.WaitTime
+	}
+	return localconstants.DefaultWaitRetry
 }
 
 type PipelineRequestQuery struct {

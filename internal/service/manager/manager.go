@@ -2,6 +2,8 @@ package manager
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/perr"
 	"os"
 	"os/signal"
 	"strings"
@@ -15,44 +17,47 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )
+
+type ExecutionMode int
 
 // Manager manages and represents the status of the service.
 type Manager struct {
 	ctx context.Context
 
-	RootMod *modconfig.Mod
-
+	RootMod          *modconfig.Mod
+	ESService        *es.ESService
 	apiService       *api.APIService
-	esService        *es.ESService
 	schedulerService *scheduler.SchedulerService
 
 	triggers map[string]*modconfig.Trigger
 
-	RaftNodeID    string `json:"raft_node_id,omitempty"`
-	RaftBootstrap bool   `json:"raft_bootstrap"`
-	RaftAddress   string `json:"raft_address,omitempty"`
+	RaftNodeID    string
+	RaftBootstrap bool
+	RaftAddress   string
 
-	HTTPSAddress string `json:"https_address,omitempty"`
+	HTTPAddress string
+	HTTPPort    int
 
-	Status    string     `json:"status"`
-	StartedAt *time.Time `json:"started_at,omitempty"`
-	StoppedAt *time.Time `json:"stopped_at,omitempty"`
+	// which services should we start
+	// event sourcing service
+	startES bool
+	// api service and scheduler service
+	serverMode bool
+
+	Status    string
+	StartedAt *time.Time
+	StoppedAt *time.Time
 }
 
-// ManagerOption defines a type of function to configures the Manager.
-type ManagerOption func(*Manager) error
-
 // NewManager creates a new Manager.
-func NewManager(ctx context.Context, opts ...ManagerOption) (*Manager, error) {
+func NewManager(ctx context.Context, opts ...ManagerOption) *Manager {
 	// Defaults
 	m := &Manager{
 		ctx:    ctx,
@@ -60,45 +65,47 @@ func NewManager(ctx context.Context, opts ...ManagerOption) (*Manager, error) {
 	}
 	// Set options
 	for _, opt := range opts {
-		err := opt(m)
+		opt(m)
+	}
+	return m
+}
+
+// Start initializes tha manage and starts services managed by the Manager.
+func (m *Manager) Start() (*Manager, error) {
+	fplog.Logger(m.ctx).Debug("Manager starting")
+	defer fplog.Logger(m.ctx).Debug("Manager started")
+
+	// initializeResources - load and cache triggers and pipelines
+	// if we are in server mode and there is a modfile, setup the file watcher
+	if err := m.initializeResources(); err != nil {
+		return nil, err
+	}
+
+	if m.startES {
+		err := m.startESService()
 		if err != nil {
-			return m, err
+			return nil, err
 		}
 	}
+
+	if m.serverMode {
+		if err := m.startAPIService(); err != nil {
+			return nil, err
+		}
+		if err := m.startSchedulerService(); err != nil {
+			return nil, err
+		}
+	}
+
+	m.StartedAt = utils.TimeNow()
+	m.Status = "running"
+
 	return m, nil
 }
 
-func WithRaftNodeID(nodeID string) ManagerOption {
-	return func(m *Manager) error {
-		m.RaftNodeID = nodeID
-		return nil
-	}
-}
-
-func WithRaftBootstrap(bootstrap bool) ManagerOption {
-	return func(m *Manager) error {
-		m.RaftBootstrap = bootstrap
-		return nil
-	}
-}
-
-func WithRaftAddress(addr string) ManagerOption {
-	return func(m *Manager) error {
-		m.RaftAddress = addr
-		return nil
-	}
-}
-
-func WithHTTPAddress(addr string) ManagerOption {
-	return func(m *Manager) error {
-		m.HTTPSAddress = addr
-		return nil
-	}
-}
-
-// TODO: is there any point to have a separate "Initialize" and "Start"?
-func (m *Manager) Initialize() error {
-
+// load and cache triggers and pipelines
+// if we are in server mode and there is a modfile, setup the file watcher
+func (m *Manager) initializeResources() error {
 	logger := fplog.Logger(m.ctx)
 
 	pipelineDir := viper.GetString(constants.ArgModLocation)
@@ -114,56 +121,19 @@ func (m *Manager) Initialize() error {
 			return errorAndWarning.Error
 		}
 
-		err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
-			logger := fplog.Logger(m.ctx)
-			logger.Error("error watching workspace", "error", e)
-			m.apiService.ModMetadata.IsStale = true
-		})
-		if err != nil {
-			return err
+		// if we are running in server mode, setup the file watcher
+		if m.serverMode {
+			if err := m.setupWatcher(w); err != nil {
+				return err
+			}
 		}
-
-		w.SetOnFileWatcherEventMessages(func() {
-			logger := fplog.Logger(m.ctx)
-			logger.Info("caching pipelines and triggers")
-			err := m.CachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
-			if err != nil {
-				logger.Error("error caching pipelines and triggers", "error", err)
-			} else {
-				logger.Info("cached pipelines and triggers")
-				m.apiService.ModMetadata.IsStale = false
-				m.apiService.ModMetadata.LastLoaded = time.Now()
-			}
-
-			// Reload scheduled triggers
-			logger.Info("rescheduling triggers")
-			if m.schedulerService != nil {
-				m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
-				err := m.schedulerService.RescheduleTriggers()
-				if err != nil {
-					logger.Error("error rescheduling triggers", "error", err)
-				} else {
-					logger.Info("rescheduled triggers")
-				}
-			}
-		})
 
 		mod := w.Mod
 		modInfo = mod
 
-		pipelines = mod.ResourceMaps.Pipelines
-		triggers = mod.ResourceMaps.Triggers
+		pipelines = workspace.GetWorkspaceResourcesOfType[*modconfig.Pipeline](w)
+		triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
 
-		for _, dependendMode := range mod.ResourceMaps.Mods {
-			if dependendMode.Name() != mod.Name() {
-				for _, pipeline := range dependendMode.ResourceMaps.Pipelines {
-					pipelines[pipeline.Name()] = pipeline
-				}
-				for _, trigger := range dependendMode.ResourceMaps.Triggers {
-					triggers[trigger.Name()] = trigger
-				}
-			}
-		}
 	} else {
 		var err error
 		pipelines, triggers, err = load_mod.LoadPipelines(m.ctx, pipelineDir)
@@ -174,48 +144,17 @@ func (m *Manager) Initialize() error {
 
 	m.triggers = triggers
 
-	inMemoryCache := cache.GetCache()
-	var pipelineNames []string
-
-	for _, p := range pipelines {
-		pipelineNames = append(pipelineNames, p.Name())
-
-		// TODO: how long to set the timeout?
-		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
-	}
-
-	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
-	runMode := os.Getenv("RUN_MODE")
-
-	var triggerNames []string
-	for _, trigger := range triggers {
-		triggerNames = append(triggerNames, trigger.Name())
-
-		// if it's a webhook trigger, calculate the URL
-		_, ok := trigger.Config.(*modconfig.TriggerHttp)
-		if ok {
-			if !strings.HasPrefix(runMode, "TEST") {
-				triggerUrl, err := m.CalculateTriggerUrl(trigger)
-				if err != nil {
-					return err
-				}
-				trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
-			}
-		}
-
-		// TODO: how long to set the timeout?
-		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
-
-	}
-	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
-
 	var rootModName string
 	if modInfo != nil {
-		inMemoryCache.SetWithTTL("#rootmod.name", modInfo.ShortName, 24*7*52*99*time.Hour)
 		rootModName = modInfo.ShortName
 	} else {
-		inMemoryCache.SetWithTTL("#rootmod.name", "local", 24*7*52*99*time.Hour)
 		rootModName = "local"
+	}
+
+	cache.GetCache().SetWithTTL("#rootmod.name", rootModName, 24*7*52*99*time.Hour)
+	err := m.cachePipelinesAndTriggers(pipelines, triggers)
+	if err != nil {
+		return err
 	}
 
 	logger.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
@@ -225,59 +164,46 @@ func (m *Manager) Initialize() error {
 	return nil
 }
 
-func (m *Manager) CalculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		return "", perr.InternalWithMessage("salt not found")
+func (m *Manager) setupWatcher(w *workspace.Workspace) error {
+	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
+		logger := fplog.Logger(m.ctx)
+		logger.Error("error watching workspace", "error", e)
+		m.apiService.ModMetadata.IsStale = true
+	})
+	if err != nil {
+		return err
 	}
 
-	hashString := util.CalculateHash(trigger.FullName, salt.(string))
-
-	return "/hook/" + trigger.FullName + "/" + hashString, nil
-}
-
-func (m *Manager) CachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
-	m.triggers = triggers
-
-	inMemoryCache := cache.GetCache()
-	var pipelineNames []string
-
-	for _, p := range pipelines {
-		pipelineNames = append(pipelineNames, p.Name())
-
-		// TODO: how do we want to do this?
-		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
-	}
-
-	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
-
-	var triggerNames []string
-	for _, trigger := range triggers {
-		triggerNames = append(triggerNames, trigger.Name())
-
-		// if it's a webhook trigger, calculate the URL
-		_, ok := trigger.Config.(*modconfig.TriggerHttp)
-		if ok {
-			triggerUrl, err := m.CalculateTriggerUrl(trigger)
-			if err != nil {
-				return err
-			}
-			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
+	w.SetOnFileWatcherEventMessages(func() {
+		logger := fplog.Logger(m.ctx)
+		logger.Info("caching pipelines and triggers")
+		m.triggers = w.Mod.ResourceMaps.Triggers
+		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+		if err != nil {
+			logger.Error("error caching pipelines and triggers", "error", err)
+		} else {
+			logger.Info("cached pipelines and triggers")
+			m.apiService.ModMetadata.IsStale = false
+			m.apiService.ModMetadata.LastLoaded = time.Now()
 		}
 
-		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
-	}
-	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
-
+		// Reload scheduled triggers
+		logger.Info("rescheduling triggers")
+		if m.schedulerService != nil {
+			m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
+			err := m.schedulerService.RescheduleTriggers()
+			if err != nil {
+				logger.Error("error rescheduling triggers", "error", err)
+			} else {
+				logger.Info("rescheduled triggers")
+			}
+		}
+	})
 	return nil
 }
 
-// Start starts services managed by the Manager.
-func (m *Manager) Start() error {
-
-	fplog.Logger(m.ctx).Debug("Manager starting")
-	defer fplog.Logger(m.ctx).Debug("Manager started")
-
+func (m *Manager) startESService() error {
+	// start event sourcing service
 	esService, err := es.NewESService(m.ctx)
 	if err != nil {
 		return err
@@ -290,11 +216,15 @@ func (m *Manager) Start() error {
 	esService.StartedAt = utils.TimeNow()
 	esService.RootMod = m.RootMod
 
-	m.esService = esService
+	m.ESService = esService
+	return nil
+}
 
+func (m *Manager) startAPIService() error {
 	// Define the API service
-	apiService, err := api.NewAPIService(m.ctx, esService,
-		api.WithHTTPSAddress(m.HTTPSAddress))
+	apiService, err := api.NewAPIService(m.ctx, m.ESService,
+		api.WithHTTPAddress(m.HTTPAddress),
+		api.WithHTTPPort(m.HTTPPort))
 
 	if err != nil {
 		return err
@@ -302,31 +232,23 @@ func (m *Manager) Start() error {
 	m.apiService = apiService
 
 	// Start API
-	err = apiService.Start()
-	if err != nil {
-		return err
-	}
+	return apiService.Start()
+}
 
-	// Start the scheduler service
-	s := scheduler.NewSchedulerService(m.ctx, esService, m.triggers)
+func (m *Manager) startSchedulerService() error {
+	s := scheduler.NewSchedulerService(m.ctx, m.ESService, m.triggers)
 	if !viper.GetBool(constants.ArgNoScheduler) {
-		err = s.Start()
-		if err != nil {
+		if err := s.Start(); err != nil {
 			return err
 		}
 	}
 
 	m.schedulerService = s
-
-	m.StartedAt = utils.TimeNow()
-	m.Status = "running"
-
 	return nil
 }
 
 // Stop stops services managed by the Manager.
 func (m *Manager) Stop() error {
-
 	fplog.Logger(m.ctx).Debug("manager stopping")
 	defer fplog.Logger(m.ctx).Debug("manager stopped")
 
@@ -334,27 +256,28 @@ func (m *Manager) Stop() error {
 	logger := fplog.Logger(m.ctx)
 	defer func() {
 		// this is causing "inappropriate ioctl for device" error: https://github.com/uber-go/zap/issues/880
-		//nolint:errcheck // we don't care if this fails
-		logger.Sync()
+		// we don't care if this fails
+		_ = logger.Sync()
 	}()
 
-	err := m.apiService.Stop()
-	if err != nil {
-		// Log and continue stopping other services
-		fplog.Logger(m.ctx).Error("error stopping api service", "error", err)
+	if m.apiService != nil {
+		if err := m.apiService.Stop(); err != nil {
+			// Log and continue stopping other services
+			fplog.Logger(m.ctx).Error("error stopping api service", "error", err)
+		}
 	}
 
-	err = m.esService.Stop()
-	if err != nil {
-		// Log and continue stopping other services
-		fplog.Logger(m.ctx).Error("error stopping es service", "error", err)
+	if m.ESService != nil {
+		if err := m.ESService.Stop(); err != nil {
+			// Log and continue stopping other services
+			fplog.Logger(m.ctx).Error("error stopping es service", "error", err)
+		}
 	}
 
 	// Cleanup docker artifacts
 	// TODO - Can we remove this since we cleanup per function etc?
 	if docker.GlobalDockerClient != nil {
-		err = docker.GlobalDockerClient.CleanupArtifacts()
-		if err != nil {
+		if err := docker.GlobalDockerClient.CleanupArtifacts(); err != nil {
 			fplog.Logger(m.ctx).Error("Failed to cleanup flowpipe docker artifacts", "error", err)
 		}
 	}
@@ -380,4 +303,49 @@ func (m *Manager) InterruptHandler() {
 	}()
 	<-done
 	fplog.Logger(m.ctx).Debug("Manager exited")
+}
+
+func (m *Manager) cachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
+	inMemoryCache := cache.GetCache()
+	var pipelineNames []string
+
+	for _, p := range pipelines {
+		pipelineNames = append(pipelineNames, p.Name())
+
+		// TODO: how do we want to do this?
+		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
+	}
+
+	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+
+	var triggerNames []string
+	for _, trigger := range triggers {
+		triggerNames = append(triggerNames, trigger.Name())
+
+		// if it's a webhook trigger, calculate the URL
+		_, ok := trigger.Config.(*modconfig.TriggerHttp)
+		if ok && !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
+			triggerUrl, err := calculateTriggerUrl(trigger)
+			if err != nil {
+				return err
+			}
+			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
+		}
+
+		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
+	}
+	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
+
+	return nil
+}
+
+func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
+	salt, ok := cache.GetCache().Get("salt")
+	if !ok {
+		return "", perr.InternalWithMessage("salt not found")
+	}
+
+	hashString := util.CalculateHash(trigger.FullName, salt.(string))
+
+	return "/hook/" + trigger.FullName + "/" + hashString, nil
 }
