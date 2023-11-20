@@ -306,8 +306,13 @@ func (c *Container) Run() (string, error) {
 	if err != nil {
 		return containerID, err
 	}
+
+	// Get the Stderr and truncate it to 256 chars
+	stdErr := o.Stderr()
+	truncatedStdErr := truncateString(stdErr, 256)
+
 	c.Runs[containerID].Stdout = o.Stdout()
-	c.Runs[containerID].Stderr = o.Stderr()
+	c.Runs[containerID].Stderr = truncatedStdErr
 	c.Runs[containerID].Combined = o.Combined()
 
 	logger.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Combined)
@@ -350,6 +355,14 @@ func (c *Container) Run() (string, error) {
 	}
 
 	return containerID, nil
+}
+
+func truncateString(str string, num int) string {
+	b := []rune(str)
+	if len(b) > num {
+		return string(b[:num])
+	}
+	return str
 }
 
 // Cleanup all docker containers for the given container.
