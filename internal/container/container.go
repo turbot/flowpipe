@@ -307,12 +307,8 @@ func (c *Container) Run() (string, error) {
 		return containerID, err
 	}
 
-	// Get the Stderr and truncate it to 256 chars
-	stdErr := o.Stderr()
-	truncatedStdErr := truncateString(stdErr, 256)
-
 	c.Runs[containerID].Stdout = o.Stdout()
-	c.Runs[containerID].Stderr = truncatedStdErr
+	c.Runs[containerID].Stderr = o.Stderr()
 	c.Runs[containerID].Combined = o.Combined()
 
 	logger.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Combined)
@@ -346,11 +342,16 @@ func (c *Container) Run() (string, error) {
 
 	// If the container exited with a non-zero exit code, return an error with bad request status
 	if exitCode != 0 {
+
+		// Get the Stderr and truncate it to 256 chars
+		stdErr := o.Stderr()
+		truncatedStdErr := truncateString(stdErr, 256)
+
 		return containerID, perr.ErrorModel{
 			Type:   perr.ErrorCodeBadRequest,
 			Title:  fmt.Sprintf("%d", exitCode),
 			Status: http.StatusBadRequest,
-			Detail: o.Stderr(),
+			Detail: truncatedStdErr,
 		}
 	}
 
