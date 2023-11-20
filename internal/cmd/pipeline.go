@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"regexp"
 	"strings"
 	"time"
@@ -252,7 +253,6 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil && resp["flowpipe"] != nil {
-
 		contents := resp["flowpipe"].(map[string]any)
 		executionId := ""
 		pipelineId := ""
@@ -368,7 +368,7 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
 
-	// extract the pipeline args from the flags
+	//extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
 
 	input := types.CmdPipeline{
@@ -376,8 +376,59 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 		ArgsString: pipelineArgs,
 	}
 
-	resp, _, err := api.ExecutePipeline(input, pipelineName, m.ESService)
+	resp, pipelineCmd, err := api.ExecutePipeline(input, pipelineName, m.ESService)
+
+	// TACTICAL - wait for completion
+	// can be removed when local streaming logs are implemented
+	_, _, err = GetPipelineExAndWait(ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 2*time.Second, 2, "completed")
+	if err != nil {
+		return nil, err
+	}
 	return resp, err
+}
+
+func GetPipelineExAndWait(ctx context.Context, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
+	time.Sleep(waitTime)
+
+	// check if the execution id has been completed, check 3 times
+	ex, err := execution.NewExecution(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = ex.LoadProcess(event)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pex := ex.PipelineExecutions[pipelineExecutionID]
+	if pex == nil {
+		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+	}
+
+	// Wait for the pipeline to complete, but not forever
+	for i := 0; i < waitRetry; i++ {
+		time.Sleep(waitTime)
+
+		err = ex.LoadProcess(event)
+		if err != nil {
+			return nil, nil, fmt.Errorf("error loading process: %w", err)
+		}
+		if pex == nil {
+			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		}
+		pex = ex.PipelineExecutions[pipelineExecutionID]
+
+		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
+			break
+		}
+	}
+
+	if !pex.IsComplete() {
+		return ex, pex, fmt.Errorf("not completed")
+	}
+
+	return ex, pex, nil
 }
 
 func getPipelineArgs(cmd *cobra.Command) map[string]string {
@@ -495,5 +546,6 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 
 // TODO: Implement when we have local execution
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+	// TODO implement
 	return true, 0, nil, nil
 }
