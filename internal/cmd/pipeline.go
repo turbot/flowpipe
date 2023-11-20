@@ -377,6 +377,9 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 	}
 
 	resp, pipelineCmd, err := api.ExecutePipeline(input, pipelineName, m.ESService)
+	if err != nil {
+		return nil, err
+	}
 
 	// TACTICAL - wait for completion
 	// can be removed when local streaming logs are implemented
