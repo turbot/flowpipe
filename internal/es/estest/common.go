@@ -1,25 +1,33 @@
-package inprocess
+package estest
 
 import (
-	"context"
 	"fmt"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"strings"
 	"time"
 )
 
-func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName string, initialWaitTime time.Duration, args modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
+func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
+
+	parts := strings.Split(name, ".")
+	if len(parts) != 3 {
+		name = "local.pipeline." + name
+	}
+
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(),
 		PipelineExecutionID: util.NewPipelineExecutionID(),
-		Name:                pipelineName,
-		Args:                args,
+		Name:                name,
 	}
 
-	if err := esService.Send(pipelineCmd); err != nil {
+	if args != nil {
+		pipelineCmd.Args = args
+	}
+
+	if err := suite.esService.Send(pipelineCmd); err != nil {
 		return nil, nil, fmt.Errorf("error sending pipeline command: %w", err)
 
 	}
@@ -28,7 +36,7 @@ func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName stri
 	time.Sleep(initialWaitTime)
 
 	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(ctx)
+	ex, err := execution.NewExecution(suite.ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -41,9 +49,9 @@ func RunPipeline(ctx context.Context, esService *es.ESService, pipelineName stri
 	return ex, pipelineCmd, nil
 }
 
-func GetPipelineExAndWait(ctx context.Context, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
+func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
 	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(ctx)
+	ex, err := execution.NewExecution(suite.ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -75,6 +83,10 @@ func GetPipelineExAndWait(ctx context.Context, event *event.Event, pipelineExecu
 			break
 		}
 	}
+
+	// if pex.Status == expectedState {
+	// 	return ex, pex, nil
+	// }
 
 	if !pex.IsComplete() {
 		return ex, pex, fmt.Errorf("not completed")

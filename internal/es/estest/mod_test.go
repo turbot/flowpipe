@@ -4,8 +4,6 @@ package estest
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/inprocess"
-	"github.com/turbot/pipe-fittings/error_helpers"
 	"os"
 	"path"
 	"testing"
@@ -22,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -121,14 +120,14 @@ func (suite *ModTestSuite) TestSimplestPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -143,14 +142,14 @@ func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.for_each_with_sleep", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_with_sleep", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -168,14 +167,14 @@ func (suite *ModTestSuite) TestSimpleTwoStepsPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.simple_two_steps", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_two_steps", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -192,14 +191,14 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.simple_loop", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -221,14 +220,14 @@ func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.loop_with_for_each_and_nested_pipeline", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_and_nested_pipeline", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -262,14 +261,14 @@ func (suite *ModTestSuite) TestSimpleForEach() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.simple_for_each", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_for_each", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -308,14 +307,14 @@ func (suite *ModTestSuite) TestForEachOneAndForEachTwo() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.for_each_one_and_for_each_two", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_one_and_for_each_two", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -334,14 +333,14 @@ func (suite *ModTestSuite) XTestLoopWithForEach() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.loop_with_for_each", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -391,14 +390,14 @@ func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.simple_loop_index", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_loop_index", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -427,7 +426,7 @@ func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 	pipelineInput := modconfig.Input{}
 
 	// We have to use the sleep step here to avoid concurrency issue with the planner
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.loop_with_for_each_sleep", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_with_for_each_sleep", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -435,7 +434,7 @@ func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 	}
 
 	// Yeah this is a long test, the sleep is 4 seconds x 3
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 14, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1*time.Second, 14, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -469,14 +468,14 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -493,14 +492,14 @@ func (suite *ModTestSuite) TestSimpleNestedPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.nested_simple_top", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -519,14 +518,14 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.nested_simple_with_clash_merged_output", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_with_clash_merged_output", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 
 	if pex.Status != "failed" {
 		assert.Fail("Pipeline execution should fail")
@@ -541,14 +540,14 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithMergedOutput() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.nested_simple_top_with_merged_output", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_merged_output", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -569,14 +568,14 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEach() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.nested_simple_top_with_for_each", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_for_each", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -596,14 +595,14 @@ func (suite *ModTestSuite) TestSimpleNestedPipelineWithForEachAndMergedOutput() 
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.nested_simple_top_with_for_each_with_merged_output", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.nested_simple_top_with_for_each_with_merged_output", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -628,14 +627,14 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.with_step_output", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_step_output", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -667,13 +666,13 @@ func (suite *ModTestSuite) TestPipelineWithForEach() {
 	assert := assert.New(suite.T())
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.run_me_controller", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.run_me_controller", 100*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -692,13 +691,13 @@ func (suite *ModTestSuite) TestPipelineForEachTrippleNested() {
 	assert := assert.New(suite.T())
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.run_me_top", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.run_me_top", 100*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -782,14 +781,14 @@ func (suite *ModTestSuite) TestPipelineWithArgs() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.calling_pipeline_with_params", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.calling_pipeline_with_params", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -815,13 +814,13 @@ func (suite *ModTestSuite) TestJsonArray() {
 		"request_body": arrayInput,
 	}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.json_array", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.json_array", 100*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -846,14 +845,14 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.for_map", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_map", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -876,14 +875,14 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 		return
 	}
 
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.set_param", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.set_param", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -905,14 +904,14 @@ func (suite *ModTestSuite) TestJsonAsOutput() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.json_output", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.json_output", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -928,14 +927,14 @@ func (suite *ModTestSuite) TestJsonAsOutput() {
 	pex = nil
 	pipelineCmd = nil
 
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.parent_json_output", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.parent_json_output", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -954,14 +953,14 @@ func (suite *ModTestSuite) TestMapReduce() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.reduce_map", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_map", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -983,14 +982,14 @@ func (suite *ModTestSuite) TestListReduce() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.reduce_list", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.reduce_list", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1014,13 +1013,13 @@ func (suite *ModTestSuite) TestNested() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.top", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.top", 500*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1040,14 +1039,14 @@ func (suite *ModTestSuite) TestForEachEmptyAndNonCollection() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.for_each_empty_test", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_empty_test", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1060,14 +1059,14 @@ func (suite *ModTestSuite) TestForEachEmptyAndNonCollection() {
 
 	assert.Nil(pex.PipelineOutput["val"])
 
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.for_each_non_collection", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_non_collection", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, _ = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 
 	if pex.Status != "failed" {
 		assert.Fail("Pipeline should have failed")
@@ -1093,14 +1092,14 @@ func (suite *ModTestSuite) XXTestHttpPipelines() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.http_post_url_encoded", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.http_post_url_encoded", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating executio¡n", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1117,13 +1116,13 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.pipeline_with_transform_step", 200*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 200*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1157,13 +1156,13 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 
 	// Pipeline 2
 
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.pipeline_with_transform_step_string_list", 200*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step_string_list", 200*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1184,13 +1183,13 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal("user is roger", pex.StepStatus["transform.transform_test"]["3"].StepExecutions[0].Output.Data[schema.AttributeTypeValue])
 
 	// Pipeline 3
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.transform_step_for_map", 200*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.transform_step_for_map", 200*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1208,14 +1207,14 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 
 func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
 	assert := assert.New(suite.T())
-	_, cmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.validate_error", 500*time.Millisecond, nil)
+	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.validate_error", 500*time.Millisecond, nil)
 
 	if err != nil {
 		assert.Fail("Error running pipeline", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 50, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 50, "failed")
 	if err != nil || (err != nil && err.Error() != "not completed") {
 		assert.Fail("Invalid pipeline status", err)
 		return
@@ -1236,14 +1235,14 @@ func (suite *ModTestSuite) TestModVars() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.echo_with_variable", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_with_variable", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1266,14 +1265,14 @@ func (suite *ModTestSuite) TestErrorRetry() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_retry", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1300,14 +1299,14 @@ func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_retry_with_backoff", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_backoff", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 60, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 60, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1351,14 +1350,14 @@ func (suite *ModTestSuite) TestTransformLoop() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.transform_loop", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.transform_loop", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 
 	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
@@ -1377,14 +1376,14 @@ func (suite *ModTestSuite) TestForEachAndForEach() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.for_each_and_for_each", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.for_each_and_for_each", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 
 	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
@@ -1409,14 +1408,14 @@ func (suite *ModTestSuite) TestErrorInForEach() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_in_for_each", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1446,14 +1445,14 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1483,14 +1482,14 @@ func (suite *ModTestSuite) TestErrorRetryWithNestedPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_retry_with_nested_pipeline", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1528,14 +1527,14 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1563,7 +1562,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works_error_ignored", 500*time.Millisecond, pipelineInput)
 
@@ -1598,14 +1597,14 @@ func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1624,7 +1623,7 @@ func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_but_ignored", 500*time.Millisecond, pipelineInput)
 
@@ -1654,14 +1653,14 @@ func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_with_multiple_throws", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_multiple_throws", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1682,14 +1681,14 @@ func (suite *ModTestSuite) TestErrorWithThrowSimpleNestedPipeline() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_simple_nested_pipeline", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1709,14 +1708,14 @@ func (suite *ModTestSuite) TestPipelineWithTransformStep() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.pipeline_with_transform_step", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_transform_step", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 
 	if pex.Status != "finished" {
 		assert.Fail("Pipeline execution not finished")
@@ -1735,14 +1734,14 @@ func (suite *ModTestSuite) TestParamAny() {
 		"param_any": "hello as string",
 	}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.any_param", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.any_param", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1759,14 +1758,14 @@ func (suite *ModTestSuite) TestParamAny() {
 		"param_any": 42,
 	}
 
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.any_param", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.any_param", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1786,14 +1785,14 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 		"param_any": "hello as string",
 	}
 
-	_, pipelineCmd, err := inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.typed_any_param", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.typed_any_param", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err := inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -1810,14 +1809,14 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 		"param_any": 42,
 	}
 
-	_, pipelineCmd, err = inprocess.RunPipeline(suite.ctx, suite.FlowpipeTestSuite.esService, "test_suite_mod.pipeline.typed_any_param", 500*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.typed_any_param", 500*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, err = inprocess.GetPipelineExAndWait(suite.ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
