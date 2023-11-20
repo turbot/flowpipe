@@ -1588,6 +1588,39 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
 }
 
+func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_in_for_each_nested_pipeline_one_works_error_ignored", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// There are 3 instances on the for_each, all of them failed just one time (no retry configured)
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
+
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(0, len(pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Errors))
+	assert.Equal(404, pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
 func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 	assert := assert.New(suite.T())
 
@@ -1614,6 +1647,34 @@ func (suite *ModTestSuite) TestErrorWithThrowSimple() {
 	// retry does not catch throw, so there should only be 1 step execution here
 	assert.Equal(1, len(pex.Errors))
 	assert.Equal("from throw block", pex.Errors[0].Error.Detail)
+}
+
+func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := &modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_but_ignored", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// Step throws an error, but it's ignored s the pipeline should finish rather than fail
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished status is: " + pex.Status)
+		return
+	}
+
+	// TODO: should ignored error bubbles up to the pipeline?
+	assert.Equal(0, len(pex.Errors))
 }
 
 func (suite *ModTestSuite) TestErrorWithMultipleThrows() {
