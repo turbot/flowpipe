@@ -11,30 +11,6 @@ import (
 	"github.com/turbot/pipe-fittings/utils"
 )
 
-type ListPipelineResponseItem struct {
-	Name          string            `json:"name"`
-	Description   *string           `json:"description,omitempty"`
-	Mod           string            `json:"mod"`
-	Title         *string           `json:"title,omitempty"`
-	Documentation *string           `json:"documentation,omitempty"`
-	Tags          map[string]string `json:"tags"`
-}
-
-func ListPipelineResponseItemFromAPI(apiItem flowpipeapiclient.ListPipelineResponseItem) ListPipelineResponseItem {
-	res := ListPipelineResponseItem{
-		Name:          typehelpers.SafeString(apiItem.Name),
-		Description:   apiItem.Description,
-		Mod:           typehelpers.SafeString(apiItem.Mod),
-		Title:         apiItem.Title,
-		Documentation: apiItem.Documentation,
-		Tags:          make(map[string]string),
-	}
-	if apiItem.Tags != nil {
-		res.Tags = *apiItem.Tags
-	}
-	return res
-}
-
 // This type is used by the API to return a list of pipelines.
 type ListPipelineResponse struct {
 	Items     []FpPipeline `json:"items"`
@@ -195,7 +171,7 @@ func (p PrintablePipeline) GetItems() interface{} {
 }
 
 func (p PrintablePipeline) GetTable() (Table, error) {
-	lp, ok := p.Items.([]ListPipelineResponseItem)
+	lp, ok := p.Items.([]FpPipeline)
 
 	if !ok {
 		return Table{}, perr.BadRequestWithMessage("Unable to cast to []ListPipelineResponseItem")
