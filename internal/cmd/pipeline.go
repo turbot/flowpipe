@@ -126,7 +126,7 @@ func pipelineShowCmd() *cobra.Command {
 
 func showPipelineFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp *types.GetPipelineResponse
+	var resp *types.FpPipeline
 	var err error
 	pipelineName := args[0]
 
@@ -197,17 +197,17 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func getPipelineRemote(pipelineName string) (*types.GetPipelineResponse, error) {
+func getPipelineRemote(pipelineName string) (*types.FpPipeline, error) {
 	apiClient := common.GetApiClient()
 	resp, _, err := apiClient.PipelineApi.Get(context.Background(), pipelineName).Execute()
 	if err != nil {
 		return nil, err
 	}
 	// map the API data typ einto the internal data type
-	return types.GetPipelineResponseFromAPI(resp), err
+	return types.PipelineResponseFromAPI(resp), err
 }
 
-func getPipelineLocal(ctx context.Context, pipelineName string) (*types.GetPipelineResponse, error) {
+func getPipelineLocal(ctx context.Context, pipelineName string) (*types.FpPipeline, error) {
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)

@@ -2,12 +2,13 @@ package types
 
 import (
 	"fmt"
+	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	typehelpers "github.com/turbot/go-kit/types"
-
-	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 type ListPipelineResponseItem struct {
@@ -36,8 +37,8 @@ func ListPipelineResponseItemFromAPI(apiItem flowpipeapiclient.ListPipelineRespo
 
 // This type is used by the API to return a list of pipelines.
 type ListPipelineResponse struct {
-	Items     []ListPipelineResponseItem `json:"items"`
-	NextToken *string                    `json:"next_token,omitempty"`
+	Items     []FpPipeline `json:"items"`
+	NextToken *string      `json:"next_token,omitempty"`
 }
 
 func ListPipelineResponseFromAPI(apiResp *flowpipeapiclient.ListPipelineResponse) *ListPipelineResponse {
@@ -46,12 +47,13 @@ func ListPipelineResponseFromAPI(apiResp *flowpipeapiclient.ListPipelineResponse
 	}
 
 	var res = &ListPipelineResponse{
-		Items:     make([]ListPipelineResponseItem, len(apiResp.Items)),
+		Items:     make([]FpPipeline, len(apiResp.Items)),
 		NextToken: apiResp.NextToken,
 	}
-	for i, apiItem := range apiResp.Items {
-		res.Items[i] = ListPipelineResponseItemFromAPI(apiItem)
-	}
+	// TODO KAI implement after API is updated
+	//for i, apiItem := range apiResp.Items {
+	//	//res.Items[i] =* PipelineResponseFromAPI(apiItem)
+	//}
 	return res
 }
 
@@ -59,7 +61,7 @@ func (o ListPipelineResponse) GetResourceType() string {
 	return "ListPipelineResponse"
 }
 
-type GetPipelineResponse struct {
+type FpPipeline struct {
 	Name          string                     `json:"name"`
 	Description   *string                    `json:"description,omitempty"`
 	Mod           string                     `json:"mod"`
@@ -71,12 +73,49 @@ type GetPipelineResponse struct {
 	Params        []FpPipelineParam          `json:"params,omitempty"`
 }
 
-func GetPipelineResponseFromAPI(apiResp *flowpipeapiclient.GetPipelineResponse) *GetPipelineResponse {
+func PipelineFromMod(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
+	resp := &FpPipeline{
+		Name:          pipeline.Name(),
+		Description:   pipeline.Description,
+		Mod:           pipeline.GetMod().FullName,
+		Title:         pipeline.Title,
+		Tags:          pipeline.Tags,
+		Documentation: pipeline.Documentation,
+		Steps:         pipeline.Steps,
+		OutputConfig:  pipeline.OutputConfig,
+	}
+
+	var pipelineParams []FpPipelineParam
+	for _, param := range pipeline.Params {
+
+		paramDefault := map[string]interface{}{}
+		if !param.Default.IsNull() {
+			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
+			if err != nil {
+				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
+			}
+			paramDefault[param.Name] = paramDefaultGoVal
+		}
+
+		pipelineParams = append(pipelineParams, FpPipelineParam{
+			Name:        param.Name,
+			Description: utils.ToStringPointer(param.Description),
+			Optional:    &param.Optional,
+			Type:        param.Type.FriendlyName(),
+			Default:     paramDefault,
+		})
+
+		resp.Params = pipelineParams
+	}
+	return resp, nil
+}
+
+func PipelineResponseFromAPI(apiResp *flowpipeapiclient.GetPipelineResponse) *FpPipeline {
 	if apiResp == nil {
 		return nil
 	}
 
-	res := &GetPipelineResponse{
+	res := &FpPipeline{
 		Name:          typehelpers.SafeString(apiResp.Name),
 		Description:   apiResp.Description,
 		Mod:           typehelpers.SafeString(apiResp.Mod),

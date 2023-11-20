@@ -18,10 +18,8 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/utils"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
@@ -73,17 +71,14 @@ func ListPipelines() (*types.ListPipelineResponse, error) {
 	}
 
 	// Convert the list of pipelines to FpPipeline type
-	var listPipelineResponseItems []types.ListPipelineResponseItem
+	var listPipelineResponseItems []types.FpPipeline
 
 	for _, pipeline := range pipelines {
-		listPipelineResponseItems = append(listPipelineResponseItems, types.ListPipelineResponseItem{
-			Name:          pipeline.Name(),
-			Description:   pipeline.Description,
-			Mod:           pipeline.GetMod().ShortName,
-			Title:         pipeline.Title,
-			Tags:          pipeline.Tags,
-			Documentation: pipeline.Documentation,
-		})
+		item, err := types.PipelineFromMod(pipeline)
+		if err != nil {
+			return nil, err
+		}
+		listPipelineResponseItems = append(listPipelineResponseItems, *item)
 	}
 
 	sort.Slice(listPipelineResponseItems, func(i, j int) bool {
@@ -106,7 +101,7 @@ func ListPipelines() (*types.ListPipelineResponse, error) {
 // / ...
 // @Param pipeline_name path string true "The name of the pipeline" format(^[a-z_]{0,32}$)
 // ...
-// @Success 200 {object} types.GetPipelineResponse
+// @Success 200 {object} types.FpPipeline
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -130,7 +125,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 	c.JSON(http.StatusOK, getPipelineresponse)
 }
 
-func GetPipeline(pipelineName string) (*types.GetPipelineResponse, error) {
+func GetPipeline(pipelineName string) (*types.FpPipeline, error) {
 	pipelineFullName := ConstructPipelineFullyQualifiedName(pipelineName)
 
 	pipelineCached, found := cache.GetCache().Get(pipelineFullName)
@@ -143,40 +138,7 @@ func GetPipeline(pipelineName string) (*types.GetPipelineResponse, error) {
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	resp := &types.GetPipelineResponse{
-		Name:          pipeline.Name(),
-		Description:   pipeline.Description,
-		Mod:           pipeline.GetMod().FullName,
-		Title:         pipeline.Title,
-		Tags:          pipeline.Tags,
-		Documentation: pipeline.Documentation,
-		Steps:         pipeline.Steps,
-		OutputConfig:  pipeline.OutputConfig,
-	}
-
-	var pipelineParams []types.FpPipelineParam
-	for _, param := range pipeline.Params {
-
-		paramDefault := map[string]interface{}{}
-		if !param.Default.IsNull() {
-			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
-			if err != nil {
-				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
-			}
-			paramDefault[param.Name] = paramDefaultGoVal
-		}
-
-		pipelineParams = append(pipelineParams, types.FpPipelineParam{
-			Name:        param.Name,
-			Description: utils.ToStringPointer(param.Description),
-			Optional:    &param.Optional,
-			Type:        param.Type.FriendlyName(),
-			Default:     paramDefault,
-		})
-
-		resp.Params = pipelineParams
-	}
-	return resp, nil
+	return types.PipelineFromMod(pipeline)
 }
 
 // @Summary Execute a pipeline command
