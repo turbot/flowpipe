@@ -1669,13 +1669,12 @@ func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 
 	// Step throws an error, but it's ignored s the pipeline should finish rather than fail
 	if pex.Status != "finished" {
-		assert.Fail("Pipeline execution not finished status is " + pex.Status)
+		assert.Fail("Pipeline execution not finished status is: " + pex.Status)
 		return
 	}
 
-	// retry does not catch throw, so there should only be 1 step execution here
-	assert.Equal(1, len(pex.Errors))
-	assert.Equal("from throw block", pex.Errors[0].Error.Detail)
+	// TODO: should ignored error bubbles up to the pipeline?
+	assert.Equal(0, len(pex.Errors))
 }
 
 func (suite *ModTestSuite) TestErrorWithMultipleThrows() {

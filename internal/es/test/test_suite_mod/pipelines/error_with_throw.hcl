@@ -24,7 +24,7 @@ pipeline "error_with_throw_but_ignored" {
         }
 
         error {
-            ignored = true
+            ignore = true
         }
     }
 }
