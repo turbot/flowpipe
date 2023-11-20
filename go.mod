@@ -4,7 +4,7 @@ go 1.21.0
 
 replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
 
-//replace github.com/turbot/pipe-fittings => ../pipe-fittings/
+replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
@@ -29,7 +29,6 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/karrick/gows v0.3.0
 	github.com/lib/pq v1.10.9
-	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/radovskyb/watcher v1.0.7
 	github.com/slack-go/slack v0.12.3
 	github.com/spf13/cobra v1.7.0
@@ -44,8 +43,7 @@ require (
 
 require (
 	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
-	// prehook_and_GetWorkspaceResourcesOfType
-	github.com/turbot/pipe-fittings v0.0.0-20231116175136-c0e648b5d502
+	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
 )
 
 require (
@@ -160,6 +158,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.4 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
+	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
@@ -211,6 +210,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
+	github.com/turbot/steampipe-cloud-sdk-go v0.6.0 // indirect
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 // indirect
 	github.com/turbot/terraform-components v0.0.0-20231108031935-358f803c1a8b // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
