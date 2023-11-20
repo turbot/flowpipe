@@ -362,8 +362,8 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 		_ = m.Stop()
 	}()
 
-	//Give some time for Watermill to fully start
-	time.Sleep(2 * time.Second)
+	// Give some time for Watermill to fully start
+	//time.Sleep(2 * time.Second)
 
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
@@ -391,7 +391,7 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 }
 
 func GetPipelineExAndWait(ctx context.Context, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
-	time.Sleep(waitTime)
+	//time.Sleep(waitTime)
 
 	// check if the execution id has been completed, check 3 times
 	ex, err := execution.NewExecution(ctx)

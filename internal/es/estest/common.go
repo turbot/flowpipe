@@ -11,7 +11,6 @@ import (
 )
 
 func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.Execution, *event.PipelineQueue, error) {
-
 	parts := strings.Split(name, ".")
 	if len(parts) != 3 {
 		name = "local.pipeline." + name
