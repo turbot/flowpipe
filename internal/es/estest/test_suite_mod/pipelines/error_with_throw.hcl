@@ -9,7 +9,7 @@ pipeline "error_with_throw_simple" {
 
         # retry does not catch throw, so there should only be 1 step execution here
         retry {
-            retries = 2
+            max_attempts = 2
         }
     }
 }
@@ -47,7 +47,7 @@ pipeline "error_with_multiple_throws" {
 
         # retry does not catch throw, so there should only be 1 step execution here
         retry {
-            retries = 2
+            max_attempts = 2
         }
     }
 }
@@ -64,7 +64,7 @@ pipeline "error_with_throw_simple_nested_pipeline" {
         }
 
         retry {
-            retries = 2
+            max_attempts = 2
         }
     }
 }
@@ -87,7 +87,7 @@ pipeline "error_with_retries_that_works" {
         }
 
         retry {
-            retries = 4
+            max_attempts = 4
         }
     }
 }
