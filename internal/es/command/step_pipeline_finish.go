@@ -3,9 +3,11 @@ package command
 import (
 	"context"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -155,10 +157,20 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	if cmd.Output.Status == "failed" {
 		var stepRetry *modconfig.StepRetry
+		var diags hcl.Diagnostics
 		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
 		// to "complete" the error
 		if !errorFromThrow {
-			stepRetry = calculateRetry(ctx, cmd.StepRetry, stepDefn)
+			stepRetry, diags = calculateRetry(ctx, cmd.StepRetry, stepDefn, endStepEvalContext)
+
+			if len(diags) > 0 {
+				logger.Error("Error calculating retry", "diags", diags)
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags)))
+				if err2 != nil {
+					logger.Error("Error publishing event", "error", err2)
+				}
+				return nil
+			}
 		}
 
 		if stepRetry != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -314,11 +315,17 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 
 	if output.Status == "failed" {
 		var stepRetry *modconfig.StepRetry
+		var diags hcl.Diagnostics
 
 		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
 		// to "complete" the error
 		if !errorFromThrow {
-			stepRetry = calculateRetry(ctx, cmd.StepRetry, stepDefn)
+			stepRetry, diags = calculateRetry(ctx, cmd.StepRetry, stepDefn, endStepEvalContext)
+			if len(diags) > 0 {
+				logger.Error("Error calculating retry", "diags", diags)
+				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags), logger)
+				return
+			}
 		}
 
 		if stepRetry != nil {
@@ -421,13 +428,17 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 	return nil, nil
 }
 
-func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep) *modconfig.StepRetry {
+func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepRetry, hcl.Diagnostics) {
 	// we have error, check the if there's a retry block
-	retryConfig := stepDefn.GetRetryConfig()
+	retryConfig, diags := stepDefn.GetRetryConfig(evalContext)
+
+	if len(diags) > 0 {
+		return nil, diags
+	}
 
 	if helpers.IsNil(retryConfig) {
 		// there's no retry config ... nothing to retry
-		return nil
+		return nil, hcl.Diagnostics{}
 	}
 
 	// if step retry == nil means this is the first time we encountered this issue
@@ -438,12 +449,12 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	}
 
 	stepRetry.Index = stepRetry.Index + 1
-	if stepRetry.Index > retryConfig.Retries {
+	if stepRetry.Index > retryConfig.MaxAttempts {
 		// we have exhausted all retries, we need to fail the pipeline
-		return nil
+		return nil, hcl.Diagnostics{}
 	}
 
-	return stepRetry
+	return stepRetry, hcl.Diagnostics{}
 }
 
 func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {

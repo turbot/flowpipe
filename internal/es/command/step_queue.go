@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -42,12 +43,26 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
 		}
 
+		pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
+
+		evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
+		if err != nil {
+			logger.Error("Error building eval context", "error", err)
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+		}
+
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
-		if stepDefn.GetRetryConfig().Backoff != nil {
-			// If there's backoff, create the sleep in a separate go routine
+		retryConfig, diags := stepDefn.GetRetryConfig(evalContext)
+		if len(diags) > 0 {
+			logger.Error("Error getting retry config", "diags", diags)
+			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags))))
+		}
+
+		if retryConfig != nil {
+
 			go func() {
-				duration, _ := time.ParseDuration(*stepDefn.GetRetryConfig().Backoff)
+				duration := retryConfig.CalculateBackoff(cmd.StepRetry.Index)
 
 				logger.Info("Delaying step start for", "duration", duration, "stepName", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID)
 				start := time.Now().UTC()
