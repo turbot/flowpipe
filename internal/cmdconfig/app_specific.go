@@ -26,6 +26,7 @@ func SetAppSpecificConstants() {
 	//app_specific.EnvAppPrefix
 	app_specific.EnvInputVarPrefix = "P_VAR_"
 	//app_specific.InstallDir
+	app_specific.ConfigExtension = ".fpc"
 	app_specific.ModDataExtension = ".hcl"
 	app_specific.ModFileName = "mod.hcl"
 	app_specific.VariablesExtension = ".pvars"

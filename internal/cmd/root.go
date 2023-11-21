@@ -40,6 +40,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		// Common (steampipe, flowpipe) flags
 		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").
 		AddPersistentFilepathFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory").
+		AddPersistentStringFlag(constants.ArgWorkspaceProfile, "default", "The workspace to use").
 		// Define the CLI flag parameters for wrapped enum flag.
 		AddPersistentVarFlag(enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
 			constants.ArgOutput,
