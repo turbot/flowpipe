@@ -58,7 +58,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		container.WithDockerClient(docker.GlobalDockerClient),
 	)
 	if err != nil {
-		panic(err)
+		return nil, perr.InternalWithMessage("Error creating function config with the provided options:" + err.Error())
 	}
 
 	c.Name = input[schema.LabelName].(string)
@@ -77,7 +77,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 	err = c.Load()
 	if err != nil {
-		panic(err)
+		return nil, perr.InternalWithMessage("Error loading function config: " + err.Error())
 	}
 
 	// Construct the output
@@ -93,7 +93,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 	if err != nil {
 		if _, ok := err.(perr.ErrorModel); !ok {
-			return nil, err
+			return nil, perr.InternalWithMessage("Error loading function config: " + err.Error())
 		}
 
 		e := err.(perr.ErrorModel)

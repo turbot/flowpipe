@@ -346,12 +346,7 @@ func (c *Container) Run() (string, error) {
 		stdErr := o.Stderr()
 		truncatedStdErr := truncateString(stdErr, 256)
 
-		return containerID, perr.ErrorModel{
-			Type:   perr.ErrorCodeExecutionError,
-			Title:  fmt.Sprintf("%d", exitCode),
-			Status: perr.StatusExecutionError,
-			Detail: truncatedStdErr,
-		}
+		return containerID, perr.ExecutionErrorWithMessage(truncatedStdErr)
 	}
 
 	return containerID, nil
