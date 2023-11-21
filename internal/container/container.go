@@ -3,7 +3,6 @@ package container
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -348,9 +347,9 @@ func (c *Container) Run() (string, error) {
 		truncatedStdErr := truncateString(stdErr, 256)
 
 		return containerID, perr.ErrorModel{
-			Type:   perr.ErrorCodeBadRequest,
+			Type:   perr.ErrorCodeExecutionError,
 			Title:  fmt.Sprintf("%d", exitCode),
-			Status: http.StatusBadRequest,
+			Status: perr.StatusExecutionError,
 			Detail: truncatedStdErr,
 		}
 	}
@@ -358,12 +357,12 @@ func (c *Container) Run() (string, error) {
 	return containerID, nil
 }
 
-func truncateString(str string, num int) string {
-	b := []rune(str)
-	if len(b) > num {
-		return string(b[:num])
+// truncateString truncates the string to the given length
+func truncateString(s string, maxLength int) string {
+	if len(s) > maxLength {
+		return s[:maxLength]
 	}
-	return str
+	return s
 }
 
 // Cleanup all docker containers for the given container.
