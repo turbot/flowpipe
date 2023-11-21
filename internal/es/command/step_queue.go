@@ -62,7 +62,7 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 		if retryConfig != nil {
 
 			go func() {
-				duration := time.Duration(retryConfig.MinInterval * int(time.Millisecond))
+				duration := retryConfig.CalculateBackoff(cmd.StepRetry.Index)
 
 				logger.Info("Delaying step start for", "duration", duration, "stepName", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID)
 				start := time.Now().UTC()

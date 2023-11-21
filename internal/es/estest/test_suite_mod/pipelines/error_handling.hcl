@@ -66,6 +66,33 @@ pipeline "error_retry_with_backoff" {
     }
 }
 
+pipeline "error_retry_with_linear_backoff" {
+    step "http" "bad_http" {
+        url = "http://api.google.com/astros.jsons"
+
+        retry {
+            max_attempts = 4
+            strategy = "linear"
+            min_interval = 100
+            max_interval = 10000
+        }
+    }
+}
+
+pipeline "error_retry_with_exponential_backoff" {
+    step "http" "bad_http" {
+        url = "http://api.google.com/astros.jsons"
+
+        retry {
+            max_attempts = 5
+            strategy = "exponential"
+            min_interval = 100
+            max_interval = 10000
+        }
+    }
+}
+
+
 pipeline "error_retry_with_backoff_linear" {
     step "http" "bad_http" {
         url = "http://api.google.com/astros.jsons"
@@ -167,8 +194,6 @@ pipeline "error_in_for_each_nested_pipeline_one_works_error_ignored" {
         value = step.pipeline.http
     }
 }
-
-
 
 pipeline "error_retry_with_nested_pipeline" {
 

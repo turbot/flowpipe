@@ -23,7 +23,7 @@ pipeline "bad_email_with_param" {
       type    = string
       default = "sendercredential"
     }
-    
+
     param "host" {
       type    = string
       default = "smtp.example.com"
@@ -57,15 +57,15 @@ pipeline "bad_email_with_expr" {
       type    = list(string)
       default = ["recipient@example.com"]
     }
-    
+
     param "sender_credential" {
       type    = string
       default = "sendercredential"
     }
-    
+
     param "host" {
       type    = string
-      default = "smtp.example.com"
+      default = "smtp.18237298713lskjlaksjasjd.com"
     }
 
     param "port" {

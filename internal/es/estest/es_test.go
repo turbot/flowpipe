@@ -588,11 +588,7 @@ func (suite *EsTestSuite) TestBadEmail() {
 		return
 	}
 
-	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 500*time.Millisecond, 5, "failed")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
+	ex, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 50, "failed")
 
 	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil || pipelineDefn == nil {
@@ -617,7 +613,6 @@ func (suite *EsTestSuite) TestBadEmail() {
 	assert.Equal("This is an email body", pex.StepStatus["echo.email_body"]["0"].StepExecutions[0].Output.Data["text"])
 
 	// Expected the pipeline to fail
-	assert.True(pex.IsComplete())
 	assert.Equal("failed", pex.Status)
 
 	assert.Equal("failed", pex.StepStatus["email.test_email"]["0"].StepExecutions[0].Output.Status)

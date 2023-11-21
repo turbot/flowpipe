@@ -12,7 +12,7 @@ pipeline "bad_email_with_expr" {
 
     param "host" {
       type    = string
-      default = "smtp.example.com"
+      default = "smtp.18237298713lskjlaksjasjd.com"
     }
 
     param "port" {
