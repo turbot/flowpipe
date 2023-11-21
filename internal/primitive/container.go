@@ -92,15 +92,18 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	combined := c.Runs[containerID].Combined
 
 	if err != nil {
-		if _, ok := err.(perr.ErrorModel); !ok {
-			return nil, perr.InternalWithMessage("Error loading function config: " + err.Error())
-		}
-
-		e := err.(perr.ErrorModel)
-		output.Errors = []modconfig.StepError{
-			{
-				Error: e,
-			},
+		if e, ok := err.(perr.ErrorModel); !ok {
+			output.Errors = []modconfig.StepError{
+				{
+					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
+				},
+			}
+		} else {
+			output.Errors = []modconfig.StepError{
+				{
+					Error: e,
+				},
+			}
 		}
 	}
 
