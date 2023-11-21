@@ -17,18 +17,19 @@ func SetAppSpecificConstants() {
 	app_specific.AppName = "flowpipe"
 	// TODO unify version logic with steampipe and powerpipe
 	//app_specific.AppVersion
-	app_specific.AutoVariablesExtension = ".auto.pvars"
+	app_specific.AutoVariablesExtension = ".auto.fpvars"
 	//app_specific.ClientConnectionAppNamePrefix
 	//app_specific.ClientSystemConnectionAppNamePrefix
 	app_specific.DefaultInstallDir = installDir
-	app_specific.DefaultVarsFileName = "flowpipe.pvars"
+	app_specific.DefaultVarsFileName = "flowpipe.fpvars"
 	//app_specific.DefaultWorkspaceDatabase
 	//app_specific.EnvAppPrefix
 	app_specific.EnvInputVarPrefix = "P_VAR_"
 	//app_specific.InstallDir
+	app_specific.ConfigExtension = ".fpc"
 	app_specific.ModDataExtension = ".hcl"
 	app_specific.ModFileName = "mod.hcl"
-	app_specific.VariablesExtension = ".pvars"
+	app_specific.VariablesExtension = ".fpvars"
 	//app_specific.ServiceConnectionAppNamePrefix
 	app_specific.WorkspaceIgnoreFile = ".flowpipeignore"
 	app_specific.WorkspaceDataDir = ".flowpipe"
