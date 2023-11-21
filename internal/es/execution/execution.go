@@ -380,7 +380,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	// Open the event log
 	logPath, err := ex.LogFilePath()
-
 	if err != nil {
 		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
 		return err

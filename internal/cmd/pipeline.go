@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -234,24 +236,86 @@ func pipelineRunCmd() *cobra.Command {
 	return cmd
 }
 
+// func used to poll event logs
+type pollEventLogFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)
+
 func runPipelineFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 	var resp map[string]any
 	var err error
-	var pollServerEventLogFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)
+
+	var pollLogFunc pollEventLogFunc
+
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
+		// run pipeline on server
 		resp, err = runPipelineRemote(cmd, args)
-
-		pollServerEventLogFunc = pollServerEventLog
+		pollLogFunc = pollServerEventLog
 	} else {
+		// run pipeline in-process
 		resp, err = runPipelineLocal(cmd, args)
-		pollServerEventLogFunc = pollLocalEventLog
+		pollLogFunc = pollLocalEventLog
 	}
 	if err != nil {
 		error_helpers.ShowErrorWithMessage(ctx, err, "Error executing pipeline")
 	}
 
+	displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+}
+
+func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
+	ctx := cmd.Context()
+
+	pipelineName := args[0]
+	// extract the pipeline args from the flags
+	pipelineArgs := getPipelineArgs(cmd)
+
+	// API client
+	apiClient := common.GetApiClient()
+	cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
+
+	// Set the pipeline args
+	cmdPipelineRun.ArgsString = &pipelineArgs
+
+	resp, _, err := apiClient.PipelineApi.Cmd(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
+
+	return resp, err
+}
+
+func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error) {
+	ctx := cmd.Context()
+
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	error_helpers.FailOnError(err)
+	defer func() {
+		// ignore shutdown error
+		_ = m.Stop()
+	}()
+
+	// construct the pipeline name _after_ initializing so the cache is initialized
+	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
+
+	//extract the pipeline args from the flags
+	pipelineArgs := getPipelineArgs(cmd)
+
+	input := types.CmdPipeline{
+		Command:    "run",
+		ArgsString: pipelineArgs,
+	}
+
+	resp, _, err := api.ExecutePipeline(input, pipelineName, m.ESService)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO  without a delay of at least 500ms here, the logs are not displayed for some reason
+	// why?
+	time.Sleep(1000 * time.Millisecond)
+	return resp, err
+}
+
+func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
 	if resp != nil && resp["flowpipe"] != nil {
 		contents := resp["flowpipe"].(map[string]any)
 		executionId := ""
@@ -260,13 +324,13 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		lastLoaded := ""
 
 		if s, ok := contents["execution_id"].(string); !ok {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining execution_id")
+			error_helpers.ShowError(ctx, fmt.Errorf("Error obtaining execution_id"))
 			return
 		} else {
 			executionId = s
 		}
 		if s, ok := contents["pipeline_execution_id"].(string); !ok {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
+			error_helpers.ShowError(ctx, fmt.Errorf("Error obtaining pipeline_execution_id"))
 			return
 		} else {
 			pipelineId = s
@@ -305,7 +369,7 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		// poll logs & print
 		for {
 
-			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollServerEventLogFunc)
+			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
 				return
@@ -330,108 +394,6 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 			}
 		}
 	}
-}
-
-func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
-	ctx := cmd.Context()
-
-	pipelineName := args[0]
-	// extract the pipeline args from the flags
-	pipelineArgs := getPipelineArgs(cmd)
-
-	// API client
-	apiClient := common.GetApiClient()
-	cmdPipelineRun := flowpipeapiclient.NewCmdPipeline("run")
-
-	// Set the pipeline args
-	cmdPipelineRun.ArgsString = &pipelineArgs
-
-	resp, _, err := apiClient.PipelineApi.Cmd(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
-
-	return resp, err
-}
-
-func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error) {
-	ctx := cmd.Context()
-
-	// create and start the manager in local mode (i.e. do not set listen address)
-	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
-	error_helpers.FailOnError(err)
-	defer func() {
-		// TODO ignore shutdown error?
-		_ = m.Stop()
-	}()
-
-	// Give some time for Watermill to fully start
-	//time.Sleep(2 * time.Second)
-
-	// construct the pipeline name _after_ initializing so the cache is initialized
-	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
-
-	//extract the pipeline args from the flags
-	pipelineArgs := getPipelineArgs(cmd)
-
-	input := types.CmdPipeline{
-		Command:    "run",
-		ArgsString: pipelineArgs,
-	}
-
-	resp, pipelineCmd, err := api.ExecutePipeline(input, pipelineName, m.ESService)
-	if err != nil {
-		return nil, err
-	}
-
-	// TACTICAL - wait for completion
-	// can be removed when local streaming logs are implemented
-	_, _, err = GetPipelineExAndWait(ctx, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 2*time.Second, 2, "completed")
-	if err != nil {
-		return nil, err
-	}
-	return resp, err
-}
-
-func GetPipelineExAndWait(ctx context.Context, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.Execution, *execution.PipelineExecution, error) {
-	time.Sleep(waitTime)
-
-	// check if the execution id has been completed, check 3 times
-	ex, err := execution.NewExecution(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	err = ex.LoadProcess(event)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pex := ex.PipelineExecutions[pipelineExecutionID]
-	if pex == nil {
-		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
-	}
-
-	// Wait for the pipeline to complete, but not forever
-	for i := 0; i < waitRetry; i++ {
-		time.Sleep(waitTime)
-
-		err = ex.LoadProcess(event)
-		if err != nil {
-			return nil, nil, fmt.Errorf("error loading process: %w", err)
-		}
-		if pex == nil {
-			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
-		}
-		pex = ex.PipelineExecutions[pipelineExecutionID]
-
-		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
-			break
-		}
-	}
-
-	if !pex.IsComplete() {
-		return ex, pex, fmt.Errorf("not completed")
-	}
-
-	return ex, pex, nil
 }
 
 func getPipelineArgs(cmd *cobra.Command) map[string]string {
@@ -547,8 +509,74 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 	return complete, last, out, nil
 }
 
-// TODO: Implement when we have local execution
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
-	// TODO implement
-	return true, 0, nil, nil
+	ex, err := execution.NewExecution(ctx, execution.WithID(exId))
+	if err != nil {
+		return true, 0, nil, err
+	}
+
+	logFilePath, err := ex.LogFilePath()
+	if err != nil {
+		return true, 0, nil, err
+	}
+	file, err := os.Open(logFilePath)
+	if err != nil {
+		// TODO KAI use perr? wrap?
+		return true, 0, nil, err
+	}
+	var lastSize int64
+	if last != -1 {
+		lastSize = int64(last)
+	}
+
+	// Seek to the last read position
+	if _, err := file.Seek(lastSize, 0); err != nil {
+		// TODO use perr?
+		return true, 0, nil, err
+	}
+
+	var res types.ProcessEventLogs
+	var complete bool
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Bytes()
+		var entry types.EventLogEntry
+
+		if err := json.Unmarshal(line, &entry); err != nil {
+			// TODO use perr?
+			return true, 0, nil, err
+		}
+		res = append(res, types.ProcessEventLog{
+			EventType: entry.EventType,
+			Timestamp: entry.Timestamp,
+			Payload:   string(entry.Payload),
+		})
+
+		// check to see if event logs complete
+		if entry.EventType == event.HandlerPipelineFinished || entry.EventType == event.HandlerPipelineFailed {
+			payload := make(map[string]any)
+			if err := json.Unmarshal(entry.Payload, &payload); err != nil {
+				return false, 0, nil, fmt.Errorf("error parsing payload from %s", entry.Payload)
+			}
+			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		// TODO use perr?
+		return true, 0, nil, err
+	}
+
+	// Update last read position
+	if currentSize, err := file.Seek(0, 1); err == nil {
+		lastSize = currentSize
+	}
+
+	if err := file.Close(); err != nil {
+		// TODO use perr?
+		return true, 0, nil, err
+	}
+
+	return complete, int(lastSize), res, nil
 }
