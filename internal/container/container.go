@@ -339,7 +339,7 @@ func (c *Container) Run() (string, error) {
 
 	logger.Info("container run", "elapsed", time.Since(start), "image", c.Image, "container", containerResp.ID)
 
-	// If the container exited with a non-zero exit code, return an error with bad request status
+	// If the container exited with a non-zero exit code, return an execution error
 	if exitCode != 0 {
 
 		// Get the Stderr and truncate it to 256 chars
@@ -360,7 +360,7 @@ func truncateString(s string, maxLength int) string {
 	return s
 }
 
-// Cleanup all docker containers for the given container.
+// Cleanup all docker containers for the given container
 func (c *Container) CleanupArtifacts() error {
 	logger := fplog.Logger(c.runCtx)
 
