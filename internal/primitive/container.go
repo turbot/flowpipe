@@ -85,7 +85,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		Data: map[string]interface{}{},
 	}
 
-	containerID, err := c.Run()
+	containerID, exitCode, err := c.Run()
 
 	stdout := c.Runs[containerID].Stdout
 	stderr := c.Runs[containerID].Stderr
@@ -111,6 +111,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	output.Data["stdout"] = stdout
 	output.Data["stderr"] = stderr
 	output.Data["combined"] = combined
+	output.Data["exit_code"] = exitCode
 
 	return &output, nil
 }

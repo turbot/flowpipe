@@ -2006,7 +2006,7 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 func (suite *ModTestSuite) TestBadContainerStep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_bad_container", 500*time.Millisecond, pipelineInput)
 
@@ -2029,7 +2029,7 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := &modconfig.Input{}
+	pipelineInput := modconfig.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_bad_container_with_is_error", 500*time.Millisecond, pipelineInput)
 
