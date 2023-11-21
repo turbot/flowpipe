@@ -2047,7 +2047,7 @@ func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {
 	// The pipeline step should faile due to the invalid credentials, but the pipeline should continue
 	assert.Equal(1, len(pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions))
 	assert.Equal("failed", pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal(400, pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(460, pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
 
 	// The second step checks if the first step failed and it should be skipped
 	assert.Equal(1, len(pex.StepStatus["pipeline.delete_s3_bucket"]["0"].StepExecutions))
