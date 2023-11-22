@@ -74,7 +74,7 @@ func ListPipelines() (*types.ListPipelineResponse, error) {
 	var listPipelineResponseItems []types.FpPipeline
 
 	for _, pipeline := range pipelines {
-		item, err := types.PipelineFromMod(pipeline)
+		item, err := types.FpPipelineFromModPipeline(pipeline)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +138,7 @@ func GetPipeline(pipelineName string) (*types.FpPipeline, error) {
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	return types.PipelineFromMod(pipeline)
+	return types.FpPipelineFromModPipeline(pipeline)
 }
 
 // @Summary Execute a pipeline command

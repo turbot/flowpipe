@@ -17,7 +17,7 @@ type ListPipelineResponse struct {
 	NextToken *string      `json:"next_token,omitempty"`
 }
 
-func ListPipelineResponseFromAPI(apiResp *flowpipeapiclient.ListPipelineResponse) *ListPipelineResponse {
+func ListPipelineResponseFromAPIResponse(apiResp *flowpipeapiclient.ListPipelineResponse) *ListPipelineResponse {
 	if apiResp == nil {
 		return nil
 	}
@@ -28,7 +28,7 @@ func ListPipelineResponseFromAPI(apiResp *flowpipeapiclient.ListPipelineResponse
 	}
 	// TODO KAI implement after API is updated
 	//for i, apiItem := range apiResp.Items {
-	//	//res.Items[i] =* PipelineResponseFromAPI(apiItem)
+	//	//res.Items[i] =* FpPipelineFromAPIResponse(apiItem)
 	//}
 	return res
 }
@@ -49,7 +49,7 @@ type FpPipeline struct {
 	Params        []FpPipelineParam          `json:"params,omitempty"`
 }
 
-func PipelineFromMod(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
+func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
 	resp := &FpPipeline{
 		Name:          pipeline.Name(),
 		Description:   pipeline.Description,
@@ -86,7 +86,7 @@ func PipelineFromMod(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
 	return resp, nil
 }
 
-func PipelineResponseFromAPI(apiResp *flowpipeapiclient.GetPipelineResponse) *FpPipeline {
+func FpPipelineFromAPIResponse(apiResp *flowpipeapiclient.GetPipelineResponse) *FpPipeline {
 	if apiResp == nil {
 		return nil
 	}
