@@ -259,7 +259,6 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		// ensure to shut the manager when we are done
 		defer func() {
 			if m != nil {
-				fmt.Println("stopping manager")
 				_ = m.Stop()
 			}
 		}()
@@ -547,7 +546,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 
 	// Seek to the last read position
 	if _, err := file.Seek(lastSize, 0); err != nil {
-		// just return - we will try again next time
+		//nolint:nilerr // just return without passing error - we will try again next time
 		return complete, int(lastSize), res, nil
 	}
 
@@ -557,7 +556,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		var entry types.EventLogEntry
 
 		if err := json.Unmarshal(line, &entry); err != nil {
-			// maybe the write is incomplete - just return
+			//nolint:nilerr // maybe the write is incomplete - just return without passing error
 			return complete, int(lastSize), res, nil
 		}
 
@@ -578,7 +577,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	}
 
 	if err := scanner.Err(); err != nil {
-		// just return - we will try again next time
+		//nolint:nilerr // just return without passing error - we will try again next time
 		return complete, int(lastSize), res, nil
 	}
 
