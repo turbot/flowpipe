@@ -658,15 +658,15 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 	// }
 	// fmt.Println(string(s)) //nolint:forbidigo // test
 
-	assert.Equal(3, len(pex.StepStatus["echo.name"]))
-	assert.Equal("artist name: Real Friends", pex.StepStatus["echo.name"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("artist name: A Day To Remember", pex.StepStatus["echo.name"]["1"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("artist name: The Story So Far", pex.StepStatus["echo.name"]["2"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(3, len(pex.StepStatus["transform.name"]))
+	assert.Equal("artist name: Real Friends", pex.StepStatus["transform.name"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("artist name: A Day To Remember", pex.StepStatus["transform.name"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("artist name: The Story So Far", pex.StepStatus["transform.name"]["2"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal(3, len(pex.StepStatus["echo.second_step"]))
-	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["echo.second_step"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("second_step: album name: Common Courtesy", pex.StepStatus["echo.second_step"]["1"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("second_step: album name: What You Don't See", pex.StepStatus["echo.second_step"]["2"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(3, len(pex.StepStatus["transform.second_step"]))
+	assert.Equal("second_step: album name: Maybe This Place Is The Same And We're Just Changing", pex.StepStatus["transform.second_step"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("second_step: album name: Common Courtesy", pex.StepStatus["transform.second_step"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("second_step: album name: What You Don't See", pex.StepStatus["transform.second_step"]["2"].StepExecutions[0].Output.Data["value"])
 }
 
 func (suite *ModTestSuite) TestPipelineWithForEach() {
@@ -903,7 +903,7 @@ func (suite *ModTestSuite) TestPipelineWithForLoop() {
 	assert.Equal("[2] drums", pex.PipelineOutput["val_3"])
 
 	assert.Equal(3, len(pex.PipelineOutput["val"].(map[string]interface{})))
-	assert.Equal("[1] bass", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["text"])
+	assert.Equal("[1] bass", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["value"])
 }
 
 func (suite *ModTestSuite) TestJsonAsOutput() {
@@ -979,8 +979,8 @@ func (suite *ModTestSuite) TestMapReduce() {
 	}
 
 	assert.Equal(3, len(pex.PipelineOutput["val"].(map[string]interface{})))
-	assert.Equal("green_day: Green Day", pex.PipelineOutput["val"].(map[string]interface{})["green_day"].(map[string]interface{})["text"])
-	assert.Equal("sum_41: Sum 41", pex.PipelineOutput["val"].(map[string]interface{})["sum_41"].(map[string]interface{})["text"])
+	assert.Equal("green_day: Green Day", pex.PipelineOutput["val"].(map[string]interface{})["green_day"].(map[string]interface{})["value"])
+	assert.Equal("sum_41: Sum 41", pex.PipelineOutput["val"].(map[string]interface{})["sum_41"].(map[string]interface{})["value"])
 	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["blink_182"].(map[string]interface{})))
 }
 
@@ -1012,7 +1012,7 @@ func (suite *ModTestSuite) TestListReduce() {
 	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})))
 	assert.Equal(0, len(pex.PipelineOutput["val"].(map[string]interface{})["4"].(map[string]interface{})))
 
-	assert.Equal("1: 2", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["text"])
+	assert.Equal("1: 2", pex.PipelineOutput["val"].(map[string]interface{})["1"].(map[string]interface{})["value"])
 }
 
 func (suite *ModTestSuite) TestNested() {

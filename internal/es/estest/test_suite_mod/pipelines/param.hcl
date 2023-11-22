@@ -11,20 +11,20 @@ pipeline "simple_param" {
         default = var.var_one
     }
 
-    step "echo" "name" {
-        text = "echo ${param.name}"
+    step "transform" "name" {
+        value = "echo ${param.name}"
     }
 
     output "val" {
-        value = step.echo.name.text
+        value = step.transform.name.value
     }
 
-    step "echo" "from_var" {
-        text = "echo ${param.from_var}"
+    step "transform" "from_var" {
+        value = "echo ${param.from_var}"
     }
 
     output "from_var" {
-        value = step.echo.from_var.text
+        value = step.transform.from_var.value
     }
 }
 
@@ -38,15 +38,15 @@ pipeline "calling_pipeline_with_params" {
         }
     }
 
-    step "echo" "foo" {
-        text = "foo bar"
+    step "transform" "foo" {
+        value = "foo bar"
     }
 
     step "pipeline" "simple_param_expr" {
         pipeline = pipeline.simple_param
 
         args = {
-            name = "baz ${step.echo.foo.text}"
+            name = "baz ${step.transform.foo.value}"
         }
     }
 
@@ -70,22 +70,22 @@ pipeline "set_param" {
         default = ["guitar", "bass", "drums"]
     }
 
-    step "echo" "instruments" {
+    step "transform" "instruments" {
         for_each = param.instruments
-        text = "[${each.key}] ${each.value}"
+        value    = "[${each.key}] ${each.value}"
     }
 
     output "val_1" {
-        value = step.echo.instruments[0].text
+        value = step.transform.instruments[0].value
     }
     output "val_2" {
-        value = step.echo.instruments[1].text
+        value = step.transform.instruments[1].value
     }
     output "val_3" {
-        value = step.echo.instruments[2].text
+        value = step.transform.instruments[2].value
     }
     output "val" {
-        value = step.echo.instruments
+        value = step.transform.instruments
     }
 }
 

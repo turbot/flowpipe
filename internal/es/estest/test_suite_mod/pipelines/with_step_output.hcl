@@ -17,22 +17,22 @@ locals {
 
 pipeline "with_step_output" {
 
-    step "echo" "name" {
+    step "transform" "name" {
         for_each = local.artists
-        text = "artist name: ${each.value.name}"
+        value = "artist name: ${each.value.name}"
 
         output "album_name" {
             value = "album name: ${each.value.album}"
         }
     }
 
-    step "echo" "second_step" {
-        for_each = step.echo.name
-        text = "second_step: ${each.value.output.album_name}"
+    step "transform" "second_step" {
+        for_each = step.transform.name
+        value = "second_step: ${each.value.output.album_name}"
     }
 
     output "second_step_0" {
-        value = step.echo.second_step[0].text
+        value = step.transform.second_step[0].text
     }
 }
 
