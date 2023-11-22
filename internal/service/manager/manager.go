@@ -116,7 +116,7 @@ func (m *Manager) initializeResources() error {
 	var modInfo *modconfig.Mod
 
 	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, pipelineDir, ".hcl", ".sp")
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, pipelineDir, app_specific.ModDataExtension)
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
@@ -135,6 +135,7 @@ func (m *Manager) initializeResources() error {
 		triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
 
 	} else {
+		// there is no mod, just load pipelines and triggers from the directory
 		var err error
 		pipelines, triggers, err = load_mod.LoadPipelines(m.ctx, pipelineDir)
 		if err != nil {
