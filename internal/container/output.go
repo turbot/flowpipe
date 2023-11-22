@@ -15,8 +15,8 @@ type Output struct {
 }
 
 type OutputLine struct {
-	Type string
-	Text string
+	Stream string `json:"stream"`
+	Line   string `json:"line"`
 }
 
 func NewOutput() *Output {
@@ -65,9 +65,9 @@ func (o *Output) FromDockerLogsReader(reader io.Reader) error {
 
 		switch streamType {
 		case 2:
-			o.Lines = append(o.Lines, OutputLine{Type: StderrType, Text: string(payload)})
+			o.Lines = append(o.Lines, OutputLine{Stream: StderrType, Line: string(payload)})
 		default:
-			o.Lines = append(o.Lines, OutputLine{Type: StdoutType, Text: string(payload)})
+			o.Lines = append(o.Lines, OutputLine{Stream: StdoutType, Line: string(payload)})
 		}
 	}
 
@@ -79,7 +79,7 @@ func (o *Output) FromDockerLogsReader(reader io.Reader) error {
 func (o *Output) Combined() string {
 	txt := ""
 	for _, line := range o.Lines {
-		txt += line.Text
+		txt += line.Line
 	}
 	return txt
 }
@@ -88,8 +88,8 @@ func (o *Output) Combined() string {
 func (o *Output) Stdout() string {
 	txt := ""
 	for _, line := range o.Lines {
-		if line.Type == StdoutType {
-			txt += line.Text
+		if line.Stream == StdoutType {
+			txt += line.Line
 		}
 	}
 	return txt
@@ -99,8 +99,8 @@ func (o *Output) Stdout() string {
 func (o *Output) Stderr() string {
 	txt := ""
 	for _, line := range o.Lines {
-		if line.Type == StderrType {
-			txt += line.Text
+		if line.Stream == StderrType {
+			txt += line.Line
 		}
 	}
 	return txt

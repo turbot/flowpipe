@@ -38,11 +38,11 @@ type Container struct {
 }
 
 type ContainerRun struct {
-	ContainerID string `json:"container_id"`
-	Status      string `json:"status"`
-	Stdout      string `json:"stdout"`
-	Stderr      string `json:"stderr"`
-	Combined    string `json:"combined"`
+	ContainerID string       `json:"container_id"`
+	Status      string       `json:"status"`
+	Stdout      string       `json:"stdout"`
+	Stderr      string       `json:"stderr"`
+	Lines       []OutputLine `json:"lines"`
 }
 
 // Option defines a function signature for configuring the Docker client.
@@ -311,9 +311,9 @@ func (c *Container) Run() (string, int, error) {
 
 	c.Runs[containerID].Stdout = o.Stdout()
 	c.Runs[containerID].Stderr = o.Stderr()
-	c.Runs[containerID].Combined = o.Combined()
+	c.Runs[containerID].Lines = o.Lines
 
-	logger.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Combined)
+	logger.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Lines)
 
 	err = c.SetRunStatus(containerID, "logged")
 	if err != nil {
@@ -353,6 +353,11 @@ func (c *Container) Run() (string, int, error) {
 	}
 
 	return containerID, 0, nil
+}
+
+type StreamLines struct {
+	Stream string `json:"stream"`
+	Line   string `json:"line"`
 }
 
 // truncateString truncates the string to the given length
