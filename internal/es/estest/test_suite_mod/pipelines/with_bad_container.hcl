@@ -23,26 +23,6 @@ pipeline "with_bad_container" {
             AWS_SECRET_ACCESS_KEY = param.aws_secret_access_key
         }
     }
-
-    output "exit_code" {
-        value = step.container.container_run.exit_code
-    }
-
-    output "stdout" {
-        value = step.container.container_run.stdout
-    }
-
-    output "stderr" {
-        value = step.container.container_run.stderr
-    }
-
-    output "lines" {
-        value = step.container.container_run.lines
-    }
-
-     output "stdout_lines" {
-        value = [for v in step.container.container_run.lines[*] : v.line if v.stream == "stdout"]
-     }
 }
 
 pipeline "with_bad_container_with_is_error" {
