@@ -1,7 +1,7 @@
 pipeline "top" {
 
-    step "echo" "hello" {
-        text = "hello world"
+    step "transform" "hello" {
+        value = "hello world"
     }
 
     step "pipeline" "middle" {
@@ -13,12 +13,12 @@ pipeline "top" {
     }
 
 
-    step "echo" "combine" {
-        text = step.pipeline.middle.output.val
+    step "transform" "combine" {
+        value = step.pipeline.middle.output.val
     }
 
     output "val" {
-        value = step.echo.combine.text
+        value = step.transform.combine.value
     }
 
     output "val_two" {
@@ -32,16 +32,16 @@ pipeline "middle" {
         type = string
     }
 
-    step "echo" "echo" {
-        text = "middle world"
+    step "transform" "echo" {
+        value = "middle world"
     }
 
     step "pipeline" "call_bottom" {
         pipeline = pipeline.bottom
     }
 
-    step "echo" "echo_two" {
-        json = jsonencode({
+    step "transform" "echo_two" {
+        value = jsonencode({
           query = <<EOQ
             mutation {
                 createIssue(input: {repositoryId: "${step.pipeline.call_bottom.output.repository_id}", title: "${param.issue_title}"}
@@ -59,11 +59,11 @@ pipeline "middle" {
 
 
     output "val" {
-        value = step.echo.echo.text
+        value = step.transform.echo.value
     }
 
     output "val_two" {
-        value = step.echo.echo_two.json
+        value = step.transform.echo_two.value
     }
 }
 
@@ -71,18 +71,18 @@ pipeline "middle" {
 pipeline "bottom" {
 
 
-    step "echo" "echo" {
-        json = jsonencode({
+    step "transform" "echo" {
+        value = jsonencode({
             jerry = "garcia"
             jimmy = "hendrix"
         })
     }
 
     output "val" {
-        value = step.echo.echo.json
+        value = step.transform.echo.value
     }
 
     output "repository_id" {
-        value = jsondecode(step.echo.echo.json).jimmy
+        value = jsondecode(step.transform.echo.value).jimmy
     }
 }

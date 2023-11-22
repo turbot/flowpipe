@@ -5,12 +5,12 @@ pipeline "run_me_bottom" {
         default = "value bottom"
     }
 
-    step "echo" "echo" {
-        text = "bottom: ${param.name}"
+    step "transform" "echo" {
+        value = "bottom: ${param.name}"
     }
 
     output "val" {
-        value = step.echo.echo.text
+        value = step.transform.echo.value
     }
 }
 

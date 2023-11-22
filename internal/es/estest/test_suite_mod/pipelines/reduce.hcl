@@ -4,18 +4,18 @@ pipeline "reduce_list" {
         default = [1, 2, 3, 4, 5, 6]
     }
 
-    step "echo" "echo" {
+    step "transform" "echo" {
         for_each = param.input
-        if = each.value % 2 == 0
-        text = "${each.key}: ${each.value}"
+        if       = each.value % 2 == 0
+        value    = "${each.key}: ${each.value}"
     }
 
     output "val_1" {
-        value = step.echo.echo[1].text
+        value = step.transform.echo[1].value
     }
 
     output "val" {
-       value = step.echo.echo
+       value = step.transform.echo
     }
  }
 
@@ -38,17 +38,17 @@ pipeline "reduce_list" {
         }
     }
 
-    step "echo" "echo" {
-        for_each = param.input
-        if = each.key != "blink_182"
-        text = "${each.key}: ${each.value.name}"
+    step "transform" "echo" {
+        for_each  = param.input
+        if        = each.key != "blink_182"
+        value     = "${each.key}: ${each.value.name}"
     }
 
     output "val" {
-        value = step.echo.echo
+        value = step.transform.echo
     }
 
      output "val_two" {
-        value = step.echo.echo["sum_41"].text
+        value = step.transform.echo["sum_41"].value
     }
  }

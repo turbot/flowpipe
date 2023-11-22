@@ -1,6 +1,6 @@
 pipeline "simple" {
-    step "echo" "echo" {
-        text = "Hello World"
+    step "transform" "echo" {
+        value = "Hello World"
 
         output "echo_1" {
             value = "echo 1"
@@ -12,26 +12,26 @@ pipeline "simple" {
     }
 
     output "val" {
-        value = step.echo.echo.text
+        value = step.transform.echo.value
     }
 }
 
 pipeline "simple_two_steps" {
 
-    step "echo" "echo" {
-        text = "Hello World"
+    step "transform" "echo" {
+        value = "Hello World"
     }
 
-    step "echo" "echo_two" {
-        text = "${step.echo.echo.text}: Hello World"
+    step "transform" "echo_two" {
+        value = "${step.transform.echo.value}: Hello World"
     }
 
     output "val" {
-        value = step.echo.echo.text
+        value = step.transform.echo.value
     }
 
     output "val_two" {
-        value = step.echo.echo_two.text
+        value = step.transform.echo_two.value
     }
 }
 
