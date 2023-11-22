@@ -105,6 +105,9 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 				},
 			}
 		}
+		output.Status = "failed"
+	} else {
+		output.Status = "finished"
 	}
 
 	output.Data["container_id"] = containerID
