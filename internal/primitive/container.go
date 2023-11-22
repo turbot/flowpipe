@@ -85,7 +85,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		Data: map[string]interface{}{},
 	}
 
-	containerID, exitCode, err := c.Run()
+	containerID, exitCode, streamLines, err := c.Run()
 
 	stdout := c.Runs[containerID].Stdout
 	stderr := c.Runs[containerID].Stderr
@@ -115,6 +115,10 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	output.Data["stderr"] = stderr
 	output.Data["combined"] = combined
 	output.Data["exit_code"] = exitCode
+
+	if streamLines != nil && len(streamLines) > 0 {
+		output.Data["lines"] = streamLines
+	}
 
 	return &output, nil
 }
