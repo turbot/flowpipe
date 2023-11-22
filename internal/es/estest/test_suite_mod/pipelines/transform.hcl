@@ -91,7 +91,7 @@ pipeline "transform_loop" {
         value = "loop: ${loop.index}"
 
         loop {
-            until = loop.index < 2
+            until = loop.index >= 2
             value = "loop: ${loop.index}"
         }
     }

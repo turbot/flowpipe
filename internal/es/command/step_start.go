@@ -501,7 +501,7 @@ func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.
 	// Unlike the for_each where we know that there are n number of step executions and the planner launched them all at once, the loop is different.
 	//
 	// The planner has no idea that the step is not yet finished. We have to tell the planner here that it needs to launch another step execution
-	if loopDefn.ShouldRun() {
+	if !loopDefn.UntilReached() {
 		// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
 		//
 		// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index,
@@ -536,6 +536,27 @@ func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.
 		}
 
 		// get the new input
+		// ! we have to re add the "old" loop value, because the loopDefn should be evaluated using the old index
+		// ! this is confusing .. so please read on:
+		/**
+		step "transform" "foo" {
+			value = "loop: ${loop.index}"
+
+			loop {
+				until = loop.index < 2
+				value = "new value: ${loop.index}"
+			}
+		}
+		*/
+		//
+		// The loop in the step above is evaluated using the "prior" evalContext, however at this point of the execution
+		// the evalContext's loop has been updated using the new index (+1) ... so we need to reverse the increment and
+		// put it back to the old value.
+		//
+		// Check TestSimpleLoop to gain more understanding about this odd code.
+		//
+		evalContext = execution.AddLoop(stepLoop, evalContext)
+
 		newInput, err := loopDefn.UpdateInput(reevaluatedInput, evalContext)
 		if err != nil {
 			return nil, perr.InternalWithMessage("error updating input for loop: " + err.Error())

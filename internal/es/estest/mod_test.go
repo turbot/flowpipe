@@ -212,14 +212,14 @@ func (suite *ModTestSuite) TestSimpleLoop() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"].(map[string]interface{})["text"])
-	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"].(map[string]interface{})["text"])
-	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"])
+	assert.Equal("override for 0", pex.PipelineOutput["val_2"])
+	assert.Equal("override for 1", pex.PipelineOutput["val_3"])
 
 	// Now check the integrity of the StepStatus
 
-	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
-	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["transform.repeat"]), "there should only be 1 element because this isn't a for_each step")
+	assert.Equal(3, len(pex.StepStatus["transform.repeat"]["0"].StepExecutions))
 }
 
 func (suite *ModTestSuite) TestLoopWithForEachAndNestedPipeline() {
@@ -411,20 +411,20 @@ func (suite *ModTestSuite) TestSimpleLoopWithIndex() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"].(map[string]interface{})["text"])
-	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"].(map[string]interface{})["text"])
-	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"].(map[string]interface{})["text"])
+	assert.Equal("iteration: 0", pex.PipelineOutput["val_1"])
+	assert.Equal("iteration: 1", pex.PipelineOutput["val_2"])
+	assert.Equal("iteration: 2", pex.PipelineOutput["val_3"])
 
 	// Now check the integrity of the StepStatus
 
-	assert.Equal(1, len(pex.StepStatus["echo.repeat"]), "there should only be 1 element because this isn't a for_each step")
-	assert.Equal(3, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
-	assert.Equal(false, pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].StepLoop.LoopCompleted)
-	assert.Equal(true, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.LoopCompleted)
+	assert.Equal(1, len(pex.StepStatus["transform.repeat"]), "there should only be 1 element because this isn't a for_each step")
+	assert.Equal(3, len(pex.StepStatus["transform.repeat"]["0"].StepExecutions))
+	assert.Equal(false, pex.StepStatus["transform.repeat"]["0"].StepExecutions[1].StepLoop.LoopCompleted)
+	assert.Equal(true, pex.StepStatus["transform.repeat"]["0"].StepExecutions[2].StepLoop.LoopCompleted)
 
-	assert.Equal(1, pex.StepStatus["echo.repeat"]["0"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
-	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].StepLoop.Index)
-	assert.Equal(2, pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
+	assert.Equal(1, pex.StepStatus["transform.repeat"]["0"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
+	assert.Equal(2, pex.StepStatus["transform.repeat"]["0"].StepExecutions[1].StepLoop.Index)
+	assert.Equal(2, pex.StepStatus["transform.repeat"]["0"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
 }
 
 func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
@@ -1517,8 +1517,8 @@ func (suite *ModTestSuite) TestTransformLoop() {
 	assert.Equal(3, len(pex.StepStatus["transform.foo"]["0"].StepExecutions))
 
 	assert.Equal("loop: 0", pex.PipelineOutput["val_1"])
-	assert.Equal("loop: 1", pex.PipelineOutput["val_2"])
-	assert.Equal("loop: 2", pex.PipelineOutput["val_3"])
+	assert.Equal("loop: 0", pex.PipelineOutput["val_2"])
+	assert.Equal("loop: 1", pex.PipelineOutput["val_3"])
 }
 
 func (suite *ModTestSuite) TestForEachAndForEach() {

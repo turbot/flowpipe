@@ -1,44 +1,47 @@
 pipeline "simple_loop" {
 
-    step "echo" "repeat" {
-        text  = "iteration: ${loop.index}"
-        numeric = 1
+    step "transform" "repeat" {
+        value  = "iteration: ${loop.index}"
 
         loop {
-            until = result.numeric < 3
-            numeric = result.numeric + 1
+            until = loop.index >= 2
+            value = "override for ${loop.index}"
         }
     }
 
     output "val_1" {
-        value = step.echo.repeat["0"]
+        value = step.transform.repeat["0"].value
     }
     output "val_2" {
-        value = step.echo.repeat["1"]
+        value = step.transform.repeat["1"].value
     }
     output "val_3" {
-        value = step.echo.repeat["2"]
+        value = step.transform.repeat["2"].value
+    }
+
+    output "val_all" {
+        value = step.transform.repeat
     }
 }
 
 pipeline "simple_loop_index" {
 
-    step "echo" "repeat" {
-        text  = "iteration: ${loop.index}"
+    step "transform" "repeat" {
+        value  = "iteration: ${loop.index}"
 
         loop {
-            until = loop.index < 2
+            until = loop.index >= 2
         }
     }
 
     output "val_1" {
-        value = step.echo.repeat["0"]
+        value = step.transform.repeat["0"].value
     }
     output "val_2" {
-        value = step.echo.repeat["1"]
+        value = step.transform.repeat["1"].value
     }
     output "val_3" {
-        value = step.echo.repeat["2"]
+        value = step.transform.repeat["2"].value
     }
 }
 
@@ -50,7 +53,7 @@ pipeline "loop_with_for_each" {
         text = "iteration: ${loop.index} - ${each.value}"
 
         loop {
-            until = loop.index < 3
+            until = loop.index >= 3
         }
     }
 
@@ -79,7 +82,7 @@ pipeline "loop_with_for_each_sleep" {
         duration = each.value
 
         loop {
-            until = loop.index < 2
+            until = loop.index >= 2
         }
     }
 
@@ -101,7 +104,7 @@ pipeline "loop_with_for_each_and_nested_pipeline" {
         }
 
         loop {
-            until = loop.index < 2
+            until = loop.index >= 2
         }
     }
 
