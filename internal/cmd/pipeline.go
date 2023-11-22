@@ -366,6 +366,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			return
 		}
 
+		// TODO: should we time out?
 		// poll logs & print
 		for {
 
@@ -392,6 +393,9 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			if exit {
 				break
 			}
+
+			// TODO: make this configurable
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }
