@@ -6,11 +6,11 @@ pipeline "pipeline_param_from_var" {
     }
 
 
-    step "echo" "echo" {
-        text = param.one
+    step "transform" "echo" {
+        value = param.one
     }
 
     output "val" {
-        value = step.echo.echo
+        value = step.transform.echo
     }
 }

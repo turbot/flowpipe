@@ -1,10 +1,10 @@
 pipeline "pipes_echo" {
-    step "echo" "foo" {
-        text = "foo"
+    step "transform" "foo" {
+        value = "foo"
     }
 
     output "foo" {
-        value = step.echo.foo.text
+        value = step.transform.foo.value
     }
 }
 
@@ -15,11 +15,11 @@ pipeline "pipes_list_echo" {
         type = list(string)
     }
 
-    step "echo" "my_string" {
-        text = join(",", param.string_list)
+    step "transform" "my_string" {
+        value = join(",", param.string_list)
     }
 
     output "foo" {
-        value = step.echo.my_string.text
+        value = step.transform.my_string.value
     }
 }

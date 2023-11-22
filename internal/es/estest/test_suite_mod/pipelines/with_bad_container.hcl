@@ -102,6 +102,7 @@ pipeline "create_s3_bucket" {
     value       = step.container.create_s3_bucket.stderr
   }
 }
+
 pipeline "delete_s3_bucket" {
   title       = "Delete S3 Bucket"
   description = "Deletes an Amazon S3 bucket."
