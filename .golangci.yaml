@@ -31,6 +31,9 @@ linters-settings:
     forbid:
       - "^(fmt\\.Print(|f|ln)|print|println)$"
       - "^(fmt\\.Fprint(|f|ln)|print|println)$"
+      - '^zap\.Error$'
+      - '^grpc\.(Header|Trailer)$' # easy to misuse and create a data race
+
   gocritic:
     disabled-checks:
       - ifElseChain       # style

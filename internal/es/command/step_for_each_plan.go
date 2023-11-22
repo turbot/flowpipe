@@ -240,5 +240,10 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 }
 
 func (h StepForEachPlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, e *event.StepForEachPlan, err error) error {
-	return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailedFromStepForEachPlan(e, err), plannerMutex)
+	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailedFromStepForEachPlan(e, err), plannerMutex)
+	if publishErr != nil {
+		logger := fplog.Logger(ctx)
+		logger.Error("Error publishing pipeline failed event", "error", publishErr)
+	}
+	return nil
 }

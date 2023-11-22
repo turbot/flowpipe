@@ -175,7 +175,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					err := error_helpers.HclDiagsToError("diags", diags)
 
 					logger.Error("Error evaluating if condition", "error", err)
-					return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
 				}
 
 				if val.False() {
@@ -194,7 +194,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
 					logger.Error("Error resolving step inputs for single step", "error", err)
-					return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)))
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
 				}
 				// There's no for_each, there's only a single input
 				input = stepInputs
@@ -220,5 +220,10 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 }
 
 func (h PipelinePlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, evt *event.PipelinePlan, err error) error {
-	return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)), plannerMutex)
+	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)), plannerMutex)
+	if publishErr != nil {
+		logger := fplog.Logger(ctx)
+		logger.Error("pipeline_plan: Error publishing pipeline failed event", "error", publishErr)
+	}
+	return nil
 }
