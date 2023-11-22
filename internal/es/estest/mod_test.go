@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
@@ -87,6 +88,12 @@ func (suite *ModTestSuite) SetupSuite() {
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 	suite.esService = m.ESService
+
+	err = docker.Initialize(ctx)
+	if err != nil {
+		panic(err)
+	}
+
 	suite.manager = m
 
 	// Give some time for Watermill to fully start
@@ -1994,6 +2001,57 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 	}
 
 	assert.Equal(float64(42), pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestBadContainerStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_bad_container", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+	assert.NotNil(pex.Errors)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "InvalidClientTokenId")
+}
+
+func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_bad_container_with_is_error", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 1500*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// The pipeline step should faile due to the invalid credentials, but the pipeline should continue
+	assert.Equal(1, len(pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal(460, pex.StepStatus["pipeline.create_s3_bucket"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+
+	// The second step checks if the first step failed and it should be skipped
+	assert.Equal(1, len(pex.StepStatus["pipeline.delete_s3_bucket"]["0"].StepExecutions))
+	assert.Equal("skipped", pex.StepStatus["pipeline.delete_s3_bucket"]["0"].StepExecutions[0].Output.Status)
 }
 
 func TestModTestingSuite(t *testing.T) {

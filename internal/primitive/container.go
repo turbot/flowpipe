@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -57,7 +58,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		container.WithDockerClient(docker.GlobalDockerClient),
 	)
 	if err != nil {
-		panic(err)
+		return nil, perr.InternalWithMessage("Error creating function config with the provided options:" + err.Error())
 	}
 
 	c.Name = input[schema.LabelName].(string)
@@ -76,27 +77,44 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 	err = c.Load()
 	if err != nil {
-		panic(err)
+		return nil, perr.InternalWithMessage("Error loading function config: " + err.Error())
 	}
 
-	containerID, err := c.Run()
+	// Construct the output
+	output := modconfig.Output{
+		Data: map[string]interface{}{},
+	}
+
+	containerID, exitCode, err := c.Run()
 
 	stdout := c.Runs[containerID].Stdout
 	stderr := c.Runs[containerID].Stderr
 	combined := c.Runs[containerID].Combined
 
 	if err != nil {
-		return nil, err
+		if e, ok := err.(perr.ErrorModel); !ok {
+			output.Errors = []modconfig.StepError{
+				{
+					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
+				},
+			}
+		} else {
+			output.Errors = []modconfig.StepError{
+				{
+					Error: e,
+				},
+			}
+		}
+		output.Status = "failed"
+	} else {
+		output.Status = "finished"
 	}
 
-	o := modconfig.Output{
-		Data: map[string]interface{}{
-			"container_id": containerID,
-			"stdout":       stdout,
-			"stderr":       stderr,
-			"combined":     combined,
-		},
-	}
+	output.Data["container_id"] = containerID
+	output.Data["stdout"] = stdout
+	output.Data["stderr"] = stderr
+	output.Data["combined"] = combined
+	output.Data["exit_code"] = exitCode
 
-	return &o, nil
+	return &output, nil
 }

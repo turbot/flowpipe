@@ -152,7 +152,7 @@ func (c *Container) SetRunStatus(containerID string, newStatus string) error {
 	return nil
 }
 
-func (c *Container) Run() (string, error) {
+func (c *Container) Run() (string, int, error) {
 
 	logger := fplog.Logger(c.runCtx)
 	containerID := ""
@@ -167,15 +167,18 @@ func (c *Container) Run() (string, error) {
 		logger.Info("image exists", "since", time.Since(imageExistsStart), "image", c.Image)
 
 		if err != nil {
-			return containerID, err
+			return containerID, -1, perr.InternalWithMessage("Error checking if image exists: " + err.Error())
 		}
+
 		if !imageExists {
 			imagePullStart := time.Now()
 			err = c.dockerClient.ImagePull(c.Image)
 			logger.Info("image pull", "elapsed", time.Since(imagePullStart), "image", c.Image)
+
 			if err != nil {
-				return containerID, err
+				return containerID, -1, perr.InternalWithMessage("Error pulling image: " + err.Error())
 			}
+
 			// Image has been pulled, so now exists locally
 			c.ImageExists = true
 		}
@@ -244,12 +247,12 @@ func (c *Container) Run() (string, error) {
 	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &container.HostConfig{}, &network.NetworkingConfig{}, nil, "")
 	logger.Info("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error creating container: " + err.Error())
 	}
 	containerID = containerResp.ID
 	err = c.SetRunStatus(containerID, "created")
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error setting run status to created: " + err.Error())
 	}
 
 	// Start the container
@@ -257,28 +260,31 @@ func (c *Container) Run() (string, error) {
 	err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, types.ContainerStartOptions{})
 	logger.Info("container start", "elapsed", time.Since(containerStartStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error starting container: " + err.Error())
 	}
 	err = c.SetRunStatus(containerID, "started")
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error setting run status to started: " + err.Error())
 	}
 
 	// Wait for the container to finish
+	var exitCode int64
 	containerWaitStart := time.Now()
 	statusCh, errCh := c.dockerClient.CLI.ContainerWait(c.ctx, containerID, container.WaitConditionNotRunning)
 	select {
 	case err := <-errCh:
 		if err != nil {
-			return containerID, err
+			return containerID, 1, perr.InternalWithMessage("Error waiting for container: " + err.Error())
 		}
-	case <-statusCh:
+	case status := <-statusCh:
+		// Set the status code of the container run
+		exitCode = status.StatusCode
 	}
 	logger.Info("container wait", "elapsed", time.Since(containerWaitStart), "image", c.Image, "container", containerResp.ID)
 
 	err = c.SetRunStatus(containerID, "finished")
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error setting run status to finished: " + err.Error())
 	}
 
 	// Retrieve the container output
@@ -293,15 +299,16 @@ func (c *Container) Run() (string, error) {
 	containerLogsStart := time.Now()
 	reader, err := c.dockerClient.CLI.ContainerLogs(c.ctx, containerID, containerLogsOptions)
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error getting container logs: " + err.Error())
 	}
 	defer reader.Close()
 
 	o := NewOutput()
 	err = o.FromDockerLogsReader(reader)
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error reading container logs: " + err.Error())
 	}
+
 	c.Runs[containerID].Stdout = o.Stdout()
 	c.Runs[containerID].Stderr = o.Stderr()
 	c.Runs[containerID].Combined = o.Combined()
@@ -310,7 +317,7 @@ func (c *Container) Run() (string, error) {
 
 	err = c.SetRunStatus(containerID, "logged")
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error setting run status to logged: " + err.Error())
 	}
 
 	// Remove the container
@@ -324,21 +331,39 @@ func (c *Container) Run() (string, error) {
 		logger.Info("container remove", "elapsed", time.Since(containerRemoveStart), "image", c.Image, "container", containerResp.ID)
 		if err != nil {
 			// TODO - do we have to fail here? Perhaps things like not found can be ignored?
-			return containerID, err
+			return containerID, -1, perr.InternalWithMessage("Error removing container: " + err.Error())
 		}
 	}
 
 	err = c.SetRunStatus(containerID, "removed")
 	if err != nil {
-		return containerID, err
+		return containerID, -1, perr.InternalWithMessage("Error setting run status to removed: " + err.Error())
 	}
 
 	logger.Info("container run", "elapsed", time.Since(start), "image", c.Image, "container", containerResp.ID)
 
-	return containerID, nil
+	// If the container exited with a non-zero exit code, return an execution error
+	if exitCode != 0 {
+
+		// Get the Stderr and truncate it to 256 chars
+		stdErr := o.Stderr()
+		truncatedStdErr := truncateString(stdErr, 256)
+
+		return containerID, int(exitCode), perr.ExecutionErrorWithMessage(truncatedStdErr)
+	}
+
+	return containerID, 0, nil
 }
 
-// Cleanup all docker containers for the given container.
+// truncateString truncates the string to the given length
+func truncateString(s string, maxLength int) string {
+	if len(s) > maxLength {
+		return s[:maxLength]
+	}
+	return s
+}
+
+// Cleanup all docker containers for the given container
 func (c *Container) CleanupArtifacts() error {
 	logger := fplog.Logger(c.runCtx)
 

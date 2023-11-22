@@ -83,6 +83,9 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	suite.esService = m.ESService
 
+	// Give some time for Watermill to fully start
+	time.Sleep(2 * time.Second)
+
 	suite.SetupSuiteRunCount++
 }
 
