@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"io"
 	"os"
 	"path"
@@ -64,6 +65,9 @@ func (suite *EsTestSuite) SetupSuite() {
 	}
 
 	pipelineDirPath := path.Join(cwd, "pipelines")
+
+	// sets app specific constants defined in pipe-fittings
+	localcmdconfig.SetAppSpecificConstants()
 
 	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
 	viper.GetViper().Set(constants.ArgOutputDir, outputPath)
