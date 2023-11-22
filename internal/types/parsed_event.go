@@ -3,6 +3,10 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -12,9 +16,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/utils"
-	"reflect"
-	"strings"
-	"time"
 )
 
 const grayScaleIndex = uint8(3)
@@ -400,7 +401,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						prefix.LoopIndex = &e.StepLoop.Index
 					}
 					if e.StepRetry != nil {
-						prefix.RetryIndex = &e.StepRetry.Index
+						prefix.RetryIndex = &e.StepRetry.Count
 					}
 
 					parsed := ParsedEventWithInput{
@@ -442,7 +443,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						}
 					}
 					if e.StepRetry != nil {
-						prefix.RetryIndex = &e.StepRetry.Index
+						prefix.RetryIndex = &e.StepRetry.Count
 					}
 
 					switch e.Output.Status {

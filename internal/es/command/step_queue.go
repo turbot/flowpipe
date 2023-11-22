@@ -62,7 +62,11 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 		if retryConfig != nil {
 
 			go func() {
-				duration := retryConfig.CalculateBackoff(cmd.StepRetry.Index)
+				// The first retry is the second attempt. StepRetry.Count is not an index, but it's a count of how many times we have retried
+				// this step.
+				//
+				// So ... to calculate the backoff, we need to add 1 to the count because the 1st retry is the 2nd count.
+				duration := retryConfig.CalculateBackoff(cmd.StepRetry.Count + 1)
 
 				logger.Info("Delaying step start for", "duration", duration, "stepName", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID)
 				start := time.Now().UTC()

@@ -444,12 +444,14 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	// if step retry == nil means this is the first time we encountered this issue
 	if stepRetry == nil {
 		stepRetry = &modconfig.StepRetry{
-			Index: 0,
+			Count: 0,
 		}
 	}
 
-	stepRetry.Index = stepRetry.Index + 1
-	if stepRetry.Index > retryConfig.MaxAttempts {
+	stepRetry.Count = stepRetry.Count + 1
+
+	// Max attempts include the first attempt (before the retry), so we need to reduce it by 1
+	if stepRetry.Count > (retryConfig.MaxAttempts - 1) {
 		// we have exhausted all retries, we need to fail the pipeline
 		return nil, hcl.Diagnostics{}
 	}

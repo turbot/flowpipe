@@ -82,7 +82,7 @@ pipeline "error_with_retries_that_works" {
         value = "bar"
 
         throw {
-            if = retry.index < 2
+            if = retry.count < 2
             message = "from throw block"
         }
 

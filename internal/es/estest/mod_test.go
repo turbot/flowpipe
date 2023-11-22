@@ -1324,7 +1324,7 @@ func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 		return
 	}
 
-	// The step should be executed 3 times. First attempt + 2 retries
+	// The step should be executed 3 times. First attempt + 2 retries (max attempts = 3)
 	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
@@ -1334,13 +1334,12 @@ func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 
-	// The first attempt is immediate
 	step1EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].EndTime
 	step2StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].StartTime
 
 	duration := step2StartTime.Sub(step1EndTime)
-	if duration > 100*time.Millisecond {
-		assert.Fail("The gap should be immediate but " + duration.String())
+	if duration < 2*time.Second {
+		assert.Fail("The gap should be at least 2 seconds but " + duration.String())
 	}
 
 	step2EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].EndTime
@@ -1375,7 +1374,7 @@ func (suite *ModTestSuite) TestErrorRetryWithLinearBackoff() {
 		return
 	}
 
-	// The step should be executed 5 times. First attempt + 4 retries
+	// The step should be executed 5 times. First attempt + 4 retries. Max attempts = 5
 	assert.Equal(5, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
@@ -1387,13 +1386,12 @@ func (suite *ModTestSuite) TestErrorRetryWithLinearBackoff() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[4].Output.Errors[0].Error.Status)
 
-	// The first attempt is immediate
 	step1EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].EndTime
 	step2StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].StartTime
 
 	duration := step2StartTime.Sub(step1EndTime)
-	if duration > 100*time.Millisecond {
-		assert.Fail("The gap should be immediate seconds but " + duration.String())
+	if duration < 100*time.Millisecond {
+		assert.Fail("The gap should be at least 100ms but " + duration.String())
 	}
 
 	// the second attempt should be 100ms after the first one
@@ -1449,8 +1447,8 @@ func (suite *ModTestSuite) TestErrorRetryWithExponentialBackoff() {
 		return
 	}
 
-	// The step should be executed 6 times. First attempt + 5 retries
-	assert.Equal(6, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	// The step should be executed 5 times. First attempt + 4 retries. Max attempts = 5
+	assert.Equal(5, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
@@ -1461,22 +1459,20 @@ func (suite *ModTestSuite) TestErrorRetryWithExponentialBackoff() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[4].Output.Errors[0].Error.Status)
 
-	// The first attempt is immediate
 	step1EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].EndTime
 	step2StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].StartTime
 
 	duration := step2StartTime.Sub(step1EndTime)
-	if duration > 100*time.Millisecond {
-		assert.Fail("The gap should be immediate seconds but " + duration.String())
+	if duration < 100*time.Millisecond {
+		assert.Fail("The gap should be at least 100ms but " + duration.String())
 	}
 
-	// the second attempt should be 100ms after the first one
 	step2EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].EndTime
 	step3StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].StartTime
 
 	duration = step3StartTime.Sub(step2EndTime)
-	if duration < 100*time.Millisecond {
-		assert.Fail("The gap should be at least 100ms but " + duration.String())
+	if duration < 200*time.Millisecond {
+		assert.Fail("The gap should be at least 200ms but " + duration.String())
 	}
 
 	step3EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].EndTime
@@ -1484,9 +1480,8 @@ func (suite *ModTestSuite) TestErrorRetryWithExponentialBackoff() {
 
 	duration = step4StartTime.Sub(step3EndTime)
 
-	// Linear backoff, now it should be 200ms
-	if duration < 200*time.Millisecond {
-		assert.Fail("The gap should be at least 200ms but " + duration.String())
+	if duration < 400*time.Millisecond {
+		assert.Fail("The gap should be at least 400ms but " + duration.String())
 	}
 
 	step4EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[3].EndTime
@@ -1494,20 +1489,10 @@ func (suite *ModTestSuite) TestErrorRetryWithExponentialBackoff() {
 
 	duration = step5StartTime.Sub(step4EndTime)
 
-	// Exponential backoff
-	if duration < 400*time.Millisecond {
-		assert.Fail("The gap should be at least 400ms but " + duration.String())
-	}
-
-	step5EndTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[4].EndTime
-	step6StartTime := pex.StepStatus["http.bad_http"]["0"].StepExecutions[5].StartTime
-
-	duration = step6StartTime.Sub(step5EndTime)
-
-	// Exponential backoff
 	if duration < 800*time.Millisecond {
 		assert.Fail("The gap should be at least 800ms but " + duration.String())
 	}
+
 }
 
 func (suite *ModTestSuite) TestTransformLoop() {
@@ -1682,9 +1667,8 @@ func (suite *ModTestSuite) TestErrorRetryWithNestedPipeline() {
 	step2StartTime := pex.StepStatus["pipeline.http"]["0"].StepExecutions[1].StartTime
 
 	duration := step2StartTime.Sub(step1EndTime)
-	// the first retry is immediate
-	if duration > 100*time.Millisecond {
-		assert.Fail("The gap should be immediate " + duration.String())
+	if duration < 1*time.Second {
+		assert.Fail("The gap should at least 1 second but " + duration.String())
 	}
 
 	step2EndTime := pex.StepStatus["pipeline.http"]["0"].StepExecutions[1].EndTime
