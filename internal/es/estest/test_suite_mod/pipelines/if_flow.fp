@@ -16,20 +16,20 @@ pipeline "if_flow" {
         }
     }
 
-    step "echo" "echo" {
-        text = param.data.foo.bar.baz
+    step "transform" "echo" {
+        value = param.data.foo.bar.baz
     }
 
-    step "echo" "run_bad_step" {
-        if = param.run_bad_step
-        text = param.data.foo.bar.bad
+    step "transform" "run_bad_step" {
+        if    = param.run_bad_step
+        value = param.data.foo.bar.bad
     }
 
     output "echo"  {
-        value = step.echo.echo.text
+        value = step.transform.echo.value
     }
 
     output "echo_bad" {
-        value = step.echo.run_bad_step.text
+        value = step.transform.run_bad_step.value
     }
 }

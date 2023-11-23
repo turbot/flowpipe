@@ -5,14 +5,14 @@ pipeline "for_each_empty_test" {
         default = []
     }
 
-    step "echo" "echo" {
+    step "transform" "echo" {
         for_each = param.input
-        text = each.value
+        value    = each.value
     }
 
 
     output "echo" {
-        value = step.echo.echo
+        value = step.transform.echo
     }
 }
 
@@ -23,13 +23,13 @@ pipeline "for_each_non_collection" {
         default = "foo"
     }
 
-    step "echo" "echo" {
+    step "transform" "echo" {
         for_each = param.input
-        text = each.value
+        value    = each.value
     }
 
     output "echo" {
-        value = step.echo.echo
+        value = step.transform.echo
     }
 }
 

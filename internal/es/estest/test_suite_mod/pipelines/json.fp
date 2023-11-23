@@ -1,8 +1,8 @@
 pipeline "jsonplaceholder_expr" {
     description = "Simple pipeline to demonstrate HTTP post operation."
 
-    step "echo" "method" {
-        text = "post"
+    step "transform" "method" {
+        value = "post"
     }
 
     param "timeout" {
@@ -23,7 +23,7 @@ pipeline "jsonplaceholder_expr" {
     step "http" "http_1" {
         url = "https://jsonplaceholder.typicode.com/posts"
 
-        method = step.echo.method.text
+        method = step.transform.method.value
 
         request_body = jsonencode({
             userId = 12345
@@ -55,21 +55,21 @@ pipeline "jsonplaceholder_expr" {
         insecure = param.insecure
     }
 
-    step "echo" "output" {
-        text = step.http.http_1.status_code
+    step "transform" "output" {
+        value = step.http.http_1.status_code
     }
 
-    step "echo" "body_json" {
-        json = step.http.http_1.response_body
+    step "transform" "body_json" {
+        value = step.http.http_1.response_body
     }
 
-    step "echo" "body_json_nested" {
-        text = step.http.http_1.response_body["nested"]["brian"]["may"]
+    step "transform" "body_json_nested" {
+        value = step.http.http_1.response_body["nested"]["brian"]["may"]
     }
 
-    step "echo" "body_json_loop" {
+    step "transform" "body_json_loop" {
         for_each = step.http.http_1.response_body["title"]
-        text = each.value
+        value = each.value
     }
 
     output "foo" {
@@ -77,7 +77,7 @@ pipeline "jsonplaceholder_expr" {
     }
 
     output "nested" {
-        value = step.echo.body_json_nested.text
+        value = step.transform.body_json_nested.value
     }
 }
 
@@ -101,12 +101,12 @@ pipeline "json_array" {
     }
 
 
-    step "echo" "json" {
-        text = "[\"foo\", \"bar\", \"baz\"]"
+    step "transform" "json" {
+        value = "[\"foo\", \"bar\", \"baz\"]"
     }
 
     output "val" {
-        value = jsondecode(step.echo.json.text)
+        value = jsondecode(step.transform.json.value)
     }
 
     output "val_two" {
