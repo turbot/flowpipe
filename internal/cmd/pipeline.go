@@ -24,6 +24,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 // pipeline commands
@@ -253,8 +254,17 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		pollLogFunc = pollServerEventLog
 	} else {
 		// run pipeline in-process
-		resp, err = runPipelineLocal(cmd, args)
+		var m *manager.Manager
+		resp, m, err = runPipelineLocal(cmd, args)
+		// ensure to shut the manager when we are done
+		defer func() {
+			if m != nil {
+				_ = m.Stop()
+			}
+		}()
+
 		pollLogFunc = pollLocalEventLog
+
 	}
 	if err != nil {
 		error_helpers.ShowErrorWithMessage(ctx, err, "Error executing pipeline")
@@ -282,16 +292,12 @@ func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{
 	return resp, err
 }
 
-func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error) {
+func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manager.Manager, error) {
 	ctx := cmd.Context()
 
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
-	defer func() {
-		// ignore shutdown error
-		_ = m.Stop()
-	}()
 
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
@@ -306,13 +312,10 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, error)
 
 	resp, _, err := api.ExecutePipeline(input, pipelineName, m.ESService)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// TODO  without a delay of at least 500ms here, the logs are not displayed for some reason
-	// why?
-	time.Sleep(1000 * time.Millisecond)
-	return resp, err
+	return resp, m, err
 }
 
 func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
@@ -372,7 +375,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 
 			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining pipeline_execution_id")
+				error_helpers.ShowErrorWithMessage(ctx, err, "Error polling event logs")
 				return
 			}
 
@@ -528,19 +531,24 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		// TODO KAI use perr? wrap?
 		return true, 0, nil, err
 	}
+	defer func() {
+		// ensure we close the file
+		_ = file.Close()
+	}()
+
 	var lastSize int64
 	if last != -1 {
 		lastSize = int64(last)
 	}
 
-	// Seek to the last read position
-	if _, err := file.Seek(lastSize, 0); err != nil {
-		// TODO use perr?
-		return true, 0, nil, err
-	}
-
 	var res types.ProcessEventLogs
 	var complete bool
+
+	// Seek to the last read position
+	if _, err := file.Seek(lastSize, 0); err != nil {
+		//nolint:nilerr // just return without passing error - we will try again next time
+		return complete, int(lastSize), res, nil
+	}
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
@@ -548,9 +556,10 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		var entry types.EventLogEntry
 
 		if err := json.Unmarshal(line, &entry); err != nil {
-			// TODO use perr?
-			return true, 0, nil, err
+			//nolint:nilerr // maybe the write is incomplete - just return without passing error
+			return complete, int(lastSize), res, nil
 		}
+
 		res = append(res, types.ProcessEventLog{
 			EventType: entry.EventType,
 			Timestamp: entry.Timestamp,
@@ -561,15 +570,15 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		if entry.EventType == event.HandlerPipelineFinished || entry.EventType == event.HandlerPipelineFailed {
 			payload := make(map[string]any)
 			if err := json.Unmarshal(entry.Payload, &payload); err != nil {
-				return false, 0, nil, fmt.Errorf("error parsing payload from %s", entry.Payload)
+				return false, 0, nil, perr.BadRequestWithMessage(fmt.Sprintf("error parsing payload from %s", entry.Payload))
 			}
 			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
-		// TODO use perr?
-		return true, 0, nil, err
+		//nolint:nilerr // just return without passing error - we will try again next time
+		return complete, int(lastSize), res, nil
 	}
 
 	// Update last read position
@@ -577,10 +586,8 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		lastSize = currentSize
 	}
 
-	if err := file.Close(); err != nil {
-		// TODO use perr?
-		return true, 0, nil, err
-	}
+	// prevent polling too frequently
+	time.Sleep(50 * time.Millisecond)
 
 	return complete, int(lastSize), res, nil
 }
