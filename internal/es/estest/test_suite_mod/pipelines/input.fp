@@ -9,8 +9,8 @@ integration "email" "dev_workspace" {
 }
 
 pipeline "input_one" {
-    step "echo" "echo" {
-        text = "hello"
+    step "transform" "echo" {
+        value = "hello"
     }
 
     step "input" "input" {

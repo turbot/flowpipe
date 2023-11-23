@@ -18,20 +18,20 @@ pipeline "for_map" {
         }
     }
 
-    step "echo" "text_1" {
+    step "transform" "text_1" {
         for_each = param.legends
-        text = "${each.key} ${each.value.last_name} was ${each.value.age}"
+        value    = "${each.key} ${each.value.last_name} was ${each.value.age}"
     }
 
     output "text_1" {
-        value = step.echo.text_1["janis"].text
+        value = step.transform.text_1["janis"].value
     }
 
     output "text_2" {
-        value = step.echo.text_1["jimi"].text
+        value = step.transform.text_1["jimi"].value
     }
 
     output "text_3" {
-        value = step.echo.text_1["jerry"].text
+        value = step.transform.text_1["jerry"].value
     }
 }

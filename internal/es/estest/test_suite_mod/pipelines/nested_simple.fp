@@ -20,16 +20,16 @@ pipeline "nested_simple_middle" {
         default = "no name band"
     }
 
-    step "echo" "echo" {
-        text = "hello from the middle world"
+    step "transform" "echo" {
+        value = "hello from the middle world"
     }
 
     output "val" {
-        value = step.echo.echo.text
+        value = step.transform.echo.value
     }
 
     output "val_two" {
-        value = "two: ${step.echo.echo.text}"
+        value = "two: ${step.transform.echo.value}"
     }
 
     output "val_param" {
