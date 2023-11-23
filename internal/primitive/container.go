@@ -298,10 +298,14 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	}
 
 	output.Data["container_id"] = containerID
-	output.Data["stdout"] = c.Runs[containerID].Stdout
-	output.Data["stderr"] = c.Runs[containerID].Stderr
-	output.Data["lines"] = c.Runs[containerID].Lines
 	output.Data["exit_code"] = exitCode
+
+	// If there are any error while creating the container, then the containerID will be empty
+	if c.Runs[containerID] != nil {
+		output.Data["stdout"] = c.Runs[containerID].Stdout
+		output.Data["stderr"] = c.Runs[containerID].Stderr
+		output.Data["lines"] = c.Runs[containerID].Lines
+	}
 
 	return &output, nil
 }

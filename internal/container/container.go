@@ -196,7 +196,6 @@ func (c *Container) Run() (string, int, error) {
 	}
 
 	// Enforce a timeout to prevent runaway containers
-	// TODO - should be a container config option
 	timeout := 60
 	if c.Timeout != nil {
 		timeout = int(*c.Timeout)
@@ -284,7 +283,6 @@ func (c *Container) Run() (string, int, error) {
 		hostConfig.Resources.MemorySwappiness = c.MemorySwappiness
 	}
 
-	// TODO: Recheck the default value
 	if c.ReadOnly != nil {
 		hostConfig.ReadonlyRootfs = *c.ReadOnly
 	}
