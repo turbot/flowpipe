@@ -63,6 +63,17 @@ func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error 
 		}
 	}
 
+	// Validate the cpu shares attribute
+	if i[schema.AttributeTypeCpuShares] != nil {
+		if _, ok := i[schema.AttributeTypeCpuShares].(int64); !ok {
+			switch i[schema.AttributeTypeCpuShares].(type) {
+			case float64, int64:
+			default:
+				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeCpuShares + "' must be an integer")
+			}
+		}
+	}
+
 	// Validate the memory attribute
 	if i[schema.AttributeTypeMemory] != nil {
 		if _, ok := i[schema.AttributeTypeMemory].(int64); !ok {
@@ -213,6 +224,19 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 			break
 		}
 		c.Timeout = &timeout
+	}
+
+	if input[schema.AttributeTypeCpuShares] != nil {
+		var cpuShares int64
+		switch c := input[schema.AttributeTypeCpuShares].(type) {
+		case float64:
+			cpuShares = int64(c)
+		case int64:
+			cpuShares = c
+		default:
+			break
+		}
+		c.CpuShares = &cpuShares
 	}
 
 	if input[schema.AttributeTypeMemory] != nil {

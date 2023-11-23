@@ -26,6 +26,7 @@ type Container struct {
 	EntryPoint      []string          `json:"entrypoint"`
 	RetainArtifacts bool              `json:"retain_artifacts"`
 	Timeout         *int64            `json:"timeout"`
+	CpuShares       *int64            `json:"cpu_shares"`
 	User            string            `json:"user"`
 	Workdir         string            `json:"workdir"`
 
@@ -266,6 +267,10 @@ func (c *Container) Run() (string, int, error) {
 
 	// Create the host configuration
 	hostConfig := container.HostConfig{}
+
+	if c.CpuShares != nil {
+		hostConfig.Resources.CPUShares = *c.CpuShares
+	}
 
 	if c.Memory != nil {
 		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024
