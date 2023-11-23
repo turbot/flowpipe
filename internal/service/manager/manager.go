@@ -27,6 +27,15 @@ import (
 
 type ExecutionMode int
 
+type StartupFlag int
+
+const (
+	startAPI       StartupFlag = 1 << iota // 1
+	startES                                // 2
+	startScheduler                         // 4
+	startDocker                            // 8
+)
+
 // Manager manages and represents the status of the service.
 type Manager struct {
 	ctx context.Context
@@ -45,11 +54,7 @@ type Manager struct {
 	HTTPAddress string
 	HTTPPort    int
 
-	// which services should we start
-	// event sourcing service
-	startES bool
-	// api service and scheduler service
-	serverMode bool
+	startup StartupFlag
 
 	Status    string
 	StartedAt *time.Time
@@ -81,17 +86,26 @@ func (m *Manager) Start() (*Manager, error) {
 		return nil, err
 	}
 
-	if m.startES {
+	if m.shouldStartDocker() {
+		if err := docker.Initialize(m.ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	if m.shouldStartES() {
 		err := m.startESService()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if m.serverMode {
+	if m.shouldStartAPI() {
 		if err := m.startAPIService(); err != nil {
 			return nil, err
 		}
+	}
+
+	if m.shouldStartScheduler() {
 		if err := m.startSchedulerService(); err != nil {
 			return nil, err
 		}
@@ -101,6 +115,22 @@ func (m *Manager) Start() (*Manager, error) {
 	m.Status = "running"
 
 	return m, nil
+}
+
+func (m *Manager) shouldStartAPI() bool {
+	return m.startup&startAPI == startAPI
+}
+
+func (m *Manager) shouldStartES() bool {
+	return m.startup&startES != 0
+}
+
+func (m *Manager) shouldStartDocker() bool {
+	return m.startup&startDocker != 0
+}
+
+func (m *Manager) shouldStartScheduler() bool {
+	return m.startup&startScheduler != 0
 }
 
 // load and cache triggers and pipelines
@@ -122,7 +152,7 @@ func (m *Manager) initializeResources() error {
 		}
 
 		// if we are running in server mode, setup the file watcher
-		if m.serverMode {
+		if m.shouldStartAPI() {
 			if err := m.setupWatcher(w); err != nil {
 				return err
 			}

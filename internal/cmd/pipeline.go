@@ -295,8 +295,8 @@ func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{
 func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manager.Manager, error) {
 	ctx := cmd.Context()
 
-	// create and start the manager in local mode (i.e. do not set listen address)
-	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	// create and start the manager with ES service, and Docker, but no API server
+	m, err := manager.NewManager(ctx, manager.WithESService(), manager.WithDocker()).Start()
 	error_helpers.FailOnError(err)
 
 	// construct the pipeline name _after_ initializing so the cache is initialized
