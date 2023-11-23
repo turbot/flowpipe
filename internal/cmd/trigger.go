@@ -90,7 +90,7 @@ func listTriggerLocal(cmd *cobra.Command, args []string) (*types.ListTriggerResp
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
 	defer func() {
-		// TODO ignore shutdown error?
+		// ignore shutdown error?
 		_ = m.Stop()
 	}()
 

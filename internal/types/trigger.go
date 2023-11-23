@@ -8,15 +8,16 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
+// TODO kai review omitempty
 type FpTrigger struct {
 	Name          string            `json:"name"`
 	Type          string            `json:"type"`
 	Description   *string           `json:"description,omitempty"`
 	Pipeline      string            `json:"pipeline"`
 	Url           *string           `json:"url,omitempty"`
-	Title         *string           `json:"title"`
-	Documentation *string           `json:"documentation"`
-	Tags          map[string]string `json:"tags"`
+	Title         *string           `json:"title,omitempty"`
+	Documentation *string           `json:"documentation,omitempty"`
+	Tags          map[string]string `json:"tags,omitempty"`
 }
 
 // This type is used by the API to return a list of triggers.
@@ -36,6 +37,7 @@ func ListTriggerResponseFromAPI(apiResp *flowpipeapiclient.ListTriggerResponse) 
 
 	var res = &ListTriggerResponse{
 		NextToken: apiResp.NextToken,
+		Items:     make([]FpTrigger, len(apiResp.Items)),
 	}
 	for i, apiItem := range apiResp.Items {
 		res.Items[i] = FpTriggerFromAPI(apiItem)
@@ -71,7 +73,7 @@ func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (inte
 		return nil, fmt.Errorf("invalid resource type: %s", apiResourceType)
 	}
 
-	lp, ok := r.(*flowpipeapiclient.ListTriggerResponse)
+	lp, ok := r.(*ListTriggerResponse)
 	if !ok {
 		return nil, fmt.Errorf("unable to cast to flowpipeapiclient.ListTriggerResponse")
 	}
@@ -84,10 +86,10 @@ func (p PrintableTrigger) GetItems() interface{} {
 }
 
 func (p PrintableTrigger) GetTable() (Table, error) {
-	lp, ok := p.Items.([]flowpipeapiclient.FpTrigger)
+	lp, ok := p.Items.([]FpTrigger)
 
 	if !ok {
-		return Table{}, perr.BadRequestWithMessage("unable to cast to []flowpipeapiclient.FpTrigger")
+		return Table{}, perr.BadRequestWithMessage("unable to cast to []FpTrigger")
 	}
 
 	var tableRows []TableRow
@@ -98,9 +100,9 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 			description = *item.Description
 		}
 		cells := []interface{}{
-			*item.Pipeline,
-			*item.Type,
-			*item.Name,
+			item.Pipeline,
+			item.Type,
+			item.Name,
 			description,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
