@@ -48,9 +48,9 @@ pipeline "simple_loop_index" {
 
 pipeline "loop_with_for_each" {
 
-    step "echo" "repeat" {
+    step "transform" "repeat" {
         for_each = ["oasis", "blur", "radiohead"]
-        text = "iteration: ${loop.index} - ${each.value}"
+        value = "iteration: ${loop.index} - ${each.value}"
 
         loop {
             until = loop.index >= 3
@@ -58,19 +58,19 @@ pipeline "loop_with_for_each" {
     }
 
     output "val" {
-        value = step.echo.repeat
+        value = step.transform.repeat
     }
 }
 
 pipeline "lots_of_for_each" {
 
-    step "echo" "repeat" {
+    step "transform" "repeat" {
         for_each = ["oasis", "blur", "radiohead", "the verve", "the beatles", "the rolling stones", "the sex pistols"]
-        text = "name: ${each.value}"
+        value = "name: ${each.value}"
     }
 
     output "val" {
-        value = step.echo.repeat
+        value = step.transform.repeat
     }
 }
 

@@ -5,9 +5,9 @@ pipeline "for_each_with_sleep" {
         duration = each.value
     }
 
-    step "echo" "echo" {
+    step "transform" "echo" {
         depends_on = [step.sleep.sleep]
-        text = "ends"
+        value      = "ends"
     }
 
     output "val_sleep" {
@@ -15,7 +15,7 @@ pipeline "for_each_with_sleep" {
     }
 
     output "val" {
-        value = step.echo.echo
+        value = step.transform.echo
     }
 
 }

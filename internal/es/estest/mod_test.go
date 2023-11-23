@@ -163,7 +163,7 @@ func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("ends", pex.PipelineOutput["val"].(map[string]interface{})["text"])
+	assert.Equal("ends", pex.PipelineOutput["val"].(map[string]interface{})["value"])
 	assert.Equal("1s", pex.PipelineOutput["val_sleep"].(map[string]interface{})["0"].(map[string]interface{})["duration"])
 	assert.Equal("2s", pex.PipelineOutput["val_sleep"].(map[string]interface{})["1"].(map[string]interface{})["duration"])
 	assert.Equal("3s", pex.PipelineOutput["val_sleep"].(map[string]interface{})["2"].(map[string]interface{})["duration"])

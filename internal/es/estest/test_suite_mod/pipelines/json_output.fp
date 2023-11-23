@@ -1,22 +1,22 @@
 pipeline "json_output" {
 
-    step "echo" "source" {
-        text = "{\n  \"name\": \"bob\",\n  \"age\": 50,\n  \"address\": {\n    \"country\": \"uk\",\n    \"city\": \"London\"\n  }\n}"
+    step "transform" "source" {
+        value = "{\n  \"name\": \"bob\",\n  \"age\": 50,\n  \"address\": {\n    \"country\": \"uk\",\n    \"city\": \"London\"\n  }\n}"
     }
 
-    step "echo" "json" {
-        text = ""
+    step "transform" "json" {
+        value = ""
         output "val" {
-            value = jsondecode(step.echo.source.text)
+            value = jsondecode(step.transform.source.value)
         }
     }
 
     output "country" {
-        value = step.echo.json.output.val.address.country
+        value = step.transform.json.output.val.address.country
     }
 
     output "all" {
-        value = jsondecode(step.echo.source.text)
+        value = jsondecode(step.transform.source.value)
     }
 }
 

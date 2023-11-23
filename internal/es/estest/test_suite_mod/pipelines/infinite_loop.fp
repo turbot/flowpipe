@@ -7,12 +7,12 @@ pipeline "onboard_employee" {
     default = "GITHUB"
   }
 
-  step "echo" "check_github" {
-    if   = contains(lower(param.tools_needed), "github")
-    text = "contains github"
+  step "transform" "check_github" {
+    if    = contains(lower(param.tools_needed), "github")
+    value = "contains github"
   }
 
   output "echo_check_gh" {
-    value = step.echo.check_github
+    value = step.transform.check_github
   }
 }
