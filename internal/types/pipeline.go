@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
@@ -8,6 +9,7 @@ import (
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 )
 
@@ -17,9 +19,9 @@ type ListPipelineResponse struct {
 	NextToken *string      `json:"next_token,omitempty"`
 }
 
-func ListPipelineResponseFromAPIResponse(apiResp *flowpipeapiclient.ListPipelineResponse) *ListPipelineResponse {
+func ListPipelineResponseFromAPIResponse(apiResp *flowpipeapiclient.ListPipelineResponse) (*ListPipelineResponse, error) {
 	if apiResp == nil {
-		return nil
+		return nil, nil
 	}
 
 	var res = &ListPipelineResponse{
@@ -28,9 +30,13 @@ func ListPipelineResponseFromAPIResponse(apiResp *flowpipeapiclient.ListPipeline
 	}
 
 	for i, apiItem := range apiResp.Items {
-		res.Items[i] = *FpPipelineFromAPIResponse(&apiItem)
+		item, err := FpPipelineFromAPIResponse(&apiItem)
+		if err != nil {
+			return nil, err
+		}
+		res.Items[i] = *item
 	}
-	return res
+	return res, nil
 }
 
 func (o ListPipelineResponse) GetResourceType() string {
@@ -64,7 +70,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 	var pipelineParams []FpPipelineParam
 	for _, param := range pipeline.Params {
 
-		paramDefault := map[string]interface{}{}
+		paramDefault := map[string]any{}
 		if !param.Default.IsNull() {
 			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
 			if err != nil {
@@ -86,9 +92,9 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 	return resp, nil
 }
 
-func FpPipelineFromAPIResponse(apiResp *flowpipeapiclient.FpPipeline) *FpPipeline {
+func FpPipelineFromAPIResponse(apiResp *flowpipeapiclient.FpPipeline) (*FpPipeline, error) {
 	if apiResp == nil {
-		return nil
+		return nil, nil
 	}
 
 	res := &FpPipeline{
@@ -104,32 +110,76 @@ func FpPipelineFromAPIResponse(apiResp *flowpipeapiclient.FpPipeline) *FpPipelin
 		OutputConfig: make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
 	}
 
-	//// TODO KAI >???????
-	//for _, s := range apiResp.Steps {
-	//	res.Steps = append(res.Steps)
-	//}
+	for _, s := range apiResp.Steps {
+		step, err := pipelineStepFromApiResponse(s)
+		if err != nil {
+			return nil, err
+		}
+		res.Steps = append(res.Steps, step)
+	}
 	if apiResp.Tags != nil {
 		res.Tags = *apiResp.Tags
 	}
-	return res
+	return res, nil
+}
+
+// pipelineStepFromApiResponse converts the API response steps to the internal representation.
+func pipelineStepFromApiResponse(apiStep map[string]any) (modconfig.PipelineStep, error) {
+	stepType := apiStep["step_type"].(string)
+	var step modconfig.PipelineStep
+	switch stepType {
+	case schema.BlockTypePipelineStepHttp:
+		step = &modconfig.PipelineStepHttp{}
+	case schema.BlockTypePipelineStepSleep:
+		step = &modconfig.PipelineStepSleep{}
+	case schema.BlockTypePipelineStepEmail:
+		step = &modconfig.PipelineStepEmail{}
+	case schema.BlockTypePipelineStepEcho:
+		step = &modconfig.PipelineStepEcho{}
+	case schema.BlockTypePipelineStepTransform:
+		step = &modconfig.PipelineStepTransform{}
+	case schema.BlockTypePipelineStepQuery:
+		step = &modconfig.PipelineStepQuery{}
+	case schema.BlockTypePipelineStepPipeline:
+		step = &modconfig.PipelineStepPipeline{}
+	case schema.BlockTypePipelineStepFunction:
+		step = &modconfig.PipelineStepFunction{}
+	case schema.BlockTypePipelineStepContainer:
+		step = &modconfig.PipelineStepContainer{}
+	case schema.BlockTypePipelineStepInput:
+		step = &modconfig.PipelineStepInput{}
+	default:
+		// Handle unknown step type
+		return nil, perr.BadRequestWithMessage(fmt.Sprintf("unknown step type: %s", stepType))
+	}
+	jsonBytes, err := json.Marshal(apiStep)
+	if err != nil {
+		return nil, perr.Internal(err)
+	}
+	err = json.Unmarshal(jsonBytes, step)
+	if err != nil {
+		return nil, perr.Internal(err)
+	}
+
+	return step, nil
 }
 
 type FpPipelineParam struct {
-	Name        string      `json:"name"`
-	Description *string     `json:"description,omitempty"`
-	Optional    *bool       `json:"optional,omitempty"`
-	Default     interface{} `json:"default,omitempty"`
-	Type        string      `json:"type"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Optional    *bool   `json:"optional,omitempty"`
+	Default     any     `json:"default,omitempty"`
+	Type        string  `json:"type"`
 }
 
-type PipelineExecutionResponse map[string]interface{}
+type PipelineExecutionResponse map[string]any
 
 type CmdPipeline struct {
-	Command       string                 `json:"command" binding:"required,oneof=run"`
-	Args          map[string]interface{} `json:"args,omitempty"`
-	ArgsString    map[string]string      `json:"args_string,omitempty"`
-	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
-	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
+	Command       string            `json:"command" binding:"required,oneof=run"`
+	Args          map[string]any    `json:"args,omitempty"`
+	ArgsString    map[string]string `json:"args_string,omitempty"`
+	ExecutionMode *string           `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
+	WaitRetry     *int              `json:"wait_retry,omitempty" binding:"omitempty"`
 }
 
 func (c *CmdPipeline) GetExecutionMode() string {
@@ -148,10 +198,10 @@ func (c *CmdPipeline) GetWaitRetry() int {
 }
 
 type PrintablePipeline struct {
-	Items interface{}
+	Items any
 }
 
-func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
+func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
 	apiResourceType := r.GetResourceType()
 	if apiResourceType != "ListPipelineResponse" {
 
@@ -166,7 +216,7 @@ func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (int
 	return lp.Items, nil
 }
 
-func (p PrintablePipeline) GetItems() interface{} {
+func (p PrintablePipeline) GetItems() any {
 	return p.Items
 }
 
@@ -184,7 +234,7 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 			description = *item.Description
 		}
 
-		cells := []interface{}{
+		cells := []any{
 			item.Mod,
 			item.Name,
 			description,

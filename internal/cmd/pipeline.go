@@ -92,9 +92,11 @@ func listPipelineRemote() (*types.ListPipelineResponse, error) {
 
 	apiClient := common.GetApiClient()
 	resp, _, err := apiClient.PipelineApi.List(context.Background()).Limit(limit).NextToken(nextToken).Execute()
-
+	if err != nil {
+		return nil, err
+	}
 	// map the API data type into the internal data type
-	return types.ListPipelineResponseFromAPIResponse(resp), err
+	return types.ListPipelineResponseFromAPIResponse(resp)
 }
 
 func listPipelineLocal(cmd *cobra.Command, args []string) (*types.ListPipelineResponse, error) {
@@ -204,7 +206,7 @@ func getPipelineRemote(pipelineName string) (*types.FpPipeline, error) {
 		return nil, err
 	}
 	// map the API data type into the internal data type
-	return types.FpPipelineFromAPIResponse(resp), err
+	return types.FpPipelineFromAPIResponse(resp)
 }
 
 func getPipelineLocal(ctx context.Context, pipelineName string) (*types.FpPipeline, error) {
