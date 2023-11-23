@@ -30,8 +30,7 @@ func GetPipeline(name string) (*modconfig.Pipeline, error) {
 	return pipeline, nil
 }
 
-func ListAllPipelines() ([]modconfig.Pipeline, error) {
-
+func ListAllPipelines() ([]*modconfig.Pipeline, error) {
 	pipelineNamesCached, found := cache.GetCache().Get("#pipeline.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("pipeline names not found")
@@ -42,13 +41,13 @@ func ListAllPipelines() ([]modconfig.Pipeline, error) {
 		return nil, perr.InternalWithMessage("invalid pipeline names")
 	}
 
-	var pipelines []modconfig.Pipeline
+	var pipelines []*modconfig.Pipeline
 	for _, name := range pipelineNames {
 		pipeline, err := GetPipeline(name)
 		if err != nil {
 			return nil, err
 		}
-		pipelines = append(pipelines, *pipeline)
+		pipelines = append(pipelines, pipeline)
 	}
 
 	return pipelines, nil
