@@ -37,6 +37,7 @@ func ListTriggerResponseFromAPI(apiResp *flowpipeapiclient.ListTriggerResponse) 
 
 	var res = &ListTriggerResponse{
 		NextToken: apiResp.NextToken,
+		Items:     make([]FpTrigger, len(apiResp.Items)),
 	}
 	for i, apiItem := range apiResp.Items {
 		res.Items[i] = FpTriggerFromAPI(apiItem)
