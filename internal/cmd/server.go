@@ -46,6 +46,8 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 
 		error_helpers.FailOnError(docker.Initialize(ctx))
 
+		// start manager, passing server config
+		// (this will ensure manager starts API, ES, Scheduling and docker services
 		m, err := manager.NewManager(ctx,
 			manager.WithServerConfig(viper.GetString(constants.ArgListen), viper.GetInt(constants.ArgPort)),
 		).Start()
