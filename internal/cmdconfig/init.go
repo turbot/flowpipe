@@ -46,7 +46,7 @@ func initGlobalConfig() {
 	}
 
 	installDir := viper.GetString(constants.ArgInstallDir)
-	ensureInstallDir(filepath.Join(installDir))
+	ensureInstallDir(installDir)
 
 	saltFileFullPath := filepath.Join(filepaths.EnsureInternalDir(), "salt")
 	salt, err := flowpipeSalt(saltFileFullPath, 32)
