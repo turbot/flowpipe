@@ -30,7 +30,7 @@ func ListPipelineResponseFromAPIResponse(apiResp *flowpipeapiclient.ListPipeline
 	}
 
 	for i, apiItem := range apiResp.Items {
-		item, err := FpPipelineFromAPIResponse(&apiItem)
+		item, err := FpPipelineFromAPIResponse(apiItem)
 		if err != nil {
 			return nil, err
 		}
@@ -92,11 +92,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 	return resp, nil
 }
 
-func FpPipelineFromAPIResponse(apiResp *flowpipeapiclient.FpPipeline) (*FpPipeline, error) {
-	if apiResp == nil {
-		return nil, nil
-	}
-
+func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipeline, error) {
 	res := &FpPipeline{
 		Name:          typehelpers.SafeString(apiResp.Name),
 		Description:   apiResp.Description,

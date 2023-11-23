@@ -206,7 +206,7 @@ func getPipelineRemote(pipelineName string) (*types.FpPipeline, error) {
 		return nil, err
 	}
 	// map the API data type into the internal data type
-	return types.FpPipelineFromAPIResponse(resp)
+	return types.FpPipelineFromAPIResponse(*resp)
 }
 
 func getPipelineLocal(ctx context.Context, pipelineName string) (*types.FpPipeline, error) {
