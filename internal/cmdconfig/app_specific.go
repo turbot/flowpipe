@@ -24,7 +24,7 @@ func SetAppSpecificConstants() {
 	app_specific.DefaultVarsFileName = "flowpipe.fpvars"
 	//app_specific.DefaultWorkspaceDatabase
 	//app_specific.EnvAppPrefix
-	app_specific.EnvInputVarPrefix = "FP_VAR_"
+	app_specific.EnvInputVarPrefix = "P_VAR_"
 	//app_specific.InstallDir
 	app_specific.ConfigExtension = ".fpc"
 	app_specific.ModDataExtension = ".fp"
