@@ -1987,6 +1987,55 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 	assert.Equal(float64(42), pex.PipelineOutput["val"])
 }
 
+func (suite *ModTestSuite) TestCredentialReference() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_aws", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val_access_key"])
+
+	// Check if the environment function is created successfully
+	envMap := pex.PipelineOutput["val"].(map[string]interface{})
+
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal("QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U", envMap["AWS_SECRET_ACCESS_KEY"])
+}
+
+func (suite *ModTestSuite) TestBasicCredential() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_basic", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("foo", pex.PipelineOutput["val_username"])
+	assert.Equal("bar", pex.PipelineOutput["val_password"])
+}
+
 func (suite *ModTestSuite) TestBadContainerStep() {
 	assert := assert.New(suite.T())
 

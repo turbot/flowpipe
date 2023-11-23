@@ -83,6 +83,87 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	paramsCtyVal := cty.ObjectVal(params)
 	evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 
+	pipelineMap, err := ex.buildPipelineMapForEvalContext()
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
+
+	integrationMap, err := ex.buildIntegrationMapForEvalContext(pipelineDefn)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+
+	credentialMap, err := ex.buildCredentialMapForEvalContext(pipelineDefn)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
+
+	// populate the variables and locals
+	variablesMap := make(map[string]cty.Value)
+	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
+		variablesMap[variable.ShortName] = variable.Value
+	}
+	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
+
+	localsMap := make(map[string]cty.Value)
+	for _, local := range pipelineDefn.GetMod().ResourceMaps.Locals {
+		localsMap[local.ShortName] = local.Value
+	}
+	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
+
+	return evalContext, nil
+}
+
+func (ex *Execution) buildCredentialMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+	credentialMap := map[string]cty.Value{}
+	awsCredentialMap := map[string]cty.Value{}
+	basicCredentialMap := map[string]cty.Value{}
+
+	allCredentials := pipelineDefn.GetMod().ResourceMaps.Credentials
+
+	for _, c := range allCredentials {
+		parts := strings.Split(c.Name(), ".")
+		if len(parts) != 4 {
+			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
+		}
+
+		pCty, err := c.CtyValue()
+		if err != nil {
+			return nil, err
+		}
+
+		credentialType := parts[2]
+
+		switch credentialType {
+		case "aws":
+			awsCredentialMap[parts[3]] = pCty
+
+		case "basic":
+			basicCredentialMap[parts[3]] = pCty
+
+		default:
+			return nil, perr.BadRequestWithMessage("invalid credential type: " + credentialType)
+		}
+	}
+
+	if len(awsCredentialMap) > 0 {
+		credentialMap["aws"] = cty.ObjectVal(awsCredentialMap)
+	}
+
+	if len(basicCredentialMap) > 0 {
+		credentialMap["basic"] = cty.ObjectVal(basicCredentialMap)
+	}
+
+	return credentialMap, nil
+}
+
+func (ex *Execution) buildPipelineMapForEvalContext() (map[string]cty.Value, error) {
 	allPipelines, err := db.ListAllPipelines()
 	if err != nil {
 		return nil, err
@@ -104,8 +185,10 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 		pipelineMap[parts[2]] = pCty
 	}
 
-	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
+	return pipelineMap, nil
+}
 
+func (ex *Execution) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
 	integrationMap := map[string]cty.Value{}
 	slackIntegrationMap := map[string]cty.Value{}
 	emailIntegrationMap := map[string]cty.Value{}
@@ -117,23 +200,22 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
 		}
 
+		pCty, err := p.CtyValue()
+		if err != nil {
+			return nil, err
+		}
+
 		integrationType := parts[2]
+
 		switch integrationType {
 		case string(schema.IntegrationTypeSlack):
-			slackIntegration := p.(*modconfig.SlackIntegration)
-			pCty, err := slackIntegration.CtyValue()
-			if err != nil {
-				return nil, err
-			}
 			slackIntegrationMap[parts[3]] = pCty
 
 		case string(schema.IntegrationTypeEmail):
-			emailIntegration := p.(*modconfig.EmailIntegration)
-			pCty, err := emailIntegration.CtyValue()
-			if err != nil {
-				return nil, err
-			}
 			emailIntegrationMap[parts[3]] = pCty
+
+		default:
+			return nil, perr.BadRequestWithMessage("invalid integration type: " + integrationType)
 		}
 	}
 
@@ -145,22 +227,8 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 		integrationMap[schema.IntegrationTypeEmail] = cty.ObjectVal(emailIntegrationMap)
 	}
 
-	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+	return integrationMap, nil
 
-	// populate the variables and locals
-	variablesMap := make(map[string]cty.Value)
-	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
-		variablesMap[variable.ShortName] = variable.Value
-	}
-	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
-
-	localsMap := make(map[string]cty.Value)
-	for _, local := range pipelineDefn.GetMod().ResourceMaps.Locals {
-		localsMap[local.ShortName] = local.Value
-	}
-	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
-
-	return evalContext, nil
 }
 
 // ExecutionStepOutputs is a map for all the step execution. It's stored in this format:
