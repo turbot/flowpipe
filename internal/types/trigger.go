@@ -8,15 +8,16 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
+// TODO kai review omitempty
 type FpTrigger struct {
 	Name          string            `json:"name"`
 	Type          string            `json:"type"`
 	Description   *string           `json:"description,omitempty"`
 	Pipeline      string            `json:"pipeline"`
 	Url           *string           `json:"url,omitempty"`
-	Title         *string           `json:"title"`
-	Documentation *string           `json:"documentation"`
-	Tags          map[string]string `json:"tags"`
+	Title         *string           `json:"title,omitempty"`
+	Documentation *string           `json:"documentation,omitempty"`
+	Tags          map[string]string `json:"tags,omitempty"`
 }
 
 // This type is used by the API to return a list of triggers.
