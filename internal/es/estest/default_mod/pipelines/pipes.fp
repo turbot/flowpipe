@@ -1,40 +1,40 @@
 pipeline "pipes_echo" {
-    step "echo" "foo" {
-        text = "foo"
+    step "transform" "foo" {
+        value = "foo"
     }
 
     output "foo" {
-        value = step.echo.foo.text
+        value = step.transform.foo.value
     }
 }
 
 
 pipeline "two_steps" {
-    step "echo" "one" {
-        text = "Step One"
+    step "transform" "one" {
+        value = "Step One"
     }
 
-    step "echo" "two" {
-        text = "${step.echo.one.text} => Step Two"
+    step "transform" "two" {
+        value = "${step.transform.one.value} => Step Two"
     }
 
     output "out" {
-        value = step.echo.two.text
+        value = step.transform.two.value
     }
 }
 
 pipeline "three_steps_with_wait" {
-    step "echo" "one" {
-        text = "Step One"
+    step "transform" "one" {
+        value = "Step One"
     }
 
     step "sleep" "sleep" {
         duration = "1s"
     }
 
-    step "echo" "three" {
+    step "transform" "three" {
         depends_on = [step.sleep.sleep]
-        text = "End"
+        value      = "End"
     }
 }
 
