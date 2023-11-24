@@ -1,13 +1,13 @@
 
-credential "aws" "aws_static" {
-    access_key = "ASIAQGDFAKEKGUI5MCEU"
-    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
-}
+// credential "aws" "aws_static" {
+//     access_key = "ASIAQGDFAKEKGUI5MCEU"
+//     secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+// }
 
-credential "basic" "credentials" {
-    username = "foo"
-    password = "bar"
-}
+// credential "basic" "credentials" {
+//     username = "foo"
+//     password = "bar"
+// }
 
 
 pipeline "cred_aws" {

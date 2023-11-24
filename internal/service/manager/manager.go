@@ -2,13 +2,16 @@ package manager
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/perr"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/steampipeconfig"
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -40,16 +43,14 @@ const (
 type Manager struct {
 	ctx context.Context
 
-	RootMod          *modconfig.Mod
+	RootMod *modconfig.Mod
+
+	// Services
 	ESService        *es.ESService
 	apiService       *api.APIService
 	schedulerService *scheduler.SchedulerService
 
 	triggers map[string]*modconfig.Trigger
-
-	RaftNodeID    string
-	RaftBootstrap bool
-	RaftAddress   string
 
 	HTTPAddress string
 	HTTPPort    int
@@ -146,7 +147,32 @@ func (m *Manager) initializeResources() error {
 	var modInfo *modconfig.Mod
 
 	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, pipelineDir, app_specific.ModDataExtension)
+
+		workspacePath := viper.GetString(constants.ArgModLocation)
+		flowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(workspacePath)
+		if ew != nil {
+			ew.ShowWarnings()
+			// check for error
+			error_helpers.FailOnError(ew.Error)
+		}
+
+		// Add the "Credentials" in the context
+
+		// TODO: this isn't the way .. we shouldn't be passing the credentials in the context
+		var credentials map[string]modconfig.Credential
+
+		if flowpipeConfig == nil {
+			credentials = make(map[string]modconfig.Credential)
+		} else {
+			credentials = flowpipeConfig.Credentials
+		}
+
+		// effectively forever .. we don't want to expire the config
+		if flowpipeConfig != nil {
+			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
+		}
+
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, pipelineDir, credentials, app_specific.ModDataExtension)
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
