@@ -18,8 +18,8 @@ pipeline "subscribe" {
   #   default = ["recipient@example.com"]
   # }
 
-  step "echo" "email_body" {
-    text = "This is an email body"
+  step "transform" "email_body" {
+    value = "This is an email body"
   }
 
   step "email" "send_it" {
@@ -29,6 +29,6 @@ pipeline "subscribe" {
     host              = "smtp.example.com"
     port              = 587
     subject           = "You have been subscribed"
-    body              = step.echo.email_body.text
+    body              = step.transform.email_body.value
   }
 }

@@ -69,9 +69,9 @@ func TestEmailStepWithParam(t *testing.T) {
 	expr := pipelines["local.pipeline.subscribe"].Steps[1].GetUnresolvedAttributes()["body"]
 
 	objectVal := cty.ObjectVal(map[string]cty.Value{
-		"echo": cty.ObjectVal(map[string]cty.Value{
+		"transform": cty.ObjectVal(map[string]cty.Value{
 			"email_body": cty.ObjectVal(map[string]cty.Value{
-				"text": cty.StringVal("This is an email body"),
+				"value": cty.StringVal("This is an email body"),
 			}),
 		}),
 	})
@@ -101,5 +101,5 @@ func TestEmailStepWithParam(t *testing.T) {
 	assert.Equal("This is an email body", output, "wrong output")
 
 	dependsOn := step.GetDependsOn()
-	assert.Contains(dependsOn, "echo.email_body")
+	assert.Contains(dependsOn, "transform.email_body")
 }
