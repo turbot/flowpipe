@@ -88,22 +88,22 @@ pipeline "bad_email_with_expr" {
       default = ["bccrecipient@example.com"]
     }
 
-    step "echo" "sender_address" {
-      text = "${param.sender_name}@example.com"
+    step "transform" "sender_address" {
+      value = "${param.sender_name}@example.com"
     }
 
-    step "echo" "email_body" {
-      text = "This is an email body"
+    step "transform" "email_body" {
+      value = "This is an email body"
     }
 
     step "email" "test_email" {
       to                = param.to
-      from              = step.echo.sender_address.text
+      from              = step.transform.sender_address.value
       sender_credential = param.sender_credential
       host              = param.host
       port              = param.port
       subject           = "Test email"
-      body              = step.echo.email_body.text
+      body              = step.transform.email_body.value
       sender_name       = param.sender_name
       cc                = param.cc
       bcc               = param.bcc
