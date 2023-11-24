@@ -272,8 +272,10 @@ func (c *Container) Run() (string, int, error) {
 		hostConfig.Resources.CPUShares = *c.CpuShares
 	}
 
+	// Defaults to 128MB
+	hostConfig.Resources.Memory = 128 * 1024 * 1024 // in bytes
 	if c.Memory != nil {
-		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024
+		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024 // in bytes
 	}
 
 	if c.MemoryReservation != nil {
@@ -281,7 +283,7 @@ func (c *Container) Run() (string, int, error) {
 	}
 
 	if c.MemorySwap != nil {
-		hostConfig.Resources.MemorySwap = *c.MemorySwap * 1024 * 1024
+		hostConfig.Resources.MemorySwap = *c.MemorySwap * 1024 * 1024 // in bytes
 	}
 
 	if c.MemorySwappiness != nil {

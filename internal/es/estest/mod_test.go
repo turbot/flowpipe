@@ -2123,7 +2123,7 @@ func (suite *ModTestSuite) TestContainerStep() {
 	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
 		assert.Fail("Cmd should be an array of strings")
 	}
-	assert.Equal(2, len(input[schema.AttributeTypeCmd].([]interface{})))
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
 
 	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
 		assert.Fail("Cmd should be a map")
@@ -2132,9 +2132,24 @@ func (suite *ModTestSuite) TestContainerStep() {
 
 	output := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Output
 	assert.Equal("finished", output.Status)
-	assert.Equal("hello world\n", output.Data["stdout"])
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
 	assert.Equal(float64(0), output.Data["exit_code"])
+
+	if _, ok := output.Data["lines"].([]interface{}); !ok {
+		assert.Fail("Container ID should be a list of strings")
+	}
+	lines := output.Data["lines"].([]interface{})
+	assert.Equal(3, len(lines))
+
+	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParam() {
@@ -2170,7 +2185,7 @@ func (suite *ModTestSuite) TestContainerStepWithParam() {
 	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
 		assert.Fail("Cmd should be an array of strings")
 	}
-	assert.Equal(2, len(input[schema.AttributeTypeCmd].([]interface{})))
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
 
 	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
 		assert.Fail("Cmd should be a map")
@@ -2179,9 +2194,86 @@ func (suite *ModTestSuite) TestContainerStepWithParam() {
 
 	output := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Output
 	assert.Equal("finished", output.Status)
-	assert.Equal("hello world\n", output.Data["stdout"])
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
 	assert.Equal(float64(0), output.Data["exit_code"])
+
+	if _, ok := output.Data["lines"].([]interface{}); !ok {
+		assert.Fail("Container ID should be a list of strings")
+	}
+	lines := output.Data["lines"].([]interface{})
+	assert.Equal(3, len(lines))
+
+	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+}
+
+func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"user":    "root",
+		"timeout": 120,
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_container_step_with_param_override", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	// Validate inputs
+	input := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Input
+	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
+	assert.Equal("root", input[schema.AttributeTypeUser].(string))
+	assert.Equal(float64(120), input[schema.AttributeTypeTimeout].(float64))
+	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
+	assert.Equal(false, input[schema.AttributeTypeReadOnly].(bool))
+
+	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
+		assert.Fail("Cmd should be an array of strings")
+	}
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
+
+	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
+		assert.Fail("Cmd should be a map")
+	}
+	assert.Equal("bar", input[schema.AttributeTypeEnv].(map[string]interface{})["FOO"].(string))
+
+	output := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+	assert.Equal("", output.Data["stderr"])
+	assert.Equal(float64(0), output.Data["exit_code"])
+
+	if _, ok := output.Data["lines"].([]interface{}); !ok {
+		assert.Fail("Container ID should be a list of strings")
+	}
+	lines := output.Data["lines"].([]interface{})
+	assert.Equal(3, len(lines))
+
+	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
 }
 
 func (suite *ModTestSuite) TestContainerStepMissingImage() {

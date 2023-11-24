@@ -54,67 +54,55 @@ func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error 
 
 	// Validate the timeout attribute
 	if i[schema.AttributeTypeTimeout] != nil {
-		if _, ok := i[schema.AttributeTypeTimeout].(int64); !ok {
-			switch i[schema.AttributeTypeTimeout].(type) {
-			case float64, int64:
-			default:
-				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeTimeout + "' must be an integer")
-			}
+		switch i[schema.AttributeTypeTimeout].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeTimeout + "' must be an integer")
 		}
 	}
 
 	// Validate the cpu shares attribute
 	if i[schema.AttributeTypeCpuShares] != nil {
-		if _, ok := i[schema.AttributeTypeCpuShares].(int64); !ok {
-			switch i[schema.AttributeTypeCpuShares].(type) {
-			case float64, int64:
-			default:
-				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeCpuShares + "' must be an integer")
-			}
+		switch i[schema.AttributeTypeCpuShares].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeCpuShares + "' must be an integer")
 		}
 	}
 
 	// Validate the memory attribute
 	if i[schema.AttributeTypeMemory] != nil {
-		if _, ok := i[schema.AttributeTypeMemory].(int64); !ok {
-			switch i[schema.AttributeTypeMemory].(type) {
-			case float64, int64:
-			default:
-				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemory + "' must be an integer")
-			}
+		switch i[schema.AttributeTypeMemory].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemory + "' must be an integer")
 		}
 	}
 
 	// Validate the memory reservation attribute
 	if i[schema.AttributeTypeMemoryReservation] != nil {
-		if _, ok := i[schema.AttributeTypeMemoryReservation].(int64); !ok {
-			switch i[schema.AttributeTypeMemoryReservation].(type) {
-			case float64, int64:
-			default:
-				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemoryReservation + "' must be an integer")
-			}
+		switch i[schema.AttributeTypeMemoryReservation].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemoryReservation + "' must be an integer")
 		}
 	}
 
 	// Validate the memory swap attribute
 	if i[schema.AttributeTypeMemorySwap] != nil {
-		if _, ok := i[schema.AttributeTypeMemorySwap].(int64); !ok {
-			switch i[schema.AttributeTypeMemorySwap].(type) {
-			case float64, int64:
-			default:
-				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemorySwap + "' must be an integer")
-			}
+		switch i[schema.AttributeTypeMemorySwap].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemorySwap + "' must be an integer")
 		}
 	}
 
 	// Validate the memory swappiness attribute
 	if i[schema.AttributeTypeMemorySwappiness] != nil {
-		if _, ok := i[schema.AttributeTypeMemorySwappiness].(int64); !ok {
-			switch i[schema.AttributeTypeMemorySwappiness].(type) {
-			case float64, int64:
-			default:
-				return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemorySwappiness + "' must be an integer")
-			}
+		switch i[schema.AttributeTypeMemorySwappiness].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemorySwappiness + "' must be an integer")
 		}
 	}
 

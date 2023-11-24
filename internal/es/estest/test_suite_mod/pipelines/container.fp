@@ -3,10 +3,7 @@ pipeline "simple_container_step" {
   step "container" "container_test_1" {
     image = "alpine:3.7"
 
-    cmd = [
-      "echo",
-      "hello world"
-    ]
+    cmd = [ "sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'" ]
 
     env = {
       FOO = "bar"
@@ -32,62 +29,63 @@ pipeline "simple_container_step" {
   output "exit_code" {
     value = step.container.container_test_1.exit_code
   }
+
+  output "lines" {
+    value = step.container.container_test_1.lines[*]
+  }
 }
 
 pipeline "simple_container_step_with_param" {
 
   param "image" {
-    type = string
+    type    = string
     default = "alpine:3.7"
   }
 
   param "cmd" {
-    type = list(string)
-    default = [
-      "echo",
-      "hello world"
-    ]
+    type    = list(string)
+    default = [ "sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'" ]
   }
 
   param "env" {
-    type = map(string)
+    type    = map(string)
     default = {
       FOO = "bar"
     }
   }
 
   param "timeout" {
-    type = number
+    type    = number
     default = 60
   }
 
   param "memory" {
-    type = number
+    type    = number
     default = 128
   }
 
   param "memory_reservation" {
-    type = number
+    type    = number
     default = 64
   }
 
   param "memory_swap" {
-    type = number
+    type    = number
     default = 256
   }
 
   param "memory_swappiness" {
-    type = number
+    type    = number
     default = 10
   }
 
   param "read_only" {
-    type = bool
+    type    = bool
     default = false
   }
 
   param "user" {
-    type = string
+    type    = string
     default = "root"
   }
 
@@ -100,6 +98,68 @@ pipeline "simple_container_step_with_param" {
     memory_reservation = param.memory_reservation
     memory_swap        = param.memory_swap
     memory_swappiness  = param.memory_swappiness
+    read_only          = param.read_only
+    user               = param.user
+  }
+
+  output "stdout" {
+    value = step.container.container_test_1.stdout
+  }
+
+  output "stderr" {
+    value = step.container.container_test_1.stderr
+  }
+
+  output "exit_code" {
+    value = step.container.container_test_1.exit_code
+  }
+}
+
+pipeline "simple_container_step_with_param_override" {
+
+  param "image" {
+    type    = string
+    default = "alpine:3.7"
+  }
+
+  param "cmd" {
+    type    = list(string)
+    default = [ "sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'" ]
+  }
+
+  param "env" {
+    type    = map(string)
+    default = {
+      FOO = "bar"
+    }
+  }
+
+  param "timeout" {
+    type    = number
+    default = 60
+  }
+
+  param "memory" {
+    type    = number
+    default = 128
+  }
+
+  param "read_only" {
+    type    = bool
+    default = false
+  }
+
+  param "user" {
+    type    = string
+    default = "flowpipe"
+  }
+
+  step "container" "container_test_1" {
+    image              = param.image
+    cmd                = param.cmd
+    env                = param.env
+    timeout            = param.timeout
+    memory             = param.memory
     read_only          = param.read_only
     user               = param.user
   }

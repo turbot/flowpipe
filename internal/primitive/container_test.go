@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -36,7 +37,7 @@ func TestSimpleContainerStep(t *testing.T) {
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:             "alpine:3.7",
-		schema.AttributeTypeCmd:               []interface{}{"echo", "hello world"},
+		schema.AttributeTypeCmd:               []interface{}{"sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'"},
 		schema.AttributeTypeEnv:               map[string]interface{}{"FOO": "bar"},
 		schema.AttributeTypeTimeout:           int64(120),
 		schema.LabelName:                      "container_test",
@@ -53,8 +54,25 @@ func TestSimpleContainerStep(t *testing.T) {
 	assert.Equal(0, len(output.Errors))
 	assert.NotNil(output.Get("container_id"))
 	assert.Equal(0, output.Get("exit_code"))
-	assert.Contains(output.Get("stdout"), "hello world")
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Get("stdout"))
 	assert.Equal("", output.Get("stderr"))
+
+	assert.NotNil(output.Get("lines"))
+
+	if _, ok := output.Get("lines").([]container.OutputLine); !ok {
+		assert.Fail("Expected lines to be []container.OutputLine")
+	}
+	lines := output.Get("lines").([]container.OutputLine)
+	assert.Equal(3, len(lines))
+
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
+
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
+
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func TestContainerStepMissingImage(t *testing.T) {
