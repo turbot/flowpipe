@@ -1,26 +1,26 @@
 pipeline "step_output" {
 
-  step "echo" "begin" {
-    text = "baz"
+  step "transform" "begin" {
+    value = "baz"
   }
 
-  step "echo" "start_step" {
-      text = "foo"
+  step "transform" "start_step" {
+      value = "foo"
 
       output "start_output" {
          value = "bar"
       }
 
       output "start_output_two" {
-         value = step.echo.begin.text
+         value = step.transform.begin.value
       }
   }
 
-  step "echo" "end_step" {
-     text = step.echo.start_step.output.start_output_two
+  step "transform" "end_step" {
+     value = step.transform.start_step.output.start_output_two
   }
 
   output "end_output" {
-     value = step.echo.start_step.output.start_output_two
+     value = step.transform.start_step.output.start_output_two
   }
 }

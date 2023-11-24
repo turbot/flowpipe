@@ -1,7 +1,7 @@
 pipeline "step_output_2" {
 
-  step "echo" "start_step" {
-      text = "foo"
+  step "transform" "start_step" {
+      value = "foo"
 
       # output "test_output" {
       #    value = "foo1"
@@ -12,8 +12,8 @@ pipeline "step_output_2" {
       # }
   }
 
-  step "echo" "end_step" {
+  step "transform" "end_step" {
    #   text = step.echo.start_step.output.start_output
-     text = step.echo.start_step.text
+     value = step.transform.start_step.value
   }
 }

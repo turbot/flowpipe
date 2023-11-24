@@ -1,7 +1,7 @@
 pipeline "parent_pipeline" {
     description = "Parent pipeline with a child pipeline"
-    step "echo" "parent_echo" {
-        text = "parent echo step"
+    step "transform" "parent_echo" {
+        value = "parent echo step"
     }
 
     step "pipeline" "child_pipeline" {
@@ -16,20 +16,20 @@ pipeline "parent_pipeline" {
 
 pipeline "child_pipeline" {
     description = "Child Pipeline"
-    step "echo" "child_echo" {
-        text = "child echo step"
+    step "transform" "child_echo" {
+        value = "child echo step"
     }
 
     output "child_output" {
-        value = step.echo.child_echo.text
+        value = step.transform.child_echo.value
     }
 }
 
 
 pipeline "parent_multiple_pipelines_with_errors" {
     description = "Parent pipeline with multiple child pipelines with errors"
-    step "echo" "parent_echo" {
-        text = "parent echo step"
+    step "transform" "parent_echo" {
+        value = "parent echo step"
     }
 
     step "pipeline" "child_pipeline_a" {
@@ -48,12 +48,12 @@ pipeline "parent_multiple_pipelines_with_errors" {
 
 pipeline "child_pipeline_a" {
     description = "Child Pipeline A"
-    step "echo" "child_echo" {
-        text = "child A echo step"
+    step "transform" "child_echo" {
+        value = "child A echo step"
     }
 
     output "child_output" {
-        value = step.echo.child_echo.text
+        value = step.transform.child_echo.value
     }
 }
 
@@ -119,11 +119,11 @@ pipeline "child_pipeline_with_args" {
     }
 
 
-    step "echo" "child_echo" {
-        text = "child echo step: ${param.message} ${param.age}"
+    step "transform" "child_echo" {
+        value = "child echo step: ${param.message} ${param.age}"
     }
 
     output "child_output" {
-        value = step.echo.child_echo.text
+        value = step.transform.child_echo.value
     }
 }

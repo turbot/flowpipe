@@ -6,8 +6,8 @@ pipeline "simple_with_trigger" {
         default = "this is the default value"
     }
 
-    step "echo" "simple_echo" {
-        text = "foo bar: ${param.param_one}"
+    step "transform" "simple_echo" {
+        value = "foo bar: ${param.param_one}"
     }
 }
 
