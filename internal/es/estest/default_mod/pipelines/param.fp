@@ -1,11 +1,11 @@
 pipeline "simple_param" {
 
     param "name" {
-        type = string
+        type    = string
         default = "foo"
     }
 
-    step "echo" "name" {
-        text = "echo ${param.name}"
+    step "transform" "name" {
+        value = "echo ${param.name}"
     }
 }

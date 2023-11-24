@@ -16,31 +16,31 @@ variable "var_depend_a_two" {
 }
 
 pipeline "echo_one_depend_a" {
-    step "echo" "echo_one" {
-        text = "Hello World from Depend A"
+    step "transform" "echo_one" {
+        value = "Hello World from Depend A"
     }
 
-    step "echo" "var_one" {
-        text = "Hello World from Depend A: ${var.var_depend_a_one}"
+    step "transform" "var_one" {
+        value = "Hello World from Depend A: ${var.var_depend_a_one}"
     }
 
-    step "echo" "var_two" {
-        text = "Hello World Two from Depend A: ${var.var_depend_a_two}"
+    step "transform" "var_two" {
+        value = "Hello World Two from Depend A: ${var.var_depend_a_two}"
     }
 
-    step "echo" "echo_of_var_one" {
-        text = "${step.echo.var_one.text} + ${var.var_depend_a_one}"
+    step "transform" "echo_of_var_one" {
+        value = "${step.transform.var_one.value} + ${var.var_depend_a_one}"
     }
 
     output "val" {
-      value = step.echo.echo_one.text
+      value = step.transform.echo_one.value
     }
 
     output "val_var_one" {
-      value = step.echo.echo_of_var_one.text
+      value = step.transform.echo_of_var_one.value
     }
 
     output "val_var_two" {
-      value = step.echo.var_two.text
+      value = step.transform.var_two.value
     }
 }

@@ -15,8 +15,8 @@ mod "test_suite_mod" {
 pipeline "echo_one_a" {
     description = "foo"
 
-    step "echo" "echo_one" {
-        text = "Hello World"
+    step "transform" "echo_one" {
+        value = "Hello World"
     }
 
     step "pipeline" "child_pipeline" {
@@ -34,8 +34,8 @@ pipeline "echo_one_a" {
 
 
 pipeline "echo_one" {
-    step "echo" "echo_one" {
-        text = "Hello World"
+    step "transform" "echo_one" {
+        value = "Hello World"
     }
 
     step "pipeline" "child_pipeline" {
@@ -52,71 +52,71 @@ pipeline "echo_one" {
 }
 
 pipeline "echo_with_variable" {
-    step "echo" "echo_one" {
-        text = "Hello World: ${var.var_one}"
+    step "transform" "echo_one" {
+        value = "Hello World: ${var.var_one}"
     }
 
-    step "echo" "echo_two" {
-        text = "Hello World Two: ${var.var_two}"
+    step "transform" "echo_two" {
+        value = "Hello World Two: ${var.var_two}"
     }
 
-    step "echo" "echo_three" {
-        text = "Hello World Two: ${var.var_two} and ${step.echo.echo_two.text}"
+    step "transform" "echo_three" {
+        value = "Hello World Two: ${var.var_two} and ${step.transform.echo_two.value}"
     }
 
-    step "echo" "echo_four" {
-        text = local.locals_one
+    step "transform" "echo_four" {
+        value = local.locals_one
     }
 
-    step "echo" "echo_five" {
-        text = "${local.locals_two} AND ${step.echo.echo_two.text} AND ${step.echo.echo_four.text}"
+    step "transform" "echo_five" {
+        value = "${local.locals_two} AND ${step.transform.echo_two.value} AND ${step.transform.echo_four.value}"
     }
 
     output "echo_one_output" {
-        value = step.echo.echo_one.text
+        value = step.transform.echo_one.value
     }
 
     output "echo_two_output" {
-        value = step.echo.echo_two.text
+        value = step.transform.echo_two.value
     }
 
     output "echo_three_output" {
-        value = step.echo.echo_three.text
+        value = step.transform.echo_three.value
     }
 
     output "echo_four_output" {
-        value = step.echo.echo_four.text
+        value = step.transform.echo_four.value
     }
 
     output "echo_five_output" {
-        value = step.echo.echo_five.text
+        value = step.transform.echo_five.value
     }
 }
 
 pipeline "expr_depend_and_function" {
-    step "echo" "text_1" {
-        text = "foo bar"
+    step "transform" "text_1" {
+        value = "foo bar"
     }
 
-    step "echo" "text_2" {
-        text = "lower case ${title("bar ${step.echo.text_1.text} baz")} and here"
+    step "transform" "text_2" {
+        value = "lower case ${title("bar ${step.transform.text_1.value} baz")} and here"
     }
 
-    step "echo" "text_3" {
-        text = "output 2 ${title(step.echo.text_2.text)} title(output1) ${title(step.echo.text_1.text)}"
+    step "transform" "text_3" {
+        value = "output 2 ${title(step.transform.text_2.value)} title(output1) ${title(step.transform.text_1.value)}"
     }
 
-    step "echo" "explicit_depends" {
+    step "transform" "explicit_depends" {
         depends_on = [
-            step.echo.text_2,
-            step.echo.text_1
+            step.transform.text_2,
+            step.transform.text_1
         ]
-        text = "explicit depends here"
+        value = "explicit depends here"
     }
 
     # "time"/"for"/"sleep" steps
     param "time" {
-        type = list(string)
+        type    = list(string)
         default = ["1s", "2s"]
     }
 
@@ -125,53 +125,53 @@ pipeline "expr_depend_and_function" {
         duration = each.value
     }
 
-    step "echo" "echo_sleep_for" {
+    step "transform" "echo_sleep_for" {
         for_each = step.sleep.sleep_1
-        text = each.value.duration
+        value    = each.value.duration
     }
 
-    step "echo" "echo_sleep_1" {
-        text = "sleep 2 output: ${step.echo.echo_sleep_for[1].text}"
+    step "transform" "echo_sleep_1" {
+        value = "sleep 2 output: ${step.transform.echo_sleep_for[1].value}"
     }
 
-    step "echo" "echo_sleep_2" {
-        text = "sleep 1 output: ${step.sleep.sleep_1[0].duration}"
+    step "transform" "echo_sleep_2" {
+        value = "sleep 1 output: ${step.sleep.sleep_1[0].duration}"
     }
 
-    step "echo" "echo_for_if" {
+    step "transform" "echo_for_if" {
         for_each = step.sleep.sleep_1
-        text = "sleep 1 output: ${each.value.duration}"
-        if = each.value.duration == "1s"
+        value    = "sleep 1 output: ${each.value.duration}"
+        if       = each.value.duration == "1s"
     }
 
 
-    step "echo" "literal_for" {
+    step "transform" "literal_for" {
         for_each = ["bach", "beethoven", "mozart"]
-        text = "name is ${each.value}"
+        value    = "name is ${each.value}"
     }
 
 
     param "user_data" {
-        type = map(list(string))
+        type    = map(list(string))
         default = {
             Users = ["shostakovitch", "prokofiev", "rachmaninoff"]
         }
     }
 
-    step "echo" "literal_for_from_list" {
+    step "transform" "literal_for_from_list" {
         for_each = { for user in param.user_data.Users : user => user }
-        text = each.value
+        value    = each.value
     }
 
     output "one" {
-        value = step.echo.echo_sleep_2.text
+        value = step.transform.echo_sleep_2.value
     }
 
     output "one_function" {
-        value = title(step.echo.echo_sleep_2.text)
+        value = title(step.transform.echo_sleep_2.value)
     }
 
     output "indexed" {
-        value = step.echo.echo_sleep_for[1].text
+        value = step.transform.echo_sleep_for[1].value
     }
 }

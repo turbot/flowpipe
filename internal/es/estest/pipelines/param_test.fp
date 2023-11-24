@@ -41,35 +41,35 @@ pipeline "param_test" {
         ]
     }
 
-    step "echo" "simple" {
-        text = param.simple
+    step "transform" "simple" {
+        value = param.simple
     }
 
-    step "echo" "map_echo" {
-        text = param.map_user_data.first_name
+    step "transform" "map_echo" {
+        value = param.map_user_data.first_name
     }
 
-    step "echo" "for_with_list" {
+    step "transform" "for_with_list" {
         for_each = param.list_band_names
-        text = each.value
+        value    = each.value
     }
 
-    step "echo" "for_with_list_and_index" {
+    step "transform" "for_with_list_and_index" {
         for_each = param.list_band_names
-        text = "${each.key}: ${each.value}"
+        value    = "${each.key}: ${each.value}"
     }
 
-    step echo "map_diff_types_string" {
-        text = param.object_diff_types.string
+    step transform "map_diff_types_string" {
+        value = param.object_diff_types.string
     }
 
-    step echo "map_diff_types_number" {
-        text = param.object_diff_types.number
+    step transform "map_diff_types_number" {
+        value = param.object_diff_types.number
     }
 
-    step "echo" "for_each_list_within_map" {
+    step "transform" "for_each_list_within_map" {
         for_each = param.object_diff_types.list
-        text = each.value
+        value    = each.value
     }
 }
 
@@ -80,7 +80,7 @@ pipeline "param_override_test" {
     }
 
 
-    step "echo" "simple" {
-        text = param.simple
+    step "transform" "simple" {
+        value = param.simple
     }
 }

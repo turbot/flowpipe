@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"testing"
 	"time"
+
+	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -134,17 +135,17 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 		assert.Fail("Pipeline definition not found", err)
 	}
 
-	explicitDependsStep := pipelineDefn.GetStep("echo.explicit_depends")
+	explicitDependsStep := pipelineDefn.GetStep("transform.explicit_depends")
 	if explicitDependsStep == nil {
-		assert.Fail("echo.explicit_depends not found")
+		assert.Fail("transform.explicit_depends not found")
 		return
 	}
 
 	dependsOn := explicitDependsStep.GetDependsOn()
 
 	assert.Equal(2, len(dependsOn))
-	assert.Contains(dependsOn, "echo.text_1")
-	assert.Contains(dependsOn, "echo.text_2")
+	assert.Contains(dependsOn, "transform.text_1")
+	assert.Contains(dependsOn, "transform.text_2")
 
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < 3 && !pex.IsComplete(); i++ {
@@ -170,21 +171,21 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	}
 	assert.NotNil(executionVariables)
 
-	echoStepsOutput := executionVariables["step"].AsValueMap()["echo"].AsValueMap()
+	transformStepsOutput := executionVariables["step"].AsValueMap()["transform"].AsValueMap()
 
-	if len(echoStepsOutput) != 10 {
-		assert.Fail("Invalid number of steps", len(echoStepsOutput))
+	if len(transformStepsOutput) != 10 {
+		assert.Fail("Invalid number of steps", len(transformStepsOutput))
 		return
 	}
-	assert.Equal(10, len(echoStepsOutput))
+	assert.Equal(10, len(transformStepsOutput))
 
-	assert.Equal("foo bar", echoStepsOutput["text_1"].AsValueMap()["text"].AsString())
-	assert.Equal("lower case Bar Foo Bar Baz and here", echoStepsOutput["text_2"].AsValueMap()["text"].AsString())
-	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", echoStepsOutput["text_3"].AsValueMap()["text"].AsString())
+	assert.Equal("foo bar", transformStepsOutput["text_1"].AsValueMap()["value"].AsString())
+	assert.Equal("lower case Bar Foo Bar Baz and here", transformStepsOutput["text_2"].AsValueMap()["value"].AsString())
+	assert.Equal("output 2 Lower Case Bar Foo Bar Baz And Here title(output1) Foo Bar", transformStepsOutput["text_3"].AsValueMap()["value"].AsString())
 
 	// check output for the "time"/"for"/"sleep" steps
-	assert.Equal("sleep 2 output: 2s", echoStepsOutput["echo_sleep_1"].AsValueMap()["text"].AsString())
-	assert.Equal("sleep 1 output: 1s", echoStepsOutput["echo_sleep_2"].AsValueMap()["text"].AsString())
+	assert.Equal("sleep 2 output: 2s", transformStepsOutput["echo_sleep_1"].AsValueMap()["value"].AsString())
+	assert.Equal("sleep 1 output: 1s", transformStepsOutput["echo_sleep_2"].AsValueMap()["value"].AsString())
 
 	sleepStepsOutput := executionVariables["step"].AsValueMap()["sleep"].AsValueMap()
 	if sleepStepsOutput == nil {
@@ -203,10 +204,10 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal("1s", sleep1StepOutputs["0"].AsValueMap()["duration"].AsString())
 	assert.Equal("2s", sleep1StepOutputs["1"].AsValueMap()["duration"].AsString())
 
-	assert.Equal(2, len(echoStepsOutput["echo_for_if"].AsValueMap()))
+	assert.Equal(2, len(transformStepsOutput["echo_for_if"].AsValueMap()))
 	// First one is OK, the second step should be skipped
-	assert.True(len(echoStepsOutput["echo_for_if"].AsValueMap()["0"].AsValueMap()) > 0)
-	assert.True(len(echoStepsOutput["echo_for_if"].AsValueMap()["1"].AsValueMap()) == 0)
+	assert.True(len(transformStepsOutput["echo_for_if"].AsValueMap()["0"].AsValueMap()) > 0)
+	assert.True(len(transformStepsOutput["echo_for_if"].AsValueMap()["1"].AsValueMap()) == 0)
 
 	assert.Equal(3, len(pex.PipelineOutput))
 	assert.Equal("sleep 1 output: 1s", pex.PipelineOutput["one"])
@@ -214,20 +215,20 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	assert.Equal("2s", pex.PipelineOutput["indexed"])
 
 	// checking the "echo.literal_for" step
-	assert.Equal(3, len(echoStepsOutput["literal_for"].AsValueMap()))
+	assert.Equal(3, len(transformStepsOutput["literal_for"].AsValueMap()))
 
-	assert.Equal("name is bach", echoStepsOutput["literal_for"].AsValueMap()["0"].AsValueMap()["text"].AsString())
-	assert.Equal("name is beethoven", echoStepsOutput["literal_for"].AsValueMap()["1"].AsValueMap()["text"].AsString())
-	assert.Equal("name is mozart", echoStepsOutput["literal_for"].AsValueMap()["2"].AsValueMap()["text"].AsString())
+	assert.Equal("name is bach", transformStepsOutput["literal_for"].AsValueMap()["0"].AsValueMap()["value"].AsString())
+	assert.Equal("name is beethoven", transformStepsOutput["literal_for"].AsValueMap()["1"].AsValueMap()["value"].AsString())
+	assert.Equal("name is mozart", transformStepsOutput["literal_for"].AsValueMap()["2"].AsValueMap()["value"].AsString())
 
 	// checking the "echo.literal_for_from_list" step
-	assert.Equal(3, len(echoStepsOutput["literal_for_from_list"].AsValueMap()))
+	assert.Equal(3, len(transformStepsOutput["literal_for_from_list"].AsValueMap()))
 
 	expectedNames := []string{"shostakovitch", "prokofiev", "rachmaninoff"}
 	foundNames := []string{
-		echoStepsOutput["literal_for_from_list"].AsValueMap()["shostakovitch"].AsValueMap()["text"].AsString(),
-		echoStepsOutput["literal_for_from_list"].AsValueMap()["prokofiev"].AsValueMap()["text"].AsString(),
-		echoStepsOutput["literal_for_from_list"].AsValueMap()["rachmaninoff"].AsValueMap()["text"].AsString(),
+		transformStepsOutput["literal_for_from_list"].AsValueMap()["shostakovitch"].AsValueMap()["value"].AsString(),
+		transformStepsOutput["literal_for_from_list"].AsValueMap()["prokofiev"].AsValueMap()["value"].AsString(),
+		transformStepsOutput["literal_for_from_list"].AsValueMap()["rachmaninoff"].AsValueMap()["value"].AsString(),
 	}
 
 	less := func(a, b string) bool { return a < b }
@@ -263,13 +264,13 @@ func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	}
 	assert.NotNil(executionVariables)
 
-	echoStepsOutput := executionVariables["step"].AsValueMap()["echo"].AsValueMap()
-	if echoStepsOutput == nil {
-		assert.Fail("echo step output not found")
+	transformStepsOutput := executionVariables["step"].AsValueMap()["transform"].AsValueMap()
+	if transformStepsOutput == nil {
+		assert.Fail("transform step output not found")
 		return
 	}
 
-	assert.Equal(5, len(echoStepsOutput))
+	assert.Equal(5, len(transformStepsOutput))
 
 	// TODO: we have to check this in the StepStatus now rather than the AllStepOutput attribute (that was removed)
 	// assert.Equal("finished", echoStepsOutput["text_true"].(*modconfig.Output).Status)
@@ -278,11 +279,11 @@ func (suite *EsTestSuite) TestIfConditionsOnSteps() {
 	// assert.Equal("finished", echoStepsOutput["text_2"].(*modconfig.Output).Status)
 	// assert.Equal("skipped", echoStepsOutput["text_3"].(*modconfig.Output).Status)
 
-	assert.Equal("foo", echoStepsOutput["text_true"].AsValueMap()["text"].AsString())
-	assert.Equal(0, len(echoStepsOutput["text_false"].AsValueMap()))
-	assert.Equal("foo", echoStepsOutput["text_1"].AsValueMap()["text"].AsString())
-	assert.Equal("bar", echoStepsOutput["text_2"].AsValueMap()["text"].AsString())
-	assert.Equal(0, len(echoStepsOutput["text_3"].AsValueMap()))
+	assert.Equal("foo", transformStepsOutput["text_true"].AsValueMap()["value"].AsString())
+	assert.Equal(0, len(transformStepsOutput["text_false"].AsValueMap()))
+	assert.Equal("foo", transformStepsOutput["text_1"].AsValueMap()["value"].AsString())
+	assert.Equal("bar", transformStepsOutput["text_2"].AsValueMap()["value"].AsString())
+	assert.Equal(0, len(transformStepsOutput["text_3"].AsValueMap()))
 }
 
 func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
@@ -387,16 +388,16 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		assert.Fail("Pipeline definition not found", err)
 	}
 
-	badHttpIfErrorTrueStep := pipelineDefn.GetStep("echo.bad_http_if_error_true")
+	badHttpIfErrorTrueStep := pipelineDefn.GetStep("transform.bad_http_if_error_true")
 	if badHttpIfErrorTrueStep == nil {
-		assert.Fail("echo.bad_http_if_error_true not found")
+		assert.Fail("transform.bad_http_if_error_true not found")
 		return
 	}
 	assert.Contains(badHttpIfErrorTrueStep.GetDependsOn(), "http.my_step_1")
 
-	badHttpIfErrorFalseStep := pipelineDefn.GetStep("echo.bad_http_if_error_false")
+	badHttpIfErrorFalseStep := pipelineDefn.GetStep("transform.bad_http_if_error_false")
 	if badHttpIfErrorFalseStep == nil {
-		assert.Fail("echo.bad_http_if_error_false not found")
+		assert.Fail("transform.bad_http_if_error_false not found")
 		return
 	}
 	assert.Contains(badHttpIfErrorFalseStep.GetDependsOn(), "http.my_step_1")
@@ -412,14 +413,14 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	assert.Equal("foo", output.(string))
 
-	assert.Equal("bar", pex.StepStatus["echo.bad_http_if_error_true"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("bar", pex.StepStatus["transform.bad_http_if_error_true"]["0"].StepExecutions[0].Output.Data["value"])
 
 	// checking the is_error function working correctly
-	assert.Equal("finished", pex.StepStatus["echo.bad_http_if_error_true"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("skipped", pex.StepStatus["echo.bad_http_if_error_false"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("finished", pex.StepStatus["transform.bad_http_if_error_true"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("skipped", pex.StepStatus["transform.bad_http_if_error_false"]["0"].StepExecutions[0].Output.Status)
 
 	// checking the error_message function working correctly
-	assert.Equal("404 Not Found", pex.StepStatus["echo.error_message"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("404 Not Found", pex.StepStatus["transform.error_message"]["0"].StepExecutions[0].Output.Data["value"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -449,9 +450,9 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	}
 
 	assert.Equal(float64(404), pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
-	assert.Equal("404", pex.StepStatus["echo.bad_http"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(float64(404), pex.StepStatus["transform.bad_http"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal("404", output.(string))
+	assert.Equal(float64(404), output.(float64))
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -478,7 +479,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(404), pex.StepStatus["http.http_step"]["1"].StepExecutions[0].Output.Data["status_code"])
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
-	if pex.StepStatus["echo.http_step"] == nil {
+	if pex.StepStatus["transform.http_step"] == nil {
 		filename := fmt.Sprintf("%s.jsonl", cmd.Event.ExecutionID)
 		p := filepath.Join(viper.GetString(constants.ArgLogDir), filename)
 
@@ -510,17 +511,17 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		// Print the data
 		fmt.Println(result) //nolint:forbidigo // test
 
-		assert.Fail("echo.http_step not found in StepStatus: " + cmd.Event.ExecutionID)
+		assert.Fail("transform.http_step not found in StepStatus: " + cmd.Event.ExecutionID)
 		return
 	}
 
-	assert.Equal("skipped", pex.StepStatus["echo.http_step"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("skipped", pex.StepStatus["echo.http_step"]["1"].StepExecutions[0].Output.Status)
-	assert.Equal("finished", pex.StepStatus["echo.http_step"]["2"].StepExecutions[0].Output.Status)
+	assert.Equal("skipped", pex.StepStatus["transform.http_step"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("skipped", pex.StepStatus["transform.http_step"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("finished", pex.StepStatus["transform.http_step"]["2"].StepExecutions[0].Output.Status)
 
-	assert.Equal(0, len(pex.StepStatus["echo.http_step"]["0"].StepExecutions[0].Output.Data))
-	assert.Equal(0, len(pex.StepStatus["echo.http_step"]["1"].StepExecutions[0].Output.Data))
-	assert.Equal("200", pex.StepStatus["echo.http_step"]["2"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(0, len(pex.StepStatus["transform.http_step"]["0"].StepExecutions[0].Output.Data))
+	assert.Equal(0, len(pex.StepStatus["transform.http_step"]["1"].StepExecutions[0].Output.Data))
+	assert.Equal(float64(200), pex.StepStatus["transform.http_step"]["2"].StepExecutions[0].Output.Data["value"])
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -656,14 +657,14 @@ func (suite *EsTestSuite) TestHttp() {
 
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("finished", pex.StepStatus["echo.output"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("201", pex.StepStatus["echo.output"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.output"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal(float64(201), pex.StepStatus["transform.output"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal(len(pex.StepStatus["echo.body_json_loop"]), 4)
-	assert.Equal("brian may", pex.StepStatus["echo.body_json_loop"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("freddie mercury", pex.StepStatus["echo.body_json_loop"]["1"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("roger taylor", pex.StepStatus["echo.body_json_loop"]["2"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("john deacon", pex.StepStatus["echo.body_json_loop"]["3"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(len(pex.StepStatus["transform.body_json_loop"]), 4)
+	assert.Equal("brian may", pex.StepStatus["transform.body_json_loop"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("freddie mercury", pex.StepStatus["transform.body_json_loop"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("roger taylor", pex.StepStatus["transform.body_json_loop"]["2"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("john deacon", pex.StepStatus["transform.body_json_loop"]["3"].StepExecutions[0].Output.Data["value"])
 }
 
 func (suite *EsTestSuite) TestParam() {
@@ -683,35 +684,35 @@ func (suite *EsTestSuite) TestParam() {
 
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("finished", pex.StepStatus["echo.simple"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("foo", pex.StepStatus["echo.simple"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.simple"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("foo", pex.StepStatus["transform.simple"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal("finished", pex.StepStatus["echo.map_echo"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("felix", pex.StepStatus["echo.map_echo"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.map_echo"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("felix", pex.StepStatus["transform.map_echo"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal(7, len(pex.StepStatus["echo.for_with_list"]))
+	assert.Equal(7, len(pex.StepStatus["transform.for_with_list"]))
 
-	assert.Equal("finished", pex.StepStatus["echo.for_with_list"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("Green Day", pex.StepStatus["echo.for_with_list"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.for_with_list"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("Green Day", pex.StepStatus["transform.for_with_list"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal("finished", pex.StepStatus["echo.for_with_list"]["6"].StepExecutions[0].Output.Status)
-	assert.Equal("The All-American Rejects", pex.StepStatus["echo.for_with_list"]["6"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.for_with_list"]["6"].StepExecutions[0].Output.Status)
+	assert.Equal("The All-American Rejects", pex.StepStatus["transform.for_with_list"]["6"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal("finished", pex.StepStatus["echo.map_diff_types_string"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("string", pex.StepStatus["echo.map_diff_types_string"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.map_diff_types_string"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("string", pex.StepStatus["transform.map_diff_types_string"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal("finished", pex.StepStatus["echo.map_diff_types_number"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("1", pex.StepStatus["echo.map_diff_types_number"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.map_diff_types_number"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal(float64(1), pex.StepStatus["transform.map_diff_types_number"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal(3, len(pex.StepStatus["echo.for_each_list_within_map"]))
-	assert.Equal("a", pex.StepStatus["echo.for_each_list_within_map"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("b", pex.StepStatus["echo.for_each_list_within_map"]["1"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("c", pex.StepStatus["echo.for_each_list_within_map"]["2"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(3, len(pex.StepStatus["transform.for_each_list_within_map"]))
+	assert.Equal("a", pex.StepStatus["transform.for_each_list_within_map"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("b", pex.StepStatus["transform.for_each_list_within_map"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("c", pex.StepStatus["transform.for_each_list_within_map"]["2"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal(7, len(pex.StepStatus["echo.for_with_list_and_index"]))
-	assert.Equal("0: Green Day", pex.StepStatus["echo.for_with_list_and_index"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("1: New Found Glory", pex.StepStatus["echo.for_with_list_and_index"]["1"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("2: Sum 41", pex.StepStatus["echo.for_with_list_and_index"]["2"].StepExecutions[0].Output.Data["text"])
+	assert.Equal(7, len(pex.StepStatus["transform.for_with_list_and_index"]))
+	assert.Equal("0: Green Day", pex.StepStatus["transform.for_with_list_and_index"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("1: New Found Glory", pex.StepStatus["transform.for_with_list_and_index"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("2: Sum 41", pex.StepStatus["transform.for_with_list_and_index"]["2"].StepExecutions[0].Output.Data["value"])
 }
 
 func (suite *EsTestSuite) TestParamOverride() {
@@ -736,8 +737,8 @@ func (suite *EsTestSuite) TestParamOverride() {
 
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("finished", pex.StepStatus["echo.simple"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("bar", pex.StepStatus["echo.simple"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.simple"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("bar", pex.StepStatus["transform.simple"]["0"].StepExecutions[0].Output.Data["value"])
 }
 
 func (suite *EsTestSuite) TestParamOptional() {
@@ -793,8 +794,8 @@ func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("finished", pex.StepStatus["echo.simple"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("bar", pex.StepStatus["echo.simple"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("finished", pex.StepStatus["transform.simple"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("bar", pex.StepStatus["transform.simple"]["0"].StepExecutions[0].Output.Data["value"])
 }
 
 func (suite *EsTestSuite) TestChildPipeline() {
@@ -842,9 +843,9 @@ func (suite *EsTestSuite) TestStepOutput() {
 
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("baz", pex.StepStatus["echo.begin"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("foo", pex.StepStatus["echo.start_step"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("baz", pex.StepStatus["echo.end_step"]["0"].StepExecutions[0].Output.Data["text"])
+	assert.Equal("baz", pex.StepStatus["transform.begin"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("foo", pex.StepStatus["transform.start_step"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("baz", pex.StepStatus["transform.end_step"]["0"].StepExecutions[0].Output.Data["value"])
 
 }
 

@@ -8,8 +8,8 @@ pipeline "query" {
     # step "echo" "result" {
     #     text = "${ join("", [for row in jsondecode(step.query.query_1.rows): "\n- ${row.title}"]) }"
     # }
-    step "echo" "result" {
+    step "transform" "result" {
         for_each = step.query.query_1.rows
-        text = each.value.arn
+        value    = each.value.arn
     }
 }

@@ -5,9 +5,9 @@ pipeline "bad_http_not_ignored" {
         url = "http://api.open-notify.org/astros.jsons"
     }
 
-    step "echo" "bad_http" {
+    step "transform" "bad_http" {
         depends_on = [step.http.my_step_1]
-        text = "foo"
+        value      = "foo"
     }
 }
 
@@ -32,9 +32,9 @@ pipeline "bad_http_ignored_two_steps" {
         }
     }
 
-    step "echo" "text_1" {
+    step "transform" "text_1" {
         depends_on = [step.http.my_step_1]
-        text = "foo"
+        value      = "foo"
     }
 }
 
@@ -58,27 +58,27 @@ pipeline "bad_http_ignored" {
         }
     }
 
-    step "echo" "bad_http_if_error_true" {
-        text = "bar"
-        if = is_error(step.http.my_step_1)
+    step "transform" "bad_http_if_error_true" {
+        value = "bar"
+        if    = is_error(step.http.my_step_1)
     }
 
-    step "echo" "bad_http_if_error_false" {
-        text = "baz"
-        if = !is_error(step.http.my_step_1)
+    step "transform" "bad_http_if_error_false" {
+        value = "baz"
+        if    = !is_error(step.http.my_step_1)
     }
 
-    step "echo" "error_message" {
-        text = error_message(step.http.my_step_1)
+    step "transform" "error_message" {
+        value = error_message(step.http.my_step_1)
     }
 
-    step "echo" "bad_http" {
+    step "transform" "bad_http" {
         depends_on = [step.http.my_step_1]
-        text = "foo"
+        value      = "foo"
     }
 
     output "one" {
-        value = step.echo.bad_http.text
+        value = step.transform.bad_http.value
     }
 }
 
@@ -89,12 +89,12 @@ pipeline "bad_http_ignored_get_error_code" {
             ignore = true
         }
     }
-    step "echo" "bad_http" {
-        text = step.http.my_step_1.status_code
+    step "transform" "bad_http" {
+        value = step.http.my_step_1.status_code
     }
 
     output "one" {
-        value = step.echo.bad_http.text
+        value = step.transform.bad_http.value
     }
 }
 
@@ -105,9 +105,9 @@ pipeline "bad_http_ignored_for_each" {
             ignore = true
         }
     }
-    step "echo" "bad_http" {
+    step "transform" "bad_http" {
         for_each = step.http.my_step_1
-        text = each.value.message
+        value    = each.value.message
     }
 }
 
@@ -128,9 +128,9 @@ pipeline "bad_http_with_for" {
         }
     }
 
-    step "echo" "http_step" {
+    step "transform" "http_step" {
         for_each = step.http.http_step
-        text = each.value.status_code
-        if = each.value.status_code == 200
+        value    = each.value.status_code
+        if       = each.value.status_code == 200
     }
 }
