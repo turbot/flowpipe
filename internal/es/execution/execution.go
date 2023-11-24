@@ -23,6 +23,7 @@ import (
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -97,7 +98,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	credentialMap, err := ex.buildCredentialMapForEvalContext(pipelineDefn)
+	credentialMap, err := ex.buildCredentialMapForEvalContext()
 	if err != nil {
 		return nil, err
 	}
@@ -120,44 +121,22 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	return evalContext, nil
 }
 
-func (ex *Execution) buildCredentialMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
-	credentialMap := map[string]cty.Value{}
-	awsCredentialMap := map[string]cty.Value{}
-	basicCredentialMap := map[string]cty.Value{}
+func (ex *Execution) buildCredentialMapForEvalContext() (map[string]cty.Value, error) {
 
-	allCredentials := pipelineDefn.GetMod().ResourceMaps.Credentials
+	fpConfig, err := db.GetFlowpipeConfig()
 
-	for _, c := range allCredentials {
-		parts := strings.Split(c.Name(), ".")
-		if len(parts) != 4 {
-			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
+	if err != nil {
+		if perr.IsNotFound(err) {
+			return map[string]cty.Value{}, nil
 		}
 
-		pCty, err := c.CtyValue()
-		if err != nil {
-			return nil, err
-		}
-
-		credentialType := parts[2]
-
-		switch credentialType {
-		case "aws":
-			awsCredentialMap[parts[3]] = pCty
-
-		case "basic":
-			basicCredentialMap[parts[3]] = pCty
-
-		default:
-			return nil, perr.BadRequestWithMessage("invalid credential type: " + credentialType)
-		}
+		return nil, err
 	}
+	allCredentials := fpConfig.Credentials
 
-	if len(awsCredentialMap) > 0 {
-		credentialMap["aws"] = cty.ObjectVal(awsCredentialMap)
-	}
-
-	if len(basicCredentialMap) > 0 {
-		credentialMap["basic"] = cty.ObjectVal(basicCredentialMap)
+	credentialMap, err := parse.BuildCredentialMapForEvalContext(allCredentials)
+	if err != nil {
+		return nil, err
 	}
 
 	return credentialMap, nil

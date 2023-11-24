@@ -2,11 +2,12 @@ package cmdconfig
 
 import (
 	"context"
+	"runtime/debug"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/constants"
-	"runtime/debug"
 )
 
 // preRunHook is a function that is executed before the PreRun of every command handler
@@ -16,7 +17,7 @@ func preRunHook(cmd *cobra.Command, args []string) error {
 
 	// set up the global viper config with default values from
 	// config files and ENV variables
-	initGlobalConfig()
+	_ = initGlobalConfig()
 
 	// set the max memory if specified
 	setMemoryLimit(cmd.Context())

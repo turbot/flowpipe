@@ -20,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -49,6 +50,8 @@ func (suite *ModTestSuite) SetupSuite() {
 
 	// sets app specific constants defined in pipe-fittings
 	localcmdconfig.SetAppSpecificConstants()
+
+	app_specific.InstallDir = app_specific.DefaultInstallDir
 
 	// Get the current working directory
 	cwd, err := os.Getwd()

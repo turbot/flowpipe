@@ -20,7 +20,7 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
-func initGlobalConfig() {
+func initGlobalConfig() *modconfig.FlowpipeConfig {
 	// load workspace profile from the configured install dir
 	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
 	error_helpers.FailOnError(err)
@@ -53,6 +53,8 @@ func initGlobalConfig() {
 	error_helpers.FailOnError(err)
 
 	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
+
+	return nil
 }
 
 // build defaults, combine global and cmd specific defaults
