@@ -271,6 +271,29 @@ func TestHTTPMethodPOSTWithNoVerifyCertificate(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
+func TestHTTPMethodPOSTWithVerifyInvalidCertificate(t *testing.T) {
+	ctx := context.Background()
+	ctx = fplog.ContextWithLogger(ctx)
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
+		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeRequestBody: `{
+			"userId": 1001,
+			"it": 1001,
+			"title": "Test 1001"
+		}`,
+		schema.AttributeTypeCaCertPem: "test",
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "tls: failed to verify certificate")
+}
+
 func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 	ctx := context.Background()
 	ctx = fplog.ContextWithLogger(ctx)
