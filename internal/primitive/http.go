@@ -124,7 +124,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	}
 
 	// Initialize the TLSClientConfig with default settings
-	tlsConfig := &tls.Config{}
+	tlsConfig := &tls.Config{} // #nosec G402
 
 	// By default the client verifies the server's certificate chain and host name.
 	// If the insecure flag is set, the client skips this verification and accepts any certificate presented by the server and any host name in that certificate.
