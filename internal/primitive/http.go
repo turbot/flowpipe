@@ -123,34 +123,27 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 		req.Header.Set(k, v.(string))
 	}
 
+	// Initialize the TLSClientConfig with default settings
+	tlsConfig := &tls.Config{}
+
 	// By default the client verifies the server's certificate chain and host name.
 	// If the insecure flag is set, the client skips this verification and accepts any certificate presented by the server and any host name in that certificate.
-	// Set the insecure flag to true if the input parameter 'insecure' is set to true.
-	insecure := false
+	// Default value of insecure flag is false.
 	if inputParams.Insecure {
-		insecure = true
-
-		client.Transport = &http.Transport{
-			// #nosec G402
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: insecure,
-			},
-		}
+		tlsConfig.InsecureSkipVerify = inputParams.Insecure
 	}
 
 	// If the input parameter 'ca_cert_pem' is set, the client verifies the server's certificate chain using the provided PEM encoded CA certificates.
-	// Also, set the insecure flag to true if the input parameter 'insecure' is set to true. Default value of insecure flag is false.
 	if inputParams.CaCertPem != "" {
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM([]byte(inputParams.CaCertPem))
 
-		client.Transport = &http.Transport{
-			// #nosec G402
-			TLSClientConfig: &tls.Config{
-				RootCAs:            caCertPool,
-				InsecureSkipVerify: insecure,
-			},
-		}
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	// Configure the client's transport with the final TLSClientConfig
+	client.Transport = &http.Transport{
+		TLSClientConfig: tlsConfig,
 	}
 
 	start := time.Now().UTC()
