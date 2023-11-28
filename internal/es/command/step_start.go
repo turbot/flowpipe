@@ -115,9 +115,6 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		case schema.BlockTypePipelineStepSleep:
 			p := primitive.Sleep{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
-		case schema.BlockTypePipelineStepEcho:
-			p := primitive.Echo{}
-			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepTransform:
 			p := primitive.Transform{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)

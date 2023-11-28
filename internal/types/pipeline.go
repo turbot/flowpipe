@@ -130,8 +130,6 @@ func pipelineStepFromApiResponse(apiStep map[string]any) (modconfig.PipelineStep
 		step = &modconfig.PipelineStepSleep{}
 	case schema.BlockTypePipelineStepEmail:
 		step = &modconfig.PipelineStepEmail{}
-	case schema.BlockTypePipelineStepEcho:
-		step = &modconfig.PipelineStepEcho{}
 	case schema.BlockTypePipelineStepTransform:
 		step = &modconfig.PipelineStepTransform{}
 	case schema.BlockTypePipelineStepQuery:
