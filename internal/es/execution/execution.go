@@ -12,9 +12,11 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fplog"
@@ -23,7 +25,6 @@ import (
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -47,10 +48,6 @@ type Execution struct {
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
-	return ex.BuildEvalContextWithCredentials(pipelineDefn, pe, nil)
-}
-
-func (ex *Execution) BuildEvalContextWithCredentials(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -101,19 +98,6 @@ func (ex *Execution) BuildEvalContextWithCredentials(pipelineDefn *modconfig.Pip
 	}
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
-
-	// Calculate if we need to "resolve" credentials, ensure that we only resolve credentials
-	// that we need. If you have 10 temp creds, we don't want to generate all 10 temp creds when we don't need them
-
-	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
-
-		credentialMap, err := ex.buildCredentialMapForEvalContext(stepDefn.GetCredentialDependsOn(), params)
-		if err != nil {
-			return nil, err
-		}
-
-		evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
-	}
 
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
@@ -187,9 +171,90 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 		}
 	}
 
-	credentialMap, err := parse.BuildCredentialMapForEvalContext(relevantCredentials)
+	credentialMap, err := buildCredentialMapForEvalContext(relevantCredentials)
 	if err != nil {
 		return nil, err
+	}
+
+	return credentialMap, nil
+}
+
+func buildCredentialMapForEvalContext(allCredentials map[string]modconfig.Credential) (map[string]cty.Value, error) {
+	credentialMap := map[string]cty.Value{}
+	awsCredentialMap := map[string]cty.Value{}
+	basicCredentialMap := map[string]cty.Value{}
+	slackCedentialMap := map[string]cty.Value{}
+	gcpCredentialMap := map[string]cty.Value{}
+
+	cache := cache.GetCache()
+	for _, c := range allCredentials {
+		parts := strings.Split(c.Name(), ".")
+		if len(parts) != 2 {
+			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
+		}
+
+		var credToUse modconfig.Credential
+
+		cachedCred, found := cache.Get(c.GetHclResourceImpl().FullName)
+		if !found {
+			// if not found, call the "resolve" function to resolve this credential, for temp cred this will
+			// generate the temp creds
+			newC, err := c.Resolve(context.TODO())
+			if err != nil {
+				return nil, err
+			}
+
+			if newC.GetTtl() > 0 {
+				cache.SetWithTTL(c.GetHclResourceImpl().FullName, newC, time.Duration(newC.GetTtl())*time.Second)
+			}
+			credToUse = newC
+		} else {
+			var ok bool
+			credToUse, ok = cachedCred.(modconfig.Credential)
+			if !ok {
+				return nil, perr.BadRequestWithMessage("invalid credential type: " + c.Name())
+			}
+		}
+
+		pCty, err := credToUse.CtyValue()
+		if err != nil {
+			return nil, err
+		}
+
+		credentialType := parts[0]
+
+		switch credentialType {
+		case "aws":
+			awsCredentialMap[parts[1]] = pCty
+
+		case "basic":
+			basicCredentialMap[parts[1]] = pCty
+
+		case "slack":
+			slackCedentialMap[parts[1]] = pCty
+
+		case "gcp":
+			gcpCredentialMap[parts[1]] = pCty
+
+		default:
+			return nil, perr.BadRequestWithMessage("invalid credential type: " + credentialType)
+		}
+	}
+
+	if len(awsCredentialMap) > 0 {
+		credentialMap["aws"] = cty.ObjectVal(awsCredentialMap)
+	}
+
+	if len(basicCredentialMap) > 0 {
+		credentialMap["basic"] = cty.ObjectVal(basicCredentialMap)
+	}
+
+	if len(slackCedentialMap) > 0 {
+		credentialMap["slack"] = cty.ObjectVal(slackCedentialMap)
+	}
+
+	if len(gcpCredentialMap) > 0 {
+		credentialMap["gcp"] = cty.ObjectVal(gcpCredentialMap)
 	}
 
 	return credentialMap, nil
