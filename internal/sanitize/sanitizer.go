@@ -53,14 +53,7 @@ func (s *Sanitizer) SanitizeKeyValue(keysAndValues ...any) []any {
 			sanitizeKeyAndValues[i+1] = val
 		} else {
 			s.SanitizeSimpleKeyValue(k, v)
-			if stringSliceContains(keys, keysAndValues[i].(string)) {
-				sanitizeKeyAndValues[i+1] = "<redacted>"
-
-			} else {
-				sanitizeKeyAndValues[i+1] = keysAndValues[i+1]
-			}
 		}
-
 	}
 
 	return sanitizeKeyAndValues
