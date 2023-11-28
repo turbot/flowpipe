@@ -14,6 +14,119 @@ import (
 type Container struct{}
 
 func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
+
+	// Validate the name attribute
+	if i[schema.LabelName] == nil {
+		return perr.BadRequestWithMessage("Container input must define '" + schema.LabelName + "'")
+	}
+	if _, ok := i[schema.LabelName].(string); !ok {
+		return perr.BadRequestWithMessage("Container attribute '" + schema.LabelName + "' must be a string")
+	}
+
+	// Validate the image attribute
+	if i[schema.AttributeTypeImage] == nil {
+		return perr.BadRequestWithMessage("Container input must define '" + schema.AttributeTypeImage + "'")
+	}
+	if _, ok := i[schema.AttributeTypeImage].(string); !ok {
+		return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeImage + "' must be a string")
+	}
+
+	// Validate the cmd attribute
+	if i[schema.AttributeTypeCmd] != nil {
+		if _, ok := i[schema.AttributeTypeCmd].([]interface{}); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeCmd + "' must be an array of strings")
+		}
+	}
+
+	// Validate the env
+	if i[schema.AttributeTypeEnv] != nil {
+		if _, ok := i[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeEnv + "' must be a map of strings")
+		}
+	}
+
+	// Validate the entrypoint attribute
+	if i[schema.AttributeTypeEntryPoint] != nil {
+		if _, ok := i[schema.AttributeTypeEntryPoint].([]interface{}); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeEntryPoint + "' must be an array of strings")
+		}
+	}
+
+	// Validate the timeout attribute
+	if i[schema.AttributeTypeTimeout] != nil {
+		switch i[schema.AttributeTypeTimeout].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeTimeout + "' must be an integer")
+		}
+	}
+
+	// Validate the cpu shares attribute
+	if i[schema.AttributeTypeCpuShares] != nil {
+		switch i[schema.AttributeTypeCpuShares].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeCpuShares + "' must be an integer")
+		}
+	}
+
+	// Validate the memory attribute
+	if i[schema.AttributeTypeMemory] != nil {
+		switch i[schema.AttributeTypeMemory].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemory + "' must be an integer")
+		}
+	}
+
+	// Validate the memory reservation attribute
+	if i[schema.AttributeTypeMemoryReservation] != nil {
+		switch i[schema.AttributeTypeMemoryReservation].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemoryReservation + "' must be an integer")
+		}
+	}
+
+	// Validate the memory swap attribute
+	if i[schema.AttributeTypeMemorySwap] != nil {
+		switch i[schema.AttributeTypeMemorySwap].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemorySwap + "' must be an integer")
+		}
+	}
+
+	// Validate the memory swappiness attribute
+	if i[schema.AttributeTypeMemorySwappiness] != nil {
+		switch i[schema.AttributeTypeMemorySwappiness].(type) {
+		case float64, int64:
+		default:
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeMemorySwappiness + "' must be an integer")
+		}
+	}
+
+	// Validate the read-only attribute
+	if i[schema.AttributeTypeReadOnly] != nil {
+		if _, ok := i[schema.AttributeTypeReadOnly].(bool); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeReadOnly + "' must be a boolean")
+		}
+	}
+
+	// Validate the user attribute
+	if i[schema.AttributeTypeUser] != nil {
+		if _, ok := i[schema.AttributeTypeUser].(string); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeUser + "' must be a string")
+		}
+	}
+
+	// Validate the workdir attribute
+	if i[schema.AttributeTypeWorkdir] != nil {
+		if _, ok := i[schema.AttributeTypeWorkdir].(string); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeWorkdir + "' must be a string")
+		}
+	}
+
 	return nil
 }
 
@@ -75,6 +188,97 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		c.EntryPoint = convertToSliceOfString(input[schema.AttributeTypeEntryPoint].([]interface{}))
 	}
 
+	if input[schema.AttributeTypeUser] != nil {
+		c.User = input[schema.AttributeTypeUser].(string)
+	}
+
+	if input[schema.AttributeTypeWorkdir] != nil {
+		c.Workdir = input[schema.AttributeTypeWorkdir].(string)
+	}
+
+	if input[schema.AttributeTypeReadOnly] != nil {
+		readOnly := input[schema.AttributeTypeReadOnly].(bool)
+		c.ReadOnly = &readOnly
+	}
+
+	if input[schema.AttributeTypeTimeout] != nil {
+		var timeout int64
+		switch t := input[schema.AttributeTypeTimeout].(type) {
+		case float64:
+			timeout = int64(t)
+		case int64:
+			timeout = t
+		default:
+			break
+		}
+		c.Timeout = &timeout
+	}
+
+	if input[schema.AttributeTypeCpuShares] != nil {
+		var cpuShares int64
+		switch c := input[schema.AttributeTypeCpuShares].(type) {
+		case float64:
+			cpuShares = int64(c)
+		case int64:
+			cpuShares = c
+		default:
+			break
+		}
+		c.CpuShares = &cpuShares
+	}
+
+	if input[schema.AttributeTypeMemory] != nil {
+		var memory int64
+		switch m := input[schema.AttributeTypeMemory].(type) {
+		case float64:
+			memory = int64(m)
+		case int64:
+			memory = m
+		default:
+			break
+		}
+		c.Memory = &memory
+	}
+
+	if input[schema.AttributeTypeMemoryReservation] != nil {
+		var memoryReservation int64
+		switch mr := input[schema.AttributeTypeMemoryReservation].(type) {
+		case float64:
+			memoryReservation = int64(mr)
+		case int64:
+			memoryReservation = mr
+		default:
+			break
+		}
+		c.MemoryReservation = &memoryReservation
+	}
+
+	if input[schema.AttributeTypeMemorySwap] != nil {
+		var memorySwap int64
+		switch ms := input[schema.AttributeTypeMemorySwap].(type) {
+		case float64:
+			memorySwap = int64(ms)
+		case int64:
+			memorySwap = ms
+		default:
+			break
+		}
+		c.MemorySwap = &memorySwap
+	}
+
+	if input[schema.AttributeTypeMemorySwappiness] != nil {
+		var memorySwappiness int64
+		switch ms := input[schema.AttributeTypeMemorySwappiness].(type) {
+		case float64:
+			memorySwappiness = int64(ms)
+		case int64:
+			memorySwappiness = ms
+		default:
+			break
+		}
+		c.MemorySwappiness = &memorySwappiness
+	}
+
 	err = c.Load()
 	if err != nil {
 		return nil, perr.InternalWithMessage("Error loading function config: " + err.Error())
@@ -106,10 +310,14 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	}
 
 	output.Data["container_id"] = containerID
-	output.Data["stdout"] = c.Runs[containerID].Stdout
-	output.Data["stderr"] = c.Runs[containerID].Stderr
-	output.Data["lines"] = c.Runs[containerID].Lines
 	output.Data["exit_code"] = exitCode
+
+	// If there are any error while creating the container, then the containerID will be empty
+	if c.Runs[containerID] != nil {
+		output.Data["stdout"] = c.Runs[containerID].Stdout
+		output.Data["stderr"] = c.Runs[containerID].Stderr
+		output.Data["lines"] = c.Runs[containerID].Lines
+	}
 
 	return &output, nil
 }

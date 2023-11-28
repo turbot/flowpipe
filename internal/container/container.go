@@ -20,10 +20,22 @@ type Container struct {
 	// Configuration
 	Name            string            `json:"name"`
 	Image           string            `json:"image"`
+	Source          string            `json:"source"`
 	Cmd             []string          `json:"cmd"`
 	Env             map[string]string `json:"env"`
 	EntryPoint      []string          `json:"entrypoint"`
 	RetainArtifacts bool              `json:"retain_artifacts"`
+	Timeout         *int64            `json:"timeout"`
+	CpuShares       *int64            `json:"cpu_shares"`
+	User            string            `json:"user"`
+	Workdir         string            `json:"workdir"`
+
+	// Host configuration
+	Memory            *int64 `json:"memory"`
+	MemoryReservation *int64 `json:"memory_reservation"`
+	MemorySwap        *int64 `json:"memory_swap"`
+	MemorySwappiness  *int64 `json:"memory_swappiness"`
+	ReadOnly          *bool  `json:"read_only"`
 
 	// Runtime information
 	CreatedAt   *time.Time               `json:"created_at,omitempty"`
@@ -185,8 +197,10 @@ func (c *Container) Run() (string, int, error) {
 	}
 
 	// Enforce a timeout to prevent runaway containers
-	// TODO - should be a container config option
 	timeout := 60
+	if c.Timeout != nil {
+		timeout = int(*c.Timeout)
+	}
 
 	// Create a container using the specified image
 	createConfig := container.Config{
@@ -243,8 +257,45 @@ func (c *Container) Run() (string, int, error) {
 		createConfig.Entrypoint = c.EntryPoint
 	}
 
+	if c.User != "" {
+		createConfig.User = c.User
+	}
+
+	if c.Workdir != "" {
+		createConfig.WorkingDir = c.Workdir
+	}
+
+	// Create the host configuration
+	hostConfig := container.HostConfig{}
+
+	if c.CpuShares != nil {
+		hostConfig.Resources.CPUShares = *c.CpuShares
+	}
+
+	// Defaults to 128MB
+	hostConfig.Resources.Memory = 128 * 1024 * 1024 // in bytes
+	if c.Memory != nil {
+		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024 // in bytes
+	}
+
+	if c.MemoryReservation != nil {
+		hostConfig.Resources.MemoryReservation = *c.MemoryReservation * 1024 * 1024
+	}
+
+	if c.MemorySwap != nil {
+		hostConfig.Resources.MemorySwap = *c.MemorySwap * 1024 * 1024 // in bytes
+	}
+
+	if c.MemorySwappiness != nil {
+		hostConfig.Resources.MemorySwappiness = c.MemorySwappiness
+	}
+
+	if c.ReadOnly != nil {
+		hostConfig.ReadonlyRootfs = *c.ReadOnly
+	}
+
 	containerCreateStart := time.Now()
-	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &container.HostConfig{}, &network.NetworkingConfig{}, nil, "")
+	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &hostConfig, &network.NetworkingConfig{}, nil, "")
 	logger.Info("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, -1, perr.InternalWithMessage("Error creating container: " + err.Error())

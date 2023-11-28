@@ -6,10 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"os/exec"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/fplog"
@@ -47,21 +45,6 @@ func stopMailHog() {
 		}
 	}
 	logger.Debug("MailHog SMTP server stopped")
-}
-
-func TestMain(m *testing.M) {
-	// Start MailHog before running tests
-	startMailHog()
-	time.Sleep(2 * time.Second) // Wait for the server to be ready
-
-	// Run tests
-	code := m.Run()
-
-	// Stop MailHog after tests are completed
-	stopMailHog()
-
-	// Exit with the test code
-	os.Exit(code)
 }
 
 func TestSendEmail(t *testing.T) {
