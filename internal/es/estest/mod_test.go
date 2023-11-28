@@ -2008,13 +2008,13 @@ func (suite *ModTestSuite) TestCredentialReference() {
 		return
 	}
 
-	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val_access_key"])
+	assert.Equal("aws_static_foo", pex.PipelineOutput["val_access_key"])
 
 	// Check if the environment function is created successfully
 	envMap := pex.PipelineOutput["val"].(map[string]interface{})
 
-	assert.Equal("ASIAQGDFAKEKGUI5MCEU", envMap["AWS_ACCESS_KEY_ID"])
-	assert.Equal("QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U", envMap["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("aws_static_foo", envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal("aws_static_key_key_key", envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
 func (suite *ModTestSuite) TestBasicCredential() {

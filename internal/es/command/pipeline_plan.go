@@ -191,6 +191,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 			if calculateInput {
 				// There's no for_each
+				evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
+				if err != nil {
+					logger.Error("Error adding credentials to eval context", "error", err)
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+				}
+
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
 					logger.Error("Error resolving step inputs for single step", "error", err)

@@ -89,7 +89,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				Status: "skipped",
 			}
 
-			endStep(cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
+			endStep(ex, cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
 			return
 		}
 
@@ -188,7 +188,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		// All other primitives finish immediately.
-		endStep(cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
+		endStep(ex, cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
 
 	}(ctx, c, h)
 
@@ -278,7 +278,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 	return false
 }
 
-func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
+func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
 	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), output, stepOutput, evalContext)
@@ -361,7 +361,7 @@ func endStep(cmd *event.StepStart, output *modconfig.Output, stepOutput map[stri
 	var stepLoop *modconfig.StepLoop
 	if loopBlock != nil {
 		var err error
-		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
+		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			logger.Error("Error calculating loop", "error", err)
 			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
@@ -459,7 +459,7 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	return stepRetry, hcl.Diagnostics{}
 }
 
-func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
+func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
 
 	logger := fplog.Logger(ctx)
 
@@ -527,6 +527,13 @@ func calculateLoop(ctx context.Context, loopBlock hcl.Body, stepLoop *modconfig.
 		// ensure that we also have the "each" variable here
 		evalContext = execution.AddLoop(newStepLoop, evalContext)
 		evalContext = execution.AddEachForEach(stepForEach, evalContext)
+
+		var err error
+		evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
+		if err != nil {
+			logger.Error("Error adding credentials to eval context", "error", err)
+			return nil, err
+		}
 
 		reevaluatedInput, err := stepDefn.GetInputs(evalContext)
 		if err != nil {

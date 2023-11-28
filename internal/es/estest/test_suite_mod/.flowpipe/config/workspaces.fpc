@@ -1,6 +1,14 @@
 credential "aws" "aws_static" {
-    access_key = "ASIAQGDFAKEKGUI5MCEU"
-    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+    access_key = "aws_static_foo"
+    secret_key = "aws_static_key_key_key"
+}
+
+credential "aws" "aws_profile_to_default" {
+    profile = "default"
+}
+
+credential "aws" "aws_profile_to_silverwater" {
+    profile = "silverwater"
 }
 
 credential "basic" "credentials" {
