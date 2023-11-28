@@ -93,8 +93,9 @@ func ListAllTriggers() ([]modconfig.Trigger, error) {
 
 func GetFlowpipeConfig() (*modconfig.FlowpipeConfig, error) {
 	flowpipeConfigCached, found := cache.GetCache().Get("#flowpipeconfig")
+
 	if !found {
-		return nil, perr.NotFoundWithMessage("flowpipe config not found")
+		return modconfig.NewFlowpipeConfig(), nil
 	}
 
 	flowpipeConfig, ok := flowpipeConfigCached.(*modconfig.FlowpipeConfig)

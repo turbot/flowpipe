@@ -47,6 +47,10 @@ type Execution struct {
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+	return ex.BuildEvalContextWithCredentials(pipelineDefn, pe, nil)
+}
+
+func (ex *Execution) BuildEvalContextWithCredentials(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -98,12 +102,18 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	credentialMap, err := ex.buildCredentialMapForEvalContext()
-	if err != nil {
-		return nil, err
-	}
+	// Calculate if we need to "resolve" credentials, ensure that we only resolve credentials
+	// that we need. If you have 10 temp creds, we don't want to generate all 10 temp creds when we don't need them
 
-	evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
+	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
+
+		credentialMap, err := ex.buildCredentialMapForEvalContext(stepDefn.GetCredentialDependsOn(), params)
+		if err != nil {
+			return nil, err
+		}
+
+		evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
+	}
 
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
@@ -121,20 +131,63 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	return evalContext, nil
 }
 
-func (ex *Execution) buildCredentialMapForEvalContext() (map[string]cty.Value, error) {
+// This function mutates evalContext
+func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
+		params := map[string]cty.Value{}
 
-	fpConfig, err := db.GetFlowpipeConfig()
-
-	if err != nil {
-		if perr.IsNotFound(err) {
-			return map[string]cty.Value{}, nil
+		if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
+			params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
 		}
 
+		credentialMap, err := ex.buildCredentialMapForEvalContext(stepDefn.GetCredentialDependsOn(), params)
+		if err != nil {
+			return nil, err
+		}
+
+		// Override what we have
+		evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
+	}
+
+	return evalContext, nil
+}
+
+func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
+
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
 		return nil, err
 	}
-	allCredentials := fpConfig.Credentials
 
-	credentialMap, err := parse.BuildCredentialMapForEvalContext(allCredentials)
+	allCredentials := fpConfig.Credentials
+	relevantCredentials := map[string]modconfig.Credential{}
+
+	dynamicCredsFound := false
+	for _, credentialName := range credentialsInContext {
+		if allCredentials[credentialName] != nil {
+			relevantCredentials[credentialName] = allCredentials[credentialName]
+		}
+
+		if !dynamicCredsFound && strings.Contains(credentialName, "<dynamic>") {
+			dynamicCredsFound = true
+		}
+	}
+
+	if dynamicCredsFound {
+		for _, v := range params {
+			if v.Type() == cty.String {
+				potentialCredName := v.AsString()
+				for _, c := range allCredentials {
+					if c.GetHclResourceImpl().ShortName == potentialCredName {
+						relevantCredentials[c.Name()] = c
+						break
+					}
+				}
+			}
+		}
+	}
+
+	credentialMap, err := parse.BuildCredentialMapForEvalContext(relevantCredentials)
 	if err != nil {
 		return nil, err
 	}

@@ -208,7 +208,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	var stepLoop *modconfig.StepLoop
 	if loopBlock != nil {
 		var err error
-		stepLoop, err = calculateLoop(ctx, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
+		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
