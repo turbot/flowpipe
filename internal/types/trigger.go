@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -63,10 +64,10 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 }
 
 type PrintableTrigger struct {
-	Items interface{}
+	Items any
 }
 
-func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
+func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
 
 	apiResourceType := r.GetResourceType()
 	if apiResourceType != "ListTriggerResponse" {
@@ -81,7 +82,17 @@ func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (inte
 	return lp.Items, nil
 }
 
-func (p PrintableTrigger) GetItems() interface{} {
+func (p PrintableTrigger) GetItems(sanitizer *sanitize.Sanitizer) any {
+	items, ok := p.Items.([]FpTrigger)
+	if !ok {
+		// not expected
+		return []any{}
+	}
+
+	sanitizedItems := make([]any, len(items))
+	for i, item := range items {
+		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
+	}
 	return p.Items
 }
 
@@ -99,7 +110,7 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 		if item.Description != nil {
 			description = *item.Description
 		}
-		cells := []interface{}{
+		cells := []any{
 			item.Pipeline,
 			item.Type,
 			item.Name,

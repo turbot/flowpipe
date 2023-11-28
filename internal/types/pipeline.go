@@ -5,6 +5,7 @@ import (
 	"fmt"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -210,7 +211,17 @@ func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any
 	return lp.Items, nil
 }
 
-func (p PrintablePipeline) GetItems() any {
+func (p PrintablePipeline) GetItems(sanitizer *sanitize.Sanitizer) any {
+	items, ok := p.Items.([]FpPipeline)
+	if !ok {
+		// not expected
+		return []any{}
+	}
+
+	sanitizedItems := make([]any, len(items))
+	for i, item := range items {
+		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
+	}
 	return p.Items
 }
 

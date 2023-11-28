@@ -3,6 +3,7 @@ package printers
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"io"
 	"text/tabwriter"
 
@@ -17,13 +18,13 @@ type TablePrinter struct {
 	Delegate ResourcePrinter
 }
 
-func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer) error {
+func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
 	table, err := items.GetTable()
 
 	if err != nil {
 		return err
 	}
-	err = p.Delegate.PrintResource(ctx, table, writer)
+	err = p.Delegate.PrintResource(ctx, table, writer, sanitizer)
 	return err
 }
 
@@ -31,7 +32,7 @@ func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableRe
 type HumanReadableTablePrinter struct {
 }
 
-func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer) error {
+func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
 
 	table, ok := items.(types.Table)
 

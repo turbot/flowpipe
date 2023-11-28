@@ -3,6 +3,7 @@ package printers
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"io"
 
 	"github.com/fatih/color"
@@ -22,11 +23,11 @@ func format(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", escape, attr)
 }
 
-func (px YamlPrinter) PrintResource(ctx context.Context, r types.PrintableResource, writer io.Writer) error {
+func (px YamlPrinter) PrintResource(ctx context.Context, r types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
 
 	// this is a copy of https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
-	bytes, err := yaml.Marshal(r.GetItems())
+	bytes, err := yaml.Marshal(r.GetItems(sanitizer))
 	if err != nil {
 		return err
 	}

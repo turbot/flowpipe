@@ -2,6 +2,7 @@ package printers
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"io"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -11,8 +12,8 @@ import (
 type JsonPrinter struct {
 }
 
-func (p JsonPrinter) PrintResource(ctx context.Context, r types.PrintableResource, writer io.Writer) error {
-	s, err := prettyjson.Marshal(r.GetItems())
+func (p JsonPrinter) PrintResource(ctx context.Context, r types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+	s, err := prettyjson.Marshal(r.GetItems(sanitizer))
 	if err != nil {
 		return err
 	}

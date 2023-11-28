@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"os"
 	"regexp"
 	"strconv"
@@ -30,6 +31,9 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 )
+
+// TODO temp
+var sanitizer = sanitize.NewSanitizer(sanitize.SanitizerOptions{})
 
 // pipeline commands
 func pipelineCmd() *cobra.Command {
@@ -83,7 +87,7 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
 		}
 
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
@@ -367,7 +371,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			LastLoaded:  lastLoaded,
 		})
 		printableResource.Items = header
-		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
 			return
@@ -389,7 +393,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 				return
 			}
 
-			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error printing logs")
 				return

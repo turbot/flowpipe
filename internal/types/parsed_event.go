@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"reflect"
 	"strings"
 	"time"
@@ -274,16 +275,26 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items          interface{}
+	Items          any
 	Registry       map[string]ParsedEventRegistryItem
 	ColorGenerator *color.DynamicColorGenerator
 }
 
-func (p PrintableParsedEvent) GetItems() interface{} {
+func (p PrintableParsedEvent) GetItems(sanitizer *sanitize.Sanitizer) any {
+	items, ok := p.Items.([]any)
+	if !ok {
+		// not expected
+		return []any{}
+	}
+
+	sanitizedItems := make([]any, len(items))
+	for i, item := range items {
+		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
+	}
 	return p.Items
 }
 
-func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
+func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
 	resourceType := r.GetResourceType()
 	if resourceType != "ProcessEventLogs" {
 		return nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid resource type: %s", resourceType))

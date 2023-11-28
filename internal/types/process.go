@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -27,8 +28,8 @@ type ProcessPayloadEvent struct {
 }
 
 type ProcessOutputData struct {
-	ID     string                 `json:"process_id"`
-	Output map[string]interface{} `json:"output"`
+	ID     string         `json:"process_id"`
+	Output map[string]any `json:"output"`
 }
 
 // Identical to the EventLogEntry struct in internal/types/execution.go
@@ -43,10 +44,10 @@ type ProcessEventLog struct {
 }
 
 type PrintableProcess struct {
-	Items interface{}
+	Items any
 }
 
-func (PrintableProcess) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
+func (PrintableProcess) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
 
 	// apiResourceType := r.GetResourceType()
 
@@ -62,7 +63,17 @@ func (PrintableProcess) Transform(r flowpipeapiclient.FlowpipeAPIResource) (inte
 	return lp.Items, nil
 }
 
-func (p PrintableProcess) GetItems() interface{} {
+func (p PrintableProcess) GetItems(sanitizer *sanitize.Sanitizer) any {
+	items, ok := p.Items.([]Process)
+	if !ok {
+		// not expected
+		return []any{}
+	}
+
+	sanitizedItems := make([]any, len(items))
+	for i, item := range items {
+		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
+	}
 	return p.Items
 }
 
@@ -75,7 +86,7 @@ func (p PrintableProcess) GetTable() (Table, error) {
 
 	var tableRows []TableRow
 	for _, item := range lp {
-		cells := []interface{}{
+		cells := []any{
 			*item.ExecutionId,
 			*item.Pipeline,
 			*item.CreatedAt,

@@ -15,7 +15,7 @@ func TestStepAsHclVariables(t *testing.T) {
 	assert := assert.New(t)
 
 	stepOutput := modconfig.Output{
-		Data: map[string]interface{}{},
+		Data: map[string]any{},
 	}
 
 	stepOutput.Data["string"] = "one"

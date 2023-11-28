@@ -2,11 +2,12 @@ package types
 
 import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type TableRow struct {
-	Cells []interface{}
+	Cells []any
 }
 
 type Table struct {
@@ -14,11 +15,11 @@ type Table struct {
 	Columns []TableColumnDefinition
 }
 
-func (Table) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
+func (Table) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
 	return nil, perr.BadRequestWithMessage("not supported")
 }
 
-func (p Table) GetItems() interface{} {
+func (p Table) GetItems(*sanitize.Sanitizer) any {
 	return p.Rows
 }
 

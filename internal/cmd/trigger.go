@@ -63,7 +63,7 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
 		}
 
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
