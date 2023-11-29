@@ -22,7 +22,6 @@ import (
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -31,9 +30,6 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 )
-
-// TODO temp
-var sanitizer = sanitize.NewSanitizer(sanitize.SanitizerOptions{})
 
 // pipeline commands
 func pipelineCmd() *cobra.Command {
