@@ -81,13 +81,15 @@ func WithLevelFromEnvironment() LoggerOption {
 		} else {
 			// Get the desired logging level from the FLOWPIPE_LOG_LEVEL environment variable
 			logLevelStr := strings.ToLower(os.Getenv("FLOWPIPE_LOG_LEVEL"))
-			// If the FLOWPIPE_LOG_LEVEL environment variable is set, parse its value to determine the logging level
-			if logLevelStr != "" {
-				var err error
-				logLevel, err := zapcore.ParseLevel(logLevelStr)
-				if err == nil {
-					c.Level = logLevel
-				}
+			if logLevelStr == "" {
+				// Default to warn
+				logLevelStr = "warn"
+			}
+
+			var err error
+			logLevel, err := zapcore.ParseLevel(logLevelStr)
+			if err == nil {
+				c.Level = logLevel
 			}
 		}
 		return nil
