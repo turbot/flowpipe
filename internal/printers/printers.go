@@ -15,20 +15,26 @@ import (
 // ResourcePrinter is an interface that knows how to print runtime objects.
 type ResourcePrinter[T any] interface {
 	// PrintResource receives a runtime object, formats it and prints it to a writer.
-	PrintResource(context.Context, types.PrintableResource[T], io.Writer, *sanitize.Sanitizer) error
+	PrintResource(context.Context, types.PrintableResource[T], io.Writer) error
 }
 
-func GetPrinter[T any](cmd *cobra.Command) ResourcePrinter[T] {
+func GetPrinter[T any](cmd *cobra.Command, sanitizer *sanitize.Sanitizer) ResourcePrinter[T] {
 
 	format := cmd.Flags().Lookup(constants.ArgOutput).Value.String()
 
 	switch format {
 	case "table":
-		return TablePrinter[T]{}
+		return TablePrinter[T]{
+			sanitizer: sanitizer,
+		}
 	case "json":
-		return JsonPrinter[T]{}
+		return JsonPrinter[T]{
+			sanitizer: sanitizer,
+		}
 	case "yaml":
-		return YamlPrinter[T]{}
+		return YamlPrinter[T]{
+			sanitizer: sanitizer,
+		}
 	}
 	return nil
 }

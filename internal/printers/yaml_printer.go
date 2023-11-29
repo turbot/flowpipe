@@ -15,6 +15,7 @@ import (
 
 // Inspired by https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 type YamlPrinter[T any] struct {
+	sanitizer *sanitize.Sanitizer
 }
 
 const escape = "\x1b"
@@ -23,7 +24,7 @@ func format(attr color.Attribute) string {
 	return fmt.Sprintf("%s[%dm", escape, attr)
 }
 
-func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer) error {
 
 	// this is a copy of https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
@@ -31,6 +32,9 @@ func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableRes
 	if err != nil {
 		return err
 	}
+
+	// sanitize
+	bytes = []byte(px.sanitizer.SanitizeString(string(bytes)))
 
 	tokens := lexer.Tokenize(string(bytes))
 	var p printer.Printer

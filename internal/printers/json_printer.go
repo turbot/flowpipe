@@ -10,13 +10,18 @@ import (
 )
 
 type JsonPrinter[T any] struct {
+	sanitizer *sanitize.Sanitizer
 }
 
-func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer) error {
 	s, err := prettyjson.Marshal(r.GetItems())
 	if err != nil {
 		return err
 	}
+
+	// sanitize
+	s = []byte(p.sanitizer.SanitizeString(string(s)))
+
 	_, err = writer.Write(s)
 	if err != nil {
 		return err

@@ -55,11 +55,11 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpTrigger](cmd)
+		printer := printers.GetPrinter[types.FpTrigger](cmd, sanitizer)
 
 		printableResource := types.NewPrintableTrigger(resp)
 
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}

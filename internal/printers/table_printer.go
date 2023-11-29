@@ -14,20 +14,21 @@ import (
 // TablePrinter decodes table objects into typed objects before delegating to another printer.
 // Non-table types are simply passed through
 type TablePrinter[T any] struct {
-	Delegate ResourcePrinter[types.TableRow]
+	Delegate  ResourcePrinter[types.TableRow]
+	sanitizer *sanitize.Sanitizer
 }
 
-func (p TablePrinter[T]) PrintResource(ctx context.Context, items types.PrintableResource[T], writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+func (p TablePrinter[T]) PrintResource(_ context.Context, items types.PrintableResource[T], writer io.Writer) error {
 	table, err := items.GetTable()
 
 	if err != nil {
 		return err
 	}
-	err = p.PrintTable(ctx, table, writer, sanitizer)
+	err = p.PrintTable(table, writer)
 	return err
 }
 
-func (p TablePrinter[T]) PrintTable(ctx context.Context, table types.Table, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+func (p TablePrinter[T]) PrintTable(table types.Table, writer io.Writer) error {
 	// Create a tabwriter
 	w := tabwriter.NewWriter(writer, 1, 1, 4, ' ', tabwriter.TabIndent)
 
@@ -53,8 +54,14 @@ func (p TablePrinter[T]) PrintTable(ctx context.Context, table types.Table, writ
 
 	// Print each struct in the array as a row in the table
 	for _, r := range table.Rows {
+		// format the row
+		str := fmt.Sprintf(tableFormatter, r.Cells...)
+		// sanitize
+		str = p.sanitizer.SanitizeString(str)
+
+		// write
 		//nolint:forbidigo // this is how the tabwriter works
-		_, err := fmt.Fprintf(w, tableFormatter, r.Cells...)
+		_, err := fmt.Fprintf(w, str)
 		if err != nil {
 			return err
 		}

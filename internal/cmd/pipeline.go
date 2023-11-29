@@ -79,11 +79,11 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpPipeline](cmd)
+		printer := printers.GetPrinter[types.FpPipeline](cmd, sanitizer)
 
 		printableResource := types.NewPrintablePipeline(resp)
 
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
@@ -354,7 +354,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
 			return
 		}
-		printer := printers.StringPrinter{}
+		printer := printers.NewStringPrinter[any](sanitizer)
 		printableResource := types.NewPrintableParsedEvent(cg)
 
 		// print execution_id / stale info
@@ -365,7 +365,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			LastLoaded:  lastLoaded,
 		})
 		printableResource.Items = header
-		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
 			return
@@ -387,7 +387,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 				return
 			}
 
-			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
+			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error printing logs")
 				return
