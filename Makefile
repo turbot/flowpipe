@@ -14,7 +14,7 @@ run-trace:
 	FLOWPIPE_LOG_LEVEL=INFO FLOWPIPE_TRACE_LEVEL=INFO go run . server --mod-location ./internal/es/estest/pipelines
 
 clean-tmp:
-	rm -rf ./internal/es/estest/test_suite_mod/.flowpipe/store
+	rm -rf ./internal/es/estest/test_suite_mod/.flowpipe/store/*
 
 clean-dist:
 	rm -rf ./dist/*

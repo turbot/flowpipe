@@ -485,11 +485,36 @@ func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.B
 	// Because this IF is still part of the Iteration 0 loop.index should be 0
 	loopEvalContext := execution.AddLoop(stepLoop, evalContext)
 
+	attributes, diags := loopBlock.JustAttributes()
+	if len(diags) > 0 {
+		return nil, perr.InternalWithMessage("error getting loop attributes: " + diags.Error())
+	}
+
+	// We need to evaluate the "until" attribute separately than the rest of the loop body. Consider the following example:
+	//
+	// step "http" "http_list_pagination" {
+	// 	url    = "https://some.url.com"
+	//
+	// 	loop {
+	// 	  until = lookup(result.response_body, "next", null) == null
+	// 	  url   = lookup(result.response_body, "next", "")
+	// 	}
+	// }
+	//
+	// The url may be invalid when until is reached, so we need to evaluate the until attribute first, independently,
+	// then evaluate the rest of the loop block
+
+	untilAttribute := attributes["until"]
+	if untilAttribute == nil {
+		return nil, perr.InternalWithMessage("loop block does not have an until attribute")
+	}
+
 	// We have to evaluate the loop body here before the index is incremented to determine if the loop should run
 	// we will have to re-evaluate the loop body again after the index is incremented to get the correct values
-	diags := gohcl.DecodeBody(loopBlock, loopEvalContext, loopDefn)
+
+	untilReached, diags := untilAttribute.Expr.Value(loopEvalContext)
 	if len(diags) > 0 {
-		return nil, perr.InternalWithMessage("error decoding loop block: " + diags.Error())
+		return nil, perr.InternalWithMessage("error evaluating until attribute: " + diags.Error())
 	}
 
 	// We have to indicate here (before raising the step finish) that this is part of the loop that should be executing, i.e. the step is not actually
@@ -498,82 +523,90 @@ func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.B
 	// Unlike the for_each where we know that there are n number of step executions and the planner launched them all at once, the loop is different.
 	//
 	// The planner has no idea that the step is not yet finished. We have to tell the planner here that it needs to launch another step execution
-	if !loopDefn.UntilReached() {
-		// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
-		//
-		// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index,
-		// do not change the currentIndex to 0
-		currentIndex := 1
-		if stepLoop != nil {
-			previousIndex := stepLoop.Index
-			currentIndex = previousIndex + 1
-		}
 
-		newStepLoop := &modconfig.StepLoop{
-			Index: currentIndex,
-			// Input: &newInput,
-		}
-
-		// first we need to evaluate the input for the step, this is to support:
-		/*
-			step "echo" "echo" {
-				text = "iteration: ${loop.index}"
-			}
-		**/
-		// for each of the loop iteration the index changes, so we have to re do it again
-		// ensure that we also have the "each" variable here
-		evalContext = execution.AddLoop(newStepLoop, evalContext)
-		evalContext = execution.AddEachForEach(stepForEach, evalContext)
-
-		var err error
-		evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
-		if err != nil {
-			logger.Error("Error adding credentials to eval context", "error", err)
-			return nil, err
-		}
-
-		reevaluatedInput, err := stepDefn.GetInputs(evalContext)
-		if err != nil {
-			logger.Error("Error re-evaluating inputs for step", "error", err)
-			return nil, perr.InternalWithMessage("error re-evaluating inputs for step: " + err.Error())
-
-		}
-
-		// get the new input
-		// ! we have to re add the "old" loop value, because the loopDefn should be evaluated using the old index
-		// ! this is confusing .. so please read on:
-		/**
-		step "transform" "foo" {
-			value = "loop: ${loop.index}"
-
-			loop {
-				until = loop.index < 2
-				value = "new value: ${loop.index}"
-			}
-		}
-		*/
-		//
-		// The loop in the step above is evaluated using the "prior" evalContext, however at this point of the execution
-		// the evalContext's loop has been updated using the new index (+1) ... so we need to reverse the increment and
-		// put it back to the old value.
-		//
-		// Check TestSimpleLoop to gain more understanding about this odd code.
-		//
-		evalContext = execution.AddLoop(stepLoop, evalContext)
-
-		newInput, err := loopDefn.UpdateInput(reevaluatedInput, evalContext)
-		if err != nil {
-			return nil, perr.InternalWithMessage("error updating input for loop: " + err.Error())
-		}
-
-		newStepLoop.Input = &newInput
+	// until has been reached so nothing to do
+	if untilReached.True() {
+		newStepLoop := stepLoop
+		// complete the loop
+		// input is not required here
+		stepLoop.Input = nil
+		stepLoop.LoopCompleted = true
 		return newStepLoop, nil
 	}
 
-	newStepLoop := stepLoop
-	// complete the loop
-	// input is not required here
-	stepLoop.Input = nil
-	stepLoop.LoopCompleted = true
+	diags = gohcl.DecodeBody(loopBlock, loopEvalContext, loopDefn)
+	if len(diags) > 0 {
+		return nil, perr.InternalWithMessage("error decoding loop block: " + diags.Error())
+	}
+
+	// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
+	//
+	// Unlike the previous evaluation, we are not calculating the input for the NEXT iteration of the loop, so we need to increment the index,
+	// do not change the currentIndex to 0
+	currentIndex := 1
+	if stepLoop != nil {
+		previousIndex := stepLoop.Index
+		currentIndex = previousIndex + 1
+	}
+
+	newStepLoop := &modconfig.StepLoop{
+		Index: currentIndex,
+		// Input: &newInput,
+	}
+
+	// first we need to evaluate the input for the step, this is to support:
+	/*
+		step "echo" "echo" {
+			text = "iteration: ${loop.index}"
+		}
+	**/
+	// for each of the loop iteration the index changes, so we have to re do it again
+	// ensure that we also have the "each" variable here
+	evalContext = execution.AddLoop(newStepLoop, evalContext)
+	evalContext = execution.AddEachForEach(stepForEach, evalContext)
+
+	var err error
+	evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
+	if err != nil {
+		logger.Error("Error adding credentials to eval context", "error", err)
+		return nil, err
+	}
+
+	reevaluatedInput, err := stepDefn.GetInputs(evalContext)
+	if err != nil {
+		logger.Error("Error re-evaluating inputs for step", "error", err)
+		return nil, perr.InternalWithMessage("error re-evaluating inputs for step: " + err.Error())
+
+	}
+
+	// get the new input
+	// ! we have to re add the "old" loop value, because the loopDefn should be evaluated using the old index
+	// ! this is confusing .. so please read on:
+	/**
+	step "transform" "foo" {
+		value = "loop: ${loop.index}"
+
+		loop {
+			until = loop.index < 2
+			value = "new value: ${loop.index}"
+		}
+	}
+	*/
+	//
+	// The loop in the step above is evaluated using the "prior" evalContext, however at this point of the execution
+	// the evalContext's loop has been updated using the new index (+1) ... so we need to reverse the increment and
+	// put it back to the old value.
+	//
+	// Check TestSimpleLoop to gain more understanding about this odd code.
+	//
+	evalContext = execution.AddLoop(stepLoop, evalContext)
+
+	newInput, err := loopDefn.UpdateInput(reevaluatedInput, evalContext)
+	if err != nil {
+		return nil, perr.InternalWithMessage("error updating input for loop: " + err.Error())
+	}
+
+	newStepLoop.Input = &newInput
 	return newStepLoop, nil
+
 }
