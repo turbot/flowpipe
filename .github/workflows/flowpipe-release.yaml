@@ -46,8 +46,8 @@ jobs:
           path: flowpipe
           ref: ${{ github.event.ref }}
 
-      - name: Unshallow
-        run: git fetch --prune --unshallow
+      # - name: Unshallow
+      #   run: git fetch --prune --unshallow
 
       - name: Calculate version
         id: calculate_version
