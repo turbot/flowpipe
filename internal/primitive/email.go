@@ -26,8 +26,11 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypeFrom] == nil {
 		return perr.BadRequestWithMessage("Email input must define from")
 	}
-	if i[schema.AttributeTypeSenderCredential] == nil {
-		return perr.BadRequestWithMessage("Email input must define sender_credential")
+	if i[schema.AttributeTypeSmtpUsername] == nil {
+		return perr.BadRequestWithMessage("Email input must define smtp_username")
+	}
+	if i[schema.AttributeTypeSmtpPassword] == nil {
+		return perr.BadRequestWithMessage("Email input must define smtp_password")
 	}
 	if i[schema.AttributeTypeHost] == nil {
 		return perr.BadRequestWithMessage("Email input must define a SMTP host")
@@ -166,9 +169,10 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 
 	// Read sender credential
 	senderEmail := input[schema.AttributeTypeFrom].(string)
-	senderCredential := input[schema.AttributeTypeSenderCredential].(string)
+	smtpUsername := input[schema.AttributeTypeSmtpUsername].(string)
+	smtpPassword := input[schema.AttributeTypeSmtpPassword].(string)
 	host := input[schema.AttributeTypeHost].(string)
-	auth := smtp.PlainAuth("", senderEmail, senderCredential, host)
+	auth := smtp.PlainAuth("", smtpUsername, smtpPassword, host)
 
 	// Convert port into integer
 	var portInt int64

@@ -53,14 +53,15 @@ func TestSendEmail(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "TestSendEmail",
-		schema.AttributeTypeFrom:             "test.send.email@example.com",
-		schema.AttributeTypeSenderCredential: "",
-		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             int64(1025),
-		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeSubject:          "Flowpipe mail test",
-		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:   "TestSendEmail",
+		schema.AttributeTypeFrom:         "test.send.email@example.com",
+		schema.AttributeTypeSmtpPassword: "",
+		schema.AttributeTypeSmtpUsername: "test.send.email@example.com",
+		schema.AttributeTypeHost:         "localhost",
+		schema.AttributeTypePort:         int64(1025),
+		schema.AttributeTypeTo:           []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeSubject:      "Flowpipe mail test",
+		schema.AttributeTypeBody:         "This is a test email sent from Golang.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -95,14 +96,15 @@ func TestSendEmailWithCc(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "TestSendEmailWithCc",
-		schema.AttributeTypeFrom:             "test.send.email.with.cc@example.com",
-		schema.AttributeTypeSenderCredential: "",
-		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             int64(1025),
-		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeCc:               []string{"ccrecipient@example.com"},
-		schema.AttributeTypeBody:             "This is a test email sent from Golang with Cc.",
+		schema.AttributeTypeSenderName:   "TestSendEmailWithCc",
+		schema.AttributeTypeFrom:         "test.send.email.with.cc@example.com",
+		schema.AttributeTypeSmtpUsername: "test.send.email.with.cc@example.com",
+		schema.AttributeTypeSmtpPassword: "",
+		schema.AttributeTypeHost:         "localhost",
+		schema.AttributeTypePort:         int64(1025),
+		schema.AttributeTypeTo:           []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeCc:           []string{"ccrecipient@example.com"},
+		schema.AttributeTypeBody:         "This is a test email sent from Golang with Cc.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -140,14 +142,15 @@ func TestSendEmailWithBcc(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "TestSendEmailWithBcc",
-		schema.AttributeTypeFrom:             "test.send.email.with.bcc@example.com",
-		schema.AttributeTypeSenderCredential: "",
-		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             int64(1025),
-		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeBcc:              []string{"bccrecipient@example.com"},
-		schema.AttributeTypeBody:             "This is a test email sent from Golang with Bcc.",
+		schema.AttributeTypeSenderName:   "TestSendEmailWithBcc",
+		schema.AttributeTypeFrom:         "test.send.email.with.bcc@example.com",
+		schema.AttributeTypeSmtpUsername: "test.send.email.with.bcc@example.com",
+		schema.AttributeTypeSmtpPassword: "",
+		schema.AttributeTypeHost:         "localhost",
+		schema.AttributeTypePort:         int64(1025),
+		schema.AttributeTypeTo:           []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeBcc:          []string{"bccrecipient@example.com"},
+		schema.AttributeTypeBody:         "This is a test email sent from Golang with Bcc.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -185,12 +188,13 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "Flowpipe",
-		schema.AttributeTypeFrom:             "sender@example.com",
-		schema.AttributeTypeSenderCredential: "",
-		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             int64(1025),
-		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:   "Flowpipe",
+		schema.AttributeTypeFrom:         "sender@example.com",
+		schema.AttributeTypeSmtpUsername: "sender@example.com",
+		schema.AttributeTypeSmtpPassword: "",
+		schema.AttributeTypeHost:         "localhost",
+		schema.AttributeTypePort:         int64(1025),
+		schema.AttributeTypeBody:         "This is a test email sent from Golang.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -208,13 +212,14 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "Flowpipe",
-		schema.AttributeTypeFrom:             "sender@example.com",
-		schema.AttributeTypeSenderCredential: "",
-		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             int64(1025),
-		schema.AttributeTypeTo:               []string{},
-		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:   "Flowpipe",
+		schema.AttributeTypeFrom:         "sender@example.com",
+		schema.AttributeTypeSmtpUsername: "sender@example.com",
+		schema.AttributeTypeSmtpPassword: "",
+		schema.AttributeTypeHost:         "localhost",
+		schema.AttributeTypePort:         int64(1025),
+		schema.AttributeTypeTo:           []string{},
+		schema.AttributeTypeBody:         "This is a test email sent from Golang.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -232,14 +237,15 @@ func TestInvalidPortInput(t *testing.T) {
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "TestSendEmail",
-		schema.AttributeTypeFrom:             "test.send.email@example.com",
-		schema.AttributeTypeSenderCredential: "",
-		schema.AttributeTypeHost:             "localhost",
-		schema.AttributeTypePort:             int64(10000000),
-		schema.AttributeTypeTo:               []string{"recipient1@example.com", "recipient2@example.com"},
-		schema.AttributeTypeSubject:          "Flowpipe mail test",
-		schema.AttributeTypeBody:             "This is a test email sent from Golang.",
+		schema.AttributeTypeSenderName:   "TestSendEmail",
+		schema.AttributeTypeFrom:         "test.send.email@example.com",
+		schema.AttributeTypeSmtpUsername: "test.send.email@example.com",
+		schema.AttributeTypeSmtpPassword: "",
+		schema.AttributeTypeHost:         "localhost",
+		schema.AttributeTypePort:         int64(10000000),
+		schema.AttributeTypeTo:           []string{"recipient1@example.com", "recipient2@example.com"},
+		schema.AttributeTypeSubject:      "Flowpipe mail test",
+		schema.AttributeTypeBody:         "This is a test email sent from Golang.",
 	})
 
 	_, err := hr.Run(context.Background(), input)
@@ -252,14 +258,15 @@ func TestEmailInvalidCreds(t *testing.T) {
 	hr := Email{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSenderName:       "Flowpipe",
-		schema.AttributeTypeFrom:             "test@example.com",
-		schema.AttributeTypeSenderCredential: "abcdefghijklmnop",
-		schema.AttributeTypeHost:             "smtp.gmail.com",
-		schema.AttributeTypePort:             int64(587),
-		schema.AttributeTypeTo:               []string{"recipient@example.com"},
-		schema.AttributeTypeSubject:          "Flowpipe mail test",
-		schema.AttributeTypeBody:             "This is a test email message to validate whether the code works or not.",
+		schema.AttributeTypeSenderName:   "Flowpipe",
+		schema.AttributeTypeFrom:         "test@example.com",
+		schema.AttributeTypeSmtpUsername: "test@example.com",
+		schema.AttributeTypeSmtpPassword: "abcdefghijklmnop",
+		schema.AttributeTypeHost:         "smtp.gmail.com",
+		schema.AttributeTypePort:         int64(587),
+		schema.AttributeTypeTo:           []string{"recipient@example.com"},
+		schema.AttributeTypeSubject:      "Flowpipe mail test",
+		schema.AttributeTypeBody:         "This is a test email message to validate whether the code works or not.",
 	})
 
 	output, err := hr.Run(context.Background(), input)

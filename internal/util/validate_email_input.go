@@ -17,8 +17,8 @@ func ValidateEmailInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypeFrom] == nil {
 		return perr.BadRequestWithMessage("Email input must define from")
 	}
-	if i[schema.AttributeTypeSenderCredential] == nil {
-		return perr.BadRequestWithMessage("Email input must define sender_credential")
+	if i[schema.AttributeTypeSmtpPassword] == nil {
+		return perr.BadRequestWithMessage("Email input must define smtp_password")
 	}
 	if i[schema.AttributeTypeHost] == nil {
 		return perr.BadRequestWithMessage("Email input must define a SMTP host")

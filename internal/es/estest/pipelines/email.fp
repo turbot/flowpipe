@@ -3,7 +3,8 @@ pipeline "bad_email_with_invalid_recipients" {
     step "email" "test_email" {
       to                = ["recipient@example.com"]
       from              = "sender@example.com"
-      sender_credential = "sendercredential"
+      smtp_username     = "sender@example.com"
+      smtp_password     = "sendercredential"
       host              = "smtp.example.com"
       port              = 587
       subject           = "Test email"
@@ -42,7 +43,8 @@ pipeline "bad_email_with_param" {
     step "email" "test_email" {
       to                = ["recipient@example.com"]
       from              = param.from
-      sender_credential = param.sender_credential
+      smtp_username     = param.from
+      smtp_password     = param.sender_credential
       host              = param.host
       port              = param.port
       subject           = "Test email"
@@ -99,7 +101,8 @@ pipeline "bad_email_with_expr" {
     step "email" "test_email" {
       to                = param.to
       from              = step.transform.sender_address.value
-      sender_credential = param.sender_credential
+      smtp_username     = step.transform.sender_address.value
+      smtp_password     = param.sender_credential
       host              = param.host
       port              = param.port
       subject           = "Test email"
