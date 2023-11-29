@@ -8,38 +8,26 @@ import (
 	"text/tabwriter"
 
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 // Inspired by Kubernetes
 // TablePrinter decodes table objects into typed objects before delegating to another printer.
 // Non-table types are simply passed through
-type TablePrinter struct {
-	Delegate ResourcePrinter
+type TablePrinter[T any] struct {
+	Delegate ResourcePrinter[types.TableRow]
 }
 
-func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+func (p TablePrinter[T]) PrintResource(ctx context.Context, items types.PrintableResource[T], writer io.Writer, sanitizer *sanitize.Sanitizer) error {
 	table, err := items.GetTable()
 
 	if err != nil {
 		return err
 	}
-	err = p.Delegate.PrintResource(ctx, table, writer, sanitizer)
+	err = p.PrintTable(ctx, table, writer, sanitizer)
 	return err
 }
 
-// Inspired by Kubernetes
-type HumanReadableTablePrinter struct {
-}
-
-func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
-
-	table, ok := items.(types.Table)
-
-	if !ok {
-		return perr.BadRequestWithMessage("not a table")
-	}
-
+func (p TablePrinter[T]) PrintTable(ctx context.Context, table types.Table, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
 	// Create a tabwriter
 	w := tabwriter.NewWriter(writer, 1, 1, 4, ' ', tabwriter.TabIndent)
 

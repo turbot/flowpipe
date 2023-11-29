@@ -1,30 +1,20 @@
 package types
 
-import (
-	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/pipe-fittings/perr"
-)
-
 type TableRow struct {
 	Cells []any
 }
 
+// TODO kai not sure this should be a printable resource
 type Table struct {
 	Rows    []TableRow
 	Columns []TableColumnDefinition
 }
 
-func (Table) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
-	return nil, perr.BadRequestWithMessage("not supported")
-}
-
-func (p Table) GetItems(*sanitize.Sanitizer) any {
-	return p.Rows
-}
-
-func (p Table) GetTable() (Table, error) {
-	return p, nil
+func NewTable(tableRows []TableRow, columns []TableColumnDefinition) Table {
+	return Table{
+		Rows:    tableRows,
+		Columns: columns,
+	}
 }
 
 // Taken from kubectl

@@ -55,13 +55,9 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter(cmd)
+		printer := printers.GetPrinter[types.FpTrigger](cmd)
 
-		printableResource := types.PrintableTrigger{}
-		printableResource.Items, err = printableResource.Transform(resp)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-		}
+		printableResource := types.NewPrintableTrigger(resp)
 
 		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 		if err != nil {

@@ -1,11 +1,9 @@
 package types
 
 import (
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 // The definition of a single Flowpipe Process
@@ -44,48 +42,23 @@ type ProcessEventLog struct {
 }
 
 type PrintableProcess struct {
-	Items any
+	// todo should we map to internal types
+	Items []flowpipeapiclient.Process
 }
 
-func (PrintableProcess) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
-
-	// apiResourceType := r.GetResourceType()
-
-	// if apiResourceType != "ListProcessResponse" {
-	// 	return nil, perr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
-	// }
-
-	lp, ok := r.(*flowpipeapiclient.ListProcessResponse)
-	if !ok {
-		return nil, perr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListProcessResponse")
+func NewPrintableProcess(resp *flowpipeapiclient.ListProcessResponse) *PrintableProcess {
+	return &PrintableProcess{
+		Items: resp.Items,
 	}
-
-	return lp.Items, nil
 }
 
-func (p PrintableProcess) GetItems(sanitizer *sanitize.Sanitizer) any {
-	items, ok := p.Items.([]Process)
-	if !ok {
-		// not expected
-		return []any{}
-	}
-
-	sanitizedItems := make([]any, len(items))
-	for i, item := range items {
-		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
-	}
+func (p PrintableProcess) GetItems() []flowpipeapiclient.Process {
 	return p.Items
 }
 
 func (p PrintableProcess) GetTable() (Table, error) {
-	lp, ok := p.Items.([]flowpipeapiclient.Process)
-
-	if !ok {
-		return Table{}, perr.BadRequestWithMessage("Unable to cast to []flowpipeapiclient.Process")
-	}
-
 	var tableRows []TableRow
-	for _, item := range lp {
+	for _, item := range p.Items {
 		cells := []any{
 			*item.ExecutionId,
 			*item.Pipeline,
@@ -95,10 +68,7 @@ func (p PrintableProcess) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return Table{
-		Rows:    tableRows,
-		Columns: p.GetColumns(),
-	}, nil
+	return NewTable(tableRows, p.GetColumns()), nil
 }
 
 func (PrintableProcess) GetColumns() (columns []TableColumnDefinition) {

@@ -25,6 +25,8 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 	}
 }
 
+// TODO KAI MAPS/SLICES
+
 func (s *Sanitizer) SanitizeKeyValue(keysAndValues ...any) []any {
 
 	// TODO better to just let the logging library do this?
@@ -84,6 +86,7 @@ func (s *Sanitizer) SanitizeStruct(v any) map[string]any {
 
 		if unicode.IsLower(rune(fieldName[0])) {
 			// private field, no need to redact
+			// TODO check?
 			continue
 		}
 

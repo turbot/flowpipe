@@ -1,10 +1,5 @@
 package types
 
-import (
-	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/internal/sanitize"
-)
-
 // The definition of a single Flowpipe Variable
 type Variable struct {
 	Type string `json:"type"`
@@ -12,36 +7,10 @@ type Variable struct {
 }
 
 type PrintableVariable struct {
-	Items any
+	Items []Variable
 }
 
-func (PrintableVariable) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
-
-	return nil, nil
-	// apiResourceType := r.GetResourceType()
-	// if apiResourceType != "ListVariableResponse" {
-	// 	return nil, fperr.BadRequestWithMessage("Invalid resource type: " + apiResourceType)
-	// }
-
-	//lp, ok := r.(*flowpipeapiclient.ListVariableResponse)
-	// if !ok {
-	// 	return nil, fperr.BadRequestWithMessage("Unable to cast to flowpipeapiclient.ListVariableResponse")
-	// }
-
-	// return lp.Items, nil
-}
-
-func (p PrintableVariable) GetItems(sanitizer *sanitize.Sanitizer) any {
-	items, ok := p.Items.([]Variable)
-	if !ok {
-		// not expected
-		return []any{}
-	}
-
-	sanitizedItems := make([]any, len(items))
-	for i, item := range items {
-		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
-	}
+func (p PrintableVariable) GetItems() []Variable {
 	return p.Items
 }
 
@@ -64,7 +33,7 @@ func (p PrintableVariable) GetTable() (Table, error) {
 	// }
 
 	// return Table{
-	// 	Rows:    tableRows,
+	// 	Items:    tableRows,
 	// 	Columns: p.GetColumns(),
 	// }, nil
 }

@@ -9,11 +9,11 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 )
 
-type JsonPrinter struct {
+type JsonPrinter[T any] struct {
 }
 
-func (p JsonPrinter) PrintResource(ctx context.Context, r types.PrintableResource, writer io.Writer, sanitizer *sanitize.Sanitizer) error {
-	s, err := prettyjson.Marshal(r.GetItems(sanitizer))
+func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer, sanitizer *sanitize.Sanitizer) error {
+	s, err := prettyjson.Marshal(r.GetItems())
 	if err != nil {
 		return err
 	}

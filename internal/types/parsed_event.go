@@ -3,20 +3,17 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/pipe-fittings/utils"
 	"reflect"
 	"strings"
 	"time"
 
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/logrusorgru/aurora"
-	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/utils"
 )
 
 const grayScaleIndex = uint8(3)
@@ -275,73 +272,64 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items          any
+	Items          []any
 	Registry       map[string]ParsedEventRegistryItem
 	ColorGenerator *color.DynamicColorGenerator
 }
 
-func (p PrintableParsedEvent) GetItems(sanitizer *sanitize.Sanitizer) any {
-	items, ok := p.Items.([]any)
-	if !ok {
-		// not expected
-		return []any{}
+func NewPrintableParsedEvent(cg *color.DynamicColorGenerator) *PrintableParsedEvent {
+	return &PrintableParsedEvent{
+		Registry:       make(map[string]ParsedEventRegistryItem),
+		ColorGenerator: cg,
 	}
+}
 
-	sanitizedItems := make([]any, len(items))
-	for i, item := range items {
-		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
-	}
+func (p PrintableParsedEvent) GetItems() []any {
 	return p.Items
 }
 
-func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
-	resourceType := r.GetResourceType()
-	if resourceType != "ProcessEventLogs" {
-		return nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid resource type: %s", resourceType))
-	}
-
+func (p PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 	var out []any
 
-	if logs, ok := r.(ProcessEventLogs); ok {
-		for _, log := range logs {
-			switch log.EventType {
-			case event.HandlerPipelineQueued:
-				var e event.PipelineQueued
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-				p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt}
-			case event.HandlerPipelineStarted:
-				var e event.PipelineStarted
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-				fullName := "unknown.unknown"
-				if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
-					p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{entry.Name, e.Event.CreatedAt}
-					fullName = entry.Name
-				}
-				parsed := ParsedEvent{
-					ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
-					Type:              log.EventType,
-					Message:           fmt.Sprintf("Starting: %s", e.PipelineExecutionID),
-				}
-				out = append(out, parsed)
-			case event.HandlerPipelineFinished:
-				var e event.PipelineFinished
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-				fullName := "unknown.unknown"
-				started := e.Event.CreatedAt
-				if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
-					fullName = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
-					started = entry.Started
-				}
-				duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
+	for _, log := range logs {
+		switch log.EventType {
+		case event.HandlerPipelineQueued:
+			var e event.PipelineQueued
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+			p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt}
+		case event.HandlerPipelineStarted:
+			var e event.PipelineStarted
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+			fullName := "unknown.unknown"
+			if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
+				p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{entry.Name, e.Event.CreatedAt}
+				fullName = entry.Name
+			}
+			parsed := ParsedEvent{
+				ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
+				Type:              log.EventType,
+				Message:           fmt.Sprintf("Starting: %s", e.PipelineExecutionID),
+			}
+			out = append(out, parsed)
+		case event.HandlerPipelineFinished:
+			var e event.PipelineFinished
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+			fullName := "unknown.unknown"
+			started := e.Event.CreatedAt
+			if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
+				fullName = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
+				started = entry.Started
+			}
+			duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
 
 				parsed := ParsedEventWithOutput{
 					ParsedEvent: ParsedEvent{
@@ -356,7 +344,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 				var e event.PipelineFailed
 				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+					return  fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 				}
 				fullName := "unknown.unknown"
 				started := e.Event.CreatedAt
@@ -401,7 +389,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 				var e event.StepQueued
 				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+					return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 				}
 				p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{
 					Name:    e.StepName,
@@ -416,100 +404,99 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 				if e.NextStepAction == "start" { // TODO: handle 'skip' steps?
 					p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
 
-					pipeline := p.Registry[e.PipelineExecutionID]
-					fullStepName := e.StepName
-					stepType := strings.Split(e.StepName, ".")[0]
-					stepName := strings.Split(e.StepName, ".")[1]
+				pipeline := p.Registry[e.PipelineExecutionID]
+				fullStepName := e.StepName
+				stepType := strings.Split(e.StepName, ".")[0]
+				stepName := strings.Split(e.StepName, ".")[1]
 
-					prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
-					prefix.FullStepName = &fullStepName
-					prefix.StepName = &stepName
-					if e.StepForEach != nil && e.StepForEach.ForEachStep {
-						prefix.ForEachKey = &e.StepForEach.Key
-					}
-					if e.StepLoop != nil {
+				prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
+				prefix.FullStepName = &fullStepName
+				prefix.StepName = &stepName
+				if e.StepForEach != nil && e.StepForEach.ForEachStep {
+					prefix.ForEachKey = &e.StepForEach.Key
+				}
+				if e.StepLoop != nil {
+					prefix.LoopIndex = &e.StepLoop.Index
+				}
+				if e.StepRetry != nil {
+					prefix.RetryIndex = &e.StepRetry.Count
+				}
+
+				parsed := ParsedEventWithInput{
+					ParsedEvent: ParsedEvent{
+						ParsedEventPrefix: prefix,
+						Type:              log.EventType,
+						StepType:          stepType,
+					},
+					Input: e.StepInput,
+				}
+				out = append(out, parsed)
+			}
+		case event.HandlerStepFinished:
+			var e event.StepFinished
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+
+			if e.Output != nil && e.Output.Status != "skipped" {
+				pipeline := p.Registry[e.PipelineExecutionID]
+				step := p.Registry[e.StepExecutionID]
+				stepType := strings.Split(step.Name, ".")[0]
+				stepName := strings.Split(step.Name, ".")[1]
+				duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(step.Started))
+
+				prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
+				prefix.FullStepName = &step.Name
+				prefix.StepName = &stepName
+				if e.StepForEach != nil && e.StepForEach.ForEachStep {
+					prefix.ForEachKey = &e.StepForEach.Key
+				}
+				if e.StepLoop != nil {
+					if e.StepLoop.LoopCompleted {
 						prefix.LoopIndex = &e.StepLoop.Index
+					} else {
+						i := e.StepLoop.Index - 1
+						prefix.LoopIndex = &i
 					}
-					if e.StepRetry != nil {
-						prefix.RetryIndex = &e.StepRetry.Count
-					}
+				}
+				if e.StepRetry != nil {
+					prefix.RetryIndex = &e.StepRetry.Count
+				}
 
-					parsed := ParsedEventWithInput{
+				switch e.Output.Status {
+				case "finished":
+					parsed := ParsedEventWithOutput{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
 							Type:              log.EventType,
 							StepType:          stepType,
 						},
-						Input: e.StepInput,
+						Duration: &duration,
+						Output:   e.Output.Data,
+					}
+					out = append(out, parsed)
+				case "failed":
+					parsed := ParsedErrorEvent{
+						ParsedEvent: ParsedEvent{
+							ParsedEventPrefix: prefix,
+							Type:              log.EventType,
+							StepType:          stepType,
+						},
+						Duration: &duration,
+						Errors:   e.Output.Errors,
 					}
 					out = append(out, parsed)
 				}
-			case event.HandlerStepFinished:
-				var e event.StepFinished
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-
-				if e.Output != nil && e.Output.Status != "skipped" {
-					pipeline := p.Registry[e.PipelineExecutionID]
-					step := p.Registry[e.StepExecutionID]
-					stepType := strings.Split(step.Name, ".")[0]
-					stepName := strings.Split(step.Name, ".")[1]
-					duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(step.Started))
-
-					prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
-					prefix.FullStepName = &step.Name
-					prefix.StepName = &stepName
-					if e.StepForEach != nil && e.StepForEach.ForEachStep {
-						prefix.ForEachKey = &e.StepForEach.Key
-					}
-					if e.StepLoop != nil {
-						if e.StepLoop.LoopCompleted {
-							prefix.LoopIndex = &e.StepLoop.Index
-						} else {
-							i := e.StepLoop.Index - 1
-							prefix.LoopIndex = &i
-						}
-					}
-					if e.StepRetry != nil {
-						prefix.RetryIndex = &e.StepRetry.Count
-					}
-
-					switch e.Output.Status {
-					case "finished":
-						parsed := ParsedEventWithOutput{
-							ParsedEvent: ParsedEvent{
-								ParsedEventPrefix: prefix,
-								Type:              log.EventType,
-								StepType:          stepType,
-							},
-							Duration: &duration,
-							Output:   e.Output.Data,
-						}
-						out = append(out, parsed)
-					case "failed":
-						parsed := ParsedErrorEvent{
-							ParsedEvent: ParsedEvent{
-								ParsedEventPrefix: prefix,
-								Type:              log.EventType,
-								StepType:          stepType,
-							},
-							Duration: &duration,
-							Errors:   e.Output.Errors,
-						}
-						out = append(out, parsed)
-					}
-				}
-			default:
-				// ignore other events
 			}
+		default:
+			// ignore other events
 		}
-	} else {
-		return nil, perr.BadRequestWithMessage(fmt.Sprintf("error parsing resource type: %s", resourceType))
 	}
 
-	return out, nil
+	p.Items = out
+	return nil
+
 }
 
 func (p PrintableParsedEvent) GetTable() (Table, error) {

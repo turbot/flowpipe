@@ -5,7 +5,6 @@ import (
 	"fmt"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -193,47 +192,22 @@ func (c *CmdPipeline) GetWaitRetry() int {
 }
 
 type PrintablePipeline struct {
-	Items any
+	Items []FpPipeline
 }
 
-func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
-	apiResourceType := r.GetResourceType()
-	if apiResourceType != "ListPipelineResponse" {
-
-		return nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid resource type: %s", apiResourceType))
+func NewPrintablePipeline(resp *ListPipelineResponse) *PrintablePipeline {
+	return &PrintablePipeline{
+		Items: resp.Items,
 	}
-
-	lp, ok := r.(*ListPipelineResponse)
-	if !ok {
-		return nil, perr.BadRequestWithMessage("unable to cast to ListPipelineResponse")
-	}
-
-	return lp.Items, nil
 }
 
-func (p PrintablePipeline) GetItems(sanitizer *sanitize.Sanitizer) any {
-	items, ok := p.Items.([]FpPipeline)
-	if !ok {
-		// not expected
-		return []any{}
-	}
-
-	sanitizedItems := make([]any, len(items))
-	for i, item := range items {
-		sanitizedItems[i] = sanitizer.SanitizeStruct(item)
-	}
+func (p PrintablePipeline) GetItems() []FpPipeline {
 	return p.Items
 }
 
 func (p PrintablePipeline) GetTable() (Table, error) {
-	lp, ok := p.Items.([]FpPipeline)
-
-	if !ok {
-		return Table{}, perr.BadRequestWithMessage("Unable to cast to []ListPipelineResponseItem")
-	}
-
 	var tableRows []TableRow
-	for _, item := range lp {
+	for _, item := range p.Items {
 		var description string
 		if item.Description != nil {
 			description = *item.Description
@@ -247,10 +221,7 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return Table{
-		Rows:    tableRows,
-		Columns: p.GetColumns(),
-	}, nil
+	return NewTable(tableRows, p.GetColumns()), nil
 }
 
 func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {

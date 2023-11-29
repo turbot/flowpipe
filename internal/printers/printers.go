@@ -13,24 +13,22 @@ import (
 // Inspired by Kubernetes
 //
 // ResourcePrinter is an interface that knows how to print runtime objects.
-type ResourcePrinter interface {
+type ResourcePrinter[T any] interface {
 	// PrintResource receives a runtime object, formats it and prints it to a writer.
-	PrintResource(context.Context, types.PrintableResource, io.Writer, *sanitize.Sanitizer) error
+	PrintResource(context.Context, types.PrintableResource[T], io.Writer, *sanitize.Sanitizer) error
 }
 
-func GetPrinter(cmd *cobra.Command) ResourcePrinter {
+func GetPrinter[T any](cmd *cobra.Command) ResourcePrinter[T] {
 
 	format := cmd.Flags().Lookup(constants.ArgOutput).Value.String()
 
 	switch format {
 	case "table":
-		return TablePrinter{
-			Delegate: HumanReadableTablePrinter{},
-		}
+		return TablePrinter[T]{}
 	case "json":
-		return JsonPrinter{}
+		return JsonPrinter[T]{}
 	case "yaml":
-		return YamlPrinter{}
+		return YamlPrinter[T]{}
 	}
 	return nil
 }

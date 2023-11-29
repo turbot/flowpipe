@@ -79,13 +79,9 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter(cmd)
+		printer := printers.GetPrinter[types.FpPipeline](cmd)
 
-		printableResource := types.PrintablePipeline{}
-		printableResource.Items, err = printableResource.Transform(resp)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-		}
+		printableResource := types.NewPrintablePipeline(resp)
 
 		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 		if err != nil {
@@ -359,9 +355,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			return
 		}
 		printer := printers.StringPrinter{}
-		printableResource := types.PrintableParsedEvent{}
-		printableResource.Registry = make(map[string]types.ParsedEventRegistryItem)
-		printableResource.ColorGenerator = cg
+		printableResource := types.NewPrintableParsedEvent(cg)
 
 		// print execution_id / stale info
 		var header []any
@@ -387,7 +381,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 				return
 			}
 
-			printableResource.Items, err = printableResource.Transform(logs)
+			err = printableResource.SetEvents(logs)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error parsing logs")
 				return

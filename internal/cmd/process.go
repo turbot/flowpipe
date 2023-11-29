@@ -3,8 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/cmdconfig"
-	"github.com/turbot/pipe-fittings/constants"
 	"reflect"
 	"sort"
 	"strings"
@@ -18,6 +16,8 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/utils"
 )
@@ -158,13 +158,9 @@ func listProcessFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if processes != nil {
-		printer := printers.GetPrinter(cmd)
+		printer := printers.GetPrinter[flowpipeapi.Process](cmd)
 
-		printableResource := types.PrintableProcess{}
-		printableResource.Items, err = printableResource.Transform(processes)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-		}
+		printableResource := types.NewPrintableProcess(processes)
 
 		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout(), sanitizer)
 		if err != nil {

@@ -1,0 +1,377 @@
+2023-11-23T13:44:05.217Z	[34mINFO[0m	setting memory limit	{"max memory MB": 1024}
+2023-11-23T13:44:05.217Z	[34mINFO[0m	Starting Flowpipe	{"pipelineDir": "/Users/kai/Dev/github/turbot/flowpipe/internal/es/estest/default_mod"}
+2023-11-23T13:44:05.366Z	[34mINFO[0m	Pipelines and triggers loaded	{"pipelines": 9, "triggers": 1, "rootMod": "default_mod"}
+[
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.echo_one",
+    "outputs": [
+      {
+        "depends_on": [
+          "pipeline.child_pipeline"
+        ],
+        "name": "echo_one_output"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "echo_one",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.echo_one",
+        "step_type": "echo",
+        "text": "Hello World"
+      },
+      {
+        "args": null,
+        "name": "child_pipeline",
+        "pipeline_name": "default_mod.pipeline.echo_one",
+        "step_type": "pipeline"
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.expr_depend_and_function",
+    "outputs": [
+      {
+        "depends_on": [
+          "echo.echo_sleep_2"
+        ],
+        "name": "one"
+      },
+      {
+        "depends_on": [
+          "echo.echo_sleep_2"
+        ],
+        "name": "one_function"
+      },
+      {
+        "depends_on": [
+          "echo.echo_sleep_for"
+        ],
+        "name": "indexed"
+      }
+    ],
+    "params": [
+      {
+        "default": {
+          "time": [
+            "1s",
+            "2s"
+          ]
+        },
+        "description": "",
+        "name": "time",
+        "optional": false,
+        "type": "list of string"
+      },
+      {
+        "default": {
+          "user_data": {
+            "Users": [
+              "shostakovitch",
+              "prokofiev",
+              "rachmaninoff"
+            ]
+          }
+        },
+        "description": "",
+        "name": "user_data",
+        "optional": false,
+        "type": "map of list of string"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "text_1",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": "foo bar"
+      },
+      {
+        "depends_on": [
+          "echo.text_1"
+        ],
+        "json": null,
+        "name": "text_2",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "depends_on": [
+          "echo.text_2",
+          "echo.text_1"
+        ],
+        "json": null,
+        "name": "text_3",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "depends_on": [
+          "echo.text_2",
+          "echo.text_1"
+        ],
+        "json": null,
+        "name": "explicit_depends",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": "explicit depends here"
+      },
+      {
+        "duration": "",
+        "name": "sleep_1",
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "sleep"
+      },
+      {
+        "depends_on": [
+          "sleep.sleep_1"
+        ],
+        "json": null,
+        "name": "echo_sleep_for",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "depends_on": [
+          "echo.echo_sleep_for"
+        ],
+        "json": null,
+        "name": "echo_sleep_1",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "depends_on": [
+          "sleep.sleep_1"
+        ],
+        "json": null,
+        "name": "echo_sleep_2",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "depends_on": [
+          "sleep.sleep_1"
+        ],
+        "json": null,
+        "name": "echo_for_if",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "json": null,
+        "name": "literal_for",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      },
+      {
+        "json": null,
+        "name": "literal_for_from_list",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.expr_depend_and_function",
+        "step_type": "echo",
+        "text": ""
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.pipes_echo",
+    "outputs": [
+      {
+        "depends_on": [
+          "echo.foo"
+        ],
+        "name": "foo"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "foo",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.pipes_echo",
+        "step_type": "echo",
+        "text": "foo"
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.simple_param",
+    "params": [
+      {
+        "default": {
+          "name": "foo"
+        },
+        "description": "",
+        "name": "name",
+        "optional": false,
+        "type": "string"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "name",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.simple_param",
+        "step_type": "echo",
+        "text": ""
+      }
+    ],
+    "tags": null
+  },
+  {
+    "description": "simple pipeline that will be referred to by a trigger",
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.simple_with_trigger",
+    "params": [
+      {
+        "default": {
+          "param_one": "this is the default value"
+        },
+        "description": "",
+        "name": "param_one",
+        "optional": false,
+        "type": "string"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "simple_echo",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.simple_with_trigger",
+        "step_type": "echo",
+        "text": ""
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.three_steps_with_wait",
+    "steps": [
+      {
+        "json": null,
+        "name": "one",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.three_steps_with_wait",
+        "step_type": "echo",
+        "text": "Step One"
+      },
+      {
+        "duration": "1s",
+        "name": "sleep",
+        "pipeline_name": "default_mod.pipeline.three_steps_with_wait",
+        "step_type": "sleep"
+      },
+      {
+        "depends_on": [
+          "sleep.sleep"
+        ],
+        "json": null,
+        "name": "three",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.three_steps_with_wait",
+        "step_type": "echo",
+        "text": "End"
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.two_steps",
+    "outputs": [
+      {
+        "depends_on": [
+          "echo.two"
+        ],
+        "name": "out"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "one",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.two_steps",
+        "step_type": "echo",
+        "text": "Step One"
+      },
+      {
+        "depends_on": [
+          "echo.one"
+        ],
+        "json": null,
+        "name": "two",
+        "numeric": 0,
+        "pipeline_name": "default_mod.pipeline.two_steps",
+        "step_type": "echo",
+        "text": ""
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.default_mod",
+    "name": "default_mod.pipeline.use_child_pipeline",
+    "steps": [
+      {
+        "args": null,
+        "name": "from_child",
+        "pipeline_name": "default_mod.pipeline.use_child_pipeline",
+        "step_type": "pipeline"
+      }
+    ],
+    "tags": null
+  },
+  {
+    "mod": "mod.mod_depend_a",
+    "name": "mod_depend_a.pipeline.echo_one_depend_a",
+    "outputs": [
+      {
+        "depends_on": [
+          "echo.echo_one"
+        ],
+        "name": "val"
+      }
+    ],
+    "steps": [
+      {
+        "json": null,
+        "name": "echo_one",
+        "numeric": 0,
+        "pipeline_name": "mod_depend_a.pipeline.echo_one_depend_a",
+        "step_type": "echo",
+        "text": "Hello World from Depend A"
+      }
+    ],
+    "tags": null
+  }
+]
