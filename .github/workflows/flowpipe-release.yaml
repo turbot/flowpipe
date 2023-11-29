@@ -57,6 +57,7 @@ jobs:
             echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
           else
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
 
       - name: Tag Release
         run: |
