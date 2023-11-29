@@ -6,7 +6,7 @@ on:
     inputs:
       environment:
         type: choice
-        description: 'Select the environment'
+        description: 'Select Release Type'
         options:
         - Development
         - Final
