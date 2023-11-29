@@ -20,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -59,8 +60,12 @@ func (suite *ModTestSuite) SetupSuite() {
 		panic(err)
 	}
 
+	pipelineDirPath := path.Join(cwd, "test_suite_mod")
+
+	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
+
 	// clear the output dir before each test
-	outputPath := path.Join(cwd, "output")
+	outputPath := util.EventStoreDir()
 
 	// Check if the directory exists
 	_, err = os.Stat(outputPath)
@@ -72,12 +77,6 @@ func (suite *ModTestSuite) SetupSuite() {
 		}
 
 	}
-
-	pipelineDirPath := path.Join(cwd, "test_suite_mod")
-
-	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
-	viper.GetViper().Set(constants.ArgOutputDir, outputPath)
-	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
 	ctx := fplog.ContextWithLogger(context.Background())

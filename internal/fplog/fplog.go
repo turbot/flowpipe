@@ -13,9 +13,8 @@ import (
 	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap/zapcore"
 
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/flowpipe/internal/util"
 )
 
 type FlowpipeLogger struct {
@@ -188,6 +187,6 @@ func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 	cfg.Sampling = nil
-	cfg.OutputPaths = []string{path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", executionID))}
+	cfg.OutputPaths = []string{path.Join(util.EventStoreDir(), fmt.Sprintf("%s.jsonl", executionID))}
 	return zap.Must(cfg.Build())
 }

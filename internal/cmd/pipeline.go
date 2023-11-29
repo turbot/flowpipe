@@ -232,9 +232,7 @@ func pipelineRunCmd() *cobra.Command {
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.").
-		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
-		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.")
+		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
 
 	return cmd
 }

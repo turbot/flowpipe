@@ -2,8 +2,13 @@ package manager
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"os"
 	"os/signal"
+	"path"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -81,6 +86,10 @@ func (m *Manager) Start() (*Manager, error) {
 	fplog.Logger(m.ctx).Debug("Manager starting")
 	defer fplog.Logger(m.ctx).Debug("Manager started")
 
+	if err := m.initializeModDirectory(); err != nil {
+		return nil, err
+	}
+
 	// initializeResources - load and cache triggers and pipelines
 	// if we are in server mode and there is a modfile, setup the file watcher
 	if err := m.initializeResources(); err != nil {
@@ -134,19 +143,98 @@ func (m *Manager) shouldStartScheduler() bool {
 	return m.startup&startScheduler != 0
 }
 
+func ensureDir(dir string) error {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil {
+			return perr.InternalWithMessage(fmt.Sprintf("error creating directory %s", dir))
+		}
+	}
+	return nil
+}
+
+func (m *Manager) initializeModDirectory() error {
+	logger := fplog.Logger(m.ctx)
+
+	modLocation := viper.GetString(constants.ArgModLocation)
+	logger.Debug("Initializing mod directory", "modLocation", modLocation)
+
+	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
+	err := ensureDir(modFlowpipeDir)
+	if err != nil {
+		return err
+	}
+
+	eventStoreDir := util.EventStoreDir()
+	err = ensureDir(eventStoreDir)
+	if err != nil {
+		return err
+	}
+
+	internalDir := util.ModInternalDir()
+	err = ensureDir(internalDir)
+	if err != nil {
+		return err
+	}
+
+	saltFileFullPath := filepath.Join(internalDir, "salt")
+	salt, err := flowpipeSalt(saltFileFullPath, 32)
+	if err != nil {
+		return err
+	}
+
+	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
+
+	return nil
+}
+
+// Assumes that the dir exists
+//
+// The function creates the salt if it does not exist, or it returns the existing
+// salt if it's already there
+func flowpipeSalt(filename string, length int) (string, error) {
+	// Check if the salt file exists
+	if _, err := os.Stat(filename); err == nil {
+		// If the file exists, read the salt from it
+		saltBytes, err := os.ReadFile(filename)
+		if err != nil {
+			return "", err
+		}
+		return string(saltBytes), nil
+	}
+
+	// If the file does not exist, generate a new salt
+	salt := make([]byte, length)
+	_, err := rand.Read(salt)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode the salt as a hexadecimal string
+	saltHex := hex.EncodeToString(salt)
+
+	// Write the salt to the file
+	err = os.WriteFile(filename, []byte(saltHex), 0600)
+	if err != nil {
+		return "", err
+	}
+
+	return saltHex, nil
+}
+
 // load and cache triggers and pipelines
 // if we are in server mode and there is a modfile, setup the file watcher
 func (m *Manager) initializeResources() error {
 	logger := fplog.Logger(m.ctx)
 
-	pipelineDir := viper.GetString(constants.ArgModLocation)
-	logger.Info("Starting Flowpipe", "pipelineDir", pipelineDir)
+	modLocation := viper.GetString(constants.ArgModLocation)
+	logger.Info("Starting Flowpipe", "modLocation", modLocation)
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
 	var modInfo *modconfig.Mod
 
-	if load_mod.ModFileExists(pipelineDir, app_specific.ModFileName) {
+	if load_mod.ModFileExists(modLocation, app_specific.ModFileName) {
 
 		workspacePath := viper.GetString(constants.ArgModLocation)
 		flowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(workspacePath)
@@ -172,7 +260,7 @@ func (m *Manager) initializeResources() error {
 			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, pipelineDir, credentials, app_specific.ModDataExtension)
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, credentials, app_specific.ModDataExtension)
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
@@ -193,7 +281,7 @@ func (m *Manager) initializeResources() error {
 	} else {
 		// there is no mod, just load pipelines and triggers from the directory
 		var err error
-		pipelines, triggers, err = load_mod.LoadPipelines(m.ctx, pipelineDir)
+		pipelines, triggers, err = load_mod.LoadPipelines(m.ctx, modLocation)
 		if err != nil {
 			return err
 		}

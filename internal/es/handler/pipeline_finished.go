@@ -6,11 +6,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -89,7 +88,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 		// Dump the output
 		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		filePath := path.Join(viper.GetString(constants.ArgOutputDir), e.Event.ExecutionID+"_output.json")
+		filePath := path.Join(util.EventStoreDir(), e.Event.ExecutionID+"_output.json")
 		_ = os.WriteFile(filePath, jsonStr, 0600)
 
 		// Dump the snapshot
@@ -100,7 +99,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		jsonStr, _ = json.MarshalIndent(snapshot, "", "  ")
-		filePath = path.Join(viper.GetString(constants.ArgOutputDir), e.Event.ExecutionID+".sps")
+		filePath = path.Join(util.EventStoreDir(), e.Event.ExecutionID+".sps")
 		_ = os.WriteFile(filePath, jsonStr, 0600)
 
 		// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)

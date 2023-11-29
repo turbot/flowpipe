@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -75,7 +74,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		log.Fatalf("Error marshalling JSON: %v", err)
 	}
 
-	fileName := path.Join(viper.GetString(constants.ArgLogDir), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
+	fileName := path.Join(util.EventStoreDir(), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
 
 	if lock == nil {
 		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)

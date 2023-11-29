@@ -2,18 +2,15 @@ package es
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
 	"github.com/garsue/watermillzap"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 
@@ -60,25 +57,6 @@ func (es *ESService) Start() error {
 
 	logger.Debug("ES starting")
 	defer logger.Debug("ES started")
-
-	outputDir := viper.GetString(constants.ArgOutputDir)
-	logDir := viper.GetString(constants.ArgLogDir)
-
-	// Check if the provided output dir exists, if not create it
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		err := os.Mkdir(outputDir, 0755)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Check if the provided execution log dir exists, if not create it
-	if _, err := os.Stat(logDir); os.IsNotExist(err) {
-		err := os.Mkdir(logDir, 0755)
-		if err != nil {
-			return err
-		}
-	}
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 

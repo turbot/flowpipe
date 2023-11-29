@@ -13,6 +13,7 @@ import (
 	"time"
 
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/util"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -51,8 +52,15 @@ func (suite *EsTestSuite) SetupSuite() {
 	cwd, err := os.Getwd()
 	error_helpers.FailOnError(err)
 
+	pipelineDirPath := path.Join(cwd, "pipelines")
+
+	// sets app specific constants defined in pipe-fittings
+	localcmdconfig.SetAppSpecificConstants()
+
+	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
+
 	// clear the output dir before each test
-	outputPath := path.Join(cwd, "output")
+	outputPath := util.EventStoreDir()
 
 	// Check if the directory exists
 	_, err = os.Stat(outputPath)
@@ -62,17 +70,7 @@ func (suite *EsTestSuite) SetupSuite() {
 		if err != nil {
 			panic(err)
 		}
-
 	}
-
-	pipelineDirPath := path.Join(cwd, "pipelines")
-
-	// sets app specific constants defined in pipe-fittings
-	localcmdconfig.SetAppSpecificConstants()
-
-	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
-	viper.GetViper().Set(constants.ArgOutputDir, outputPath)
-	viper.GetViper().Set(constants.ArgLogDir, outputPath)
 
 	// Create a single, global context for the application
 	ctx := fplog.ContextWithLogger(context.Background())
@@ -481,7 +479,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	if pex.StepStatus["transform.http_step"] == nil {
 		filename := fmt.Sprintf("%s.jsonl", cmd.Event.ExecutionID)
-		p := filepath.Join(viper.GetString(constants.ArgLogDir), filename)
+		p := filepath.Join(util.EventStoreDir(), filename)
 
 		// Open the file
 		file, err := os.Open(p)

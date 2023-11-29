@@ -1,22 +1,16 @@
 package cmdconfig
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"maps"
 	"os"
-	"path/filepath"
-	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/filepaths"
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
@@ -48,12 +42,6 @@ func initGlobalConfig() *modconfig.FlowpipeConfig {
 	installDir := viper.GetString(constants.ArgInstallDir)
 	ensureInstallDir(installDir)
 
-	saltFileFullPath := filepath.Join(filepaths.EnsureInternalDir(), "salt")
-	salt, err := flowpipeSalt(saltFileFullPath, 32)
-	error_helpers.FailOnError(err)
-
-	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
-
 	return nil
 }
 
@@ -67,37 +55,6 @@ func getConfigDefaults(cmd *cobra.Command) map[string]any {
 		maps.Copy(res, cmdSpecificDefaults)
 	}
 	return res
-}
-
-// Assumes that the install dir exists
-func flowpipeSalt(filename string, length int) (string, error) {
-	// Check if the salt file exists
-	if _, err := os.Stat(filename); err == nil {
-		// If the file exists, read the salt from it
-		saltBytes, err := os.ReadFile(filename)
-		if err != nil {
-			return "", err
-		}
-		return string(saltBytes), nil
-	}
-
-	// If the file does not exist, generate a new salt
-	salt := make([]byte, length)
-	_, err := rand.Read(salt)
-	if err != nil {
-		return "", err
-	}
-
-	// Encode the salt as a hexadecimal string
-	saltHex := hex.EncodeToString(salt)
-
-	// Write the salt to the file
-	err = os.WriteFile(filename, []byte(saltHex), 0600)
-	if err != nil {
-		return "", err
-	}
-
-	return saltHex, nil
 }
 
 // todo KAI use filepaths???

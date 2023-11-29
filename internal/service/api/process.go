@@ -9,13 +9,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -58,8 +57,8 @@ func (api *APIService) listProcess(c *gin.Context) {
 	fplog.Logger(api.ctx).Info("received list process request", "next_token", nextToken, "limit", limit)
 
 	// Read the log directory to list out all the process that have been executed
-	logDir := viper.GetString(constants.ArgLogDir)
-	processLogFiles, err := os.ReadDir(logDir)
+	eventStoreDir := util.EventStoreDir()
+	processLogFiles, err := os.ReadDir(eventStoreDir)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -211,7 +210,7 @@ func (api *APIService) getProcessOutput(c *gin.Context) {
 		ExecutionID: uri.ProcessId,
 	}
 
-	filePath := path.Join(viper.GetString(constants.ArgOutputDir), evt.ExecutionID+"_output.json")
+	filePath := path.Join(util.EventStoreDir(), evt.ExecutionID+"_output.json")
 
 	// Open the JSON file
 	file, err := os.Open(filePath)
@@ -385,7 +384,7 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 		return
 	}
 
-	filePath := path.Join(viper.GetString(constants.ArgLogDir), uri.ProcessId+".sps")
+	filePath := path.Join(util.EventStoreDir(), uri.ProcessId+".sps")
 
 	jsonBytes, err := os.ReadFile(filePath)
 	if err != nil {

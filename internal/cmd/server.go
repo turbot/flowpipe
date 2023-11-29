@@ -29,8 +29,6 @@ func serverCmd() *cobra.Command {
 	cmdconfig.
 		OnCmd(cmd).
 		AddFilepathFlag(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.").
-		AddFilepathFlag(constants.ArgOutputDir, "~/.flowpipe/output", "The directory path to dump the snapshot file.").
-		AddFilepathFlag(constants.ArgLogDir, "~/.flowpipe/log", "The directory path to the log file for the execution.").
 		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
 		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "listen address port.").
 		AddBoolFlag(constants.ArgNoScheduler, false, "Disable the scheduler.").

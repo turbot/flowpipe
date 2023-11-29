@@ -2,3 +2,7 @@
 !.flowpipe
 
 output
+pipelines/.flowpipe/store
+pipelines/.flowpipe/internal
+test_suite_mod/.flowpipe/store
+test_suite_mod/.flowpipe/internal
