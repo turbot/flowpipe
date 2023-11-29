@@ -14,7 +14,7 @@ on:
       version:
         description: 'Version'
         required: true
-        default: 0.0.\invalid
+        default: 0.1.0
       confirmMain:
         description: Confirm running on main branch
         required: true
@@ -24,11 +24,9 @@ env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
 jobs:
-  create_release_tag:
-    name: Tag Release
+  build_and_release:
+    name: Build and Release Flowpipe
     runs-on: ubuntu-latest
-    outputs:
-      VERSION: ${{ steps.calculate_version.outputs.VERSION }}
     steps:
       - name: validate
         if: github.ref == 'refs/heads/main'
@@ -45,10 +43,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
+          path: flowpipe
           ref: ${{ github.event.ref }}
 
-      - name: Unshallow
-        run: git fetch --prune --unshallow
+      # - name: Unshallow
+      #   run: git fetch --prune --unshallow
 
       - name: Calculate version
         id: calculate_version
@@ -57,25 +56,15 @@ jobs:
             echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
           else
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
 
       - name: Tag Release
         run: |
+          cd flowpipe
           git config user.name "Flowpipe GitHub Actions Bot"
           git config user.email noreply@github.com
           git tag $VERSION
           git push origin $VERSION
-
-  build_and_release:
-    name: Release
-    needs: create_release_tag
-    runs-on: ubuntu-latest
-    steps:
-
-      - name: Checkout Flowpipe repository
-        uses: actions/checkout@v3
-        with:
-          path: flowpipe
-          ref: ${{ needs.create_release_tag.outputs.VERSION }}
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v3
@@ -112,4 +101,4 @@ jobs:
           workdir: flowpipe
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          VERSION: ${{ needs.create_release_tag.outputs.VERSION }}
+          VERSION: $VERSION
