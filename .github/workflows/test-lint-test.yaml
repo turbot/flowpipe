@@ -1,4 +1,4 @@
-name: Go Lint and Test
+name: Test - Lint and Test
 on:
   push:
     tags:

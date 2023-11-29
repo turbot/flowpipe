@@ -1,7 +1,24 @@
-name: Flowpipe Release
+name: Flowpipe - Release
+
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        description: 'Select the environment'
+        options:
+        - Development
+        - Final
+        required: true
+      version:
+        description: 'Version'
+        required: true
+        default: 0.0.\invalid
+      confirmMain:
+        description: Confirm running on main branch
+        required: true
+        type: boolean
 
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
@@ -13,6 +30,18 @@ jobs:
     outputs:
       VERSION: ${{ steps.calculate_version.outputs.VERSION }}
     steps:
+      - name: validate
+        if: github.ref == 'refs/heads/main'
+        env:
+          CONFIRM_MAIN: ${{ github.event.inputs.confirmMain }}
+        run: |
+          if [ "$CONFIRM_MAIN" == 'false' ]; then
+            echo "It looks like you've accidentally tried to run this action in main branch. Either: "
+            echo " - Re-run the action and select the branch you wanted, or"
+            echo " - If you really do want to run this for main, then re-run and tick the box to confirm"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -24,10 +53,10 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          beta_tag_timestamp=$(date -u +%Y%m%d%H%M)
-          VERSION=$(echo "v0.1.0-beta.$beta_tag_timestamp")
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Tag Release
         run: |
