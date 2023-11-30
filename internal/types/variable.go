@@ -38,19 +38,19 @@ func (p PrintableVariable) GetTable() (Table, error) {
 	// }, nil
 }
 
-func (PrintableVariable) getColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{
-		{
-			Name:        "TYPE",
-			Type:        "string",
-			Description: "The type of the variable",
-		},
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "The name of the variable",
-		}}
-}
+//func (PrintableVariable) getColumns() (columns []TableColumnDefinition) {
+//	return []TableColumnDefinition{
+//		{
+//			Name:        "TYPE",
+//			Type:        "string",
+//			Description: "The type of the variable",
+//		},
+//		{
+//			Name:        "NAME",
+//			Type:        "string",
+//			Description: "The name of the variable",
+//		}}
+//}
 
 // This type is used by the API to return a list of variables.
 type ListVariableResponse struct {

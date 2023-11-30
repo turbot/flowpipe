@@ -60,7 +60,7 @@ func (p TablePrinter[T]) PrintTable(table types.Table, writer io.Writer) error {
 
 		// write
 		//nolint:forbidigo // this is how the tabwriter works
-		_, err := fmt.Fprintf(w, str)
+		_, err := fmt.Fprint(w, str)
 		if err != nil {
 			return err
 		}
