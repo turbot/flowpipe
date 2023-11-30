@@ -3,16 +3,14 @@ package command
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
-	"path"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -74,7 +72,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		log.Fatalf("Error marshalling JSON: %v", err)
 	}
 
-	fileName := path.Join(util.EventStoreDir(), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
+	fileName := filepaths.EventStorePath(commandEvent.GetEvent().ExecutionID)
 
 	if lock == nil {
 		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)

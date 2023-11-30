@@ -5,16 +5,15 @@ import (
 	"encoding/json"
 	"log"
 	"os"
-	"path"
 
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
 )
 
 func LoadEventLogEntries(executionID string) ([]types.EventLogEntry, error) {
 
 	// Open the JSONL file
-	fileName := path.Join(util.EventStoreDir(), executionID+".jsonl")
+	fileName := filepaths.EventStorePath(executionID)
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err

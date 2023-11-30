@@ -13,22 +13,22 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/steampipeconfig"
-
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/steampipeconfig"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )
@@ -177,13 +177,13 @@ func (m *Manager) initializeModDirectory() error {
 		return err
 	}
 
-	eventStoreDir := util.EventStoreDir()
+	eventStoreDir := filepaths.EventStoreDir()
 	err = ensureDir(eventStoreDir)
 	if err != nil {
 		return err
 	}
 
-	internalDir := util.ModInternalDir()
+	internalDir := filepaths.ModInternalDir()
 	err = ensureDir(internalDir)
 	if err != nil {
 		return err

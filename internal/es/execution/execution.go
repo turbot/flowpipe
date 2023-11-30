@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -19,9 +18,9 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -493,12 +492,6 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	return results
 }
 
-func (ex *Execution) EventStoreFilePath() (string, error) {
-	filename := fmt.Sprintf("%s.jsonl", ex.ID)
-	p := filepath.Join(util.EventStoreDir(), filename)
-	return filepath.Abs(p)
-}
-
 func getStackTrace() string {
 	buf := new(bytes.Buffer)
 	for i := 20; ; i++ {
@@ -511,7 +504,7 @@ func getStackTrace() string {
 	return buf.String()
 }
 
-// This function loads the event log file (the .jsonl file) continously and update the
+// LoadProcess loads the event log file (the .jsonl file) continously and update the
 // ex.PipelineExecutions and ex.StepExecutions
 func (ex *Execution) LoadProcess(e *event.Event) error {
 
@@ -543,11 +536,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	// Open the event log
-	logPath, err := ex.EventStoreFilePath()
-	if err != nil {
-		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
-		return err
-	}
+	logPath := filepaths.EventStorePath(ex.ID)
 
 	f, err := os.Open(logPath)
 	if err != nil {

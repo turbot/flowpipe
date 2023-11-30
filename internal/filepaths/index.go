@@ -1,6 +1,7 @@
-package util
+package filepaths
 
 import (
+	"fmt"
 	"path"
 
 	"github.com/spf13/viper"
@@ -22,4 +23,16 @@ func ModInternalDir() string {
 	modInternalDir := path.Join(modFlowpipeDir, "internal")
 
 	return modInternalDir
+}
+
+func EventStorePath(executionId string) string {
+	return path.Join(EventStoreDir(), fmt.Sprintf("%s.jsonl", executionId))
+}
+
+func SnapshotPath(executionId string) string {
+	return path.Join(EventStoreDir(), fmt.Sprintf("%s.sps", executionId))
+}
+
+func OutputPath(executionId string) string {
+	return path.Join(EventStoreDir(), fmt.Sprintf("%s_output.json", executionId))
 }

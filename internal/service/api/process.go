@@ -11,10 +11,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -57,7 +57,7 @@ func (api *APIService) listProcess(c *gin.Context) {
 	fplog.Logger(api.ctx).Info("received list process request", "next_token", nextToken, "limit", limit)
 
 	// Read the log directory to list out all the process that have been executed
-	eventStoreDir := util.EventStoreDir()
+	eventStoreDir := filepaths.EventStoreDir()
 	processLogFiles, err := os.ReadDir(eventStoreDir)
 	if err != nil {
 		common.AbortWithError(c, err)
@@ -210,10 +210,10 @@ func (api *APIService) getProcessOutput(c *gin.Context) {
 		ExecutionID: uri.ProcessId,
 	}
 
-	filePath := path.Join(util.EventStoreDir(), evt.ExecutionID+"_output.json")
+	outputPath := filepaths.OutputPath(evt.ExecutionID)
 
 	// Open the JSON file
-	file, err := os.Open(filePath)
+	file, err := os.Open(outputPath)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -384,11 +384,11 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 		return
 	}
 
-	filePath := path.Join(util.EventStoreDir(), uri.ProcessId+".sps")
+	snapshotPath := path.Join(filepaths.EventStoreDir(), uri.ProcessId+".sps")
 
-	jsonBytes, err := os.ReadFile(filePath)
+	jsonBytes, err := os.ReadFile(snapshotPath)
 	if err != nil {
-		fplog.Logger(api.ctx).Error("error reading sps file", "error", err, "file_path", filePath)
+		fplog.Logger(api.ctx).Error("error reading sps file", "error", err, "file_path", snapshotPath)
 		common.AbortWithError(c, perr.InternalWithMessage("internal error"))
 		return
 	}

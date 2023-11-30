@@ -1,0 +1,14 @@
+{
+  "args": null,
+  "output": {
+    "foo": "foo"
+  },
+  "transform.foo": [
+    {
+      "status": "finished",
+      "data": {
+        "value": "foo"
+      }
+    }
+  ]
+}
