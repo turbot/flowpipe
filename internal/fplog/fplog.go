@@ -84,6 +84,7 @@ func WithLevelFromEnvironment() LoggerOption {
 			if logLevelStr == "" {
 				// Default to warn
 				logLevelStr = "warn"
+				// logLevelStr = "debug"
 			}
 
 			var err error

@@ -17,6 +17,7 @@ import (
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -299,6 +300,20 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 	m, err := manager.NewManager(ctx, manager.WithESService(), manager.WithDocker()).Start()
 	error_helpers.FailOnError(err)
 
+	logger := fplog.Logger(cmd.Context())
+
+	// wait until the es service if running
+	for {
+		logger.Info("Waiting for Flowpipe service to start ...")
+		if m.ESService.IsRunning() {
+			break
+		}
+
+		time.Sleep(time.Duration(100) * time.Millisecond)
+	}
+
+	logger.Info("Flowpipe service started ...")
+
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
 
@@ -517,47 +532,62 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 }
 
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+	logger := fplog.Logger(ctx)
 	ex, err := execution.NewExecution(ctx, execution.WithID(exId))
 	if err != nil {
 		return true, 0, nil, err
 	}
 
-	logFilePath, err := ex.LogFilePath()
+	eventStoreFilePath, err := ex.EventStoreFilePath()
 	if err != nil {
 		return true, 0, nil, err
 	}
-	file, err := os.Open(logFilePath)
+
+	logger.Debug("Opening file", "event store file", eventStoreFilePath)
+	file, err := os.Open(eventStoreFilePath)
 	if err != nil {
 		// TODO KAI use perr? wrap?
 		return true, 0, nil, err
 	}
+
+	logger.Debug("File opened", "event store file", eventStoreFilePath)
 	defer func() {
 		// ensure we close the file
 		_ = file.Close()
 	}()
 
-	var lastSize int64
-	if last != -1 {
-		lastSize = int64(last)
-	}
+	// var lastSize int64
+	// if last != -1 {
+	// 	lastSize = int64(last)
+	// }
 
 	var res types.ProcessEventLogs
 	var complete bool
 
+	// TODO: this code section is buggy, the json unmarshall errors out maybe 50% of the time
+	// TODO: with unexpected error in JSON file
 	// Seek to the last read position
-	if _, err := file.Seek(lastSize, 0); err != nil {
-		//nolint:nilerr // just return without passing error - we will try again next time
-		return complete, int(lastSize), res, nil
-	}
+	// if _, err := file.Seek(lastSize, 0); err != nil {
+	// 	//nolint:nilerr // just return without passing error - we will try again next time
+	// 	logger.Info("Returning here because of error", "error", err)
+	// 	return complete, int(lastSize), res, nil
+	// }
 
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
+	currentIndex := 0
 	for scanner.Scan() {
+		if currentIndex <= last {
+			currentIndex++
+			continue
+		}
+
 		line := scanner.Bytes()
 		var entry types.EventLogEntry
 
 		if err := json.Unmarshal(line, &entry); err != nil {
-			//nolint:nilerr // maybe the write is incomplete - just return without passing error
-			return complete, int(lastSize), res, nil
+			logger.Warn("Error loading event entry", "error", err)
+			return complete, last, res, nil
 		}
 
 		res = append(res, types.ProcessEventLog{
@@ -570,24 +600,18 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		if entry.EventType == event.HandlerPipelineFinished || entry.EventType == event.HandlerPipelineFailed {
 			payload := make(map[string]any)
 			if err := json.Unmarshal(entry.Payload, &payload); err != nil {
-				return false, 0, nil, perr.BadRequestWithMessage(fmt.Sprintf("error parsing payload from %s", entry.Payload))
+				return false, 0, nil, perr.InternalWithMessage(fmt.Sprintf("error parsing payload from %s", entry.Payload))
 			}
 			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 		}
+
+		currentIndex++
 	}
 
 	if err := scanner.Err(); err != nil {
-		//nolint:nilerr // just return without passing error - we will try again next time
-		return complete, int(lastSize), res, nil
+		logger.Error("Unable to scan event store file", "error", err)
+		return complete, last, res, nil
 	}
 
-	// Update last read position
-	if currentSize, err := file.Seek(0, 1); err == nil {
-		lastSize = currentSize
-	}
-
-	// prevent polling too frequently
-	time.Sleep(50 * time.Millisecond)
-
-	return complete, int(lastSize), res, nil
+	return complete, currentIndex, res, nil
 }

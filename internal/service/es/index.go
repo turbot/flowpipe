@@ -51,6 +51,14 @@ func (es *ESService) Raise(evt interface{}) error {
 	return err
 }
 
+func (es *ESService) IsRunning() bool {
+	if es.router == nil {
+		return false
+	}
+
+	return es.router.IsRunning()
+}
+
 func (es *ESService) Start() error {
 	// Convenience
 	logger := fplog.Logger(es.ctx)

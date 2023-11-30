@@ -493,8 +493,7 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	return results
 }
 
-// LogFilePath returns the path to the log file for the execution.
-func (ex *Execution) LogFilePath() (string, error) {
+func (ex *Execution) EventStoreFilePath() (string, error) {
 	filename := fmt.Sprintf("%s.jsonl", ex.ID)
 	p := filepath.Join(util.EventStoreDir(), filename)
 	return filepath.Abs(p)
@@ -544,7 +543,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	// Open the event log
-	logPath, err := ex.LogFilePath()
+	logPath, err := ex.EventStoreFilePath()
 	if err != nil {
 		logger.Error("Failed to get log file path", "execution", ex.ID, "error", err)
 		return err
