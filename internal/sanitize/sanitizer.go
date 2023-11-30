@@ -171,6 +171,10 @@ func (s *Sanitizer) SanitizeKeyValue(k string, v any) any {
 	return s.Sanitize(v)
 }
 
+func (s *Sanitizer) SanitizeFile(string) {
+
+}
+
 func getExcludeFromYamlRegex(fieldName string) string {
 	return fmt.Sprintf(`%s:\s*([^\n]+)`, fieldName)
 

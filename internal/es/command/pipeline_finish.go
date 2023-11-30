@@ -2,6 +2,9 @@ package command
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/flowpipe/internal/util"
+	"path"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -82,6 +85,9 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		}
 		output = outputBlock
 	}
+
+	eventStoreFilePath := path.Join(util.EventStoreDir(), cmd.Event.ExecutionID+".jsonl")
+	sanitize.Instance.SanitizeFile(eventStoreFilePath)
 
 	e, err := event.NewPipelineFinished(event.ForPipelineFinish(cmd, output))
 	if err != nil {
