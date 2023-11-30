@@ -53,7 +53,7 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
-		retryConfig, diags := stepDefn.GetRetryConfig(evalContext)
+		retryConfig, diags := stepDefn.GetRetryConfig(evalContext, false)
 		if len(diags) > 0 {
 			logger.Error("Error getting retry config", "diags", diags)
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags))))

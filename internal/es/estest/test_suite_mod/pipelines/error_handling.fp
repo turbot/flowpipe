@@ -50,12 +50,22 @@ pipeline "error_retry_with_if" {
         url = "http://api.google.com/astros.jsons"
 
         retry {
-            if = result.response_headers.status_code == 404
+            if = result.status_code == 404
             max_attempts = 3
         }
     }
 }
 
+pipeline "error_retry_with_if_not_match" {
+    step "http" "bad_http" {
+        url = "http://api.google.com/astros.jsons"
+
+        retry {
+            if = result.status_code == 405
+            max_attempts = 3
+        }
+    }
+}
 
 pipeline "error_retry" {
     step "http" "bad_http" {
