@@ -1,7 +1,9 @@
 package sanitize
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 	"log"
 	"log/slog"
 	"regexp"
@@ -9,6 +11,21 @@ import (
 )
 
 const redactedStr = "<redacted>"
+
+// TODO where should this be defined
+var Instance = NewSanitizer(SanitizerOptions{
+	ExcludeFields: []string{
+		"pipeline_execution_id",
+		"pipeline_name",
+		"mod",
+		"step_type",
+		"name",
+		"password",
+	},
+	ExcludePatterns: []string{
+		"Starting",
+	},
+})
 
 type SanitizerOptions struct {
 	// ExcludeFields is a list of fields to exclude from sanitization
@@ -18,7 +35,8 @@ type SanitizerOptions struct {
 }
 
 type Sanitizer struct {
-	patterns []*regexp.Regexp
+	patterns      []*regexp.Regexp
+	excludeFields map[string]struct{}
 }
 
 func NewSanitizer(opts SanitizerOptions) *Sanitizer {
@@ -39,7 +57,9 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 		patterns[p] = struct{}{}
 	}
 
-	s := &Sanitizer{}
+	s := &Sanitizer{
+		excludeFields: helpers.SliceToLookup(opts.ExcludeFields),
+	}
 
 	// now convert all patterns into regexes
 	for p := range patterns {
@@ -53,13 +73,9 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 	return s
 }
 
-func getExcludeFromYamlRegex(fieldName string) string {
-	return fmt.Sprintf(`%s:\s*([^\n]+)`, fieldName)
-
-}
-
-func getExcludeFromJsonRegex(fieldName string) string {
-	return fmt.Sprintf(`"%s"\s*:\s*"([^"]+)"`, fieldName)
+func (s *Sanitizer) FieldExcluded(v string) bool {
+	_, excluded := s.excludeFields[v]
+	return excluded
 }
 
 func (s *Sanitizer) SanitizeString(v string) string {
@@ -115,4 +131,51 @@ func (s *Sanitizer) SanitizeString(v string) string {
 		v = v[:r.start] + redactedStr + v[r.end:]
 	}
 	return v
+}
+
+// Sanitize takes any value and returns a sanitized version of the value.
+// If the value is a string, then it is sanitized.
+// Otherwise the value is marshaled to JSON and then sanitized.
+// Attempt to marshal back to original type but if this fails, return the json
+func (s *Sanitizer) Sanitize(v any) any {
+	valStr, isString := v.(string)
+	if !isString {
+		jsonBytes, err := json.Marshal(v)
+		if err != nil {
+			return redactedStr
+		}
+		valStr = string(jsonBytes)
+	}
+
+	sanitizedString := s.SanitizeString(valStr)
+
+	if sanitizedString == valStr {
+		return v
+	}
+	if isString {
+		return sanitizedString
+	}
+
+	var res map[string]any
+	err := json.Unmarshal([]byte(sanitizedString), &res)
+	if err != nil {
+		return sanitizedString
+	}
+	return res
+}
+
+func (s *Sanitizer) SanitizeKeyValue(k string, v any) any {
+	if s.FieldExcluded(k) {
+		return redactedStr
+	}
+	return s.Sanitize(v)
+}
+
+func getExcludeFromYamlRegex(fieldName string) string {
+	return fmt.Sprintf(`%s:\s*([^\n]+)`, fieldName)
+
+}
+
+func getExcludeFromJsonRegex(fieldName string) string {
+	return fmt.Sprintf(`"%s"\s*:\s*"([^"]+)"`, fieldName)
 }

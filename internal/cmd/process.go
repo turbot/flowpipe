@@ -158,7 +158,7 @@ func listProcessFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if processes != nil {
-		printer := printers.GetPrinter[flowpipeapi.Process](cmd, sanitizer)
+		printer := printers.GetPrinter[flowpipeapi.Process](cmd)
 
 		printableResource := types.NewPrintableProcess(processes)
 

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -15,21 +14,6 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
-
-// TODO where should this be defined
-var sanitizer = sanitize.NewSanitizer(sanitize.SanitizerOptions{
-	ExcludeFields: []string{
-		"pipeline_execution_id",
-		"pipeline_name",
-		"mod",
-		"step_type",
-		"name",
-		"pipeline_name",
-	},
-	ExcludePatterns: []string{
-		"Starting",
-	},
-})
 
 // variable used to assign the output mode flag
 var outputMode types.OutputMode

@@ -55,7 +55,7 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpTrigger](cmd, sanitizer)
+		printer := printers.GetPrinter[types.FpTrigger](cmd)
 
 		printableResource := types.NewPrintableTrigger(resp)
 

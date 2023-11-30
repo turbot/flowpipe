@@ -11,7 +11,6 @@ import (
 )
 
 type JsonPrinter[T any] struct {
-	sanitizer *sanitize.Sanitizer
 }
 
 func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer) error {
@@ -22,7 +21,7 @@ func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableReso
 	}
 
 	// sanitize
-	s = []byte(p.sanitizer.SanitizeString(string(s)))
+	s = []byte(sanitize.Instance.SanitizeString(string(s)))
 
 	// format
 	s, err = prettyjson.Format(s)

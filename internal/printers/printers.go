@@ -2,7 +2,6 @@ package printers
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"io"
 
 	"github.com/spf13/cobra"
@@ -18,23 +17,17 @@ type ResourcePrinter[T any] interface {
 	PrintResource(context.Context, types.PrintableResource[T], io.Writer) error
 }
 
-func GetPrinter[T any](cmd *cobra.Command, sanitizer *sanitize.Sanitizer) ResourcePrinter[T] {
+func GetPrinter[T any](cmd *cobra.Command) ResourcePrinter[T] {
 
 	format := cmd.Flags().Lookup(constants.ArgOutput).Value.String()
 
 	switch format {
 	case "table":
-		return TablePrinter[T]{
-			sanitizer: sanitizer,
-		}
+		return TablePrinter[T]{}
 	case "json":
-		return JsonPrinter[T]{
-			sanitizer: sanitizer,
-		}
+		return JsonPrinter[T]{}
 	case "yaml":
-		return YamlPrinter[T]{
-			sanitizer: sanitizer,
-		}
+		return YamlPrinter[T]{}
 	}
 	return nil
 }

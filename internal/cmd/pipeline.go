@@ -75,7 +75,7 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpPipeline](cmd, sanitizer)
+		printer := printers.GetPrinter[types.FpPipeline](cmd)
 
 		printableResource := types.NewPrintablePipeline(resp)
 
@@ -350,7 +350,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
 			return
 		}
-		printer := printers.NewStringPrinter[fmt.Stringer](sanitizer)
+		printer := &printers.StringPrinter{}
 		printableResource := types.NewPrintableParsedEvent(cg)
 
 		// print execution_id / stale info
