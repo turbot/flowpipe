@@ -561,7 +561,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
 	currentIndex := 0
 	for scanner.Scan() {
-		if currentIndex <= last {
+		if currentIndex < last {
 			currentIndex++
 			continue
 		}
