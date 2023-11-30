@@ -34,11 +34,11 @@ func (p PrintableVariable) GetTable() (Table, error) {
 
 	// return Table{
 	// 	Items:    tableRows,
-	// 	Columns: p.GetColumns(),
+	// 	Columns: p.getColumns(),
 	// }, nil
 }
 
-func (PrintableVariable) GetColumns() (columns []TableColumnDefinition) {
+func (PrintableVariable) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
 			Name:        "TYPE",

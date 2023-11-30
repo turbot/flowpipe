@@ -68,10 +68,10 @@ func (p PrintableProcess) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return NewTable(tableRows, p.GetColumns()), nil
+	return NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintableProcess) GetColumns() (columns []TableColumnDefinition) {
+func (PrintableProcess) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
 			Name:        "EXECUTION_ID",

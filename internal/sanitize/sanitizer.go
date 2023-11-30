@@ -61,6 +61,7 @@ func getExcludeFromYamlRegex(fieldName string) string {
 func getExcludeFromJsonRegex(fieldName string) string {
 	return fmt.Sprintf(`"%s"\s*:\s*"([^"]+)"`, fieldName)
 }
+
 func (s *Sanitizer) SanitizeString(v string) string {
 	type replacement struct {
 		start int

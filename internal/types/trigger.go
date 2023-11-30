@@ -91,10 +91,10 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return NewTable(tableRows, p.GetColumns()), nil
+	return NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
+func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
 			Name:        "PIPELINE",

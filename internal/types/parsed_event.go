@@ -272,7 +272,7 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items          []any
+	Items          []fmt.Stringer
 	Registry       map[string]ParsedEventRegistryItem
 	ColorGenerator *color.DynamicColorGenerator
 }
@@ -284,12 +284,12 @@ func NewPrintableParsedEvent(cg *color.DynamicColorGenerator) *PrintableParsedEv
 	}
 }
 
-func (p PrintableParsedEvent) GetItems() []any {
+func (p *PrintableParsedEvent) GetItems() []fmt.Stringer {
 	return p.Items
 }
 
-func (p PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
-	var out []any
+func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
+	var out []fmt.Stringer
 
 	for _, log := range logs {
 		switch log.EventType {
@@ -499,12 +499,8 @@ func (p PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 
 }
 
-func (p PrintableParsedEvent) GetTable() (Table, error) {
+func (p *PrintableParsedEvent) GetTable() (Table, error) {
 	return Table{}, nil
-}
-
-func (PrintableParsedEvent) GetColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{}
 }
 
 type ProcessEventLogs []ProcessEventLog

@@ -350,11 +350,11 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
 			return
 		}
-		printer := printers.NewStringPrinter[any](sanitizer)
+		printer := printers.NewStringPrinter[fmt.Stringer](sanitizer)
 		printableResource := types.NewPrintableParsedEvent(cg)
 
 		// print execution_id / stale info
-		var header []any
+		var header []fmt.Stringer
 		header = append(header, types.ParsedHeader{
 			ExecutionId: executionId,
 			IsStale:     stale,

@@ -221,10 +221,10 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return NewTable(tableRows, p.GetColumns()), nil
+	return NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
+func (PrintablePipeline) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
 			Name:        "MOD",

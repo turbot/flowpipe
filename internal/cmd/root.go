@@ -27,7 +27,7 @@ var sanitizer = sanitize.NewSanitizer(sanitize.SanitizerOptions{
 		"pipeline_name",
 	},
 	ExcludePatterns: []string{
-		"echo_one",
+		"Starting",
 	},
 })
 
