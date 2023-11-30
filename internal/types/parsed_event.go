@@ -331,78 +331,78 @@ func (p PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			}
 			duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
 
-				parsed := ParsedEventWithOutput{
-					ParsedEvent: ParsedEvent{
-						ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
-						Type:              log.EventType,
-					},
-					Duration: &duration,
-					Output:   e.PipelineOutput,
-				}
-				out = append(out, parsed)
-			case event.HandlerPipelineFailed:
-				var e event.PipelineFailed
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return  fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-				fullName := "unknown.unknown"
-				started := e.Event.CreatedAt
-				if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
-					fullName = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
-					started = entry.Started
-				}
-				duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
+			parsed := ParsedEventWithOutput{
+				ParsedEvent: ParsedEvent{
+					ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
+					Type:              log.EventType,
+				},
+				Duration: &duration,
+				Output:   e.PipelineOutput,
+			}
+			out = append(out, parsed)
+		case event.HandlerPipelineFailed:
+			var e event.PipelineFailed
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+			fullName := "unknown.unknown"
+			started := e.Event.CreatedAt
+			if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
+				fullName = strings.Split(entry.Name, ".")[len(strings.Split(entry.Name, "."))-1]
+				started = entry.Started
+			}
+			duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
 
-				allErrors := e.Errors
-				pipelineOutputErrors, ok := e.PipelineOutput["errors"].([]modconfig.StepError)
-				if ok && len(pipelineOutputErrors) > 0 {
+			allErrors := e.Errors
+			pipelineOutputErrors, ok := e.PipelineOutput["errors"].([]modconfig.StepError)
+			if ok && len(pipelineOutputErrors) > 0 {
 
-					for _, e := range pipelineOutputErrors {
-						found := false
-						for _, ae := range allErrors {
-							if e.Error.ID == ae.Error.ID {
-								found = true
-								break
-							}
-						}
-						if !found {
-							allErrors = append(allErrors, e)
+				for _, e := range pipelineOutputErrors {
+					found := false
+					for _, ae := range allErrors {
+						if e.Error.ID == ae.Error.ID {
+							found = true
+							break
 						}
 					}
+					if !found {
+						allErrors = append(allErrors, e)
+					}
 				}
+			}
 
-				parsed := ParsedErrorEvent{
-					ParsedEvent: ParsedEvent{
-						ParsedEventPrefix: ParsedEventPrefix{
-							FullPipelineName: fullName,
-							PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
-							cg:               p.ColorGenerator,
-						},
-						Type: log.EventType,
+			parsed := ParsedErrorEvent{
+				ParsedEvent: ParsedEvent{
+					ParsedEventPrefix: ParsedEventPrefix{
+						FullPipelineName: fullName,
+						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
+						cg:               p.ColorGenerator,
 					},
-					Duration: &duration,
-					Errors:   allErrors,
-				}
-				out = append(out, parsed)
-			case event.HandlerStepQueued:
-				var e event.StepQueued
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-				p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{
-					Name:    e.StepName,
-					Started: e.Event.CreatedAt,
-				}
-			case event.CommandStepStart:
-				var e event.StepStart
-				err := json.Unmarshal([]byte(log.Payload), &e)
-				if err != nil {
-					return nil, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
-				}
-				if e.NextStepAction == "start" { // TODO: handle 'skip' steps?
-					p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
+					Type: log.EventType,
+				},
+				Duration: &duration,
+				Errors:   allErrors,
+			}
+			out = append(out, parsed)
+		case event.HandlerStepQueued:
+			var e event.StepQueued
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{
+				Name:    e.StepName,
+				Started: e.Event.CreatedAt,
+			}
+		case event.CommandStepStart:
+			var e event.StepStart
+			err := json.Unmarshal([]byte(log.Payload), &e)
+			if err != nil {
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+			}
+			if e.NextStepAction == "start" { // TODO: handle 'skip' steps?
+				p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
 
 				pipeline := p.Registry[e.PipelineExecutionID]
 				fullStepName := e.StepName
