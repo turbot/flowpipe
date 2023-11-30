@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"log"
 	"os"
 	"sync"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

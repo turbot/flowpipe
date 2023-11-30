@@ -2,7 +2,6 @@ package fplog
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"os"
 	"strings"
 
@@ -12,6 +11,7 @@ import (
 	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap/zapcore"
 
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
 )
 
