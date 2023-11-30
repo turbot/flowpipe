@@ -83,8 +83,10 @@ func NewManager(ctx context.Context, opts ...ManagerOption) *Manager {
 
 // Start initializes tha manage and starts services managed by the Manager.
 func (m *Manager) Start() (*Manager, error) {
-	fplog.Logger(m.ctx).Debug("Manager starting")
-	defer fplog.Logger(m.ctx).Debug("Manager started")
+	logger := fplog.Logger(m.ctx)
+
+	logger.Debug("Manager starting")
+	defer logger.Debug("Manager started")
 
 	if err := m.initializeModDirectory(); err != nil {
 		return nil, err
@@ -107,6 +109,16 @@ func (m *Manager) Start() (*Manager, error) {
 		if err != nil {
 			return nil, err
 		}
+		for {
+			logger.Info("Waiting for Flowpipe service to start ...")
+			if m.ESService.IsRunning() {
+				break
+			}
+
+			time.Sleep(time.Duration(100) * time.Millisecond)
+		}
+
+		logger.Info("Flowpipe service started ...")
 	}
 
 	if m.shouldStartAPI() {

@@ -300,20 +300,6 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 	m, err := manager.NewManager(ctx, manager.WithESService(), manager.WithDocker()).Start()
 	error_helpers.FailOnError(err)
 
-	logger := fplog.Logger(cmd.Context())
-
-	// wait until the es service if running
-	for {
-		logger.Info("Waiting for Flowpipe service to start ...")
-		if m.ESService.IsRunning() {
-			break
-		}
-
-		time.Sleep(time.Duration(100) * time.Millisecond)
-	}
-
-	logger.Info("Flowpipe service started ...")
-
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
 

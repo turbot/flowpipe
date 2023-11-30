@@ -41,7 +41,6 @@ func serverCmd() *cobra.Command {
 func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
-
 		error_helpers.FailOnError(docker.Initialize(ctx))
 
 		// start manager, passing server config
