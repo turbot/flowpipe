@@ -2,9 +2,7 @@ package fplog
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"path"
 	"strings"
 
 	//nolint:depguard // Wrapper for Zap
@@ -13,8 +11,8 @@ import (
 	//nolint:depguard // Wrapper for Zap
 	"go.uber.org/zap/zapcore"
 
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/flowpipe/internal/util"
 )
 
 type FlowpipeLogger struct {
@@ -190,6 +188,6 @@ func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 	cfg.Sampling = nil
-	cfg.OutputPaths = []string{path.Join(util.EventStoreDir(), fmt.Sprintf("%s.jsonl", executionID))}
+	cfg.OutputPaths = []string{filepaths.EventStoreFilePath(executionID)}
 	return zap.Must(cfg.Build())
 }

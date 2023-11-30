@@ -8,12 +8,8 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"testing"
 	"time"
-
-	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/util"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -21,6 +17,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
+	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
@@ -60,7 +58,7 @@ func (suite *EsTestSuite) SetupSuite() {
 	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
 
 	// clear the output dir before each test
-	outputPath := util.EventStoreDir()
+	outputPath := filepaths.EventStoreDir()
 
 	// Check if the directory exists
 	_, err = os.Stat(outputPath)
@@ -475,8 +473,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
 	if pex.StepStatus["transform.http_step"] == nil {
-		filename := fmt.Sprintf("%s.jsonl", cmd.Event.ExecutionID)
-		p := filepath.Join(util.EventStoreDir(), filename)
+		p := filepaths.EventStoreFilePath(cmd.Event.ExecutionID)
 
 		// Open the file
 		file, err := os.Open(p)

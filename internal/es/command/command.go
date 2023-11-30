@@ -3,16 +3,14 @@ package command
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
-	"path"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -74,7 +72,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		log.Fatalf("Error marshalling JSON: %v", err)
 	}
 
-	fileName := path.Join(util.EventStoreDir(), fmt.Sprintf("%s.jsonl", commandEvent.GetEvent().ExecutionID))
+	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)
 
 	if lock == nil {
 		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
@@ -83,7 +81,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 	}
 
 	// Append the JSON data to a file
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return perr.InternalWithMessage("Error opening file " + err.Error())
 	}

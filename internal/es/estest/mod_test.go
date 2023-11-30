@@ -18,9 +18,9 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -65,7 +65,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
 
 	// clear the output dir before each test
-	outputPath := util.EventStoreDir()
+	outputPath := filepaths.EventStoreDir()
 
 	// Check if the directory exists
 	_, err = os.Stat(outputPath)
