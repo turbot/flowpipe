@@ -25,14 +25,14 @@ func ModInternalDir() string {
 	return modInternalDir
 }
 
-func EventStorePath(executionId string) string {
+func EventStoreFilePath(executionId string) string {
 	return path.Join(EventStoreDir(), fmt.Sprintf("%s.jsonl", executionId))
 }
 
-func SnapshotPath(executionId string) string {
+func SnapshotFilePath(executionId string) string {
 	return path.Join(EventStoreDir(), fmt.Sprintf("%s.sps", executionId))
 }
 
-func OutputPath(executionId string) string {
+func OutputFilePath(executionId string) string {
 	return path.Join(EventStoreDir(), fmt.Sprintf("%s_output.json", executionId))
 }

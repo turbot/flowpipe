@@ -17,8 +17,8 @@ import (
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -525,7 +525,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		return true, 0, nil, err
 	}
 
-	eventStoreFilePath := filepaths.EventStorePath(ex.ID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
 
 	logger.Debug("Opening file", "event store file", eventStoreFilePath)
 	file, err := os.Open(eventStoreFilePath)

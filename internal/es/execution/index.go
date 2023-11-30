@@ -10,11 +10,11 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 )
 
-func LoadEventLogEntries(executionID string) ([]types.EventLogEntry, error) {
+func LoadEventStoreEntries(executionID string) ([]types.EventLogEntry, error) {
 
 	// Open the JSONL file
-	fileName := filepaths.EventStorePath(executionID)
-	file, err := os.Open(fileName)
+	eventStoreFilePath := filepaths.EventStoreFilePath(executionID)
+	file, err := os.Open(eventStoreFilePath)
 	if err != nil {
 		return nil, err
 	}

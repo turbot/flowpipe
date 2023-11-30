@@ -536,9 +536,9 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	// Open the event log
-	logPath := filepaths.EventStorePath(ex.ID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
 
-	f, err := os.Open(logPath)
+	f, err := os.Open(eventStoreFilePath)
 	if err != nil {
 		logger.Error("Failed to open log file", "execution", ex.ID, "error", err)
 		return err

@@ -72,7 +72,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		log.Fatalf("Error marshalling JSON: %v", err)
 	}
 
-	fileName := filepaths.EventStorePath(commandEvent.GetEvent().ExecutionID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)
 
 	if lock == nil {
 		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
@@ -81,7 +81,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 	}
 
 	// Append the JSON data to a file
-	file, err := os.OpenFile(fileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return perr.InternalWithMessage("Error opening file " + err.Error())
 	}

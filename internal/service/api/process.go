@@ -75,7 +75,7 @@ func (api *APIService) listProcess(c *gin.Context) {
 	processList := []types.Process{}
 	for _, execID := range executionIDs {
 
-		logEntries, err := execution.LoadEventLogEntries(execID)
+		logEntries, err := execution.LoadEventStoreEntries(execID)
 		if err != nil {
 			common.AbortWithError(c, err)
 			return
@@ -210,7 +210,7 @@ func (api *APIService) getProcessOutput(c *gin.Context) {
 		ExecutionID: uri.ProcessId,
 	}
 
-	outputPath := filepaths.OutputPath(evt.ExecutionID)
+	outputPath := filepaths.OutputFilePath(evt.ExecutionID)
 
 	// Open the JSON file
 	file, err := os.Open(outputPath)
@@ -323,7 +323,7 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		return
 	}
 
-	logEntries, err := execution.LoadEventLogEntries(uri.ProcessId)
+	logEntries, err := execution.LoadEventStoreEntries(uri.ProcessId)
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
@@ -351,7 +351,7 @@ func (api *APIService) listProcessEventLogJSONLine(c *gin.Context) {
 		return
 	}
 
-	logEntries, err := execution.LoadEventLogEntries(uri.ProcessId)
+	logEntries, err := execution.LoadEventStoreEntries(uri.ProcessId)
 	if err != nil {
 		common.AbortWithError(c, err)
 	}

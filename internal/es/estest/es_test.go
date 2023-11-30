@@ -473,7 +473,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
 	if pex.StepStatus["transform.http_step"] == nil {
-		p := filepaths.EventStorePath(cmd.Event.ExecutionID)
+		p := filepaths.EventStoreFilePath(cmd.Event.ExecutionID)
 
 		// Open the file
 		file, err := os.Open(p)

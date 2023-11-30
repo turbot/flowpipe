@@ -188,6 +188,6 @@ func ExecutionLogger(ctx context.Context, executionID string) *zap.Logger {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339TimeEncoder
 	cfg.Sampling = nil
-	cfg.OutputPaths = []string{filepaths.EventStorePath(executionID)}
+	cfg.OutputPaths = []string{filepaths.EventStoreFilePath(executionID)}
 	return zap.Must(cfg.Build())
 }

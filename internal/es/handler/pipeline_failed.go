@@ -91,7 +91,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 		// Dump the output
 		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		outputPath := filepaths.OutputPath(e.Event.ExecutionID)
+		outputPath := filepaths.OutputFilePath(e.Event.ExecutionID)
 		_ = os.WriteFile(outputPath, jsonStr, 0600)
 
 		snapshot, err := ex.Snapshot(e.PipelineExecutionID)
@@ -105,7 +105,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 				return err
 			}
 
-			snapshotPath := filepaths.SnapshotPath(e.Event.ExecutionID)
+			snapshotPath := filepaths.SnapshotFilePath(e.Event.ExecutionID)
 			_ = os.WriteFile(snapshotPath, jsonStr, 0600)
 		}
 		// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
