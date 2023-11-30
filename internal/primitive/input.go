@@ -211,7 +211,7 @@ func (inputEmail *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx conte
 	if i[schema.AttributeTypeFrom] == nil {
 		return perr.BadRequestWithMessage("Email input must define from")
 	}
-	if i[schema.AttributeTypeSenderCredential] == nil {
+	if i[schema.AttributeTypeSmtpPassword] == nil {
 		return perr.BadRequestWithMessage("Email input must define sender_credential")
 	}
 	if i[schema.AttributeTypeHost] == nil {

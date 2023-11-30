@@ -44,15 +44,16 @@ pipeline "bad_email_with_expr" {
     }
 
     step "email" "test_email" {
-      to                = param.to
-      from              = step.transform.sender_address.value
-      sender_credential = param.sender_credential
-      host              = param.host
-      port              = param.port
-      subject           = "Test email"
-      body              = step.transform.email_body.value
-      sender_name       = param.sender_name
-      cc                = param.cc
-      bcc               = param.bcc
+      to            = param.to
+      from          = step.transform.sender_address.value
+      smtp_password = param.sender_credential
+      smtp_username = step.transform.sender_address.value
+      host          = param.host
+      port          = param.port
+      subject       = "Test email"
+      body          = step.transform.email_body.value
+      sender_name   = param.sender_name
+      cc            = param.cc
+      bcc           = param.bcc
     }
 }

@@ -3,7 +3,8 @@ pipeline "email" {
     step "email" "test_email" {
       to                = ["recipient@example.com"]
       from              = "sender@example.com"
-      sender_credential = "sendercredential"
+      smtp_password     = "sendercredential"
+      smtp_username     = "sender@example.com"
       host              = "smtp.example.com"
       port              = 587
       subject           = "Test email"
@@ -25,7 +26,8 @@ pipeline "subscribe" {
   step "email" "send_it" {
     to                = ["recipient@example.com"]
     from              = "sender@example.com"
-    sender_credential = "sendercredential"
+    smtp_password     = "sendercredential"
+    smtp_username     = "sender@example.com"
     host              = "smtp.example.com"
     port              = 587
     subject           = "You have been subscribed"

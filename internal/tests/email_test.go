@@ -38,7 +38,8 @@ func TestEmailStep(t *testing.T) {
 
 	assert.Equal([]string{"recipient@example.com"}, inputs["to"])
 	assert.Equal("sender@example.com", inputs["from"])
-	assert.Equal("sendercredential", inputs["sender_credential"])
+	assert.Equal("sender@example.com", inputs["smtp_username"])
+	assert.Equal("sendercredential", inputs["smtp_password"])
 	assert.Equal("smtp.example.com", inputs["host"])
 	assert.Equal(int64(587), inputs["port"])
 	assert.Equal("Test email", inputs["subject"])
@@ -88,7 +89,8 @@ func TestEmailStepWithParam(t *testing.T) {
 
 	assert.Contains(inputs["to"], "recipient@example.com")
 	assert.Equal("sender@example.com", inputs["from"])
-	assert.Equal("sendercredential", inputs["sender_credential"])
+	assert.Equal("sender@example.com", inputs["smtp_username"])
+	assert.Equal("sendercredential", inputs["smtp_password"])
 	assert.Equal("smtp.example.com", inputs["host"])
 	assert.Equal(int64(587), inputs["port"])
 	assert.Equal("You have been subscribed", inputs["subject"])
