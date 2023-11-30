@@ -1303,6 +1303,62 @@ func (suite *ModTestSuite) TestErrorRetry() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 }
 
+func (suite *ModTestSuite) TestErroWithIf() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_if", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// The step should be executed 3 times. First attempt + 2 retries
+	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Errors[0].Error.Status)
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) TestErroWithIfNotMatch() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_with_if_not_match", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+
+	if pex.Status != "failed" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	// The step should be executed 1 time. There is retry block, but that retry block has an if that does not match.
+	assert.Equal(1, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
+
+	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
 func (suite *ModTestSuite) TestErrorRetryWithBackoff() {
 	assert := assert.New(suite.T())
 

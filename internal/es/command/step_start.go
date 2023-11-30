@@ -427,7 +427,7 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 
 func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepRetry, hcl.Diagnostics) {
 	// we have error, check the if there's a retry block
-	retryConfig, diags := stepDefn.GetRetryConfig(evalContext)
+	retryConfig, diags := stepDefn.GetRetryConfig(evalContext, true)
 
 	if len(diags) > 0 {
 		return nil, diags
