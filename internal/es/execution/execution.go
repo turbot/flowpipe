@@ -971,7 +971,11 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		if pe.PipelineOutput == nil {
 			pe.PipelineOutput = map[string]interface{}{}
 		}
-		pe.PipelineOutput["errors"] = et.Errors
+		if pe.PipelineOutput["errors"] != nil && len(et.Errors) > 0 {
+			pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]modconfig.StepError), et.Errors...)
+		} else if pe.PipelineOutput["errors"] == nil && len(et.Errors) > 0 {
+			pe.PipelineOutput["errors"] = et.Errors
+		}
 
 		// TODO: this is a bit messy
 		// pe.Errors are "collected" as we call the pe.Fail() function above during the 'handler.step_finished' handling

@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"runtime/debug"
@@ -30,6 +31,40 @@ func (e *PipelineFailed) GetEvent() *Event {
 
 func (e *PipelineFailed) HandlerName() string {
 	return HandlerPipelineFailed
+}
+
+func (p *PipelineFailed) UnmarshalJSON(data []byte) error {
+	type Alias PipelineFailed
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(p),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// Custom handling for PipelineOutput
+	rawErrors, ok := aux.PipelineOutput["errors"]
+	if !ok {
+		return nil
+	}
+
+	var stepErrors []modconfig.StepError
+	rawErrorsBytes, err := json.Marshal(rawErrors)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(rawErrorsBytes, &stepErrors); err != nil {
+		return err
+	}
+
+	// Update the PipelineOutput with the strongly typed errors
+	p.PipelineOutput["errors"] = stepErrors
+
+	return nil
 }
 
 // PipelineFailedOption is a function that modifies an Execution instance.
@@ -290,6 +325,8 @@ func ForStepStartToPipelineFailed(cmd *StepStart, err error) PipelineFailedOptio
 		stepError := modconfig.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: cmd.PipelineExecutionID,
+			StepExecutionID:     cmd.StepExecutionID,
+			Step:                cmd.StepName,
 		}
 
 		if e.PipelineOutput == nil {

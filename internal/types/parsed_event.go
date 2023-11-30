@@ -354,6 +354,25 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 					started = entry.Started
 				}
 				duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
+
+				allErrors := e.Errors
+				pipelineOutputErrors, ok := e.PipelineOutput["errors"].([]modconfig.StepError)
+				if ok && len(pipelineOutputErrors) > 0 {
+
+					for _, e := range pipelineOutputErrors {
+						found := false
+						for _, ae := range allErrors {
+							if e.Error.ID == ae.Error.ID {
+								found = true
+								break
+							}
+						}
+						if !found {
+							allErrors = append(allErrors, e)
+						}
+					}
+				}
+
 				parsed := ParsedErrorEvent{
 					ParsedEvent: ParsedEvent{
 						ParsedEventPrefix: ParsedEventPrefix{
@@ -364,7 +383,7 @@ func (p PrintableParsedEvent) Transform(r flowpipeapiclient.FlowpipeAPIResource)
 						Type: log.EventType,
 					},
 					Duration: &duration,
-					Errors:   e.Errors,
+					Errors:   allErrors,
 				}
 				out = append(out, parsed)
 			case event.HandlerStepQueued:
