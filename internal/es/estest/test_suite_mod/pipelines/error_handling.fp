@@ -45,6 +45,18 @@ pipeline "one_error" {
     }
 }
 
+pipeline "error_retry_with_if" {
+    step "http" "bad_http" {
+        url = "http://api.google.com/astros.jsons"
+
+        retry {
+            if = result.response_headers.status_code == 404
+            max_attempts = 3
+        }
+    }
+}
+
+
 pipeline "error_retry" {
     step "http" "bad_http" {
         url = "http://api.google.com/astros.jsons"
