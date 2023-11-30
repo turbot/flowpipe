@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/utils"
 	"reflect"
 	"strings"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 const grayScaleIndex = uint8(3)
