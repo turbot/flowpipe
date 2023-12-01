@@ -1,4 +1,33 @@
-# Flowpipe
+
+<img width="67%" src="https://flowpipe-io-git-main-turbot.vercel.app/images/flowpipe_wordmark.svg">
+
+
+<p>
+
+[![mods](https://img.shields.io/badge/mods-23-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp; 
+[![pipelines](https://img.shields.io/badge/pipelines-154-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp;
+[![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme)
+
+[Flowpipe](https://flowpipe-io.vercel.app) is the universal cloud scripting engine. Use HCL to write pipelines that conduct workflow among people, applications, services, and data sources. 
+
+With Flowpipe you can:
+
+- Compose a pipeline, in HCL, with steps that use Flowpipe libraries, Steampipe queries, Lambda-compatible functions, and containers — all in a consistent way.
+- Run your pipeline as a CLI command, or on a trigger driven by cron, query, or webhook.
+- Connect people using libraries for email, Slack, and Teams.
+- Deploy pipelines as single binary to your local machine, cloud VMs, container clusters, CI/CD pipelines.
+- Commit your pipelines to repos just like all your other code.
+
+
+
+
+ 
+
+## Flowpipe in action
+
+<img width="524" src="https://steampipe.io/images/steampipe-sql-demo.gif" />
+
+
 
 ## Getting Started
 
