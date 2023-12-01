@@ -346,6 +346,10 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
 
 		printer, err := printers.NewStringPrinter()
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error instantiating string printer")
+			return
+		}
 		printableResource := types.NewPrintableParsedEvent()
 
 		// print execution_id / stale info
