@@ -15,16 +15,17 @@ const redactedStr = "<redacted>"
 // TODO where should this be defined
 var Instance = NewSanitizer(SanitizerOptions{
 	ExcludeFields: []string{
-		"pipeline_execution_id",
-		"pipeline_name",
-		"mod",
-		"step_type",
-		"name",
-		"password",
+		//"pipeline_execution_id",
+		//"pipeline_name",
+		//"mod",
+		//"step_type",
+		//"step_name",
+		"value",
+		"foo",
 	},
-	ExcludePatterns: []string{
-		"Starting",
-	},
+	//ExcludePatterns: []string{
+	//	"Starting",
+	//},
 })
 
 type SanitizerOptions struct {
@@ -45,11 +46,9 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 
 	// first convert exclude fields to regex patterns to exclude the fields from both JSON and YAML
 	for _, f := range opts.ExcludeFields {
-		excludeFromJson := getExcludeFromJsonRegex(f)
-		patterns[excludeFromJson] = struct{}{}
-
-		excludeFromYaml := getExcludeFromYamlRegex(f)
-		patterns[excludeFromYaml] = struct{}{}
+		patterns[getExcludeFromJsonRegex(f)] = struct{}{}
+		patterns[getExcludeFromYamlRegex(f)] = struct{}{}
+		patterns[getExcludeFromEquals(f)] = struct{}{}
 	}
 
 	// add in custom patterns
@@ -139,6 +138,7 @@ func (s *Sanitizer) SanitizeString(v string) string {
 // Attempt to marshal back to original type but if this fails, return the json
 func (s *Sanitizer) Sanitize(v any) any {
 	valStr, isString := v.(string)
+
 	if !isString {
 		jsonBytes, err := json.Marshal(v)
 		if err != nil {
@@ -156,12 +156,31 @@ func (s *Sanitizer) Sanitize(v any) any {
 		return sanitizedString
 	}
 
-	var res map[string]any
-	err := json.Unmarshal([]byte(sanitizedString), &res)
+	// TODO slice, other types
+	var res = new(map[string]any)
+	err := json.Unmarshal([]byte(sanitizedString), res)
 	if err != nil {
 		return sanitizedString
 	}
 	return res
+}
+
+func SanitizeStruct[T any](s *Sanitizer, v T) (T, error) {
+	var empty T
+
+	jsonBytes, err := json.Marshal(v)
+	if err != nil {
+		return empty, err
+	}
+	valStr := string(jsonBytes)
+	sanitizedString := s.SanitizeString(valStr)
+
+	if sanitizedString == valStr {
+		return v, err
+	}
+
+	err = json.Unmarshal([]byte(sanitizedString), &empty)
+	return empty, err
 }
 
 func (s *Sanitizer) SanitizeKeyValue(k string, v any) any {
@@ -177,7 +196,10 @@ func (s *Sanitizer) SanitizeFile(string) {
 
 func getExcludeFromYamlRegex(fieldName string) string {
 	return fmt.Sprintf(`%s:\s*([^\n]+)`, fieldName)
+}
 
+func getExcludeFromEquals(fieldName string) string {
+	return fmt.Sprintf(`%s\s*=\s*(?:\033\[[^m]*m)*([^\033\n]+)`, fieldName)
 }
 
 func getExcludeFromJsonRegex(fieldName string) string {

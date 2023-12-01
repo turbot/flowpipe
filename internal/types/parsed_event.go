@@ -11,10 +11,15 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/utils"
 )
+
+type SanitizedStringer interface {
+	String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string
+}
 
 const grayScaleIndex = uint8(3)
 
@@ -24,7 +29,13 @@ type ParsedHeader struct {
 	LastLoaded  string `json:"last_loaded"`
 }
 
-func (p ParsedHeader) String() string {
+func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	left := aurora.Gray(grayScaleIndex, "[")
 	right := aurora.Gray(grayScaleIndex, "]")
 	out := fmt.Sprintf("%s%s%s %s\n", left, aurora.BrightGreen("Execution"), right, p.ExecutionId)
@@ -42,46 +53,62 @@ type ParsedEventPrefix struct {
 	ForEachKey       *string `json:"for_each_key,omitempty"`
 	LoopIndex        *int    `json:"loop_index,omitempty"`
 	RetryIndex       *int    `json:"retry_index,omitempty"`
-	cg               *color.DynamicColorGenerator
 }
 
-func NewPrefix(fullPipelineName string, colorGenerator *color.DynamicColorGenerator) ParsedEventPrefix {
+func NewPrefix(fullPipelineName string) ParsedEventPrefix {
 	return ParsedEventPrefix{
 		FullPipelineName: fullPipelineName,
 		PipelineName:     strings.Split(fullPipelineName, ".")[len(strings.Split(fullPipelineName, "."))-1],
-		cg:               colorGenerator,
 	}
 }
 
-func (p ParsedEventPrefix) getRetryString() string {
+func (p ParsedEventPrefix) getRetryString(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	if p.RetryIndex == nil || *p.RetryIndex == 0 {
 		return ""
 	}
 	return aurora.Sprintf(aurora.Index(8, "#%d"), *p.RetryIndex)
 }
 
-func (p ParsedEventPrefix) getPipelineString() string {
-	c := p.cg.GetColorForElement(p.PipelineName)
+func (p ParsedEventPrefix) getPipelineString(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	c := cg.GetColorForElement(p.PipelineName)
 	return aurora.Sprintf(aurora.Index(c, p.PipelineName))
 }
 
-func (p ParsedEventPrefix) getLoopString() string {
+func (p ParsedEventPrefix) getLoopString(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	if p.LoopIndex == nil || p.StepName == nil {
 		return ""
 	}
 
 	key := fmt.Sprintf("%s.%s.%s.%d", p.PipelineName, *p.StepName, types.SafeString(p.ForEachKey), *p.LoopIndex)
-	c := p.cg.GetColorForElement(key)
+	c := cg.GetColorForElement(key)
 	return aurora.Sprintf(aurora.Index(c, *p.LoopIndex))
 }
 
-func (p ParsedEventPrefix) getForEachString(loopString string) string {
+func (p ParsedEventPrefix) getForEachString(loopString string, cg *color.DynamicColorGenerator) string {
 	if p.ForEachKey == nil || p.StepName == nil {
 		return ""
 	}
 
 	key := fmt.Sprintf("%s.%s.%s", p.PipelineName, *p.StepName, *p.ForEachKey)
-	c := p.cg.GetColorForElement(key)
+	c := cg.GetColorForElement(key)
 
 	if loopString != "" {
 		return aurora.Sprintf("%s%s%s", aurora.Index(c, *p.ForEachKey+"["), loopString, aurora.Index(c, "]"))
@@ -90,13 +117,13 @@ func (p ParsedEventPrefix) getForEachString(loopString string) string {
 	}
 }
 
-func (p ParsedEventPrefix) getStepString(eachString string, loopString string) string {
+func (p ParsedEventPrefix) getStepString(eachString string, loopString string, cg *color.DynamicColorGenerator) string {
 	if p.StepName == nil {
 		return ""
 	}
 
 	key := fmt.Sprintf("%s.%s", p.PipelineName, *p.StepName)
-	c := p.cg.GetColorForElement(key)
+	c := cg.GetColorForElement(key)
 	if eachString != "" {
 		return aurora.Sprintf("%s%s%s", aurora.Index(c, *p.StepName+"["), eachString, aurora.Index(c, "]"))
 	} else if loopString != "" {
@@ -106,12 +133,18 @@ func (p ParsedEventPrefix) getStepString(eachString string, loopString string) s
 	}
 }
 
-func (p ParsedEventPrefix) String() string {
-	retryString := p.getRetryString()
-	loopString := p.getLoopString()
-	eachString := p.getForEachString(loopString)
-	stepString := p.getStepString(eachString, loopString)
-	pipelineString := p.getPipelineString()
+func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	retryString := p.getRetryString(sanitizer, cg)
+	loopString := p.getLoopString(sanitizer, cg)
+	eachString := p.getForEachString(loopString, cg)
+	stepString := p.getStepString(eachString, loopString, cg)
+	pipelineString := p.getPipelineString(sanitizer, cg)
 
 	left := aurora.Gray(grayScaleIndex, "[")
 	right := aurora.Gray(grayScaleIndex, "]")
@@ -131,9 +164,15 @@ type ParsedEvent struct {
 	Message  string `json:"message"`
 }
 
-func (p ParsedEvent) String() string {
+func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	out := ""
-	pre := p.ParsedEventPrefix.String()
+	pre := p.ParsedEventPrefix.String(sanitizer, cg)
 
 	out += fmt.Sprintf("%s %s\n", pre, p.Message)
 	return out
@@ -144,9 +183,15 @@ type ParsedEventWithInput struct {
 	Input map[string]any `json:"input"`
 }
 
-func (p ParsedEventWithInput) String() string {
+func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	out := ""
-	pre := p.ParsedEventPrefix.String()
+	pre := p.ParsedEventPrefix.String(sanitizer, cg)
 
 	stepString := ""
 	if p.StepType != "" {
@@ -179,9 +224,15 @@ type ParsedEventWithArgs struct {
 	Args map[string]any `json:"args"`
 }
 
-func (p ParsedEventWithArgs) String() string {
+func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	out := ""
-	pre := p.ParsedEventPrefix.String()
+	pre := p.ParsedEventPrefix.String(sanitizer, cg)
 
 	out += fmt.Sprintf("%s Starting\n", pre)
 	for k, v := range p.Args {
@@ -210,9 +261,15 @@ type ParsedEventWithOutput struct {
 	Duration *string
 }
 
-func (p ParsedEventWithOutput) String() string {
+func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	out := ""
-	pre := p.ParsedEventPrefix.String()
+	pre := p.ParsedEventPrefix.String(sanitizer, cg)
 
 	if p.Type == event.HandlerPipelineFinished {
 		for k, v := range p.Output {
@@ -248,9 +305,15 @@ type ParsedErrorEvent struct {
 	Duration *string               `json:"duration,omitempty"`
 }
 
-func (p ParsedErrorEvent) String() string {
+func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
 	out := ""
-	pre := p.ParsedEventPrefix.String()
+	pre := p.ParsedEventPrefix.String(sanitizer, cg)
 
 	if p.Type != event.HandlerPipelineFailed {
 		for _, e := range p.Errors {
@@ -272,24 +335,22 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items          []fmt.Stringer
-	Registry       map[string]ParsedEventRegistryItem
-	ColorGenerator *color.DynamicColorGenerator
+	Items    []SanitizedStringer
+	Registry map[string]ParsedEventRegistryItem
 }
 
-func NewPrintableParsedEvent(cg *color.DynamicColorGenerator) *PrintableParsedEvent {
+func NewPrintableParsedEvent() *PrintableParsedEvent {
 	return &PrintableParsedEvent{
-		Registry:       make(map[string]ParsedEventRegistryItem),
-		ColorGenerator: cg,
+		Registry: make(map[string]ParsedEventRegistryItem),
 	}
 }
 
-func (p *PrintableParsedEvent) GetItems() []fmt.Stringer {
+func (p *PrintableParsedEvent) GetItems() []SanitizedStringer {
 	return p.Items
 }
 
 func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
-	var out []fmt.Stringer
+	var out []SanitizedStringer
 
 	for _, log := range logs {
 		switch log.EventType {
@@ -312,7 +373,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				fullName = entry.Name
 			}
 			parsed := ParsedEvent{
-				ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
+				ParsedEventPrefix: NewPrefix(fullName),
 				Type:              log.EventType,
 				Message:           fmt.Sprintf("Starting: %s", e.PipelineExecutionID),
 			}
@@ -333,7 +394,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 
 			parsed := ParsedEventWithOutput{
 				ParsedEvent: ParsedEvent{
-					ParsedEventPrefix: NewPrefix(fullName, p.ColorGenerator),
+					ParsedEventPrefix: NewPrefix(fullName),
 					Type:              log.EventType,
 				},
 				Duration: &duration,
@@ -377,7 +438,6 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					ParsedEventPrefix: ParsedEventPrefix{
 						FullPipelineName: fullName,
 						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
-						cg:               p.ColorGenerator,
 					},
 					Type: log.EventType,
 				},
@@ -409,7 +469,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				stepType := strings.Split(e.StepName, ".")[0]
 				stepName := strings.Split(e.StepName, ".")[1]
 
-				prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
+				prefix := NewPrefix(pipeline.Name)
 				prefix.FullStepName = &fullStepName
 				prefix.StepName = &stepName
 				if e.StepForEach != nil && e.StepForEach.ForEachStep {
@@ -446,7 +506,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				stepName := strings.Split(step.Name, ".")[1]
 				duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(step.Started))
 
-				prefix := NewPrefix(pipeline.Name, p.ColorGenerator)
+				prefix := NewPrefix(pipeline.Name)
 				prefix.FullStepName = &step.Name
 				prefix.StepName = &stepName
 				if e.StepForEach != nil && e.StepForEach.ForEachStep {

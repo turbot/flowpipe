@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/color"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -345,16 +344,12 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 
 		lastIndex := -1
 		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
-		cg, err := color.NewDynamicColorGenerator(0, 16)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
-			return
-		}
-		printer := &printers.StringPrinter{}
-		printableResource := types.NewPrintableParsedEvent(cg)
+
+		printer, err := printers.NewStringPrinter()
+		printableResource := types.NewPrintableParsedEvent()
 
 		// print execution_id / stale info
-		var header []fmt.Stringer
+		var header []types.SanitizedStringer
 		header = append(header, types.ParsedHeader{
 			ExecutionId: executionId,
 			IsStale:     stale,

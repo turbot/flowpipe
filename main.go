@@ -58,7 +58,6 @@ func setupLogger() {
 				Key:   a.Key,
 				Value: slog.AnyValue(sanitized),
 			}
-
 		},
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
