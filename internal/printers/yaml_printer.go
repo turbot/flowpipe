@@ -40,6 +40,9 @@ func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableRes
 
 	// convert to yaml
 	yamlBytes, err := yaml.JSONToYAML(s)
+	if err != nil {
+		return err
+	}
 
 	tokens := lexer.Tokenize(string(yamlBytes))
 	var p printer.Printer
