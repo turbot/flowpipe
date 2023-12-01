@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
@@ -546,8 +548,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
-	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
+	scanner.Buffer(make([]byte, constants.MaxScanSize), constants.MaxScanSize)
 	for scanner.Scan() {
 
 		ba := scanner.Bytes()
@@ -570,6 +571,9 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 	}
 
 	if err := scanner.Err(); err != nil {
+		if err.Error() == bufio.ErrTooLong.Error() {
+			return perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(constants.MaxScanSize))
+		}
 		return err
 	}
 

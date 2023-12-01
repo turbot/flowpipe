@@ -43,7 +43,8 @@ func (r Retry) Middleware(h message.HandlerFunc) message.HandlerFunc {
 			return producedMessages, nil
 		}
 
-		// Short circuit for now
+		// NOTE: currently we are not implementing any retry at this level, the retry is done
+		// in the application layer (Flowpipe) not Watermill
 		msg.Ack()
 		return nil, err
 	}

@@ -6,8 +6,13 @@ import (
 	"log"
 	"os"
 
+	"strconv"
+
 	"github.com/turbot/flowpipe/internal/filepaths"
+
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func LoadEventStoreEntries(executionID string) ([]types.EventLogEntry, error) {
@@ -21,9 +26,8 @@ func LoadEventStoreEntries(executionID string) ([]types.EventLogEntry, error) {
 	defer file.Close()
 
 	// Create a scanner to read the file line by line
-	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
+	scanner.Buffer(make([]byte, constants.MaxScanSize), constants.MaxScanSize)
 
 	// Create a slice to hold the parsed eventLogEntries
 	var eventLogEntries []types.EventLogEntry
@@ -47,6 +51,9 @@ func LoadEventStoreEntries(executionID string) ([]types.EventLogEntry, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
+		if err.Error() == bufio.ErrTooLong.Error() {
+			return nil, perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(constants.MaxScanSize))
+		}
 		return nil, err
 	}
 

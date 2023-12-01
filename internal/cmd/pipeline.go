@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/color"
+	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
@@ -558,7 +560,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	// }
 
 	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
+	scanner.Buffer(make([]byte, fpconstants.MaxScanSize), fpconstants.MaxScanSize)
 	currentIndex := 0
 	for scanner.Scan() {
 		if currentIndex < last {
@@ -593,6 +595,10 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	}
 
 	if err := scanner.Err(); err != nil {
+		if err.Error() == bufio.ErrTooLong.Error() {
+			return false, 0, nil, perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(fpconstants.MaxScanSize))
+		}
+
 		logger.Error("Unable to scan event store file", "error", err)
 		return complete, last, res, nil
 	}

@@ -193,6 +193,26 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 
 		err = ex.LoadProcess(pipelineCmd.Event)
 		if err != nil {
+			if errorModel, ok := err.(perr.ErrorModel); ok {
+				if errorModel.Type == perr.ErrorCodeInternalTokenTooLarge {
+					response := map[string]interface{}{}
+
+					response["errors"] = []modconfig.StepError{
+						{
+							PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+							Pipeline:            pipelineCmd.Name,
+							Error:               errorModel,
+						},
+					}
+
+					c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+					c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+					c.Header("flowpipe-status", "failed")
+
+					c.JSON(500, response)
+					return
+				}
+			}
 			logger.Warn("error loading process", "error", err)
 			continue
 		}

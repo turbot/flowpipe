@@ -1,5 +1,7 @@
 package constants
 
+import "bufio"
+
 const (
 	DefaultServerPort         = 7103
 	DefaultListen             = "localhost"
@@ -7,4 +9,6 @@ const (
 	DefaultWaitRetry          = 60
 	ExecutionModeSynchronous  = "synchronous"
 	ExecutionModeAsynchronous = "asynchronous"
+
+	MaxScanSize = bufio.MaxScanTokenSize * 40
 )

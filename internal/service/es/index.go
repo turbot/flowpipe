@@ -97,6 +97,13 @@ func (es *ESService) Start() error {
 	// Recoverer handles panics from handlers.
 	router.AddMiddleware(middleware.PanicRecovererMiddleware(es.ctx))
 
+	// Do not remove this middleware. This stops Watermill from doing infinite loop if we return an error on the handler (which may be a valid case)
+	retryer := middleware.Retry{
+		MaxRetries: 0,
+	}
+
+	router.AddMiddleware(retryer.Middleware)
+
 	// router.AddMiddleware(middleware.EventMiddleware(es.ctx))
 
 	// cqrs.Facade is facade for Command and Event buses and processors.

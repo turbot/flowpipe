@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -37,9 +38,8 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 		return nil, err
 	}
 	stdoutLines := []string{}
-	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	stdoutScanner := bufio.NewScanner(stdout)
-	stdoutScanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
+	stdoutScanner.Buffer(make([]byte, constants.MaxScanSize), constants.MaxScanSize)
 	go func() {
 		for stdoutScanner.Scan() {
 			t := stdoutScanner.Text()
@@ -54,9 +54,8 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 		return nil, err
 	}
 	stderrLines := []string{}
-	// TODO - by default this has a max line size of 64K, see https://stackoverflow.com/a/16615559
 	stderrScanner := bufio.NewScanner(stderr)
-	stderrScanner.Buffer(make([]byte, bufio.MaxScanTokenSize*40), bufio.MaxScanTokenSize*40)
+	stderrScanner.Buffer(make([]byte, constants.MaxScanSize), constants.MaxScanSize)
 	go func() {
 		for stderrScanner.Scan() {
 			t := stderrScanner.Text()

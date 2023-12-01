@@ -2375,6 +2375,18 @@ func (suite *ModTestSuite) TestContainerStepInvalidMemory() {
 	assert.Contains(pex.Errors[0].Error.Detail, "Minimum memory limit allowed is 6MB")
 }
 
+func (suite *ModTestSuite) TestBufferTokenTooLarge() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, _, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.big_data", 500*time.Millisecond, pipelineInput)
+
+	// It should fail straight away in the loadProcess
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "Event log entry too large. Max size is")
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
