@@ -12,20 +12,12 @@ import (
 
 const redactedStr = "<redacted>"
 
-// TODO where should this be defined
+// TODO determine default fields and a config mechanism
 var Instance = NewSanitizer(SanitizerOptions{
 	ExcludeFields: []string{
-		"pipeline_execution_id",
-		"pipeline_name",
-		//"mod",
-		//"step_type",
-		" description",
-		"value",
-		"foo",
+		"password",
 	},
-	//ExcludePatterns: []string{
-	//	"Starting",
-	//},
+	ExcludePatterns: []string{},
 })
 
 type SanitizerOptions struct {
@@ -157,6 +149,7 @@ func (s *Sanitizer) Sanitize(v any) any {
 	}
 
 	// TODO slice, other types
+	// maybe switch on typoe and use SanitizeStruct?
 	var res = new(map[string]any)
 	err := json.Unmarshal([]byte(sanitizedString), res)
 	if err != nil {
@@ -191,7 +184,7 @@ func (s *Sanitizer) SanitizeKeyValue(k string, v any) any {
 }
 
 func (s *Sanitizer) SanitizeFile(string) {
-
+	// TODO
 }
 
 func getExcludeFromYamlRegex(fieldName string) string {

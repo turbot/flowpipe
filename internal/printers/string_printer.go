@@ -3,10 +3,11 @@ package printers
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/types"
-	"io"
 )
 
 type StringPrinter struct {

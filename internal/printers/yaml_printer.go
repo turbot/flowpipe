@@ -26,9 +26,6 @@ func format(attr color.Attribute) string {
 }
 
 func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer) error {
-	// TODO KAI look at adding yaml tags to pritable resources??
-	// this is a copy of https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
-
 	// marshal to json
 	s, err := json.Marshal(r.GetItems())
 	if err != nil {
@@ -44,6 +41,7 @@ func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableRes
 		return err
 	}
 
+	// this is a copy of https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 	tokens := lexer.Tokenize(string(yamlBytes))
 	var p printer.Printer
 	p.LineNumber = false

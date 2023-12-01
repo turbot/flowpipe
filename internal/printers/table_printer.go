@@ -3,10 +3,10 @@ package printers
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"io"
 	"text/tabwriter"
 
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
