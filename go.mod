@@ -15,14 +15,14 @@ require (
 	github.com/docker/cli v24.0.6+incompatible
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/docker/go-connections v0.4.0
-	github.com/fatih/color v1.15.0
+	github.com/fatih/color v1.16.0
 	github.com/garsue/watermillzap v1.2.0
 	github.com/getkin/kin-openapi v0.117.0
 	github.com/gin-contrib/size v0.0.0-20230212012657-e14a14094dc4
 	github.com/gin-contrib/zap v0.1.0
 	github.com/go-co-op/gocron v1.31.1
 	github.com/go-playground/validator/v10 v10.15.5
-	github.com/goccy/go-yaml v1.11.0
+	github.com/goccy/go-yaml v1.11.2
 	github.com/google/go-cmp v0.6.0
 	github.com/hashicorp/hcl/v2 v2.18.1
 	github.com/hashicorp/raft v1.3.11
@@ -31,14 +31,14 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/radovskyb/watcher v1.0.7
 	github.com/slack-go/slack v0.12.3
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
 	github.com/stretchr/testify v1.8.4
 	github.com/thediveo/enumflag/v2 v2.0.3
 	github.com/turbot/go-kit v0.9.0-rc.3
 	github.com/unrolled/secure v1.13.0
 	github.com/zclconf/go-cty v1.14.1
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
 require (
@@ -173,7 +173,7 @@ require (
 	github.com/lithammer/shortuuid/v3 v3.0.7 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.19 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect

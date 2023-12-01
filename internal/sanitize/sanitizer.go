@@ -15,11 +15,11 @@ const redactedStr = "<redacted>"
 // TODO where should this be defined
 var Instance = NewSanitizer(SanitizerOptions{
 	ExcludeFields: []string{
-		//"pipeline_execution_id",
-		//"pipeline_name",
+		"pipeline_execution_id",
+		"pipeline_name",
 		//"mod",
 		//"step_type",
-		//"step_name",
+		" description",
 		"value",
 		"foo",
 	},

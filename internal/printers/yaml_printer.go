@@ -2,15 +2,17 @@ package printers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/sanitize"
+
 	"io"
 
 	"github.com/fatih/color"
+	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/types"
-	"gopkg.in/yaml.v2"
 )
 
 // Inspired by https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
@@ -27,15 +29,19 @@ func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableRes
 	// TODO KAI look at adding yaml tags to pritable resources??
 	// this is a copy of https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 
-	bytes, err := yaml.Marshal(r.GetItems())
+	// marshal to json
+	s, err := json.Marshal(r.GetItems())
 	if err != nil {
 		return err
 	}
 
 	// sanitize
-	bytes = []byte(sanitize.Instance.SanitizeString(string(bytes)))
+	s = []byte(sanitize.Instance.SanitizeString(string(s)))
 
-	tokens := lexer.Tokenize(string(bytes))
+	// convert to yaml
+	yamlBytes, err := yaml.JSONToYAML(s)
+
+	tokens := lexer.Tokenize(string(yamlBytes))
 	var p printer.Printer
 	p.LineNumber = false
 	// p.LineNumberFormat = func(num int) string {
