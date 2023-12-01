@@ -1,9 +1,6 @@
 package types
 
-import flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-
-type PrintableResource interface {
-	Transform(flowpipeapiclient.FlowpipeAPIResource) (interface{}, error)
-	GetItems() interface{}
+type PrintableResource[T any] interface {
+	GetItems() []T
 	GetTable() (Table, error)
 }

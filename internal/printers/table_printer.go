@@ -6,39 +6,28 @@ import (
 	"io"
 	"text/tabwriter"
 
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 // Inspired by Kubernetes
 // TablePrinter decodes table objects into typed objects before delegating to another printer.
 // Non-table types are simply passed through
-type TablePrinter struct {
-	Delegate ResourcePrinter
+type TablePrinter[T any] struct {
+	Delegate ResourcePrinter[types.TableRow]
 }
 
-func (p TablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer) error {
+func (p TablePrinter[T]) PrintResource(_ context.Context, items types.PrintableResource[T], writer io.Writer) error {
 	table, err := items.GetTable()
 
 	if err != nil {
 		return err
 	}
-	err = p.Delegate.PrintResource(ctx, table, writer)
+	err = p.PrintTable(table, writer)
 	return err
 }
 
-// Inspired by Kubernetes
-type HumanReadableTablePrinter struct {
-}
-
-func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items types.PrintableResource, writer io.Writer) error {
-
-	table, ok := items.(types.Table)
-
-	if !ok {
-		return perr.BadRequestWithMessage("not a table")
-	}
-
+func (p TablePrinter[T]) PrintTable(table types.Table, writer io.Writer) error {
 	// Create a tabwriter
 	w := tabwriter.NewWriter(writer, 1, 1, 4, ' ', tabwriter.TabIndent)
 
@@ -64,8 +53,14 @@ func (p HumanReadableTablePrinter) PrintResource(ctx context.Context, items type
 
 	// Print each struct in the array as a row in the table
 	for _, r := range table.Rows {
+		// format the row
+		str := fmt.Sprintf(tableFormatter, r.Cells...)
+		// sanitize
+		str = sanitize.Instance.SanitizeString(str)
+
+		// write
 		//nolint:forbidigo // this is how the tabwriter works
-		_, err := fmt.Fprintf(w, tableFormatter, r.Cells...)
+		_, err := fmt.Fprint(w, str)
 		if err != nil {
 			return err
 		}

@@ -15,7 +15,6 @@ import (
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/color"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -75,13 +74,9 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter(cmd)
+		printer := printers.GetPrinter[types.FpPipeline](cmd)
 
-		printableResource := types.PrintablePipeline{}
-		printableResource.Items, err = printableResource.Transform(resp)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when transforming")
-		}
+		printableResource := types.NewPrintablePipeline(resp)
 
 		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
@@ -349,18 +344,16 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 
 		lastIndex := -1
 		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
-		cg, err := color.NewDynamicColorGenerator(0, 16)
+
+		printer, err := printers.NewStringPrinter()
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error creating ColorGenerator")
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error instantiating string printer")
 			return
 		}
-		printer := printers.StringPrinter{}
-		printableResource := types.PrintableParsedEvent{}
-		printableResource.Registry = make(map[string]types.ParsedEventRegistryItem)
-		printableResource.ColorGenerator = cg
+		printableResource := types.NewPrintableParsedEvent()
 
 		// print execution_id / stale info
-		var header []any
+		var header []types.SanitizedStringer
 		header = append(header, types.ParsedHeader{
 			ExecutionId: executionId,
 			IsStale:     stale,
@@ -383,7 +376,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 				return
 			}
 
-			printableResource.Items, err = printableResource.Transform(logs)
+			err = printableResource.SetEvents(logs)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error parsing logs")
 				return

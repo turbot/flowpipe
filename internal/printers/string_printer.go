@@ -3,22 +3,36 @@ package printers
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/types"
 	"io"
+
+	"github.com/turbot/flowpipe/internal/color"
+	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/flowpipe/internal/types"
 )
 
 type StringPrinter struct {
+	colorGenerator *color.DynamicColorGenerator
 }
 
-func (p StringPrinter) PrintResource(_ context.Context, r types.PrintableResource, writer io.Writer) error {
-	if items, ok := r.GetItems().([]any); ok {
-		for _, item := range items {
-			if s, ok := item.(fmt.Stringer); ok {
-				_, err := writer.Write([]byte(s.String()))
-				if err != nil {
-					return fmt.Errorf("error printing resource")
-				}
-			}
+func NewStringPrinter() (*StringPrinter, error) {
+	colorGenerator, err := color.NewDynamicColorGenerator(0, 16)
+	if err != nil {
+		return nil, err
+	}
+
+	return &StringPrinter{
+		colorGenerator: colorGenerator,
+	}, nil
+}
+
+func (p StringPrinter) PrintResource(_ context.Context, r types.PrintableResource[types.SanitizedStringer], writer io.Writer) error {
+	items := r.GetItems()
+	for _, item := range items {
+		str := item.String(sanitize.Instance, p.colorGenerator)
+
+		_, err := writer.Write([]byte(str))
+		if err != nil {
+			return fmt.Errorf("error printing resource")
 		}
 	}
 	return nil

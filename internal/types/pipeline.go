@@ -192,37 +192,22 @@ func (c *CmdPipeline) GetWaitRetry() int {
 }
 
 type PrintablePipeline struct {
-	Items any
+	Items []FpPipeline
 }
 
-func (PrintablePipeline) Transform(r flowpipeapiclient.FlowpipeAPIResource) (any, error) {
-	apiResourceType := r.GetResourceType()
-	if apiResourceType != "ListPipelineResponse" {
-
-		return nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid resource type: %s", apiResourceType))
+func NewPrintablePipeline(resp *ListPipelineResponse) *PrintablePipeline {
+	return &PrintablePipeline{
+		Items: resp.Items,
 	}
-
-	lp, ok := r.(*ListPipelineResponse)
-	if !ok {
-		return nil, perr.BadRequestWithMessage("unable to cast to ListPipelineResponse")
-	}
-
-	return lp.Items, nil
 }
 
-func (p PrintablePipeline) GetItems() any {
+func (p PrintablePipeline) GetItems() []FpPipeline {
 	return p.Items
 }
 
 func (p PrintablePipeline) GetTable() (Table, error) {
-	lp, ok := p.Items.([]FpPipeline)
-
-	if !ok {
-		return Table{}, perr.BadRequestWithMessage("Unable to cast to []ListPipelineResponseItem")
-	}
-
 	var tableRows []TableRow
-	for _, item := range lp {
+	for _, item := range p.Items {
 		var description string
 		if item.Description != nil {
 			description = *item.Description
@@ -236,13 +221,10 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return Table{
-		Rows:    tableRows,
-		Columns: p.GetColumns(),
-	}, nil
+	return NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipeline) GetColumns() (columns []TableColumnDefinition) {
+func (PrintablePipeline) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
 			Name:        "MOD",

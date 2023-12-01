@@ -1,11 +1,9 @@
 package types
 
 import (
-	"fmt"
 	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 // TODO kai review omitempty
@@ -63,43 +61,28 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 }
 
 type PrintableTrigger struct {
-	Items interface{}
+	Items []FpTrigger
 }
 
-func (PrintableTrigger) Transform(r flowpipeapiclient.FlowpipeAPIResource) (interface{}, error) {
-
-	apiResourceType := r.GetResourceType()
-	if apiResourceType != "ListTriggerResponse" {
-		return nil, fmt.Errorf("invalid resource type: %s", apiResourceType)
-	}
-
-	lp, ok := r.(*ListTriggerResponse)
-	if !ok {
-		return nil, fmt.Errorf("unable to cast to flowpipeapiclient.ListTriggerResponse")
-	}
-
-	return lp.Items, nil
-}
-
-func (p PrintableTrigger) GetItems() interface{} {
+func (p PrintableTrigger) GetItems() []FpTrigger {
 	return p.Items
 }
 
-func (p PrintableTrigger) GetTable() (Table, error) {
-	lp, ok := p.Items.([]FpTrigger)
-
-	if !ok {
-		return Table{}, perr.BadRequestWithMessage("unable to cast to []FpTrigger")
+func NewPrintableTrigger(resp *ListTriggerResponse) *PrintableTrigger {
+	return &PrintableTrigger{
+		Items: resp.Items,
 	}
+}
 
+func (p PrintableTrigger) GetTable() (Table, error) {
 	var tableRows []TableRow
-	for _, item := range lp {
+	for _, item := range p.Items {
 
 		var description string
 		if item.Description != nil {
 			description = *item.Description
 		}
-		cells := []interface{}{
+		cells := []any{
 			item.Pipeline,
 			item.Type,
 			item.Name,
@@ -108,13 +91,10 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
 
-	return Table{
-		Rows:    tableRows,
-		Columns: p.GetColumns(),
-	}, nil
+	return NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintableTrigger) GetColumns() (columns []TableColumnDefinition) {
+func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
 			Name:        "PIPELINE",
