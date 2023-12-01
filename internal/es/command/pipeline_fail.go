@@ -108,8 +108,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	eventStoreFilePath := filepaths.EventStoreFilePath(cmd.Event.ExecutionID)
 	sanitize.Instance.SanitizeFile(eventStoreFilePath)
 
-	sanitize.Instance.SanitizeFile(eventStoreFilePath)
-
 	pipelineFailedEvent := event.NewPipelineFailedFromPipelineFail(cmd, output, pipelineErrors)
 	return h.EventBus.Publish(ctx, pipelineFailedEvent)
 }

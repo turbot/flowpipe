@@ -4,7 +4,6 @@ type TableRow struct {
 	Cells []any
 }
 
-// TODO kai not sure this should be a printable resource
 type Table struct {
 	Rows    []TableRow
 	Columns []TableColumnDefinition
