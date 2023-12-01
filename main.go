@@ -7,11 +7,8 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"log/slog"
-	"os"
 )
 
 var (
@@ -33,7 +30,6 @@ func main() {
 		}
 	}()
 
-	setupLogger()
 	cache.InMemoryInitialize(nil)
 
 	localcmdconfig.SetAppSpecificConstants()
@@ -47,26 +43,4 @@ func main() {
 
 	// Run the CLI
 	cmd.RunCLI(ctx)
-}
-
-func setupLogger() {
-	handlerOptions := &slog.HandlerOptions{
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			sanitized := sanitize.Instance.SanitizeKeyValue(a.Key, a.Value.Any())
-
-			return slog.Attr{
-				Key:   a.Key,
-				Value: slog.AnyValue(sanitized),
-			}
-		},
-	}
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
-
-	slog.SetDefault(logger)
-
-	slog.Info("Info message")
-	slog.Info("Starting", "var", "Starting")
-	slog.Info("Starting", "password", "FOOOOO")
-	slog.Info("Starting", "password", []string{"FOOOOO", "BAR"})
-	slog.Info("This process is Starting", "var2", []string{"Starting", "BAR"})
 }
