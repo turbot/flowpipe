@@ -2387,6 +2387,95 @@ func (suite *ModTestSuite) TestBufferTokenTooLarge() {
 	assert.Contains(err.Error(), "Event log entry too large. Max size is")
 }
 
+func (suite *ModTestSuite) TestBadHttpNotIgnored() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.bad_http_not_ignored", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.NotNil(pex.Errors)
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal(int(404), pex.Errors[0].Error.Status)
+	// the first step failed
+	assert.Equal(1, len(pex.StepStatus["http.my_step_1"]["0"].Failed))
+	assert.Equal(0, len(pex.StepStatus["http.my_step_1"]["0"].Finished))
+	// the second step won't be started because the error is not ignored so the pipeline will fail
+	// before the second step start
+	assert.Equal(0, len(pex.StepStatus["transform.bad_http"]))
+}
+
+func (suite *ModTestSuite) TestInaccessibleFail() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.inaccessible_fail", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.NotNil(pex.Errors)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "This object does not have an attribute named \"value\"")
+
+	// The error is that value does not exist, this
+	// value = step.http.will_fail.value
+	//
+	// is the source of the failure because step.http.will_fail.value does not exist.
+	//
+	// the step.http.will_fail itself is not "failed" because there's ignore error directive
+	assert.Equal(int(500), pex.Errors[0].Error.Status)
+
+	// the first step has ignore error, so it will technically be "finished"
+	assert.Equal(0, len(pex.StepStatus["http.will_fail"]["0"].Failed))
+	assert.Equal(1, len(pex.StepStatus["http.will_fail"]["0"].Finished))
+
+	// The step status for transform.will_not_run should be nil because we failed in generating the input for the step
+	assert.Nil(pex.StepStatus["transform.will_not_run"])
+}
+
+func (suite *ModTestSuite) TestInaccessibleOk() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.inaccessible_ok", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+	assert.NotNil(pex.Errors)
+	assert.Equal(0, len(pex.Errors))
+
+	// the first step has ignore error, so it will technically be "finished"
+	assert.Equal(0, len(pex.StepStatus["http.will_fail"]["0"].Failed))
+	assert.Equal(1, len(pex.StepStatus["http.will_fail"]["0"].Finished))
+
+	// the second step is actualy OK because it's referring to:
+	//
+	// step.http.will_fail
+	//
+	// which is OK
+	assert.Equal(0, len(pex.StepStatus["transform.will_not_run"]["0"].Failed))
+	assert.Equal(1, len(pex.StepStatus["transform.will_not_run"]["0"].Finished))
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

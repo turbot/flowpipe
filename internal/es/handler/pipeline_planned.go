@@ -90,7 +90,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	if pipelineInaccessible {
 		logger.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
 		// TODO: what is the error on the pipeline?
-		cmd := event.NewPipelineFailFromPipelinePlanned(e, perr.InternalWithMessage("pipeline failed"))
+		cmd := event.NewPipelineFailFromPipelinePlanned(e, nil)
 		if err != nil {
 			return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		}
