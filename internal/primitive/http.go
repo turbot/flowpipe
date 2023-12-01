@@ -304,7 +304,9 @@ func mapResponseHeaders(resp *http.Response) map[string]interface{} {
 	headers := map[string]interface{}{}
 	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
 	// in array form
-	headersAsArrays := map[string]bool{"Set-Cookie": true}
+	headersAsArrays := map[string]bool{
+		"Set-Cookie": true,
+		"Link":       true}
 
 	for k, v := range resp.Header {
 		if headersAsArrays[k] {
