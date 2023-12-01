@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/flowpipe/internal/util"
 )
 
 type customTransport struct {
@@ -37,7 +37,7 @@ func GetApiClient() *flowpipeapiclient.APIClient {
 	// Use the custom transport
 	customTransport := &customTransport{Transport: tr}
 
-	configuration.Servers[0].URL = viper.GetString(constants.ArgHost) + "/api/v0"
+	configuration.Servers[0].URL = util.GetHost() + "/api/v0"
 	configuration.HTTPClient = &http.Client{Transport: customTransport}
 
 	apiClient := flowpipeapiclient.NewAPIClient(configuration)
