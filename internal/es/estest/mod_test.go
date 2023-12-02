@@ -2060,13 +2060,43 @@ func (suite *ModTestSuite) TestCredentialReference() {
 		return
 	}
 
+	// This is not redacted because we're looking for either field name or field value, and neither will hit the redaction list
 	assert.Equal("aws_static_foo", pex.PipelineOutput["val_access_key"])
 
 	// Check if the environment function is created successfully
 	envMap := pex.PipelineOutput["val"].(map[string]interface{})
 
-	assert.Equal("aws_static_foo", envMap["AWS_ACCESS_KEY_ID"])
-	assert.Equal("aws_static_key_key_key", envMap["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("<redacted>", envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal("<redacted>", envMap["AWS_SECRET_ACCESS_KEY"])
+}
+
+func (suite *ModTestSuite) TestCredentialRedaction() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sensitive_one", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// This is not redacted because we're looking for either field name or field value, and neither will hit the redaction list
+	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
+	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
+
+	// not redacted
+	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
+	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
 }
 
 func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
@@ -2089,7 +2119,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 
-	assert.Equal("test.1.2.3", pex.PipelineOutput["slack_token"])
+	assert.Equal("<redacted>", pex.PipelineOutput["slack_token"])
 }
 
 func (suite *ModTestSuite) TestBasicCredential() {

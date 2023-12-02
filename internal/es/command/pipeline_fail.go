@@ -2,11 +2,10 @@ package command
 
 import (
 	"context"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -104,9 +103,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 			pipelineErrors = append(pipelineErrors, stepExecution.Output.Errors...)
 		}
 	}
-
-	eventStoreFilePath := filepaths.EventStoreFilePath(cmd.Event.ExecutionID)
-	sanitize.Instance.SanitizeFile(eventStoreFilePath)
 
 	pipelineFailedEvent := event.NewPipelineFailedFromPipelineFail(cmd, output, pipelineErrors)
 	return h.EventBus.Publish(ctx, pipelineFailedEvent)
