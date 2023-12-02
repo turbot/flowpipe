@@ -146,24 +146,27 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 
 	allCredentials := fpConfig.Credentials
 	relevantCredentials := map[string]modconfig.Credential{}
+	dynamicCredsType := map[string]bool{}
 
-	dynamicCredsFound := false
 	for _, credentialName := range credentialsInContext {
 		if allCredentials[credentialName] != nil {
 			relevantCredentials[credentialName] = allCredentials[credentialName]
 		}
 
-		if !dynamicCredsFound && strings.Contains(credentialName, "<dynamic>") {
-			dynamicCredsFound = true
+		if strings.Contains(credentialName, "<dynamic>") {
+			parts := strings.Split(credentialName, ".")
+			if len(parts) > 0 {
+				dynamicCredsType[parts[0]] = true
+			}
 		}
 	}
 
-	if dynamicCredsFound {
+	if len(dynamicCredsType) > 0 {
 		for _, v := range params {
 			if v.Type() == cty.String {
 				potentialCredName := v.AsString()
 				for _, c := range allCredentials {
-					if c.GetHclResourceImpl().ShortName == potentialCredName {
+					if c.GetHclResourceImpl().ShortName == potentialCredName && dynamicCredsType[c.GetCredentialType()] {
 						relevantCredentials[c.Name()] = c
 						break
 					}
