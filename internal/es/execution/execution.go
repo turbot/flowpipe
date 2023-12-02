@@ -163,7 +163,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 
 	if len(dynamicCredsType) > 0 {
 		for _, v := range params {
-			if v.Type() == cty.String {
+			if v.Type() == cty.String && !v.IsNull() {
 				potentialCredName := v.AsString()
 				for _, c := range allCredentials {
 					if c.GetHclResourceImpl().ShortName == potentialCredName && dynamicCredsType[c.GetCredentialType()] {

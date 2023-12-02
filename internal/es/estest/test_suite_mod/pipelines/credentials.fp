@@ -63,6 +63,11 @@ pipeline "cred_slack" {
         default = "default"
     }
 
+    param "null_param" {
+        type = string
+        optional = true
+    }
+
     step "transform" "token" {
         value   = credential.slack[param.cred].token
     }
