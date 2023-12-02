@@ -2069,19 +2069,42 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	assert.Equal("aws_static_key_key_key", envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
-func (suite *ModTestSuite) TestBasicCredential() {
+func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_basic", 500*time.Millisecond, pipelineInput)
+	os.Setenv("SLACK_TOKEN", "test.1.2.3")
+	// This was crashing because of the optional param
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_slack", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("test.1.2.3", pex.PipelineOutput["slack_token"])
+}
+
+func (suite *ModTestSuite) TestBasicCredential() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_basic", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
@@ -2112,6 +2135,8 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 	assert.NotNil(pex.Errors)
 	assert.Equal(1, len(pex.Errors))
 	assert.Contains(pex.Errors[0].Error.Detail, "InvalidClientTokenId")
+
+	//
 }
 
 func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {

@@ -56,3 +56,24 @@ pipeline "cred_basic" {
         value = step.transform.basic_password.value
     }
 }
+
+pipeline "cred_slack" {
+    param "cred" {
+        type    = string
+        default = "default"
+    }
+
+    param "null_param" {
+        type = string
+        optional = true
+    }
+
+    step "transform" "token" {
+        value   = credential.slack[param.cred].token
+    }
+
+    output "slack_token" {
+        value = step.transform.token.value
+    }
+}
+
