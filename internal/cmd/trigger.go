@@ -1,9 +1,7 @@
-//nolint:forbidigo // CLI console output
 package cmd
 
 import (
 	"context"
-	"fmt"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -124,35 +122,12 @@ func showTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		output := ""
-		if resp.Title != nil {
-			output += "Title:    " + *resp.Title + "\n"
+		printer := printers.GetPrinter[types.FpTrigger](cmd)
+		printableResource := types.NewPrintableTriggerFromSingle(resp)
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
-
-		output += "Name:     " + resp.Name
-		output += "\nPipeline: " + resp.Pipeline
-		output += "\nType:     " + resp.Type
-		if resp.Url != nil {
-			output += "\nUrl:      " + *resp.Url
-		}
-
-		if len(resp.Tags) > 0 {
-			output += "\nTags:   "
-			isFirstTag := true
-			for k, v := range resp.Tags {
-				if isFirstTag {
-					output += "  " + k + " = " + v
-					isFirstTag = false
-				} else {
-					output += ", " + k + " = " + v
-				}
-			}
-		}
-		if resp.Description != nil {
-			output += "\n\nDescription:\n" + *resp.Description
-		}
-		//nolint:forbidigo // CLI console output
-		fmt.Println(output)
 	}
 }
 
