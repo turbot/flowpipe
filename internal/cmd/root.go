@@ -44,7 +44,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		// Define the CLI flag parameters for wrapped enum flag.
 		AddPersistentVarFlag(enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
 			constants.ArgOutput,
-			"Output format; one of: table, yaml, json")
+			"Output format; one of: pretty, plain, yaml, json")
 
 	// disable auto completion generation, since we don't want to support
 	// powershell yet - and there's no way to disable powershell in the default generator

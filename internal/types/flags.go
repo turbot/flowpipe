@@ -8,7 +8,8 @@ type OutputMode enumflag.Flag
 
 // ② Define the enumeration values for FooMode.
 const (
-	OutputModeTable OutputMode = iota
+	OutputModePretty OutputMode = iota
+	OutputModePlain
 	OutputModeYaml
 	OutputModeJson
 )
@@ -16,7 +17,8 @@ const (
 // ③ Map enumeration values to their textual representations (value
 // identifiers).
 var OutputModeIds = map[OutputMode][]string{
-	OutputModeTable: {"table"},
-	OutputModeYaml:  {"yaml"},
-	OutputModeJson:  {"json"},
+	OutputModePretty: {"pretty"},
+	OutputModePlain:  {"plain"},
+	OutputModeYaml:   {"yaml"},
+	OutputModeJson:   {"json"},
 }

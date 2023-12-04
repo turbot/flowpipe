@@ -66,7 +66,10 @@ func (p TablePrinter[T]) PrintTable(table types.Table, writer io.Writer) error {
 	}
 
 	// Flush and display the table
-	w.Flush()
+	err = w.Flush()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -3,6 +3,7 @@ package printers
 import (
 	"context"
 	"io"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/turbot/flowpipe/internal/types"
@@ -18,15 +19,25 @@ type ResourcePrinter[T any] interface {
 }
 
 func GetPrinter[T any](cmd *cobra.Command) ResourcePrinter[T] {
-
 	format := cmd.Flags().Lookup(constants.ArgOutput).Value.String()
 
+	// TODO: devise a more robust approach to determine a "list" command
+	isListCmd := strings.Contains(cmd.Use, "list")
+
 	switch format {
-	case "table":
-		return TablePrinter[T]{}
-	case "json":
+	case constants.OutputFormatPretty:
+		if isListCmd {
+			return TablePrinter[T]{}
+		}
+		return StringPrinter[T]{}
+	case constants.OutputFormatPlain:
+		if isListCmd {
+			return TablePrinter[T]{}
+		}
+		return StringPrinter[T]{}
+	case constants.OutputFormatJSON:
 		return JsonPrinter[T]{}
-	case "yaml":
+	case constants.OutputFormatYAML:
 		return YamlPrinter[T]{}
 	}
 	return nil

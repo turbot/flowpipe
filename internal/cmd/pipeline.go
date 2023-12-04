@@ -302,7 +302,7 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
 
-	//extract the pipeline args from the flags
+	// extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
 
 	input := types.CmdPipeline{
@@ -346,7 +346,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		lastIndex := -1
 		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
 
-		printer, err := printers.NewStringPrinter()
+		printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error instantiating string printer")
 			return
