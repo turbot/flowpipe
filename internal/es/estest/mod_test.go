@@ -43,7 +43,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
-	err = os.Setenv("P_VAR_var_from_env", "from env")
+	err = os.Setenv("FP_VAR_var_from_env", "from env")
 	if err != nil {
 		panic(err)
 	}
