@@ -141,9 +141,9 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 		}
 
 		cells := []any{
-			item.Pipeline,
-			item.Type,
 			item.Name,
+			item.Type,
+			item.Pipeline,
 			description,
 			url,
 			schedule,
@@ -157,9 +157,9 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
-			Name:        "PIPELINE",
+			Name:        "NAME",
 			Type:        "string",
-			Description: "The name of the pipeline",
+			Description: "The name of the trigger",
 		},
 		{
 			Name:        "TYPE",
@@ -167,9 +167,9 @@ func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 			Description: "The type of the trigger",
 		},
 		{
-			Name:        "NAME",
+			Name:        "PIPELINE",
 			Type:        "string",
-			Description: "The name of the trigger",
+			Description: "The name of the pipeline",
 		},
 		{
 			Name:        "DESCRIPTION",
