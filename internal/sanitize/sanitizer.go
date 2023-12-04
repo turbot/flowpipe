@@ -47,6 +47,12 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"uptimerobot_api_key",
 		"urlscan_api_key",
 		"clickup_token",
+		"pagerduty_token",
+		"discord_token",
+		"ip2location_api_key",
+		"ipstack_access_key",
+		"teams_access_token",
+		"pipes_token",
 	},
 	ExcludePatterns: []string{},
 })
