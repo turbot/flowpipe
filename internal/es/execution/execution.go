@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"runtime"
 	"strconv"
@@ -21,7 +22,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -526,8 +526,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		}()
 	}
 
-	logger := fplog.Logger(ex.Context)
-
 	if e.ExecutionID == "" {
 		return perr.BadRequestWithMessage("event execution ID is empty")
 	}
@@ -545,7 +543,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	f, err := os.Open(eventStoreFilePath)
 	if err != nil {
-		logger.Error("Failed to open log file", "execution", ex.ID, "error", err)
+		slog.Error("Failed to open log file", "execution", ex.ID, "error", err)
 		return err
 	}
 	defer f.Close()
@@ -561,13 +559,13 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
 			stackTrace := getStackTrace()
-			logger.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba), "stackTrace", stackTrace)
+			slog.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba), "stackTrace", stackTrace)
 			return err
 		}
 
 		err = ex.AppendEventLogEntry(ele)
 		if err != nil {
-			logger.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", string(ba))
+			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", string(ba))
 			return err
 		}
 
@@ -640,7 +638,6 @@ var (
 )
 
 func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
-	logger := fplog.Logger(ex.Context)
 
 	switch logEntry.EventType {
 
@@ -648,7 +645,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineQueued
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
 			return err
 		}
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
@@ -667,7 +664,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineStarted
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -678,7 +675,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineStarted
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -689,7 +686,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelinePlan
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall command.pipeline_plan event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall command.pipeline_plan event", "execution", ex.ID, "error", err)
 			return err
 		}
 
@@ -697,7 +694,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelinePlanned
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
 			return err
 		}
 
@@ -714,7 +711,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.StepStart
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
 			return err
 		}
 		// Set the overall step status
@@ -729,7 +726,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 
 		stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
 		if err != nil {
-			logger.Error("Failed to get step definition - 1", "execution", ex.ID, "stepExecutionID", et.StepExecutionID, "error", err)
+			slog.Error("Failed to get step definition - 1", "execution", ex.ID, "stepExecutionID", et.StepExecutionID, "error", err)
 			return err
 		}
 		pe.StepExecutions[et.StepExecutionID].Input = et.StepInput
@@ -755,7 +752,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.StepQueued
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.step_queued event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.step_queued event", "execution", ex.ID, "error", err)
 			return err
 		}
 
@@ -763,7 +760,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.StepStart
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -777,7 +774,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.StepPipelineStarted
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -786,7 +783,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.StepExecutions[et.StepExecutionID].Status = "started"
 		stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
 		if err != nil {
-			logger.Error("Failed to get step definition - 2", "stepExecutionID", et.StepExecutionID, "error", err)
+			slog.Error("Failed to get step definition - 2", "stepExecutionID", et.StepExecutionID, "error", err)
 			return err
 		}
 
@@ -798,13 +795,13 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.StepFinished
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
 		if err != nil {
-			logger.Error("Failed to get step definition", "stepExecutionID", et.StepExecutionID, "error", err)
+			slog.Error("Failed to get step definition", "stepExecutionID", et.StepExecutionID, "error", err)
 			return err
 		}
 
@@ -832,7 +829,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 
 		if et.Output == nil {
 			// return fperr.BadRequestWithMessage("Step execution has a nil output " + et.StepExecutionID + " in pipeline execution " + pe.ID)
-			logger.Warn("Step execution has a nil output", "stepExecutionID", et.StepExecutionID, "pipelineExecutionID", pe.ID)
+			slog.Warn("Step execution has a nil output", "stepExecutionID", et.StepExecutionID, "pipelineExecutionID", pe.ID)
 		} else {
 			pe.StepExecutions[et.StepExecutionID].Status = et.Output.Status
 			pe.StepExecutions[et.StepExecutionID].Output = et.Output
@@ -872,7 +869,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.StepForEachPlanned
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -912,7 +909,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineCanceled
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -923,7 +920,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelinePaused
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -933,7 +930,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineFinished
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -943,7 +940,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineFinished
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -955,7 +952,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		var et event.PipelineFailed
 		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
-			logger.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
+			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]

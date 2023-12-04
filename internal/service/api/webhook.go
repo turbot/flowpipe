@@ -2,6 +2,7 @@ package api
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
@@ -29,8 +29,6 @@ func (api *APIService) WebhookRegisterAPI(router *gin.RouterGroup) {
 }
 
 func (api *APIService) runWebhook(c *gin.Context) {
-	logger := fplog.Logger(api.ctx)
-
 	webhookUri := types.WebhookRequestUri{}
 	if err := c.ShouldBindUri(&webhookUri); err != nil {
 		common.AbortWithError(c, err)
@@ -79,7 +77,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	modFullName := t.GetMetadata().ModFullName
 
 	if modFullName != mod.FullName {
-		logger.Error("Trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.FullName)
+		slog.Error("Trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.FullName)
 		return
 	}
 
@@ -171,8 +169,6 @@ func (api *APIService) runWebhook(c *gin.Context) {
 }
 
 func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue, waitRetry int) {
-	logger := fplog.Logger(api.ctx)
-
 	ex, err := execution.NewExecution(api.ctx)
 	if err != nil {
 		common.AbortWithError(c, perr.InternalWithMessage("error creating execution object"))
@@ -213,13 +209,13 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 					return
 				}
 			}
-			logger.Warn("error loading process", "error", err)
+			slog.Warn("error loading process", "error", err)
 			continue
 		}
 
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 		if pex == nil {
-			logger.Warn("Pipeline execution not found", "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+			slog.Warn("Pipeline execution not found", "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
 			continue
 		}
 

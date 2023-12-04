@@ -3,13 +3,13 @@ package scheduler
 import (
 	"context"
 	"crypto/rand"
+	"log/slog"
 	"math/big"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/go-co-op/gocron"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -53,7 +53,6 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		return nil
 	}
 
-	logger := fplog.Logger(s.ctx)
 	validJobsNames := []string{}
 
 	for _, t := range s.Triggers {
@@ -99,7 +98,7 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		jobTags := job.Tags()
 
 		if jobTags[1] != "schedule:"+scheduleString {
-			logger.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
+			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
 			s.cronScheduler.RemoveByReference(job)
 			err := s.scheduleTrigger(t)
 			if err != nil {
@@ -109,7 +108,7 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		}
 
 		if jobTags[2] != "pipeline:"+t.Pipeline.AsValueMap()[schema.LabelName].AsString() {
-			logger.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
+			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
 			s.cronScheduler.RemoveByReference(job)
 			err := s.scheduleTrigger(t)
 			if err != nil {
@@ -128,7 +127,7 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		}
 
 		if !slices.Contains[[]string, string](validJobsNames, jobTags[0]) {
-			logger.Info("Removing trigger", "name", jobTags[0])
+			slog.Info("Removing trigger", "name", jobTags[0])
 			s.cronScheduler.RemoveByReference(job)
 		}
 	}
@@ -137,8 +136,6 @@ func (s *SchedulerService) RescheduleTriggers() error {
 }
 
 func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
-	logger := fplog.Logger(s.ctx)
-
 	pipelineValueMap := t.Pipeline.AsValueMap()
 	if pipelineValueMap == nil {
 		return perr.BadRequestWithMessage("pipeline not found for trigger " + t.Name())
@@ -158,7 +155,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 			"pipeline:" + pipelineName,
 		}
 
-		logger.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
+		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
 
 		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
 		_, err := s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
@@ -173,7 +170,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 			"pipeline:" + pipelineName,
 		}
 
-		logger.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
+		slog.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
 
 		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
 

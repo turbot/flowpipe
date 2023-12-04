@@ -6,12 +6,12 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"log/slog"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -26,11 +26,9 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
-	logger := fplog.Logger(ctx)
-
 	evt, ok := c.(*event.PipelinePlan)
 	if !ok {
-		logger.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
+		slog.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
 
@@ -42,7 +40,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(evt.Event))
 	if err != nil {
-		logger.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+		slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
 		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
 	}
 
@@ -57,7 +55,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	pipelineDefn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
 	if err != nil {
-		logger.Error("Error loading pipeline definition", "error", err)
+		slog.Error("Error loading pipeline definition", "error", err)
 		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
 	}
 
@@ -69,7 +67,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
-		logger.Error("Error building eval context for step", "error", err)
+		slog.Error("Error building eval context for step", "error", err)
 		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, "")
 	}
 
@@ -174,12 +172,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				if len(diags) > 0 {
 					err := error_helpers.HclDiagsToError("diags", diags)
 
-					logger.Error("Error evaluating if condition", "error", err)
+					slog.Error("Error evaluating if condition", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
 				}
 
 				if val.False() {
-					logger.Debug("if condition not met for step", "step", stepDefn.GetName())
+					slog.Debug("if condition not met for step", "step", stepDefn.GetName())
 					calculateInput = false
 					nextStepAction = modconfig.NextStepActionSkip
 				} else {
@@ -193,7 +191,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				// There's no for_each
 				evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
 				if err != nil {
-					logger.Error("Error adding credentials to eval context", "error", err)
+					slog.Error("Error adding credentials to eval context", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
 				}
 
@@ -227,8 +225,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 func (h PipelinePlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, cmd *event.PipelinePlan, err error, pipelineName, stepName string) error {
 	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pipelineName, stepName)), plannerMutex)
 	if publishErr != nil {
-		logger := fplog.Logger(ctx)
-		logger.Error("pipeline_plan: Error publishing pipeline failed event", "error", publishErr)
+		slog.Error("pipeline_plan: Error publishing pipeline failed event", "error", publishErr)
 	}
 	return nil
 }

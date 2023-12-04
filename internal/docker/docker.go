@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -13,25 +14,22 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 var GlobalDockerClient *DockerClient
 
 func Initialize(ctx context.Context) error {
-	logger := fplog.Logger(ctx)
-
-	logger.Info("Initializing Docker client")
+	slog.Info("Initializing Docker client")
 	dc, err := New(WithContext(ctx), WithPingTest())
 	if err != nil {
-		logger.Error("Failed to initialize Docker client", "error", err)
+		slog.Error("Failed to initialize Docker client", "error", err)
 		return err
 	}
 
 	GlobalDockerClient = dc
 
-	logger.Info("Docker client initialized")
+	slog.Info("Docker client initialized")
 	return nil
 }
 
@@ -154,9 +152,6 @@ func (dc *DockerClient) CleanupArtifacts() error {
 
 // deleteContainersWithLabel deletes all containers with the specified label.
 func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
-
-	logger := fplog.Logger(dc.ctx)
-
 	containers, err := dc.CLI.ContainerList(dc.ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
@@ -166,9 +161,9 @@ func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 		if container.Labels[labelKey] != "" {
 			err = dc.CLI.ContainerRemove(dc.ctx, container.ID, types.ContainerRemoveOptions{Force: true})
 			if err != nil {
-				logger.Error("failed to remove container", "containerID", container.ID, "error", err)
+				slog.Error("failed to remove container", "containerID", container.ID, "error", err)
 			} else {
-				logger.Info("container deleted", "containerID", container.ID)
+				slog.Info("container deleted", "containerID", container.ID)
 			}
 		}
 	}
@@ -178,11 +173,10 @@ func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 
 // deleteImagesWithLabel deletes all images with the specified label.
 func (dc *DockerClient) deleteImagesWithLabelKey(labelKey string) error {
-	logger := fplog.Logger(dc.ctx)
 
 	images, err := dc.CLI.ImageList(dc.ctx, types.ImageListOptions{})
 	if err != nil {
-		logger.Error("failed to list images", "error", err)
+		slog.Error("failed to list images", "error", err)
 		return perr.InternalWithMessage("failed to list images: " + err.Error())
 	}
 
@@ -199,9 +193,9 @@ func (dc *DockerClient) deleteImagesWithLabelKey(labelKey string) error {
 			}
 			_, err = dc.CLI.ImageRemove(dc.ctx, image.ID, imgRemoveOpts)
 			if err != nil {
-				logger.Error("failed to remove image", "imageID", image.ID, "error", err)
+				slog.Error("failed to remove image", "imageID", image.ID, "error", err)
 			} else {
-				logger.Info("image deleted", "imageID", image.ID)
+				slog.Info("image deleted", "imageID", image.ID)
 			}
 		}
 	}

@@ -6,12 +6,12 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"log/slog"
 )
 
 type StepPipelineFinishHandler CommandHandler
@@ -31,32 +31,30 @@ func (h StepPipelineFinishHandler) NewCommand() interface{} {
 // This command is NOT to to be confused with the handling of the "Pipeline Step" operation. That flow:
 // Pipeline Step Start command -> Pipeline Step Finish *event*
 func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) error {
-
-	logger := fplog.Logger(ctx)
 	cmd, ok := c.(*event.StepPipelineFinish)
 	if !ok {
-		logger.Error("invalid command type", "expected", "*event.PipelineStepFinish", "actual", c)
+		slog.Error("invalid command type", "expected", "*event.PipelineStepFinish", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineStepFinish")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
-		logger.Error("Error loading pipeline execution", "error", err)
+		slog.Error("Error loading pipeline execution", "error", err)
 
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
-			logger.Error("Error publishing event", "error", err2)
+			slog.Error("Error publishing event", "error", err2)
 		}
 		return nil
 	}
 
 	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		logger.Error("Error loading pipeline definition", "error", err)
+		slog.Error("Error loading pipeline definition", "error", err)
 
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
-			logger.Error("Error publishing event", "error", err2)
+			slog.Error("Error publishing event", "error", err2)
 		}
 		return nil
 	}
@@ -67,11 +65,11 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
-		logger.Error("Error building eval context", "error", err)
+		slog.Error("Error building eval context", "error", err)
 
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
-			logger.Error("Error publishing event", "error", err2)
+			slog.Error("Error publishing event", "error", err2)
 		}
 		return nil
 	}
@@ -95,14 +93,14 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 && diags.HasErrors() {
-				logger.Error("Error calculating output on step start", "error", diags)
+				slog.Error("Error calculating output on step start", "error", diags)
 				stepOutput[outputConfig.Name] = "Error calculating output " + diags.Error()
 				continue
 			}
 
 			goVal, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {
-				logger.Error("Error converting cty value to Go value for output calculation", "error", err)
+				slog.Error("Error converting cty value to Go value for output calculation", "error", err)
 				stepOutput[outputConfig.Name] = "Error calculating output " + err.Error()
 				continue
 			}
@@ -124,10 +122,10 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), cmd.Output, stepOutput, evalContext)
 
 	if err != nil {
-		logger.Error("Error adding step output as results", "error", err)
+		slog.Error("Error adding step output as results", "error", err)
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
-			logger.Error("Error publishing event", "error", err2)
+			slog.Error("Error publishing event", "error", err2)
 		}
 		return nil
 	}
@@ -135,16 +133,16 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
 	errorFromThrow := false
 	if err != nil {
-		logger.Error("Error calculating throw", "error", err)
+		slog.Error("Error calculating throw", "error", err)
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
-			logger.Error("Error publishing event", "error", err2)
+			slog.Error("Error publishing event", "error", err2)
 		}
 		return nil
 	}
 
 	if stepError != nil {
-		logger.Debug("Step error calculated from throw", "error", stepError)
+		slog.Debug("Step error calculated from throw", "error", stepError)
 		errorFromThrow = true
 		cmd.Output.Status = "failed"
 		cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
@@ -164,10 +162,10 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 			stepRetry, diags = calculateRetry(ctx, cmd.StepRetry, stepDefn, endStepEvalContext)
 
 			if len(diags) > 0 {
-				logger.Error("Error calculating retry", "diags", diags)
+				slog.Error("Error calculating retry", "diags", diags)
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags)))
 				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
+					slog.Error("Error publishing event", "error", err2)
 				}
 				return nil
 			}
@@ -185,10 +183,10 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 		e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
 		if err != nil {
-			logger.Error("Error creating Pipeline Step Finished event", "error", err)
+			slog.Error("Error creating Pipeline Step Finished event", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 		}
 		e.StepRetry = stepRetry
@@ -198,7 +196,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 		}
 		return nil
@@ -212,7 +210,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		if err != nil {
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 		}
 	}

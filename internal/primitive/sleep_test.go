@@ -7,14 +7,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 func TestSleepOK(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	q := Sleep{}
@@ -31,7 +29,6 @@ func TestSleepOK(t *testing.T) {
 
 func TestSleepInvalidDuration(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	q := Sleep{}

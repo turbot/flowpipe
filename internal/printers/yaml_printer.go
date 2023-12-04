@@ -26,7 +26,7 @@ func format(attr color.Attribute) string {
 }
 
 func (px YamlPrinter[T]) PrintResource(ctx context.Context, r types.PrintableResource[T], writer io.Writer) error {
-	// marshal to json
+	// marshal to json to avoid having to put yaml tags on all structs
 	s, err := json.Marshal(r.GetItems())
 	if err != nil {
 		return err

@@ -8,7 +8,7 @@ replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
-	github.com/ThreeDotsLabs/watermill v1.2.0
+	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/didip/tollbooth/v7 v7.0.1
@@ -42,6 +42,8 @@ require (
 )
 
 require (
+	github.com/FabienMht/ginslog v0.0.1
+	github.com/denisss025/slog-watermill v0.1.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000

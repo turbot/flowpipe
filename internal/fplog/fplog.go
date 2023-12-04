@@ -34,10 +34,10 @@ type FlowpipeLogger struct {
 	Sugar *zap.SugaredLogger
 }
 
-// LoggerOption defines a type of function to configures the Logger.
+// LoggerOption defines a type of function to configures the slog.
 type LoggerOption func(*FlowpipeLogger) error
 
-// NewLogger creates a new Logger.
+// NewLogger creates a new slog.
 func NewLogger(ctx context.Context, opts ...LoggerOption) (*FlowpipeLogger, error) {
 	// Defaults
 	c := &FlowpipeLogger{

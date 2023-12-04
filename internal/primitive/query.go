@@ -4,11 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"regexp"
 	"time"
 
 	_ "github.com/lib/pq"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -115,7 +115,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 				var col interface{}
 				err := json.Unmarshal(ba, &col)
 				if err != nil {
-					fplog.Logger(ctx).Error("error unmarshalling jsonb column %s: %v", k, err)
+					slog.Error("error unmarshalling jsonb", "column", k, "error", err)
 					return nil, err
 				}
 				row[k] = col

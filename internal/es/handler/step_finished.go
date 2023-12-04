@@ -2,10 +2,10 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -27,15 +27,13 @@ func (StepFinished) NewEvent() interface{} {
 func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 	e, ok := ei.(*event.StepFinished)
 	if !ok {
-		fplog.Logger(ctx).Error("invalid event type", "expected", "*event.StepFinished", "actual", ei)
+		slog.Error("invalid event type", "expected", "*event.StepFinished", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepFinished")
 	}
 
-	logger := fplog.Logger(ctx)
-
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
-		logger.Error("error creating pipeline_plan command", "error", err)
+		slog.Error("error creating pipeline_plan command", "error", err)
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
 	}
 
@@ -58,7 +56,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	stepDefn := pipelineDefn.GetStep(stepName)
 	if stepDefn == nil {
-		logger.Error("step not found", "step_name", stepName)
+		slog.Error("step not found", "step_name", stepName)
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, perr.BadRequestWithMessage("step not found"))))
 	}
 
@@ -70,7 +68,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		// this means we have an error BUT the retry has been exhausted, run the planner
 		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 		if err != nil {
-			logger.Error("error creating pipeline_plan command", "error", err)
+			slog.Error("error creating pipeline_plan command", "error", err)
 			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
 		}
 		return h.CommandBus.Send(ctx, cmd)
@@ -92,7 +90,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 	if err != nil {
-		logger.Error("error creating pipeline_plan command", "error", err)
+		slog.Error("error creating pipeline_plan command", "error", err)
 		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(e, err)))
 	}
 

@@ -5,13 +5,13 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/json"
+	"log/slog"
 )
 
 type PipelinePlanned EventHandler
@@ -25,11 +25,9 @@ func (PipelinePlanned) NewEvent() interface{} {
 }
 
 func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
-
-	logger := fplog.Logger(ctx)
 	e, ok := ei.(*event.PipelinePlanned)
 	if !ok {
-		logger.Error("invalid event type", "expected", "*event.PipelinePlanned", "actual", ei)
+		slog.Error("invalid event type", "expected", "*event.PipelinePlanned", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
@@ -88,7 +86,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if pipelineInaccessible {
-		logger.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
+		slog.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
 		// TODO: what is the error on the pipeline?
 		cmd := event.NewPipelineFailFromPipelinePlanned(e, nil)
 		if err != nil {
@@ -135,8 +133,6 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePlanned, forEachOutput modconfig.Output, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, stepLoop *modconfig.StepLoop) {
 
-	logger := fplog.Logger(ctx)
-
 	// If a step does not have a for_each, we still build a for_each control but with key of "0"
 	forEachControl := &modconfig.StepForEach{
 		ForEachStep: false,
@@ -151,7 +147,7 @@ func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.P
 	if err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		if err != nil {
-			logger.Error("Error publishing event", "error", err)
+			slog.Error("Error publishing event", "error", err)
 		}
 
 		return
@@ -160,7 +156,7 @@ func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.P
 	if err := commandBus.Send(ctx, cmd); err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
 		if err != nil {
-			logger.Error("Error publishing event", "error", err)
+			slog.Error("Error publishing event", "error", err)
 		}
 		return
 	}

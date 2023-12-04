@@ -2,10 +2,10 @@ package middleware
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/unrolled/secure"
 )
 
@@ -42,7 +42,7 @@ func SecurityMiddleware(ctx context.Context) gin.HandlerFunc {
 		PermissionsPolicy: "geolocation 'self'",
 	}
 
-	fplog.Logger(ctx).Debug("Security middleware options", "IsDevelopment", options.IsDevelopment, "SSLHost", options.SSLHost, "STSSeconds", options.STSSeconds, "STSIncludeSubdomains", options.STSIncludeSubdomains, "STSPreload", options.STSPreload, "CustomFrameOptionsValue", options.CustomFrameOptionsValue, "ContentTypeNosniff", options.ContentTypeNosniff, "ReferrerPolicy", options.ReferrerPolicy, "PermissionsPolicy", options.PermissionsPolicy)
+	slog.Debug("Security middleware options", "IsDevelopment", options.IsDevelopment, "SSLHost", options.SSLHost, "STSSeconds", options.STSSeconds, "STSIncludeSubdomains", options.STSIncludeSubdomains, "STSPreload", options.STSPreload, "CustomFrameOptionsValue", options.CustomFrameOptionsValue, "ContentTypeNosniff", options.ContentTypeNosniff, "ReferrerPolicy", options.ReferrerPolicy, "PermissionsPolicy", options.PermissionsPolicy)
 
 	secureMiddleware := secure.New(options)
 

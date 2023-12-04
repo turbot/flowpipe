@@ -5,7 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
+	"log/slog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -26,11 +26,10 @@ func (PipelineQueued) NewEvent() interface{} {
 // ? so the PipelineQueue *command* is the one that puts it in a some sort of a queue?
 func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 
-	logger := fplog.Logger(ctx)
 	e, ok := ei.(*event.PipelineQueued)
 
 	if !ok {
-		logger.Error("invalid event type", "expected", "*event.PipelineQueued", "actual", ei)
+		slog.Error("invalid event type", "expected", "*event.PipelineQueued", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineQueued")
 	}
 

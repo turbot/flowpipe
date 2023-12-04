@@ -4,13 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
-	"runtime/debug"
-
-	"github.com/turbot/pipe-fittings/perr"
-
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
+	"log"
 )
 
 type PipelineFailed struct {
@@ -75,12 +71,11 @@ type PipelineFailedOption func(*PipelineFailed) error
 // error as an option (because we're already handling errors).
 func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *PipelineFailed {
 
-	logger := fplog.Logger(ctx)
-
-	if logger.TraceLevel != "" {
-		stackTrace := string(debug.Stack())
-		logger.Info("New pipeline failed event created", "stack_trace", stackTrace)
-	}
+	// TODO KAI LOGS DO WE NEED THIS
+	//if slog.TraceLevel != "" {
+	//	stackTrace := string(debug.Stack())
+	//	slog.Info("New pipeline failed event created", "stack_trace", stackTrace)
+	//}
 
 	// Defaults
 	e := &PipelineFailed{}

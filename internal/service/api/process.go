@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -12,7 +13,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
@@ -54,7 +54,7 @@ func (api *APIService) listProcess(c *gin.Context) {
 		return
 	}
 
-	fplog.Logger(api.ctx).Info("received list process request", "next_token", nextToken, "limit", limit)
+	slog.Info("received list process request", "next_token", nextToken, "limit", limit)
 
 	// Read the log directory to list out all the process that have been executed
 	eventStoreDir := filepaths.EventStoreDir()
@@ -388,7 +388,7 @@ func (api *APIService) listProcessSps(c *gin.Context) {
 
 	jsonBytes, err := os.ReadFile(snapshotPath)
 	if err != nil {
-		fplog.Logger(api.ctx).Error("error reading sps file", "error", err, "file_path", snapshotPath)
+		slog.Error("error reading sps file", "error", err, "file_path", snapshotPath)
 		common.AbortWithError(c, perr.InternalWithMessage("internal error"))
 		return
 	}

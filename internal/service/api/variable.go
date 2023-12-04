@@ -1,11 +1,11 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 	"sort"
 
 	"github.com/gin-gonic/gin"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
@@ -34,7 +34,6 @@ func (api *APIService) VariableRegisterAPI(router *gin.RouterGroup) {
 // @Failure 500 {object} perr.ErrorModel
 // @Router /variable [get]
 func (api *APIService) listVariables(c *gin.Context) {
-	logger := fplog.Logger(api.ctx)
 	// Get paging parameters
 	nextToken, limit, err := common.ListPagingRequest(c)
 	if err != nil {
@@ -44,7 +43,7 @@ func (api *APIService) listVariables(c *gin.Context) {
 
 	rootMod := api.EsService.RootMod
 
-	logger.Info("received list variable request", "next_token", nextToken, "limit", limit)
+	slog.Info("received list variable request", "next_token", nextToken, "limit", limit)
 
 	variables := []types.Variable{}
 	for _, v := range rootMod.ResourceMaps.Variables {

@@ -5,10 +5,10 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/perr"
+	"log/slog"
 )
 
 type PipelineFinishHandler CommandHandler
@@ -22,11 +22,9 @@ func (h PipelineFinishHandler) NewCommand() interface{} {
 }
 
 func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error {
-	logger := fplog.Logger(ctx)
-
 	cmd, ok := c.(*event.PipelineFinish)
 	if !ok {
-		logger.Error("invalid command type", "expected", "*event.PipelineFinish", "actual", c)
+		slog.Error("invalid command type", "expected", "*event.PipelineFinish", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
 	}
 
@@ -49,7 +47,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		// If all dependencies met, we then calculate the value of this output
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 		if err != nil {
-			logger.Error("Error building eval context while calculating output in pipeline_finish", "error", err)
+			slog.Error("Error building eval context while calculating output in pipeline_finish", "error", err)
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
 		}
 
@@ -69,13 +67,13 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("output", diags)
-				logger.Error("Error calculating output on pipeline finish", "error", err)
+				slog.Error("Error calculating output on pipeline finish", "error", err)
 				outputBlock[output.Name] = "Unable to calculate output " + output.Name + ": " + err.Error()
 				continue
 			}
 			val, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {
-				logger.Error("Error converting cty value to Go value", "error", err)
+				slog.Error("Error converting cty value to Go value", "error", err)
 				return err
 			}
 			outputBlock[output.Name] = val

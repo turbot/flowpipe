@@ -5,9 +5,9 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"log/slog"
 )
 
 type StepPipelineStarted EventHandler
@@ -24,11 +24,9 @@ func (StepPipelineStarted) NewEvent() interface{} {
 // * This handler only handle with a single event type: pipeline step started (if we want to start a new child pipeline)
 // *
 func (h StepPipelineStarted) Handle(ctx context.Context, ei interface{}) error {
-	logger := fplog.Logger(ctx)
-
 	e, ok := ei.(*event.StepPipelineStarted)
 	if !ok {
-		logger.Error("invalid event type", "expected", "*event.StepPipelineStarted", "actual", ei)
+		slog.Error("invalid event type", "expected", "*event.StepPipelineStarted", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepPipelineStarted")
 	}
 

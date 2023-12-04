@@ -2,12 +2,12 @@ package primitive
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -15,22 +15,18 @@ import (
 
 func initializeCocker() {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
-	logger := fplog.Logger(ctx)
-
 	// Start MailHog server as a separate process
-	logger.Debug("Initializing Docker")
+	slog.Debug("Initializing Docker")
 
 	err := docker.Initialize(ctx)
 	if err != nil {
-		logger.Error("Failed to start MailHog: ", err.Error())
+		slog.Error("Failed to start MailHog: ", err.Error())
 	}
-	logger.Debug("Docker initialized")
+	slog.Debug("Docker initialized")
 }
 
 func TestSimpleContainerStep(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -77,7 +73,6 @@ func TestSimpleContainerStep(t *testing.T) {
 
 func TestContainerStepMissingImage(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -99,7 +94,6 @@ func TestContainerStepMissingImage(t *testing.T) {
 
 func TestContainerStepInvalidImage(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -122,7 +116,6 @@ func TestContainerStepInvalidImage(t *testing.T) {
 
 func TestContainerStepInvalidMemory(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -147,7 +140,6 @@ func TestContainerStepInvalidMemory(t *testing.T) {
 
 func TestContainerStepInvalidCmd(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -170,7 +162,6 @@ func TestContainerStepInvalidCmd(t *testing.T) {
 
 func TestContainerStepInvalidEntrypoint(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Container{}

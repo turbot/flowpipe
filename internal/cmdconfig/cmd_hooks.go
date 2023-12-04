@@ -2,11 +2,11 @@ package cmdconfig
 
 import (
 	"context"
+	"log/slog"
 	"runtime/debug"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/constants"
 )
 
@@ -28,7 +28,7 @@ func setMemoryLimit(ctx context.Context) {
 	maxMemoryMb := viper.GetInt64(constants.ArgMemoryMaxMb)
 	maxMemoryBytes := maxMemoryMb * 1024 * 1024
 	if maxMemoryBytes > 0 {
-		fplog.Logger(ctx).Info("setting memory limit", "max memory MB", maxMemoryMb)
+		slog.Info("setting memory limit", "max memory MB", maxMemoryMb)
 		// set the max memory
 		debug.SetMemoryLimit(maxMemoryBytes)
 	}

@@ -7,7 +7,6 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -15,7 +14,6 @@ import (
 
 func TestQueryListAll(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -87,7 +85,6 @@ func TestQueryListAll(t *testing.T) {
 
 func TestQueryWithArgs(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -132,7 +129,6 @@ func TestQueryWithArgs(t *testing.T) {
 
 func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -198,7 +194,6 @@ func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 
 func TestQueryTableNotFound(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -225,7 +220,6 @@ func TestQueryTableNotFound(t *testing.T) {
 
 func TestQueryNoRows(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -254,7 +248,6 @@ func TestQueryNoRows(t *testing.T) {
 
 func TestQueryBadQueryStatement(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -281,7 +274,6 @@ func TestQueryBadQueryStatement(t *testing.T) {
 
 func TestQueryWithMissingAttributeSql(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{}
@@ -300,7 +292,6 @@ func TestQueryWithMissingAttributeSql(t *testing.T) {
 
 func TestQueryWithInvalidAttribute(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{
@@ -338,7 +329,6 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 
 func TestQueryMissingArgs(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{}
@@ -358,7 +348,6 @@ func TestQueryMissingArgs(t *testing.T) {
 
 func TestQueryMissingConnectionString(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := Query{}

@@ -3,6 +3,7 @@ package function
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -11,7 +12,6 @@ import (
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/runtime"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -77,9 +77,6 @@ func (v *Version) Build() error {
 
 // buildImage builds the function image. Should only be called by Build().
 func (v *Version) buildImage() error {
-
-	logger := fplog.Logger(v.Function.runCtx)
-
 	// Tar up the function code for use in the build
 	buildCtx, err := archive.TarWithOptions(v.Function.AbsolutePath, &archive.TarOptions{})
 	if err != nil {
@@ -132,16 +129,16 @@ func (v *Version) buildImage() error {
 	}
 	defer resp.Body.Close()
 
-	logger.Info("Building Docker image...")
+	slog.Info("Building Docker image...")
 
 	// Output the build progress
 	_, err = io.Copy(os.Stdout, resp.Body)
 	if err != nil {
-		logger.Error("Error reading build output: "+err.Error(), "error", err)
+		slog.Error("Error reading build output: "+err.Error(), "error", err)
 		return err
 	}
 
-	logger.Info("Docker image built successfully.")
+	slog.Info("Docker image built successfully.")
 
 	return nil
 }

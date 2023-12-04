@@ -2,18 +2,19 @@ package es
 
 import (
 	"context"
+	_ "github.com/garsue/watermillzap"
+	"log/slog"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/garsue/watermillzap"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 
+	"github.com/denisss025/slog-watermill"
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
 	"github.com/turbot/flowpipe/internal/util"
 )
@@ -60,11 +61,8 @@ func (es *ESService) IsRunning() bool {
 }
 
 func (es *ESService) Start() error {
-	// Convenience
-	logger := fplog.Logger(es.ctx)
-
-	logger.Debug("ES starting")
-	defer logger.Debug("ES started")
+	slog.Debug("ES starting")
+	defer slog.Debug("ES started")
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 
@@ -73,8 +71,7 @@ func (es *ESService) Start() error {
 		// OutputChannelBuffer: 10000,
 		// Persistent:          true,
 	}
-	wLogger := watermillzap.NewLogger(logger.Zap)
-
+	wLogger := slogwatermill.New(slog.Default())
 	commandsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 
@@ -193,10 +190,9 @@ func (es *ESService) Start() error {
 }
 
 func (es *ESService) Stop() error {
-	logger := fplog.Logger(es.ctx)
 
-	logger.Debug("ES stopping")
-	defer logger.Debug("ES stopped")
+	slog.Debug("ES stopping")
+	defer slog.Debug("ES stopped")
 
 	return es.router.Close()
 }

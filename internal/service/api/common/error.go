@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -33,7 +33,7 @@ func AbortWithError(c *gin.Context, err error) {
 		for _, v := range e.Errors {
 			badRequest.ValidationErrors = append(badRequest.ValidationErrors, &perr.ErrorDetailModel{Message: detailMessageByTag(v), Location: fmt.Sprintf("%s.%s", e.Type, getNormalizedField(v.Namespace()))})
 		}
-		fplog.Logger(c).Error("Validation error",
+		slog.Error("Validation error",
 			"error", badRequest,
 			"errorID", badRequest.Instance,
 			"detail", badRequest.ValidationErrors,
@@ -45,21 +45,21 @@ func AbortWithError(c *gin.Context, err error) {
 		for _, v := range e {
 			badRequest.ValidationErrors = append(badRequest.ValidationErrors, &perr.ErrorDetailModel{Message: detailMessageByTag(v), Location: getNormalizedField(v.Namespace())})
 		}
-		fplog.Logger(c).Error("Validation error",
+		slog.Error("Validation error",
 			"error", badRequest,
 			"errorID", badRequest.Instance,
 			"detail", badRequest.ValidationErrors,
 			"requestURL", requestURL)
 		c.AbortWithStatusJSON(http.StatusBadRequest, badRequest)
 	case perr.ErrorModel:
-		fplog.Logger(c).Error("Error "+e.Instance,
+		slog.Error("Error "+e.Instance,
 			"error", e,
 			"errorID", e.Instance,
 			"requestURL", requestURL)
 		c.AbortWithStatusJSON(e.Status, e)
 	default:
 		newErr := perr.InternalWithMessage("Internal Error.")
-		fplog.Logger(c).Error("Error "+newErr.Instance,
+		slog.Error("Error "+newErr.Instance,
 			"error", newErr,
 			"errorID", newErr.Instance,
 			"originalError", err,

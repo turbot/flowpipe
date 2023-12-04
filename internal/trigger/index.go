@@ -2,11 +2,11 @@ package trigger
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -47,12 +47,10 @@ func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *mod
 }
 
 func (tr *TriggerRunnerBase) Run() {
-	logger := fplog.Logger(tr.Ctx)
-
 	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
-		logger.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
+		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
 		return
 	}
 
@@ -60,18 +58,18 @@ func (tr *TriggerRunnerBase) Run() {
 	pipelineName := pipelineDefn["name"].AsString()
 
 	modFullName := tr.Trigger.GetMetadata().ModFullName
-	logger.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
+	slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
 
 	// We can only run trigger from root mod
 
 	mod := tr.EsService.RootMod
 	if mod == nil {
-		logger.Info("No root mod detected, cannot schedule triggers")
+		slog.Info("No root mod detected, cannot schedule triggers")
 		return
 	}
 
 	if modFullName != mod.FullName {
-		logger.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", mod.FullName)
+		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", mod.FullName)
 		return
 	}
 
@@ -91,7 +89,7 @@ func (tr *TriggerRunnerBase) Run() {
 	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
 
 	if diags.HasErrors() {
-		logger.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
+		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
 		return
 	}
 
@@ -102,10 +100,10 @@ func (tr *TriggerRunnerBase) Run() {
 		Args:                pipelineArgs,
 	}
 
-	logger.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
 
 	if err := tr.EsService.Send(pipelineCmd); err != nil {
-		logger.Error("Error sending pipeline command", "error", err)
+		slog.Error("Error sending pipeline command", "error", err)
 		return
 	}
 }
