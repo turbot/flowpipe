@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/docker"
@@ -304,6 +305,13 @@ func (m *Manager) initializeResources() error {
 	var rootModName string
 	if modInfo != nil {
 		rootModName = modInfo.ShortName
+		if modInfo.Require != nil && modInfo.Require.FlowpipeVersionConstraint() != nil {
+			flowpipeCliVersion := viper.GetString("main.version")
+			flowpipeSemverVersion := semver.MustParse(flowpipeCliVersion)
+			if !modInfo.Require.FlowpipeVersionConstraint().Check(flowpipeSemverVersion) {
+				return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, rootModName, modInfo.Require.Flowpipe.MinVersionString))
+			}
+		}
 	} else {
 		rootModName = "local"
 	}
