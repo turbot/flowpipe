@@ -31,6 +31,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"aws_session_token",
 		"clientsecret",
 		"access_token",
+		"access_key",
 		"sourcerecord",
 		"cert",
 		"privatekey",
