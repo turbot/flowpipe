@@ -70,13 +70,6 @@ type PipelineFailedOption func(*PipelineFailed) error
 // Unlike other events, creating a pipeline failed event cannot have an
 // error as an option (because we're already handling errors).
 func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *PipelineFailed {
-
-	// TODO KAI LOGS DO WE NEED THIS
-	//if slog.TraceLevel != "" {
-	//	stackTrace := string(debug.Stack())
-	//	slog.Info("New pipeline failed event created", "stack_trace", stackTrace)
-	//}
-
 	// Defaults
 	e := &PipelineFailed{}
 	// Set options

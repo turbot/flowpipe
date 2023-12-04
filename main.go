@@ -9,9 +9,11 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"log/slog"
 	"os"
+	"strings"
 )
 
 var (
@@ -58,7 +60,25 @@ func setupLogger() {
 				Value: slog.AnyValue(sanitized),
 			}
 		},
+		Level: getLogLevel(),
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
 	slog.SetDefault(logger)
+}
+
+func getLogLevel() slog.Leveler {
+	levelEnv := os.Getenv(constants.EnvLogLevel)
+
+	switch strings.ToLower(levelEnv) {
+	case "trace":
+		return constants.LevelTrace
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelWarn
+	}
 }

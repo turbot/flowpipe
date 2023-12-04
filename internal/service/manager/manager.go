@@ -413,10 +413,8 @@ func (m *Manager) Stop() error {
 
 	// Ensure any log messages are synced before we exit
 	defer func() {
-		// this is causing "inappropriate ioctl for device" error: https://github.com/uber-go/zap/issues/880
-		// we don't care if this fails
+		// TODO do we need this for slog
 		//_ = slog.Sync()
-		// TODO KAI LOG DO WE NEED THIS
 	}()
 
 	if m.apiService != nil {
