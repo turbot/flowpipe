@@ -2,6 +2,7 @@ package estest
 
 // Basic imports
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
@@ -77,6 +78,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	}
 
 	// Create a single, global context for the application
+	ctx := context.Background()
 	suite.ctx = ctx
 
 	// We use the cache to store the pipelines

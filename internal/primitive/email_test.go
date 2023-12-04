@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os/exec"
 	"testing"
@@ -18,23 +19,21 @@ import (
 var mailhogCmd *exec.Cmd
 
 func startMailHog() {
-	ctx := context.Background()
 	// Start MailHog server as a separate process
 	slog.Debug("Starting MailHog SMTP server")
 	mailhogCmd = exec.Command("MailHog")
 	if err := mailhogCmd.Start(); err != nil {
-		slog.Error("Failed to start MailHog: ", err.Error())
+		slog.Error("Failed to start MailHog", "error", err.Error())
 	}
 	slog.Debug("MailHog SMTP server started")
 }
 
 func stopMailHog() {
-	ctx := context.Background()
 	// Stop MailHog server process
 	slog.Debug("Stopping MailHog SMTP server")
 	if mailhogCmd.Process != nil {
 		if err := mailhogCmd.Process.Kill(); err != nil {
-			slog.Error("Failed to stop MailHog: ", err.Error())
+			slog.Error("Failed to stop MailHog", "error", err.Error())
 		}
 	}
 	slog.Debug("MailHog SMTP server stopped")

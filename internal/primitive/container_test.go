@@ -20,7 +20,7 @@ func initializeCocker() {
 
 	err := docker.Initialize(ctx)
 	if err != nil {
-		slog.Error("Failed to start MailHog: ", err.Error())
+		slog.Error("Failed to start MailHog", "error", err.Error())
 	}
 	slog.Debug("Docker initialized")
 }

@@ -76,7 +76,7 @@ func (suite *EsTestSuite) SetupSuite() {
 	cache.InMemoryInitialize(nil)
 
 	// create and start the manager in local mode (i.e. do not set listen address)
-	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	m, err := manager.NewManager(suite.ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 
 	suite.esService = m.ESService
