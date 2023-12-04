@@ -8,7 +8,6 @@ import (
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
 func SetAppSpecificConstants() {
-
 	installDir, err := files.Tildefy("~/.flowpipe")
 	if err != nil {
 		panic(err)
@@ -23,9 +22,7 @@ func SetAppSpecificConstants() {
 	app_specific.DefaultInstallDir = installDir
 	app_specific.DefaultVarsFileName = "flowpipe.fpvars"
 	//app_specific.DefaultWorkspaceDatabase
-	//app_specific.EnvAppPrefix
-	app_specific.EnvInputVarPrefix = "P_VAR_"
-
+	app_specific.SetAppSpecificEnvVarKeys("FLOWPIPE_")
 	app_specific.ConfigExtension = ".fpc"
 	app_specific.ModDataExtension = ".fp"
 	app_specific.ModFileName = "mod.fp"

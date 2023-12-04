@@ -9,6 +9,7 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"log/slog"
@@ -34,10 +35,9 @@ func main() {
 		}
 	}()
 
+	localcmdconfig.SetAppSpecificConstants()
 	setupLogger()
 	cache.InMemoryInitialize(nil)
-
-	localcmdconfig.SetAppSpecificConstants()
 
 	// TODO kai can we pass these into SetAppSpecificConstants?
 	//  look into namespacing of config
@@ -52,6 +52,7 @@ func main() {
 
 func setupLogger() {
 	handlerOptions := &slog.HandlerOptions{
+		Level: getLogLevel(),
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			sanitized := sanitize.Instance.SanitizeKeyValue(a.Key, a.Value.Any())
 
@@ -60,14 +61,13 @@ func setupLogger() {
 				Value: slog.AnyValue(sanitized),
 			}
 		},
-		Level: getLogLevel(),
 	}
 	logger := slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
 	slog.SetDefault(logger)
 }
 
 func getLogLevel() slog.Leveler {
-	levelEnv := os.Getenv(constants.EnvLogLevel)
+	levelEnv := os.Getenv(app_specific.EnvLogLevel)
 
 	switch strings.ToLower(levelEnv) {
 	case "trace":
