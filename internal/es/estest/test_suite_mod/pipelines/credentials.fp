@@ -77,3 +77,62 @@ pipeline "cred_slack" {
     }
 }
 
+pipeline "cred_gitlab" {
+    param "cred" {
+        type    = string
+        default = "default"
+    }
+
+    param "null_param" {
+        type = string
+        optional = true
+    }
+
+    step "transform" "token" {
+        value   = credential.gitlab[param.cred].access_token
+    }
+
+    output "gitlab_token" {
+        value = step.transform.token.value
+    }
+}
+
+pipeline "cred_abuseipdb" {
+    param "cred" {
+        type    = string
+        default = "default"
+    }
+
+    param "null_param" {
+        type = string
+        optional = true
+    }
+
+    step "transform" "api_key" {
+        value   = credential.abuseipdb[param.cred].api_key
+    }
+
+    output "abuseipdb_api_key" {
+        value = step.transform.api_key.value
+    }
+}
+
+pipeline "cred_clickup" {
+    param "cred" {
+        type    = string
+        default = "default"
+    }
+
+    param "null_param" {
+        type = string
+        optional = true
+    }
+
+    step "transform" "api_token" {
+        value   = credential.clickup[param.cred].api_token
+    }
+
+    output "clickup_token" {
+        value = step.transform.api_token.value
+    }
+}

@@ -23,6 +23,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"sessiontoken",
 		"smtp_password",
 		"api_key",
+		"api_token",
 		// "key", // we can't sanitize key because of each.key
 		"token",
 		"cloud_token",
@@ -53,6 +54,8 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"ipstack_access_key",
 		"teams_access_token",
 		"pipes_token",
+		"github_token",
+		"gitlab_token",
 	},
 	ExcludePatterns: []string{},
 })

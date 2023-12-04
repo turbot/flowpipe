@@ -2118,6 +2118,57 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	}
 
 	assert.Equal("<redacted>", pex.PipelineOutput["slack_token"])
+
+	//
+	pipelineInput = modconfig.Input{}
+	os.Setenv("GITLAB_TOKEN", "glpat-gsfio3wtyr92364ifkw")
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_gitlab", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("<redacted>", pex.PipelineOutput["gitlab_token"])
+
+	//
+	pipelineInput = modconfig.Input{}
+	os.Setenv("ABUSEIPDB_API_KEY", "bfc6f1c42dsfsdfdxxxx26977977b2xxxsfsdda98f313c3d389126de0d")
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_abuseipdb", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("<redacted>", pex.PipelineOutput["abuseipdb_api_key"])
+
+	//
+	pipelineInput = modconfig.Input{}
+	os.Setenv("CLICKUP_TOKEN", "pk_616_L5H36X3CXXXXXXXWEAZZF0NM5")
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_clickup", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("<redacted>", pex.PipelineOutput["clickup_token"])
 }
 
 func (suite *ModTestSuite) TestBasicCredential() {
