@@ -69,5 +69,11 @@
 [Developer Setup](./docs/development-setup.md)
 
 
+## License
 
+Flowpipe is distributed under [AGPL-3.0](https://github.com/turbot/flowpipe/blob/main/LICENSE).
+
+## Contributor license agreement
+
+To safeguard the legal integrity of our projects and facilitate their sustainable growth, we require a [Contributor License Agreement (CLA)](https://turbot.com/legal/cla-faq) for contributions to `turbot/flowpipe`, `turbot/flowpipe-docs`, and `turbot/pipe-fittings`. The `turbot/flowpipe-mod-*` repos do not require a CLA.
 
