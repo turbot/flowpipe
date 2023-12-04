@@ -24,6 +24,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/scheduler"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/load_mod"
@@ -244,9 +245,11 @@ func (m *Manager) initializeResources() error {
 	var modInfo *modconfig.Mod
 
 	if load_mod.ModFileExists(modLocation, app_specific.ModFileName) {
+		// build the list of possible config path locations
+		configPath, err := cmdconfig.GetConfigPath()
+		error_helpers.FailOnError(err)
 
-		workspacePath := viper.GetString(constants.ArgModLocation)
-		flowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(workspacePath)
+		loadFlowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(configPath)
 		if ew != nil {
 			ew.ShowWarnings()
 			// check for error
@@ -254,22 +257,12 @@ func (m *Manager) initializeResources() error {
 		}
 
 		// Add the "Credentials" in the context
-
-		// TODO: this isn't the way .. we shouldn't be passing the credentials in the context
-		var credentials map[string]modconfig.Credential
-
-		if flowpipeConfig == nil {
-			credentials = make(map[string]modconfig.Credential)
-		} else {
-			credentials = flowpipeConfig.Credentials
-		}
-
 		// effectively forever .. we don't want to expire the config
-		if flowpipeConfig != nil {
-			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
+		if loadFlowpipeConfig != nil {
+			cache.GetCache().SetWithTTL("#flowpipeconfig", loadFlowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, credentials, app_specific.ModDataExtension)
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, loadFlowpipeConfig.Credentials, app_specific.ModDataExtension)
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
