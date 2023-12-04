@@ -52,6 +52,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"ip2location_api_key",
 		"ipstack_access_key",
 		"teams_access_token",
+		"pipes_token",
 	},
 	ExcludePatterns: []string{},
 })
