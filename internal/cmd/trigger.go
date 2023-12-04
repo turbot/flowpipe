@@ -1,4 +1,3 @@
-//nolint:forbidigo // CLI console output
 package cmd
 
 import (
