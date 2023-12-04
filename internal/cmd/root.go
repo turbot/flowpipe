@@ -44,7 +44,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		// Define the CLI flag parameters for wrapped enum flag.
 		AddPersistentVarFlag(enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
 			constants.ArgOutput,
-			"Output format; one of: pretty, plain, yaml, json")
+			"Output format; one of: pretty, plain, yaml, json").
 		AddPersistentStringSliceFlag(constants.ArgVarFile, nil, "Specify an .fpvar file containing variable values").
 		// NOTE: use StringArrayFlag for ArgVariable, not StringSliceFlag
 		// Cobra will interpret values passed to a StringSliceFlag as CSV,
