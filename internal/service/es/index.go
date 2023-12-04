@@ -104,6 +104,7 @@ func (es *ESService) Start() error {
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
+	//nolint:staticcheck // TODO victor look at this
 	cqrsFacade, err := cqrs.NewFacade(cqrs.FacadeConfig{
 		GenerateCommandsTopic: func(commandName string) string {
 			// we are using queue RabbitMQ config, so we need to have topic per command type
