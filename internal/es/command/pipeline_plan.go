@@ -43,7 +43,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(evt.Event))
 	if err != nil {
 		logger.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
 	}
 
 	// Convenience
@@ -58,19 +58,19 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	pipelineDefn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
 	if err != nil {
 		logger.Error("Error loading pipeline definition", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
 	}
 
 	// Create a new PipelinePlanned event
 	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(evt))
 	if err != nil {
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, "")
 	}
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
 		logger.Error("Error building eval context for step", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, "")
 	}
 
 	// Each defined step in the pipeline can be in a few states:
@@ -175,7 +175,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					err := error_helpers.HclDiagsToError("diags", diags)
 
 					logger.Error("Error evaluating if condition", "error", err)
-					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
 				}
 
 				if val.False() {
@@ -194,13 +194,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
 				if err != nil {
 					logger.Error("Error adding credentials to eval context", "error", err)
-					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
 				}
 
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
-					logger.Error("Error resolving step inputs for single step", "error", err)
-					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err)
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
 				}
 				// There's no for_each, there's only a single input
 				input = stepInputs
@@ -219,14 +218,14 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.PublishWithLock(ctx, e, plannerMutex); err != nil {
-		return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)), plannerMutex)
+		return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err, pex.Name, "")), plannerMutex)
 	}
 
 	return nil
 }
 
-func (h PipelinePlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, evt *event.PipelinePlan, err error) error {
-	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err)), plannerMutex)
+func (h PipelinePlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, cmd *event.PipelinePlan, err error, pipelineName, stepName string) error {
+	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pipelineName, stepName)), plannerMutex)
 	if publishErr != nil {
 		logger := fplog.Logger(ctx)
 		logger.Error("pipeline_plan: Error publishing pipeline failed event", "error", publishErr)

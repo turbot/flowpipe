@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/fplog"
@@ -241,6 +242,31 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
 		}
 
+		// Validate the param before we start the nested param
+		nestedPipelineName, ok := cmd.StepInput[schema.AttributeTypePipeline].(string)
+		if !ok {
+			logger.Error("Unable to get pipeline name from the step input")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, perr.InternalWithMessage("Unable to get pipeline name from the step input"), logger)
+			return true
+		}
+
+		pipelineDefn, err := db.GetPipeline(nestedPipelineName)
+
+		if err != nil {
+			logger.Error("Unable to get pipeline " + nestedPipelineName + " from cache")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+			return true
+		}
+
+		errs := pipelineDefn.ValidatePipelineParam(args)
+
+		if len(errs) > 0 {
+			logger.Error("Failed validating pipeline param", "errors", errs)
+			// just pick the first error
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, errs[0], logger)
+			return true
+		}
+
 		e, err := event.NewStepPipelineStarted(
 			event.ForStepStart(cmd),
 			event.WithNewChildPipelineExecutionID(),
@@ -253,10 +279,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 		}
 
 		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
-			}
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
 			return true
 		}
 
@@ -267,7 +290,6 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 
 		return true
 	} else if stepDefn.GetType() == schema.BlockTypeInput {
-
 		logger.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 		return true
 	}

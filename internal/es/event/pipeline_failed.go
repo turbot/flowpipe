@@ -234,7 +234,7 @@ func ForStepQueueToPipelineFailed(cmd *StepQueue, err error) PipelineFailedOptio
 
 // ForPipelinePlanToPipelineFailed returns a PipelineFailedOption that sets the fields of the
 // PipelineFailed event from a PipelinePlan command.
-func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error) PipelineFailedOption {
+func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error, pipelineName string, stepName string) PipelineFailedOption {
 	return func(e *PipelineFailed) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.PipelineExecutionID = cmd.PipelineExecutionID
@@ -246,6 +246,8 @@ func ForPipelinePlanToPipelineFailed(cmd *PipelinePlan, err error) PipelineFaile
 			e.Errors = []modconfig.StepError{{
 				Error:               errorModel,
 				PipelineExecutionID: cmd.PipelineExecutionID,
+				Pipeline:            pipelineName,
+				Step:                stepName,
 			},
 			}
 		} else {
@@ -328,6 +330,7 @@ func ForStepStartToPipelineFailed(cmd *StepStart, err error) PipelineFailedOptio
 			StepExecutionID:     cmd.StepExecutionID,
 			Step:                cmd.StepName,
 		}
+		e.Errors = []modconfig.StepError{stepError}
 
 		if e.PipelineOutput == nil {
 			e.PipelineOutput = map[string]interface{}{

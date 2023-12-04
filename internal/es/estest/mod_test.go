@@ -2513,9 +2513,8 @@ func (suite *ModTestSuite) TestInaccessibleOk() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "failed")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
 	assert.Equal("finished", pex.Status)
-	assert.NotNil(pex.Errors)
 	assert.Equal(0, len(pex.Errors))
 
 	// the first step has ignore error, so it will technically be "finished"
@@ -2529,6 +2528,25 @@ func (suite *ModTestSuite) TestInaccessibleOk() {
 	// which is OK
 	assert.Equal(0, len(pex.StepStatus["transform.will_not_run"]["0"].Failed))
 	assert.Equal(1, len(pex.StepStatus["transform.will_not_run"]["0"].Finished))
+}
+
+func (suite *ModTestSuite) TestNestedPipelineParamMismatched() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.parent_pipeline_param_mismatch", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("unknown parameter specified 'invalid_param'", pex.Errors[0].Error.Detail)
+
 }
 
 func TestModTestingSuite(t *testing.T) {
