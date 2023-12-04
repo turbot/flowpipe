@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 
+	"log/slog"
+	"os"
+	"strings"
+
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
@@ -12,14 +16,11 @@ import (
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"log/slog"
-	"os"
-	"strings"
 )
 
 var (
-	// This variables will be set by GoReleaser, put it in main package because we put everything else in internal and I couldn't get Go Releaser
-	// to modify the internal package
+	// These variables will be set by GoReleaser. We have them in main package because we put everything else in internal
+	// and  I couldn't get Go Release to modify the internal packages
 	version = "0.0.1-local.1"
 	commit  = "none"
 	date    = "unknown"
