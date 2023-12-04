@@ -3,6 +3,8 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/logrusorgru/aurora"
+	"github.com/turbot/flowpipe/internal/sanitize"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
@@ -54,6 +56,67 @@ type FpPipeline struct {
 	Steps         []modconfig.PipelineStep   `json:"steps,omitempty"`
 	OutputConfig  []modconfig.PipelineOutput `json:"outputs,omitempty"`
 	Params        []FpPipelineParam          `json:"params,omitempty"`
+}
+
+func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	output := ""
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	if p.Title != nil {
+		output += fmt.Sprintf("%s%s\n", au.Blue("Title:  ").Bold(), *p.Title)
+	}
+
+	output += fmt.Sprintf("%s%s", au.Blue("Name:   ").Bold(), p.Name)
+
+	if len(p.Tags) > 0 {
+		output += fmt.Sprintf("\n%s\n", au.Blue("Tags:").Bold())
+		isFirstTag := true
+		for k, v := range p.Tags {
+			if isFirstTag {
+				output += "  " + k + " = " + v
+				isFirstTag = false
+			} else {
+				output += ", " + k + " = " + v
+			}
+		}
+	}
+
+	if p.Description != nil {
+		output += fmt.Sprintf("\n\n%s\n", au.Blue("Description:").Bold())
+		output += *p.Description
+	}
+
+	var pArg string
+	if len(p.Params) > 0 {
+		output += fmt.Sprintf("\n%s\n", au.Blue("Params:").Bold())
+		for _, p := range p.Params {
+			output += fmt.Sprintf("  %s\n", p.String(sanitizer, opts))
+			if p.Default != nil || (p.Optional != nil && *p.Optional) {
+				continue
+			}
+			pArg += " --pipeline-arg " + p.Name + "=<value>"
+		}
+	}
+
+	if len(p.OutputConfig) > 0 {
+		output += fmt.Sprintf("\n%s\n", au.Blue("Outputs:").Bold())
+		for _, o := range p.OutputConfig {
+			desc := ""
+			if len(o.Description) > 0 {
+				desc = fmt.Sprintf(": %s", o.Description)
+			}
+			output += fmt.Sprintf("  %s %s\n", au.Blue(o.Name), desc)
+		}
+	}
+
+	output += fmt.Sprintf("\n%s\n", au.Blue("Usage:").Bold())
+	output += "  flowpipe pipeline run " + p.Name + pArg
+	return output
 }
 
 func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
@@ -202,6 +265,26 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
+func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	o := ""
+	if p.Optional != nil && *p.Optional {
+		o = au.Sprintf(",%s", au.Yellow("Optional"))
+	}
+
+	d := ""
+	if p.Description != nil && len(*p.Description) > 0 {
+		d = fmt.Sprintf(": %s", *p.Description)
+	}
+	return au.Sprintf("%s [%s%s]%s", au.Blue(p.Name), au.Green(p.Type), o, d)
+}
+
 type PipelineExecutionResponse map[string]any
 
 type CmdPipeline struct {
@@ -234,6 +317,12 @@ type PrintablePipeline struct {
 func NewPrintablePipeline(resp *ListPipelineResponse) *PrintablePipeline {
 	return &PrintablePipeline{
 		Items: resp.Items,
+	}
+}
+
+func NewPrintablePipelineFromSingle(input *FpPipeline) *PrintablePipeline {
+	return &PrintablePipeline{
+		Items: []FpPipeline{*input},
 	}
 }
 
