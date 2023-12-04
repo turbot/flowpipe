@@ -1,6 +1,9 @@
 package types
 
 import (
+	"fmt"
+	"github.com/logrusorgru/aurora"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -16,6 +19,43 @@ type FpTrigger struct {
 	Documentation *string           `json:"documentation,omitempty"`
 	Tags          map[string]string `json:"tags,omitempty"`
 	Schedule      *string           `json:"schedule,omitempty"`
+}
+
+func (t FpTrigger) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	output := ""
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if t, err = sanitize.SanitizeStruct(sanitizer, t); err != nil {
+		return ""
+	}
+
+	if t.Title != nil {
+		output += fmt.Sprintf("%s%s\n", au.Blue("Title:    ").Bold(), *t.Title)
+	}
+	output += fmt.Sprintf("%s%s", au.Blue("Name:     ").Bold(), t.Name)
+	output += fmt.Sprintf("\n%s%s", au.Blue("Pipeline: ").Bold(), t.Pipeline)
+	output += fmt.Sprintf("\n%s%s", au.Blue("Type:     ").Bold(), t.Type)
+	if t.Url != nil {
+		output += fmt.Sprintf("\n%s%s", au.Blue("Url:      ").Bold(), *t.Url)
+	}
+	if len(t.Tags) > 0 {
+		output += fmt.Sprintf("\n%s\n", au.Blue("Tags:").Bold())
+		isFirstTag := true
+		for k, v := range t.Tags {
+			if isFirstTag {
+				output += "  " + k + " = " + v
+				isFirstTag = false
+			} else {
+				output += ", " + k + " = " + v
+			}
+		}
+	}
+	if t.Description != nil {
+		output += fmt.Sprintf("\n\n%s\n", au.Blue("Description:").Bold())
+		output += *t.Description
+	}
+	return output
 }
 
 // This type is used by the API to return a list of triggers.
@@ -75,6 +115,12 @@ func NewPrintableTrigger(resp *ListTriggerResponse) *PrintableTrigger {
 	}
 }
 
+func NewPrintableTriggerFromSingle(input *FpTrigger) *PrintableTrigger {
+	return &PrintableTrigger{
+		Items: []FpTrigger{*input},
+	}
+}
+
 func (p PrintableTrigger) GetTable() (Table, error) {
 	var tableRows []TableRow
 	for _, item := range p.Items {
@@ -95,9 +141,9 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 		}
 
 		cells := []any{
-			item.Pipeline,
-			item.Type,
 			item.Name,
+			item.Type,
+			item.Pipeline,
 			description,
 			url,
 			schedule,
@@ -111,9 +157,9 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 	return []TableColumnDefinition{
 		{
-			Name:        "PIPELINE",
+			Name:        "NAME",
 			Type:        "string",
-			Description: "The name of the pipeline",
+			Description: "The name of the trigger",
 		},
 		{
 			Name:        "TYPE",
@@ -121,9 +167,9 @@ func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 			Description: "The type of the trigger",
 		},
 		{
-			Name:        "NAME",
+			Name:        "PIPELINE",
 			Type:        "string",
-			Description: "The name of the trigger",
+			Description: "The name of the pipeline",
 		},
 		{
 			Name:        "DESCRIPTION",

@@ -27,7 +27,6 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -145,57 +144,12 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		output := ""
-		if resp.Title != nil {
-			output += "Title: " + *resp.Title
+		printer := printers.GetPrinter[types.FpPipeline](cmd)
+		printableResource := types.NewPrintablePipelineFromSingle(resp)
+		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
-		if resp.Title != nil {
-			output += "\nName:  " + resp.Name
-		} else {
-			output += "Name: " + resp.Name
-		}
-		if resp.Tags != nil {
-			if resp.Title != nil {
-				output += "\nTags:  "
-			} else {
-				output += "\nTags: "
-			}
-			isFirstTag := true
-			for k, v := range resp.Tags {
-				if isFirstTag {
-					output += k + " = " + v
-					isFirstTag = false
-				} else {
-					output += ", " + k + " = " + v
-				}
-			}
-		}
-		if resp.Description != nil {
-			output += "\n\nDescription:\n" + *resp.Description + "\n"
-		}
-		if resp.Params != nil {
-			output += formatSection("\nParams:", resp.Params)
-		}
-		if resp.OutputConfig != nil {
-			output += formatSection("\nOutputs:", resp.OutputConfig)
-		}
-		output += "\nUsage:" + "\n"
-		if resp.Params != nil {
-			var pArg string
-
-			// show the minimal required pipeline args
-			for _, param := range resp.Params {
-				if param.Default != nil || (param.Optional != nil && *param.Optional) {
-					continue
-				}
-				pArg += " --pipeline-arg " + param.Name + "=<value>"
-			}
-			output += "  flowpipe pipeline run " + resp.Name + pArg
-		} else {
-			output += "  flowpipe pipeline run " + resp.Name
-		}
-		//nolint:forbidigo // CLI console output
-		fmt.Println(output)
 	}
 }
 
@@ -302,7 +256,7 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 	// construct the pipeline name _after_ initializing so the cache is initialized
 	pipelineName := api.ConstructPipelineFullyQualifiedName(args[0])
 
-	//extract the pipeline args from the flags
+	// extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
 
 	input := types.CmdPipeline{
@@ -346,7 +300,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		lastIndex := -1
 		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
 
-		printer, err := printers.NewStringPrinter()
+		printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error instantiating string printer")
 			return
@@ -415,49 +369,6 @@ func getPipelineArgs(cmd *cobra.Command) map[string]string {
 		pipelineArgs[splitData[0]] = splitData[1]
 	}
 	return pipelineArgs
-}
-
-// Helper function to format a section
-func formatSection(sectionName string, items interface{}) string {
-	var output string
-	if items != nil {
-		output += sectionName + "\n"
-		switch v := items.(type) {
-		case []types.FpPipelineParam:
-			for _, item := range v {
-				output += "  " + paramToString(item) + "\n"
-			}
-		case []modconfig.PipelineOutput:
-			for _, item := range v {
-				output += "  " + outputToString(item) + "\n"
-			}
-		}
-	}
-	return output
-}
-
-// Helper function to convert Param to string
-func paramToString(param types.FpPipelineParam) string {
-	var strOutput string
-	if param.Optional != nil && *param.Optional {
-		strOutput = param.Name + "[" + param.Type + ",Optional]"
-	} else {
-		strOutput = param.Name + "[" + param.Type + "]"
-	}
-
-	if param.Description != nil && len(*param.Description) > 0 {
-		strOutput += ": " + *param.Description
-	}
-	return strOutput
-}
-
-// Helper function to convert Output to string
-func outputToString(output modconfig.PipelineOutput) string {
-	strOutput := output.Name
-	if len(output.Description) > 0 {
-		strOutput += ": " + output.Description
-	}
-	return strOutput
 }
 
 func validatePipelineArgs(pipelineArgs []string) error {
