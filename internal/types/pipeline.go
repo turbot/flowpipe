@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	typehelpers "github.com/turbot/go-kit/types"
@@ -113,6 +114,14 @@ func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipelin
 		}
 		res.Steps = append(res.Steps, step)
 	}
+
+	for _, p := range apiResp.Params {
+		res.Params = append(res.Params, pipelineParamFromApiResponse(p))
+	}
+
+	for _, o := range apiResp.Outputs {
+		res.OutputConfig = append(res.OutputConfig, pipelineOutputFromApiResponse(o))
+	}
 	if apiResp.Tags != nil {
 		res.Tags = *apiResp.Tags
 	}
@@ -156,6 +165,33 @@ func pipelineStepFromApiResponse(apiStep map[string]any) (modconfig.PipelineStep
 	}
 
 	return step, nil
+}
+
+func pipelineParamFromApiResponse(paramApiResponse flowpipeapiclient.FpPipelineParam) FpPipelineParam {
+	param := FpPipelineParam{
+		Name:        *paramApiResponse.Name,
+		Description: paramApiResponse.Description,
+		Default:     paramApiResponse.Default,
+		Optional:    paramApiResponse.Optional,
+		Type:        *paramApiResponse.Type,
+	}
+	return param
+}
+
+func pipelineOutputFromApiResponse(outputApiResponse flowpipeapiclient.ModconfigPipelineOutput) modconfig.PipelineOutput {
+	output := modconfig.PipelineOutput{
+		DependsOn: outputApiResponse.DependsOn,
+	}
+
+	if outputApiResponse.Name != nil {
+		output.Name = *outputApiResponse.Name
+	}
+
+	if outputApiResponse.Description != nil {
+		output.Description = *outputApiResponse.Description
+	}
+
+	return output
 }
 
 type FpPipelineParam struct {

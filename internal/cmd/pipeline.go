@@ -27,6 +27,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -422,11 +423,11 @@ func formatSection(sectionName string, items interface{}) string {
 	if items != nil {
 		output += sectionName + "\n"
 		switch v := items.(type) {
-		case []flowpipeapiclient.FpPipelineParam:
+		case []types.FpPipelineParam:
 			for _, item := range v {
 				output += "  " + paramToString(item) + "\n"
 			}
-		case []flowpipeapiclient.ModconfigPipelineOutput:
+		case []modconfig.PipelineOutput:
 			for _, item := range v {
 				output += "  " + outputToString(item) + "\n"
 			}
@@ -436,12 +437,12 @@ func formatSection(sectionName string, items interface{}) string {
 }
 
 // Helper function to convert Param to string
-func paramToString(param flowpipeapiclient.FpPipelineParam) string {
+func paramToString(param types.FpPipelineParam) string {
 	var strOutput string
 	if param.Optional != nil && *param.Optional {
-		strOutput = *param.Name + "[" + *param.Type + ",Optional]"
+		strOutput = param.Name + "[" + param.Type + ",Optional]"
 	} else {
-		strOutput = *param.Name + "[" + *param.Type + "]"
+		strOutput = param.Name + "[" + param.Type + "]"
 	}
 
 	if param.Description != nil && len(*param.Description) > 0 {
@@ -451,10 +452,10 @@ func paramToString(param flowpipeapiclient.FpPipelineParam) string {
 }
 
 // Helper function to convert Output to string
-func outputToString(output flowpipeapiclient.ModconfigPipelineOutput) string {
-	strOutput := *output.Name
-	if output.Description != nil && len(*output.Description) > 0 {
-		strOutput += ": " + *output.Description
+func outputToString(output modconfig.PipelineOutput) string {
+	strOutput := output.Name
+	if len(output.Description) > 0 {
+		strOutput += ": " + output.Description
 	}
 	return strOutput
 }
