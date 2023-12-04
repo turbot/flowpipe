@@ -70,18 +70,6 @@ logger, err := zap.NewProduction(
 
 */
 
-var keys = []string{"password", "secretaccesskey", "sessiontoken", "aws_secret_access_key", "aws_session_token", "key", "token", "cloud_token", "clientSecret", "access_token", "sourcerecord", "cert", "privatekey", "secretValue"}
-
-func stringSliceContains(slice []string, s string) bool {
-	lowerCaseKey := strings.ToLower(s)
-	for _, entry := range slice {
-		if entry == lowerCaseKey {
-			return true
-		}
-	}
-	return false
-}
-
 func BindStruct(domain interface{}) map[string]interface{} {
 
 	val := reflect.ValueOf(domain) // could be any underlying type
@@ -93,7 +81,7 @@ func BindStruct(domain interface{}) map[string]interface{} {
 
 	// should double check we now have a struct (could still be anything)
 	if val.Kind() != reflect.Struct {
-		panic("unexpected type")
+		panic("unexpected type in fplog BindStruct function")
 	}
 
 	// now we grab our values as before (note: I assume table name should come from the struct type)
@@ -111,8 +99,8 @@ func BindStruct(domain interface{}) map[string]interface{} {
 		if strings.ToLower(string(first)) == string(first) {
 			// private field, don't log out
 			continue
-		} else if stringSliceContains(keys, fieldName) {
-			value = "<redacted>"
+		} else if Instance.FieldExcluded(fieldName) {
+			value = redactedStr
 		} else {
 			value2 := val.FieldByName(fieldName)
 			if value2.Kind() == reflect.Ptr {
@@ -124,7 +112,7 @@ func BindStruct(domain interface{}) map[string]interface{} {
 			}
 		}
 
-		results[fieldName] = value
+		results[fieldName] = Instance.Sanitize(value)
 	}
 	return results
 }
@@ -146,15 +134,15 @@ func SanitizeLogEntries(keysAndValues []interface{}) []interface{} {
 				val := BindStruct(keysAndValues[i+1])
 				sanitizeKeyAndValues[i+1] = val
 			} else {
-				if stringSliceContains(keys, keysAndValues[i].(string)) {
-					sanitizeKeyAndValues[i+1] = "<redacted>"
-
+				if Instance.FieldExcluded(keysAndValues[i].(string)) {
+					sanitizeKeyAndValues[i+1] = redactedStr
 				} else {
-					sanitizeKeyAndValues[i+1] = keysAndValues[i+1]
+
+					sanitizeKeyAndValues[i+1] = Instance.Sanitize(keysAndValues[i+1])
 				}
 			}
 		default:
-			sanitizeKeyAndValues[i+1] = keysAndValues[i+1]
+			sanitizeKeyAndValues[i+1] = Instance.Sanitize(keysAndValues[i+1])
 		}
 	}
 
