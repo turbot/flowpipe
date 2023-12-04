@@ -82,10 +82,13 @@ func ListTriggers() (*types.ListTriggerResponse, error) {
 
 		if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
 			fpTrigger.Url = &tc.Url
+		} else if tc, ok := trigger.Config.(*modconfig.TriggerSchedule); ok {
+			fpTrigger.Schedule = &tc.Schedule
+		} else if tc, ok := trigger.Config.(*modconfig.TriggerInterval); ok {
+			fpTrigger.Schedule = &tc.Schedule
 		}
 
 		fpTriggers = append(fpTriggers, fpTrigger)
-
 	}
 
 	// Sort the triggers by pipeline, type, name
@@ -183,6 +186,11 @@ func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 
 	if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
 		fpTrigger.Url = &tc.Url
+	} else if tc, ok := trigger.Config.(*modconfig.TriggerSchedule); ok {
+		fpTrigger.Schedule = &tc.Schedule
+	} else if tc, ok := trigger.Config.(*modconfig.TriggerInterval); ok {
+		fpTrigger.Schedule = &tc.Schedule
 	}
+
 	return fpTrigger, nil
 }

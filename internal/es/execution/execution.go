@@ -967,7 +967,20 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			pe.PipelineOutput = map[string]interface{}{}
 		}
 		if pe.PipelineOutput["errors"] != nil && len(et.Errors) > 0 {
-			pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]modconfig.StepError), et.Errors...)
+			for _, e := range et.Errors {
+
+				found := false
+				for _, pipelineErr := range pe.PipelineOutput["errors"].([]modconfig.StepError) {
+					if e.Error.ID == pipelineErr.Error.ID {
+						found = true
+						break
+					}
+				}
+				if !found {
+					pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]modconfig.StepError), et.Errors...)
+				}
+			}
+
 		} else if pe.PipelineOutput["errors"] == nil && len(et.Errors) > 0 {
 			pe.PipelineOutput["errors"] = et.Errors
 		}

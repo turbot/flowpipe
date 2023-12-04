@@ -16,6 +16,7 @@ type FpTrigger struct {
 	Title         *string           `json:"title,omitempty"`
 	Documentation *string           `json:"documentation,omitempty"`
 	Tags          map[string]string `json:"tags,omitempty"`
+	Schedule      *string           `json:"schedule,omitempty"`
 }
 
 // This type is used by the API to return a list of triggers.
@@ -52,7 +53,8 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 		Url:           apiTrigger.Url,
 		Title:         apiTrigger.Title,
 		Documentation: apiTrigger.Documentation,
-		Tags:          make(map[string]string),
+		// Schedule:      apiTrigger.Schedule,
+		Tags: make(map[string]string),
 	}
 	if apiTrigger.Tags != nil {
 		res.Tags = *apiTrigger.Tags
@@ -82,11 +84,24 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 		if item.Description != nil {
 			description = *item.Description
 		}
+
+		var url string
+		if item.Url != nil {
+			url = *item.Url
+		}
+
+		var schedule string
+		if item.Schedule != nil {
+			schedule = *item.Schedule
+		}
+
 		cells := []any{
 			item.Pipeline,
 			item.Type,
 			item.Name,
 			description,
+			url,
+			schedule,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -115,6 +130,16 @@ func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 			Name:        "DESCRIPTION",
 			Type:        "string",
 			Description: "Trigger description",
+		},
+		{
+			Name:        "URL",
+			Type:        "string",
+			Description: "HTTP Trigger URL",
+		},
+		{
+			Name:        "SCHEDULE",
+			Type:        "string",
+			Description: "Schedule or Interval",
 		},
 	}
 }
