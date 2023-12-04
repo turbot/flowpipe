@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/constants"
 )
 
 type StringPrinter struct {
@@ -28,10 +30,13 @@ func NewStringPrinter() (*StringPrinter, error) {
 func (p StringPrinter) PrintResource(_ context.Context, r types.PrintableResource[types.SanitizedStringer], writer io.Writer) error {
 	items := r.GetItems()
 	for _, item := range items {
-		str := item.String(sanitize.Instance, p.colorGenerator)
+		colorOpts := types.ColorOptions{
+			ColorGenerator: p.colorGenerator,
+			ColourEnabled:  viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty,
+		}
+		str := item.String(sanitize.Instance, colorOpts)
 
-		_, err := writer.Write([]byte(str))
-		if err != nil {
+		if _, err := writer.Write([]byte(str)); err != nil {
 			return fmt.Errorf("error printing resource")
 		}
 	}

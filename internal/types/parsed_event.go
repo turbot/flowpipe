@@ -17,8 +17,13 @@ import (
 	"github.com/turbot/pipe-fittings/utils"
 )
 
+type ColorOptions struct {
+	ColourEnabled  bool
+	ColorGenerator *color.DynamicColorGenerator
+}
+
 type SanitizedStringer interface {
-	String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string
+	String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string
 }
 
 const grayScaleIndex = uint8(3)
@@ -29,7 +34,7 @@ type ParsedHeader struct {
 	LastLoaded  string `json:"last_loaded"`
 }
 
-func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -62,37 +67,19 @@ func NewPrefix(fullPipelineName string) ParsedEventPrefix {
 	}
 }
 
-func (p ParsedEventPrefix) getRetryString(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
-
+func (p ParsedEventPrefix) getRetryString(cg *color.DynamicColorGenerator) string {
 	if p.RetryIndex == nil || *p.RetryIndex == 0 {
 		return ""
 	}
 	return aurora.Sprintf(aurora.Index(8, "#%d"), *p.RetryIndex)
 }
 
-func (p ParsedEventPrefix) getPipelineString(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
-
+func (p ParsedEventPrefix) getPipelineString(cg *color.DynamicColorGenerator) string {
 	c := cg.GetColorForElement(p.PipelineName)
 	return aurora.Sprintf(aurora.Index(c, p.PipelineName))
 }
 
-func (p ParsedEventPrefix) getLoopString(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
-
+func (p ParsedEventPrefix) getLoopString(cg *color.DynamicColorGenerator) string {
 	if p.LoopIndex == nil || p.StepName == nil {
 		return ""
 	}
@@ -133,18 +120,19 @@ func (p ParsedEventPrefix) getStepString(eachString string, loopString string, c
 	}
 }
 
-func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
 		return ""
 	}
+	cg := opts.ColorGenerator
 
-	retryString := p.getRetryString(sanitizer, cg)
-	loopString := p.getLoopString(sanitizer, cg)
+	retryString := p.getRetryString(cg)
+	loopString := p.getLoopString(cg)
 	eachString := p.getForEachString(loopString, cg)
 	stepString := p.getStepString(eachString, loopString, cg)
-	pipelineString := p.getPipelineString(sanitizer, cg)
+	pipelineString := p.getPipelineString(cg)
 
 	left := aurora.Gray(grayScaleIndex, "[")
 	right := aurora.Gray(grayScaleIndex, "]")
@@ -164,7 +152,7 @@ type ParsedEvent struct {
 	Message  string `json:"message"`
 }
 
-func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -172,7 +160,7 @@ func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColo
 	}
 
 	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, cg)
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	out += fmt.Sprintf("%s %s\n", pre, p.Message)
 	return out
@@ -183,7 +171,7 @@ type ParsedEventWithInput struct {
 	Input map[string]any `json:"input"`
 }
 
-func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -191,7 +179,7 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, cg *color.Dy
 	}
 
 	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, cg)
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	stepString := ""
 	if p.StepType != "" {
@@ -224,7 +212,7 @@ type ParsedEventWithArgs struct {
 	Args map[string]any `json:"args"`
 }
 
-func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -232,7 +220,7 @@ func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, cg *color.Dyn
 	}
 
 	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, cg)
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	out += fmt.Sprintf("%s Starting\n", pre)
 	for k, v := range p.Args {
@@ -261,7 +249,7 @@ type ParsedEventWithOutput struct {
 	Duration *string
 }
 
-func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -269,7 +257,7 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, cg *color.D
 	}
 
 	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, cg)
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	if p.Type == event.HandlerPipelineFinished {
 		for k, v := range p.Output {
@@ -305,7 +293,7 @@ type ParsedErrorEvent struct {
 	Duration *string               `json:"duration,omitempty"`
 }
 
-func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, cg *color.DynamicColorGenerator) string {
+func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -313,7 +301,7 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, cg *color.Dynami
 	}
 
 	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, cg)
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	if p.Type != event.HandlerPipelineFailed {
 		for _, e := range p.Errors {
