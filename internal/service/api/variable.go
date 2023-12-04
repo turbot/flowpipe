@@ -110,5 +110,4 @@ func (api *APIService) getVariable(c *gin.Context) {
 	}
 
 	common.AbortWithError(c, perr.NotFoundWithMessage("not found"))
-	return
 }
