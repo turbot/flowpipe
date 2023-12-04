@@ -11,8 +11,7 @@ import (
 
 // func TestInputStep(t *testing.T) {
 // 	ctx := context.Background()
-// 	ctx = fplog.ContextWithLogger(ctx)
-
+//
 // 	assert := assert.New(t)
 // 	hr := Input{
 // 		ExecutionID:         "exec_cknkhj5gdurd7349d4v0",

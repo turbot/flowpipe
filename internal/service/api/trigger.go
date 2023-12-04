@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -46,7 +46,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 		return
 	}
 
-	fplog.Logger(api.ctx).Info("received list trigger request", "next_token", nextToken, "limit", limit)
+	slog.Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
 	result, err := ListTriggers()
 	if err != nil {

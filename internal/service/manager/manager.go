@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path"
@@ -18,7 +19,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
@@ -84,10 +84,9 @@ func NewManager(ctx context.Context, opts ...ManagerOption) *Manager {
 
 // Start initializes tha manage and starts services managed by the Manager.
 func (m *Manager) Start() (*Manager, error) {
-	logger := fplog.Logger(m.ctx)
 
-	logger.Debug("Manager starting")
-	defer logger.Debug("Manager started")
+	slog.Debug("Manager starting")
+	defer slog.Debug("Manager started")
 
 	if err := m.initializeModDirectory(); err != nil {
 		return nil, err
@@ -111,7 +110,7 @@ func (m *Manager) Start() (*Manager, error) {
 			return nil, err
 		}
 		for {
-			logger.Info("Waiting for Flowpipe service to start ...")
+			slog.Info("Waiting for Flowpipe service to start ...")
 			if m.ESService.IsRunning() {
 				break
 			}
@@ -119,7 +118,7 @@ func (m *Manager) Start() (*Manager, error) {
 			time.Sleep(time.Duration(100) * time.Millisecond)
 		}
 
-		logger.Info("Flowpipe service started ...")
+		slog.Info("Flowpipe service started ...")
 	}
 
 	if m.shouldStartAPI() {
@@ -167,10 +166,9 @@ func ensureDir(dir string) error {
 }
 
 func (m *Manager) initializeModDirectory() error {
-	logger := fplog.Logger(m.ctx)
 
 	modLocation := viper.GetString(constants.ArgModLocation)
-	logger.Debug("Initializing mod directory", "modLocation", modLocation)
+	slog.Debug("Initializing mod directory", "modLocation", modLocation)
 
 	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
 	err := ensureDir(modFlowpipeDir)
@@ -238,10 +236,8 @@ func flowpipeSalt(filename string, length int) (string, error) {
 // load and cache triggers and pipelines
 // if we are in server mode and there is a modfile, setup the file watcher
 func (m *Manager) initializeResources() error {
-	logger := fplog.Logger(m.ctx)
-
 	modLocation := viper.GetString(constants.ArgModLocation)
-	logger.Info("Starting Flowpipe", "modLocation", modLocation)
+	slog.Info("Starting Flowpipe", "modLocation", modLocation)
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
@@ -322,7 +318,7 @@ func (m *Manager) initializeResources() error {
 		return err
 	}
 
-	logger.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
+	slog.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
 
 	m.RootMod = modInfo
 
@@ -331,8 +327,7 @@ func (m *Manager) initializeResources() error {
 
 func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
-		logger := fplog.Logger(m.ctx)
-		logger.Error("error watching workspace", "error", e)
+		slog.Error("error watching workspace", "error", e)
 		m.apiService.ModMetadata.IsStale = true
 	})
 	if err != nil {
@@ -340,27 +335,26 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	}
 
 	w.SetOnFileWatcherEventMessages(func() {
-		logger := fplog.Logger(m.ctx)
-		logger.Info("caching pipelines and triggers")
+		slog.Info("caching pipelines and triggers")
 		m.triggers = w.Mod.ResourceMaps.Triggers
 		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 		if err != nil {
-			logger.Error("error caching pipelines and triggers", "error", err)
+			slog.Error("error caching pipelines and triggers", "error", err)
 		} else {
-			logger.Info("cached pipelines and triggers")
+			slog.Info("cached pipelines and triggers")
 			m.apiService.ModMetadata.IsStale = false
 			m.apiService.ModMetadata.LastLoaded = time.Now()
 		}
 
 		// Reload scheduled triggers
-		logger.Info("rescheduling triggers")
+		slog.Info("rescheduling triggers")
 		if m.schedulerService != nil {
 			m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
 			err := m.schedulerService.RescheduleTriggers()
 			if err != nil {
-				logger.Error("error rescheduling triggers", "error", err)
+				slog.Error("error rescheduling triggers", "error", err)
 			} else {
-				logger.Info("rescheduled triggers")
+				slog.Info("rescheduled triggers")
 			}
 		}
 	})
@@ -414,28 +408,26 @@ func (m *Manager) startSchedulerService() error {
 
 // Stop stops services managed by the Manager.
 func (m *Manager) Stop() error {
-	fplog.Logger(m.ctx).Debug("manager stopping")
-	defer fplog.Logger(m.ctx).Debug("manager stopped")
+	slog.Debug("manager stopping")
+	defer slog.Debug("manager stopped")
 
 	// Ensure any log messages are synced before we exit
-	logger := fplog.Logger(m.ctx)
 	defer func() {
-		// this is causing "inappropriate ioctl for device" error: https://github.com/uber-go/zap/issues/880
-		// we don't care if this fails
-		_ = logger.Sync()
+		// TODO do we need this for slog
+		//_ = slog.Sync()
 	}()
 
 	if m.apiService != nil {
 		if err := m.apiService.Stop(); err != nil {
 			// Log and continue stopping other services
-			fplog.Logger(m.ctx).Error("error stopping api service", "error", err)
+			slog.Error("error stopping api service", "error", err)
 		}
 	}
 
 	if m.ESService != nil {
 		if err := m.ESService.Stop(); err != nil {
 			// Log and continue stopping other services
-			fplog.Logger(m.ctx).Error("error stopping es service", "error", err)
+			slog.Error("error stopping es service", "error", err)
 		}
 	}
 
@@ -443,7 +435,7 @@ func (m *Manager) Stop() error {
 	// TODO - Can we remove this since we cleanup per function etc?
 	if docker.GlobalDockerClient != nil {
 		if err := docker.GlobalDockerClient.CleanupArtifacts(); err != nil {
-			fplog.Logger(m.ctx).Error("Failed to cleanup flowpipe docker artifacts", "error", err)
+			slog.Error("Failed to cleanup flowpipe docker artifacts", "error", err)
 		}
 	}
 
@@ -458,7 +450,7 @@ func (m *Manager) InterruptHandler() {
 	done := make(chan bool, 1)
 	go func() {
 		sig := <-sigs
-		fplog.Logger(m.ctx).Debug("Manager exiting", "signal", sig)
+		slog.Debug("Manager exiting", "signal", sig)
 		err := m.Stop()
 		if err != nil {
 			panic(err)
@@ -467,7 +459,7 @@ func (m *Manager) InterruptHandler() {
 		done <- true
 	}()
 	<-done
-	fplog.Logger(m.ctx).Debug("Manager exited")
+	slog.Debug("Manager exited")
 }
 
 func (m *Manager) cachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {

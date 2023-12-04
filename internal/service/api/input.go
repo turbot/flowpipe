@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
@@ -37,11 +37,9 @@ type JSONPayload struct {
 }
 
 func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType, executionID, pipelineExecutionID, stepExecutionID string) {
-	logger := fplog.Logger(api.ctx)
-
 	ex, err := execution.NewExecution(api.ctx)
 	if err != nil {
-		logger.Error("error creating execution", "error", err)
+		slog.Error("error creating execution", "error", err)
 		common.AbortWithError(c, err)
 		return
 	}
@@ -54,7 +52,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 	err = ex.LoadProcess(evt)
 	if err != nil {
-		logger.Error("error loading process", "error", err)
+		slog.Error("error loading process", "error", err)
 		common.AbortWithError(c, err)
 		return
 	}
@@ -90,7 +88,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		decodedValue = decodedValue[8:]
 
 		// TODO: Remove this log
-		// logger.Info("decodedValue", "decodedValue>>>>>", decodedValue)
+		// slog.Info("decodedValue", "decodedValue>>>>>", decodedValue)
 
 		var bodyJSON map[string]interface{}
 		err = json.Unmarshal([]byte(decodedValue), &bodyJSON)
@@ -178,19 +176,19 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		// stepOutput, err = input.ProcessOutput(api.ctx, inputType, bodyBytes)
 		// if err != nil {
-		// 	logger.Error("error processing output", "error", err)
+		// 	slog.Error("error processing output", "error", err)
 		// 	common.AbortWithError(c, err)
 		// 	return
 		// }
 
-		logger.Debug("stepOutput", "stepOutput", &output)
+		slog.Debug("stepOutput", "stepOutput", &output)
 
 		c.String(http.StatusOK, fmt.Sprintf("%s <@%s> has selected `%v`", prompt, userName, value))
 	} else {
 		if pipelineExecution.Status == "finished" {
 			alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
 			if err != nil {
-				logger.Error("error reading the template file", "error", err)
+				slog.Error("error reading the template file", "error", err)
 				common.AbortWithError(c, err)
 				return
 			}
@@ -199,14 +197,14 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 			input := primitive.Input{}
 			stepOutput, err = input.ProcessOutput(c, inputType, nil)
 			if err != nil {
-				logger.Error("error processing output", "error", err)
+				slog.Error("error processing output", "error", err)
 				common.AbortWithError(c, err)
 				return
 			}
 
 			acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
 			if err != nil {
-				logger.Error("error reading the template file", "error", err)
+				slog.Error("error reading the template file", "error", err)
 				common.AbortWithError(c, err)
 				return
 			}
@@ -234,8 +232,6 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 }
 
 func (api *APIService) runInputEmailGet(c *gin.Context) {
-	logger := fplog.Logger(api.ctx)
-
 	inputUri := types.InputRequestUri{}
 	if err := c.ShouldBindUri(&inputUri); err != nil {
 		common.AbortWithError(c, err)
@@ -253,14 +249,14 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		executionMode = *inputQuery.ExecutionMode
 	}
 
-	logger.Info("executionMode", "executionMode", executionMode)
+	slog.Info("executionMode", "executionMode", executionMode)
 
 	inputName := inputUri.Input
 	inputHash := inputUri.Hash
 
 	salt, ok := cache.GetCache().Get("salt")
 	if !ok {
-		logger.Error("salt not found")
+		slog.Error("salt not found")
 		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
 		return
 	}
@@ -268,7 +264,7 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 	hashString := util.CalculateHash(inputName, salt.(string))
 
 	if hashString != inputHash {
-		logger.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
+		slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
 		// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
 		// return
 	}
@@ -277,8 +273,6 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 }
 
 func (api *APIService) runSlackInputPost(c *gin.Context) {
-	logger := fplog.Logger(api.ctx)
-
 	inputUri := types.InputRequestUri{}
 	if err := c.ShouldBindUri(&inputUri); err != nil {
 		common.AbortWithError(c, err)
@@ -296,14 +290,14 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 		executionMode = *inputQuery.ExecutionMode
 	}
 
-	logger.Info("executionMode", "executionMode", executionMode)
+	slog.Info("executionMode", "executionMode", executionMode)
 
 	inputName := inputUri.Input
 	inputHash := inputUri.Hash
 
 	salt, ok := cache.GetCache().Get("salt")
 	if !ok {
-		logger.Error("salt not found")
+		slog.Error("salt not found")
 		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
 		return
 	}
@@ -311,7 +305,7 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	hashString := util.CalculateHash(inputName, salt.(string))
 
 	if hashString != inputHash {
-		logger.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
+		slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
 		// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
 		// return
 	}

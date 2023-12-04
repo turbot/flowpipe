@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
@@ -54,7 +54,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 		return
 	}
 
-	fplog.Logger(api.ctx).Info("received list pipelines request", "next_token", nextToken, "limit", limit)
+	slog.Info("received list pipelines request", "next_token", nextToken, "limit", limit)
 
 	result, err := ListPipelines()
 	if err != nil {

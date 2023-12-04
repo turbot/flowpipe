@@ -3,12 +3,12 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -26,19 +26,18 @@ func (PipelineFailed) NewEvent() interface{} {
 func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	e := ei.(*event.PipelineFailed)
 
-	logger := fplog.Logger(ctx)
-	logger.Debug("pipeline_failed handler", "event", e)
+	slog.Debug("pipeline_failed handler", "event", e)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
-		logger.Error("pipeline_failed error constructing execution", "error", err)
+		slog.Error("pipeline_failed error constructing execution", "error", err)
 		return err
 	}
 
 	parentStepExecution, err := ex.ParentStepExecution(e.PipelineExecutionID)
 	if err != nil {
 		// We're already in a pipeline failed event handler
-		logger.Error("pipeline_failed error getting parent step execution", "error", err)
+		slog.Error("pipeline_failed error getting parent step execution", "error", err)
 		return err
 	}
 
@@ -57,7 +56,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		cmd.StepLoop = parentStepExecution.StepLoop
 
 		if err != nil {
-			logger.Error("pipeline_failed error creating pipeline step finish event", "error", err)
+			slog.Error("pipeline_failed error creating pipeline step finish event", "error", err)
 			return err
 		}
 
@@ -67,15 +66,15 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	// Generate output data
 	data, err := ex.PipelineData(e.PipelineExecutionID)
 	if err != nil {
-		logger.Error("pipeline_failed", "error", err)
+		slog.Error("pipeline_failed", "error", err)
 	} else {
 		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		logger.Debug("json string", "json", string(jsonStr))
+		slog.Debug("json string", "json", string(jsonStr))
 	}
 
 	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
 	if err != nil {
-		logger.Error("Pipeline definition not found", "error", err)
+		slog.Error("Pipeline definition not found", "error", err)
 		return err
 	}
 
@@ -98,12 +97,12 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 	snapshot, err := ex.Snapshot(e.PipelineExecutionID)
 	if err != nil {
-		logger.Error("pipeline_failed error generating snapshot", "error", err)
+		slog.Error("pipeline_failed error generating snapshot", "error", err)
 	} else {
 		jsonStr, err := json.MarshalIndent(snapshot, "", "  ")
 
 		if err != nil {
-			logger.Error("pipeline_failed error generating snapshot", "error", err)
+			slog.Error("pipeline_failed error generating snapshot", "error", err)
 			return err
 		}
 
@@ -114,7 +113,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
 	if err != nil {
-		logger.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
+		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)

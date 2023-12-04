@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -12,7 +13,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -38,32 +38,30 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 	go func(ctx context.Context, c interface{}, h StepStartHandler) {
 
-		logger := fplog.Logger(ctx)
-
 		cmd, ok := c.(*event.StepStart)
 		if !ok {
-			logger.Error("invalid command type", "expected", "*event.StepStart", "actual", c)
+			slog.Error("invalid command type", "expected", "*event.StepStart", "actual", c)
 			return
 		}
 
 		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 		if err != nil {
-			logger.Error("Error loading pipeline execution", "error", err)
+			slog.Error("Error loading pipeline execution", "error", err)
 
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
 
 		pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 		if err != nil {
-			logger.Error("Error loading pipeline definition", "error", err)
+			slog.Error("Error loading pipeline definition", "error", err)
 
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
@@ -75,10 +73,10 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
-			logger.Error("Error building eval context while calculating output", "error", err)
+			slog.Error("Error building eval context while calculating output", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
@@ -90,7 +88,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				Status: "skipped",
 			}
 
-			endStep(ex, cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
+			endStep(ex, cmd, output, stepOutput, h, stepDefn, evalContext, ctx)
 			return
 		}
 
@@ -133,16 +131,16 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
-			logger.Error("Unknown step type", "type", stepDefn.GetType())
+			slog.Error("Unknown step type", "type", stepDefn.GetType())
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
-				logger.Error("Error publishing event", "error", err2)
+				slog.Error("Error publishing event", "error", err2)
 			}
 			return
 		}
 
 		if primitiveError != nil {
-			logger.Error("primitive failed", "error", primitiveError)
+			slog.Error("primitive failed", "error", primitiveError)
 			if output == nil {
 				output = &modconfig.Output{}
 			}
@@ -172,7 +170,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		// We have some special steps that need to be handled differently:
 		// Pipeline Step -> launch a new pipeline
 		// Input Step -> waiting for external event to resume the pipeline
-		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, h, logger)
+		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, h)
 		if shouldReturn {
 			return
 		}
@@ -180,13 +178,13 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		// calculate the output blocks
 		// If there's a for_each in the step definition, we need to insert the "each" magic variable
 		// so the output can refer to it
-		evalContext, stepOutput, shouldReturn = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, logger, h, err, stepOutput)
+		evalContext, stepOutput, shouldReturn = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, err, stepOutput)
 		if shouldReturn {
 			return
 		}
 
 		// All other primitives finish immediately.
-		endStep(ex, cmd, output, stepOutput, logger, h, stepDefn, evalContext, ctx)
+		endStep(ex, cmd, output, stepOutput, h, stepDefn, evalContext, ctx)
 
 	}(ctx, c, h)
 
@@ -194,7 +192,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 }
 
 // This function mutates stepOutput
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, logger *fplog.FlowpipeLogger, h StepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, h StepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
@@ -206,20 +204,20 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 && diags.HasErrors() {
-				logger.Error("Error calculating output on step start", "error", diags)
+				slog.Error("Error calculating output on step start", "error", diags)
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
+					slog.Error("Error publishing event", "error", err2)
 				}
 				return nil, stepOutput, true
 			}
 
 			goVal, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {
-				logger.Error("Error converting cty value to Go value for output calculation", "error", err)
+				slog.Error("Error converting cty value to Go value for output calculation", "error", err)
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
-					logger.Error("Error publishing event", "error", err2)
+					slog.Error("Error publishing event", "error", err2)
 				}
 				return nil, stepOutput, true
 			}
@@ -234,7 +232,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, h StepStartHandler, logger *fplog.FlowpipeLogger) bool {
+func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, h StepStartHandler) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
 		args := modconfig.Input{}
@@ -245,25 +243,25 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 		// Validate the param before we start the nested param
 		nestedPipelineName, ok := cmd.StepInput[schema.AttributeTypePipeline].(string)
 		if !ok {
-			logger.Error("Unable to get pipeline name from the step input")
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, perr.InternalWithMessage("Unable to get pipeline name from the step input"), logger)
+			slog.Error("Unable to get pipeline name from the step input")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, perr.InternalWithMessage("Unable to get pipeline name from the step input"))
 			return true
 		}
 
 		pipelineDefn, err := db.GetPipeline(nestedPipelineName)
 
 		if err != nil {
-			logger.Error("Unable to get pipeline " + nestedPipelineName + " from cache")
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+			slog.Error("Unable to get pipeline " + nestedPipelineName + " from cache")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 			return true
 		}
 
 		errs := pipelineDefn.ValidatePipelineParam(args)
 
 		if len(errs) > 0 {
-			logger.Error("Failed validating pipeline param", "errors", errs)
+			slog.Error("Failed validating pipeline param", "errors", errs)
 			// just pick the first error
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, errs[0], logger)
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, errs[0])
 			return true
 		}
 
@@ -279,31 +277,31 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 		}
 
 		if err != nil {
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 			return true
 		}
 
 		err = h.EventBus.Publish(ctx, e)
 		if err != nil {
-			logger.Error("Error publishing event", "error", err)
+			slog.Error("Error publishing event", "error", err)
 		}
 
 		return true
 	} else if stepDefn.GetType() == schema.BlockTypeInput {
-		logger.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+		slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 		return true
 	}
 
 	return false
 }
 
-func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, logger *fplog.FlowpipeLogger, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
+func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
 	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), output, stepOutput, evalContext)
 	if err != nil {
-		logger.Error("Error adding step output as results", "error", err)
-		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+		slog.Error("Error adding step output as results", "error", err)
+		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 		return
 	}
 
@@ -315,13 +313,13 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 	errorFromThrow := false
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
 	if err != nil {
-		logger.Error("Error calculating throw", "error", err)
-		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+		slog.Error("Error calculating throw", "error", err)
+		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 		return
 	}
 
 	if stepError != nil {
-		logger.Debug("Step error calculated from throw", "error", stepError)
+		slog.Debug("Step error calculated from throw", "error", stepError)
 		errorFromThrow = true
 		output.Status = "failed"
 		output.Errors = append(output.Errors, modconfig.StepError{
@@ -341,8 +339,8 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		if !errorFromThrow {
 			stepRetry, diags = calculateRetry(ctx, cmd.StepRetry, stepDefn, endStepEvalContext)
 			if len(diags) > 0 {
-				logger.Error("Error calculating retry", "diags", diags)
-				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags), logger)
+				slog.Error("Error calculating retry", "diags", diags)
+				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags))
 				return
 			}
 		}
@@ -360,8 +358,8 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 
 		e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
 		if err != nil {
-			logger.Error("Error creating Pipeline Step Finished event", "error", err)
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+			slog.Error("Error creating Pipeline Step Finished event", "error", err)
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 			return
 		}
 		e.StepRetry = stepRetry
@@ -370,7 +368,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		e.StepLoop = cmd.StepLoop
 		err = h.EventBus.Publish(ctx, e)
 		if err != nil {
-			logger.Error("Error publishing event", "error", err)
+			slog.Error("Error publishing event", "error", err)
 		}
 		return
 
@@ -382,37 +380,35 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		var err error
 		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
-			logger.Error("Error calculating loop", "error", err)
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+			slog.Error("Error calculating loop", "error", err)
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 			return
 		}
 	}
 
 	e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, stepLoop)
 	if err != nil {
-		logger.Error("Error creating Pipeline Step Finished event", "error", err)
-		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err, logger)
+		slog.Error("Error creating Pipeline Step Finished event", "error", err)
+		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 		return
 	}
 
 	err = h.EventBus.Publish(ctx, e)
 	if err != nil {
-		logger.Error("Error publishing event", "error", err)
+		slog.Error("Error publishing event", "error", err)
 	}
 }
 
-func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepStartHandler, cmd *event.StepStart, originalError error, logger *fplog.FlowpipeLogger) {
+func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, h StepStartHandler, cmd *event.StepStart, originalError error) {
 	err := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, originalError)))
 	if err != nil {
-		logger.Error("Error publishing event", "error", err)
+		slog.Error("Error publishing event", "error", err)
 	}
 }
 
 // This function returns 2 error. The first error is the result of the "throw" calculation, the second
 // error is system error that should lead directly to pipeline fail
 func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*perr.ErrorModel, error) {
-	logger := fplog.Logger(ctx)
-
 	throwConfigs := stepDefn.GetThrowConfig()
 	if len(throwConfigs) == 0 {
 		return nil, nil
@@ -425,7 +421,7 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 			diags := gohcl.DecodeBody(throwConfig.UnresolvedBody, evalContext, &throwDefn)
 
 			if len(diags) > 0 && diags.HasErrors() {
-				logger.Error("Error calculating throw", "error", diags)
+				slog.Error("Error calculating throw", "error", diags)
 				return nil, perr.InternalWithMessage("error calculating throw: " + diags.Error())
 			}
 		} else {
@@ -480,12 +476,10 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 
 func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
 
-	logger := fplog.Logger(ctx)
-
 	loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
 	if loopDefn == nil {
 		// We should never get here, because the loop block should have been validated
-		logger.Error("Unknown loop type", "type", stepDefn.GetType())
+		slog.Error("Unknown loop type", "type", stepDefn.GetType())
 		return nil, perr.InternalWithMessage("unkonwn loop type: " + stepDefn.GetType())
 	}
 
@@ -590,13 +584,13 @@ func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.B
 	var err error
 	evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
 	if err != nil {
-		logger.Error("Error adding credentials to eval context", "error", err)
+		slog.Error("Error adding credentials to eval context", "error", err)
 		return nil, err
 	}
 
 	reevaluatedInput, err := stepDefn.GetInputs(evalContext)
 	if err != nil {
-		logger.Error("Error re-evaluating inputs for step", "error", err)
+		slog.Error("Error re-evaluating inputs for step", "error", err)
 		return nil, perr.InternalWithMessage("error re-evaluating inputs for step: " + err.Error())
 
 	}

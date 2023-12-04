@@ -2,6 +2,7 @@ package cmdconfig
 
 import (
 	serviceconfig "github.com/turbot/flowpipe/internal/service/config"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 )
@@ -16,8 +17,8 @@ var cmdSpecificDefaults = map[string]map[string]any{
 
 // environment variable mappings for directory paths which must be set as part of the viper bootstrap process
 var dirEnvMappings = map[string]cmdconfig.EnvMapping{
-	constants.EnvInstallDir:  {ConfigVar: []string{constants.ArgInstallDir}, VarType: cmdconfig.EnvVarTypeString},
-	constants.EnvModLocation: {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
+	app_specific.EnvInstallDir:  {ConfigVar: []string{constants.ArgInstallDir}, VarType: cmdconfig.EnvVarTypeString},
+	app_specific.EnvModLocation: {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
 }
 
 // NOTE: EnvWorkspaceProfile has already been set as a viper default as we have already loaded workspace profiles
@@ -25,7 +26,7 @@ var dirEnvMappings = map[string]cmdconfig.EnvMapping{
 
 // a map of known environment variables to map to viper keys - these are set as part of LoadGlobalConfig
 var envMappings = map[string]cmdconfig.EnvMapping{
-	constants.EnvInstallDir:  {ConfigVar: []string{constants.ArgInstallDir}, VarType: cmdconfig.EnvVarTypeString},
-	constants.EnvModLocation: {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
-	constants.EnvMemoryMaxMb: {ConfigVar: []string{constants.ArgMemoryMaxMb}, VarType: cmdconfig.EnvVarTypeInt},
+	app_specific.EnvInstallDir:  {ConfigVar: []string{constants.ArgInstallDir}, VarType: cmdconfig.EnvVarTypeString},
+	app_specific.EnvModLocation: {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
+	app_specific.EnvMemoryMaxMb: {ConfigVar: []string{constants.ArgMemoryMaxMb}, VarType: cmdconfig.EnvVarTypeInt},
 }

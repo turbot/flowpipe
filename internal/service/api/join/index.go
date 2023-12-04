@@ -2,12 +2,11 @@ package join
 
 import (
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/turbot/flowpipe/internal/fplog"
 )
 
 func RegisterAPI(router *gin.RouterGroup) {
@@ -28,14 +27,14 @@ func joinPost(c *gin.Context) {
 		return
 	}
 
-	fplog.Logger(c).Debug("received join request from node", "id", req.ID, "address", req.Addr)
+	slog.Debug("received join request from node", "id", req.ID, "address", req.Addr)
 
 	// Confirm that this node can resolve the remote address. This can happen due
 	// to incomplete DNS records across the underlying infrastructure. If it can't
 	// then don't consider this join attempt successful -- so the joining node
 	// will presumably try again.
 	if addr, err := resolvableAddress(req.Addr); err != nil {
-		fplog.Logger(c).Error("failed to resolve address while handling join request", "address", req.Addr, "error", err)
+		slog.Error("failed to resolve address while handling join request", "address", req.Addr, "error", err)
 		c.IndentedJSON(http.StatusServiceUnavailable, gin.H{"error": fmt.Sprintf("can't resolve %s (%s)", addr, err.Error())})
 		return
 	}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
@@ -19,7 +20,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -515,7 +515,6 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 }
 
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
-	logger := fplog.Logger(ctx)
 	ex, err := execution.NewExecution(ctx, execution.WithID(exId))
 	if err != nil {
 		return true, 0, nil, err
@@ -523,14 +522,14 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 
 	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
 
-	logger.Debug("Opening file", "event store file", eventStoreFilePath)
+	slog.Debug("Opening file", "event store file", eventStoreFilePath)
 	file, err := os.Open(eventStoreFilePath)
 	if err != nil {
 		// TODO KAI use perr? wrap?
 		return true, 0, nil, err
 	}
 
-	logger.Debug("File opened", "event store file", eventStoreFilePath)
+	slog.Debug("File opened", "event store file", eventStoreFilePath)
 	defer func() {
 		// ensure we close the file
 		_ = file.Close()
@@ -549,7 +548,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	// Seek to the last read position
 	// if _, err := file.Seek(lastSize, 0); err != nil {
 	// 	//nolint:nilerr // just return without passing error - we will try again next time
-	// 	logger.Info("Returning here because of error", "error", err)
+	// 	slog.Info("Returning here because of error", "error", err)
 	// 	return complete, int(lastSize), res, nil
 	// }
 
@@ -566,7 +565,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 		var entry types.EventLogEntry
 
 		if err := json.Unmarshal(line, &entry); err != nil {
-			logger.Warn("Error loading event entry", "error", err)
+			slog.Warn("Error loading event entry", "error", err)
 			return complete, last, res, nil
 		}
 
@@ -593,7 +592,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 			return false, 0, nil, perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(fpconstants.MaxScanSize))
 		}
 
-		logger.Error("Unable to scan event store file", "error", err)
+		slog.Error("Unable to scan event store file", "error", err)
 		return complete, last, res, nil
 	}
 

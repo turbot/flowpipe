@@ -14,11 +14,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"log/slog"
 )
 
 const (
@@ -109,8 +109,6 @@ func (h *HTTPRequest) Run(ctx context.Context, input modconfig.Input) (*modconfi
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
 func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, error) {
-	logger := fplog.Logger(ctx)
-
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -188,7 +186,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 		var bodyJSON interface{}
 		err := json.Unmarshal(body, &bodyJSON)
 		if err != nil {
-			logger.Debug("Unable to marshallresponse body to JSON", "error", err)
+			slog.Debug("Unable to marshallresponse body to JSON", "error", err)
 			output.Data[schema.AttributeTypeResponseBody] = bodyString
 		} else {
 			output.Data[schema.AttributeTypeResponseBody] = bodyJSON

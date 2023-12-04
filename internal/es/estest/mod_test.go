@@ -19,7 +19,6 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
@@ -79,8 +78,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	}
 
 	// Create a single, global context for the application
-	ctx := fplog.ContextWithLogger(context.Background())
-
+	ctx := context.Background()
 	suite.ctx = ctx
 
 	// We use the cache to store the pipelines

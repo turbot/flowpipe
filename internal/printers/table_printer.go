@@ -14,7 +14,6 @@ import (
 // TablePrinter decodes table objects into typed objects before delegating to another printer.
 // Non-table types are simply passed through
 type TablePrinter[T any] struct {
-	Delegate ResourcePrinter[types.TableRow]
 }
 
 func (p TablePrinter[T]) PrintResource(_ context.Context, items types.PrintableResource[T], writer io.Writer) error {

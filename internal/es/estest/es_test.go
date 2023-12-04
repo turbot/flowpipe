@@ -19,7 +19,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -71,15 +70,13 @@ func (suite *EsTestSuite) SetupSuite() {
 	}
 
 	// Create a single, global context for the application
-	ctx := fplog.ContextWithLogger(context.Background())
-
-	suite.ctx = ctx
+	suite.ctx = context.Background()
 
 	// We use the cache to store the pipelines
 	cache.InMemoryInitialize(nil)
 
 	// create and start the manager in local mode (i.e. do not set listen address)
-	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	m, err := manager.NewManager(suite.ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 
 	suite.esService = m.ESService

@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -19,32 +19,24 @@ import (
 var mailhogCmd *exec.Cmd
 
 func startMailHog() {
-	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
-	logger := fplog.Logger(ctx)
-
 	// Start MailHog server as a separate process
-	logger.Debug("Starting MailHog SMTP server")
+	slog.Debug("Starting MailHog SMTP server")
 	mailhogCmd = exec.Command("MailHog")
 	if err := mailhogCmd.Start(); err != nil {
-		logger.Error("Failed to start MailHog: ", err.Error())
+		slog.Error("Failed to start MailHog", "error", err.Error())
 	}
-	logger.Debug("MailHog SMTP server started")
+	slog.Debug("MailHog SMTP server started")
 }
 
 func stopMailHog() {
-	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
-	logger := fplog.Logger(ctx)
-
 	// Stop MailHog server process
-	logger.Debug("Stopping MailHog SMTP server")
+	slog.Debug("Stopping MailHog SMTP server")
 	if mailhogCmd.Process != nil {
 		if err := mailhogCmd.Process.Kill(); err != nil {
-			logger.Error("Failed to stop MailHog: ", err.Error())
+			slog.Error("Failed to stop MailHog", "error", err.Error())
 		}
 	}
-	logger.Debug("MailHog SMTP server stopped")
+	slog.Debug("MailHog SMTP server stopped")
 }
 
 func TestSendEmail(t *testing.T) {

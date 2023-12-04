@@ -2,9 +2,9 @@ package primitive
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -36,7 +36,7 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	// Already validated
 	duration, _ := time.ParseDuration(durationString)
 
-	fplog.Logger(ctx).Info("Sleeping for", "duration", duration)
+	slog.Info("Sleeping for", "duration", duration)
 	start := time.Now().UTC()
 	time.Sleep(duration)
 	finish := time.Now().UTC()

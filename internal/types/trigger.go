@@ -6,7 +6,6 @@ import (
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )
 
-// TODO kai review omitempty
 type FpTrigger struct {
 	Name          string            `json:"name"`
 	Type          string            `json:"type"`

@@ -3,12 +3,12 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"os"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -26,15 +26,13 @@ func (PipelineFinished) NewEvent() interface{} {
 
 func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
-	logger := fplog.Logger(ctx)
-
 	e, ok := ei.(*event.PipelineFinished)
 	if !ok {
-		logger.Error("invalid event type", "expected", "*event.PipelineFinished", "actual", ei)
+		slog.Error("invalid event type", "expected", "*event.PipelineFinished", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
 	}
 
-	logger.Debug("pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
+	slog.Debug("pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
 	if err != nil {
@@ -70,15 +68,15 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	// Generate output data
 	data, err := ex.PipelineData(e.PipelineExecutionID)
 	if err != nil {
-		logger.Error("pipeline_finished (2)", "error", err)
+		slog.Error("pipeline_finished (2)", "error", err)
 	} else {
 		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		logger.Debug("json string", "json", string(jsonStr))
+		slog.Debug("json string", "json", string(jsonStr))
 	}
 
 	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
 	if err != nil {
-		logger.Error("Pipeline definition not found", "error", err)
+		slog.Error("Pipeline definition not found", "error", err)
 		return err
 	}
 
@@ -97,7 +95,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	// Dump the snapshot
 	snapshot, err := ex.Snapshot(e.PipelineExecutionID)
 	if err != nil {
-		logger.Error("pipeline_finished (3)", "error", err)
+		slog.Error("pipeline_finished (3)", "error", err)
 		return err
 	}
 
@@ -110,7 +108,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
 	if err != nil {
-		logger.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
+		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)

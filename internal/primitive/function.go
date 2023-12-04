@@ -3,12 +3,12 @@ package primitive
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"sync"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/flowpipe/internal/fplog"
 	function "github.com/turbot/flowpipe/internal/functions"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -26,8 +26,6 @@ func (e *Function) ValidateInput(ctx context.Context, i modconfig.Input) error {
 }
 
 func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
-	logger := fplog.Logger(ctx)
-
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -42,17 +40,17 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 	fn := functionCache[input[schema.LabelName].(string)]
 
 	if fn != nil {
-		logger.Info("Found cached function, checking cached function env variables", "name", fn.Name)
+		slog.Info("Found cached function, checking cached function env variables", "name", fn.Name)
 
 		less := func(a, b string) bool { return a < b }
 		equalIgnoreOrder := cmp.Diff(newEnvs, fn.Env, cmpopts.SortSlices(less)) == ""
 
 		if !equalIgnoreOrder {
-			logger.Info("Cached function env variables are different, rebuilding function", "name", fn.Name)
+			slog.Info("Cached function env variables are different, rebuilding function", "name", fn.Name)
 			fn = nil
 			delete(functionCache, input[schema.LabelName].(string))
 		} else {
-			logger.Info("Cached function env variables are the same, using cached function", "name", fn.Name)
+			slog.Info("Cached function env variables are the same, using cached function", "name", fn.Name)
 		}
 	}
 	functionCacheMutex.Unlock()
@@ -98,7 +96,7 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		// Convert event body to JSON String
 		jsonString, err := json.Marshal(fn.Event)
 		if err != nil {
-			logger.Error("Unable to convert Event body to JSON", "error", err.Error())
+			slog.Error("Unable to convert Event body to JSON", "error", err.Error())
 			return nil, perr.BadRequestWithMessage("Unable to convert Event body to JSON: " + err.Error())
 		}
 		body = string(jsonString)

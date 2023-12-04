@@ -2,10 +2,10 @@ package command
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -22,7 +22,7 @@ func (h PipelineQueueHandler) NewCommand() interface{} {
 func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	cmd, ok := c.(*event.PipelineQueue)
 	if !ok {
-		fplog.Logger(ctx).Error("invalid command type", "expected", "*event.PipelineQueue", "actual", c)
+		slog.Error("invalid command type", "expected", "*event.PipelineQueue", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineQueue")
 	}
 

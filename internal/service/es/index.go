@@ -2,20 +2,20 @@ package es
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/garsue/watermillzap"
+	"github.com/denisss025/slog-watermill"
+	_ "github.com/garsue/watermillzap"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
-	"github.com/turbot/flowpipe/internal/fplog"
-	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
-
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 type ESService struct {
@@ -60,11 +60,8 @@ func (es *ESService) IsRunning() bool {
 }
 
 func (es *ESService) Start() error {
-	// Convenience
-	logger := fplog.Logger(es.ctx)
-
-	logger.Debug("ES starting")
-	defer logger.Debug("ES started")
+	slog.Debug("ES starting")
+	defer slog.Debug("ES started")
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 
@@ -73,8 +70,7 @@ func (es *ESService) Start() error {
 		// OutputChannelBuffer: 10000,
 		// Persistent:          true,
 	}
-	wLogger := watermillzap.NewLogger(logger.Zap)
-
+	wLogger := slogwatermill.New(slog.Default())
 	commandsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 
@@ -108,6 +104,7 @@ func (es *ESService) Start() error {
 
 	// cqrs.Facade is facade for Command and Event buses and processors.
 	// You can use facade, or create buses and processors manually (you can inspire with cqrs.NewFacade)
+	//nolint:staticcheck // TODO victor look at this
 	cqrsFacade, err := cqrs.NewFacade(cqrs.FacadeConfig{
 		GenerateCommandsTopic: func(commandName string) string {
 			// we are using queue RabbitMQ config, so we need to have topic per command type
@@ -193,10 +190,9 @@ func (es *ESService) Start() error {
 }
 
 func (es *ESService) Stop() error {
-	logger := fplog.Logger(es.ctx)
 
-	logger.Debug("ES stopping")
-	defer logger.Debug("ES stopped")
+	slog.Debug("ES stopping")
+	defer slog.Debug("ES stopped")
 
 	return es.router.Close()
 }

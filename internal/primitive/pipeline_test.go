@@ -5,13 +5,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 func TestPipelineOK(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	q := RunPipeline{}

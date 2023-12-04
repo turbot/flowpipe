@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -14,7 +13,6 @@ import (
 
 func TestHTTPMethodGET(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -33,7 +31,6 @@ func TestHTTPMethodGET(t *testing.T) {
 
 func TestHTTPMethodGETWithQueryString(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -52,7 +49,6 @@ func TestHTTPMethodGETWithQueryString(t *testing.T) {
 
 func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -72,7 +68,6 @@ func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
 
 func TestHTTPMethodGETNotFound(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -95,7 +90,6 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 
 func TestHTTPMethodGETUnauthorized(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -121,7 +115,6 @@ func TestHTTPMethodGETUnauthorized(t *testing.T) {
 
 func TestHTTPMethodPOST(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -146,7 +139,6 @@ func TestHTTPMethodPOST(t *testing.T) {
 
 func TestHTTPMethodPOSTWithTextBody(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -166,7 +158,6 @@ func TestHTTPMethodPOSTWithTextBody(t *testing.T) {
 
 func TestHTTPMethodPOSTNotFound(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -188,7 +179,6 @@ func TestHTTPMethodPOSTNotFound(t *testing.T) {
 
 func TestHTTPMethodPOSTWithRequestHeaders(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -220,7 +210,6 @@ func TestHTTPMethodPOSTWithRequestHeaders(t *testing.T) {
 
 func TestHTTPMethodPOSTWithTimeout(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -246,7 +235,6 @@ func TestHTTPMethodPOSTWithTimeout(t *testing.T) {
 
 func TestHTTPMethodPOSTWithNoVerifyCertificate(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -273,7 +261,6 @@ func TestHTTPMethodPOSTWithNoVerifyCertificate(t *testing.T) {
 
 func TestHTTPMethodPOSTWithVerifyInvalidCertificate(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -296,7 +283,6 @@ func TestHTTPMethodPOSTWithVerifyInvalidCertificate(t *testing.T) {
 
 func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -322,7 +308,6 @@ func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 
 func TestHTTPMethodDELETE(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -341,7 +326,6 @@ func TestHTTPMethodDELETE(t *testing.T) {
 
 func TestHTTPMethodDELETENotFound(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -365,7 +349,6 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 
 func TestHTTPMethodPUT(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -394,7 +377,6 @@ func TestHTTPMethodPUT(t *testing.T) {
 
 func TestHTTPMethodPUTWithTextBody(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -415,7 +397,6 @@ func TestHTTPMethodPUTWithTextBody(t *testing.T) {
 
 func TestHTTPMethodPUTNotFound(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -439,7 +420,6 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 
 func TestHTTPMethodPATCH(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -464,7 +444,6 @@ func TestHTTPMethodPATCH(t *testing.T) {
 
 func TestHTTPMethodPATCHWithTextBody(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
@@ -485,7 +464,6 @@ func TestHTTPMethodPATCHWithTextBody(t *testing.T) {
 
 func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	ctx := context.Background()
-	ctx = fplog.ContextWithLogger(ctx)
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}

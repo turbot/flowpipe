@@ -5,7 +5,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
+	"log/slog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -21,11 +21,10 @@ func (StepQueued) NewEvent() interface{} {
 
 func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 
-	logger := fplog.Logger(ctx)
 	e, ok := ei.(*event.StepQueued)
 
 	if !ok {
-		logger.Error("invalid event type", "expected", "*event.StepQueued", "actual", ei)
+		slog.Error("invalid event type", "expected", "*event.StepQueued", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepQueued")
 	}
 
@@ -36,7 +35,7 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 	if err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(e, err)))
 		if err != nil {
-			fplog.Logger(ctx).Error("Error publishing event", "error", err)
+			slog.Error("Error publishing event", "error", err)
 		}
 
 		return nil
@@ -45,7 +44,7 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 	if err := h.CommandBus.Send(ctx, cmd); err != nil {
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(e, err)))
 		if err != nil {
-			fplog.Logger(ctx).Error("Error publishing event", "error", err)
+			slog.Error("Error publishing event", "error", err)
 		}
 		return nil
 	}

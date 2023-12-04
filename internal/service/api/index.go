@@ -4,22 +4,23 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
 
+	ginlogger "github.com/FabienMht/ginslog/logger"
+	ginrecovery "github.com/FabienMht/ginslog/recovery"
 	"github.com/didip/tollbooth/v7"
 	"github.com/didip/tollbooth/v7/limiter"
 	"github.com/gin-contrib/gzip"
 	size "github.com/gin-contrib/size"
-	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
@@ -125,11 +126,8 @@ func WithHTTPPort(port int) APIServiceOption {
 // Start starts services managed by the Manager.
 func (api *APIService) Start() error {
 
-	// Convenience
-	logger := fplog.Logger(api.ctx)
-
-	logger.Debug("API starting")
-	defer logger.Debug("API started")
+	slog.Debug("API starting")
+	defer slog.Debug("API started")
 
 	// Set the gin mode based on our environment, to configure logging etc as appropriate
 	gin.SetMode(viper.GetString("environment"))
@@ -138,20 +136,15 @@ func (api *APIService) Start() error {
 	// Initialize gin
 	router := gin.New()
 
-	// Add a ginzap middleware, which:
+	// Add a ginslog middleware, which:
 	//   - Logs all requests, like a combined access and error log.
 	//   - Logs to stdout.
 	//   - RFC3339 with UTC time format.
-	router.Use(ginzap.Ginzap(logger.Zap, time.RFC3339, true))
-
+	// TODO should we configure an slogger for gin
+	router.Use(ginlogger.New(slog.Default()))
 	// Logs all panic to error log
 	//   - stack means whether output the stack info.
-	router.Use(ginzap.RecoveryWithZap(logger.Zap, true))
-
-	// Set the same logger in all the Gin context
-	router.Use(func(c *gin.Context) {
-		c.Set("fplogger", logger)
-	})
+	router.Use(ginrecovery.New(slog.Default()))
 
 	apiPrefixGroup := router.Group(common.APIPrefix())
 	apiPrefixGroup.Use(common.ValidateAPIVersion)
@@ -255,8 +248,8 @@ func (api *APIService) Start() error {
 
 // Stop stops services managed by the Manager.
 func (api *APIService) Stop() error {
-	fplog.Logger(api.ctx).Debug("API stopping")
-	defer fplog.Logger(api.ctx).Debug("API stopped")
+	slog.Debug("API stopping")
+	defer slog.Debug("API stopped")
 
 	// The context is used to inform the server it has time to finish the request
 	// it is currently handling
@@ -268,7 +261,7 @@ func (api *APIService) Stop() error {
 			// TODO - wrap error
 			return err
 		}
-		fplog.Logger(api.ctx).Debug("API HTTP server stopped")
+		slog.Debug("API HTTP server stopped")
 	}
 
 	api.StoppedAt = utils.TimeNow()

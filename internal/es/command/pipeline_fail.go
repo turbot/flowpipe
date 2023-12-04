@@ -5,10 +5,10 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"log/slog"
 )
 
 type PipelineFailHandler CommandHandler
@@ -22,17 +22,15 @@ func (h PipelineFailHandler) NewCommand() interface{} {
 }
 
 func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
-	logger := fplog.Logger(ctx)
-
 	cmd, ok := c.(*event.PipelineFail)
 	if !ok {
-		logger.Error("pipeline_fail handler expected PipelineFail event", "event", c)
+		slog.Error("pipeline_fail handler expected PipelineFail event", "event", c)
 		return perr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
 	}
 
 	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
 	if err != nil {
-		logger.Error("pipeline_fail error constructing execution", "error", err)
+		slog.Error("pipeline_fail error constructing execution", "error", err)
 		return err
 	}
 
@@ -40,7 +38,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 
 	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		logger.Error("Pipeline definition not found", "error", err)
+		slog.Error("Pipeline definition not found", "error", err)
 		return err
 	}
 
@@ -52,7 +50,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		// If all dependencies met, we then calculate the value of this output
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
-			logger.Error("Error building eval context while calculating output in pipeline_fail", "error", err)
+			slog.Error("Error building eval context while calculating output in pipeline_fail", "error", err)
 			return err
 		}
 
@@ -71,13 +69,13 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
-				logger.Info("Error calculating output during pipeline_fail during pipeline_fail event", "error", err)
+				slog.Info("Error calculating output during pipeline_fail during pipeline_fail event", "error", err)
 				// do not fail, continue to the next output
 				continue
 			}
 			val, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {
-				logger.Error("Error converting cty value to Go value for output calculation during pipeline_fail event", "error", err)
+				slog.Error("Error converting cty value to Go value for output calculation during pipeline_fail event", "error", err)
 				// do not fail, continue to the next output
 				continue
 			}
@@ -95,7 +93,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	for _, stepExecution := range pe.StepExecutions {
 		stepDefn := pipelineDefn.GetStep(stepExecution.Name)
 		if err != nil {
-			logger.Error("Error getting step definition during pipeline_fail event", "error", err)
+			slog.Error("Error getting step definition during pipeline_fail event", "error", err)
 			// do not fail, continue to the next step, we are already in pipeline_fail event, what else can we do here?
 			continue
 		}

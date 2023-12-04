@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	"github.com/radovskyb/watcher"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/runtime"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
@@ -204,8 +204,6 @@ func (fn *Function) Pull() error {
 // Validate validates the function fn.
 func (fn *Function) Validate() error {
 
-	logger := fplog.Logger(fn.runCtx)
-
 	if fn.Name == "" {
 		return perr.BadRequestWithMessage("name required for function")
 	}
@@ -251,7 +249,7 @@ func (fn *Function) Validate() error {
 
 	// Validate the PullParentImagePeriod
 	if _, err := time.ParseDuration(fn.PullParentImagePeriod); err != nil {
-		logger.Info(fmt.Sprintf("invalid pull parent image period `%s` for function: %s", fn.PullParentImagePeriod, fn.Name), "error", err)
+		slog.Info("invalid pull parent image period", "PullParentImagePeriod", fn.PullParentImagePeriod, "function", fn.Name, "error", err)
 		fn.PullParentImagePeriod = DefaultPullParentImagePeriod
 	}
 
@@ -259,7 +257,6 @@ func (fn *Function) Validate() error {
 }
 
 func (fn *Function) Watch() error {
-	logger := fplog.Logger(fn.runCtx)
 
 	fn.watcher = watcher.New()
 
@@ -277,13 +274,13 @@ func (fn *Function) Watch() error {
 			select {
 			case event := <-fn.watcher.Event:
 				go func() {
-					logger.Info("function watch event", "event", event)
+					slog.Info("function watch event", "event", event)
 					if err := fn.Build(); err != nil {
-						logger.Error(fmt.Sprintf("failed to build function %s, got error: %v", fn.Name, err), "error", err, "functionName", fn.Name)
+						slog.Error(fmt.Sprintf("failed to build function %s, got error: %v", fn.Name, err), "error", err, "functionName", fn.Name)
 					}
 				}()
 			case err := <-fn.watcher.Error:
-				logger.Error("file watcher error", "error", err)
+				slog.Error("file watcher error", "error", err)
 			case <-fn.watcher.Closed:
 				return
 			}
@@ -295,7 +292,7 @@ func (fn *Function) Watch() error {
 		// TODO - what do we do if this returns an error?
 		err := fn.watcher.Start(time.Millisecond * 100)
 		if err != nil {
-			logger.Error(fmt.Sprintf("failed to start file watcher for function %s, got error: %v", fn.Name, err), "error", err, "functionName", fn.Name)
+			slog.Error("failed to start file watcher", "function", fn.Name, "error", err)
 		}
 	}()
 
@@ -303,7 +300,6 @@ func (fn *Function) Watch() error {
 }
 
 func (fn *Function) Start(imageName string) (string, error) {
-	logger := fplog.Logger(fn.runCtx)
 
 	// Only allow the local machine to connect
 	hostIP := "127.0.0.1"
@@ -352,7 +348,7 @@ func (fn *Function) Start(imageName string) (string, error) {
 	v.Port = port
 	fn.Versions[imageName] = v
 
-	logger.Info("Docker container started successfully. Lambda function exposed on port", "port", port, "functionName", fn.Name, "imageName", imageName, "containerID", resp.ID, "containerName", resp.ID[:12])
+	slog.Info("Docker container started successfully. Lambda function exposed on port", "port", port, "functionName", fn.Name, "imageName", imageName, "containerID", resp.ID, "containerName", resp.ID[:12])
 	return resp.ID, nil
 }
 
@@ -368,7 +364,6 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 }
 
 func (fn *Function) Invoke(input []byte) (int, []byte, error) {
-	logger := fplog.Logger(fn.runCtx)
 
 	output := []byte{}
 
@@ -380,7 +375,7 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 
 	// Forward request to lambda endpoint
 	v := fn.Versions[fn.CurrentVersionName]
-	logger.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName)
+	slog.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName)
 
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
@@ -395,30 +390,29 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 }
 
 func (fn *Function) Restart(containerID string) (string, error) {
-	logger := fplog.Logger(fn.runCtx)
 
 	newContainerID := ""
 
-	logger.Info("restartDockerContainer", "imageTag", fn.GetImageTag(), "containerID", containerID)
+	slog.Info("restartDockerContainer", "imageTag", fn.GetImageTag(), "containerID", containerID)
 
 	// Stop the container
 	err := fn.dockerClient.CLI.ContainerStop(fn.ctx, containerID, container.StopOptions{})
 	if err != nil {
-		logger.Error("Container stop failed", "error", err)
+		slog.Error("Container stop failed", "error", err)
 		return newContainerID, err
 	}
 
 	// Remove the container
 	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerID, types.ContainerRemoveOptions{})
 	if err != nil {
-		logger.Error("Container remove failed", "error", err)
+		slog.Error("Container remove failed", "error", err)
 		return newContainerID, err
 	}
 
 	// Run the Docker container again
 	newContainerID, err = fn.Start(fn.CurrentVersionName)
 	if err != nil {
-		logger.Error("Container run failed", "error", err)
+		slog.Error("Container run failed", "error", err)
 		return newContainerID, err
 	}
 
@@ -442,7 +436,6 @@ func (fn *Function) Build() error {
 }
 
 func (fn *Function) BuildOne() error {
-	logger := fplog.Logger(fn.runCtx)
 
 	// Ensure only one build is running at a time. I feel there is probably
 	// a better way to do this with channels, but this works for now.
@@ -466,7 +459,7 @@ func (fn *Function) BuildOne() error {
 	// Add this version to the list for the function
 	imageName := fn.GetImageTag()
 	fn.Versions[imageName] = Version{}
-	logger.Info("Function versions", "versions", fn.Versions)
+	slog.Info("Function versions", "versions", fn.Versions)
 
 	// The latest built version is the current version used for new invocations
 	fn.CurrentVersionName = imageName
@@ -499,7 +492,6 @@ func (fn *Function) PullParentImageDueNow() bool {
 
 // buildImage builds the function image. Should only be called by Build().
 func (fn *Function) buildImage() error {
-	logger := fplog.Logger(fn.runCtx)
 
 	// Tar up the function code for use in the build
 	buildCtx, err := archive.TarWithOptions(fn.AbsolutePath, &archive.TarOptions{})
@@ -549,7 +541,7 @@ func (fn *Function) buildImage() error {
 		},
 	}
 
-	logger.Info("Building image ...", "PullParent", buildOptions.PullParent, "Dockerfile", buildOptions.Dockerfile, "functionName", fn.Name)
+	slog.Info("Building image ...", "PullParent", buildOptions.PullParent, "Dockerfile", buildOptions.Dockerfile, "functionName", fn.Name)
 
 	resp, err := fn.dockerClient.CLI.ImageBuild(fn.ctx, buildCtx, buildOptions)
 	if err != nil {
@@ -568,7 +560,7 @@ func (fn *Function) buildImage() error {
 		return err
 	}
 
-	logger.Info("Docker image built successfully.", "functionName", fn.Name)
+	slog.Info("Docker image built successfully.", "functionName", fn.Name)
 	return nil
 }
 

@@ -3,10 +3,10 @@ package middleware
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/fplog"
 )
 
 // This middleware writes the command and event to the jsonl event log file
@@ -14,12 +14,10 @@ func EventMiddleware(ctx context.Context) message.HandlerMiddleware {
 	return func(h message.HandlerFunc) message.HandlerFunc {
 		return func(msg *message.Message) ([]*message.Message, error) {
 
-			logger := fplog.Logger(ctx)
-
 			var pe event.PayloadWithEvent
 			err := json.Unmarshal(msg.Payload, &pe)
 			if err != nil {
-				logger.Error("invalid log payload", "error", err)
+				slog.Error("invalid log payload", "error", err)
 				return nil, err
 			}
 
@@ -29,7 +27,7 @@ func EventMiddleware(ctx context.Context) message.HandlerMiddleware {
 			var payload map[string]interface{}
 			err = json.Unmarshal(msg.Payload, &payload)
 			if err != nil {
-				logger.Error("invalid log payload", "error", err)
+				slog.Error("invalid log payload", "error", err)
 				return nil, err
 			}
 
@@ -37,7 +35,7 @@ func EventMiddleware(ctx context.Context) message.HandlerMiddleware {
 			// TODO: maybe allow for regex on the execution id?
 			// TODO: watch for registration and deregistration of the global hooks
 
-			logger.Info("event", "execution_id", executionID, "event_type", eventType, "payload", payload, "event", pe.Event)
+			slog.Info("event", "execution_id", executionID, "event_type", eventType, "payload", payload, "event", pe.Event)
 
 			return h(msg)
 		}

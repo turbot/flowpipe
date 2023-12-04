@@ -6,8 +6,8 @@ import (
 	"runtime/debug"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/pipe-fittings/perr"
+	"log/slog"
 )
 
 // Holds the recovered panic's error along with the stacktrace.
@@ -30,8 +30,7 @@ func PanicRecovererMiddleware(ctx context.Context) message.HandlerMiddleware {
 
 			defer func() {
 				if r := recover(); r != nil || panicked {
-					logger := fplog.Logger(ctx)
-					logger.Error("Recovered from panic", "error", err)
+					slog.Error("Recovered from panic", "error", err)
 					recoveredPanicErr := RecoveredPanicError{V: r, Stacktrace: string(debug.Stack())}
 
 					// Flowpipe error by default is not retryable
