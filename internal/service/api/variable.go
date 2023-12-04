@@ -2,11 +2,13 @@ package api
 
 import (
 	"net/http"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (api *APIService) VariableRegisterAPI(router *gin.RouterGroup) {
@@ -32,6 +34,7 @@ func (api *APIService) VariableRegisterAPI(router *gin.RouterGroup) {
 // @Failure 500 {object} perr.ErrorModel
 // @Router /variable [get]
 func (api *APIService) listVariables(c *gin.Context) {
+	logger := fplog.Logger(api.ctx)
 	// Get paging parameters
 	nextToken, limit, err := common.ListPagingRequest(c)
 	if err != nil {
@@ -39,13 +42,28 @@ func (api *APIService) listVariables(c *gin.Context) {
 		return
 	}
 
-	fplog.Logger(api.ctx).Info("received list variable request", "next_token", nextToken, "limit", limit)
+	rootMod := api.EsService.RootMod
 
-	result := types.ListVariableResponse{
-		Items: []types.Variable{},
+	logger.Info("received list variable request", "next_token", nextToken, "limit", limit)
+
+	variables := []types.Variable{}
+	for _, v := range rootMod.ResourceMaps.Variables {
+		variables = append(variables, types.Variable{
+			Name:        v.ShortName,
+			Description: v.Description,
+			Type:        v.TypeString,
+			Value:       v.ValueGo,
+			Default:     v.DefaultGo,
+		})
 	}
 
-	result.Items = append(result.Items, types.Variable{Type: "variable_webhook", Name: "webhookvariable"}, types.Variable{Type: "variable_manual", Name: "manualvariable"})
+	sort.Slice(variables, func(i, j int) bool {
+		return variables[i].Name < variables[j].Name
+	})
+
+	result := types.ListVariableResponse{
+		Items: variables,
+	}
 
 	c.JSON(http.StatusOK, result)
 }
@@ -74,6 +92,23 @@ func (api *APIService) getVariable(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
-	result := types.Variable{Type: "variable_" + uri.VariableName, Name: uri.VariableName}
-	c.JSON(http.StatusOK, result)
+
+	rootMod := api.EsService.RootMod
+
+	for _, v := range rootMod.ResourceMaps.Variables {
+		if v.ShortName == uri.VariableName {
+			result := types.Variable{
+				Name:        v.ShortName,
+				Type:        v.TypeString,
+				Value:       v.ValueGo,
+				Default:     v.DefaultGo,
+				Description: v.Description,
+			}
+			c.JSON(http.StatusOK, result)
+			return
+		}
+	}
+
+	common.AbortWithError(c, perr.NotFoundWithMessage("not found"))
+	return
 }

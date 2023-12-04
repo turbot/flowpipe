@@ -2,8 +2,11 @@ package types
 
 // The definition of a single Flowpipe Variable
 type Variable struct {
-	Type string `json:"type"`
-	Name string `json:"name"`
+	Type        string  `json:"type"`
+	Name        string  `json:"name"`
+	Description *string `json:"description,omitempty"`
+	Default     any     `json:"default"`
+	Value       any     `json:"value"`
 }
 
 type PrintableVariable struct {
