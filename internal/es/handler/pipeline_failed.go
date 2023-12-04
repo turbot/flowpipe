@@ -9,7 +9,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/fplog"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 )
