@@ -184,11 +184,11 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 		bodyString = string(body)
 	}
 
-	if headers["Content-Type"] != nil && strings.Contains(headers["Content-Type"].(string), "application/json") && resp.StatusCode < 400 {
+	if headers["Content-Type"] != nil && strings.Contains(headers["Content-Type"].(string), "application/json") && resp.StatusCode < 400 && len(body) > 0 {
 		var bodyJSON interface{}
 		err := json.Unmarshal(body, &bodyJSON)
 		if err != nil {
-			logger.Error("Error unmarshalling response body", "error", err)
+			logger.Debug("Unable to marshallresponse body to JSON", "error", err)
 			output.Data[schema.AttributeTypeResponseBody] = bodyString
 		} else {
 			output.Data[schema.AttributeTypeResponseBody] = bodyJSON
