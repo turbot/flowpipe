@@ -14,11 +14,12 @@ import (
 	"strings"
 	"time"
 
+	"log/slog"
+
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"log/slog"
 )
 
 const (
@@ -88,7 +89,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input modconfig.Input) (*modconfi
 		return nil, err
 	}
 
-	// TODO
+	// TODO:
 	// * Test SSL vs non-SSL
 	// * Compare to features in https://www.tines.com/docs/actions/types/http-request#configuration-options
 
@@ -300,18 +301,10 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 // mapResponseHeaders maps the response headers to a simpler key-value pair
 func mapResponseHeaders(resp *http.Response) map[string]interface{} {
 	headers := map[string]interface{}{}
-	// But, well known multi-value fields (e.g. Set-Cookie) should be maintained
-	// in array form
-	headersAsArrays := map[string]bool{
-		"Set-Cookie": true,
-		"Link":       true}
-
 	for k, v := range resp.Header {
-		if headersAsArrays[k] {
-			// It's a known multi-value header
-			headers[k] = v
+		if len(v) > 1 {
+			headers[k] = strings.Join(v, ",")
 		} else {
-			// Otherwise, just use the first value for simplicity
 			headers[k] = v[0]
 		}
 	}
