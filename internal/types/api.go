@@ -24,6 +24,10 @@ type VariableRequestURI struct {
 	VariableName string `uri:"variable_name" binding:"required" format:"^[a-z]{0,32}$"`
 }
 
+type ModRequestURI struct {
+	ModName string `uri:"mod_name" binding:"required" format:"^[a-z]{0,32}$"`
+}
+
 type ProcessRequestURI struct {
 	// TODO: do we want to pass the ExecutionID or PipelineExecutionID? The log is stored under ExecutionID but the execution works with PipelineExecutionID
 	// ProcessId string `uri:"process_id" binding:"required" format:"^(pexec|exec)_[0-9a-v]{20}$"`

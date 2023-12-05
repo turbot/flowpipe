@@ -1,5 +1,18 @@
 mod "test_suite_mod" {
-    title = "Default test suite mod 3"
+    title = "Default Test Suite Mod"
+
+    description = "Test Suite Mode for Flowpipe"
+
+    categories = [
+        "Test Suite",
+        "Flowpipe"
+    ]
+
+    opengraph {
+        title       = "Flowpipe Test Suite Mod"
+        description = "Run pipelines to supercharge your workflows using Flowpipe."
+    }
+
     require {
         mod "mod_depend_a" {
             version = "1.0.0"

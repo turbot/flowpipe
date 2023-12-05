@@ -185,6 +185,7 @@ func (api *APIService) Start() error {
 	api.DocsRegisterAPI(apiPrefixGroup)
 	api.WebhookRegisterAPI(apiPrefixGroup)
 	api.InputRegisterAPI(apiPrefixGroup)
+	api.ModRegisterAPI(apiPrefixGroup)
 
 	api.apiPrefixGroup = apiPrefixGroup
 	api.router = router
