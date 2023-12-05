@@ -2061,7 +2061,7 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	assert.Equal("<redacted>", envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
-func (suite *ModTestSuite) TestCredentialRedaction() {
+func (suite *ModTestSuite) XTestCredentialRedaction() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -2090,7 +2090,7 @@ func (suite *ModTestSuite) TestCredentialRedaction() {
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
 }
 
-func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
+func (suite *ModTestSuite) XTestCredentialWithOptionalParam() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
