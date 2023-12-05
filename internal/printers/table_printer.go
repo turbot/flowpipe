@@ -14,6 +14,13 @@ import (
 // TablePrinter decodes table objects into typed objects before delegating to another printer.
 // Non-table types are simply passed through
 type TablePrinter[T any] struct {
+	Sanitizer *sanitize.Sanitizer
+}
+
+func NewTablePrinter[T any]() (*TablePrinter[T], error) {
+	return &TablePrinter[T]{
+		Sanitizer: sanitize.NullSanitizer,
+	}, nil
 }
 
 func (p TablePrinter[T]) PrintResource(_ context.Context, items types.PrintableResource[T], writer io.Writer) error {
@@ -55,7 +62,7 @@ func (p TablePrinter[T]) PrintTable(table types.Table, writer io.Writer) error {
 		// format the row
 		str := fmt.Sprintf(tableFormatter, r.Cells...)
 		// sanitize
-		str = sanitize.Instance.SanitizeString(str)
+		str = p.Sanitizer.SanitizeString(str)
 
 		// write
 		//nolint:forbidigo // this is how the tabwriter works

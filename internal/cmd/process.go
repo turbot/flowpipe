@@ -158,11 +158,13 @@ func listProcessFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if processes != nil {
-		printer := printers.GetPrinter[flowpipeapi.Process](cmd)
-
+		printer, err := printers.GetPrinter[flowpipeapi.Process](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
 		printableResource := types.NewPrintableProcess(processes)
 
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}

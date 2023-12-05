@@ -3,7 +3,6 @@ package sanitize
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"regexp"
@@ -15,6 +14,8 @@ import (
 )
 
 const redactedStr = "<redacted>"
+
+var NullSanitizer = NewSanitizer(SanitizerOptions{})
 
 var Instance = NewSanitizer(SanitizerOptions{
 	ExcludeFields: []string{
@@ -57,7 +58,8 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"github_token",
 		"gitlab_token",
 	},
-	ExcludePatterns: []string{},
+	ExcludePatterns:    []string{},
+	ImportCodeMatchers: true,
 })
 
 type SanitizerOptions struct {
@@ -65,6 +67,8 @@ type SanitizerOptions struct {
 	ExcludeFields []string
 	// ExcludePatterns is a list of regexes - any capture groups are redacted
 	ExcludePatterns []string
+
+	ImportCodeMatchers bool
 }
 
 type Sanitizer struct {
@@ -111,10 +115,11 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 		s.patterns = append(s.patterns, re)
 	}
 
-	for _, sm := range codePluginMatchers {
-		s.patterns = append(s.patterns, sm.DenyList()...)
+	if opts.ImportCodeMatchers {
+		for _, sm := range codePluginMatchers {
+			s.patterns = append(s.patterns, sm.DenyList()...)
+		}
 	}
-
 	return s
 }
 
@@ -161,7 +166,7 @@ func (s *Sanitizer) SanitizeString(v string) string {
 		if lastReplacement != nil && r.start < lastReplacement.end {
 			a := v[r.start:r.end]
 			b := v[lastReplacement.start:lastReplacement.end]
-			log.Printf("Overlapping replacements: %s and %s", a, b)
+			slog.Debug("Overlapping replacements", "a", a, "b", b)
 			// expand previous replacement
 			lastReplacement.end = r.end
 			continue

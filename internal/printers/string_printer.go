@@ -14,9 +14,10 @@ import (
 
 type StringPrinter[T any] struct {
 	colorGenerator *color.DynamicColorGenerator
+	Sanitizer      *sanitize.Sanitizer
 }
 
-func NewStringPrinter[T types.SanitizedStringer]() (*StringPrinter[T], error) {
+func NewStringPrinter[T any]() (*StringPrinter[T], error) {
 	colorGenerator, err := color.NewDynamicColorGenerator(0, 16)
 	if err != nil {
 		return nil, err
@@ -24,6 +25,7 @@ func NewStringPrinter[T types.SanitizedStringer]() (*StringPrinter[T], error) {
 
 	p := &StringPrinter[T]{
 		colorGenerator: colorGenerator,
+		Sanitizer:      sanitize.NullSanitizer,
 	}
 	return p, nil
 }
