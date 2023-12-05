@@ -58,7 +58,9 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"github_token",
 		"gitlab_token",
 	},
-	ExcludePatterns:    []string{},
+	ExcludePatterns: []string{
+		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid
+	},
 	ImportCodeMatchers: true,
 })
 
