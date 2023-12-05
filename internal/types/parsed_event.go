@@ -44,9 +44,9 @@ func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) 
 
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
-	out := fmt.Sprintf("%s%s%s %s\n", left, au.BrightGreen("Execution"), right, p.ExecutionId)
+	out := fmt.Sprintf("%s%s%s %s %s\n", left, au.Cyan("flowpipe"), right, "Execution ID:", p.ExecutionId)
 	if p.IsStale {
-		out += fmt.Sprintf("%s%s%s %s\n", left, au.BrightRed("Stale"), right, au.Sprintf(au.Red("Mod is stale, last loaded: %s"), p.LastLoaded))
+		out += fmt.Sprintf("%s%s%s %s\n", left, au.Cyan("flowpipe"), right, au.Sprintf(au.Yellow("Warning: Mod is stale, last loaded %s"), p.LastLoaded))
 	}
 	return out
 }
@@ -151,7 +151,7 @@ type ParsedEvent struct {
 	ParsedEventPrefix
 	Type     string `json:"event_type"`
 	StepType string `json:"step_type"`
-	Message  string `json:"message"`
+	Message  string `json:"message,omitempty"`
 }
 
 func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -170,7 +170,7 @@ func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) s
 
 type ParsedEventWithInput struct {
 	ParsedEvent
-	Input map[string]any `json:"input"`
+	Input map[string]any `json:"args"`
 }
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -184,12 +184,24 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 	out := ""
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
-	stepString := ""
-	if p.StepType != "" {
-		stepString = fmt.Sprintf(" %s step", au.Blue(p.StepType))
+	switch p.StepType {
+	case "http":
+		method, _ := p.Input["method"].(string)
+		url, _ := p.Input["url"].(string)
+		if method == "" {
+			method = "GET"
+		} else {
+			method = strings.ToUpper(method)
+		}
+
+		out += fmt.Sprintf("%s Starting %s: %s %s\n", pre, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
+	case "sleep":
+		duration, _ := p.Input["duration"].(string)
+		out += fmt.Sprintf("%s Starting %s: %s\n", pre, p.StepType, au.BrightBlack(duration))
+	default:
+		out += fmt.Sprintf("%s Starting %s\n", pre, p.StepType)
 	}
 
-	out += fmt.Sprintf("%s Starting%s\n", pre, stepString)
 	if opts.Verbose {
 		for k, v := range p.Input {
 			if v == nil {
@@ -197,7 +209,7 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 			}
 			valueString := ""
 			if isSimpleType(v) {
-				valueString = fmt.Sprintf("%v", v)
+				valueString = formatSimpleValue(v, au)
 			} else {
 				s, err := prettyjson.Marshal(v)
 				if err != nil {
@@ -206,7 +218,7 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 					valueString = string(s)
 				}
 			}
-			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), au.BrightBlue(valueString))
+			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), valueString)
 		}
 	}
 	return out
@@ -236,7 +248,7 @@ func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 			}
 			valueString := ""
 			if isSimpleType(v) {
-				valueString = fmt.Sprintf("%v", au.BrightBlue(v))
+				valueString = formatSimpleValue(v, au)
 			} else {
 				s, err := prettyjson.Marshal(v)
 				if err != nil {
@@ -253,8 +265,9 @@ func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 
 type ParsedEventWithOutput struct {
 	ParsedEvent
-	Output   map[string]any
-	Duration *string
+	Output     map[string]any `json:"attributes"`
+	StepOutput map[string]any `json:"step_output"`
+	Duration   *string        `json:"duration,omitempty"`
 }
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -268,29 +281,61 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 	out := ""
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
-	for k, v := range p.Output {
-		if v == nil {
-			v = ""
-		}
-		valueString := ""
-		if isSimpleType(v) {
-			valueString = fmt.Sprintf("%v", au.BrightBlue(v))
-		} else {
-			s, err := prettyjson.Marshal(v)
-			if err != nil {
-				valueString = au.Sprintf(au.Red("error parsing value"))
-			} else {
-				valueString = string(s)
+	// attributes?
+	if p.Type == event.HandlerPipelineFinished || opts.Verbose {
+		for k, v := range p.Output {
+			if v == nil {
+				v = ""
 			}
+			valueString := ""
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, au)
+			} else {
+				s, err := prettyjson.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Attr", au.Blue(k), valueString)
 		}
-		out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
+	}
+
+	// StepOutput?
+	if p.Type == event.HandlerPipelineFinished || opts.Verbose {
+		for k, v := range p.StepOutput {
+			if v == nil {
+				v = ""
+			}
+			valueString := ""
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, au)
+			} else {
+				s, err := prettyjson.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
+		}
 	}
 
 	duration := ""
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
+
+	switch p.StepType {
+	case "http":
+		statusCode, _ := p.Output["status_code"].(float64)
+		out += fmt.Sprintf("%s %s %g %s\n", pre, au.BrightGreen("Complete:"), au.BrightGreen(statusCode), au.Cyan(duration).Italic())
+	default:
+		out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
+	}
+
 	return out
 }
 
@@ -298,8 +343,8 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 type ParsedErrorEvent struct {
 	ParsedEvent
 	Errors   []modconfig.StepError `json:"errors"`
-	Output   map[string]any
-	Duration *string `json:"duration,omitempty"`
+	Output   map[string]any        `json:"attributes"`
+	Duration *string               `json:"duration,omitempty"`
 }
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -317,28 +362,29 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 		duration = *p.Duration
 	}
 
-	for k, v := range p.Output {
-		if v == nil {
-			v = ""
-		}
-		valueString := ""
-		if isSimpleType(v) {
-			valueString = fmt.Sprintf("%v", au.BrightBlue(v))
-		} else {
-			s, err := prettyjson.Marshal(v)
-			if err != nil {
-				valueString = au.Sprintf(au.Red("error parsing value"))
-			} else {
-				valueString = string(s)
+	if p.Type == event.HandlerPipelineFailed || opts.Verbose {
+		for k, v := range p.Output {
+			if v == nil {
+				v = ""
 			}
+			valueString := ""
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, au)
+			} else {
+				s, err := prettyjson.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
 		}
-		out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
 	}
-
 	for _, e := range p.Errors {
-		out += fmt.Sprintf("%s %s: %s\n", pre, au.BrightRed(e.Error.Title), au.Red(e.Error.Detail))
+		out += fmt.Sprintf("%s %s %s\n", pre, au.Red(e.Error.Title+":"), au.Red(e.Error.Detail))
 	}
-	out += fmt.Sprintf("%s %s %s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)"), len(p.Errors)), au.Cyan(duration).Italic())
+	out += fmt.Sprintf("%s %s %s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic())
 	return out
 }
 
@@ -388,7 +434,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEvent{
 				ParsedEventPrefix: NewPrefix(fullName),
 				Type:              log.EventType,
-				Message:           fmt.Sprintf("Starting %s", e.PipelineExecutionID),
+				Message:           "Starting pipeline",
 			}
 			out = append(out, parsed)
 		case event.HandlerPipelineFinished:
@@ -546,8 +592,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 							Type:              log.EventType,
 							StepType:          stepType,
 						},
-						Duration: &duration,
-						Output:   e.Output.Data,
+						Duration:   &duration,
+						Output:     e.Output.Data,
+						StepOutput: e.StepOutput,
 					}
 					out = append(out, parsed)
 				case "failed":
@@ -559,6 +606,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 						},
 						Duration: &duration,
 						Errors:   e.Output.Errors,
+						Output:   e.Output.Data,
 					}
 					out = append(out, parsed)
 				}
@@ -606,4 +654,29 @@ func isSimpleType(input any) bool {
 	default:
 		return false
 	}
+}
+
+func formatSimpleValue(input any, au aurora.Aurora) string {
+	kind := reflect.TypeOf(input).Kind()
+	switch kind {
+	case reflect.Bool:
+		return au.Sprintf("%s", au.Yellow(input))
+	case reflect.String:
+		return au.Sprintf("%s", au.Green(input))
+	case
+		reflect.Float32,
+		reflect.Float64,
+		reflect.Int,
+		reflect.Int8,
+		reflect.Int16,
+		reflect.Int32,
+		reflect.Int64,
+		reflect.Uint,
+		reflect.Uint8,
+		reflect.Uint16,
+		reflect.Uint32,
+		reflect.Uint64:
+		return au.Sprintf("%s", au.Cyan(input))
+	}
+	return ""
 }
