@@ -339,8 +339,8 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.Error.Status)
-		assert.Equal("404 Not Found", e.Error.Detail)
+		assert.Equal(405, e.Error.Status)
+		assert.Equal("405 Method Not Allowed", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
@@ -476,8 +476,8 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	assert.Nil(err)
 	output.HasErrors()
 	for _, e := range output.Errors {
-		assert.Equal(404, e.Error.Status)
-		assert.Equal("404 Not Found", e.Error.Detail)
+		assert.Equal(405, e.Error.Status)
+		assert.Equal("405 Method Not Allowed", e.Error.Detail)
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }

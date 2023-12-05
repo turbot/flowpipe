@@ -206,35 +206,33 @@ func (api *APIService) getProcessOutput(c *gin.Context) {
 		return
 	}
 
-	evt := &event.Event{
-		ExecutionID: uri.ProcessId,
-	}
+	// evt := &event.Event{
+	// 	ExecutionID: uri.ProcessId,
+	// }
 
-	outputPath := filepaths.OutputFilePath(evt.ExecutionID)
+	// // Open the JSON file
+	// file, err := os.Open(outputPath)
+	// if err != nil {
+	// 	common.AbortWithError(c, err)
+	// 	return
+	// }
+	// defer file.Close()
 
-	// Open the JSON file
-	file, err := os.Open(outputPath)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-	defer file.Close()
+	// // Decode JSON data
+	// var output map[string]interface{}
+	// decoder := json.NewDecoder(file)
+	// err = decoder.Decode(&output)
+	// if err != nil {
+	// 	common.AbortWithError(c, err)
+	// 	return
+	// }
 
-	// Decode JSON data
-	var output map[string]interface{}
-	decoder := json.NewDecoder(file)
-	err = decoder.Decode(&output)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
+	// pipelineOutput := types.ProcessOutputData{
+	// 	ID:     evt.ExecutionID,
+	// 	Output: output,
+	// }
 
-	pipelineOutput := types.ProcessOutputData{
-		ID:     evt.ExecutionID,
-		Output: output,
-	}
-
-	c.JSON(http.StatusOK, pipelineOutput)
+	c.JSON(http.StatusOK, "")
 }
 
 func (api *APIService) cmdProcess(c *gin.Context) {

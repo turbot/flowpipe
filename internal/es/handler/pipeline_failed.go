@@ -2,15 +2,12 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
-	"os"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/pipe-fittings/schema"
 )
 
 type PipelineFailed EventHandler
@@ -63,53 +60,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	// Generate output data
-	data, err := ex.PipelineData(e.PipelineExecutionID)
-	if err != nil {
-		slog.Error("pipeline_failed", "error", err)
-	} else {
-		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		slog.Debug("json string", "json", string(jsonStr))
-	}
-
-	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
-	if err != nil {
-		slog.Error("Pipeline definition not found", "error", err)
-		return err
-	}
-
-	pipelineErrors := e.Errors
-	if len(pipelineErrors) > 0 {
-		if e.PipelineOutput == nil {
-			e.PipelineOutput = map[string]interface{}{}
-		}
-		e.PipelineOutput["errors"] = pipelineErrors
-	}
-
-	if len(pipelineDefn.OutputConfig) > 0 || (e.PipelineOutput != nil && e.PipelineOutput["errors"] != nil) {
-		data[schema.BlockTypePipelineOutput] = e.PipelineOutput
-	}
-
-	// Dump the output
-	jsonStr, _ := json.MarshalIndent(data, "", "  ")
-	outputPath := filepaths.OutputFilePath(e.Event.ExecutionID)
-	_ = os.WriteFile(outputPath, jsonStr, 0600)
-
-	snapshot, err := ex.Snapshot(e.PipelineExecutionID)
-	if err != nil {
-		slog.Error("pipeline_failed error generating snapshot", "error", err)
-	} else {
-		jsonStr, err := json.MarshalIndent(snapshot, "", "  ")
-
-		if err != nil {
-			slog.Error("pipeline_failed error generating snapshot", "error", err)
-			return err
-		}
-
-		snapshotPath := filepaths.SnapshotFilePath(e.Event.ExecutionID)
-		_ = os.WriteFile(snapshotPath, jsonStr, 0600)
-	}
-
+	// Sanitize event store file
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
 	if err != nil {

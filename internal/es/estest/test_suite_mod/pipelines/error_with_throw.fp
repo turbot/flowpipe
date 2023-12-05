@@ -29,8 +29,6 @@ pipeline "error_with_throw_but_ignored" {
     }
 }
 
-
-
 pipeline "error_with_multiple_throws" {
     step "transform" "foo" {
         value = "bar"
@@ -75,7 +73,6 @@ pipeline "nested_for_throw" {
         value = "bar"
     }
 }
-
 
 pipeline "error_with_retries_that_works" {
     step "transform" "foo" {
