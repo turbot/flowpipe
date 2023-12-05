@@ -32,7 +32,3 @@ func EventStoreFilePath(executionId string) string {
 func SnapshotFilePath(executionId string) string {
 	return path.Join(EventStoreDir(), fmt.Sprintf("%s.sps", executionId))
 }
-
-func OutputFilePath(executionId string) string {
-	return path.Join(EventStoreDir(), fmt.Sprintf("%s_output.json", executionId))
-}

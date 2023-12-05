@@ -85,12 +85,6 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// Dump the output
-	jsonStr, _ := json.MarshalIndent(data, "", "  ")
-
-	sanitizedJsonStr := sanitize.Instance.SanitizeString(string(jsonStr))
-
-	outputPath := filepaths.OutputFilePath(e.Event.ExecutionID)
-	_ = os.WriteFile(outputPath, []byte(sanitizedJsonStr), 0600)
 
 	// Dump the snapshot
 	snapshot, err := ex.Snapshot(e.PipelineExecutionID)
@@ -99,8 +93,8 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
-	jsonStr, _ = json.MarshalIndent(snapshot, "", "  ")
-	sanitizedJsonStr = sanitize.Instance.SanitizeString(string(jsonStr))
+	jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
+	sanitizedJsonStr := sanitize.Instance.SanitizeString(string(jsonStr))
 
 	snapshotPath := filepaths.SnapshotFilePath(e.Event.ExecutionID)
 	_ = os.WriteFile(snapshotPath, []byte(sanitizedJsonStr), 0600)

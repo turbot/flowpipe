@@ -3,12 +3,12 @@ package command
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"log/slog"
 )
 
 type PipelineFailHandler CommandHandler
@@ -42,47 +42,8 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		return err
 	}
 
-	// calculate as many output as ppossible
-	var output map[string]interface{}
-	if len(pipelineDefn.OutputConfig) > 0 {
-		outputBlock := map[string]interface{}{}
-
-		// If all dependencies met, we then calculate the value of this output
-		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
-		if err != nil {
-			slog.Error("Error building eval context while calculating output in pipeline_fail", "error", err)
-			return err
-		}
-
-		for _, output := range pipelineDefn.OutputConfig {
-			// check if its dependencies have been met
-			dependenciesMet := true
-			for _, dep := range output.DependsOn {
-				if !pe.IsStepComplete(dep) {
-					dependenciesMet = false
-					break
-				}
-			}
-			// Dependencies not met, skip this output
-			if !dependenciesMet {
-				continue
-			}
-			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
-			if len(diags) > 0 {
-				slog.Info("Error calculating output during pipeline_fail during pipeline_fail event", "error", err)
-				// do not fail, continue to the next output
-				continue
-			}
-			val, err := hclhelpers.CtyToGo(ctyValue)
-			if err != nil {
-				slog.Error("Error converting cty value to Go value for output calculation during pipeline_fail event", "error", err)
-				// do not fail, continue to the next output
-				continue
-			}
-			outputBlock[output.Name] = val
-		}
-		output = outputBlock
-	}
+	// 2023-12-05: do not calculate output if pipeline fails
+	output := make(map[string]any, 1)
 
 	// Collect all the step output, but don't also add the error in the cmd/event
 	var pipelineErrors []modconfig.StepError
