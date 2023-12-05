@@ -45,3 +45,22 @@ pipeline "failed_output_calc" {
         value = "this works"
     }
 }
+
+pipeline "parent_with_child_with_no_output" {
+    step "pipeline" "call_child" {
+        pipeline = pipeline.child_with_no_output
+    }
+
+    output "val" {
+    value       = {
+      "call_child" = !is_error(step.pipeline.call_child) ? "ok" : "fail"
+    }
+  }
+}
+
+pipeline "child_with_no_output" {
+
+    step "transform" "echo" {
+        value = "echo"
+    }
+}

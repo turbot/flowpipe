@@ -2684,6 +2684,23 @@ func (suite *ModTestSuite) TestPipelineFailedOutputCalculation() {
 	assert.Equal("this works", pex.PipelineOutput["val_ok_two"])
 }
 
+func (suite *ModTestSuite) TestNestedPipelineWithEmptyOutput() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the nested pipeline has no output so the error calculation fail
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.parent_with_child_with_no_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("ok", pex.PipelineOutput["val"].(map[string]interface{})["call_child"])
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
