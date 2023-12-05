@@ -17,13 +17,14 @@ import (
 	"github.com/turbot/pipe-fittings/utils"
 )
 
-type ColorOptions struct {
+type RenderOptions struct {
 	ColorEnabled   bool
 	ColorGenerator *color.DynamicColorGenerator
+	Verbose        bool
 }
 
 type SanitizedStringer interface {
-	String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string
+	String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string
 }
 
 // const grayScaleIndex = uint8(3)
@@ -34,7 +35,7 @@ type ParsedHeader struct {
 	LastLoaded  string `json:"last_loaded"`
 }
 
-func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -122,7 +123,7 @@ func (p ParsedEventPrefix) getStepString(eachString string, loopString string, a
 	}
 }
 
-func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -155,7 +156,7 @@ type ParsedEvent struct {
 	Message  string `json:"message"`
 }
 
-func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -174,7 +175,7 @@ type ParsedEventWithInput struct {
 	Input map[string]any `json:"input"`
 }
 
-func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -191,22 +192,24 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts ColorOp
 	}
 
 	out += fmt.Sprintf("%s Starting%s\n", pre, stepString)
-	for k, v := range p.Input {
-		if v == nil {
-			v = ""
-		}
-		valueString := ""
-		if isSimpleType(v) {
-			valueString = fmt.Sprintf("%v", v)
-		} else {
-			s, err := prettyjson.Marshal(v)
-			if err != nil {
-				valueString = au.Sprintf(au.Red("error parsing value"))
-			} else {
-				valueString = string(s)
+	if opts.Verbose {
+		for k, v := range p.Input {
+			if v == nil {
+				v = ""
 			}
+			valueString := ""
+			if isSimpleType(v) {
+				valueString = fmt.Sprintf("%v", v)
+			} else {
+				s, err := prettyjson.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), au.BrightBlue(valueString))
 		}
-		out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), au.BrightBlue(valueString))
 	}
 	return out
 }
@@ -216,7 +219,7 @@ type ParsedEventWithArgs struct {
 	Args map[string]any `json:"args"`
 }
 
-func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -228,45 +231,8 @@ func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts ColorOpt
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	out += fmt.Sprintf("%s Starting\n", pre)
-	for k, v := range p.Args {
-		if v == nil {
-			v = ""
-		}
-		valueString := ""
-		if isSimpleType(v) {
-			valueString = fmt.Sprintf("%v", au.BrightBlue(v))
-		} else {
-			s, err := prettyjson.Marshal(v)
-			if err != nil {
-				valueString = au.Sprintf(au.Red("error parsing value"))
-			} else {
-				valueString = string(s)
-			}
-		}
-		out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), valueString)
-	}
-	return out
-}
-
-type ParsedEventWithOutput struct {
-	ParsedEvent
-	Output   map[string]any
-	Duration *string
-}
-
-func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
-
-	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
-
-	if p.Type == event.HandlerPipelineFinished {
-		for k, v := range p.Output {
+	if opts.Verbose {
+		for k, v := range p.Args {
 			if v == nil {
 				v = ""
 			}
@@ -281,9 +247,47 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts ColorO
 					valueString = string(s)
 				}
 			}
-			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
+			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), valueString)
 		}
 	}
+	return out
+}
+
+type ParsedEventWithOutput struct {
+	ParsedEvent
+	Output   map[string]any
+	Duration *string
+}
+
+func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	out := ""
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
+
+	for k, v := range p.Output {
+		if v == nil {
+			v = ""
+		}
+		valueString := ""
+		if isSimpleType(v) {
+			valueString = fmt.Sprintf("%v", au.BrightBlue(v))
+		} else {
+			s, err := prettyjson.Marshal(v)
+			if err != nil {
+				valueString = au.Sprintf(au.Red("error parsing value"))
+			} else {
+				valueString = string(s)
+			}
+		}
+		out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
+	}
+
 	duration := ""
 	if p.Duration != nil {
 		duration = *p.Duration
@@ -300,7 +304,7 @@ type ParsedErrorEvent struct {
 	Duration *string `json:"duration,omitempty"`
 }
 
-func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -315,24 +319,22 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOption
 		duration = *p.Duration
 	}
 
-	if p.Type == event.HandlerPipelineFailed {
-		for k, v := range p.Output {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = fmt.Sprintf("%v", au.BrightBlue(v))
-			} else {
-				s, err := prettyjson.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
+	for k, v := range p.Output {
+		if v == nil {
+			v = ""
 		}
+		valueString := ""
+		if isSimpleType(v) {
+			valueString = fmt.Sprintf("%v", au.BrightBlue(v))
+		} else {
+			s, err := prettyjson.Marshal(v)
+			if err != nil {
+				valueString = au.Sprintf(au.Red("error parsing value"))
+			} else {
+				valueString = string(s)
+			}
+		}
+		out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
 	}
 
 	for _, e := range p.Errors {

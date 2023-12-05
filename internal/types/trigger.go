@@ -21,7 +21,7 @@ type FpTrigger struct {
 	Schedule      *string           `json:"schedule,omitempty"`
 }
 
-func (t FpTrigger) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (t FpTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
 	// deliberately shadow the receiver with a sanitized version of the struct

@@ -186,7 +186,8 @@ func pipelineRunCmd() *cobra.Command {
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.")
+		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.").
+		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.")
 
 	return cmd
 }
