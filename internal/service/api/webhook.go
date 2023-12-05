@@ -190,7 +190,7 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		err = ex.LoadProcess(pipelineCmd.Event)
 		if err != nil {
 			if errorModel, ok := err.(perr.ErrorModel); ok {
-				if errorModel.Type == perr.ErrorCodeInternalTokenTooLarge {
+				if errorModel.Type == perr.ErrorCodeInternalTokenTooLarge || errorModel.Type == perr.ErrorCodeJsonSyntaxError {
 					response := map[string]interface{}{}
 
 					response["errors"] = []modconfig.StepError{

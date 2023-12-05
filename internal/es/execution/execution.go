@@ -536,9 +536,8 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		var ele types.EventLogEntry
 		err := json.Unmarshal(ba, &ele)
 		if err != nil {
-			stackTrace := getStackTrace()
-			slog.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba), "stackTrace", stackTrace)
-			return err
+			slog.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba))
+			return perr.InternalWithMessageAndType(perr.ErrorCodeJsonSyntaxError, "Fail to unmarshall event log entry "+err.Error())
 		}
 
 		err = ex.AppendEventLogEntry(ele)

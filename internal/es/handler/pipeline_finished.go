@@ -89,7 +89,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	// Dump the snapshot
 	snapshot, err := ex.Snapshot(e.PipelineExecutionID)
 	if err != nil {
-		slog.Error("pipeline_finished (3)", "error", err)
+		slog.Error("pipeline_finished", "error", err)
 		return err
 	}
 
