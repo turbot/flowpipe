@@ -2,14 +2,12 @@ package execution
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -473,18 +471,6 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	}
 
 	return results
-}
-
-func getStackTrace() string {
-	buf := new(bytes.Buffer)
-	for i := 20; ; i++ {
-		pc, file, line, ok := runtime.Caller(i)
-		if !ok {
-			break
-		}
-		fmt.Fprintf(buf, "%s:%d (0x%x)\n", file, line, pc) //nolint:forbidigo // exception
-	}
-	return buf.String()
 }
 
 // LoadProcess loads the event log file (the .jsonl file) continously and update the
