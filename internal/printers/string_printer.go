@@ -32,9 +32,10 @@ func (p StringPrinter[T]) PrintResource(_ context.Context, r types.PrintableReso
 	items := r.GetItems()
 	for _, item := range items {
 		if item, isSanitizedStringer := any(item).(types.SanitizedStringer); isSanitizedStringer {
-			colorOpts := types.ColorOptions{
+			colorOpts := types.RenderOptions{
 				ColorGenerator: p.colorGenerator,
 				ColorEnabled:   viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty,
+				Verbose:        viper.GetBool(constants.ArgVerbose),
 			}
 
 			str := item.String(sanitize.Instance, colorOpts)

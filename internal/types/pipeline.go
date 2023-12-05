@@ -58,7 +58,7 @@ type FpPipeline struct {
 	Params        []FpPipelineParam          `json:"params,omitempty"`
 }
 
-func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -99,7 +99,7 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) str
 			if p.Default != nil || (p.Optional != nil && *p.Optional) {
 				continue
 			}
-			pArg += " --pipeline-arg " + p.Name + "=<value>"
+			pArg += " --arg " + p.Name + "=<value>"
 		}
 	}
 
@@ -265,7 +265,7 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
+func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
