@@ -13,7 +13,4 @@ const (
 	ExecutionModeAsynchronous = "asynchronous"
 
 	MaxScanSize = bufio.MaxScanTokenSize * 40
-	// DefaultConfigPath is a colon separated path of decreasing precedence where config (fpc) files are loaded from)
-	// '.' resolves to the mod-location
-	DefaultConfigPath = ".:~/.flowpipe/config"
 )
