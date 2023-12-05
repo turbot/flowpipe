@@ -2701,6 +2701,73 @@ func (suite *ModTestSuite) TestNestedPipelineWithEmptyOutput() {
 	assert.Equal("ok", pex.PipelineOutput["val"].(map[string]interface{})["call_child"])
 }
 
+func (suite *ModTestSuite) TestStepOutputShouldNotCalculateIfError() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the nested pipeline has no output so the error calculation fail
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.step_output_should_not_calculate_if_error", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.StepStatus["http.bad"]["0"].StepExecutions))
+
+	// pipeline output should NOT be calculated, the pipeline failed due to step error
+	assert.Nil(pex.PipelineOutput["val"])
+	assert.Nil(pex.StepStatus["http.bad"]["0"].StepExecutions[0].StepOutput["val"])
+}
+
+func (suite *ModTestSuite) TestStepOutputCalculateIfErrorBecauseErrorIsIgnored() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the nested pipeline has no output so the error calculation fail
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.step_output_should_be_calculated_because_step_error_is_ignored", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(1, len(pex.StepStatus["http.bad"]["0"].StepExecutions))
+
+	// pipeline output should NOT be calculated, the pipeline failed due to step error
+	assert.Equal("pipeline: should be calculated", pex.PipelineOutput["val"])
+	assert.Equal("step: should be calculated", pex.StepStatus["http.bad"]["0"].StepExecutions[0].StepOutput["val"])
+}
+
+// TODO: waiting for clarification what should we do if step failed, ignore error = true, output calculation failed. If step is still OK after failed output calculation, what should we put in the output?
+func (suite *ModTestSuite) XTestStepOutputCalculationFailed() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the nested pipeline has no output so the error calculation fail
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.step_output_calculation_failed", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(1, len(pex.StepStatus["http.bad"]["0"].StepExecutions))
+
+	// pipeline output should NOT be calculated, the pipeline failed due to step error
+	assert.Equal("pipeline: should be calculated", pex.PipelineOutput["val"])
+	assert.Equal("step: should be calculated", pex.StepStatus["http.bad"]["0"].StepExecutions[0].StepOutput["val"])
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

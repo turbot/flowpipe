@@ -175,12 +175,14 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
-		// calculate the output blocks
-		// If there's a for_each in the step definition, we need to insert the "each" magic variable
-		// so the output can refer to it
-		evalContext, stepOutput, shouldReturn = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, err, stepOutput)
-		if shouldReturn {
-			return
+		// Only calculate the step output if there are no errors.
+		if !output.HasErrors() || (output.HasErrors() && stepDefn.GetErrorConfig() != nil && stepDefn.GetErrorConfig().Ignore) {
+			// If there's a for_each in the step definition, we need to insert the "each" magic variable
+			// so the output can refer to it
+			evalContext, stepOutput, shouldReturn = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, err, stepOutput)
+			if shouldReturn {
+				return
+			}
 		}
 
 		// All other primitives finish immediately.
@@ -205,6 +207,8 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 && diags.HasErrors() {
 				slog.Error("Error calculating output on step start", "error", diags)
+				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
+
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 				if err2 != nil {
 					slog.Error("Error publishing event", "error", err2)
@@ -219,6 +223,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 				if err2 != nil {
 					slog.Error("Error publishing event", "error", err2)
 				}
+
 				return nil, stepOutput, true
 			}
 			stepOutput[outputConfig.Name] = goVal

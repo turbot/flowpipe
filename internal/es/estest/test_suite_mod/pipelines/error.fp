@@ -64,3 +64,49 @@ pipeline "child_with_no_output" {
         value = "echo"
     }
 }
+
+pipeline "step_output_should_not_calculate_if_error" {
+    step "http" "bad" {
+        url = "https://google.com/abc.json"
+
+        output "val" {
+            value = "step: should not be calculated"
+        }
+    }
+
+    output "val" {
+        value = "pipeline: should not be calculated"
+    }
+}
+
+pipeline "step_output_should_be_calculated_because_step_error_is_ignored" {
+    step "http" "bad" {
+        url = "https://google.com/abc.json"
+
+        error {
+            ignore = true
+        }
+
+        output "val" {
+            value = "step: should be calculated"
+        }
+    }
+
+    output "val" {
+        value = "pipeline: should be calculated"
+    }
+}
+
+pipeline "step_output_calculation_failed" {
+    step "transform" "echo" {
+        value = "echo that works"
+
+        output "val" {
+            value = step.transform.echo.bar
+        }
+    }
+
+    output "val" {
+        value = "pipeline: should not be calculated"
+    }
+}
