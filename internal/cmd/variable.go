@@ -95,6 +95,8 @@ func listVariableLocal(cmd *cobra.Command, args []string) (*types.ListVariableRe
 				Name:        k,
 				Type:        m.TypeString,
 				Description: m.Description,
+				Value:       m.ValueGo,
+				Default:     m.DefaultGo,
 			})
 		}
 		return &types.ListVariableResponse{
