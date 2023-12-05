@@ -3,12 +3,13 @@ package command
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/perr"
-	"log/slog"
 )
 
 type PipelineFinishHandler CommandHandler
@@ -41,6 +42,8 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 	}
 
 	var output map[string]interface{}
+	var outputCalculationErrors []perr.ErrorModel
+
 	if len(pipelineDefn.OutputConfig) > 0 {
 		outputBlock := map[string]interface{}{}
 
@@ -52,23 +55,12 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		}
 
 		for _, output := range pipelineDefn.OutputConfig {
-			// check if its dependencies have been met
-			dependenciesMet := true
-			for _, dep := range output.DependsOn {
-				if !pex.IsStepComplete(dep) {
-					dependenciesMet = false
-					break
-				}
-			}
-			// Dependencies not met, skip this output
-			if !dependenciesMet {
-				continue
-			}
 			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("output", diags)
-				slog.Error("Error calculating output on pipeline finish", "error", err)
-				outputBlock[output.Name] = "Unable to calculate output " + output.Name + ": " + err.Error()
+				slog.Error("Error calculating output "+output.Name, "error", err)
+
+				outputCalculationErrors = append(outputCalculationErrors, perr.InternalWithMessage("Error calculating output '"+output.Name+"': "+err.Error()))
 				continue
 			}
 			val, err := hclhelpers.CtyToGo(ctyValue)
@@ -81,10 +73,30 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		output = outputBlock
 	}
 
-	e, err := event.NewPipelineFinished(event.ForPipelineFinish(cmd, output))
-	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
+	if len(outputCalculationErrors) > 0 {
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx,
+			event.PipelineFailedWithEvent(event.NewFlowEvent(cmd.Event)),
+			event.PipelineFailedWithMultipleErrors(cmd.PipelineExecutionID, pipelineDefn.Name(), outputCalculationErrors),
+			event.PipelineFailedWithOutput(output)))
+
+		if err2 != nil {
+			slog.Error("Error publishing pipeline_failed event", "error", err2)
+		}
+		return nil
 	}
 
-	return h.EventBus.Publish(ctx, e)
+	e, err := event.NewPipelineFinished(event.ForPipelineFinish(cmd, output))
+	if err != nil {
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			slog.Error("Error publishing pipeline_failed event", "error", err2)
+		}
+		return nil
+	}
+
+	err = h.EventBus.Publish(ctx, e)
+	if err != nil {
+		slog.Error("Error publishing pipeline_finished event", "error", err)
+	}
+	return nil
 }

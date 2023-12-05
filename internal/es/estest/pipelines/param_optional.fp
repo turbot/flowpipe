@@ -19,7 +19,7 @@ pipeline "test_param_optional" {
     }
 
     output "test_output_1" {
-        value = step.transform.echo_optional.value
+        value = try(step.transform.echo_optional.value, "")
     }
 
     output "test_output_2" {

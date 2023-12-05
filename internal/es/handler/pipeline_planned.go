@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/go-kit/helpers"
@@ -11,7 +13,6 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/json"
-	"log/slog"
 )
 
 type PipelinePlanned EventHandler
@@ -86,7 +87,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if pipelineInaccessible {
-		slog.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name)
+		slog.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name())
 		// TODO: what is the error on the pipeline?
 		cmd := event.NewPipelineFailFromPipelinePlanned(e, nil)
 		if err != nil {
