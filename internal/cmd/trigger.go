@@ -53,11 +53,13 @@ func listTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpTrigger](cmd)
-
+		printer, err := printers.GetPrinter[types.FpTrigger](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
 		printableResource := types.NewPrintableTrigger(resp)
 
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
@@ -122,9 +124,12 @@ func showTriggerFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpTrigger](cmd)
+		printer, err := printers.GetPrinter[types.FpTrigger](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
 		printableResource := types.NewPrintableTriggerFromSingle(resp)
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}

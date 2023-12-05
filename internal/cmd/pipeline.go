@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"log/slog"
 	"os"
 	"regexp"
@@ -74,11 +75,12 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpPipeline](cmd)
-
+		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
 		printableResource := types.NewPrintablePipeline(resp)
-
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
@@ -144,9 +146,12 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.FpPipeline](cmd)
+		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
 		printableResource := types.NewPrintablePipelineFromSingle(resp)
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
@@ -299,13 +304,13 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		}
 
 		lastIndex := -1
-		// printer := printers.GetPrinter(cmd) // TODO: Use once we can utilise multiple printers with StringPrinter default
 
 		printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error instantiating string printer")
 			return
 		}
+		printer.Sanitizer = sanitize.Instance
 		printableResource := types.NewPrintableParsedEvent()
 
 		// print execution_id / stale info
@@ -325,7 +330,6 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		// TODO: should we time out?
 		// poll logs & print
 		for {
-
 			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "Error polling event logs")

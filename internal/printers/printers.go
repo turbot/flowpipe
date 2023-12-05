@@ -2,12 +2,12 @@ package printers
 
 import (
 	"context"
-	"io"
-	"strings"
-
 	"github.com/spf13/cobra"
+	"github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
+	"io"
+	"slices"
 )
 
 // Inspired by Kubernetes
@@ -18,27 +18,29 @@ type ResourcePrinter[T any] interface {
 	PrintResource(context.Context, types.PrintableResource[T], io.Writer) error
 }
 
-func GetPrinter[T any](cmd *cobra.Command) ResourcePrinter[T] {
+func GetPrinter[T any](cmd *cobra.Command) (ResourcePrinter[T], error) {
 	format := cmd.Flags().Lookup(constants.ArgOutput).Value.String()
-
-	// TODO: devise a more robust approach to determine a "list" command
-	isListCmd := strings.Contains(cmd.Use, "list")
+	key := cmdconfig.CommandFullKey(cmd)
+	useTable := []string{
+		"flowpipe.trigger.list",
+		"flowpipe.pipeline.list",
+	}
 
 	switch format {
 	case constants.OutputFormatPretty:
-		if isListCmd {
-			return TablePrinter[T]{}
+		if slices.Contains(useTable, key) {
+			return NewTablePrinter[T]()
 		}
-		return StringPrinter[T]{}
+		return NewStringPrinter[T]()
 	case constants.OutputFormatPlain:
-		if isListCmd {
-			return TablePrinter[T]{}
+		if slices.Contains(useTable, key) {
+			return NewTablePrinter[T]()
 		}
-		return StringPrinter[T]{}
+		return NewStringPrinter[T]()
 	case constants.OutputFormatJSON:
-		return JsonPrinter[T]{}
+		return NewJsonPrinter[T]()
 	case constants.OutputFormatYAML:
-		return YamlPrinter[T]{}
+		return NewYamlPrinter[T]()
 	}
-	return nil
+	return nil, nil
 }

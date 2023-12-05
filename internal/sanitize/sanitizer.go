@@ -16,6 +16,11 @@ import (
 
 const redactedStr = "<redacted>"
 
+var NullSanitizer = NewSanitizer(SanitizerOptions{
+	ExcludeFields:   []string{},
+	ExcludePatterns: []string{},
+})
+
 var Instance = NewSanitizer(SanitizerOptions{
 	ExcludeFields: []string{
 		"password",
