@@ -67,6 +67,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	rootCmd.AddCommand(triggerCmd())
 	rootCmd.AddCommand(processCmd())
 	rootCmd.AddCommand(modCmd())
+	rootCmd.AddCommand(variableCmd())
 
 	return rootCmd
 }
