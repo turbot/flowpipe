@@ -88,7 +88,7 @@ pipeline "cred_gitlab" {
     }
 
     step "transform" "token" {
-        value   = credential.gitlab[param.cred].access_token
+        value   = credential.gitlab[param.cred].token
     }
 
     output "gitlab_token" {
@@ -127,12 +127,12 @@ pipeline "cred_clickup" {
         optional = true
     }
 
-    step "transform" "api_token" {
-        value   = credential.clickup[param.cred].api_token
+    step "transform" "token" {
+        value   = credential.clickup[param.cred].token
     }
 
     output "clickup_token" {
-        value = step.transform.api_token.value
+        value = step.transform.token.value
     }
 }
 
@@ -158,7 +158,7 @@ pipeline "multiple_credentials" {
         value = credential.slack[param.slack_cred].token
     }
 
-    output "val_token" {
+    output "slack_token_val" {
         value = step.transform.slack_token.value
     }
 
@@ -172,29 +172,29 @@ pipeline "multiple_credentials" {
     }
 
     // gitlab
-     step "transform" "gitlab_access_token" {
-        value = credential.gitlab[param.gitlab_cred].access_token
+     step "transform" "gitlab_token" {
+        value = credential.gitlab[param.gitlab_cred].token
     }
 
-    output "val_access_token" {
-        value = step.transform.gitlab_access_token.value
+    output "gitlab_token_val" {
+        value = step.transform.gitlab_token.value
     }
 
     // gitlab default
-    step "transform" "default_gitlab_access_token" {
-        value   = credential.gitlab[param.default_cred].access_token
+    step "transform" "default_gitlab_token" {
+        value   = credential.gitlab[param.default_cred].token
     }
 
     output "gitlab_default_token" {
-        value = step.transform.default_gitlab_access_token.value
+        value = step.transform.default_gitlab_token.value
     }
 
     // clickup
-    step "transform" "api_token" {
-        value   = credential.clickup[param.default_cred].api_token
+    step "transform" "clickup_token" {
+        value   = credential.clickup[param.default_cred].token
     }
 
-    output "clickup_api_token" {
-        value = step.transform.api_token.value
+    output "clickup_token_val" {
+        value = step.transform.clickup_token.value
     }
 }
