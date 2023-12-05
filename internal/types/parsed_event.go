@@ -26,7 +26,7 @@ type SanitizedStringer interface {
 	String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string
 }
 
-const grayScaleIndex = uint8(3)
+// const grayScaleIndex = uint8(3)
 
 type ParsedHeader struct {
 	ExecutionId string `json:"execution_id"`
@@ -43,8 +43,8 @@ func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) s
 		return ""
 	}
 
-	left := au.Gray(grayScaleIndex, "[")
-	right := au.Gray(grayScaleIndex, "]")
+	left := "["  // au.Gray(grayScaleIndex, "[")
+	right := "]" // au.Gray(grayScaleIndex, "]")
 	out := fmt.Sprintf("%s%s%s %s\n", left, au.BrightGreen("Execution"), right, p.ExecutionId)
 	if p.IsStale {
 		out += fmt.Sprintf("%s%s%s %s\n", left, au.BrightRed("Stale"), right, au.Sprintf(au.Red("Mod is stale, last loaded: %s"), p.LastLoaded))
@@ -137,14 +137,14 @@ func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts ColorOptio
 	stepString := p.getStepString(eachString, loopString, au, cg)
 	pipelineString := p.getPipelineString(au, cg)
 
-	left := au.Gray(grayScaleIndex, "[")
-	right := au.Gray(grayScaleIndex, "]")
-	dot := au.Gray(grayScaleIndex, ".")
+	left := "["  // au.Gray(grayScaleIndex, "[")
+	right := "]" // au.Gray(grayScaleIndex, "]")
+	sep := "."   // au.Gray(grayScaleIndex, ".")
 
 	if stepString == "" {
 		return fmt.Sprintf("%s%s%s", left, pipelineString, right)
 	} else {
-		return fmt.Sprintf("%s%s%s%s%s%s", left, pipelineString, dot, stepString, retryString, right)
+		return fmt.Sprintf("%s%s%s%s%s%s", left, pipelineString, sep, stepString, retryString, right)
 	}
 }
 
@@ -288,7 +288,7 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts ColorO
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Italic(au.Index(153, duration)))
+	out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
 	return out
 }
 
@@ -296,7 +296,8 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts ColorO
 type ParsedErrorEvent struct {
 	ParsedEvent
 	Errors   []modconfig.StepError `json:"errors"`
-	Duration *string               `json:"duration,omitempty"`
+	Output   map[string]any
+	Duration *string `json:"duration,omitempty"`
 }
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOptions) string {
@@ -309,18 +310,35 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts ColorOption
 
 	out := ""
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
-
-	if p.Type != event.HandlerPipelineFailed {
-		for _, e := range p.Errors {
-			out += fmt.Sprintf("%s %s: %s\n", pre, au.Red(e.Error.Title), au.Red(e.Error.Detail))
-		}
-	}
-
 	duration := ""
 	if p.Duration != nil {
 		duration = *p.Duration
 	}
-	out += fmt.Sprintf("%s %s %s\n", pre, au.Sprintf(au.BrightRed("Failed with %d error(s)"), len(p.Errors)), au.Italic(au.Index(153, duration)))
+
+	if p.Type == event.HandlerPipelineFailed {
+		for k, v := range p.Output {
+			if v == nil {
+				v = ""
+			}
+			valueString := ""
+			if isSimpleType(v) {
+				valueString = fmt.Sprintf("%v", au.BrightBlue(v))
+			} else {
+				s, err := prettyjson.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
+		}
+	}
+
+	for _, e := range p.Errors {
+		out += fmt.Sprintf("%s %s: %s\n", pre, au.BrightRed(e.Error.Title), au.Red(e.Error.Detail))
+	}
+	out += fmt.Sprintf("%s %s %s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)"), len(p.Errors)), au.Cyan(duration).Italic())
 	return out
 }
 
@@ -438,6 +456,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				},
 				Duration: &duration,
 				Errors:   allErrors,
+				Output:   e.PipelineOutput,
 			}
 			out = append(out, parsed)
 		case event.HandlerStepQueued:
