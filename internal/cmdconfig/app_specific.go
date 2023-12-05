@@ -7,7 +7,6 @@ import (
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
 func SetAppSpecificConstants() {
-
 	app_specific.AppName = "flowpipe"
 	// TODO unify version logic with steampipe and powerpipe
 	//app_specific.AppVersion
