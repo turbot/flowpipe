@@ -7,6 +7,8 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -27,11 +29,11 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineCanceled")
 	}
 
-	// eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
-	// err := sanitize.Instance.SanitizeFile(eventStoreFilePath)
-	// if err != nil {
-	// 	slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
-	// }
+	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
+	err := sanitize.Instance.SanitizeFile(eventStoreFilePath)
+	if err != nil {
+		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
+	}
 
 	event.ReleaseEventLogMutex(e.Event.ExecutionID)
 

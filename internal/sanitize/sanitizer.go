@@ -92,8 +92,6 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 	// first convert exclude fields to regex patterns to exclude the fields from both JSON and YAML
 	for _, f := range opts.ExcludeFields {
 		patterns[getExcludeFromJsonRegex(f)] = struct{}{}
-		patterns[getExcludeFromYamlRegex(f)] = struct{}{}
-		patterns[getExcludeFromEquals(f)] = struct{}{}
 	}
 
 	// add in custom patterns
@@ -261,14 +259,14 @@ func (s *Sanitizer) SanitizeFile(file string) error {
 	return nil
 }
 
-func getExcludeFromYamlRegex(fieldName string) string {
-	return fmt.Sprintf(`(?i)%s:\s*([^\n]+)`, fieldName)
-}
+// func getExcludeFromYamlRegex(fieldName string) string {
+// 	return fmt.Sprintf(`(?i)%s:\s*([^\n]+)`, fieldName)
+// }
 
-func getExcludeFromEquals(fieldName string) string {
-	return fmt.Sprintf(`(?i)%s\s*=\s*(?:\033\[[^m]*m)*([^\033\n]+)`, fieldName)
-}
+// func getExcludeFromEquals(fieldName string) string {
+// 	return fmt.Sprintf(`(?i)%s\s*=\s*(?:\033\[[^m]*m)*([^\033\n]+)`, fieldName)
+// }
 
 func getExcludeFromJsonRegex(fieldName string) string {
-	return fmt.Sprintf(`(?i)"%s"\s*:\s*"([^"]+)"`, fieldName)
+	return fmt.Sprintf(`(?i)"%s"\s*:\s*"((?:\\"|[^"])+)"`, fieldName)
 }

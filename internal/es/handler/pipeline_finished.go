@@ -99,11 +99,11 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	snapshotPath := filepaths.SnapshotFilePath(e.Event.ExecutionID)
 	_ = os.WriteFile(snapshotPath, []byte(sanitizedJsonStr), 0600)
 
-	// eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
-	// err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
-	// if err != nil {
-	// 	slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
-	// }
+	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
+	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
+	if err != nil {
+		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
+	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
 	event.ReleaseEventLogMutex(e.Event.ExecutionID)
