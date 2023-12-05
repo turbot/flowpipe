@@ -185,10 +185,6 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 
 func buildCredentialMapForEvalContext(allCredentials map[string]modconfig.Credential) (map[string]cty.Value, error) {
 	credentialMap := map[string]cty.Value{}
-	awsCredentialMap := map[string]cty.Value{}
-	basicCredentialMap := map[string]cty.Value{}
-	slackCedentialMap := map[string]cty.Value{}
-	gcpCredentialMap := map[string]cty.Value{}
 
 	cache := cache.GetCache()
 	for _, c := range allCredentials {
@@ -227,38 +223,20 @@ func buildCredentialMapForEvalContext(allCredentials map[string]modconfig.Creden
 
 		credentialType := parts[0]
 
-		switch credentialType {
-		case "aws":
-			awsCredentialMap[parts[1]] = pCty
-
-		case "basic":
-			basicCredentialMap[parts[1]] = pCty
-
-		case "slack":
-			slackCedentialMap[parts[1]] = pCty
-
-		case "gcp":
-			gcpCredentialMap[parts[1]] = pCty
-
-		default:
-			return nil, perr.BadRequestWithMessage("invalid credential type: " + credentialType)
+		if pCty != cty.NilVal {
+			// Check if the credential type already exists in the map
+			if existing, ok := credentialMap[credentialType]; ok {
+				// If it exists, merge the new object with the existing one
+				existingMap := existing.AsValueMap()
+				existingMap[parts[1]] = pCty
+				credentialMap[credentialType] = cty.ObjectVal(existingMap)
+			} else {
+				// If it doesn't exist, create a new entry
+				credentialMap[credentialType] = cty.ObjectVal(map[string]cty.Value{
+					parts[1]: pCty,
+				})
+			}
 		}
-	}
-
-	if len(awsCredentialMap) > 0 {
-		credentialMap["aws"] = cty.ObjectVal(awsCredentialMap)
-	}
-
-	if len(basicCredentialMap) > 0 {
-		credentialMap["basic"] = cty.ObjectVal(basicCredentialMap)
-	}
-
-	if len(slackCedentialMap) > 0 {
-		credentialMap["slack"] = cty.ObjectVal(slackCedentialMap)
-	}
-
-	if len(gcpCredentialMap) > 0 {
-		credentialMap["gcp"] = cty.ObjectVal(gcpCredentialMap)
 	}
 
 	return credentialMap, nil
