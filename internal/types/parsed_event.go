@@ -27,8 +27,6 @@ type SanitizedStringer interface {
 	String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string
 }
 
-// const grayScaleIndex = uint8(3)
-
 type ParsedHeader struct {
 	ExecutionId string `json:"execution_id"`
 	IsStale     bool   `json:"is_stale"`
@@ -44,8 +42,8 @@ func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) 
 		return ""
 	}
 
-	left := "["  // au.Gray(grayScaleIndex, "[")
-	right := "]" // au.Gray(grayScaleIndex, "]")
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
 	out := fmt.Sprintf("%s%s%s %s\n", left, au.BrightGreen("Execution"), right, p.ExecutionId)
 	if p.IsStale {
 		out += fmt.Sprintf("%s%s%s %s\n", left, au.BrightRed("Stale"), right, au.Sprintf(au.Red("Mod is stale, last loaded: %s"), p.LastLoaded))
@@ -138,9 +136,9 @@ func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts RenderOpti
 	stepString := p.getStepString(eachString, loopString, au, cg)
 	pipelineString := p.getPipelineString(au, cg)
 
-	left := "["  // au.Gray(grayScaleIndex, "[")
-	right := "]" // au.Gray(grayScaleIndex, "]")
-	sep := "."   // au.Gray(grayScaleIndex, ".")
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+	sep := au.BrightBlack(".")
 
 	if stepString == "" {
 		return fmt.Sprintf("%s%s%s", left, pipelineString, right)
@@ -390,7 +388,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEvent{
 				ParsedEventPrefix: NewPrefix(fullName),
 				Type:              log.EventType,
-				Message:           fmt.Sprintf("Starting: %s", e.PipelineExecutionID),
+				Message:           fmt.Sprintf("Starting %s", e.PipelineExecutionID),
 			}
 			out = append(out, parsed)
 		case event.HandlerPipelineFinished:
