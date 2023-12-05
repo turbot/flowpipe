@@ -21,6 +21,7 @@ type RenderOptions struct {
 	ColorEnabled   bool
 	ColorGenerator *color.DynamicColorGenerator
 	Verbose        bool
+	JsonFormatter  *prettyjson.Formatter
 }
 
 type SanitizedStringer interface {
@@ -211,7 +212,7 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 			if isSimpleType(v) {
 				valueString = formatSimpleValue(v, au)
 			} else {
-				s, err := prettyjson.Marshal(v)
+				s, err := opts.JsonFormatter.Marshal(v)
 				if err != nil {
 					valueString = au.Sprintf(au.Red("error parsing value"))
 				} else {
@@ -250,7 +251,7 @@ func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 			if isSimpleType(v) {
 				valueString = formatSimpleValue(v, au)
 			} else {
-				s, err := prettyjson.Marshal(v)
+				s, err := opts.JsonFormatter.Marshal(v)
 				if err != nil {
 					valueString = au.Sprintf(au.Red("error parsing value"))
 				} else {
@@ -291,7 +292,7 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 			if isSimpleType(v) {
 				valueString = formatSimpleValue(v, au)
 			} else {
-				s, err := prettyjson.Marshal(v)
+				s, err := opts.JsonFormatter.Marshal(v)
 				if err != nil {
 					valueString = au.Sprintf(au.Red("error parsing value"))
 				} else {
@@ -312,7 +313,7 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 			if isSimpleType(v) {
 				valueString = formatSimpleValue(v, au)
 			} else {
-				s, err := prettyjson.Marshal(v)
+				s, err := opts.JsonFormatter.Marshal(v)
 				if err != nil {
 					valueString = au.Sprintf(au.Red("error parsing value"))
 				} else {
@@ -371,7 +372,7 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 			if isSimpleType(v) {
 				valueString = formatSimpleValue(v, au)
 			} else {
-				s, err := prettyjson.Marshal(v)
+				s, err := opts.JsonFormatter.Marshal(v)
 				if err != nil {
 					valueString = au.Sprintf(au.Red("error parsing value"))
 				} else {
@@ -581,7 +582,12 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 				}
 				if e.StepRetry != nil {
-					prefix.RetryIndex = &e.StepRetry.Count
+					if e.StepRetry.RetryCompleted {
+						prefix.RetryIndex = &e.StepRetry.Count
+					} else {
+						i := e.StepRetry.Count - 1
+						prefix.RetryIndex = &i
+					}
 				}
 
 				switch e.Output.Status {
@@ -665,7 +671,9 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 		return au.Sprintf("%s", au.Green(input))
 	case
 		reflect.Float32,
-		reflect.Float64,
+		reflect.Float64:
+		return au.Sprintf("%g", au.Cyan(input))
+	case
 		reflect.Int,
 		reflect.Int8,
 		reflect.Int16,
@@ -676,7 +684,7 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 		reflect.Uint16,
 		reflect.Uint32,
 		reflect.Uint64:
-		return au.Sprintf("%s", au.Cyan(input))
+		return au.Sprintf("%d", au.Cyan(input))
 	}
 	return ""
 }
