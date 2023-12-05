@@ -17,12 +17,12 @@ import (
 
 // Inspired by https://github.com/goccy/go-yaml/blob/master/cmd/ycat/ycat.go
 type YamlPrinter[T any] struct {
-	Sanitizer sanitize.Sanitizer
+	Sanitizer *sanitize.Sanitizer
 }
 
 func NewYamlPrinter[T any]() (*YamlPrinter[T], error) {
 	return &YamlPrinter[T]{
-		Sanitizer: *sanitize.NullSanitizer,
+		Sanitizer: sanitize.NullSanitizer,
 	}, nil
 }
 

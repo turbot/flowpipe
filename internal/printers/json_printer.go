@@ -11,12 +11,12 @@ import (
 )
 
 type JsonPrinter[T any] struct {
-	Sanitizer sanitize.Sanitizer
+	Sanitizer *sanitize.Sanitizer
 }
 
 func NewJsonPrinter[T any]() (*JsonPrinter[T], error) {
 	return &JsonPrinter[T]{
-		Sanitizer: *sanitize.NullSanitizer,
+		Sanitizer: sanitize.NullSanitizer,
 	}, nil
 }
 

@@ -14,12 +14,12 @@ import (
 // TablePrinter decodes table objects into typed objects before delegating to another printer.
 // Non-table types are simply passed through
 type TablePrinter[T any] struct {
-	Sanitizer sanitize.Sanitizer
+	Sanitizer *sanitize.Sanitizer
 }
 
 func NewTablePrinter[T any]() (*TablePrinter[T], error) {
 	return &TablePrinter[T]{
-		Sanitizer: *sanitize.NullSanitizer,
+		Sanitizer: sanitize.NullSanitizer,
 	}, nil
 }
 
