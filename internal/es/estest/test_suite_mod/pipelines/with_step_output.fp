@@ -32,7 +32,7 @@ pipeline "with_step_output" {
     }
 
     output "second_step_0" {
-        value = step.transform.second_step[0].text
+        value = step.transform.second_step[0].value
     }
 }
 

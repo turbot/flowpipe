@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
+
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"log"
 )
 
 type PipelineFailed struct {
@@ -161,6 +162,34 @@ func ForPipelineFinishToPipelineFailed(cmd *PipelineFinish, err error) PipelineF
 			PipelineExecutionID: cmd.PipelineExecutionID,
 		},
 		}
+		return nil
+	}
+}
+
+func PipelineFailedWithEvent(event *Event) PipelineFailedOption {
+	return func(e *PipelineFailed) error {
+		e.Event = event
+		return nil
+	}
+}
+
+func PipelineFailedWithMultipleErrors(pipelineExecutionID string, pipelineName string, errs []perr.ErrorModel) PipelineFailedOption {
+	return func(e *PipelineFailed) error {
+		e.PipelineExecutionID = pipelineExecutionID
+		for _, err := range errs {
+			e.Errors = append(e.Errors, modconfig.StepError{
+				Error:               err,
+				Pipeline:            pipelineName,
+				PipelineExecutionID: pipelineExecutionID,
+			})
+		}
+		return nil
+	}
+}
+
+func PipelineFailedWithOutput(output map[string]any) PipelineFailedOption {
+	return func(e *PipelineFailed) error {
+		e.PipelineOutput = output
 		return nil
 	}
 }

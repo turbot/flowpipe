@@ -648,13 +648,6 @@ func (suite *ModTestSuite) TestPipelineWithStepOutput() {
 		return
 	}
 
-	// s, err := prettyjson.Marshal(pex.StepStatus)
-	// if err != nil {
-	// 	assert.Fail("Error marshalling pipeline output", err)
-	// 	return
-	// }
-	// fmt.Println(string(s)) //nolint:forbidigo // test
-
 	assert.Equal(3, len(pex.StepStatus["transform.name"]))
 	assert.Equal("artist name: Real Friends", pex.StepStatus["transform.name"]["0"].StepExecutions[0].Output.Data["value"])
 	assert.Equal("artist name: A Day To Remember", pex.StepStatus["transform.name"]["1"].StepExecutions[0].Output.Data["value"])
@@ -2614,6 +2607,50 @@ func (suite *ModTestSuite) TestPipelineOutputShouldNotBeCalculatedOnError() {
 	assert.Equal(1, len(pex.Errors))
 	assert.Equal(404, pex.Errors[0].Error.Status)
 	assert.Nil(pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestPipelineIgnoredErrorOutputShouldBeCalculated() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_error_ignored", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("should be calculated", pex.PipelineOutput["val"])
+
+	// make sure that the step did fail and there's an error
+	assert.Equal(1, len(pex.StepStatus["http.does_not_exist"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["http.does_not_exist"]["0"].StepExecutions[0].Output.Errors))
+	assert.Equal(404, pex.StepStatus["http.does_not_exist"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) TestPipelineFailedOutputCalculation() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline fail its output calculation, so it should be marked as "failed" with as many output calculated as possible
+	//
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.failed_output_calc", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(2, len(pex.Errors))
+	assert.Equal("echo that works", pex.PipelineOutput["val_ok"])
+	assert.Equal("this works", pex.PipelineOutput["val_ok_two"])
 }
 
 func TestModTestingSuite(t *testing.T) {
