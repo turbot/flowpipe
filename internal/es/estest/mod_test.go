@@ -2188,11 +2188,11 @@ func (suite *ModTestSuite) TestMultipleCredential() {
 	}
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("jgdjslgjdljgldjglsdjl", pex.PipelineOutput["val_token"])
+	assert.Equal("jgdjslgjdljgldjglsdjl", pex.PipelineOutput["slack_token_val"])
 	assert.Equal("slack123", pex.PipelineOutput["slack_default_token"])
-	assert.Equal("glpat-ksgfhwekty389398hdgkhgkhdgk", pex.PipelineOutput["val_access_token"])
+	assert.Equal("glpat-ksgfhwekty389398hdgkhgkhdgk", pex.PipelineOutput["gitlab_token_val"])
 	assert.Equal("gitlab123", pex.PipelineOutput["gitlab_default_token"])
-	assert.Equal("pk_616_L5H36X3CXXXXXXXWEAZZF0NM5", pex.PipelineOutput["clickup_api_token"])
+	assert.Equal("pk_616_L5H36X3CXXXXXXXWEAZZF0NM5", pex.PipelineOutput["clickup_token_val"])
 }
 
 func (suite *ModTestSuite) TestBasicCredential() {
