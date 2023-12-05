@@ -3,10 +3,10 @@ package printers
 import (
 	"context"
 	"encoding/json"
+	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"io"
 
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/turbot/flowpipe/internal/types"
 )
 
@@ -31,7 +31,7 @@ func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableReso
 	s = []byte(p.Sanitizer.SanitizeString(string(s)))
 
 	// format
-	s, err = prettyjson.Format(s)
+	s, err = color.NewJsonFormatter().Format(s)
 	if err != nil {
 		return err
 	}

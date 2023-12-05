@@ -38,6 +38,7 @@ func (p StringPrinter[T]) PrintResource(_ context.Context, r types.PrintableReso
 				ColorGenerator: p.colorGenerator,
 				ColorEnabled:   viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty,
 				Verbose:        viper.GetBool(constants.ArgVerbose),
+				JsonFormatter:  color.NewJsonFormatter(),
 			}
 
 			str := item.String(sanitize.Instance, colorOpts)
