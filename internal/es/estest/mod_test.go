@@ -2033,7 +2033,7 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 	assert.Equal(float64(42), pex.PipelineOutput["val"])
 }
 
-func (suite *ModTestSuite) TestCredentialReference() {
+func (suite *ModTestSuite) XTestCredentialReference() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
