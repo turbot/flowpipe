@@ -2164,6 +2164,37 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	assert.Equal("<redacted>", pex.PipelineOutput["clickup_token"])
 }
 
+func (suite *ModTestSuite) TestMultipleCredential() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// Set env variable
+	os.Setenv("SLACK_TOKEN", "slack123")
+	os.Setenv("GITLAB_TOKEN", "gitlab123")
+	os.Setenv("CLICKUP_TOKEN", "pk_616_L5H36X3CXXXXXXXWEAZZF0NM5")
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.multiple_credentials", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("jgdjslgjdljgldjglsdjl", pex.PipelineOutput["val_token"])
+	assert.Equal("slack123", pex.PipelineOutput["slack_default_token"])
+	assert.Equal("glpat-ksgfhwekty389398hdgkhgkhdgk", pex.PipelineOutput["val_access_token"])
+	assert.Equal("gitlab123", pex.PipelineOutput["gitlab_default_token"])
+	assert.Equal("pk_616_L5H36X3CXXXXXXXWEAZZF0NM5", pex.PipelineOutput["clickup_api_token"])
+}
+
 func (suite *ModTestSuite) TestBasicCredential() {
 	assert := assert.New(suite.T())
 

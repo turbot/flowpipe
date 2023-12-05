@@ -15,3 +15,11 @@ credential "basic" "credentials" {
     username = "foo"
     password = "bar"
 }
+
+credential "slack" "slack_static" {
+    token = "jgdjslgjdljgldjglsdjl"
+}
+
+credential "gitlab" "gitlab_static" {
+    access_token = "glpat-ksgfhwekty389398hdgkhgkhdgk"
+}
