@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"net"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
@@ -41,6 +44,13 @@ func serverCmd() *cobra.Command {
 func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
+
+		// Check if the port is already in use
+		if isPortInUse(viper.GetInt(constants.ArgPort)) {
+			error_helpers.FailOnError(fmt.Errorf("Flowpipe server is already running on port: %d", viper.GetInt(constants.ArgPort)))
+			return
+		}
+
 		error_helpers.FailOnError(docker.Initialize(ctx))
 
 		// start manager, passing server config
@@ -53,4 +63,14 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		// Block until we receive a signal
 		m.InterruptHandler()
 	}
+}
+
+// Function to check if a port is in use
+func isPortInUse(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return true
+	}
+	ln.Close()
+	return false
 }
