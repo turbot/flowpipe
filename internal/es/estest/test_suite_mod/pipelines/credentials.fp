@@ -140,6 +140,26 @@ pipeline "cred_clickup" {
     }
 }
 
+pipeline "cred_vault" {
+    param "cred" {
+        type    = string
+        default = "default"
+    }
+
+    param "null_param" {
+        type = string
+        optional = true
+    }
+
+    step "transform" "token" {
+        value   = credential.vault[param.cred].token
+    }
+
+    output "vault_token" {
+        value = step.transform.token.value
+    }
+}
+
 pipeline "multiple_credentials" {
 
     param "default_cred" {

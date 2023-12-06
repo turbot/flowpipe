@@ -2202,6 +2202,23 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 	assert.Equal("<redacted>", pex.PipelineOutput["clickup_token"])
+
+	//
+	pipelineInput = modconfig.Input{}
+	os.Setenv("VAULT_TOKEN", "hsv-fkshfgskhf")
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_vault", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("<redacted>", pex.PipelineOutput["vault_token"])
 }
 
 func (suite *ModTestSuite) TestMultipleCredential() {
