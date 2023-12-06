@@ -73,14 +73,6 @@ func modInstallCmd() *cobra.Command {
 	cmdconfig.OnCmd(cmd).
 		AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
 
-	var gitUrlModeEnum = modinstaller.GitUrlModeHTTPS
-
-	cmd.Flags().Var(&gitUrlModeEnum, constants.ArgGitUrlMode, "Git URL mode (https or ssh)")
-	err := viper.BindPFlag(constants.ArgGitUrlMode, cmd.Flags().Lookup(constants.ArgGitUrlMode))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	return cmd
 }
 
@@ -108,11 +100,8 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 
 	}
 
-	gitUrlMode := viper.GetString(constants.ArgGitUrlMode)
-
 	// if any mod names were passed as args, convert into formed mod names
 	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
-	opts.GitUrlMode = modinstaller.GitUrlMode(gitUrlMode)
 
 	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
 	if err != nil {
