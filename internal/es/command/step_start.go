@@ -425,20 +425,43 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 	}
 
 	for _, throwConfig := range throwConfigs {
-		throwDefn := modconfig.ThrowConfig{}
 
-		if throwConfig.Unresolved {
-			diags := gohcl.DecodeBody(throwConfig.UnresolvedBody, evalContext, &throwDefn)
-
-			if len(diags) > 0 && diags.HasErrors() {
-				slog.Error("Error calculating throw", "error", diags)
-				return nil, perr.InternalWithMessage("error calculating throw: " + diags.Error())
-			}
-		} else {
-			throwDefn = throwConfig
+		if throwConfig.UnresolvedBody == nil {
+			continue
 		}
 
-		if throwDefn.If {
+		attributes, diags := throwConfig.UnresolvedBody.JustAttributes()
+		if len(diags) > 0 {
+			slog.Error("Error getting throw attributes", "error", diags)
+			return nil, perr.InternalWithMessage("error getting throw attributes: " + diags.Error())
+		}
+
+		ifAttribute := attributes["if"]
+		if ifAttribute == nil {
+			slog.Error("throw block does not have an if attribute")
+			return nil, perr.InternalWithMessage("throw block does not have an if attribute")
+		}
+
+		ifValue, diags := ifAttribute.Expr.Value(evalContext)
+		if len(diags) > 0 {
+			slog.Error("Error evaluating if attribute", "error", diags)
+			return nil, perr.InternalWithMessage("error evaluating if attribute: " + diags.Error())
+		}
+
+		if ifValue.True() {
+			throwDefn := modconfig.ThrowConfig{}
+
+			if throwConfig.Unresolved {
+				diags := gohcl.DecodeBody(throwConfig.UnresolvedBody, evalContext, &throwDefn)
+
+				if len(diags) > 0 && diags.HasErrors() {
+					slog.Error("Error calculating throw", "error", diags)
+					return nil, perr.InternalWithMessage("error calculating throw: " + diags.Error())
+				}
+			} else {
+				throwDefn = throwConfig
+			}
+
 			var message string
 			if throwDefn.Message != nil {
 				message = *throwDefn.Message

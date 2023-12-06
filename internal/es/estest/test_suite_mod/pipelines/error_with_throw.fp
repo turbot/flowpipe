@@ -14,6 +14,39 @@ pipeline "error_with_throw_simple" {
     }
 }
 
+pipeline "error_with_throw_invalid_message" {
+    step "transform" "foo" {
+        value = "bar"
+    }
+
+    step "http" "bad_http" {
+        url    = "http://api.google.com/bad.json"
+        method = "get"
+
+        throw {
+            if      = step.transform.foo.value == "should not match"
+            message = result.response_body.error
+        }
+    }
+}
+
+pipeline "error_with_throw_failing_to_calculate_throw" {
+    step "transform" "foo" {
+        value = "bar"
+    }
+
+    step "http" "bad_http" {
+        url    = "http://api.google.com/bad.json"
+        method = "get"
+
+        throw {
+            if      = step.transform.foo.value == "bar"
+            message = result.response_body.error
+        }
+    }
+}
+
+
 pipeline "error_with_throw_but_ignored" {
     step "transform" "foo" {
         value = "bar"

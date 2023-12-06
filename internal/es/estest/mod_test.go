@@ -2785,6 +2785,51 @@ func (suite *ModTestSuite) TestStepOutputCalculateIfErrorBecauseErrorIsIgnored()
 	assert.Equal("step: should be calculated", pex.StepStatus["http.bad"]["0"].StepExecutions[0].StepOutput["val"])
 }
 
+func (suite *ModTestSuite) TestErrorWithThrowInvalidMessage() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	//
+	// This pipeline step has a throw that the IF condition is not met, so it should not throw the error,
+	// however there was a bug that if the IF condition is not met, Flowpipe will still try to calculate the
+	// rest of the throw block
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_invalid_message", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("404 Not Found", pex.Errors[0].Error.Detail)
+}
+
+// Skip for now until the behaviour of handling the throw block error is fixed
+func (suite *ModTestSuite) XTesterrorWithThrowFailingToCalculateThrow() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	//
+	// This pipeline step has a throw that the IF condition is met but then it failed to calculate the throw block
+	//
+	// TODO: this should NOT fail the pipeline immediately but instead it needs to follow the same calc as the retry step
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_failing_to_calculate_throw", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("404 Not Found", pex.Errors[0].Error.Detail)
+}
+
 // TODO: waiting for clarification what should we do if step failed, ignore error = true, output calculation failed. If step is still OK after failed output calculation, what should we put in the output?
 func (suite *ModTestSuite) XTestStepOutputCalculationFailed() {
 	assert := assert.New(suite.T())
