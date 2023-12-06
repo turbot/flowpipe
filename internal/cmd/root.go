@@ -43,8 +43,8 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		// Flowpipe API
 		AddPersistentStringFlag(constants.ArgHost, "", "API server host, including the port number").
 		AddPersistentBoolFlag(localconstants.ArgTlsInsecure, false, "Skip TLS verification").
+		AddPersistentStringFlag(constants.ArgConfigPath, "", "Colon separated list of paths to search for workspace files, in order of decreasing precedence").
 		// Common (steampipe, flowpipe) flags
-		AddPersistentFilepathFlag(constants.ArgInstallDir, app_specific.DefaultInstallDir, "Path to the Config Directory").
 		AddPersistentFilepathFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory").
 		AddPersistentStringFlag(constants.ArgWorkspaceProfile, "default", "The workspace to use").
 		// Define the CLI flag parameters for wrapped enum flag.

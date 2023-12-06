@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/spf13/cobra"
@@ -33,6 +34,8 @@ func triggerListCmd() *cobra.Command {
 		Args: cobra.NoArgs,
 		Run:  listTriggerFunc,
 	}
+	// initialize hooks
+	cmdconfig.OnCmd(cmd)
 
 	return cmd
 }
@@ -102,6 +105,9 @@ func triggerShowCmd() *cobra.Command {
 		Args: cobra.ExactArgs(1),
 		Run:  showTriggerFunc,
 	}
+
+	// initialize hooks
+	cmdconfig.OnCmd(triggerShowCmd)
 
 	return triggerShowCmd
 }
