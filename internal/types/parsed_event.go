@@ -70,7 +70,7 @@ func NewPrefix(fullPipelineName string) ParsedEventPrefix {
 }
 
 func (p ParsedEventPrefix) getRetryString(au aurora.Aurora) string {
-	if p.RetryIndex == nil || *p.RetryIndex <= 0 {
+	if p.RetryIndex == nil || *p.RetryIndex <= 1 {
 		return ""
 	}
 	return au.Sprintf(au.Index(8, "#%d"), *p.RetryIndex)
@@ -302,7 +302,11 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 	}
 
 	if p.retriesComplete {
-		out += fmt.Sprintf("%s %s %s%s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
+		errStr := au.Sprintf(au.Red("Failed").Bold())
+		if len(p.Errors) > 1 {
+			errStr = au.Sprintf(au.Red("Failed with %d errors").Bold(), len(p.Errors))
+		}
+		out += fmt.Sprintf("%s %s %s%s\n", pre, errStr, au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
 	}
 	return out
 }
@@ -465,7 +469,8 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					prefix.LoopIndex = &e.StepLoop.Index
 				}
 				if e.StepRetry != nil {
-					prefix.RetryIndex = &e.StepRetry.Count
+					i := e.StepRetry.Count + 1
+					prefix.RetryIndex = &i
 				}
 
 				parsed := ParsedEventWithInput{
@@ -508,7 +513,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 				}
 				if e.StepRetry != nil {
-					i := e.StepRetry.Count - 1
+					i := e.StepRetry.Count
 					prefix.RetryIndex = &i
 
 				}
