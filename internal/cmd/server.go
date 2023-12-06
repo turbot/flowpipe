@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+	"net"
+	"strconv"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
@@ -10,6 +14,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func serverCmd() *cobra.Command {
@@ -41,6 +46,13 @@ func serverCmd() *cobra.Command {
 func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
+
+		// Check if the port is already in use
+		if isPortInUse(viper.GetInt(constants.ArgPort)) {
+			error_helpers.FailOnError(perr.InternalWithMessage("The designated port (" + strconv.Itoa(viper.GetInt(constants.ArgPort)) + ") is already in use"))
+			return
+		}
+
 		error_helpers.FailOnError(docker.Initialize(ctx))
 
 		// start manager, passing server config
@@ -53,4 +65,14 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		// Block until we receive a signal
 		m.InterruptHandler()
 	}
+}
+
+// Function to check if a port is in use
+func isPortInUse(port int) bool {
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return true
+	}
+	ln.Close()
+	return false
 }
