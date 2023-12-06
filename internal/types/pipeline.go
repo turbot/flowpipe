@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/turbot/go-kit/helpers"
+	"strings"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
@@ -118,6 +119,9 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 
 	output += fmt.Sprintf("\n%s\n", au.Blue("Usage:").Bold())
 	output += "  flowpipe pipeline run " + p.Name + pArg
+	if !strings.HasSuffix(output, "\n") {
+		output += "\n"
+	}
 	return output
 }
 

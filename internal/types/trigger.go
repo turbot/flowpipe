@@ -5,6 +5,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
+	"strings"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )
@@ -54,6 +55,10 @@ func (t FpTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) str
 	if t.Description != nil {
 		output += fmt.Sprintf("\n\n%s\n", au.Blue("Description:").Bold())
 		output += *t.Description
+	}
+
+	if !strings.HasSuffix(output, "\n") {
+		output += "\n"
 	}
 	return output
 }
