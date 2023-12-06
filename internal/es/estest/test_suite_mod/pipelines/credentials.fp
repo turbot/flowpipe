@@ -1,15 +1,3 @@
-
-// credential "aws" "aws_static" {
-//     access_key = "ASIAQGDFAKEKGUI5MCEU"
-//     secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
-// }
-
-// credential "basic" "credentials" {
-//     username = "foo"
-//     password = "bar"
-// }
-
-
 pipeline "cred_aws" {
     param "cred" {
         type    = string
@@ -32,6 +20,22 @@ pipeline "cred_aws" {
         value = step.transform.aws_access_key.value
     }
 }
+
+pipeline "cred_gcp" {
+    param "cred" {
+        type    = string
+        default = "default"
+    }
+
+    step "transform" "gcp" {
+        value   = credential.gcp[param.cred].access_token
+    }
+
+    output "val" {
+        value = step.transform.gcp.value
+    }
+}
+
 
 pipeline "cred_basic" {
     param "cred" {

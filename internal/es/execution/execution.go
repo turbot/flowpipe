@@ -173,7 +173,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 		}
 	}
 
-	credentialMap, err := buildCredentialMapForEvalContext(relevantCredentials)
+	credentialMap, err := buildCredentialMapForEvalContext(ex.Context, relevantCredentials)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	return credentialMap, nil
 }
 
-func buildCredentialMapForEvalContext(allCredentials map[string]modconfig.Credential) (map[string]cty.Value, error) {
+func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]modconfig.Credential) (map[string]cty.Value, error) {
 	credentialMap := map[string]cty.Value{}
 
 	cache := cache.GetCache()
@@ -197,7 +197,7 @@ func buildCredentialMapForEvalContext(allCredentials map[string]modconfig.Creden
 		if !found {
 			// if not found, call the "resolve" function to resolve this credential, for temp cred this will
 			// generate the temp creds
-			newC, err := c.Resolve(context.TODO())
+			newC, err := c.Resolve(ctx)
 			if err != nil {
 				return nil, err
 			}
