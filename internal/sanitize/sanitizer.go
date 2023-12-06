@@ -57,6 +57,8 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"pipes_token",
 		"github_token",
 		"gitlab_token",
+		"vault_token",
+		"jira_api_token",
 	},
 	ExcludePatterns: []string{
 		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid
