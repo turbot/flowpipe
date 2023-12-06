@@ -70,7 +70,7 @@ func NewPrefix(fullPipelineName string) ParsedEventPrefix {
 }
 
 func (p ParsedEventPrefix) getRetryString(au aurora.Aurora) string {
-	if p.RetryIndex == nil || *p.RetryIndex <= 0 {
+	if p.RetryIndex == nil || *p.RetryIndex <= 1 {
 		return ""
 	}
 	return au.Sprintf(au.Index(8, "#%d"), *p.RetryIndex)
@@ -267,10 +267,11 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 // ParsedErrorEvent is a ParsedEvent which Failed.
 type ParsedErrorEvent struct {
 	ParsedEvent
-	Errors         []modconfig.StepError `json:"errors"`
-	Output         map[string]any        `json:"attributes"`
-	Duration       *string               `json:"duration,omitempty"`
-	isClosingEvent bool
+	Errors          []modconfig.StepError `json:"errors"`
+	Output          map[string]any        `json:"attributes"`
+	Duration        *string               `json:"duration,omitempty"`
+	isClosingEvent  bool
+	retriesComplete bool
 }
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -299,7 +300,14 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 	if p.isClosingEvent {
 		additionalText = fmt.Sprintf(" %s", p.execId)
 	}
-	out += fmt.Sprintf("%s %s %s%s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
+
+	if p.retriesComplete {
+		errStr := au.Sprintf(au.Red("Failed").Bold())
+		if len(p.Errors) > 1 {
+			errStr = au.Sprintf(au.Red("Failed with %d errors").Bold(), len(p.Errors))
+		}
+		out += fmt.Sprintf("%s %s %s%s\n", pre, errStr, au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
+	}
 	return out
 }
 
@@ -421,9 +429,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					Type:   log.EventType,
 					execId: e.Event.ExecutionID,
 				},
-				Duration: &duration,
-				Errors:   allErrors,
-				Output:   e.PipelineOutput,
+				Duration:        &duration,
+				Errors:          allErrors,
+				Output:          e.PipelineOutput,
+				retriesComplete: true,
 			}
 			out = append(out, parsed)
 		case event.HandlerStepQueued:
@@ -460,7 +469,8 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					prefix.LoopIndex = &e.StepLoop.Index
 				}
 				if e.StepRetry != nil {
-					prefix.RetryIndex = &e.StepRetry.Count
+					i := e.StepRetry.Count + 1
+					prefix.RetryIndex = &i
 				}
 
 				parsed := ParsedEventWithInput{
@@ -503,7 +513,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 				}
 				if e.StepRetry != nil {
-					i := e.StepRetry.Count - 1
+					i := e.StepRetry.Count
 					prefix.RetryIndex = &i
 
 				}
@@ -523,6 +533,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 					out = append(out, parsed)
 				case "failed":
+					rc := true
+					if e.StepRetry != nil {
+						rc = e.StepRetry.RetryCompleted
+					}
 					parsed := ParsedErrorEvent{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
@@ -530,9 +544,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 							StepType:          stepType,
 							execId:            e.Event.ExecutionID,
 						},
-						Duration: &duration,
-						Errors:   e.Output.Errors,
-						Output:   e.Output.Data,
+						Duration:        &duration,
+						Errors:          e.Output.Errors,
+						Output:          e.Output.Data,
+						retriesComplete: rc,
 					}
 					out = append(out, parsed)
 				}
