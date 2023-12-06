@@ -422,8 +422,8 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					ParsedEventPrefix: NewPrefix(fullName),
 					Type:              log.EventType,
 				},
-				Duration: &duration,
-				Output:   e.PipelineOutput,
+				Duration:   &duration,
+				StepOutput: e.PipelineOutput,
 			}
 			out = append(out, parsed)
 		case event.HandlerPipelineFailed:
