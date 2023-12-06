@@ -70,7 +70,7 @@ func NewPrefix(fullPipelineName string) ParsedEventPrefix {
 }
 
 func (p ParsedEventPrefix) getRetryString(au aurora.Aurora) string {
-	if p.RetryIndex == nil || *p.RetryIndex == 0 {
+	if p.RetryIndex == nil || *p.RetryIndex <= 0 {
 		return ""
 	}
 	return au.Sprintf(au.Index(8, "#%d"), *p.RetryIndex)
