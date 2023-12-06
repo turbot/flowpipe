@@ -582,12 +582,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 				}
 				if e.StepRetry != nil {
-					if e.StepRetry.RetryCompleted {
-						prefix.RetryIndex = &e.StepRetry.Count
-					} else {
-						i := e.StepRetry.Count - 1
-						prefix.RetryIndex = &i
-					}
+					i := e.StepRetry.Count - 1
+					prefix.RetryIndex = &i
+
 				}
 
 				switch e.Output.Status {
