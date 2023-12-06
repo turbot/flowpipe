@@ -183,6 +183,10 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 	}
 
 	out := ""
+	initText := "Starting"
+	if p.RetryIndex != nil {
+		initText = "Retrying"
+	}
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	switch p.StepType {
@@ -195,55 +199,16 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 			method = strings.ToUpper(method)
 		}
 
-		out += fmt.Sprintf("%s Starting %s: %s %s\n", pre, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
+		out += fmt.Sprintf("%s %s %s: %s %s\n", pre, initText, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
 	case "sleep":
 		duration, _ := p.Input["duration"].(string)
-		out += fmt.Sprintf("%s Starting %s: %s\n", pre, p.StepType, au.BrightBlack(duration))
+		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(duration))
 	default:
-		out += fmt.Sprintf("%s Starting %s\n", pre, p.StepType)
+		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}
 
 	if opts.Verbose {
 		for k, v := range p.Input {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, au)
-			} else {
-				s, err := opts.JsonFormatter.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), valueString)
-		}
-	}
-	return out
-}
-
-type ParsedEventWithArgs struct {
-	ParsedEvent
-	Args map[string]any `json:"args"`
-}
-
-func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
-
-	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
-
-	out += fmt.Sprintf("%s Starting\n", pre)
-	if opts.Verbose {
-		for k, v := range p.Args {
 			if v == nil {
 				v = ""
 			}
@@ -582,12 +547,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 				}
 				if e.StepRetry != nil {
-					if e.StepRetry.RetryCompleted {
-						prefix.RetryIndex = &e.StepRetry.Count
-					} else {
-						i := e.StepRetry.Count - 1
-						prefix.RetryIndex = &i
-					}
+					i := e.StepRetry.Count - 1
+					prefix.RetryIndex = &i
+
 				}
 
 				switch e.Output.Status {
