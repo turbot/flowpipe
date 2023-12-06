@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
@@ -97,7 +98,7 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 		output += fmt.Sprintf("\n%s\n", au.Blue("Params:").Bold())
 		for _, p := range p.Params {
 			output += fmt.Sprintf("  %s\n", p.String(sanitizer, opts))
-			if p.Default != nil || (p.Optional != nil && *p.Optional) {
+			if !helpers.IsNil(p.Default) || (p.Optional != nil && *p.Optional) {
 				continue
 			}
 			pArg += " --arg " + p.Name + "=<value>"
@@ -135,13 +136,13 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 	var pipelineParams []FpPipelineParam
 	for _, param := range pipeline.Params {
 
-		paramDefault := map[string]any{}
+		var paramDefault any
 		if !param.Default.IsNull() {
 			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
 			if err != nil {
 				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
 			}
-			paramDefault[param.Name] = paramDefaultGoVal
+			paramDefault = map[string]any{param.Name: paramDefaultGoVal}
 		}
 
 		pipelineParams = append(pipelineParams, FpPipelineParam{
