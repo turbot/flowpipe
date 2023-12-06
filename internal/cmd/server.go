@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -13,6 +14,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func serverCmd() *cobra.Command {
@@ -47,7 +49,7 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 
 		// Check if the port is already in use
 		if isPortInUse(viper.GetInt(constants.ArgPort)) {
-			error_helpers.FailOnError(fmt.Errorf("The designated port (%d) is already in use", viper.GetInt(constants.ArgPort)))
+			error_helpers.FailOnError(perr.InternalWithMessage("The designated port (" + strconv.Itoa(viper.GetInt(constants.ArgPort)) + ") is already in use"))
 			return
 		}
 
