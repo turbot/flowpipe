@@ -26,8 +26,8 @@ type ProcessPayloadEvent struct {
 }
 
 type ProcessOutputData struct {
-	ID     string         `json:"process_id"`
-	Output map[string]any `json:"output"`
+	ID     string                 `json:"process_id"`
+	Output map[string]interface{} `json:"output"`
 }
 
 // Identical to the EventLogEntry struct in internal/types/execution.go

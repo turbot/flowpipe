@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
 
@@ -285,14 +286,14 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOption
 	return au.Sprintf("%s [%s%s]%s", au.Blue(p.Name), au.Green(p.Type), o, d)
 }
 
-type PipelineExecutionResponse map[string]any
+type PipelineExecutionResponse map[string]interface{}
 
 type CmdPipeline struct {
-	Command       string            `json:"command" binding:"required,oneof=run"`
-	Args          map[string]any    `json:"args,omitempty"`
-	ArgsString    map[string]string `json:"args_string,omitempty"`
-	ExecutionMode *string           `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
-	WaitRetry     *int              `json:"wait_retry,omitempty" binding:"omitempty"`
+	Command       string                 `json:"command" binding:"required,oneof=run"`
+	Args          map[string]interface{} `json:"args,omitempty"`
+	ArgsString    map[string]string      `json:"args_string,omitempty"`
+	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
 }
 
 func (c *CmdPipeline) GetExecutionMode() string {

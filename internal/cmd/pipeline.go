@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/sanitize"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
