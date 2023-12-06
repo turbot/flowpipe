@@ -183,6 +183,10 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 	}
 
 	out := ""
+	initText := "Starting"
+	if p.RetryIndex != nil {
+		initText = "Retrying"
+	}
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	switch p.StepType {
@@ -195,12 +199,12 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 			method = strings.ToUpper(method)
 		}
 
-		out += fmt.Sprintf("%s Starting %s: %s %s\n", pre, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
+		out += fmt.Sprintf("%s %s %s: %s %s\n", pre, initText, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
 	case "sleep":
 		duration, _ := p.Input["duration"].(string)
-		out += fmt.Sprintf("%s Starting %s: %s\n", pre, p.StepType, au.BrightBlack(duration))
+		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(duration))
 	default:
-		out += fmt.Sprintf("%s Starting %s\n", pre, p.StepType)
+		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}
 
 	if opts.Verbose {
@@ -582,12 +586,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 				}
 				if e.StepRetry != nil {
-					if e.StepRetry.RetryCompleted {
-						prefix.RetryIndex = &e.StepRetry.Count
-					} else {
-						i := e.StepRetry.Count - 1
-						prefix.RetryIndex = &i
-					}
+					i := e.StepRetry.Count - 1
+					prefix.RetryIndex = &i
+
 				}
 
 				switch e.Output.Status {
