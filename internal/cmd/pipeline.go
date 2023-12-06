@@ -311,7 +311,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			return
 		}
 		printer.Sanitizer = sanitize.Instance
-		printableResource := types.NewPrintableParsedEvent()
+		printableResource := types.NewPrintableParsedEvent(pipelineId)
 
 		// print execution_id / stale info
 		var header []types.SanitizedStringer

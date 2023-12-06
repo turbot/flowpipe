@@ -153,6 +153,7 @@ type ParsedEvent struct {
 	Type     string `json:"event_type"`
 	StepType string `json:"step_type"`
 	Message  string `json:"message,omitempty"`
+	execId   string
 }
 
 func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -216,9 +217,10 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 
 type ParsedEventWithOutput struct {
 	ParsedEvent
-	Output     map[string]any `json:"attributes"`
-	StepOutput map[string]any `json:"step_output"`
-	Duration   *string        `json:"duration,omitempty"`
+	Output         map[string]any `json:"attributes"`
+	StepOutput     map[string]any `json:"step_output"`
+	Duration       *string        `json:"duration,omitempty"`
+	isClosingEvent bool
 }
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -252,7 +254,11 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 		statusCode, _ := p.Output["status_code"].(float64)
 		out += fmt.Sprintf("%s %s %g %s\n", pre, au.BrightGreen("Complete:"), au.BrightGreen(statusCode), au.Cyan(duration).Italic())
 	default:
-		out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
+		additionalText := ""
+		if p.isClosingEvent {
+			additionalText = fmt.Sprintf(" %s", p.execId)
+		}
+		out += fmt.Sprintf("%s %s %s%s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
 	}
 
 	return out
@@ -261,9 +267,10 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 // ParsedErrorEvent is a ParsedEvent which Failed.
 type ParsedErrorEvent struct {
 	ParsedEvent
-	Errors   []modconfig.StepError `json:"errors"`
-	Output   map[string]any        `json:"attributes"`
-	Duration *string               `json:"duration,omitempty"`
+	Errors         []modconfig.StepError `json:"errors"`
+	Output         map[string]any        `json:"attributes"`
+	Duration       *string               `json:"duration,omitempty"`
+	isClosingEvent bool
 }
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -287,7 +294,12 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 	for _, e := range p.Errors {
 		out += fmt.Sprintf("%s %s %s\n", pre, au.Red(e.Error.Title+":"), au.Red(e.Error.Detail))
 	}
-	out += fmt.Sprintf("%s %s %s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic())
+
+	additionalText := ""
+	if p.isClosingEvent {
+		additionalText = fmt.Sprintf(" %s", p.execId)
+	}
+	out += fmt.Sprintf("%s %s %s%s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
 	return out
 }
 
@@ -297,13 +309,15 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items    []SanitizedStringer
-	Registry map[string]ParsedEventRegistryItem
+	Items             []SanitizedStringer
+	Registry          map[string]ParsedEventRegistryItem
+	initialPipelineId string
 }
 
-func NewPrintableParsedEvent() *PrintableParsedEvent {
+func NewPrintableParsedEvent(pipelineId string) *PrintableParsedEvent {
 	return &PrintableParsedEvent{
-		Registry: make(map[string]ParsedEventRegistryItem),
+		Registry:          make(map[string]ParsedEventRegistryItem),
+		initialPipelineId: pipelineId,
 	}
 }
 
@@ -338,6 +352,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				ParsedEventPrefix: NewPrefix(fullName),
 				Type:              log.EventType,
 				Message:           "Starting pipeline",
+				execId:            e.Event.ExecutionID,
 			}
 			out = append(out, parsed)
 		case event.HandlerPipelineFinished:
@@ -358,9 +373,11 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: NewPrefix(fullName),
 					Type:              log.EventType,
+					execId:            e.Event.ExecutionID,
 				},
-				Duration:   &duration,
-				StepOutput: e.PipelineOutput,
+				Duration:       &duration,
+				StepOutput:     e.PipelineOutput,
+				isClosingEvent: p.initialPipelineId == e.PipelineExecutionID,
 			}
 			out = append(out, parsed)
 		case event.HandlerPipelineFailed:
@@ -401,7 +418,8 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 						FullPipelineName: fullName,
 						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
 					},
-					Type: log.EventType,
+					Type:   log.EventType,
+					execId: e.Event.ExecutionID,
 				},
 				Duration: &duration,
 				Errors:   allErrors,
@@ -450,6 +468,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 						ParsedEventPrefix: prefix,
 						Type:              log.EventType,
 						StepType:          stepType,
+						execId:            e.Event.ExecutionID,
 					},
 					Input: e.StepInput,
 				}
@@ -496,6 +515,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 							ParsedEventPrefix: prefix,
 							Type:              log.EventType,
 							StepType:          stepType,
+							execId:            e.Event.ExecutionID,
 						},
 						Duration:   &duration,
 						Output:     e.Output.Data,
@@ -508,6 +528,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 							ParsedEventPrefix: prefix,
 							Type:              log.EventType,
 							StepType:          stepType,
+							execId:            e.Event.ExecutionID,
 						},
 						Duration: &duration,
 						Errors:   e.Output.Errors,
