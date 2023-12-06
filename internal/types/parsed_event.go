@@ -229,45 +229,6 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 	return out
 }
 
-type ParsedEventWithArgs struct {
-	ParsedEvent
-	Args map[string]any `json:"args"`
-}
-
-func (p ParsedEventWithArgs) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
-
-	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
-
-	out += fmt.Sprintf("%s Starting\n", pre)
-	if opts.Verbose {
-		for k, v := range p.Args {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, au)
-			} else {
-				s, err := opts.JsonFormatter.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), valueString)
-		}
-	}
-	return out
-}
-
 type ParsedEventWithOutput struct {
 	ParsedEvent
 	Output     map[string]any `json:"attributes"`
