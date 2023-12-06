@@ -55,9 +55,12 @@ func listVariableFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer := printers.GetPrinter[types.Variable](cmd)
+		printer, err := printers.GetPrinter[types.Variable](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
 		printableResource := types.NewPrintableVariable(resp)
-		err := printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}

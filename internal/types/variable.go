@@ -95,9 +95,11 @@ func ListVariableResponseFromAPIResponse(apiResp *flowpipeapiclient.ListVariable
 
 func VariableFromAPIResponse(apiResp flowpipeapiclient.Variable) (*Variable, error) {
 	res := &Variable{
-		Name: typehelpers.SafeString(apiResp.Name),
-		Type: typehelpers.SafeString(apiResp.Type),
-		// TODO: Description isn't currently returned in flowpipeapiclient.Variable
+		Name:        typehelpers.SafeString(apiResp.Name),
+		Type:        typehelpers.SafeString(apiResp.Type),
+		Description: apiResp.Description,
+		Default:     apiResp.Default,
+		Value:       apiResp.Value,
 	}
 
 	return res, nil
