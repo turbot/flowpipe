@@ -26,6 +26,9 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		Short:   localconstants.FlowpipeShortDescription,
 		Long:    localconstants.FlowpipeLongDescription,
 		Version: viper.GetString("main.version"),
+		Run: func(cmd *cobra.Command, args []string) {
+			cmd.Help() // Show the help message
+		},
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
 
