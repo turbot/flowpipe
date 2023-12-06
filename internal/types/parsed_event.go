@@ -207,24 +207,9 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}
 
-	if opts.Verbose {
-		for k, v := range p.Input {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, au)
-			} else {
-				s, err := opts.JsonFormatter.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s Arg %s = %s\n", pre, au.Blue(k), valueString)
-		}
+	// args
+	if opts.Verbose && len(p.Input) > 0 {
+		out += sortAndParseMap(p.Input, "Arg", pre, au, opts)
 	}
 	return out
 }
@@ -247,46 +232,14 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 	out := ""
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
-	// attributes?
-	if p.Type == event.HandlerPipelineFinished || opts.Verbose {
-		for k, v := range p.Output {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, au)
-			} else {
-				s, err := opts.JsonFormatter.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Attr", au.Blue(k), valueString)
-		}
+	// attributes
+	if opts.Verbose && len(p.Output) > 0 {
+		out += sortAndParseMap(p.Output, "Attr", pre, au, opts)
 	}
 
-	// StepOutput?
-	if p.Type == event.HandlerPipelineFinished || opts.Verbose {
-		for k, v := range p.StepOutput {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, au)
-			} else {
-				s, err := opts.JsonFormatter.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
-		}
+	// outputs
+	if (p.Type == event.HandlerPipelineFinished || opts.Verbose) && len(p.StepOutput) > 0 {
+		out += sortAndParseMap(p.StepOutput, "Output", pre, au, opts)
 	}
 
 	duration := ""
@@ -328,24 +281,8 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 		duration = *p.Duration
 	}
 
-	if p.Type == event.HandlerPipelineFailed || opts.Verbose {
-		for k, v := range p.Output {
-			if v == nil {
-				v = ""
-			}
-			valueString := ""
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, au)
-			} else {
-				s, err := opts.JsonFormatter.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			out += fmt.Sprintf("%s %s %s = %s\n", pre, "Output", au.Blue(k), valueString)
-		}
+	if (p.Type == event.HandlerPipelineFailed || opts.Verbose) && len(p.Output) > 0 {
+		out += sortAndParseMap(p.Output, "Output", pre, au, opts)
 	}
 	for _, e := range p.Errors {
 		out += fmt.Sprintf("%s %s %s\n", pre, au.Red(e.Error.Title+":"), au.Red(e.Error.Detail))
@@ -649,4 +586,28 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 		return au.Sprintf("%d", au.Cyan(input))
 	}
 	return ""
+}
+
+func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts RenderOptions) string {
+	out := ""
+	sortedKeys := utils.SortedMapKeys(input)
+	for _, key := range sortedKeys {
+		v := input[key]
+		if v == nil {
+			v = ""
+		}
+		valueString := ""
+		if isSimpleType(v) {
+			valueString = formatSimpleValue(v, au)
+		} else {
+			s, err := opts.JsonFormatter.Marshal(v)
+			if err != nil {
+				valueString = au.Sprintf(au.Red("error parsing value"))
+			} else {
+				valueString = string(s)
+			}
+		}
+		out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
+	}
+	return out
 }
