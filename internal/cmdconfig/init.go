@@ -1,17 +1,13 @@
 package cmdconfig
 
 import (
-	"fmt"
-	"maps"
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"maps"
 )
 
 func initGlobalConfig() *modconfig.FlowpipeConfig {
@@ -39,9 +35,6 @@ func initGlobalConfig() *modconfig.FlowpipeConfig {
 		cmdconfig.SetDefaultsFromConfig(loader.ConfiguredProfile.ConfigMap(cmd))
 	}
 
-	installDir := viper.GetString(constants.ArgInstallDir)
-	ensureInstallDir(installDir)
-
 	return nil
 }
 
@@ -55,13 +48,4 @@ func getConfigDefaults(cmd *cobra.Command) map[string]any {
 		maps.Copy(res, cmdSpecificDefaults)
 	}
 	return res
-}
-
-// todo KAI use filepaths???
-func ensureInstallDir(installDir string) {
-	if _, err := os.Stat(installDir); os.IsNotExist(err) {
-		err = os.MkdirAll(installDir, 0755)
-		error_helpers.FailOnErrorWithMessage(err, fmt.Sprintf("could not create installation directory: %s", installDir))
-	}
-	app_specific.InstallDir = installDir
 }

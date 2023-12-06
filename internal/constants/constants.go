@@ -1,6 +1,8 @@
 package constants
 
-import "bufio"
+import (
+	"bufio"
+)
 
 const (
 	DefaultServerPort         = 7103
