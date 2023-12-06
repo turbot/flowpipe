@@ -47,7 +47,7 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 
 		// Check if the port is already in use
 		if isPortInUse(viper.GetInt(constants.ArgPort)) {
-			error_helpers.FailOnError(fmt.Errorf("Flowpipe server is already running on port: %d", viper.GetInt(constants.ArgPort)))
+			error_helpers.FailOnError(fmt.Errorf("The designated port (%d) is already in use", viper.GetInt(constants.ArgPort)))
 			return
 		}
 
