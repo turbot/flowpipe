@@ -267,10 +267,11 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 // ParsedErrorEvent is a ParsedEvent which Failed.
 type ParsedErrorEvent struct {
 	ParsedEvent
-	Errors         []modconfig.StepError `json:"errors"`
-	Output         map[string]any        `json:"attributes"`
-	Duration       *string               `json:"duration,omitempty"`
-	isClosingEvent bool
+	Errors          []modconfig.StepError `json:"errors"`
+	Output          map[string]any        `json:"attributes"`
+	Duration        *string               `json:"duration,omitempty"`
+	isClosingEvent  bool
+	retriesComplete bool
 }
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -299,7 +300,10 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 	if p.isClosingEvent {
 		additionalText = fmt.Sprintf(" %s", p.execId)
 	}
-	out += fmt.Sprintf("%s %s %s%s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
+
+	if p.retriesComplete {
+		out += fmt.Sprintf("%s %s %s%s\n", pre, au.Sprintf(au.Red("Failed with %d error(s)").Bold(), len(p.Errors)), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
+	}
 	return out
 }
 
@@ -421,9 +425,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					Type:   log.EventType,
 					execId: e.Event.ExecutionID,
 				},
-				Duration: &duration,
-				Errors:   allErrors,
-				Output:   e.PipelineOutput,
+				Duration:        &duration,
+				Errors:          allErrors,
+				Output:          e.PipelineOutput,
+				retriesComplete: true,
 			}
 			out = append(out, parsed)
 		case event.HandlerStepQueued:
@@ -523,6 +528,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					}
 					out = append(out, parsed)
 				case "failed":
+					rc := true
+					if e.StepRetry != nil {
+						rc = e.StepRetry.RetryCompleted
+					}
 					parsed := ParsedErrorEvent{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
@@ -530,9 +539,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 							StepType:          stepType,
 							execId:            e.Event.ExecutionID,
 						},
-						Duration: &duration,
-						Errors:   e.Output.Errors,
-						Output:   e.Output.Data,
+						Duration:        &duration,
+						Errors:          e.Output.Errors,
+						Output:          e.Output.Data,
+						retriesComplete: rc,
 					}
 					out = append(out, parsed)
 				}
