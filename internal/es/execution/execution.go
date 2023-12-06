@@ -809,17 +809,16 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions = append(pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].StepExecutions,
 			*pe.StepExecutions[et.StepExecutionID])
 
-		// TODO: Error handling
-		// TODO: ignore error setting -> we need to be able to ignore setting
-		// TODO: is a step failure an immediate end of the pipeline?
-		// TODO: can a pipeline continue if a step fails? Is that the ignore setting?
 		if et.Output.HasErrors() {
-			// TODO: ignore retries for now (StepFinalFailure)
 			if !stepDefn.GetErrorConfig().Ignore {
-				// pe.StepExecutions[et.StepExecutionID].Error = et.Error
-				// pe.StepExecutions[et.StepExecutionID].Status = "failed"
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
-				pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
+
+				if !errorHold {
+					// if there's a retry config, don't add that failure to the pipeline failure until the final retry attempt
+					//
+					// retry completed is represented in the errorHold variable
+					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
+				}
 			} else {
 				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
 				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)

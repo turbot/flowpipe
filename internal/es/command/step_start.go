@@ -354,9 +354,14 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
 			stepRetry.Input = &cmd.StepInput
 		} else {
+			retryIndex := 0
+			if cmd.StepRetry != nil {
+				retryIndex = cmd.StepRetry.Count
+			}
 			// we have exhausted our retry, do not try to loop call step finish immediately
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
 			stepRetry = &modconfig.StepRetry{
+				Count:          retryIndex,
 				RetryCompleted: true,
 			}
 		}

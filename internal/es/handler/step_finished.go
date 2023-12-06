@@ -64,7 +64,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 	if e.StepRetry != nil && !e.StepRetry.RetryCompleted {
 		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(e, stepName)
 		return h.CommandBus.Send(ctx, cmd)
-	} else if e.StepRetry != nil {
+	} else if e.StepRetry != nil && e.StepRetry.RetryCompleted {
 		// this means we have an error BUT the retry has been exhausted, run the planner
 		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 		if err != nil {

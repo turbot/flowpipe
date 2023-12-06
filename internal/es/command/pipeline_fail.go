@@ -58,7 +58,12 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 			// do not fail, continue to the next step, we are already in pipeline_fail event, what else can we do here?
 			continue
 		}
+
 		if stepExecution.Output.HasErrors() && (stepDefn.GetErrorConfig() != nil && !stepDefn.GetErrorConfig().Ignore) {
+			if stepExecution.StepRetry != nil && !stepExecution.StepRetry.RetryCompleted {
+				// Don't add to pipeline errors if it's not the final retry
+				continue
+			}
 			pipelineErrors = append(pipelineErrors, stepExecution.Output.Errors...)
 		}
 	}
