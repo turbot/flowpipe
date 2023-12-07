@@ -241,9 +241,7 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 	}
 
 	// outputs
-	if (p.Type == event.HandlerPipelineFinished || opts.Verbose) && len(p.StepOutput) > 0 {
-		out += sortAndParseMap(p.StepOutput, "Output", pre, au, opts)
-	}
+	out += sortAndParseMap(p.StepOutput, "Output", pre, au, opts)
 
 	duration := ""
 	if p.Duration != nil {
