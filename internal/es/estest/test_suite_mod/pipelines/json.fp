@@ -112,4 +112,8 @@ pipeline "json_array" {
     output "val_two" {
         value = step.http.json_http.response_body
     }
+
+    output "val_request_body" {
+        value = step.http.json_http.request_body
+    }
 }

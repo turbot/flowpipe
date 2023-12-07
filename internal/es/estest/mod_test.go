@@ -838,6 +838,8 @@ func (suite *ModTestSuite) TestJsonArray() {
 	assert.Equal("a", pex.PipelineOutput["val_two"].(map[string]interface{})["0"])
 	assert.Equal("b", pex.PipelineOutput["val_two"].(map[string]interface{})["1"])
 	assert.Equal("c", pex.PipelineOutput["val_two"].(map[string]interface{})["2"])
+
+	assert.Equal("[\"a\",\"b\",\"c\"]", pex.PipelineOutput["val_request_body"])
 }
 
 func (suite *ModTestSuite) TestPipelineWithForLoop() {
@@ -2908,6 +2910,27 @@ func (suite *ModTestSuite) TestEmptyArrayResponseFromHttpServer() {
 	}
 
 	assert.Equal(0, len(valOutput))
+}
+
+func (suite *ModTestSuite) TestReferToArguments() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the step refer to an argument (input) of another step, we used to not have the input in the
+	// eval context
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.refer_to_arguments", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+
+	assert.Equal("http://api.open-notify.org/astros.json", pex.PipelineOutput["val"])
 }
 
 // Skip for now until the behaviour of handling the throw block error (error rendering the throw block)

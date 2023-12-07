@@ -1,0 +1,27 @@
+[
+    {
+        "name": "Burger",
+        "kcal": 300,
+        "lactose": true
+    },
+    {
+        "name": "Cheeseburger",
+        "kcal": 400,
+        "lactose": true
+    },
+    {
+        "name": "Veggie Burger",
+        "kcal": 250,
+        "lactose": false
+    },
+    {
+        "name": "Chicken Burger",
+        "kcal": 350,
+        "lactose": false
+    },
+    {
+        "name": "Fish Burger",
+        "kcal": 300,
+        "lactose": false
+    }
+]

@@ -205,10 +205,6 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 }
 
 func buildSingleStepStatusOutput(stepName string, loop bool, singleStepStatus *StepStatus) (map[string]cty.Value, error) {
-
-	// TODO: error
-	// TODO: retry
-
 	var err error
 	var stepNameValueMap map[string]cty.Value
 	if !loop {
@@ -258,6 +254,22 @@ func BuildSingleStepExecutionOutput(lastStepExecution *StepExecution, stepName s
 		singleStepValueMap, err = lastStepExecution.Output.AsCtyMap()
 		if err != nil {
 			return nil, err
+		}
+	}
+
+	// Add the input
+	if lastStepExecution.Input != nil {
+		inputCtyMap, err := lastStepExecution.Input.AsCtyMap()
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range inputCtyMap {
+			if singleStepValueMap[k].IsNull() {
+				singleStepValueMap[k] = v
+			}
+			// some cases, like the transform step, the input & output share the same name: value. However they won't change value, so
+			// just add the output since that's the "final" value and ignore the input
 		}
 	}
 
