@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 	"reflect"
 	"strings"
 	"time"
@@ -253,6 +254,13 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts Render
 	case "http":
 		statusCode, _ := p.Output["status_code"].(float64)
 		out += fmt.Sprintf("%s %s %g %s\n", pre, au.BrightGreen("Complete:"), au.BrightGreen(statusCode), au.Cyan(duration).Italic())
+	case "query":
+		if !helpers.IsNil(p.Output["rows"]) {
+			rows := len(p.Output["rows"].([]any))
+			out += fmt.Sprintf("%s %s %d %s %s\n", pre, au.BrightGreen("Complete:"), au.Cyan(rows), au.BrightGreen("row(s)"), au.Cyan(duration).Italic())
+		} else {
+			out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
+		}
 	default:
 		additionalText := ""
 		if p.isClosingEvent {
