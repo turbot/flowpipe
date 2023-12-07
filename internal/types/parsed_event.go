@@ -173,7 +173,8 @@ func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) s
 
 type ParsedEventWithInput struct {
 	ParsedEvent
-	Input map[string]any `json:"args"`
+	Input  map[string]any `json:"args"`
+	isSkip bool
 }
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -185,11 +186,16 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 	}
 
 	out := ""
+	pre := p.ParsedEventPrefix.String(sanitizer, opts)
+
+	if p.isSkip {
+		return fmt.Sprintf("%s Skipped\n", pre)
+	}
+
 	initText := "Starting"
 	if p.RetryIndex != nil {
 		initText = "Retrying"
 	}
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	switch p.StepType {
 	case "http":
@@ -457,39 +463,39 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
-			if e.NextStepAction == "start" { // TODO: handle 'skip' steps?
-				p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
 
-				pipeline := p.Registry[e.PipelineExecutionID]
-				fullStepName := e.StepName
-				stepType := strings.Split(e.StepName, ".")[0]
-				stepName := strings.Split(e.StepName, ".")[1]
+			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
 
-				prefix := NewPrefix(pipeline.Name)
-				prefix.FullStepName = &fullStepName
-				prefix.StepName = &stepName
-				if e.StepForEach != nil && e.StepForEach.ForEachStep {
-					prefix.ForEachKey = &e.StepForEach.Key
-				}
-				if e.StepLoop != nil {
-					prefix.LoopIndex = &e.StepLoop.Index
-				}
-				if e.StepRetry != nil {
-					i := e.StepRetry.Count + 1
-					prefix.RetryIndex = &i
-				}
+			pipeline := p.Registry[e.PipelineExecutionID]
+			fullStepName := e.StepName
+			stepType := strings.Split(e.StepName, ".")[0]
+			stepName := strings.Split(e.StepName, ".")[1]
 
-				parsed := ParsedEventWithInput{
-					ParsedEvent: ParsedEvent{
-						ParsedEventPrefix: prefix,
-						Type:              log.EventType,
-						StepType:          stepType,
-						execId:            e.Event.ExecutionID,
-					},
-					Input: e.StepInput,
-				}
-				out = append(out, parsed)
+			prefix := NewPrefix(pipeline.Name)
+			prefix.FullStepName = &fullStepName
+			prefix.StepName = &stepName
+			if e.StepForEach != nil && e.StepForEach.ForEachStep {
+				prefix.ForEachKey = &e.StepForEach.Key
 			}
+			if e.StepLoop != nil {
+				prefix.LoopIndex = &e.StepLoop.Index
+			}
+			if e.StepRetry != nil {
+				i := e.StepRetry.Count + 1
+				prefix.RetryIndex = &i
+			}
+
+			parsed := ParsedEventWithInput{
+				ParsedEvent: ParsedEvent{
+					ParsedEventPrefix: prefix,
+					Type:              log.EventType,
+					StepType:          stepType,
+					execId:            e.Event.ExecutionID,
+				},
+				Input:  e.StepInput,
+				isSkip: e.NextStepAction == "skip",
+			}
+			out = append(out, parsed)
 		case event.HandlerStepFinished:
 			var e event.StepFinished
 			err := json.Unmarshal([]byte(log.Payload), &e)
