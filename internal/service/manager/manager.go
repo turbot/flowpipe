@@ -319,7 +319,6 @@ func (m *Manager) initializeResources() error {
 }
 
 func (m *Manager) setupWatcher(w *workspace.Workspace) error {
-
 	if !viper.GetBool(constants.ArgWatch) {
 		return nil
 	}

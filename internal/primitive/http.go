@@ -9,13 +9,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"log/slog"
-
+	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -223,6 +224,8 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 	inputParams := &HTTPInput{
 		URL:    input["url"].(string),
 		Method: method,
+		// set insecure from config
+		Insecure: viper.GetBool(constants.ArgTlsInsecure),
 
 		// TODO: Make it configurable
 		RequestTimeoutMs: HTTPRequestDefaultTimeoutMs,
