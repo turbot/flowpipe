@@ -21,7 +21,8 @@ func serverCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "server",
 		Args:  cobra.NoArgs,
-		Short: "Start the Flowpipe server",
+		Short: "Run the Flowpipe server, including triggers, integrations, and the API",
+		Long:  `Run the Flowpipe server, including triggers, integrations, and the API.`,
 		Run:   startServerFunc(),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 

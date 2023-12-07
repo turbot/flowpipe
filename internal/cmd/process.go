@@ -40,9 +40,11 @@ func processCmd() *cobra.Command {
 // get
 func processGetCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "get <execution-id>",
-		Args: cobra.ExactArgs(1),
-		Run:  getProcessFunc,
+		Use:   "get <execution-id>",
+		Args:  cobra.ExactArgs(1),
+		Run:   getProcessFunc,
+		Short: "Show details for a single process",
+		Long:  `Show details for a single process.`,
 	}
 
 	cmdconfig.
@@ -94,9 +96,11 @@ func getProcessFunc(cmd *cobra.Command, args []string) {
 // log
 func processLogCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "log <execution-id>",
-		Args: cobra.ExactArgs(1),
-		Run:  logProcessFunc,
+		Use:   "log <execution-id>",
+		Args:  cobra.ExactArgs(1),
+		Run:   logProcessFunc,
+		Short: "Display logs for a processes",
+		Long:  `Display logs for a processes.`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -134,9 +138,11 @@ func logProcessFunc(cmd *cobra.Command, args []string) {
 // list
 func processListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "list",
-		Args: cobra.NoArgs,
-		Run:  listProcessFunc,
+		Use:   "list",
+		Args:  cobra.NoArgs,
+		Run:   listProcessFunc,
+		Short: "List processes",
+		Long:  `List processes.`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
