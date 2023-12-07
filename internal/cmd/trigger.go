@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -30,9 +31,11 @@ func triggerCmd() *cobra.Command {
 // list
 func triggerListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "list",
-		Args: cobra.NoArgs,
-		Run:  listTriggerFunc,
+		Use:   "list",
+		Args:  cobra.NoArgs,
+		Run:   listTriggerFunc,
+		Short: "List triggers from the current mod",
+		Long:  `List triggers from the current mod.`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -101,9 +104,11 @@ func listTriggerLocal(cmd *cobra.Command, args []string) (*types.ListTriggerResp
 
 func triggerShowCmd() *cobra.Command {
 	var triggerShowCmd = &cobra.Command{
-		Use:  "show <trigger-name>",
-		Args: cobra.ExactArgs(1),
-		Run:  showTriggerFunc,
+		Use:   "show <trigger-name>",
+		Args:  cobra.ExactArgs(1),
+		Run:   showTriggerFunc,
+		Short: "Show details of a trigger from the current mod",
+		Long:  `Show details of a trigger from the current mod.`,
 	}
 
 	// initialize hooks

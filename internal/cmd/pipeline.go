@@ -52,7 +52,8 @@ func pipelineListCmd() *cobra.Command {
 		Use:   "list",
 		Args:  cobra.NoArgs,
 		Run:   listPipelineFunc,
-		Short: "List pipelines from the current mod and its direct dependents.",
+		Short: "List pipelines from the current mod and its direct dependents",
+		Long:  `List pipelines from the current mod and its direct dependents.`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -122,7 +123,8 @@ func pipelineShowCmd() *cobra.Command {
 		Use:   "show <pipeline-name>",
 		Args:  cobra.ExactArgs(1),
 		Run:   showPipelineFunc,
-		Short: "Show details of a pipeline from the current mod or its direct dependents.",
+		Short: "Show details of a pipeline from the current mod or its direct dependents",
+		Long:  `Show details of a pipeline from the current mod or its direct dependents.`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -190,7 +192,8 @@ func pipelineRunCmd() *cobra.Command {
 		Use:   "run <pipeline-name>",
 		Args:  cobra.ExactArgs(1),
 		Run:   runPipelineFunc,
-		Short: "Run a pipeline from the current mod or its direct dependents or from a Flowpipe server instance.",
+		Short: "Run a pipeline from the current mod or its direct dependents or from a Flowpipe server instance",
+		Long:  `Run a pipeline from the current mod or its direct dependents or from a Flowpipe server instance.`,
 	}
 
 	// Add the pipeline arg flag
