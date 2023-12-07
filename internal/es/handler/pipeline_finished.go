@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
-	"os"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -83,21 +82,6 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	if len(pipelineDefn.OutputConfig) > 0 {
 		data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 	}
-
-	// Dump the output
-
-	// Dump the snapshot
-	snapshot, err := ex.Snapshot(e.PipelineExecutionID)
-	if err != nil {
-		slog.Error("pipeline_finished", "error", err)
-		return err
-	}
-
-	jsonStr, _ := json.MarshalIndent(snapshot, "", "  ")
-	sanitizedJsonStr := sanitize.Instance.SanitizeString(string(jsonStr))
-
-	snapshotPath := filepaths.SnapshotFilePath(e.Event.ExecutionID)
-	_ = os.WriteFile(snapshotPath, []byte(sanitizedJsonStr), 0600)
 
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
