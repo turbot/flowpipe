@@ -49,9 +49,10 @@ func pipelineCmd() *cobra.Command {
 // list
 func pipelineListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "list",
-		Args: cobra.NoArgs,
-		Run:  listPipelineFunc,
+		Use:   "list",
+		Args:  cobra.NoArgs,
+		Run:   listPipelineFunc,
+		Short: "List pipelines from the current mod and its direct dependents.",
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -118,9 +119,10 @@ func listPipelineLocal(cmd *cobra.Command, args []string) (*types.ListPipelineRe
 // show
 func pipelineShowCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "show <pipeline-name>",
-		Args: cobra.ExactArgs(1),
-		Run:  showPipelineFunc,
+		Use:   "show <pipeline-name>",
+		Args:  cobra.ExactArgs(1),
+		Run:   showPipelineFunc,
+		Short: "Show details of a pipeline from the current mod or its direct dependents.",
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -185,14 +187,15 @@ func getPipelineLocal(ctx context.Context, pipelineName string) (*types.FpPipeli
 // run
 func pipelineRunCmd() *cobra.Command {
 	var cmd = &cobra.Command{
-		Use:  "run <pipeline-name>",
-		Args: cobra.ExactArgs(1),
-		Run:  runPipelineFunc,
+		Use:   "run <pipeline-name>",
+		Args:  cobra.ExactArgs(1),
+		Run:   runPipelineFunc,
+		Short: "Run a pipeline from the current mod or its direct dependents or from a Flowpipe server instance.",
 	}
 
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --pipeline-arg may be passed.").
+		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --arg may be passed.").
 		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.")
 
 	return cmd
