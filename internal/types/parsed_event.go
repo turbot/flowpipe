@@ -189,7 +189,7 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderO
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	if p.isSkip {
-		return fmt.Sprintf("%s Skipped\n", pre)
+		return fmt.Sprintf("%s %s\n", pre, au.BrightBlack("Skipped"))
 	}
 
 	initText := "Starting"
