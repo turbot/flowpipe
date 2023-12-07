@@ -33,13 +33,13 @@ func TestSanitizer_SanitizeString(t *testing.T) {
 	//         {
 	//            "name":"echo_one",
 	//            "step_type":"transform",
-	//            "pipeline_name":"<redacted>",
+	//            "pipeline_name":"REDACTED",
 	//            "value":"Hello World"
 	//         },
 	//         {
 	//            "name":"child_pipeline",
 	//            "step_type":"pipeline",
-	//            "pipeline_name":"<redacted>",
+	//            "pipeline_name":"REDACTED",
 	//            "args":null
 	//         }
 	//      ],

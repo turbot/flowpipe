@@ -13,7 +13,7 @@ import (
 	"github.com/turbot/steampipe-plugin-code/secrets"
 )
 
-const redactedStr = "<redacted>"
+const RedactedStr = "REDACTED"
 
 var NullSanitizer = NewSanitizer(SanitizerOptions{})
 
@@ -189,7 +189,7 @@ func (s *Sanitizer) SanitizeString(v string) string {
 	// now apply replacements in reverse order so the indexes remain valid
 	for i := len(newReplacements) - 1; i >= 0; i-- {
 		r := newReplacements[i]
-		v = v[:r.start] + redactedStr + v[r.end:]
+		v = v[:r.start] + RedactedStr + v[r.end:]
 	}
 	return v
 }
@@ -204,7 +204,7 @@ func (s *Sanitizer) Sanitize(v any) any {
 	if !isString {
 		jsonBytes, err := json.Marshal(v)
 		if err != nil {
-			return redactedStr
+			return RedactedStr
 		}
 		valStr = string(jsonBytes)
 	}
@@ -248,7 +248,7 @@ func SanitizeStruct[T any](s *Sanitizer, v T) (T, error) {
 
 func (s *Sanitizer) SanitizeKeyValue(k string, v any) any {
 	if s.FieldExcluded(k) {
-		return redactedStr
+		return RedactedStr
 	}
 	return s.Sanitize(v)
 }

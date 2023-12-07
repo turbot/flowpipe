@@ -20,6 +20,7 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -2105,8 +2106,8 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	// Check if the environment function is created successfully
 	envMap := pex.PipelineOutput["val"].(map[string]interface{})
 
-	assert.Equal("<redacted>", envMap["AWS_ACCESS_KEY_ID"])
-	assert.Equal("<redacted>", envMap["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal(sanitize.RedactedStr, envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal(sanitize.RedactedStr, envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
 func (suite *ModTestSuite) TestCredentialRedaction() {
@@ -2128,10 +2129,10 @@ func (suite *ModTestSuite) TestCredentialRedaction() {
 	}
 
 	// This is not redacted because we're looking for either field name or field value, and neither will hit the redaction list
-	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
-	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
-	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
-	assert.Equal("<redacted>", pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
 
 	// not redacted
 	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
@@ -2158,7 +2159,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 
-	assert.Equal("<redacted>", pex.PipelineOutput["slack_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["slack_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2175,7 +2176,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal("<redacted>", pex.PipelineOutput["gitlab_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["gitlab_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2192,7 +2193,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal("<redacted>", pex.PipelineOutput["abuseipdb_api_key"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["abuseipdb_api_key"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2209,7 +2210,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal("<redacted>", pex.PipelineOutput["clickup_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["clickup_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2226,7 +2227,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal("<redacted>", pex.PipelineOutput["vault_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["vault_token"])
 }
 
 func (suite *ModTestSuite) TestMultipleCredential() {
