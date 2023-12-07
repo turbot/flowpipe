@@ -39,7 +39,8 @@ func serverCmd() *cobra.Command {
 		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "listen address port.").
 		AddBoolFlag(constants.ArgNoScheduler, false, "Disable the scheduler.").
 		AddBoolFlag(constants.ArgRetainArtifacts, false, "Retains Docker container artifacts for container step. [EXPERIMENTAL]").
-		AddBoolFlag(constants.ArgInput, true, "Enable interactive prompts")
+		AddBoolFlag(constants.ArgInput, true, "Enable interactive prompts").
+		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server")
 
 	return cmd
 }

@@ -319,10 +319,16 @@ func (m *Manager) initializeResources() error {
 }
 
 func (m *Manager) setupWatcher(w *workspace.Workspace) error {
+
+	if !viper.GetBool(constants.ArgWatch) {
+		return nil
+	}
+
 	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 		slog.Error("error watching workspace", "error", e)
 		m.apiService.ModMetadata.IsStale = true
 	})
+
 	if err != nil {
 		return err
 	}
