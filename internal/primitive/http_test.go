@@ -222,7 +222,6 @@ func TestHTTPMethodPOSTWithTimeout(t *testing.T) {
 			"it": 1001,
 			"title": "Test 1001"
 		}`,
-		schema.AttributeTypeRequestTimeoutMs: 3000,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -295,8 +294,7 @@ func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 			"it": 1001,
 			"title": "Test 1001"
 		}`,
-		schema.AttributeTypeRequestTimeoutMs: 3000,
-		schema.AttributeTypeCaCertPem:        "test",
+		schema.AttributeTypeCaCertPem: "test",
 	})
 
 	_, err := hr.Run(ctx, input)

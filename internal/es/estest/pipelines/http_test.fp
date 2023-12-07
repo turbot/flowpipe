@@ -36,8 +36,6 @@ pipeline "jsonplaceholder_expr" {
             User-Agent = param.user_agent
         }
 
-        request_timeout_ms = param.timeout
-
         insecure = param.insecure
     }
 
