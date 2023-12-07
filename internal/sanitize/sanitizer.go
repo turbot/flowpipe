@@ -62,6 +62,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 	},
 	ExcludePatterns: []string{
 		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid
+		`AccountKey=[a-zA-Z0-9+/=]{88}`,            // azure storage account key
 	},
 	ImportCodeMatchers: true,
 })
@@ -78,6 +79,11 @@ type SanitizerOptions struct {
 type Sanitizer struct {
 	patterns      []*regexp.Regexp
 	excludeFields map[string]struct{}
+}
+
+var codePluginExcludedRegex = []string{
+	"heroku_api_key",
+	"azure_storage_account_key", // code plugin defines 2 regexes for this, one we want to use but the other is a bit loose, we will use just the one we want and define it in this package
 }
 
 func NewSanitizer(opts SanitizerOptions) *Sanitizer {
@@ -119,7 +125,10 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 
 	if opts.ImportCodeMatchers {
 		for _, sm := range codePluginMatchers {
-			s.patterns = append(s.patterns, sm.DenyList()...)
+			// basic_auth: matches URLs with a specific scheme (like http, https, ftp, etc.), followed by a user and password before an @
+			if !slices.Contains(codePluginExcludedRegex, sm.Type()) {
+				s.patterns = append(s.patterns, sm.DenyList()...)
+			}
 		}
 	}
 	return s

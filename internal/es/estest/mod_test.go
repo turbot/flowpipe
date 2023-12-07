@@ -2867,6 +2867,24 @@ func (suite *ModTestSuite) TestEmptySlice() {
 	assert.Equal(0, len(emptyOutput))
 }
 
+func (suite *ModTestSuite) TestRedact() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.redact", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("this should not be redacted: 9d9bdaa9-fa12-436b-bce8-9e783695b3ff", pex.PipelineOutput["val"])
+}
+
 func (suite *ModTestSuite) TestEmptyArrayResponseFromHttpServer() {
 	assert := assert.New(suite.T())
 
