@@ -4,6 +4,7 @@ package estest
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path"
 	"testing"
@@ -30,6 +31,7 @@ type ModTestSuite struct {
 	suite.Suite
 	*FlowpipeTestSuite
 
+	server                *http.Server
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
 }
@@ -46,6 +48,8 @@ func (suite *ModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	suite.server = StartServer()
 
 	// sets app specific constants defined in pipe-fittings
 	localcmdconfig.SetAppSpecificConstants()
@@ -106,6 +110,8 @@ func (suite *ModTestSuite) TearDownSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	suite.server.Shutdown(suite.ctx) //nolint:errcheck // just a test case
 	suite.TearDownSuiteRunCount++
 }
 
@@ -2824,7 +2830,69 @@ func (suite *ModTestSuite) TestErrorWithThrowInvalidMessage() {
 	assert.Equal("404 Not Found", pex.Errors[0].Error.Detail)
 }
 
-// Skip for now until the behaviour of handling the throw block error is fixed
+func (suite *ModTestSuite) TestEmptySlice() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.empty_slice", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	valOutput, ok := pex.PipelineOutput["val"].([]interface{})
+	if !ok {
+		assert.Fail("val should be a slice")
+		return
+	}
+	assert.Equal(0, len(valOutput))
+
+	emptyOutput, ok := pex.PipelineOutput["empty_output"].([]interface{})
+	if !ok {
+		assert.Fail("empty_output should be a slice")
+		return
+	}
+	assert.Equal(0, len(emptyOutput))
+
+	emptyOutput, ok = pex.PipelineOutput["empty_input_number"].([]interface{})
+	if !ok {
+		assert.Fail("empty_output should be a slice")
+		return
+	}
+	assert.Equal(0, len(emptyOutput))
+}
+
+func (suite *ModTestSuite) TestEmptyArrayResponseFromHttpServer() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.empty_slice_http", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+
+	valOutput, ok := pex.PipelineOutput["val"].([]interface{})
+	if !ok {
+		assert.Fail("val should be a slice")
+		return
+	}
+
+	assert.Equal(0, len(valOutput))
+}
+
+// Skip for now until the behaviour of handling the throw block error (error rendering the throw block)
 func (suite *ModTestSuite) XTesterrorWithThrowFailingToCalculateThrow() {
 	assert := assert.New(suite.T())
 
