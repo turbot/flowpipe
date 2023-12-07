@@ -77,8 +77,9 @@ type SanitizerOptions struct {
 }
 
 type Sanitizer struct {
-	patterns      []*regexp.Regexp
-	excludeFields map[string]struct{}
+	regexes             []*regexp.Regexp
+	fieldPatternRegexes []*regexp.Regexp
+	excludeFields       map[string]struct{}
 }
 
 var codePluginExcludedRegex = []string{
@@ -87,8 +88,9 @@ var codePluginExcludedRegex = []string{
 }
 
 func NewSanitizer(opts SanitizerOptions) *Sanitizer {
-	// dedupe patterns using map
-	var patterns = make(map[string]struct{}, len(opts.ExcludeFields)+len(opts.ExcludePatterns))
+	s := &Sanitizer{
+		excludeFields: helpers.SliceToLookup(opts.ExcludeFields),
+	}
 
 	builtInExcludeFields := opts.ExcludeFields
 	codePluginMatchers := secrets.Matchers()
@@ -99,35 +101,32 @@ func NewSanitizer(opts SanitizerOptions) *Sanitizer {
 		}
 	}
 
-	// first convert exclude fields to regex patterns to exclude the fields from both JSON and YAML
+	// first convert exclude fields to regex regexes to exclude the fields from both JSON and YAML
 	for _, f := range opts.ExcludeFields {
-		patterns[getExcludeFromJsonRegex(f)] = struct{}{}
+		re, err := regexp.Compile(getExcludeFromJsonRegex(f))
+		if err != nil {
+			slog.Warn("Invalid regex pattern", slog.String("pattern", f), "error", err)
+			continue
+		}
+		s.fieldPatternRegexes = append(s.fieldPatternRegexes, re)
+
 	}
 
-	// add in custom patterns
+	// add in custom regexes
 	for _, p := range opts.ExcludePatterns {
-		patterns[p] = struct{}{}
-	}
-
-	s := &Sanitizer{
-		excludeFields: helpers.SliceToLookup(opts.ExcludeFields),
-	}
-
-	// now convert all patterns into regexes
-	for p := range patterns {
 		re, err := regexp.Compile(p)
 		if err != nil {
 			slog.Warn("Invalid regex pattern", slog.String("pattern", p), "error", err)
 			continue
 		}
-		s.patterns = append(s.patterns, re)
+		s.regexes = append(s.regexes, re)
 	}
 
 	if opts.ImportCodeMatchers {
 		for _, sm := range codePluginMatchers {
 			// basic_auth: matches URLs with a specific scheme (like http, https, ftp, etc.), followed by a user and password before an @
 			if !slices.Contains(codePluginExcludedRegex, sm.Type()) {
-				s.patterns = append(s.patterns, sm.DenyList()...)
+				s.regexes = append(s.regexes, sm.DenyList()...)
 			}
 		}
 	}
@@ -145,9 +144,9 @@ func (s *Sanitizer) SanitizeString(v string) string {
 		end   int
 	}
 	var replacements []*replacement
-	for _, re := range s.patterns {
-		matchGroups := re.FindAllStringSubmatchIndex(v, -1)
-		for _, m := range matchGroups {
+	// first field replacements - for this we will replace _just the first capture group_
+	for _, re := range s.fieldPatternRegexes {
+		for _, m := range re.FindAllStringSubmatchIndex(v, -1) {
 			var startOffset, endOffset int
 			if len(m) > 2 {
 				// If the regexp in the secret matcher has a match group, then use it
@@ -160,6 +159,19 @@ func (s *Sanitizer) SanitizeString(v string) string {
 				startOffset = m[0]
 				endOffset = m[1]
 			}
+			replacements = append(replacements, &replacement{
+				start: startOffset,
+				end:   endOffset,
+			})
+		}
+	}
+	// now full regex replacements - replace the full match
+	for _, re := range s.regexes {
+		for _, m := range re.FindAllStringSubmatchIndex(v, -1) {
+			// use the full match as the secret.
+			startOffset := m[0]
+			endOffset := m[1]
+
 			replacements = append(replacements, &replacement{
 				start: startOffset,
 				end:   endOffset,
