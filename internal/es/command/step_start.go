@@ -310,11 +310,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		return
 	}
 
-	// errors are handled in the following order:
-	//
-	// throw, in the order that they appear
-	// retry
-	// error
+	// errors are handled in the following order: https://github.com/turbot/flowpipe/issues/419
 	errorFromThrow := false
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
 	if err != nil {
@@ -466,9 +462,9 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 			if throwDefn.Message != nil {
 				message = *throwDefn.Message
 			} else {
-				message = "Unkonwn error"
+				message = "User defined error"
 			}
-			stepErr := perr.BadRequestWithMessage(message)
+			stepErr := perr.UserDefinedWithMessage(message)
 			return &stepErr, nil
 		}
 	}
