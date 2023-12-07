@@ -22,11 +22,11 @@ func initGlobalConfig() *modconfig.FlowpipeConfig {
 	// set-up viper with defaults from the env and default workspace profile
 	cmdconfig.BootstrapViper(loader, cmd,
 		cmdconfig.WithConfigDefaults(configDefaults),
-		cmdconfig.WithDirectoryEnvMappings(dirEnvMappings))
+		cmdconfig.WithDirectoryEnvMappings(dirEnvMappings()))
 
 	// set the rest of the defaults from ENV
 	// ENV takes precedence over any default configuration
-	cmdconfig.SetDefaultsFromEnv(envMappings)
+	cmdconfig.SetDefaultsFromEnv(envMappings())
 
 	// if an explicit workspace profile was set, add to viper as highest precedence default
 	// NOTE: if install_dir/mod_location are set these will already have been passed to viper by BootstrapViper
