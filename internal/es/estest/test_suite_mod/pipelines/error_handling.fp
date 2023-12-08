@@ -298,3 +298,55 @@ pipeline "error_retry_failed_calculating_output_block_ignored_error_should_not_b
         value = step.transform.two.value
     }
 }
+
+pipeline "loop_block_evaluation_error" {
+
+    // this step has ignore = true, loop block failed to render so ignore error is not followed
+    step "transform" "one" {
+        value = "bar ${loop.index}"
+
+        error {
+            ignore = true
+        }
+
+        retry {
+            max_attempts = 5
+        }
+
+        loop {
+            until = loop.index > 1
+            value = result.xyz
+        }
+    }
+
+    step "transform" "two" {
+        depends_on = [step.transform.one]
+        value = "should not exist"
+    }
+
+    output "val" {
+        value = step.transform.one.value
+    }
+
+    output "val_two" {
+        value = step.transform.two.value
+    }
+}
+
+pipeline "error_retry_evaluation_block" {
+
+    step "http" "one" {
+        url = "https://api.google.com/bad.json"
+
+        error {
+            ignore = true
+        }
+
+        // Because the retry block valuation failed, there will be no retry
+        // the error for rendering the retry block will be added to the step error
+        retry {
+            if = result.xyz == 404
+            max_attempts = 3
+        }
+    }
+}
