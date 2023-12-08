@@ -52,7 +52,7 @@ func showProcessFunc(cmd *cobra.Command, args []string) {
 	if viper.IsSet(constants.ArgHost) {
 		resp, err = getProcessRemote(executionId)
 	} else {
-		resp, err = getProcessLocal(executionId)
+		resp, err = getProcessLocal(ctx, executionId)
 	}
 
 	if err != nil {
@@ -83,7 +83,14 @@ func getProcessRemote(executionId string) (*types.Process, error) {
 	return types.ProcessFromAPIResponse(*resp)
 }
 
-func getProcessLocal(executionId string) (*types.Process, error) {
+func getProcessLocal(ctx context.Context, executionId string) (*types.Process, error) {
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx).Start()
+	error_helpers.FailOnError(err)
+	defer func() {
+		// TODO ignore shutdown error?
+		_ = m.Stop()
+	}()
 	return api.GetProcess(executionId)
 }
 
