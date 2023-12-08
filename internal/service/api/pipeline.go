@@ -25,8 +25,7 @@ import (
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/pipeline", api.listPipelines)
 	router.GET("/pipeline/:pipeline_name", api.getPipeline)
-
-	router.POST("/pipeline/:pipeline_name/cmd", api.cmdPipeline)
+	router.POST("/pipeline/:pipeline_name/command", api.cmdPipeline)
 }
 
 // @Summary List pipelines
@@ -143,7 +142,7 @@ func GetPipeline(pipelineName string) (*types.FpPipeline, error) {
 
 // @Summary Execute a pipeline command
 // @DescriptionExecute a pipeline command
-// @ID   pipeline_cmd
+// @ID   pipeline_command
 // @Tags Pipeline
 // @Accept json
 // @Produce json
@@ -158,7 +157,7 @@ func GetPipeline(pipelineName string) (*types.FpPipeline, error) {
 // @Failure 404 {object} perr.ErrorModel
 // @Failure 429 {object} perr.ErrorModel
 // @Failure 500 {object} perr.ErrorModel
-// @Router /pipeline/{pipeline_name}/cmd [post]
+// @Router /pipeline/{pipeline_name}/command [post]
 func (api *APIService) cmdPipeline(c *gin.Context) {
 	var uri types.PipelineRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {

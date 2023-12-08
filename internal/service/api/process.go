@@ -22,7 +22,7 @@ func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process", api.listProcess)
 	router.GET("/process/:process_id", api.getProcess)
 	router.GET("/process/:process_id/output", api.getProcessOutput)
-	router.POST("/process/:process_id/cmd", api.cmdProcess)
+	router.POST("/process/:process_id/command", api.cmdProcess)
 	router.GET("/process/:process_id/log/process.json", api.listProcessEventLog)
 	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLogJSONLine)
 	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
