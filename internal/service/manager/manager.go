@@ -394,10 +394,8 @@ func (m *Manager) startAPIService() error {
 
 func (m *Manager) startSchedulerService() error {
 	s := scheduler.NewSchedulerService(m.ctx, m.ESService, m.triggers)
-	if !viper.GetBool(constants.ArgNoScheduler) {
-		if err := s.Start(); err != nil {
-			return err
-		}
+	if err := s.Start(); err != nil {
+		return err
 	}
 
 	m.schedulerService = s

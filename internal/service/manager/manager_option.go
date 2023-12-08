@@ -17,6 +17,9 @@ func WithDocker() ManagerOption {
 
 func WithServerConfig(addr string, port int) ManagerOption {
 	return func(m *Manager) {
+		if addr == "local" {
+			addr = "localhost"
+		}
 		m.HTTPAddress = addr
 		m.HTTPPort = port
 		m.startup |= startDocker | startES | startAPI | startScheduler
