@@ -2982,7 +2982,7 @@ func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlock() {
 	// Ensure that there's no retry
 	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
 	assert.Equal(fpconstants.StateFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal(fpconstants.FailureModeEvaluation, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
+	assert.Equal(fpconstants.FailureModeFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
 }
 
 func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlockIgnoredErrorShouldNotBeFollowed() {
@@ -3006,7 +3006,7 @@ func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlockIgnoredErro
 	// Ensure that there's no retry
 	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
 	assert.Equal(fpconstants.StateFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal(fpconstants.FailureModeEvaluation, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
+	assert.Equal(fpconstants.FailureModeFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
 
 	assert.Equal(0, len(pex.StepStatus["transform.two"]), "transform.two should not be executed. It depends on transform.one. Although transform.one has ignore=error directive, the output block calculation failed. As per issue #419 we've decided that this type of failure ignores ignore=true directive")
 }

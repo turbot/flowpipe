@@ -8,6 +8,20 @@ pipeline "simple_error" {
     }
 }
 
+pipeline "simple_error_ignored_with_if_does_not_match" {
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+
+        error {
+            if = result.status_code == 700
+            ignore = true
+        }
+    }
+
+    output "val" {
+        value = "should not be calculated"
+    }
+}
 
 pipeline "simple_error_ignored" {
     step "http" "does_not_exist" {

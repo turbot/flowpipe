@@ -37,12 +37,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 
 	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
-	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
-	if err != nil {
-		slog.Error("Pipeline definition not found", "error", err)
-		return err
-	}
-
 	// 2023-12-05: do not calculate output if pipeline fails
 	output := make(map[string]any, 1)
 
@@ -53,7 +47,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	for _, stepExecution := range pe.StepExecutions {
-		stepDefn := pipelineDefn.GetStep(stepExecution.Name)
 		if err != nil {
 			slog.Error("Error getting step definition during pipeline_fail event", "error", err)
 			// do not fail, continue to the next step, we are already in pipeline_fail event, what else can we do here?
@@ -66,8 +59,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 				continue
 			}
 
-			// Failure mode = evaluation ignores "ignore error = true" directive and must be added to pipeline error
-			if stepDefn.GetErrorConfig() != nil && stepDefn.GetErrorConfig().Ignore && stepExecution.Output.FailureMode != constants.FailureModeEvaluation {
+			if stepExecution.Output.FailureMode == constants.FailureModeIgnored {
 				continue
 			}
 

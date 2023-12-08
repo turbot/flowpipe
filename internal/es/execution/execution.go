@@ -815,7 +815,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 
 		if et.Output.HasErrors() {
 			// Failure Mode = execution means we ignore the "ignore = true" directive
-			if !stepDefn.GetErrorConfig().Ignore || et.Output.FailureMode == constants.FailureModeEvaluation {
+			if et.Output.FailureMode != constants.FailureModeIgnored || et.Output.FailureMode == constants.FailureModeFailed {
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
 
 				if !errorHold {
