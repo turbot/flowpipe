@@ -5,6 +5,7 @@ import (
 
 	"log/slog"
 
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -59,11 +60,17 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 			continue
 		}
 
-		if stepExecution.Output.HasErrors() && (stepDefn.GetErrorConfig() != nil && !stepDefn.GetErrorConfig().Ignore) {
+		if stepExecution.Output.HasErrors() {
 			if stepExecution.StepRetry != nil && !stepExecution.StepRetry.RetryCompleted {
 				// Don't add to pipeline errors if it's not the final retry
 				continue
 			}
+
+			// Failure mode = evaluation ignores "ignore error = true" directive and must be added to pipeline error
+			if stepExecution.Output.FailureMode != constants.FailureModeEvaluation && (stepDefn.GetErrorConfig() != nil && !stepDefn.GetErrorConfig().Ignore) {
+				continue
+			}
+
 			pipelineErrors = append(pipelineErrors, stepExecution.Output.Errors...)
 		}
 	}

@@ -23,6 +23,30 @@ pipeline "simple_error_ignored" {
     }
 }
 
+pipeline "simple_error_ignored_multi_steps" {
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+
+        error {
+            ignore = true
+        }
+    }
+
+    step "transform" "two" {
+        depends_on = [step.http.does_not_exist]
+        value = "should exist"
+    }
+
+    output "val" {
+        value = "should be calculated"
+    }
+
+    output "val_two" {
+        value = step.transform.two.value
+    }
+}
+
+
 
 pipeline "failed_output_calc" {
     step "transform" "echo" {

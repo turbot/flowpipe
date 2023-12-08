@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
@@ -2932,6 +2933,82 @@ func (suite *ModTestSuite) TestReferToArguments() {
 	assert.Equal(0, len(pex.Errors))
 
 	assert.Equal("http://api.open-notify.org/astros.json", pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestSimpleErrorIgnoredMultiSteps() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the step refer to an argument (input) of another step, we used to not have the input in the
+	// eval context
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_error_ignored_multi_steps", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+
+	// Ensure that there's no retry
+	assert.Equal("should be calculated", pex.PipelineOutput["val"])
+	assert.Equal("should exist", pex.PipelineOutput["val_two"])
+
+	assert.Equal(0, pex.StepStatus["http.does_not_exist"]["0"].FailCount(), "error is ignored, should not be in failed state")
+	assert.Equal(1, pex.StepStatus["http.does_not_exist"]["0"].FinishCount(), "error is ignored, should be in finished state")
+}
+
+func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlock() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the step refer to an argument (input) of another step, we used to not have the input in the
+	// eval context
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_failed_calculating_output_block", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+
+	// Ensure that there's no retry
+	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
+	assert.Equal(fpconstants.StateFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal(fpconstants.FailureModeEvaluation, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
+}
+
+func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlockIgnoredErrorShouldNotBeFollowed() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// This pipeline used to fail because the step refer to an argument (input) of another step, we used to not have the input in the
+	// eval context
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_failed_calculating_output_block_ignored_error_should_not_be_followed", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+
+	// Ensure that there's no retry
+	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
+	assert.Equal(fpconstants.StateFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.Status)
+	assert.Equal(fpconstants.FailureModeEvaluation, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
+
+	assert.Equal(0, len(pex.StepStatus["transform.two"]), "transform.two should not be executed. It depends on transform.one. Although transform.one has ignore=error directive, the output block calculation failed. As per issue #419 we've decided that this type of failure ignores ignore=true directive")
 }
 
 // Skip for now until the behaviour of handling the throw block error (error rendering the throw block)

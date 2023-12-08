@@ -381,11 +381,6 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 	return true
 }
 
-// Calculate if this step needs to be retried, or this is the final failure of the step
-func (pe *PipelineExecution) IsStepFinalFailure(step modconfig.PipelineStep, ex *Execution) bool {
-	return true
-}
-
 // TODO: this is where we collect the failures so the "ShouldFail" test works .. not sure if this is the correct place?
 func (pe *PipelineExecution) Fail(stepName string, stepError ...modconfig.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
@@ -523,6 +518,10 @@ func (s *StepStatus) IsFail() bool {
 
 func (s *StepStatus) FailCount() int {
 	return len(s.Failed)
+}
+
+func (s *StepStatus) FinishCount() int {
+	return len(s.Finished)
 }
 
 // Progress returns the percentage of executions of the step that are complete.

@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/go-kit/helpers"
@@ -11,7 +13,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"log/slog"
 )
 
 type PipelinePlanHandler CommandHandler
@@ -123,21 +124,19 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				break
 			}
 
-			if pex.IsStepFail(dep) && (depStepDefn.GetErrorConfig() == nil || !depStepDefn.GetErrorConfig().Ignore) {
+			// Do not check for ignore error = true here. It may have been overriden by the "Failure Mode = evaluation" directive. The right place
+			// to do this is in the execution layer where we build the "step status"
+			if pex.IsStepFail(dep) {
 				dependendenciesMet = false
 
-				// TODO: final failure is always TRUE for now
-				if pex.IsStepFinalFailure(depStepDefn, ex) {
-					// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
-					// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
-					// be ended in the handler/pipeline_planned stage
-					e.NextSteps = append(e.NextSteps, modconfig.NextStep{
-						StepName: stepDefn.GetFullyQualifiedName(),
-						Action:   modconfig.NextStepActionInaccessible})
-				}
+				// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
+				// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
+				// be ended in the handler/pipeline_planned stage
+				e.NextSteps = append(e.NextSteps, modconfig.NextStep{
+					StepName: stepDefn.GetFullyQualifiedName(),
+					Action:   modconfig.NextStepActionInaccessible})
 				break
 			}
-
 		}
 
 		if !dependendenciesMet {
