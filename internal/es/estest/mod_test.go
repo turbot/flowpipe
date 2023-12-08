@@ -3102,6 +3102,29 @@ func (suite *ModTestSuite) TestLoopBlockEvaluationError() {
 	assert.Equal(0, len(pex.StepStatus["transform.two"]), "transform.two should not be executed even if there's ignore = true directive in transform.one because the error is in the loop block")
 }
 
+func (suite *ModTestSuite) TestErrorRetryEvaluationBlock() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_retry_evaluation_block", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(2, len(pex.Errors), "there should be 2 errors. The first error is the HTTP 404 error and the second error is the error trying to render the retry block")
+	assert.Equal(404, pex.Errors[0].Error.Status)
+	assert.Equal(500, pex.Errors[1].Error.Status)
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["http.one"]["0"].StepExecutions))
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

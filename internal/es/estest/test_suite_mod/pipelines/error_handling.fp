@@ -332,3 +332,21 @@ pipeline "loop_block_evaluation_error" {
         value = step.transform.two.value
     }
 }
+
+pipeline "error_retry_evaluation_block" {
+
+    step "http" "one" {
+        url = "https://api.google.com/bad.json"
+
+        error {
+            ignore = true
+        }
+
+        // Because the retry block valuation failed, there will be no retry
+        // the error for rendering the retry block will be added to the step error
+        retry {
+            if = result.xyz == 404
+            max_attempts = 3
+        }
+    }
+}

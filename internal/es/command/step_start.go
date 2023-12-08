@@ -370,8 +370,17 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 			stepRetry, diags = calculateRetry(ctx, cmd.StepRetry, stepDefn, endStepEvalContext)
 			if len(diags) > 0 {
 				slog.Error("Error calculating retry", "diags", diags)
-				raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags))
-				return
+
+				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
+				output.Status = constants.StateFailed
+				output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+				output.Errors = append(output.Errors, modconfig.StepError{
+					PipelineExecutionID: cmd.PipelineExecutionID,
+					Pipeline:            stepDefn.GetPipelineName(),
+					StepExecutionID:     cmd.StepExecutionID,
+					Step:                cmd.StepName,
+					Error:               err.(perr.ErrorModel),
+				})
 			}
 		}
 
