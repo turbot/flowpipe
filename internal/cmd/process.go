@@ -163,6 +163,5 @@ func listProcessLocal(cmd *cobra.Command, args []string) (*types.ListProcessResp
 		_ = m.Stop()
 	}()
 
-	// TODO: FIGURE OUT HOW TO OBTAIN THIS LOCALLY - DO WE EVEN NEED MANAGER?!
-	return nil, nil
+	return api.ListProcesses()
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 	"io"
 	"log/slog"
 	"os"
@@ -393,6 +394,9 @@ func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string)
 		return nil, err
 	}
 	sd := pd.GetStep(se.Name)
+	if helpers.IsNil(sd) {
+		return nil, perr.InternalWithMessage("mod definition may have changed since execution, step '" + se.Name + "' not found")
+	}
 	return sd, nil
 }
 

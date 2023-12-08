@@ -24,6 +24,7 @@ func GetPrinter[T any](cmd *cobra.Command) (ResourcePrinter[T], error) {
 	useTable := []string{
 		"flowpipe.trigger.list",
 		"flowpipe.pipeline.list",
+		"flowpipe.process.list",
 	}
 
 	switch format {
