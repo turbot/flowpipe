@@ -21,13 +21,13 @@ type Require struct {
 }
 
 type FlowpipeRequire struct {
-	MinVersionString string
+	MinVersionString string `json:"min_version,omitempty"`
 }
 
 type ModVersionConstraint struct {
 	// the fully qualified mod name, e.g. github.com/turbot/mod1
-	Name          string
-	VersionString string
+	Name          string `json:"name"`
+	VersionString string `json:"version,omitempty"`
 }
 
 func NewModFromModConfigMod(mod *modconfig.Mod) *Mod {
