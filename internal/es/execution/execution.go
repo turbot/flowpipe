@@ -919,7 +919,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
-		pe.Status = "failed"
+		pe.Status = constants.StateFailed
 		pe.EndTime = et.Event.CreatedAt
 		pe.PipelineOutput = et.PipelineOutput
 
