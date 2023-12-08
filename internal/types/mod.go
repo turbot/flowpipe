@@ -1,6 +1,8 @@
 package types
 
-import "github.com/turbot/pipe-fittings/modconfig"
+import (
+	"github.com/turbot/pipe-fittings/modconfig"
+)
 
 type Mod struct {
 	Name          string     `json:"name"`
@@ -10,6 +12,22 @@ type Mod struct {
 	Color         *string    `json:"color,omitempty"`
 	Categories    []string   `json:"categories,omitempty"`
 	OpenGraph     *OpenGraph `json:"opengraph,omitempty"`
+	Require       *Require   `json:"require,omitempty"`
+}
+
+type Require struct {
+	Flowpipe *FlowpipeRequire       `json:"flowpipe,omitempty"`
+	Mods     []ModVersionConstraint `json:"mods,omitempty"`
+}
+
+type FlowpipeRequire struct {
+	MinVersionString string
+}
+
+type ModVersionConstraint struct {
+	// the fully qualified mod name, e.g. github.com/turbot/mod1
+	Name          string
+	VersionString string
 }
 
 func NewModFromModConfigMod(mod *modconfig.Mod) *Mod {
@@ -26,6 +44,25 @@ func NewModFromModConfigMod(mod *modconfig.Mod) *Mod {
 		fpMod.OpenGraph = &OpenGraph{
 			Description: mod.OpenGraph.Description,
 			Title:       mod.OpenGraph.Title,
+		}
+	}
+
+	if mod.Require != nil {
+		fpMod.Require = &Require{}
+		if mod.Require.Flowpipe != nil {
+			fpMod.Require.Flowpipe = &FlowpipeRequire{
+				MinVersionString: mod.Require.Flowpipe.MinVersionString,
+			}
+		}
+		if mod.Require.Mods != nil {
+			fpMod.Require.Mods = make([]ModVersionConstraint, len(mod.Require.Mods))
+
+			for i, mvc := range mod.Require.Mods {
+				fpMod.Require.Mods[i] = ModVersionConstraint{
+					Name:          mvc.Name,
+					VersionString: mvc.VersionString,
+				}
+			}
 		}
 	}
 
