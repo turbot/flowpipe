@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -149,35 +150,49 @@ func (api *APIService) listProcess(c *gin.Context) {
 // @Failure 500 {object} perr.ErrorModel
 // @Router /process/{process_id} [get]
 func (api *APIService) getProcess(c *gin.Context) {
-
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
-	evt := &event.Event{
-		ExecutionID: uri.ProcessId,
-	}
-
-	ex, err := execution.NewExecution(c, execution.WithEvent(evt))
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-
-	}
-
-	err = ex.LoadProcess(evt)
+	process, err := GetProcess(uri.ProcessId)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
-
-	process := types.Process{
-		ID: ex.ID,
-	}
-
 	c.JSON(http.StatusOK, process)
+}
+
+func GetProcess(executionId string) (*types.Process, error) {
+	var process types.Process
+	evt := &event.Event{
+		ExecutionID: executionId,
+	}
+
+	// WithEvent loads the process
+	ex, err := execution.NewExecution(context.Background(), execution.WithEvent(evt))
+	if err != nil {
+		return nil, err
+	}
+
+	// get outer pipeline (not child)
+	var outerPipeline execution.PipelineExecution
+	for _, pipeline := range ex.PipelineExecutions {
+		if pipeline.ParentExecutionID == "" && pipeline.ParentStepExecutionID == "" {
+			outerPipeline = *pipeline
+			continue
+		}
+	}
+
+	process = types.Process{
+		ID:        ex.ID,
+		Pipeline:  outerPipeline.Name,
+		Status:    outerPipeline.Status,
+		CreatedAt: outerPipeline.StartTime,
+	}
+
+	return &process, nil
 }
 
 // TODO: temp API for All Hands demo
