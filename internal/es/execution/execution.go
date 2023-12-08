@@ -810,7 +810,8 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			*pe.StepExecutions[et.StepExecutionID])
 
 		if et.Output.HasErrors() {
-			if !stepDefn.GetErrorConfig().Ignore {
+			// Failure Mode = execution means we ignore the "ignore = true" directive
+			if !stepDefn.GetErrorConfig().Ignore || et.Output.FailureMode == constants.FailureModeEvaluation {
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
 
 				if !errorHold {
@@ -918,7 +919,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			return err
 		}
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
-		pe.Status = "failed"
+		pe.Status = constants.StateFailed
 		pe.EndTime = et.Event.CreatedAt
 		pe.PipelineOutput = et.PipelineOutput
 

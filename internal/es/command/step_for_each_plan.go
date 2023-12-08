@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"sync"
 
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/go-kit/helpers"
@@ -14,7 +16,6 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/json"
-	"log/slog"
 )
 
 type StepForEachPlanHandler CommandHandler

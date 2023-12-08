@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -96,9 +97,6 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		var primitiveError error
 		switch stepDefn.GetType() {
-		case schema.BlockTypePipelineStepExec:
-			p := primitive.Exec{}
-			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepHttp:
 			p := primitive.HTTPRequest{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
@@ -156,7 +154,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		// Decorate the errors
 		if output.HasErrors() {
-			output.Status = "failed"
+			output.Status = constants.StateFailed
 			for i := 0; i < len(output.Errors); i++ {
 				(output.Errors)[i].Step = cmd.StepName
 				(output.Errors)[i].PipelineExecutionID = cmd.PipelineExecutionID
@@ -164,7 +162,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				(output.Errors)[i].Pipeline = pipelineDefn.Name()
 			}
 		} else {
-			output.Status = "finished"
+			output.Status = constants.StateFinished
 		}
 
 		// We have some special steps that need to be handled differently:
@@ -179,9 +177,26 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		if !output.HasErrors() || (output.HasErrors() && stepDefn.GetErrorConfig() != nil && stepDefn.GetErrorConfig().Ignore) {
 			// If there's a for_each in the step definition, we need to insert the "each" magic variable
 			// so the output can refer to it
-			evalContext, stepOutput, shouldReturn = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, err, stepOutput)
-			if shouldReturn {
-				return
+			evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, stepOutput)
+
+			// If there's an error calculating the output, we need to fail the step, the ignored error directive will be ignored
+			// and the retry directive will be ignored as well
+			if err != nil {
+
+				if !perr.IsPerr(err) {
+					err = perr.InternalWithMessage(err.Error())
+				}
+
+				// Append the error and set the state to failed
+				output.Status = constants.StateFailed
+				output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+				output.Errors = append(output.Errors, modconfig.StepError{
+					PipelineExecutionID: cmd.PipelineExecutionID,
+					StepExecutionID:     cmd.StepExecutionID,
+					Step:                cmd.StepName,
+					Error:               err.(perr.ErrorModel),
+				})
+
 			}
 		}
 
@@ -194,44 +209,44 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 }
 
 // This function mutates stepOutput
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, h StepStartHandler, err error, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, bool) {
+//
+// https://github.com/turbot/flowpipe/issues/419
+//
+// Evaluation error, i.e. calculating the output, it fails the step and the retry and ignore error directives are not followed.
+//
+// The way this function is returned, whatever output currently calculated will be returned.
+// TODO: should we remove it?
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, h StepStartHandler, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
 			stepForEach := stepDefn.GetForEach()
 			if stepForEach != nil {
-
 				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
 			}
 
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 && diags.HasErrors() {
 				slog.Error("Error calculating output on step start", "error", diags)
-				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
 
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					slog.Error("Error publishing event", "error", err2)
-				}
-				return nil, stepOutput, true
+				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
+				return evalContext, stepOutput, err
 			}
 
 			goVal, err := hclhelpers.CtyToGo(ctyValue)
 			if err != nil {
-				slog.Error("Error converting cty value to Go value for output calculation", "error", err)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					slog.Error("Error publishing event", "error", err2)
-				}
+				slog.Error("Error converting cty to go", "error", err)
 
-				return nil, stepOutput, true
+				return evalContext, stepOutput, err
 			}
+
 			stepOutput[outputConfig.Name] = goVal
 		} else {
 			stepOutput[outputConfig.Name] = outputConfig.Value
 		}
 	}
-	return evalContext, stepOutput, false
+
+	return evalContext, stepOutput, nil
 }
 
 // If it's a pipeline step, we need to do something else, we we need to start
@@ -322,7 +337,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 	if stepError != nil {
 		slog.Debug("Step error calculated from throw", "error", stepError)
 		errorFromThrow = true
-		output.Status = "failed"
+		output.Status = constants.StateFailed
 		output.Errors = append(output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			StepExecutionID:     cmd.StepExecutionID,
@@ -331,7 +346,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		})
 	}
 
-	if output.Status == "failed" {
+	if output.Status == constants.StateFailed && output.FailureMode != constants.FailureModeEvaluation {
 		var stepRetry *modconfig.StepRetry
 		var diags hcl.Diagnostics
 
