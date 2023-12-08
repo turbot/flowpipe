@@ -36,8 +36,54 @@ pipeline "error_with_throw_failing_to_calculate_throw" {
     }
 
     step "http" "bad_http" {
+        // this is an error .. that normally would be ignored ... but
         url    = "http://api.google.com/bad.json"
         method = "get"
+
+        // This will be ignored, throw block evaluation error does not respect ignore = true error directive
+        error {
+            ignore = true
+        }
+
+        throw {
+            if      = step.transform.foo.value == "bar"
+            message = result.response_body.error
+        }
+    }
+}
+
+pipeline "error_with_throw_does_not_ignore" {
+    step "transform" "foo" {
+        value = "bar"
+    }
+
+    step "transform" "good_step" {
+        value = "baz"
+
+        // This will be ignored, throw block evaluation error does not respect ignore = true error directive
+        error {
+            ignore = true
+        }
+
+        throw {
+            if      = step.transform.foo.value == "bar"
+            message = result.response_body.error
+        }
+    }
+}
+
+pipeline "error_with_throw_does_not_retry" {
+    step "transform" "foo" {
+        value = "bar"
+    }
+
+    step "transform" "good_step" {
+        value = "baz"
+
+        // This will be ignored, throw block evaluation error does not respect retry
+        retry {
+            max_attempts = 2
+        }
 
         throw {
             if      = step.transform.foo.value == "bar"
@@ -61,6 +107,7 @@ pipeline "error_with_throw_but_ignored" {
         }
     }
 }
+
 
 pipeline "error_with_multiple_throws" {
     step "transform" "foo" {

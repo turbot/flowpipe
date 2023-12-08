@@ -3011,8 +3011,7 @@ func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlockIgnoredErro
 	assert.Equal(0, len(pex.StepStatus["transform.two"]), "transform.two should not be executed. It depends on transform.one. Although transform.one has ignore=error directive, the output block calculation failed. As per issue #419 we've decided that this type of failure ignores ignore=true directive")
 }
 
-// Skip for now until the behaviour of handling the throw block error (error rendering the throw block)
-func (suite *ModTestSuite) XTesterrorWithThrowFailingToCalculateThrow() {
+func (suite *ModTestSuite) TestErrorWithThrowFailingToCalculateThrow() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -3020,7 +3019,8 @@ func (suite *ModTestSuite) XTesterrorWithThrowFailingToCalculateThrow() {
 	//
 	// This pipeline step has a throw that the IF condition is met but then it failed to calculate the throw block
 	//
-	// TODO: this should NOT fail the pipeline immediately but instead it needs to follow the same calc as the retry step
+	// The step where the throw is also erroring out and there's an ignore = true directive. However the failure of calculating the throw bypasses the
+	// ignore = true directive and fail the step
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_failing_to_calculate_throw", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
@@ -3030,18 +3030,19 @@ func (suite *ModTestSuite) XTesterrorWithThrowFailingToCalculateThrow() {
 
 	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	assert.Equal("failed", pex.Status)
-	assert.Equal(1, len(pex.Errors))
+
+	// There are 2 errors, the error from the step primitive (HTTP 404) and the error calculating the throw block
+	assert.Equal(2, len(pex.Errors))
 	assert.Equal("404 Not Found", pex.Errors[0].Error.Detail)
+	assert.Equal(500, pex.Errors[1].Error.Status)
 }
 
-// TODO: waiting for clarification what should we do if step failed, ignore error = true, output calculation failed. If step is still OK after failed output calculation, what should we put in the output?
-func (suite *ModTestSuite) XTestStepOutputCalculationFailed() {
+func (suite *ModTestSuite) TestErrorWithThrowDoesNotIgnore() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
 
-	// This pipeline used to fail because the nested pipeline has no output so the error calculation fail
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.step_output_calculation_failed", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_does_not_ignore", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -3049,12 +3050,33 @@ func (suite *ModTestSuite) XTestStepOutputCalculationFailed() {
 	}
 
 	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
-	assert.Equal("finished", pex.Status)
-	assert.Equal(1, len(pex.StepStatus["http.bad"]["0"].StepExecutions))
+	assert.Equal("failed", pex.Status)
 
-	// pipeline output should NOT be calculated, the pipeline failed due to step error
-	assert.Equal("pipeline: should be calculated", pex.PipelineOutput["val"])
-	assert.Equal("step: should be calculated", pex.StepStatus["http.bad"]["0"].StepExecutions[0].StepOutput["val"])
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal(500, pex.Errors[0].Error.Status)
+}
+
+func (suite *ModTestSuite) TestErrorWithThrowDoesNotRetry() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_does_not_retry", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal(500, pex.Errors[0].Error.Status)
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["transform.good_step"]["0"].StepExecutions))
+	assert.Equal(1, len(pex.StepStatus["transform.foo"]["0"].StepExecutions))
 }
 
 func TestModTestingSuite(t *testing.T) {

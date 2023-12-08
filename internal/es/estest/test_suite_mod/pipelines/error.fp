@@ -121,16 +121,3 @@ pipeline "step_output_should_be_calculated_because_step_error_is_ignored" {
     }
 }
 
-pipeline "step_output_calculation_failed" {
-    step "transform" "echo" {
-        value = "echo that works"
-
-        output "val" {
-            value = step.transform.echo.bar
-        }
-    }
-
-    output "val" {
-        value = "pipeline: should not be calculated"
-    }
-}

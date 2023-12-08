@@ -215,7 +215,6 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 // Evaluation error, i.e. calculating the output, it fails the step and the retry and ignore error directives are not followed.
 //
 // The way this function is returned, whatever output currently calculated will be returned.
-// TODO: should we remove it?
 func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, h StepStartHandler, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
@@ -320,6 +319,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
 	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), output, stepOutput, evalContext)
 	if err != nil {
+		// catasthropic error - raise pipeline failed straight away
 		slog.Error("Error adding step output as results", "error", err)
 		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 		return
@@ -329,12 +329,23 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 	errorFromThrow := false
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
 	if err != nil {
+		// non-catasthropic error, fail the step, ignore the "retry" or "ignore" directive
 		slog.Error("Error calculating throw", "error", err)
-		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
-		return
-	}
 
-	if stepError != nil {
+		if !perr.IsPerr(err) {
+			err = perr.InternalWithMessage(err.Error())
+		}
+
+		// Append the error and set the state to failed
+		output.Status = constants.StateFailed
+		output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+		output.Errors = append(output.Errors, modconfig.StepError{
+			PipelineExecutionID: cmd.PipelineExecutionID,
+			StepExecutionID:     cmd.StepExecutionID,
+			Step:                cmd.StepName,
+			Error:               err.(perr.ErrorModel),
+		})
+	} else if stepError != nil {
 		slog.Debug("Step error calculated from throw", "error", stepError)
 		errorFromThrow = true
 		output.Status = constants.StateFailed
