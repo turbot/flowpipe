@@ -1331,7 +1331,7 @@ func (suite *ModTestSuite) TestErroWithIf() {
 	assert.Equal(1, len(pex.Errors))
 }
 
-func (suite *ModTestSuite) TestErroWithIfMultiStep() {
+func (suite *ModTestSuite) TestErrorWithIfMultiStep() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -3077,6 +3077,29 @@ func (suite *ModTestSuite) TestErrorWithThrowDoesNotRetry() {
 	// make sure that there's only 1 execution and the retry isn't happening
 	assert.Equal(1, len(pex.StepStatus["transform.good_step"]["0"].StepExecutions))
 	assert.Equal(1, len(pex.StepStatus["transform.foo"]["0"].StepExecutions))
+}
+
+func (suite *ModTestSuite) TestLoopBlockEvaluationError() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_block_evaluation_error", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal(500, pex.Errors[0].Error.Status)
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
+	assert.Equal(0, len(pex.StepStatus["transform.two"]), "transform.two should not be executed even if there's ignore = true directive in transform.one because the error is in the loop block")
 }
 
 func TestModTestingSuite(t *testing.T) {

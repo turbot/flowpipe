@@ -193,6 +193,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				output.Errors = append(output.Errors, modconfig.StepError{
 					PipelineExecutionID: cmd.PipelineExecutionID,
 					StepExecutionID:     cmd.StepExecutionID,
+					Pipeline:            pipelineDefn.Name(),
 					Step:                cmd.StepName,
 					Error:               err.(perr.ErrorModel),
 				})
@@ -341,6 +342,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
 		output.Errors = append(output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
+			Pipeline:            stepDefn.GetPipelineName(),
 			StepExecutionID:     cmd.StepExecutionID,
 			Step:                cmd.StepName,
 			Error:               err.(perr.ErrorModel),
@@ -351,6 +353,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		output.Status = constants.StateFailed
 		output.Errors = append(output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
+			Pipeline:            stepDefn.GetPipelineName(),
 			StepExecutionID:     cmd.StepExecutionID,
 			Step:                cmd.StepName,
 			Error:               *stepError,
@@ -413,8 +416,20 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			slog.Error("Error calculating loop", "error", err)
-			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
-			return
+			// Failure from loop calculation ignores ignore = true and retry block
+			if !perr.IsPerr(err) {
+				err = perr.InternalWithMessage(err.Error())
+			}
+
+			output.Status = constants.StateFailed
+			output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+			output.Errors = append(output.Errors, modconfig.StepError{
+				PipelineExecutionID: cmd.PipelineExecutionID,
+				Pipeline:            stepDefn.GetPipelineName(),
+				StepExecutionID:     cmd.StepExecutionID,
+				Step:                cmd.StepName,
+				Error:               err.(perr.ErrorModel),
+			})
 		}
 	}
 
@@ -679,5 +694,4 @@ func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.B
 
 	newStepLoop.Input = &newInput
 	return newStepLoop, nil
-
 }
