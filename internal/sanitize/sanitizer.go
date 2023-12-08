@@ -25,6 +25,8 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"smtp_password",
 		"api_key",
 		"api_token",
+		"alert_api_key",
+		"incident_api_key",
 		// "key", // we can't sanitize key because of each.key
 		"token",
 		"cloud_token",
@@ -59,6 +61,9 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"gitlab_token",
 		"vault_token",
 		"jira_api_token",
+		"opsgenie_alert_api_key",
+		"opsgenie_incident_api_key",
+		"openai_api_key",
 	},
 	ExcludePatterns: []string{
 		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid
