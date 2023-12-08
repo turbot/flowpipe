@@ -67,7 +67,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 
 			// Failure mode = evaluation ignores "ignore error = true" directive and must be added to pipeline error
-			if stepExecution.Output.FailureMode != constants.FailureModeEvaluation && (stepDefn.GetErrorConfig() != nil && !stepDefn.GetErrorConfig().Ignore) {
+			if stepDefn.GetErrorConfig() != nil && stepDefn.GetErrorConfig().Ignore && stepExecution.Output.FailureMode != constants.FailureModeEvaluation {
 				continue
 			}
 
