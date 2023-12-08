@@ -1,9 +1,12 @@
 package types
 
 import (
-	"time"
-
+	"fmt"
+	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/sanitize"
+	typehelpers "github.com/turbot/go-kit/types"
+	"time"
 )
 
 // The definition of a single Flowpipe Process
@@ -12,6 +15,22 @@ type Process struct {
 	Pipeline  string    `json:"pipeline"`
 	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
+}
+
+func (p Process) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	output := ""
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	output += fmt.Sprintf("%s%s\n", au.Blue("ExecutionID: ").Bold(), p.ID)
+	output += fmt.Sprintf("%s%s\n", au.Blue("Pipeline:    ").Bold(), p.Pipeline)
+	output += fmt.Sprintf("%s%s\n", au.Blue("Status:      ").Bold(), p.Status)
+	output += fmt.Sprintf("%s%s\n", au.Blue("Created:     ").Bold(), p.CreatedAt)
+	return output
 }
 
 // Process log payload definition
@@ -42,17 +61,22 @@ type ProcessEventLog struct {
 }
 
 type PrintableProcess struct {
-	// todo should we map to internal types
-	Items []flowpipeapiclient.Process
+	Items []Process
 }
 
-func NewPrintableProcess(resp *flowpipeapiclient.ListProcessResponse) *PrintableProcess {
+func NewPrintableProcess(resp *ListProcessResponse) *PrintableProcess {
 	return &PrintableProcess{
 		Items: resp.Items,
 	}
 }
 
-func (p PrintableProcess) GetItems() []flowpipeapiclient.Process {
+func NewPrintableProcessFromSingle(input *Process) *PrintableProcess {
+	return &PrintableProcess{
+		Items: []Process{*input},
+	}
+}
+
+func (p PrintableProcess) GetItems() []Process {
 	return p.Items
 }
 
@@ -60,10 +84,10 @@ func (p PrintableProcess) GetTable() (Table, error) {
 	var tableRows []TableRow
 	for _, item := range p.Items {
 		cells := []any{
-			*item.ExecutionId,
-			*item.Pipeline,
-			*item.CreatedAt,
-			*item.Status,
+			item.ID,
+			item.Pipeline,
+			item.CreatedAt,
+			item.Status,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -100,6 +124,38 @@ func (PrintableProcess) getColumns() (columns []TableColumnDefinition) {
 type ListProcessResponse struct {
 	Items     []Process `json:"items"`
 	NextToken *string   `json:"next_token,omitempty"`
+}
+
+func ListProcessResponseFromAPIResponse(apiResp *flowpipeapiclient.ListProcessResponse) (*ListProcessResponse, error) {
+	if apiResp == nil {
+		return nil, nil
+	}
+
+	var res = &ListProcessResponse{
+		Items:     make([]Process, len(apiResp.Items)),
+		NextToken: apiResp.NextToken,
+	}
+
+	for i, apiItem := range apiResp.Items {
+		item, err := ProcessFromAPIResponse(apiItem)
+		if err != nil {
+			return nil, err
+		}
+		res.Items[i] = *item
+	}
+	return res, nil
+}
+
+func ProcessFromAPIResponse(apiResp flowpipeapiclient.Process) (*Process, error) {
+	createdAt, _ := time.Parse(time.RFC3339Nano, *apiResp.CreatedAt)
+	res := &Process{
+		ID:        typehelpers.SafeString(apiResp.ExecutionId),
+		Pipeline:  typehelpers.SafeString(apiResp.Pipeline),
+		Status:    typehelpers.SafeString(apiResp.Status),
+		CreatedAt: createdAt,
+	}
+
+	return res, nil
 }
 
 type ListProcessLogJSONResponse struct {
