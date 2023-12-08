@@ -254,7 +254,7 @@ func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{
 	// Set the pipeline args
 	cmdPipelineRun.ArgsString = &pipelineArgs
 
-	resp, _, err := apiClient.PipelineApi.Cmd(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
+	resp, _, err := apiClient.PipelineApi.Command(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
 
 	return resp, err
 }
