@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
@@ -57,79 +56,64 @@ func (api *APIService) listProcess(c *gin.Context) {
 
 	slog.Info("received list process request", "next_token", nextToken, "limit", limit)
 
-	// Read the log directory to list out all the process that have been executed
-	eventStoreDir := filepaths.EventStoreDir()
-	processLogFiles, err := os.ReadDir(eventStoreDir)
+	result, err := ListProcesses()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
+	c.JSON(http.StatusOK, result)
+}
+
+func ListProcesses() (*types.ListProcessResponse, error) {
+	// Read the log directory to list out all the process that have been executed
+	eventStoreDir := filepaths.EventStoreDir()
+	processLogFiles, err := os.ReadDir(eventStoreDir)
+	if err != nil {
+		return nil, err
+	}
+
 	// Extract the execution IDs from the log file names
-	executionIDs := []string{}
+	var executionIDs []string
 	for _, f := range processLogFiles {
 		execID := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
 		executionIDs = append(executionIDs, execID)
 	}
 
 	// Get the log entries using the execution ID and extract the pipeline name
-	processList := []types.Process{}
+	var processList []types.Process
 	for _, execID := range executionIDs {
 
-		logEntries, err := execution.LoadEventStoreEntries(execID)
-		if err != nil {
-			common.AbortWithError(c, err)
-			return
+		evt := &event.Event{
+			ExecutionID: execID,
 		}
 
-		for _, e := range logEntries {
-			if e.EventType == "command.pipeline_queue" {
-				var payload *types.ProcessPayload
-				err := json.Unmarshal(e.Payload, &payload)
-				if err != nil {
-					common.AbortWithError(c, err)
-					return
-				}
+		ex, err := execution.NewExecution(context.Background(), execution.WithEvent(evt))
+		if err != nil {
+			// Skip if the execution is for a different mod
+			continue
+		}
 
-				evt := &event.Event{
-					ExecutionID: execID,
-				}
-
-				ex, err := execution.NewExecution(c, execution.WithEvent(evt))
-				if err != nil {
-					// Skip if the execution is for a different mod
-					continue
-				}
-
-				err = ex.LoadProcess(evt)
-				if err != nil {
-					common.AbortWithError(c, err)
-					return
-				}
-
-				pex := ex.PipelineExecutions[payload.PipelineExecutionID]
-				if pex == nil {
-					common.AbortWithError(c, err)
-					return
-				}
-
-				processList = append(processList, types.Process{
-					ID:        execID,
-					Pipeline:  payload.PipelineName,
-					Status:    pex.Status,
-					CreatedAt: payload.Event.CreatedAt,
-				})
-
-				break
+		// get outer pipeline (not child)
+		var outerPipeline execution.PipelineExecution
+		for _, pipeline := range ex.PipelineExecutions {
+			if pipeline.ParentExecutionID == "" && pipeline.ParentStepExecutionID == "" {
+				outerPipeline = *pipeline
+				continue
 			}
 		}
+
+		processList = append(processList, types.Process{
+			ID:        ex.ID,
+			Pipeline:  outerPipeline.Name,
+			Status:    outerPipeline.Status,
+			CreatedAt: outerPipeline.StartTime,
+		})
 	}
 
-	result := types.ListProcessResponse{
+	return &types.ListProcessResponse{
 		Items: processList,
-	}
-
-	c.JSON(http.StatusOK, result)
+	}, nil
 }
 
 // @Summary Get process
