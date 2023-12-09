@@ -200,7 +200,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		// Only calculate the step output if there are no errors or if the error is ignored. Either way it will end up
 		// with output.Status == constants.StateFinished
-		if output.Status == constants.StateFinished {
+		if output.Status == constants.StateFinished || output.FailureMode == constants.FailureModeIgnored {
 			// If there's a for_each in the step definition, we need to insert the "each" magic variable
 			// so the output can refer to it
 			evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd.StepForEach, stepOutput)

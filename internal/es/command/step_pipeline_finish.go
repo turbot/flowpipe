@@ -71,6 +71,22 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	stepOutput := make(map[string]interface{})
 
+	if cmd.Output.Status == constants.StateFailed {
+		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
+		if diags.HasErrors() {
+			slog.Error("Error getting error config", "error", diags)
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeFatal
+		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeIgnored
+		} else {
+			cmd.Output.FailureMode = constants.FailureModeStandard
+		}
+	} else {
+		cmd.Output.Status = constants.StateFinished
+	}
+
 	// Calculate the configured step output
 	//
 	// Ignore the merging here, the nested pipeline output is also called "output", but that merging is done later
@@ -78,24 +94,26 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	//
 	// As long as they are in 2 different property: Output (native output, happens also to be called "output" for pipeline step) and StepOutput (also referred to configured step output)
 	// we will be OK
-	evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd.StepForEach, stepOutput)
-	// If there's an error calculating the output, we need to fail the step, the ignored error directive will be ignored
-	// and the retry directive will be ignored as well
-	if err != nil {
-		if !perr.IsPerr(err) {
-			err = perr.InternalWithMessage(err.Error())
-		}
+	if cmd.Output.Status == constants.StateFinished || cmd.Output.FailureMode == constants.FailureModeIgnored {
+		evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd.StepForEach, stepOutput)
+		// If there's an error calculating the output, we need to fail the step, the ignored error directive will be ignored
+		// and the retry directive will be ignored as well
+		if err != nil {
+			if !perr.IsPerr(err) {
+				err = perr.InternalWithMessage(err.Error())
+			}
 
-		// Append the error and set the state to failed
-		cmd.Output.Status = constants.StateFailed
-		cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-		cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
-			PipelineExecutionID: cmd.PipelineExecutionID,
-			StepExecutionID:     cmd.StepExecutionID,
-			Pipeline:            pipelineDefn.Name(),
-			Step:                stepDefn.GetName(),
-			Error:               err.(perr.ErrorModel),
-		})
+			// Append the error and set the state to failed
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
+			cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
+				PipelineExecutionID: cmd.PipelineExecutionID,
+				StepExecutionID:     cmd.StepExecutionID,
+				Pipeline:            pipelineDefn.Name(),
+				Step:                stepDefn.GetName(),
+				Error:               err.(perr.ErrorModel),
+			})
+		}
 	}
 
 	// We need this to calculate the throw and loop, so might as well add it here for convenience
@@ -119,22 +137,6 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		slog.Error("Error adding step calculated output as results", "error", err)
 		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
 		return nil
-	}
-
-	if cmd.Output.Status == constants.StateFailed {
-		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
-		if diags.HasErrors() {
-			slog.Error("Error getting error config", "error", diags)
-			cmd.Output.Status = constants.StateFailed
-			cmd.Output.FailureMode = constants.FailureModeFatal
-		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
-			cmd.Output.Status = constants.StateFailed
-			cmd.Output.FailureMode = constants.FailureModeIgnored
-		} else {
-			cmd.Output.FailureMode = constants.FailureModeStandard
-		}
-	} else {
-		cmd.Output.Status = constants.StateFinished
 	}
 
 	stepError, err := calculateThrow(ctx, stepDefn, endStepEvalContext)
