@@ -827,6 +827,8 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 					// retry completed is represented in the errorHold variable
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 				}
+			} else {
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 			}
 		} else {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
