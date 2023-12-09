@@ -3,6 +3,8 @@ package command
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -11,7 +13,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"log/slog"
 )
 
 type StepPipelineFinishHandler CommandHandler
@@ -119,10 +120,20 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	// I can see there are merit for both. #2 is usually the right way because we can ignore error, however this type
 	// of problem, e.g. building eval context failure due to clash in the step output, is a configuration error, so I think
 	// it should raise pipeline_failed event directly
-	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), cmd.Output, stepOutput, evalContext)
+	endStepEvalContext, err := execution.AddStepPrimitiveOutputAsResults(stepDefn.GetName(), cmd.Output, evalContext)
+	if err != nil {
+		slog.Error("Error adding step primitive output as results", "error", err)
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
+		if err2 != nil {
+			slog.Error("Error publishing event", "error", err2)
+		}
+		return nil
+	}
+
+	endStepEvalContext, err = execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, endStepEvalContext)
 
 	if err != nil {
-		slog.Error("Error adding step output as results", "error", err)
+		slog.Error("Error adding step calculated output as results", "error", err)
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
 		if err2 != nil {
 			slog.Error("Error publishing event", "error", err2)

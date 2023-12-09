@@ -5,6 +5,7 @@ const (
 	StateFinished = "finished"
 	StateSkipped  = "skipped"
 
-	FailureModeIgnored = "ignored"
-	FailureModeFailed  = "failed" // rendering output, retry, throw, loop (and other) blocks
+	FailureModeIgnored  = "ignored" // ignored=true
+	FailureModeStandard = "normal"  // "normal" failure, retry or ignored=true will be followed
+	FailureModeFatal    = "fatal"   // rendering output, retry, throw, loop (and other) blocks
 )

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
 	"io"
 	"log/slog"
 	"os"
@@ -13,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/turbot/go-kit/helpers"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -814,8 +815,10 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			*pe.StepExecutions[et.StepExecutionID])
 
 		if et.Output.HasErrors() {
-			// Failure Mode = execution means we ignore the "ignore = true" directive
-			if et.Output.FailureMode != constants.FailureModeIgnored || et.Output.FailureMode == constants.FailureModeFailed {
+			if et.Output.FailureMode == constants.FailureModeIgnored {
+				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
+				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
+			} else if et.StepRetry == nil || et.StepRetry.RetryCompleted {
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
 
 				if !errorHold {
@@ -824,9 +827,6 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 					// retry completed is represented in the errorHold variable
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 				}
-			} else {
-				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 			}
 		} else {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
