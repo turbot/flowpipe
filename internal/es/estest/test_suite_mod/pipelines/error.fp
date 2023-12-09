@@ -8,6 +8,35 @@ pipeline "simple_error" {
     }
 }
 
+pipeline "simple_error_ignored_with_if_does_not_match" {
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+
+        error {
+            if = result.status_code == 700
+            ignore = true
+        }
+    }
+
+    output "val" {
+        value = "should not be calculated"
+    }
+}
+
+pipeline "simple_error_ignored_with_if_matches" {
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+
+        error {
+            if = result.status_code == 404
+            ignore = true
+        }
+    }
+
+    output "val" {
+        value = "should be calculated"
+    }
+}
 
 pipeline "simple_error_ignored" {
     step "http" "does_not_exist" {
@@ -76,10 +105,10 @@ pipeline "parent_with_child_with_no_output" {
     }
 
     output "val" {
-    value       = {
-      "call_child" = !is_error(step.pipeline.call_child) ? "ok" : "fail"
+        value       = {
+            "call_child" = !is_error(step.pipeline.call_child) ? "ok" : "fail"
+        }
     }
-  }
 }
 
 pipeline "child_with_no_output" {

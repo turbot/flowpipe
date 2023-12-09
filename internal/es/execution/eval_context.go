@@ -38,17 +38,35 @@ func AddLoop(stepLoop *modconfig.StepLoop, evalContext *hcl.EvalContext) *hcl.Ev
 	return evalContext
 }
 
-// This function *mutates* the evalContext passed in
-func AddStepOutputAsResults(stepName string, output *modconfig.Output, stepOutput map[string]interface{}, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
+func AddStepPrimitiveOutputAsResults(stepName string, output *modconfig.Output, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
 
 	var err error
-	stepNativeOutputMap := map[string]cty.Value{}
+	stepPrimitiveOutputMap := map[string]cty.Value{}
 
 	if output != nil {
-		stepNativeOutputMap, err = output.AsCtyMap()
+		stepPrimitiveOutputMap, err = output.AsCtyMap()
 		if err != nil {
 			return evalContext, perr.InternalWithMessage("unable to convert step output to cty map: " + err.Error())
 		}
+	}
+
+	evalContext.Variables["result"] = cty.ObjectVal(stepPrimitiveOutputMap)
+
+	return evalContext, nil
+}
+
+// This function *mutates* the evalContext passed in
+func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]interface{}, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
+
+	var err error
+
+	var stepNativeOutputMap map[string]cty.Value
+	if !evalContext.Variables["result"].IsNull() {
+		stepNativeOutputMap = evalContext.Variables["result"].AsValueMap()
+	}
+
+	if stepNativeOutputMap == nil {
+		stepNativeOutputMap = map[string]cty.Value{}
 	}
 
 	stepOutputCtyMap := map[string]cty.Value{}

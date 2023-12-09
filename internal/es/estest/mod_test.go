@@ -1298,7 +1298,7 @@ func (suite *ModTestSuite) TestErrorRetry() {
 	assert.Equal(404, pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Errors[0].Error.Status)
 }
 
-func (suite *ModTestSuite) TestErroWithIf() {
+func (suite *ModTestSuite) TestErrorRetryWithIf() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -1805,7 +1805,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
 
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("finished", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
 
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
@@ -1838,7 +1838,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored(
 	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
 
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("finished", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
 
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
@@ -1898,7 +1898,6 @@ func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 		return
 	}
 
-	// TODO: should ignored error bubbles up to the pipeline?
 	assert.Equal(0, len(pex.Errors))
 }
 
@@ -2982,7 +2981,7 @@ func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlock() {
 	// Ensure that there's no retry
 	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
 	assert.Equal(fpconstants.StateFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal(fpconstants.FailureModeEvaluation, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
+	assert.Equal(fpconstants.FailureModeFatal, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
 }
 
 func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlockIgnoredErrorShouldNotBeFollowed() {
@@ -3006,7 +3005,7 @@ func (suite *ModTestSuite) TestErrorRetryFailedCalculatingOutputBlockIgnoredErro
 	// Ensure that there's no retry
 	assert.Equal(1, len(pex.StepStatus["transform.one"]["0"].StepExecutions))
 	assert.Equal(fpconstants.StateFailed, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal(fpconstants.FailureModeEvaluation, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
+	assert.Equal(fpconstants.FailureModeFatal, pex.StepStatus["transform.one"]["0"].StepExecutions[0].Output.FailureMode)
 
 	assert.Equal(0, len(pex.StepStatus["transform.two"]), "transform.two should not be executed. It depends on transform.one. Although transform.one has ignore=error directive, the output block calculation failed. As per issue #419 we've decided that this type of failure ignores ignore=true directive")
 }
@@ -3123,6 +3122,51 @@ func (suite *ModTestSuite) TestErrorRetryEvaluationBlock() {
 
 	// make sure that there's only 1 execution and the retry isn't happening
 	assert.Equal(1, len(pex.StepStatus["http.one"]["0"].StepExecutions))
+}
+
+func (suite *ModTestSuite) TestSimpleErrorIgnoredWithIfDoesNotMatch() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_error_ignored_with_if_does_not_match", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors), "1 error no retry, error ignore = true directive is ignored because the if statement does not match")
+	assert.Equal(404, pex.Errors[0].Error.Status)
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["http.does_not_exist"]["0"].StepExecutions))
+	assert.Nil(pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestSimpleErrorIgnoredWithIfMatches() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_error_ignored_with_if_matches", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors), "no error in pipeline, error in step is ignored")
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["http.does_not_exist"]["0"].StepExecutions))
+	assert.Equal("should be calculated", pex.PipelineOutput["val"])
 }
 
 func TestModTestingSuite(t *testing.T) {

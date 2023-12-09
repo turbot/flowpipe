@@ -338,9 +338,15 @@ pipeline "error_retry_evaluation_block" {
     step "http" "one" {
         url = "https://api.google.com/bad.json"
 
-        error {
-            ignore = true
-        }
+        // If we add error ignore = true here, the retry block won't be evaluated
+        // so the test to check if the retry block failed to render won't work
+        //
+        // Since the error is ignored, the retry block isn't relevant, we short circuited and
+        // does not evaluate the retry block
+        //
+        // error {
+        //     ignore = true
+        // }
 
         // Because the retry block valuation failed, there will be no retry
         // the error for rendering the retry block will be added to the step error

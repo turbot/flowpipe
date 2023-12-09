@@ -165,6 +165,14 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output.Status = constants.StateFinished
 		}
 
+		evalContext, err = execution.AddStepPrimitiveOutputAsResults(stepDefn.GetName(), output, evalContext)
+		if err != nil {
+			// catastrophic error - raise pipeline failed straight away
+			slog.Error("Error adding step primitive output as results", "error", err)
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
+			return
+		}
+
 		// We have some special steps that need to be handled differently:
 		// Pipeline Step -> launch a new pipeline
 		// Input Step -> waiting for external event to resume the pipeline
@@ -173,23 +181,40 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
-		// Only calculate the step output if there are no errors.
-		if !output.HasErrors() || (output.HasErrors() && stepDefn.GetErrorConfig() != nil && stepDefn.GetErrorConfig().Ignore) {
+		if output.HasErrors() {
+			// check if we need to ignore the error
+			errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
+			if diags.HasErrors() {
+				slog.Error("Error getting error config", "error", diags)
+				output.Status = constants.StateFailed
+				output.FailureMode = constants.FailureModeFatal
+			} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
+				output.Status = constants.StateFailed
+				output.FailureMode = constants.FailureModeIgnored
+			} else {
+				output.FailureMode = constants.FailureModeStandard
+			}
+		} else {
+			output.Status = constants.StateFinished
+		}
+
+		// Only calculate the step output if there are no errors or if the error is ignored. Either way it will end up
+		// with output.Status == constants.StateFinished
+		if output.Status == constants.StateFinished || output.FailureMode == constants.FailureModeIgnored {
 			// If there's a for_each in the step definition, we need to insert the "each" magic variable
 			// so the output can refer to it
-			evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, stepOutput)
+			evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd.StepForEach, stepOutput)
 
 			// If there's an error calculating the output, we need to fail the step, the ignored error directive will be ignored
 			// and the retry directive will be ignored as well
 			if err != nil {
-
 				if !perr.IsPerr(err) {
 					err = perr.InternalWithMessage(err.Error())
 				}
 
 				// Append the error and set the state to failed
 				output.Status = constants.StateFailed
-				output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+				output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
 				output.Errors = append(output.Errors, modconfig.StepError{
 					PipelineExecutionID: cmd.PipelineExecutionID,
 					StepExecutionID:     cmd.StepExecutionID,
@@ -216,13 +241,13 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 // Evaluation error, i.e. calculating the output, it fails the step and the retry and ignore error directives are not followed.
 //
 // The way this function is returned, whatever output currently calculated will be returned.
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, h StepStartHandler, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmdStepForEach *modconfig.StepForEach, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
 			stepForEach := stepDefn.GetForEach()
 			if stepForEach != nil {
-				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
+				evalContext = execution.AddEachForEach(cmdStepForEach, evalContext)
 			}
 
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
@@ -318,9 +343,9 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
-	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), output, stepOutput, evalContext)
+	endStepEvalContext, err := execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, evalContext)
 	if err != nil {
-		// catasthropic error - raise pipeline failed straight away
+		// catastrophic error - raise pipeline failed straight away
 		slog.Error("Error adding step output as results", "error", err)
 		raisePipelineFailedEventFromPipelineStepStart(ctx, h, cmd, err)
 		return
@@ -339,7 +364,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 
 		// Append the error and set the state to failed
 		output.Status = constants.StateFailed
-		output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+		output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
 		output.Errors = append(output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			Pipeline:            stepDefn.GetPipelineName(),
@@ -360,7 +385,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 		})
 	}
 
-	if output.Status == constants.StateFailed && output.FailureMode != constants.FailureModeEvaluation {
+	if output.Status == constants.StateFailed && output.FailureMode != constants.FailureModeFatal {
 		var stepRetry *modconfig.StepRetry
 		var diags hcl.Diagnostics
 
@@ -373,7 +398,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 
 				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
 				output.Status = constants.StateFailed
-				output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+				output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
 				output.Errors = append(output.Errors, modconfig.StepError{
 					PipelineExecutionID: cmd.PipelineExecutionID,
 					Pipeline:            stepDefn.GetPipelineName(),
@@ -398,6 +423,23 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 				Count:          retryIndex,
 				RetryCompleted: true,
 			}
+		}
+
+		// Now we have to check again if the error is ignored. Earlier in the process we checked if the error is ignored IF there's an error
+		// however that may have changed now because the primitive may not have failed but there's a failure now due to the throw
+		//
+		//
+		// check if we need to ignore the error
+		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
+		if diags.HasErrors() {
+			slog.Error("Error getting error config", "error", diags)
+			output.Status = constants.StateFailed
+			output.FailureMode = constants.FailureModeFatal
+		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
+			output.Status = constants.StateFailed
+			output.FailureMode = constants.FailureModeIgnored
+		} else {
+			output.FailureMode = constants.FailureModeStandard
 		}
 
 		e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
@@ -431,7 +473,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 			}
 
 			output.Status = constants.StateFailed
-			output.FailureMode = constants.FailureModeEvaluation // this is a indicator that this step should be retried or error ignored
+			output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
 			output.Errors = append(output.Errors, modconfig.StepError{
 				PipelineExecutionID: cmd.PipelineExecutionID,
 				Pipeline:            stepDefn.GetPipelineName(),

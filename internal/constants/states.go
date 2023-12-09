@@ -5,7 +5,7 @@ const (
 	StateFinished = "finished"
 	StateSkipped  = "skipped"
 
-	FailureModeUnexpected = "unexpected" // unexpected primitive error
-	FailureModeRuntime    = "runtime"    // expected primitive error, i.e. HTTP status code >= 400
-	FailureModeEvaluation = "evaluation" // rendering output, retry, throw, loop (and other) blocks
+	FailureModeIgnored  = "ignored" // ignored=true
+	FailureModeStandard = "normal"  // "normal" failure, retry or ignored=true will be followed
+	FailureModeFatal    = "fatal"   // rendering output, retry, throw, loop (and other) blocks
 )

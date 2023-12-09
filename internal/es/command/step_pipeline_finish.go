@@ -3,15 +3,16 @@ package command
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/hashicorp/hcl/v2"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"log/slog"
 )
 
 type StepPipelineFinishHandler CommandHandler
@@ -52,10 +53,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	if err != nil {
 		slog.Error("Error loading pipeline definition", "error", err)
 
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-		if err2 != nil {
-			slog.Error("Error publishing event", "error", err2)
-		}
+		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
 		return nil
 	}
 
@@ -67,14 +65,27 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-		if err2 != nil {
-			slog.Error("Error publishing event", "error", err2)
-		}
+		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
 		return nil
 	}
 
 	stepOutput := make(map[string]interface{})
+
+	if cmd.Output.Status == constants.StateFailed {
+		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
+		if diags.HasErrors() {
+			slog.Error("Error getting error config", "error", diags)
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeFatal
+		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeIgnored
+		} else {
+			cmd.Output.FailureMode = constants.FailureModeStandard
+		}
+	} else {
+		cmd.Output.Status = constants.StateFinished
+	}
 
 	// Calculate the configured step output
 	//
@@ -83,30 +94,25 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	//
 	// As long as they are in 2 different property: Output (native output, happens also to be called "output" for pipeline step) and StepOutput (also referred to configured step output)
 	// we will be OK
-	for _, outputConfig := range stepDefn.GetOutputConfig() {
-		if outputConfig.UnresolvedValue != nil {
-
-			stepForEach := stepDefn.GetForEach()
-			if stepForEach != nil {
-				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
+	if cmd.Output.Status == constants.StateFinished || cmd.Output.FailureMode == constants.FailureModeIgnored {
+		evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd.StepForEach, stepOutput)
+		// If there's an error calculating the output, we need to fail the step, the ignored error directive will be ignored
+		// and the retry directive will be ignored as well
+		if err != nil {
+			if !perr.IsPerr(err) {
+				err = perr.InternalWithMessage(err.Error())
 			}
 
-			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
-			if len(diags) > 0 && diags.HasErrors() {
-				slog.Error("Error calculating output on step start", "error", diags)
-				stepOutput[outputConfig.Name] = "Error calculating output " + diags.Error()
-				continue
-			}
-
-			goVal, err := hclhelpers.CtyToGo(ctyValue)
-			if err != nil {
-				slog.Error("Error converting cty value to Go value for output calculation", "error", err)
-				stepOutput[outputConfig.Name] = "Error calculating output " + err.Error()
-				continue
-			}
-			stepOutput[outputConfig.Name] = goVal
-		} else {
-			stepOutput[outputConfig.Name] = outputConfig.Value
+			// Append the error and set the state to failed
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
+			cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
+				PipelineExecutionID: cmd.PipelineExecutionID,
+				StepExecutionID:     cmd.StepExecutionID,
+				Pipeline:            pipelineDefn.Name(),
+				Step:                stepDefn.GetName(),
+				Error:               err.(perr.ErrorModel),
+			})
 		}
 	}
 
@@ -119,14 +125,17 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	// I can see there are merit for both. #2 is usually the right way because we can ignore error, however this type
 	// of problem, e.g. building eval context failure due to clash in the step output, is a configuration error, so I think
 	// it should raise pipeline_failed event directly
-	endStepEvalContext, err := execution.AddStepOutputAsResults(stepDefn.GetName(), cmd.Output, stepOutput, evalContext)
-
+	endStepEvalContext, err := execution.AddStepPrimitiveOutputAsResults(stepDefn.GetName(), cmd.Output, evalContext)
 	if err != nil {
-		slog.Error("Error adding step output as results", "error", err)
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-		if err2 != nil {
-			slog.Error("Error publishing event", "error", err2)
-		}
+		slog.Error("Error adding step primitive output as results", "error", err)
+		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
+		return nil
+	}
+
+	endStepEvalContext, err = execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, endStepEvalContext)
+	if err != nil {
+		slog.Error("Error adding step calculated output as results", "error", err)
+		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
 		return nil
 	}
 
@@ -134,17 +143,26 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	errorFromThrow := false
 	if err != nil {
 		slog.Error("Error calculating throw", "error", err)
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-		if err2 != nil {
-			slog.Error("Error publishing event", "error", err2)
-		}
-		return nil
-	}
+		// non-catasthropic error, fail the step, ignore the "retry" or "ignore" directive
 
-	if stepError != nil {
+		if !perr.IsPerr(err) {
+			err = perr.InternalWithMessage(err.Error())
+		}
+		// Append the error and set the state to failed
+		cmd.Output.Status = constants.StateFailed
+		cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
+		cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
+			PipelineExecutionID: cmd.PipelineExecutionID,
+			Pipeline:            stepDefn.GetPipelineName(),
+			StepExecutionID:     cmd.StepExecutionID,
+			Step:                stepDefn.GetName(),
+			Error:               err.(perr.ErrorModel),
+		})
+	} else if stepError != nil {
 		slog.Debug("Step error calculated from throw", "error", stepError)
+
 		errorFromThrow = true
-		cmd.Output.Status = "failed"
+		cmd.Output.Status = constants.StateFailed
 		cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			StepExecutionID:     cmd.StepExecutionID,
@@ -153,7 +171,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		})
 	}
 
-	if cmd.Output.Status == "failed" {
+	if cmd.Output.Status == constants.StateFailed && cmd.Output.FailureMode != constants.FailureModeFatal {
 		var stepRetry *modconfig.StepRetry
 		var diags hcl.Diagnostics
 		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
@@ -163,11 +181,17 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 			if len(diags) > 0 {
 				slog.Error("Error calculating retry", "diags", diags)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, error_helpers.HclDiagsToError(stepDefn.GetName(), diags)))
-				if err2 != nil {
-					slog.Error("Error publishing event", "error", err2)
-				}
-				return nil
+
+				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
+				cmd.Output.Status = constants.StateFailed
+				cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
+				cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
+					PipelineExecutionID: cmd.PipelineExecutionID,
+					Pipeline:            stepDefn.GetPipelineName(),
+					StepExecutionID:     cmd.StepExecutionID,
+					Step:                stepDefn.GetName(),
+					Error:               err.(perr.ErrorModel),
+				})
 			}
 		}
 
@@ -175,30 +199,45 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
 			stepRetry.Input = &cmd.StepInput
 		} else {
+			retryIndex := 0
+			if cmd.StepRetry != nil {
+				retryIndex = cmd.StepRetry.Count
+			}
+
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
 			stepRetry = &modconfig.StepRetry{
+				Count:          retryIndex,
 				RetryCompleted: true,
 			}
+		}
+
+		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
+		if diags.HasErrors() {
+			slog.Error("Error getting error config", "error", diags)
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeFatal
+		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeIgnored
+		} else {
+			cmd.Output.FailureMode = constants.FailureModeStandard
 		}
 
 		e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
 		if err != nil {
 			slog.Error("Error creating Pipeline Step Finished event", "error", err)
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-			if err2 != nil {
-				slog.Error("Error publishing event", "error", err2)
-			}
+			raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
+			return nil
 		}
 		e.StepRetry = stepRetry
 		// e.StepLoop = cmd.StepLoop
 		err = h.EventBus.Publish(ctx, e)
 
 		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-			if err2 != nil {
-				slog.Error("Error publishing event", "error", err2)
-			}
+			raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
+			return nil
 		}
+
 		return nil
 	}
 
@@ -208,10 +247,19 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		var err error
 		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-			if err2 != nil {
-				slog.Error("Error publishing event", "error", err2)
+			if !perr.IsPerr(err) {
+				err = perr.InternalWithMessage(err.Error())
 			}
+
+			cmd.Output.Status = constants.StateFailed
+			cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
+			cmd.Output.Errors = append(cmd.Output.Errors, modconfig.StepError{
+				PipelineExecutionID: cmd.PipelineExecutionID,
+				Pipeline:            stepDefn.GetPipelineName(),
+				StepExecutionID:     cmd.StepExecutionID,
+				Step:                stepDefn.GetName(),
+				Error:               err.(perr.ErrorModel),
+			})
 		}
 	}
 
@@ -224,4 +272,11 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	e.StepOutput = stepOutput
 
 	return h.EventBus.Publish(ctx, e)
+}
+
+func raisePipelineFailedFromStepPipelineFinishError(ctx context.Context, h StepPipelineFinishHandler, cmd *event.StepPipelineFinish, err error) {
+	publishError := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
+	if publishError != nil {
+		slog.Error("Error publishing event", "error", publishError)
+	}
 }
