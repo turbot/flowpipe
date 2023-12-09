@@ -189,11 +189,13 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				output.Status = constants.StateFailed
 				output.FailureMode = constants.FailureModeFatal
 			} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
-				output.Status = constants.StateFinished
+				output.Status = constants.StateFailed
 				output.FailureMode = constants.FailureModeIgnored
 			} else {
 				output.FailureMode = constants.FailureModeStandard
 			}
+		} else {
+			output.Status = constants.StateFinished
 		}
 
 		// Only calculate the step output if there are no errors or if the error is ignored. Either way it will end up
@@ -201,7 +203,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		if output.Status == constants.StateFinished {
 			// If there's a for_each in the step definition, we need to insert the "each" magic variable
 			// so the output can refer to it
-			evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd, h, stepOutput)
+			evalContext, stepOutput, err = calculateStepConfiguredOutput(ctx, stepDefn, evalContext, cmd.StepForEach, stepOutput)
 
 			// If there's an error calculating the output, we need to fail the step, the ignored error directive will be ignored
 			// and the retry directive will be ignored as well
@@ -239,13 +241,13 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 // Evaluation error, i.e. calculating the output, it fails the step and the retry and ignore error directives are not followed.
 //
 // The way this function is returned, whatever output currently calculated will be returned.
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmd *event.StepStart, h StepStartHandler, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmdStepForEach *modconfig.StepForEach, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
 			stepForEach := stepDefn.GetForEach()
 			if stepForEach != nil {
-				evalContext = execution.AddEachForEach(cmd.StepForEach, evalContext)
+				evalContext = execution.AddEachForEach(cmdStepForEach, evalContext)
 			}
 
 			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
@@ -434,7 +436,7 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 			output.Status = constants.StateFailed
 			output.FailureMode = constants.FailureModeFatal
 		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
-			output.Status = constants.StateFinished
+			output.Status = constants.StateFailed
 			output.FailureMode = constants.FailureModeIgnored
 		} else {
 			output.FailureMode = constants.FailureModeStandard

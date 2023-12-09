@@ -1805,7 +1805,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorks() {
 	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
 
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("finished", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
 
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
@@ -1838,7 +1838,7 @@ func (suite *ModTestSuite) TestErrorInForEachNestedPipelineOneWorksErrorIgnored(
 	assert.Equal(1, len(pex.StepStatus["pipeline.http"]["2"].StepExecutions))
 
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Status)
-	assert.Equal("", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
+	assert.Equal("finished", pex.StepStatus["pipeline.http"]["1"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["pipeline.http"]["2"].StepExecutions[0].Output.Status)
 
 	assert.Equal(404, pex.StepStatus["pipeline.http"]["0"].StepExecutions[0].Output.Errors[0].Error.Status)
