@@ -63,7 +63,9 @@ func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]int
 	var stepNativeOutputMap map[string]cty.Value
 	if !evalContext.Variables["result"].IsNull() {
 		stepNativeOutputMap = evalContext.Variables["result"].AsValueMap()
-	} else {
+	}
+
+	if stepNativeOutputMap == nil {
 		stepNativeOutputMap = map[string]cty.Value{}
 	}
 

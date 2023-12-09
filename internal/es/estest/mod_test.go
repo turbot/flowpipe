@@ -1898,7 +1898,6 @@ func (suite *ModTestSuite) TestErrorWithThrowButIgnored() {
 		return
 	}
 
-	// TODO: should ignored error bubbles up to the pipeline?
 	assert.Equal(0, len(pex.Errors))
 }
 

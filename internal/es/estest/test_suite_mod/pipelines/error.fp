@@ -90,10 +90,10 @@ pipeline "parent_with_child_with_no_output" {
     }
 
     output "val" {
-    value       = {
-      "call_child" = !is_error(step.pipeline.call_child) ? "ok" : "fail"
+        value       = {
+            "call_child" = !is_error(step.pipeline.call_child) ? "ok" : "fail"
+        }
     }
-  }
 }
 
 pipeline "child_with_no_output" {

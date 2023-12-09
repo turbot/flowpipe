@@ -818,7 +818,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 			if et.Output.FailureMode == constants.FailureModeIgnored {
 				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
 				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
-			} else if et.StepRetry == nil || et.StepRetry.RetryCompleted {
+			} else {
 				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
 
 				if !errorHold {
@@ -827,8 +827,6 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 					// retry completed is represented in the errorHold variable
 					pe.Fail(stepDefn.GetFullyQualifiedName(), et.Output.Errors...)
 				}
-			} else {
-				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 			}
 		} else {
 			pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)

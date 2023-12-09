@@ -182,8 +182,6 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		if output.HasErrors() {
-			// TODO: add output to evalContext
-
 			// check if we need to ignore the error
 			errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
 			if diags.HasErrors() {
@@ -423,6 +421,23 @@ func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Ou
 				Count:          retryIndex,
 				RetryCompleted: true,
 			}
+		}
+
+		// Now we have to check again if the error is ignored. Earlier in the process we checked if the error is ignored IF there's an error
+		// however that may have changed now because the primitive may not have failed but there's a failure now due to the throw
+		//
+		//
+		// check if we need to ignore the error
+		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)
+		if diags.HasErrors() {
+			slog.Error("Error getting error config", "error", diags)
+			output.Status = constants.StateFailed
+			output.FailureMode = constants.FailureModeFatal
+		} else if errorConfig != nil && errorConfig.Ignore != nil && *errorConfig.Ignore {
+			output.Status = constants.StateFinished
+			output.FailureMode = constants.FailureModeIgnored
+		} else {
+			output.FailureMode = constants.FailureModeStandard
 		}
 
 		e, err := event.NewStepFinishedFromStepStart(cmd, output, stepOutput, cmd.StepLoop)
