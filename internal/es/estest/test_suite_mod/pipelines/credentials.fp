@@ -222,3 +222,15 @@ pipeline "multiple_credentials" {
         value = step.transform.clickup_token.value
     }
 }
+
+
+pipeline "with_github_creds" {
+  param "creds" {
+    type = string
+    default = "default"
+  }
+
+  step "transform" "creds" {
+    value = credential.github[param.creds].token
+  }
+}
