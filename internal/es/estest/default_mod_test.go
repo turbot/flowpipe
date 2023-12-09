@@ -3,7 +3,6 @@ package estest
 // Basic imports
 import (
 	"context"
-	"net/http"
 	"os"
 	"path"
 	"testing"
@@ -26,7 +25,6 @@ type DefaultModTestSuite struct {
 	suite.Suite
 	*FlowpipeTestSuite
 
-	server                *http.Server
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
 }
