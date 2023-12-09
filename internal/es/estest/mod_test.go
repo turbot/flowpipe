@@ -3124,6 +3124,51 @@ func (suite *ModTestSuite) TestErrorRetryEvaluationBlock() {
 	assert.Equal(1, len(pex.StepStatus["http.one"]["0"].StepExecutions))
 }
 
+func (suite *ModTestSuite) TestSimpleErrorIgnoredWithIfDoesNotMatch() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_error_ignored_with_if_does_not_match", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors), "1 error no retry, error ignore = true directive is ignored because the if statement does not match")
+	assert.Equal(404, pex.Errors[0].Error.Status)
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["http.does_not_exist"]["0"].StepExecutions))
+	assert.Nil(pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestSimpleErrorIgnoredWithIfMatches() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_error_ignored_with_if_matches", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors), "no error in pipeline, error in step is ignored")
+
+	// make sure that there's only 1 execution and the retry isn't happening
+	assert.Equal(1, len(pex.StepStatus["http.does_not_exist"]["0"].StepExecutions))
+	assert.Equal("should be calculated", pex.PipelineOutput["val"])
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

@@ -23,6 +23,21 @@ pipeline "simple_error_ignored_with_if_does_not_match" {
     }
 }
 
+pipeline "simple_error_ignored_with_if_matches" {
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+
+        error {
+            if = result.status_code == 404
+            ignore = true
+        }
+    }
+
+    output "val" {
+        value = "should be calculated"
+    }
+}
+
 pipeline "simple_error_ignored" {
     step "http" "does_not_exist" {
         url = "https://google.com/bad.json"
