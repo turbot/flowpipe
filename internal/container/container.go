@@ -9,9 +9,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -96,8 +94,6 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 		// ImageExists: true,
 		EntryPoint: []string{},
 	}
-
-	fc.RetainArtifacts = viper.GetBool(constants.ArgRetainArtifacts)
 
 	for _, option := range options {
 		if err := option(fc); err != nil {

@@ -71,7 +71,10 @@ func modInstallCmd() *cobra.Command {
 
 	// setup hooks and flags
 	cmdconfig.OnCmd(cmd).
-		AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h"))
+		AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h")).
+		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
+		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be updated without modifying them").
+		AddBoolFlag(constants.ArgForce, false, "Install mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)")
 
 	return cmd
 }
@@ -164,8 +167,8 @@ func modUpdateCmd() *cobra.Command {
 	}
 
 	cmdconfig.OnCmd(cmd).
-		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
 		AddBoolFlag(constants.ArgForce, false, "Update mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)").
+		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
 		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be updated without modifying them").
 		AddBoolFlag(constants.ArgHelp, false, "Help for update", cmdconfig.FlagOptions.WithShortHand("h"))
 

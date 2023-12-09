@@ -319,7 +319,6 @@ func (m *Manager) initializeResources() error {
 }
 
 func (m *Manager) setupWatcher(w *workspace.Workspace) error {
-
 	if !viper.GetBool(constants.ArgWatch) {
 		return nil
 	}
@@ -395,10 +394,8 @@ func (m *Manager) startAPIService() error {
 
 func (m *Manager) startSchedulerService() error {
 	s := scheduler.NewSchedulerService(m.ctx, m.ESService, m.triggers)
-	if !viper.GetBool(constants.ArgNoScheduler) {
-		if err := s.Start(); err != nil {
-			return err
-		}
+	if err := s.Start(); err != nil {
+		return err
 	}
 
 	m.schedulerService = s
