@@ -10,6 +10,7 @@ __debug_bin*
 
 # Flowpipe binary
 flowpipe
+*.tar.gz
 
 # accidental .flowpipe directory in workspace dir
 .flowpipe
