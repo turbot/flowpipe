@@ -1,10 +1,6 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # you may remove this if you don't need go generate
     - go generate ./...
 builds:
   - id: flowpipe
@@ -31,6 +27,10 @@ builds:
     env:
       - CGO_ENABLED=0
 
+release:
+  # Always set as "draft" release. Publishing release must be done manually.
+  draft: true
+
 archives:
   - format: tar.gz
     # Additional files/globs
@@ -53,8 +53,3 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-
-# The lines beneath this are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj
