@@ -26,6 +26,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
+          ref: v0.1.x
 
       - name: Checkout Pipe Fittings Components repository
         uses: actions/checkout@v3
@@ -33,6 +34,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
+          ref: v0.1.x
 
       - uses: actions/setup-go@v4
         with:
