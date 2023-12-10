@@ -19,7 +19,6 @@ require (
 	github.com/garsue/watermillzap v1.2.0
 	github.com/getkin/kin-openapi v0.117.0
 	github.com/gin-contrib/size v0.0.0-20230212012657-e14a14094dc4
-	github.com/gin-contrib/zap v0.1.0
 	github.com/go-co-op/gocron v1.31.1
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/goccy/go-yaml v1.11.2
@@ -27,7 +26,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.18.1
 	github.com/hashicorp/raft v1.3.11
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
-	github.com/karrick/gows v0.3.0
+	github.com/karrick/gows v0.3.0 // indirect
 	github.com/lib/pq v1.10.9
 	github.com/radovskyb/watcher v1.0.7
 	github.com/slack-go/slack v0.12.3
@@ -43,10 +42,12 @@ require (
 
 require (
 	github.com/FabienMht/ginslog v0.0.1
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/denisss025/slog-watermill v0.1.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
 	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
+	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 
 require (
@@ -60,8 +61,6 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/Machiel/slugify v1.0.1 // indirect
-	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/Microsoft/hcsshim v0.11.1 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230828082145-3c4c8a2d2371 // indirect
@@ -225,7 +224,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
-	github.com/turbot/steampipe-plugin-code v0.5.1 // indirect
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 // indirect
 	github.com/turbot/terraform-components v0.0.0-20231108031935-358f803c1a8b // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
@@ -291,7 +289,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/swaggo/swag v1.8.12
-	go.uber.org/zap v1.24.0
+	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
