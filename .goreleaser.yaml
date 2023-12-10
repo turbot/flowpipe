@@ -28,8 +28,8 @@ builds:
       - CGO_ENABLED=0
 
 release:
-  # Always set as "draft" release. Publishing release must be done manually.
-  draft: true
+  # Always set as pre-release. Publishing release must be done manually.
+  prerelease: true
 
 archives:
   - format: tar.gz
