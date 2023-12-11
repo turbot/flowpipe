@@ -244,6 +244,7 @@ func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es
 		"flowpipe": map[string]interface{}{
 			"execution_id":          pipelineCmd.Event.ExecutionID,
 			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+			"pipeline":              pipelineCmd.Name,
 		},
 	}
 	return response, pipelineCmd, nil

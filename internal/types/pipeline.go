@@ -396,7 +396,7 @@ func (p FpPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 
 	out := fmt.Sprintf("%s%s\n", au.Blue("Execution ID: ").Bold(), p.ExecutionId)
 	if !helpers.IsNil(p.PipelineName) {
-		out += fmt.Sprintf("%s%s\n", au.Blue("Pipeline:     ").Bold(), p.PipelineExecutionId)
+		out += fmt.Sprintf("%s%s\n", au.Blue("Pipeline:     ").Bold(), *p.PipelineName)
 	}
 	out += fmt.Sprintf("%s%s\n", au.Blue("Pipeline ID:  ").Bold(), p.PipelineExecutionId)
 	out += fmt.Sprintf("%s%s\n", au.Blue("Status:       ").Bold(), p.Status)
@@ -425,13 +425,19 @@ func FpPipelineExecutionFromAPIResponse(apiResp map[string]any) (*FpPipelineExec
 
 		executionId, _ := contents["execution_id"].(string)
 		pipelineId, _ := contents["pipeline_execution_id"].(string)
+		pipeline, hasName := contents["pipeline"].(string)
 
-		return &FpPipelineExecution{
+		exec := FpPipelineExecution{
 			ExecutionId:         executionId,
 			PipelineExecutionId: pipelineId,
 			Status:              "queued",
-			// TODO: Populate rest of possible data into API
-		}, nil
+		}
+
+		if hasName {
+			exec.PipelineName = &pipeline
+		}
+
+		return &exec, nil
 	}
 
 	return nil, perr.Internal(fmt.Errorf("unexpected API response"))
