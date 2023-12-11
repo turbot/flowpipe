@@ -59,7 +59,6 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 
 	output.Data[schema.AttributeTypeStartedAt] = start
 	output.Data[schema.AttributeTypeFinishedAt] = finish
-	output.Data[schema.AttributeTypeDuration] = duration
 
 	return output, nil
 }
