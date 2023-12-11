@@ -241,24 +241,21 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 
 	if viper.GetBool(constants.ArgDetach) {
 		exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
-		printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining API response")
 			return
 		}
-		printableResource := types.PrintablePipelineExecution{
-			Items: []types.FpPipelineExecution{*exec},
-		}
-		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		err = displayPipelineExecution(ctx, exec, cmd)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			error_helpers.ShowError(ctx, err)
 			return
 		}
 	} else {
 		output := viper.GetString(constants.ArgOutput)
-		if output == "pretty" || output == "plain" {
+		switch output {
+		case "pretty", "plain":
 			displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
-		} else {
+		default:
 			displayBasicOutput(ctx, cmd, resp, pollLogFunc)
 		}
 	}
@@ -468,16 +465,10 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
+	err = displayPipelineExecution(ctx, exec, cmd)
 	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
-	}
-	printableResource := types.PrintablePipelineExecution{
-		Items: []types.FpPipelineExecution{*exec},
-	}
-	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+		error_helpers.ShowError(ctx, err)
+		return
 	}
 }
 
@@ -634,4 +625,20 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	}
 
 	return complete, currentIndex, res, nil
+}
+
+func displayPipelineExecution(ctx context.Context, pe *types.FpPipelineExecution, cmd *cobra.Command) error {
+	printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
+	if err != nil {
+		return fmt.Errorf("error obtaining printer\n%v", err)
+	}
+	printableResource := types.PrintablePipelineExecution{
+		Items: []types.FpPipelineExecution{*pe},
+	}
+	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+	if err != nil {
+		return fmt.Errorf("error when printing\n%v", err)
+	}
+
+	return nil
 }
