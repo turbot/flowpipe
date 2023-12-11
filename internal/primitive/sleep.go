@@ -18,12 +18,11 @@ func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error 
 		return perr.BadRequestWithMessage("Sleep input must define a duration")
 	}
 
-	switch input[schema.AttributeTypeDuration].(type) {
+	switch duration := input[schema.AttributeTypeDuration].(type) {
 	case string:
-		durationString := input[schema.AttributeTypeDuration].(string)
-		_, err := time.ParseDuration(durationString)
+		_, err := time.ParseDuration(duration)
 		if err != nil {
-			return perr.BadRequestWithMessage("invalid sleep duration " + durationString)
+			return perr.BadRequestWithMessage("invalid sleep duration " + duration)
 		}
 	case int64, float64:
 		// Valid case, no validation required
@@ -40,13 +39,13 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	}
 
 	var duration time.Duration
-	switch input[schema.AttributeTypeDuration].(type) {
+	switch durationVal := input[schema.AttributeTypeDuration].(type) {
 	case string:
-		duration, _ = time.ParseDuration(input[schema.AttributeTypeDuration].(string))
+		duration, _ = time.ParseDuration(durationVal)
 	case int64:
-		duration = time.Duration(input[schema.AttributeTypeDuration].(int64)) * time.Millisecond // in milliseconds
+		duration = time.Duration(durationVal) * time.Millisecond // in milliseconds
 	case float64:
-		duration = time.Duration(input[schema.AttributeTypeDuration].(float64)) * time.Millisecond // in milliseconds
+		duration = time.Duration(durationVal) * time.Millisecond // in milliseconds
 	}
 
 	slog.Info("Sleeping for", "duration", duration)
