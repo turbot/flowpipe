@@ -236,22 +236,31 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 	if err != nil {
 		error_helpers.ShowErrorWithMessage(ctx, err, "Error executing pipeline")
+		return
 	}
 
 	if viper.GetBool(constants.ArgDetach) {
-		printer, err := printers.GetPrinter[types.PipelineExecutionResponse](cmd)
+		exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
+		printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+			return
 		}
-		printableResource := types.PrintablePipelineExecutionResponse{
-			Items: []types.PipelineExecutionResponse{resp},
+		printableResource := types.PrintablePipelineExecution{
+			Items: []types.FpPipelineExecution{*exec},
 		}
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			return
 		}
 	} else {
-		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+		output := viper.GetString(constants.ArgOutput)
+		if output == "pretty" || output == "plain" {
+			displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+		} else {
+			displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+		}
 	}
 }
 
@@ -379,6 +388,96 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 			// TODO: make this configurable
 			time.Sleep(500 * time.Millisecond)
 		}
+	}
+}
+
+func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
+	exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining execution")
+		return
+	}
+
+	lastIndex := -1
+
+	for {
+		exit, i, logs, err := pollEventLog(ctx, exec.ExecutionId, exec.PipelineExecutionId, lastIndex, pollLogFunc)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error polling event logs")
+			return
+		}
+		lastIndex = i
+
+		for _, log := range logs {
+			switch log.EventType {
+			case event.HandlerPipelineQueued:
+				var e event.PipelineQueued
+				err := json.Unmarshal([]byte(log.Payload), &e)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					return
+				}
+				if e.PipelineExecutionID == exec.PipelineExecutionId {
+					exec.PipelineName = &e.Name
+					exec.CreatedAt = &e.Event.CreatedAt
+					exec.Status = "queued"
+				}
+			case event.HandlerPipelineStarted:
+				var e event.PipelineStarted
+				err := json.Unmarshal([]byte(log.Payload), &e)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					return
+				}
+				if e.PipelineExecutionID == exec.PipelineExecutionId {
+					exec.Status = "started"
+				}
+			case event.HandlerPipelineFinished:
+				var e event.PipelineFinished
+				err := json.Unmarshal([]byte(log.Payload), &e)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					return
+				}
+				if e.PipelineExecutionID == exec.PipelineExecutionId {
+					exec.Status = "finished"
+					exec.Outputs = e.PipelineOutput
+				}
+			case event.HandlerPipelineFailed:
+				var e event.PipelineFailed
+				err := json.Unmarshal([]byte(log.Payload), &e)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					return
+				}
+				if e.PipelineExecutionID == exec.PipelineExecutionId {
+					exec.Status = "failed"
+					exec.Outputs = e.PipelineOutput
+					exec.Errors = e.Errors
+				}
+			default:
+				// ignore other events
+			}
+		}
+
+		if exit {
+			break
+		}
+
+		// TODO: make this configurable
+		time.Sleep(500 * time.Millisecond)
+	}
+
+	printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+	}
+	printableResource := types.PrintablePipelineExecution{
+		Items: []types.FpPipelineExecution{*exec},
+	}
+	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 	}
 }
 

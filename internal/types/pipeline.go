@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/turbot/go-kit/helpers"
 	"strings"
+	"time"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
@@ -415,6 +416,108 @@ func (PrintablePipeline) getColumns() (columns []TableColumnDefinition) {
 			Name:        "DESCRIPTION",
 			Type:        "string",
 			Description: "Pipeline description",
+		},
+	}
+}
+
+type FpPipelineExecution struct {
+	ExecutionId         string                `json:"execution_id"`
+	PipelineExecutionId string                `json:"pipeline_execution_id"`
+	Status              string                `json:"status"`
+	PipelineName        *string               `json:"pipeline,omitempty"`
+	CreatedAt           *time.Time            `json:"created_at,omitempty"`
+	Outputs             map[string]any        `json:"outputs,omitempty"`
+	Errors              []modconfig.StepError `json:"errors,omitempty"`
+}
+
+func (p FpPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	out := fmt.Sprintf("%s%s\n", au.Blue("Execution ID: ").Bold(), p.ExecutionId)
+	if !helpers.IsNil(p.PipelineName) {
+		out += fmt.Sprintf("%s%s\n", au.Blue("Pipeline:     ").Bold(), p.PipelineExecutionId)
+	}
+	out += fmt.Sprintf("%s%s\n", au.Blue("Pipeline ID:  ").Bold(), p.PipelineExecutionId)
+	out += fmt.Sprintf("%s%s\n", au.Blue("Status:       ").Bold(), p.Status)
+	if !helpers.IsNil(p.CreatedAt) {
+		out += fmt.Sprintf("%s%s\n", au.Blue("Created At:   ").Bold(), p.CreatedAt.Format(time.RFC3339))
+	}
+
+	if !helpers.IsNil(p.Outputs) && len(p.Outputs) > 0 {
+		out += fmt.Sprintf("%s\n", au.Blue("Outputs:").Bold())
+		out += sortAndParseMap(p.Outputs, "", " ", au, opts)
+	}
+
+	if !helpers.IsNil(p.Errors) && len(p.Errors) > 0 {
+		out += fmt.Sprintf("%s\n", au.Blue("Errors:").Bold())
+		for _, e := range p.Errors {
+			out += fmt.Sprintf("  %s %s\n", au.Red(e.Error.Title+":"), au.Red(e.Error.Detail))
+		}
+	}
+
+	return out
+}
+
+func FpPipelineExecutionFromAPIResponse(apiResp map[string]any) (*FpPipelineExecution, error) {
+	if apiResp != nil && apiResp["flowpipe"] != nil {
+		contents := apiResp["flowpipe"].(map[string]any)
+
+		executionId, _ := contents["execution_id"].(string)
+		pipelineId, _ := contents["pipeline_execution_id"].(string)
+
+		return &FpPipelineExecution{
+			ExecutionId:         executionId,
+			PipelineExecutionId: pipelineId,
+			Status:              "queued",
+			// TODO: Populate rest of possible data into API
+		}, nil
+	}
+
+	return nil, perr.Internal(fmt.Errorf("unexpected API response"))
+}
+
+type PrintablePipelineExecution struct {
+	Items []FpPipelineExecution
+}
+
+func (p PrintablePipelineExecution) GetItems() []FpPipelineExecution {
+	return p.Items
+}
+
+func (p PrintablePipelineExecution) GetTable() (Table, error) {
+	var tableRows []TableRow
+	for _, item := range p.Items {
+		cells := []any{
+			item.ExecutionId,
+			item.PipelineName,
+			item.Status,
+		}
+		tableRows = append(tableRows, TableRow{Cells: cells})
+	}
+	return NewTable(tableRows, p.getColumns()), nil
+}
+
+func (PrintablePipelineExecution) getColumns() (columns []TableColumnDefinition) {
+	return []TableColumnDefinition{
+		{
+			Name:        "EXECUTION ID",
+			Type:        "string",
+			Description: "Execution ID",
+		},
+		{
+			Name:        "NAME",
+			Type:        "string",
+			Description: "Pipeline name",
+		},
+		{
+			Name:        "STATUS",
+			Type:        "string",
+			Description: "Pipeline execution status",
 		},
 	}
 }
