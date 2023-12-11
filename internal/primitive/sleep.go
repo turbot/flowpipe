@@ -18,10 +18,22 @@ func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error 
 		return perr.BadRequestWithMessage("Sleep input must define a duration")
 	}
 
-	durationString := input[schema.AttributeTypeDuration].(string)
-	_, err := time.ParseDuration(durationString)
-	if err != nil {
-		return perr.BadRequestWithMessage("invalid sleep duration " + durationString)
+	switch duration := input[schema.AttributeTypeDuration].(type) {
+	case string:
+		_, err := time.ParseDuration(duration)
+		if err != nil {
+			return perr.BadRequestWithMessage("invalid sleep duration " + duration)
+		}
+	case int64:
+		if duration < 0 {
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a positive whole number")
+		}
+	case float64:
+		if duration < 0 {
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a positive whole number")
+		}
+	default:
+		return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a string or a whole number")
 	}
 
 	return nil
@@ -32,9 +44,15 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		return nil, err
 	}
 
-	durationString := input[schema.AttributeTypeDuration].(string)
-	// Already validated
-	duration, _ := time.ParseDuration(durationString)
+	var duration time.Duration
+	switch durationVal := input[schema.AttributeTypeDuration].(type) {
+	case string:
+		duration, _ = time.ParseDuration(durationVal)
+	case int64:
+		duration = time.Duration(durationVal) * time.Millisecond // in milliseconds
+	case float64:
+		duration = time.Duration(durationVal) * time.Millisecond // in milliseconds
+	}
 
 	slog.Info("Sleeping for", "duration", duration)
 	start := time.Now().UTC()
@@ -47,7 +65,6 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 
 	output.Data[schema.AttributeTypeStartedAt] = start
 	output.Data[schema.AttributeTypeFinishedAt] = finish
-	output.Data[schema.AttributeTypeDuration] = durationString
 
 	return output, nil
 }

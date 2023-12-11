@@ -4,6 +4,7 @@ package estest
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path"
@@ -1207,6 +1208,36 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal("janis joplin was 27", pex.PipelineOutput["text_1"].(map[string]interface{})["janis"].(map[string]interface{})["value"])
 	assert.Equal("jimi hendrix was 27", pex.PipelineOutput["text_1"].(map[string]interface{})["jimi"].(map[string]interface{})["value"])
 	assert.Equal("jerry garcia was 53", pex.PipelineOutput["text_1"].(map[string]interface{})["jerry"].(map[string]interface{})["value"])
+}
+
+func (suite *ModTestSuite) TestStepSleep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_sleep_step_int_duration", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+	assert.Equal(1, len(pex.StepStatus["sleep.sleep_test"]))
+
+	outputData := pex.StepStatus["sleep.sleep_test"]["0"].StepExecutions[0].Output.Data
+	startTime, _ := time.Parse(outputData[schema.AttributeTypeStartedAt].(string), time.RFC3339)
+	finishTime, _ := time.Parse(outputData[schema.AttributeTypeFinishedAt].(string), time.RFC3339)
+	diff := finishTime.Sub(startTime)
+	assert.Equal(float64(0), math.Floor(diff.Seconds()), "output does not match the provided duration")
+
 }
 
 func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
