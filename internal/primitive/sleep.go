@@ -27,7 +27,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error 
 	case int64, float64:
 		// Valid case, no validation required
 	default:
-		return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a string or number")
+		return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a string or a whole number")
 	}
 
 	return nil
