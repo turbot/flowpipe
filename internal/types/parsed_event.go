@@ -632,8 +632,9 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 		reflect.Uint32,
 		reflect.Uint64:
 		return au.Sprintf("%d", au.Cyan(input))
+	default:
+		return ""
 	}
-	return ""
 }
 
 func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts RenderOptions) string {
@@ -655,7 +656,11 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
+		if typeString == "" {
+			out += fmt.Sprintf("%s %s = %s\n", prefix, au.Blue(key), valueString)
+		} else {
+			out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
+		}
 	}
 	return out
 }
