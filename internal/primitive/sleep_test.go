@@ -57,3 +57,18 @@ func TestSleepInvalidDuration(t *testing.T) {
 	assert.Equal("invalid sleep duration 5", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
+
+func TestSleepNegativeDuration(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	q := Sleep{}
+	input := modconfig.Input(map[string]interface{}{"duration": int64(-1)})
+
+	_, err := q.Run(ctx, input)
+	assert.NotNil(err)
+
+	fpErr := err.(perr.ErrorModel)
+	assert.Equal("The attribute 'duration' must be a positive whole number", fpErr.Detail)
+	assert.Equal(400, fpErr.Status)
+}

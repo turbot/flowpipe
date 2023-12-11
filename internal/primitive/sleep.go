@@ -24,8 +24,14 @@ func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error 
 		if err != nil {
 			return perr.BadRequestWithMessage("invalid sleep duration " + duration)
 		}
-	case int64, float64:
-		// Valid case, no validation required
+	case int64:
+		if duration < 0 {
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a positive whole number")
+		}
+	case float64:
+		if duration < 0 {
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a positive whole number")
+		}
 	default:
 		return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeDuration + "' must be a string or a whole number")
 	}
