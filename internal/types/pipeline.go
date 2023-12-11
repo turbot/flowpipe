@@ -293,6 +293,50 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOption
 
 type PipelineExecutionResponse map[string]interface{}
 
+func (p PipelineExecutionResponse) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	output := ""
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	for k, v := range p {
+		if v == nil {
+			v = ""
+		}
+
+		valueString := ""
+		if isSimpleType(v) {
+			valueString = formatSimpleValue(v, au)
+		} else {
+			s, err := opts.JsonFormatter.Marshal(v)
+			if err != nil {
+				valueString = au.Sprintf(au.Red("error parsing value"))
+			} else {
+				valueString = string(s)
+			}
+		}
+
+		output += fmt.Sprintf("%s %s\n", au.Blue(k+":").Bold(), valueString)
+	}
+
+	return output
+}
+
+type PrintablePipelineExecutionResponse struct {
+	Items []PipelineExecutionResponse
+}
+
+func (p PrintablePipelineExecutionResponse) GetItems() []PipelineExecutionResponse {
+	return p.Items
+}
+
+func (p PrintablePipelineExecutionResponse) GetTable() (Table, error) {
+	return Table{}, nil
+}
+
 type CmdPipeline struct {
 	Command       string                 `json:"command" binding:"required,oneof=run"`
 	Args          map[string]interface{} `json:"args,omitempty"`

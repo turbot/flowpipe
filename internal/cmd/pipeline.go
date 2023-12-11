@@ -199,7 +199,8 @@ func pipelineRunCmd() *cobra.Command {
 	// Add the pipeline arg flag
 	cmdconfig.OnCmd(cmd).
 		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --arg may be passed.").
-		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.")
+		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.").
+		AddBoolFlag(constants.ArgDetach, false, "Run the pipeline in detached mode.")
 
 	return cmd
 }
@@ -237,7 +238,21 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		error_helpers.ShowErrorWithMessage(ctx, err, "Error executing pipeline")
 	}
 
-	displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	if viper.GetBool(constants.ArgDetach) {
+		printer, err := printers.GetPrinter[types.PipelineExecutionResponse](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
+		printableResource := types.PrintablePipelineExecutionResponse{
+			Items: []types.PipelineExecutionResponse{resp},
+		}
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+		}
+	} else {
+		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	}
 }
 
 func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
