@@ -19,6 +19,7 @@ variable "var_three" {
 variable "var_from_env" {
   type = string
   description = "will be set from env variable"
+  default  = "test"
 }
 
 locals {
