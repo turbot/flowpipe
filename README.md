@@ -99,7 +99,7 @@ You only need to start the server if you're running a pipeline that responds to 
 
     ```hcl
     mod "local" {
-        title = "trigger_test"    
+      title = "trigger_test"    
     }
     ```
 
@@ -107,14 +107,15 @@ You only need to start the server if you're running a pipeline that responds to 
 
     ```hcl
     mod "hello" {
-        trigger "http" "hello_webhook" {
-            pipeline = pipeline.hello
-        }
+      trigger "http" "hello_webhook" {
+        pipeline = pipeline.hello
+      }
 
-        pipeline "hello" {
-            output "hello" {
-                value = "hello"
-            }
+      pipeline "hello" {
+        output "hello" {
+          value = "hello"
+        }
+      }
     }
     ```
 
