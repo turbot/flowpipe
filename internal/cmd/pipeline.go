@@ -80,12 +80,14 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	if resp != nil {
 		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
+			return
 		}
 		printableResource := types.NewPrintablePipeline(resp)
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed when printing")
+			return
 		}
 	}
 }
@@ -144,7 +146,6 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	} else {
 		resp, err = getPipelineLocal(ctx, pipelineName)
 	}
-
 	if err != nil {
 		error_helpers.ShowError(ctx, err)
 		return
@@ -153,12 +154,14 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	if resp != nil {
 		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
+			return
 		}
 		printableResource := types.NewPrintablePipelineFromSingle(resp)
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed when printing")
+			return
 		}
 	}
 }
