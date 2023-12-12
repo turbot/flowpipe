@@ -11,8 +11,6 @@
 [Flowpipe](https://flowpipe-io.vercel.app) is the universal cloud scripting engine. It provides automation and workflow to connect your clouds
 to the people, systems and data that matter.
 
-With Flowpipe you can:
-
 **Connect people and tools**. Connect your cloud data to people and systems using email, chat & APIs. Workflow steps can even run containers, custom functions, and more.
 
 **Orchestrate your cloud**. Build simple steps into complex workflows. Run and test locally. Compose solutions across clouds using open source mods. 
@@ -29,7 +27,15 @@ With Flowpipe you can:
 
 <details>
 <summary>Ensure that Docker is installed and running.</summary>
-Flowpipe's container support requires Docker.
+
+1. Flowpipe's container & function steps use Docker. (The CLI itself does not.)
+
+1. Confirm docker is running.
+
+    ```shell
+    $ docker info
+    ```
+
 </details>
 
 <details>
@@ -39,7 +45,7 @@ Flowpipe's container support requires Docker.
 
 1. Create a working directory and extract the binary
 
-    ```
+    ```shell
     $ mkdir flowpipe
     $ cd flowpipe
     $ cp ~/Downloads/flowpipe_0.0.1_darwin_amd64.tar.gz .
@@ -50,10 +56,10 @@ Flowpipe's container support requires Docker.
 
 1. Verify the installation.
 
-```
-$ flowpipe -v
-Flowpipe v0.1.0
-```
+    ```shell
+    $ flowpipe -v
+    Flowpipe v0.1.0
+    ```
 </details>
 
 <details>
@@ -65,7 +71,7 @@ Flowpipe v0.1.0
 
 1. Run `flowpipe pipeline list` in the directory you cloned:
 
-    ```
+    ```shell
     $ flowpipe pipeline list
     MOD           NAME                                                DESCRIPTION
     mod.github    github.pipeline.add_issue_assignees                 Add assignees to an issue.
@@ -73,7 +79,7 @@ Flowpipe v0.1.0
     mod.github    github.pipeline.close_pull_request                  Closes a pull request.
     ```
 
-    ```
+    ```shell
     $ flowpipe pipeline run get_current_user
     [get_current_user] Output user = {
     "login": "jsmyth",
@@ -114,24 +120,24 @@ You only need to start the server if you're running a pipeline that responds to 
 
 1. Run `flowpipe server`, specifying your mod location.
 
-    ```
+    ```shell
     $ ./flowpipe server --mod-location ~/YOUR_MOD
     ```
 
 
 1. Run `flowpipe trigger list` to list your triggers.
 
-    ```
+    ```shell
     $ flowpipe trigger list
     PIPELINE                TYPE    NAME                                DESCRIPTION    URL
                                             SCHEDULE
     local.pipeline.hello    http    local.trigger.http.hello_webhook                   /hook/local.trigger.http.hello_webhook/f08b...b41f8
     ```
 
-4. Use `curl` to test the webhook.
+1. Use `curl` to test the webhook.
 
-    ```
-    curl /hook/local.trigger.http.hello_webhook/f08b...b41f8
+    ```shell
+    $ curl /hook/local.trigger.http.hello_webhook/f08b...b41f8
     ```
 </details>
 
@@ -203,7 +209,8 @@ Check out [Flowpipe samples](https://hub-flowpipe-io-git-development-turbot.verc
 
 <details>
 <summary>Developer Setup</summary>
-# Flowpipe Development Setup
+
+### Flowpipe Development Setup
 
 
 1. Clone `flowpipe`, `flowpipe-sdk-go`, `pipe-fittings` and `terraform-components` in the following directory structure:
