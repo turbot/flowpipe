@@ -500,5 +500,5 @@ func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
 
 	hashString := util.CalculateHash(trigger.FullName, salt.(string))
 
-	return "/hook/" + trigger.FullName + "/" + hashString, nil
+	return "/api/latest/hook/" + trigger.FullName + "/" + hashString, nil
 }
