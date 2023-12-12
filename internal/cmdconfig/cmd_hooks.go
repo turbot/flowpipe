@@ -21,6 +21,12 @@ func preRunHook(cmd *cobra.Command, args []string) error {
 
 	// set the max memory if specified
 	setMemoryLimit(cmd.Context())
+
+	// check telemetry setting
+	telemetrySetting(cmd.Context())
+
+	checkUpdateSetting(cmd.Context())
+
 	return nil
 }
 
@@ -28,8 +34,22 @@ func setMemoryLimit(ctx context.Context) {
 	maxMemoryMb := viper.GetInt64(constants.ArgMemoryMaxMb)
 	maxMemoryBytes := maxMemoryMb * 1024 * 1024
 	if maxMemoryBytes > 0 {
-		slog.Info("setting memory limit", "max memory MB", maxMemoryMb)
+		slog.Debug("setting memory limit", "max memory MB", maxMemoryMb)
 		// set the max memory
 		debug.SetMemoryLimit(maxMemoryBytes)
+	}
+}
+
+func telemetrySetting(ctx context.Context) {
+	telemetry := viper.GetBool(constants.ArgTelemetry)
+	if telemetry {
+		slog.Debug("enabling telemetry")
+	}
+}
+
+func checkUpdateSetting(ctx context.Context) {
+	updateCheck := viper.GetBool(constants.ArgUpdateCheck)
+	if updateCheck {
+		slog.Debug("enabling update check")
 	}
 }

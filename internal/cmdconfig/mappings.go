@@ -32,5 +32,7 @@ func envMappings() map[string]cmdconfig.EnvMapping {
 		app_specific.EnvConfigPath:  {ConfigVar: []string{constants.ArgConfigPath}, VarType: cmdconfig.EnvVarTypeString},
 		app_specific.EnvModLocation: {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
 		app_specific.EnvMemoryMaxMb: {ConfigVar: []string{constants.ArgMemoryMaxMb}, VarType: cmdconfig.EnvVarTypeInt},
+		app_specific.EnvTelemetry:   {ConfigVar: []string{constants.ArgTelemetry}, VarType: cmdconfig.EnvVarTypeInt},
+		app_specific.EnvUpdateCheck: {ConfigVar: []string{constants.ArgUpdateCheck}, VarType: cmdconfig.EnvVarTypeBool},
 	}
 }

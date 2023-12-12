@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"io"
 
 	"log/slog"
 	"os"
@@ -63,8 +64,16 @@ func setupLogger() {
 			}
 		},
 	}
-	logger := slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
+
+	var logger *slog.Logger
+	if handlerOptions.Level == constants.LogLevelOff {
+		logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
+	} else {
+		logger = slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
+	}
+
 	slog.SetDefault(logger)
+
 }
 
 func getLogLevel() slog.Leveler {
@@ -72,14 +81,16 @@ func getLogLevel() slog.Leveler {
 
 	switch strings.ToLower(levelEnv) {
 	case "trace":
-		return constants.LevelTrace
+		return constants.LogLevelTrace
 	case "debug":
 		return slog.LevelDebug
 	case "info":
 		return slog.LevelInfo
 	case "error":
 		return slog.LevelError
+	case "off":
+		return constants.LogLevelOff
 	default:
-		return slog.LevelWarn
+		return constants.LogLevelOff
 	}
 }
