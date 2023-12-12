@@ -8,7 +8,7 @@
 [![pipelines](https://img.shields.io/badge/pipelines-532-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme)
 
-[Flowpipe](https://flowpipe-io.vercel.app) is the universal cloud scripting engine. It provides automation and workflow to connect your clouds
+[Flowpipe](https://flowpipe-io.vercel.app) is a cloud scripting engine. It provides automation and workflow to connect your clouds
 to the people, systems and data that matter.
 
 **Connect people and tools**. Connect your cloud data to people and systems using email, chat & APIs. Workflow steps can even run containers, custom functions, and more.
@@ -25,122 +25,24 @@ to the people, systems and data that matter.
 
 ## Getting Started
 
-<details>
-<summary>Ensure that Docker is installed and running.</summary>
+The <a href="https://flowpipe.io/downloads?utm_id=gfpreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme">downloads</a> page shows you how but tl;dr:
+ 
+Linux or WSL
 
-1. Flowpipe's container & function steps use Docker. (The CLI itself does not.)
+```sh
+sudo /bin/sh -c "$(curl -fsSL https://flowpipe.io/install/flowpipe.sh)"
+```
 
-1. Confirm docker is running.
+MacOS
 
-    ```shell
-    $ docker info
-    ```
+```sh
+brew tap turbot/tap
+brew install flowpipe
+```
 
-</details>
+_Note: Flowpipe container and function steps require Docker to be installed and running. (The CLI itself does not.)_
 
-<details>
-<summary>Install the Flowpipe binary.</summary>
-
-1. Download the approriate binary for your platform from the [Releases](https://github.com/turbot/flowpipe/releases).
-
-1. Create a working directory and extract the binary
-
-    ```shell
-    $ mkdir flowpipe
-    $ cd flowpipe
-    $ cp ~/Downloads/flowpipe_0.0.1_darwin_amd64.tar.gz .
-    $ tar xzf flowpipe_darwin_amd64.tar.gz
-    ```
-
-1. Add that directory to your path, or move the `flowpipe` binary to a location (e.g. `/usr/local/bin`) that is on the path.
-
-1. Verify the installation.
-
-    ```shell
-    $ flowpipe -v
-    Flowpipe v0.1.0
-    ```
-</details>
-
-<details>
-<summary>Install and use a Flowpipe mod.</summary>
-
-1. Choose a mod from the [Flowpipe library](https://hub.flowpipe.io?type=library), e.g. [flowpipe-mod-github](https://hub.flowpipe.io/mods/turbot/github).
-
-1. Click `Install Mod` and follow the instructions to clone the mod.
-
-1. Run `flowpipe pipeline list` in the directory you cloned:
-
-    ```shell
-    $ flowpipe pipeline list
-    MOD           NAME                                                DESCRIPTION
-    mod.github    github.pipeline.add_issue_assignees                 Add assignees to an issue.
-    mod.github    github.pipeline.close_issue                         Close an issue with the given ID.
-    mod.github    github.pipeline.close_pull_request                  Closes a pull request.
-    ```
-
-    ```shell
-    $ flowpipe pipeline run get_current_user
-    [get_current_user] Output user = {
-    "login": "jsmyth",
-    ...
-    }
-    ```
-</details>
-
-<details>
-<summary>Start the server and trigger a pipeline.</summary>
-
-You only need to start the server if you're running a pipeline that responds to a webhook. In that case:
-
-1. Create this setup in a directory.
-
-    In `mod.fp`:
-
-    ```hcl
-    mod "local" {
-      title = "trigger_test"    
-    }
-    ```
-
-    In `trigger_hello.fp`:
-
-    ```hcl
-    mod "hello" {
-      trigger "http" "hello_webhook" {
-        pipeline = pipeline.hello
-      }
-
-      pipeline "hello" {
-        output "hello" {
-          value = "hello"
-        }
-      }
-    }
-    ```
-
-1. Run `flowpipe server`, specifying your mod location.
-
-    ```shell
-    $ ./flowpipe server --mod-location ~/YOUR_MOD
-    ```
-
-
-1. Run `flowpipe trigger list` to list your triggers.
-
-    ```shell
-    $ flowpipe trigger list
-    PIPELINE                TYPE    NAME                                DESCRIPTION    URL
-                                            SCHEDULE
-    local.pipeline.hello    http    local.trigger.http.hello_webhook                   /hook/local.trigger.http.hello_webhook/f08b...b41f8
-    ```
-
-1. Use `curl` to test the webhook.
-
-    ```shell
-    $ curl /hook/local.trigger.http.hello_webhook/f08b...b41f8
-    ```
-</details>
+Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
 
 ## Libraries and samples
 
