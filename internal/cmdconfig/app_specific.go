@@ -37,6 +37,10 @@ func SetAppSpecificConstants() {
 	cmdconfig.CustomPreRunHook = preRunHook
 	cmdconfig.CustomPostRunHook = postRunHook
 
+	// Version check
+	app_specific.VersionCheckHost = "hub.flowpipe.io"
+	app_specific.VersionCheckPath = "api/cli/version/latest"
+
 	// set the default install dir
 	defaultInstallDir, err := files.Tildefy("~/.flowpipe")
 	error_helpers.FailOnError(err)
@@ -50,9 +54,6 @@ func SetAppSpecificConstants() {
 	}
 	app_specific.DefaultConfigPath = strings.Join([]string{".", globalConfigPath}, ":")
 
-	// Version check
-	app_specific.VersionCheckHost = "hub.flowpipe.io"
-	app_specific.VersionCheckPath = "api/cli/version/latest"
 
 
 }

@@ -1,0 +1,21 @@
+
+#
+# For detailed descriptions, see the reference documentation
+# at https://flowpipe.io/docs/reference/config-files/workspace
+#
+
+# workspace "all_options" {
+#  output              = "table"         # Default output format; one of: table, yaml, json (default table)
+#
+#  watch               = true
+#  input               = true
+#
+#  host        = "http://localhost:7103"  # unset means "serverless" - run from pwd/mod-location
+#
+#   port        = 7103
+#   listen      = "local"   # 'local' or 'network' (future - support postgres listen_addresses style)
+#
+#   log_level     = "info" # trace, debug, info, warn, error
+#   memory_max_mb = "1024" # the maximum memory to allow the CLI process in MB
+#  }
+# }
