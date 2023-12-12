@@ -54,7 +54,6 @@ func showProcessFunc(cmd *cobra.Command, args []string) {
 	} else {
 		resp, err = getProcessLocal(ctx, executionId)
 	}
-
 	if err != nil {
 		error_helpers.ShowError(ctx, err)
 		return
@@ -63,12 +62,14 @@ func showProcessFunc(cmd *cobra.Command, args []string) {
 	if resp != nil {
 		printer, err := printers.GetPrinter[types.Process](cmd)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
+			return
 		}
 		printableResource := types.NewPrintableProcessFromSingle(resp)
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed when printing")
+			return
 		}
 	}
 }
@@ -119,7 +120,6 @@ func listProcessFunc(cmd *cobra.Command, args []string) {
 	} else {
 		resp, err = listProcessLocal(cmd, args)
 	}
-
 	if err != nil {
 		error_helpers.ShowError(ctx, err)
 		return
@@ -129,11 +129,13 @@ func listProcessFunc(cmd *cobra.Command, args []string) {
 		printer, err := printers.GetPrinter[types.Process](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+			return
 		}
 		printableResource := types.NewPrintableProcess(resp)
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+			return
 		}
 	}
 }
