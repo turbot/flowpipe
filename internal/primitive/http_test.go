@@ -488,7 +488,7 @@ func TestHTTPMethodGETWithTimeoutNumber(t *testing.T) {
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:     "https://steampipe.io/",
-		schema.AttributeTypeTimeout: int64(100),
+		schema.AttributeTypeTimeout: int64(1),
 	})
 
 	_, err := hr.Run(ctx, input)
