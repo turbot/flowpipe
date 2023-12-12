@@ -1,14 +1,16 @@
 package cmdconfig
 
 import (
+	"strings"
+	"path/filepath"
+	"os"
+
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"os"
-	"path/filepath"
-	"strings"
 )
+
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
 func SetAppSpecificConstants() {
@@ -33,6 +35,11 @@ func SetAppSpecificConstants() {
 
 	// set the command pre and post hooks
 	cmdconfig.CustomPreRunHook = preRunHook
+	cmdconfig.CustomPostRunHook = postRunHook
+
+	// Version check
+	app_specific.VersionCheckHost = "hub.flowpipe.io"
+	app_specific.VersionCheckPath = "api/cli/version/latest"
 
 	// set the default install dir
 	defaultInstallDir, err := files.Tildefy("~/.flowpipe")

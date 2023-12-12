@@ -4,11 +4,36 @@ import (
 	"context"
 	"log/slog"
 	"runtime/debug"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/task"
+	"github.com/turbot/pipe-fittings/utils"
 )
+
+var waitForTasksChannel chan struct{}
+var tasksCancelFn context.CancelFunc
+
+// postRunHook is a function that is executed after the PostRun of every command handler
+func postRunHook(cmd *cobra.Command, args []string) error {
+	utils.LogTime("cmdhook.postRunHook start")
+	defer utils.LogTime("cmdhook.postRunHook end")
+
+	if waitForTasksChannel != nil {
+		// wait for the async tasks to finish
+		select {
+		case <-time.After(100 * time.Millisecond):
+			tasksCancelFn()
+			return nil
+		case <-waitForTasksChannel:
+			return nil
+		}
+	}
+
+	return nil
+}
 
 // preRunHook is a function that is executed before the PreRun of every command handler
 func preRunHook(cmd *cobra.Command, args []string) error {
@@ -25,7 +50,7 @@ func preRunHook(cmd *cobra.Command, args []string) error {
 	// check telemetry setting
 	telemetrySetting(cmd.Context())
 
-	checkUpdateSetting(cmd.Context())
+	checkUpdate(cmd)
 
 	return nil
 }
@@ -47,9 +72,31 @@ func telemetrySetting(ctx context.Context) {
 	}
 }
 
-func checkUpdateSetting(ctx context.Context) {
+func checkUpdate(cmd *cobra.Command) {
 	updateCheck := viper.GetBool(constants.ArgUpdateCheck)
+	updateCheck = true //nolint:ineffassign // remove when we enable update check
 	if updateCheck {
-		slog.Debug("enabling update check")
+		// runScheduledTasks skips running tasks if this instance is the plugin manager
+		waitForTasksChannel = runScheduledTasks(cmd.Context(), cmd, []string{})
 	}
+}
+
+// runScheduledTasks runs the task runner and returns a channel which is closed when
+// task run is complete
+//
+// runScheduledTasks skips running tasks if this instance is the plugin manager
+func runScheduledTasks(ctx context.Context, cmd *cobra.Command, args []string) chan struct{} {
+	taskUpdateCtx, cancelFn := context.WithCancel(ctx)
+	tasksCancelFn = cancelFn
+
+	return task.RunTasks(
+		taskUpdateCtx,
+		cmd,
+		args,
+		// pass the config value in rather than runRasks querying viper directly - to avoid concurrent map access issues
+		// (we can use the update-check viper config here, since initGlobalConfig has already set it up
+		// with values from the config files and ENV settings - update-check cannot be set from the command line)
+		// task.WithUpdateCheck(viper.GetBool(constants.ArgUpdateCheck)),
+		task.WithUpdateCheck(true),
+	)
 }
