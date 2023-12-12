@@ -46,7 +46,7 @@ Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
 
 ## Libraries and samples
 
-Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for for services including 
+Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for services including 
   <a href="https://hub.flowpipe.io/mods/turbot/aws">AWS</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/azure">Azure</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/gcp">GCP</a>, 
