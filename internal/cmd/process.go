@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cmd/common"
@@ -12,6 +13,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"time"
 )
 
 // process commands
@@ -23,6 +25,7 @@ func processCmd() *cobra.Command {
 
 	cmd.AddCommand(processShowCmd())
 	cmd.AddCommand(processListCmd())
+	cmd.AddCommand(processTailCmd())
 
 	return cmd
 
@@ -166,4 +169,91 @@ func listProcessLocal(cmd *cobra.Command, args []string) (*types.ListProcessResp
 	}()
 
 	return api.ListProcesses()
+}
+
+// tail
+func processTailCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "tail <execution-id>",
+		Args:  cobra.ExactArgs(1),
+		Run:   tailProcessFunc,
+		Short: "Tail a single process",
+		Long:  `Tail a single process.`,
+	}
+	// initialize hooks
+	cmdconfig.OnCmd(cmd).
+		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.")
+
+	return cmd
+}
+
+func tailProcessFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	executionId := args[0]
+	isRemote := viper.IsSet(constants.ArgHost)
+	tailStart := time.Now()
+	var err error
+
+	if isRemote {
+		err = tailProcessRemote(ctx, cmd, executionId, tailStart)
+	} else {
+		err = tailProcessLocal()
+	}
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+}
+
+func tailProcessRemote(ctx context.Context, cmd *cobra.Command, execId string, tailStart time.Time) error {
+	// TODO: Need a better approach to get outer pipeline id
+	var pipelineExecutionId string
+	var pipelineStatus string
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.ProcessApi.GetExecution(ctx, execId).Execute()
+	if err != nil {
+		return err
+	}
+	if resp != nil && resp.HasPipelineExecutions() {
+		for _, pl := range *resp.PipelineExecutions {
+			if pl.GetParentExecutionId() == "" && pl.GetParentStepExecutionId() == "" {
+				pipelineExecutionId = *pl.Id
+				pipelineStatus = *pl.Status
+				continue
+			}
+		}
+	} else {
+		return fmt.Errorf("failed to obtain process")
+	}
+
+	output := viper.GetString(constants.ArgOutput)
+	isStreamingLogs := output == "pretty" || output == "plain"
+	pipelineComplete := pipelineStatus == "finished" || pipelineStatus == "failed"
+	input := buildLogDisplayInput(execId, pipelineExecutionId)
+
+	switch {
+	case !isStreamingLogs && !pipelineComplete:
+		return fmt.Errorf("--output %s may only be used to tail a process which has completed", output)
+	case !isStreamingLogs && pipelineComplete:
+		displayBasicOutput(ctx, cmd, input, pollServerEventLog)
+		return nil
+	case isStreamingLogs:
+		displayStreamingLogs(ctx, cmd, input, pollServerEventLog)
+		return nil
+	default:
+		return nil
+	}
+}
+
+func tailProcessLocal() error {
+	return fmt.Errorf("tail requires a remote server via --host <host>")
+}
+
+func buildLogDisplayInput(executionId, pipelineExecutionId string) map[string]any {
+	return map[string]any{
+		"flowpipe": map[string]any{
+			"execution_id":          executionId,
+			"pipeline_execution_id": pipelineExecutionId,
+		},
+	}
 }
