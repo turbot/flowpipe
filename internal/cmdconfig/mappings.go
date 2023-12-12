@@ -8,7 +8,11 @@ import (
 )
 
 // global config defaults
-var configDefaults = map[string]any{}
+var configDefaults = map[string]any{
+	constants.ArgMemoryMaxMb: 1024,
+	constants.ArgTelemetry:   constants.TelemetryInfo,
+	constants.ArgUpdateCheck: true,
+}
 
 // command specific config defaults (keyed by comand name)
 var cmdSpecificDefaults = map[string]map[string]any{
