@@ -2,31 +2,31 @@ pipeline "pipeline_with_http_timeout" {
 
   param "timeout_string" {
     type    = string
-    default = "1ms"
+    default = "15ms"
   }
 
   param "timeout_number" {
     type    = number
-    default = 100
+    default = 15
   }
-  
+
   step "http" "http_with_timeout_string" {
-    url     = "https://steampipe.io"
-    timeout = "1ms"
+    url     = "http://localhost:7104/delay"
+    timeout = "10ms"
   }
 
   step "http" "http_with_timeout_number" {
-    url     = "https://steampipe.io"
-    timeout = 100
+    url     = "http://localhost:7104/delay"
+    timeout = 10
   }
 
   step "http" "http_with_timeout_string_unresolved" {
-    url     = "https://steampipe.io"
+    url     = "http://localhost:7104/delay"
     timeout = param.timeout_string
   }
 
   step "http" "http_with_timeout_number_unresolved" {
-    url     = "https://steampipe.io"
+    url     = "http://localhost:7104/delay"
     timeout = param.timeout_number
   }
 }

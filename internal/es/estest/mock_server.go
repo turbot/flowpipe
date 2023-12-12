@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func mockHandler(w http.ResponseWriter, r *http.Request) {
@@ -12,6 +13,14 @@ func mockHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"message": "This is a special case"}`)) //nolint:errcheck // just a test case
+		return
+	}
+
+	if r.URL.Path == "/delay" {
+		time.Sleep(20 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"message": "delay"}`)) //nolint:errcheck // just a test case
 		return
 	}
 
