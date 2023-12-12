@@ -34,14 +34,13 @@ type HTTPRequest struct {
 }
 
 type HTTPInput struct {
-	URL              string
-	Method           string
-	RequestBody      string
-	RequestHeaders   map[string]interface{}
-	RequestTimeoutMs int
-	CaCertPem        string
-	Insecure         bool
-	Timeout          time.Duration
+	URL            string
+	Method         string
+	RequestBody    string
+	RequestHeaders map[string]interface{}
+	CaCertPem      string
+	Insecure       bool
+	Timeout        time.Duration
 }
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -248,9 +247,6 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 	inputParams := &HTTPInput{
 		URL:    input["url"].(string),
 		Method: method,
-
-		// TODO: Make it configurable
-		RequestTimeoutMs: HTTPRequestDefaultTimeoutMs,
 	}
 
 	// Set the certificate, if provided
