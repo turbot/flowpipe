@@ -36,6 +36,7 @@ type Function struct {
 	Src     string                 `json:"src"`
 	Env     map[string]string      `json:"env"`
 	Event   map[string]interface{} `json:"event"`
+	Timeout *int64                 `json:"timeout"`
 
 	// PullParentImagePeriod defines how often the parent image should be pulled.
 	// This is useful for keeping the parent image up to date. Default is every
@@ -306,7 +307,7 @@ func (fn *Function) Start(imageName string) (string, error) {
 	// But allow any port to be allocated
 	hostPort := "0"
 
-	containerfn := &container.Config{
+	containerfn := container.Config{
 		Image: imageName,
 		Cmd:   []string{fn.GetHandler()},
 		ExposedPorts: nat.PortSet{
@@ -325,8 +326,13 @@ func (fn *Function) Start(imageName string) (string, error) {
 		},
 	}
 
+	if fn.Timeout != nil {
+		timeout := int(*fn.Timeout)
+		containerfn.StopTimeout = &timeout
+	}
+
 	// Create a container using the specified image
-	resp, err := fn.dockerClient.CLI.ContainerCreate(fn.ctx, containerfn, containerHostfn, &network.NetworkingConfig{}, nil, "")
+	resp, err := fn.dockerClient.CLI.ContainerCreate(fn.ctx, &containerfn, containerHostfn, &network.NetworkingConfig{}, nil, "")
 	if err != nil {
 		return "", err
 	}
