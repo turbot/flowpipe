@@ -1222,6 +1222,10 @@ func (suite *ModTestSuite) TestStepHttpTimeout() {
 	}
 
 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
 	assert.Equal("failed", pex.Status)
 
 	// Step #1
