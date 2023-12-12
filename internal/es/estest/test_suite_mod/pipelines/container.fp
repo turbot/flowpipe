@@ -9,7 +9,7 @@ pipeline "simple_container_step" {
       FOO = "bar"
     }
 
-    timeout            = 60
+    timeout            = 60000 // in ms
     memory             = 128
     memory_reservation = 64
     memory_swap        = 256
@@ -56,7 +56,7 @@ pipeline "simple_container_step_with_param" {
 
   param "timeout" {
     type    = number
-    default = 60
+    default = 60000 // in ms
   }
 
   param "memory" {
@@ -136,7 +136,7 @@ pipeline "simple_container_step_with_param_override" {
 
   param "timeout" {
     type    = number
-    default = 60
+    default = 60000 // in ms
   }
 
   param "memory" {
@@ -189,7 +189,7 @@ pipeline "simple_container_step_missing_image" {
       FOO = "bar"
     }
 
-    timeout = 60
+    timeout = 60000 // in ms
     memory  = 128
   }
 }
@@ -208,7 +208,86 @@ pipeline "simple_container_step_invalid_memory" {
       FOO = "bar"
     }
 
-    timeout = 60
+    timeout = 60000 // in ms
     memory  = 1
+  }
+}
+
+pipeline "simple_container_step_with_string_timeout" {
+
+  step "container" "container_test_1" {
+    image = "alpine:3.7"
+
+    cmd = [ "sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'" ]
+
+    env = {
+      FOO = "bar"
+    }
+
+    timeout            = "60s"
+    memory             = 128
+    memory_reservation = 64
+    memory_swap        = 256
+    memory_swappiness  = 10
+    read_only          = false
+    user               = "root"
+  }
+
+  output "stdout" {
+    value = step.container.container_test_1.stdout
+  }
+
+  output "stderr" {
+    value = step.container.container_test_1.stderr
+  }
+
+  output "exit_code" {
+    value = step.container.container_test_1.exit_code
+  }
+
+  output "lines" {
+    value = step.container.container_test_1.lines[*]
+  }
+}
+
+pipeline "simple_container_step_with_string_timeout_with_param" {
+
+  param "timeout" {
+    type    = string
+    default = "60s"
+  }
+
+  step "container" "container_test_1" {
+    image = "alpine:3.7"
+
+    cmd = [ "sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'" ]
+
+    env = {
+      FOO = "bar"
+    }
+
+    timeout            = param.timeout
+    memory             = 128
+    memory_reservation = 64
+    memory_swap        = 256
+    memory_swappiness  = 10
+    read_only          = false
+    user               = "root"
+  }
+
+  output "stdout" {
+    value = step.container.container_test_1.stdout
+  }
+
+  output "stderr" {
+    value = step.container.container_test_1.stderr
+  }
+
+  output "exit_code" {
+    value = step.container.container_test_1.exit_code
+  }
+
+  output "lines" {
+    value = step.container.container_test_1.lines[*]
   }
 }
