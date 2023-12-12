@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -15,17 +14,12 @@ import (
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process", api.listProcess)
 	router.GET("/process/:process_id", api.getProcess)
-	router.GET("/process/:process_id/output", api.getProcessOutput)
-	router.POST("/process/:process_id/command", api.cmdProcess)
 	router.GET("/process/:process_id/log/process.json", api.listProcessEventLog)
-	router.GET("/process/:process_id/log/process.jsonl", api.listProcessEventLogJSONLine)
-	router.GET("/process/:process_id/log/process.sps", api.listProcessSps)
 	router.GET("/process/:process_id/execution", api.getProcessExecution)
 }
 
@@ -179,124 +173,6 @@ func GetProcess(executionId string) (*types.Process, error) {
 	return &process, nil
 }
 
-// TODO: temp API for All Hands demo
-// @Summary Get process output
-// @Description Get process output
-// @ID   process_get_output
-// @Tags Process
-// @Accept json
-// @Produce json
-// / ...
-// @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
-// ...
-// @Success 200 {object} types.ProcessOutputData
-// @Failure 400 {object} perr.ErrorModel
-// @Failure 401 {object} perr.ErrorModel
-// @Failure 403 {object} perr.ErrorModel
-// @Failure 404 {object} perr.ErrorModel
-// @Failure 429 {object} perr.ErrorModel
-// @Failure 500 {object} perr.ErrorModel
-// @Router /process/{process_id}/output [get]
-func (api *APIService) getProcessOutput(c *gin.Context) {
-
-	var uri types.ProcessRequestURI
-	if err := c.ShouldBindUri(&uri); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	// evt := &event.Event{
-	// 	ExecutionID: uri.ProcessId,
-	// }
-
-	// // Open the JSON file
-	// file, err := os.Open(outputPath)
-	// if err != nil {
-	// 	common.AbortWithError(c, err)
-	// 	return
-	// }
-	// defer file.Close()
-
-	// // Decode JSON data
-	// var output map[string]interface{}
-	// decoder := json.NewDecoder(file)
-	// err = decoder.Decode(&output)
-	// if err != nil {
-	// 	common.AbortWithError(c, err)
-	// 	return
-	// }
-
-	// pipelineOutput := types.ProcessOutputData{
-	// 	ID:     evt.ExecutionID,
-	// 	Output: output,
-	// }
-
-	c.JSON(http.StatusOK, "")
-}
-
-func (api *APIService) cmdProcess(c *gin.Context) {
-	var uri types.ProcessRequestURI
-	if err := c.ShouldBindUri(&uri); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	// Validate input data
-	var input types.CmdProcess
-	if err := c.ShouldBindJSON(&input); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	if input.Command != "cancel" && input.Command != "pause" && input.Command != "resume" {
-		common.AbortWithError(c, perr.BadRequestWithMessage("invalid command"))
-		return
-	}
-
-	if input.Command == "cancel" {
-		// Raise the event.PipelineCancel event .. but will actually handled by command.PipelineCancel command handler
-		// the command to event binding is in the NewCommand() function
-		pipelineEvent := event.PipelineCancel{
-			Event:               event.NewEventForExecutionID(uri.ProcessId),
-			PipelineExecutionID: input.PipelineExecutionID,
-			ExecutionID:         uri.ProcessId,
-			Reason:              "because I said so",
-		}
-
-		if err := api.EsService.Send(pipelineEvent); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-	} else if input.Command == "pause" {
-		// Raise the event.PipelinePause event .. but will actually handled by command.PipelinePause command handler
-		// the command to event binding is in the NewCommand() function
-		pipelineEvent := &event.PipelinePause{
-			Event:               event.NewEventForExecutionID(uri.ProcessId),
-			PipelineExecutionID: input.PipelineExecutionID,
-			ExecutionID:         uri.ProcessId,
-			Reason:              "just because",
-		}
-
-		if err := api.EsService.Send(pipelineEvent); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-	} else if input.Command == "resume" {
-		pipelineEvent := &event.PipelineResume{
-			Event:               event.NewEventForExecutionID(uri.ProcessId),
-			PipelineExecutionID: input.PipelineExecutionID,
-			ExecutionID:         uri.ProcessId,
-			Reason:              "just because",
-		}
-
-		if err := api.EsService.Send(pipelineEvent); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-	}
-
-}
-
 // @Summary Get process log
 // @Description Get process log
 // @ID   process_get_log
@@ -339,63 +215,6 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, result)
-}
-
-func (api *APIService) listProcessEventLogJSONLine(c *gin.Context) {
-	var uri types.ProcessRequestURI
-	if err := c.ShouldBindUri(&uri); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	logEntries, err := execution.LoadEventStoreEntries(uri.ProcessId)
-	if err != nil {
-		common.AbortWithError(c, err)
-	}
-	result := types.ListProcessLogResponse{
-		Items: logEntries,
-	}
-	c.JSON(http.StatusOK, result)
-}
-
-// @Summary Get process snapshot
-// @Description Get process snapshot
-// @ID   process_get_snapshot
-// @Tags Process
-// @Produce json
-// / ...
-// @Param process_id path string true "The id of the process" format(^[a-z]{0,32}$)
-// ...
-// @Success 200 {object} execution.Snapshot
-// @Failure 400 {object} perr.ErrorModel
-// @Failure 401 {object} perr.ErrorModel
-// @Failure 403 {object} perr.ErrorModel
-// @Failure 404 {object} perr.ErrorModel
-// @Failure 429 {object} perr.ErrorModel
-// @Failure 500 {object} perr.ErrorModel
-// @Router /process/:process_id/log/process.sps [get]
-func (api *APIService) listProcessSps(c *gin.Context) {
-	var uri types.ProcessRequestURI
-	if err := c.ShouldBindUri(&uri); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	snapshotPath := path.Join(filepaths.EventStoreDir(), uri.ProcessId+".sps")
-
-	jsonBytes, err := os.ReadFile(snapshotPath)
-	if err != nil {
-		slog.Error("error reading sps file", "error", err, "file_path", snapshotPath)
-		common.AbortWithError(c, perr.InternalWithMessage("internal error"))
-		return
-	}
-
-	// Set the appropriate headers
-	c.Header("Content-Type", "application/json")
-	c.Header("Content-Disposition", "attachment; filename=process.sps")
-
-	// Return the JSON content
-	c.Data(http.StatusOK, "application/json", jsonBytes)
 }
 
 // @Summary Get process execution
