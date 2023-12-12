@@ -376,19 +376,19 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		for {
 			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling event logs")
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
 				return
 			}
 
 			err = printableResource.SetEvents(logs)
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "failed parsing logs")
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed parsing events")
 				return
 			}
 
 			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "failed printing logs")
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed printing events")
 				return
 			}
 
@@ -416,7 +416,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 	for {
 		exit, i, logs, err := pollEventLog(ctx, exec.ExecutionId, exec.PipelineExecutionId, lastIndex, pollLogFunc)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "failed polling event logs")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
 			return
 		}
 		lastIndex = i
