@@ -1210,6 +1210,41 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal("jerry garcia was 53", pex.PipelineOutput["text_1"].(map[string]interface{})["jerry"].(map[string]interface{})["value"])
 }
 
+func (suite *ModTestSuite) TestStepHttpTimeout() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_http_timeout", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+
+	// Step #1
+	stepOutput := pex.StepStatus["http.http_with_timeout_string"]["0"].StepExecutions[0].Output
+	stepError := stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+
+	// Step #2
+	stepOutput = pex.StepStatus["http.http_with_timeout_number"]["0"].StepExecutions[0].Output
+	stepError = stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+
+	// Step #3
+	stepOutput = pex.StepStatus["http.http_with_timeout_string_unresolved"]["0"].StepExecutions[0].Output
+	stepError = stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+
+	// Step #4
+	stepOutput = pex.StepStatus["http.http_with_timeout_number_unresolved"]["0"].StepExecutions[0].Output
+	stepError = stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+}
+
 func (suite *ModTestSuite) TestStepSleep() {
 	assert := assert.New(suite.T())
 

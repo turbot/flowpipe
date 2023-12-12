@@ -41,6 +41,7 @@ type HTTPInput struct {
 	RequestTimeoutMs int
 	CaCertPem        string
 	Insecure         bool
+	Timeout          time.Duration
 }
 
 func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -77,6 +78,26 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 		if requestHeaders["Authorization"] != nil && i[schema.BlockTypePipelineBasicAuth] != nil {
 			stepName := i[schema.AttributeTypeStepName].(string)
 			return perr.BadRequestWithMessage("step " + stepName + " should have either basic_auth or authorization header but not both")
+		}
+	}
+
+	if i[schema.AttributeTypeTimeout] != nil {
+		switch duration := i[schema.AttributeTypeTimeout].(type) {
+		case string:
+			_, err := time.ParseDuration(duration)
+			if err != nil {
+				return perr.BadRequestWithMessage("invalid sleep duration " + duration)
+			}
+		case int64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		case float64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		default:
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a string or a whole number")
 		}
 	}
 
@@ -130,6 +151,10 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	// Default value of insecure flag is false.
 	if inputParams.Insecure {
 		tlsConfig.InsecureSkipVerify = inputParams.Insecure
+	}
+
+	if inputParams.Timeout > 0 {
+		client.Timeout = inputParams.Timeout
 	}
 
 	// If the input parameter 'ca_cert_pem' is set, the client verifies the server's certificate chain using the provided PEM encoded CA certificates.
@@ -294,6 +319,19 @@ func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
 	}
 
 	inputParams.RequestHeaders = requestHeaders
+
+	if input[schema.AttributeTypeTimeout] != nil {
+		var timeout time.Duration
+		switch timeoutDuration := input[schema.AttributeTypeTimeout].(type) {
+		case string:
+			timeout, _ = time.ParseDuration(timeoutDuration)
+		case int64:
+			timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+		case float64:
+			timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+		}
+		inputParams.Timeout = timeout
+	}
 
 	return inputParams, nil
 }
