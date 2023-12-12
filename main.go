@@ -31,7 +31,7 @@ func main() {
 	}()
 
 	localcmdconfig.SetAppSpecificConstants()
-	log.SetupLogger()
+	log.SetDefaultLogger()
 	cache.InMemoryInitialize(nil)
 
 	// TODO kai can we pass these into SetAppSpecificConstants?

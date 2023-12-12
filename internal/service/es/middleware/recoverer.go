@@ -31,7 +31,7 @@ func PanicRecovererMiddleware(ctx context.Context) message.HandlerMiddleware {
 		return func(msg *message.Message) (messages []*message.Message, err error) {
 			panicked := true
 
-			panicLogger := log.GetLoggerWithLevelAndWriter(slog.LevelError, os.Stderr)
+			panicLogger := log.FlowpipeLoggerWithLevelAndWriter(slog.LevelError, os.Stderr)
 			defer func() {
 				if r := recover(); r != nil || panicked {
 					panicLogger.Error("Recovered from panic", "error", err)

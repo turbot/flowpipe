@@ -11,7 +11,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 )
 
-func GetLogger() *slog.Logger {
+func FlowipeLogger() *slog.Logger {
 	handlerOptions := &slog.HandlerOptions{
 		Level: getLogLevel(),
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -30,7 +30,7 @@ func GetLogger() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
 }
 
-func GetLoggerWithLevelAndWriter(level slog.Leveler, w io.Writer) *slog.Logger {
+func FlowpipeLoggerWithLevelAndWriter(level slog.Leveler, w io.Writer) *slog.Logger {
 	handlerOptions := &slog.HandlerOptions{
 		Level: level,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -50,8 +50,8 @@ func GetLoggerWithLevelAndWriter(level slog.Leveler, w io.Writer) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
 }
 
-func SetupLogger() {
-	logger := GetLogger()
+func SetDefaultLogger() {
+	logger := FlowipeLogger()
 	slog.SetDefault(logger)
 }
 
