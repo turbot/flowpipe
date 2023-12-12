@@ -212,53 +212,57 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
 	var resp map[string]any
 	var err error
-
 	var pollLogFunc pollEventLogFunc
 
-	// if a host is set, use it to connect to API server
-	if viper.IsSet(constants.ArgHost) {
-		// run pipeline on server
-		resp, err = runPipelineRemote(cmd, args)
-		pollLogFunc = pollServerEventLog
-	} else {
-		// run pipeline in-process
-		var m *manager.Manager
-		resp, m, err = runPipelineLocal(cmd, args)
-		// ensure to shut the manager when we are done
-		defer func() {
-			if m != nil {
-				_ = m.Stop()
-			}
-		}()
-
-		pollLogFunc = pollLocalEventLog
-
-	}
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error executing pipeline")
+	isDetach := viper.GetBool(constants.ArgDetach)
+	isRemote := viper.IsSet(constants.ArgHost)
+	if !isRemote && isDetach {
+		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
 		return
 	}
 
-	if viper.GetBool(constants.ArgDetach) {
-		exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining API response")
-			return
-		}
-		err = displayPipelineExecution(ctx, exec, cmd)
-		if err != nil {
-			error_helpers.ShowError(ctx, err)
-			return
-		}
-	} else {
-		output := viper.GetString(constants.ArgOutput)
-		switch output {
-		case "pretty", "plain":
-			displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
-		default:
-			displayBasicOutput(ctx, cmd, resp, pollLogFunc)
-		}
+	// if a host is set, use it to connect to API server
+	resp, pollLogFunc, err = executePipeline(cmd, args, isRemote)
+	if err != nil {
+		error_helpers.ShowErrorWithMessage(ctx, err, "failed executing pipeline")
+		return
 	}
+
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := output == "plain" || output == "pretty"
+	switch {
+	case isDetach:
+		err := displayDetached(ctx, cmd, resp)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed printing execution information")
+			return
+		}
+	case streamLogs:
+		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	default:
+		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+	}
+}
+
+func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (map[string]any, pollEventLogFunc, error) {
+	if isRemote {
+		// run pipeline on server
+		resp, err := runPipelineRemote(cmd, args)
+		pollLogFunc := pollServerEventLog
+		return resp, pollLogFunc, err
+	}
+	// run pipeline in-process
+	var m *manager.Manager
+	resp, m, err := runPipelineLocal(cmd, args)
+	// ensure to shut the manager when we are done
+	defer func() {
+		if m != nil {
+			_ = m.Stop()
+		}
+	}()
+
+	pollLogFunc := pollLocalEventLog
+	return resp, pollLogFunc, err
 }
 
 func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
@@ -306,6 +310,18 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 	return resp, m, err
 }
 
+func displayDetached(ctx context.Context, cmd *cobra.Command, resp map[string]any) error {
+	exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
+	if err != nil {
+		return err
+	}
+	err = displayPipelineExecution(ctx, exec, cmd)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
 	if resp != nil && resp["flowpipe"] != nil {
 		contents := resp["flowpipe"].(map[string]any)
@@ -315,13 +331,13 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		lastLoaded := ""
 
 		if s, ok := contents["execution_id"].(string); !ok {
-			error_helpers.ShowError(ctx, fmt.Errorf("Error obtaining execution_id"))
+			error_helpers.ShowError(ctx, fmt.Errorf("failed obtaining execution_id"))
 			return
 		} else {
 			executionId = s
 		}
 		if s, ok := contents["pipeline_execution_id"].(string); !ok {
-			error_helpers.ShowError(ctx, fmt.Errorf("Error obtaining pipeline_execution_id"))
+			error_helpers.ShowError(ctx, fmt.Errorf("failed obtaining pipeline_execution_id"))
 			return
 		} else {
 			pipelineId = s
@@ -335,7 +351,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 
 		printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error instantiating string printer")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed instantiating string printer")
 			return
 		}
 		printer.Sanitizer = sanitize.Instance
@@ -351,7 +367,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		printableResource.Items = header
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error writing execution header")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed writing execution header")
 			return
 		}
 
@@ -360,19 +376,19 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		for {
 			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error polling event logs")
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling event logs")
 				return
 			}
 
 			err = printableResource.SetEvents(logs)
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error parsing logs")
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed parsing logs")
 				return
 			}
 
 			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "Error printing logs")
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed printing logs")
 				return
 			}
 
@@ -391,7 +407,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
 	exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
 	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining execution")
+		error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining execution")
 		return
 	}
 
@@ -400,7 +416,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 	for {
 		exit, i, logs, err := pollEventLog(ctx, exec.ExecutionId, exec.PipelineExecutionId, lastIndex, pollLogFunc)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "Error polling event logs")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed polling event logs")
 			return
 		}
 		lastIndex = i
@@ -411,7 +427,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 				var e event.PipelineQueued
 				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
 				if e.PipelineExecutionID == exec.PipelineExecutionId {
@@ -423,7 +439,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 				var e event.PipelineStarted
 				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
 				if e.PipelineExecutionID == exec.PipelineExecutionId {
@@ -433,7 +449,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 				var e event.PipelineFinished
 				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
 				if e.PipelineExecutionID == exec.PipelineExecutionId {
@@ -444,7 +460,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 				var e event.PipelineFailed
 				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("error unmarshalling %s evemt", e.HandlerName()))
+					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
 				if e.PipelineExecutionID == exec.PipelineExecutionId {
@@ -470,6 +486,22 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string
 		error_helpers.ShowError(ctx, err)
 		return
 	}
+}
+
+func displayPipelineExecution(ctx context.Context, pe *types.FpPipelineExecution, cmd *cobra.Command) error {
+	printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
+	if err != nil {
+		return fmt.Errorf("error obtaining printer\n%v", err)
+	}
+	printableResource := types.PrintablePipelineExecution{
+		Items: []types.FpPipelineExecution{*pe},
+	}
+	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+	if err != nil {
+		return fmt.Errorf("error when printing\n%v", err)
+	}
+
+	return nil
 }
 
 func getPipelineArgs(cmd *cobra.Command) map[string]string {
@@ -625,20 +657,4 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 	}
 
 	return complete, currentIndex, res, nil
-}
-
-func displayPipelineExecution(ctx context.Context, pe *types.FpPipelineExecution, cmd *cobra.Command) error {
-	printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
-	if err != nil {
-		return fmt.Errorf("error obtaining printer\n%v", err)
-	}
-	printableResource := types.PrintablePipelineExecution{
-		Items: []types.FpPipelineExecution{*pe},
-	}
-	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-	if err != nil {
-		return fmt.Errorf("error when printing\n%v", err)
-	}
-
-	return nil
 }
