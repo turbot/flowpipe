@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
+	"os"
 
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -77,7 +78,9 @@ func NewPipelineFailed(ctx context.Context, opts ...PipelineFailedOption) *Pipel
 	for _, opt := range opts {
 		err := opt(e)
 		if err != nil {
-			log.Fatalf("error creating pipeline failed event: %v", err)
+			// TODO fix this to align with the rest of the event
+			slog.Error("error creating pipeline failed event", "error", err)
+			os.Exit(1)
 		}
 	}
 	return e

@@ -3,7 +3,7 @@ package command
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"os"
 	"sync"
 	"time"
@@ -69,7 +69,8 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 	// Marshal the struct to JSON
 	fileData, err := json.Marshal(logMessage) // No indent, single line
 	if err != nil {
-		log.Fatalf("Error marshalling JSON: %v", err)
+		slog.Error("Error marshalling JSON", "error", err)
+		os.Exit(1)
 	}
 
 	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)

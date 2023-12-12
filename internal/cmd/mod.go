@@ -4,7 +4,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -289,7 +290,7 @@ func runModInitCmd(cmd *cobra.Command, args []string) {
 	workspacePath := viper.GetString(constants.ArgModLocation)
 	_, err := createWorkspaceMod(cmd.Context(), cmd, workspacePath)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Error creating mod", "error", err)
+		os.Exit(1)
 	}
-
 }

@@ -1,7 +1,7 @@
 package estest
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,7 +34,8 @@ func StartServer() *http.Server {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Could not listen on %s: %v\n", server.Addr, err)
+			slog.Error("API server failed to start", "error", err)
+			os.Exit(1)
 		}
 	}()
 

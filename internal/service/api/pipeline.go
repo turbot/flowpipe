@@ -115,6 +115,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
+
 	getPipelineresponse, err := GetPipeline(uri.PipelineName)
 	if err != nil {
 		common.AbortWithError(c, err)

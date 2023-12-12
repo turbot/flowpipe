@@ -3,7 +3,7 @@ package execution
 import (
 	"bufio"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"os"
 
 	"strconv"
@@ -42,7 +42,7 @@ func LoadEventStoreEntries(executionID string) ([]types.EventLogEntry, error) {
 		// Parse the line into the Event struct
 		err := json.Unmarshal(line, &event)
 		if err != nil {
-			log.Println("Error parsing line:", err)
+			slog.Error("Error parsing line:", "error", err)
 			continue
 		}
 

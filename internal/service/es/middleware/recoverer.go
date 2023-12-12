@@ -3,11 +3,14 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime/debug"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/turbot/pipe-fittings/perr"
 	"log/slog"
+
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 // Holds the recovered panic's error along with the stacktrace.
@@ -28,9 +31,10 @@ func PanicRecovererMiddleware(ctx context.Context) message.HandlerMiddleware {
 		return func(msg *message.Message) (messages []*message.Message, err error) {
 			panicked := true
 
+			panicLogger := log.GetLoggerWithLevelAndWriter(slog.LevelError, os.Stderr)
 			defer func() {
 				if r := recover(); r != nil || panicked {
-					slog.Error("Recovered from panic", "error", err)
+					panicLogger.Error("Recovered from panic", "error", err)
 					recoveredPanicErr := RecoveredPanicError{V: r, Stacktrace: string(debug.Stack())}
 
 					// Flowpipe error by default is not retryable
@@ -38,7 +42,6 @@ func PanicRecovererMiddleware(ctx context.Context) message.HandlerMiddleware {
 					err = internalErr
 
 					// Must ack here otherwise Watermill will go to an infinite loop
-
 					// TODO: how do we retry? Should we do this in the router / Watermill? Or should we handle it in Flowpipe ES?
 					msg.Ack()
 				}

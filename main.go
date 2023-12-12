@@ -2,20 +2,13 @@ package main
 
 import (
 	"context"
-	"io"
-
-	"log/slog"
-	"os"
-	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/app_specific"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
@@ -38,7 +31,7 @@ func main() {
 	}()
 
 	localcmdconfig.SetAppSpecificConstants()
-	setupLogger()
+	log.SetupLogger()
 	cache.InMemoryInitialize(nil)
 
 	// TODO kai can we pass these into SetAppSpecificConstants?
@@ -50,47 +43,4 @@ func main() {
 
 	// Run the CLI
 	cmd.RunCLI(ctx)
-}
-
-func setupLogger() {
-	handlerOptions := &slog.HandlerOptions{
-		Level: getLogLevel(),
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			sanitized := sanitize.Instance.SanitizeKeyValue(a.Key, a.Value.Any())
-
-			return slog.Attr{
-				Key:   a.Key,
-				Value: slog.AnyValue(sanitized),
-			}
-		},
-	}
-
-	var logger *slog.Logger
-	if handlerOptions.Level == constants.LogLevelOff {
-		logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
-	} else {
-		logger = slog.New(slog.NewJSONHandler(os.Stderr, handlerOptions))
-	}
-
-	slog.SetDefault(logger)
-
-}
-
-func getLogLevel() slog.Leveler {
-	levelEnv := os.Getenv(app_specific.EnvLogLevel)
-
-	switch strings.ToLower(levelEnv) {
-	case "trace":
-		return constants.LogLevelTrace
-	case "debug":
-		return slog.LevelDebug
-	case "info":
-		return slog.LevelInfo
-	case "error":
-		return slog.LevelError
-	case "off":
-		return constants.LogLevelOff
-	default:
-		return constants.LogLevelOff
-	}
 }

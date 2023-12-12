@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"strings"
 	"time"
@@ -266,17 +265,17 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 		if c.State == "running" {
 			err = cli.ContainerStop(dc.ctx, c.ID, container.StopOptions{})
 			if err != nil {
-				log.Printf("failed to stop container %s: %s\n", c.ID, err)
+				slog.Warn(fmt.Sprintf("failed to stop container %s: %s", c.ID, err))
 			} else {
-				log.Printf("container %s stopped\n", c.ID)
+				slog.Info(fmt.Sprintf("container %s stopped\n", c.ID))
 			}
 		}
 		// Remove the container
 		err = cli.ContainerRemove(dc.ctx, c.ID, types.ContainerRemoveOptions{Force: true})
 		if err != nil {
-			log.Printf("failed to remove container %s: %s\n", c.ID, err)
+			slog.Warn(fmt.Sprintf("failed to remove container %s: %s\n", c.ID, err))
 		} else {
-			log.Printf("container %s deleted\n", c.ID)
+			slog.Info(fmt.Sprintf("container %s deleted\n", c.ID))
 		}
 	}
 
@@ -338,9 +337,9 @@ func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...
 		}
 		_, err = dc.CLI.ImageRemove(dc.ctx, image.ID, imgRemoveOpts)
 		if err != nil {
-			log.Printf("failed to remove image %s: %s\n", image.ID, err)
+			slog.Warn(fmt.Sprintf("failed to remove image %s: %s\n", image.ID, err))
 		} else {
-			log.Printf("image %s deleted\n", image.ID)
+			slog.Info(fmt.Sprintf("image %s deleted\n", image.ID))
 		}
 	}
 

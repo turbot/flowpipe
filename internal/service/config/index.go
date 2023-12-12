@@ -2,8 +2,9 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -12,8 +13,8 @@ import (
 )
 
 var ConfigDefaults = map[string]any{
-	// Set to debug or release - default to debug and envs override this to release as required
-	"environment": "debug",
+	// Gin environment
+	"environment": "release",
 
 	// Set to single or cluster - default to cluster and envs override this to single as required
 	"redis.mode": "redis",
@@ -77,7 +78,8 @@ func Initialize() {
 	baseUrl := viper.GetString("url.base")
 	u, err := url.Parse(baseUrl)
 	if err != nil {
-		log.Fatal("Unable to parse url.base", err)
+		slog.Error("Unable to parse url.base", "error", err)
+		os.Exit(1)
 	}
 
 	viper.Set("domain.base", u.Hostname())
