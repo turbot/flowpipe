@@ -34,7 +34,6 @@ func serverCmd() *cobra.Command {
 
 	cmdconfig.
 		OnCmd(cmd).
-		AddFilepathFlag(constants.ArgModLocation, ".", "The directory to load pipelines from. Defaults to the current directory.").
 		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
 		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "listen address port.").
 		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server")
