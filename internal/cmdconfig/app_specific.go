@@ -5,37 +5,45 @@ import (
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"os"
 	"path/filepath"
 	"strings"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
 func SetAppSpecificConstants() {
-	// set the default install dir
-	installDir, err := files.Tildefy("~/.flowpipe")
-	error_helpers.FailOnError(err)
-
-	app_specific.DefaultInstallDir = installDir
-	app_specific.DefaultConfigPath = strings.Join([]string{".", filepath.Join(installDir, "config")}, ":")
 	app_specific.AppName = "flowpipe"
+
 	// TODO unify version logic with steampipe and powerpipe
 	//app_specific.AppVersion
-	app_specific.AutoVariablesExtension = ".auto.fpvars"
-	//app_specific.ClientConnectionAppNamePrefix
-	//app_specific.ClientSystemConnectionAppNamePrefix
 
-	app_specific.DefaultVarsFileName = "flowpipe.fpvars"
-	//app_specific.DefaultWorkspaceDatabase
+	// set all app specific env var keys
 	app_specific.SetAppSpecificEnvVarKeys("FLOWPIPE_")
+
+	app_specific.AutoVariablesExtension = ".auto.fpvars"
+	app_specific.DefaultVarsFileName = "flowpipe.fpvars"
 	app_specific.EnvInputVarPrefix = "FP_VAR_"
 
 	app_specific.ConfigExtension = ".fpc"
 	app_specific.ModDataExtension = ".fp"
 	app_specific.ModFileName = "mod.fp"
 	app_specific.VariablesExtension = ".fpvars"
-	//app_specific.ServiceConnectionAppNamePrefix
 	app_specific.WorkspaceIgnoreFile = ".flowpipeignore"
 	app_specific.WorkspaceDataDir = ".flowpipe"
+
 	// set the command pre and post hooks
 	cmdconfig.CustomPreRunHook = preRunHook
+
+	// set the default install dir
+	defaultInstallDir, err := files.Tildefy("~/.flowpipe")
+	error_helpers.FailOnError(err)
+	app_specific.DefaultInstallDir = defaultInstallDir
+
+	// set the default config path
+	globalConfigPath := filepath.Join(defaultInstallDir, "config")
+	// check whether install-dir env has been set - if so, respect it
+	if envInstallDir, ok := os.LookupEnv(app_specific.EnvInstallDir); ok {
+		globalConfigPath = filepath.Join(envInstallDir, "config")
+	}
+	app_specific.DefaultConfigPath = strings.Join([]string{".", globalConfigPath}, ":")
 }
