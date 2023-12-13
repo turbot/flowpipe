@@ -1,13 +1,15 @@
 package cmdconfig
 
 import (
+	"fmt"
+	"maps"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"maps"
 )
 
 func initGlobalConfig() *modconfig.FlowpipeConfig {
@@ -35,7 +37,22 @@ func initGlobalConfig() *modconfig.FlowpipeConfig {
 		cmdconfig.SetDefaultsFromConfig(loader.ConfiguredProfile.ConfigMap(cmd))
 	}
 
+	validateConfig()
+
 	return nil
+}
+
+func validateConfig() {
+	validOutputFormats := map[string]struct{}{
+		constants.OutputFormatPretty: {},
+		constants.OutputFormatPlain:  {},
+		constants.OutputFormatJSON:   {},
+		constants.OutputFormatYAML:   {},
+	}
+	output := viper.GetString(constants.ArgOutput)
+	if _, ok := validOutputFormats[output]; !ok {
+		error_helpers.FailOnError(fmt.Errorf("invalid output format '%s'", output))
+	}
 }
 
 // build defaults, combine global and cmd specific defaults
