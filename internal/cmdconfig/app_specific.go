@@ -1,9 +1,9 @@
 package cmdconfig
 
 import (
-	"strings"
-	"path/filepath"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -37,10 +37,6 @@ func SetAppSpecificConstants() {
 	cmdconfig.CustomPreRunHook = preRunHook
 	cmdconfig.CustomPostRunHook = postRunHook
 
-	// Version check
-	app_specific.VersionCheckHost = "hub.flowpipe.io"
-	app_specific.VersionCheckPath = "api/cli/version/latest"
-
 	// set the default install dir
 	defaultInstallDir, err := files.Tildefy("~/.flowpipe")
 	error_helpers.FailOnError(err)
@@ -53,4 +49,10 @@ func SetAppSpecificConstants() {
 		globalConfigPath = filepath.Join(envInstallDir, "config")
 	}
 	app_specific.DefaultConfigPath = strings.Join([]string{".", globalConfigPath}, ":")
+
+	// Version check
+	app_specific.VersionCheckHost = "hub.flowpipe.io"
+	app_specific.VersionCheckPath = "api/cli/version/latest"
+
+
 }
