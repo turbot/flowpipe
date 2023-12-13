@@ -27,8 +27,9 @@ pipeline "with_functions" {
 
         runtime = "nodejs:18"
         handler = "index.handler"
-        src = "./functions/hello-nodejs"
-        event = param.event
+        src     = "./functions/hello-nodejs"
+        event   = param.event
+        timeout = 60000
 
         env = {
             AWS_REGION = param.aws_region
@@ -73,8 +74,9 @@ pipeline "with_functions_no_env_var" {
     step "function" "hello_nodejs_step" {
         runtime = "nodejs:18"
         handler = "index.handler"
-        src = "./functions/hello-nodejs"
-        event = param.event
+        src     = "./functions/hello-nodejs"
+        event   = param.event
+        timeout = "60s"
     }
 
     output "val" {
