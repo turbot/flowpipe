@@ -3,9 +3,9 @@ package api
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -21,6 +21,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	_ "github.com/swaggo/swag"
+	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/api/middleware"
 	"github.com/turbot/flowpipe/internal/service/api/service"
@@ -140,11 +141,11 @@ func (api *APIService) Start() error {
 	//   - Logs all requests, like a combined access and error log.
 	//   - Logs to stdout.
 	//   - RFC3339 with UTC time format.
-	// TODO should we configure an slogger for gin
-	router.Use(ginlogger.New(slog.Default()))
+	router.Use(ginlogger.New(log.FlowipeLogger()))
+
 	// Logs all panic to error log
 	//   - stack means whether output the stack info.
-	router.Use(ginrecovery.New(slog.Default()))
+	router.Use(ginrecovery.New(log.FlowpipeLoggerWithLevelAndWriter(slog.LevelDebug, os.Stderr)))
 
 	apiPrefixGroup := router.Group(common.APIPrefix())
 	apiPrefixGroup.Use(common.ValidateAPIVersion)
@@ -229,7 +230,8 @@ func (api *APIService) Start() error {
 	// it won't block the graceful shutdown handling below
 	// go func() {
 	// 	if err := api.httpsServer.ListenAndServeTLS("./service/certificate/server.crt", "./service/certificate/server.key"); err != nil && err != http.ErrServerClosed {
-	// 		log.Fatalf("listen: %s\n", err)
+	// slog.Error("API server failed to start", "error", err)
+	// os.Exit(1)
 	// 	}
 	// }()
 
@@ -237,7 +239,8 @@ func (api *APIService) Start() error {
 	// it won't block the graceful shutdown handling below
 	go func() {
 		if err := api.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			slog.Error("API server failed to start", "error", err)
+			os.Exit(1)
 		}
 	}()
 

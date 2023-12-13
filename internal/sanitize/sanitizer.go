@@ -36,6 +36,9 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"clientsecret",
 		"access_token",
 		"access_key",
+		"client_id",
+		"client_secret",
+		"tenant_id",
 		"sourcerecord",
 		"cert",
 		"privatekey",
@@ -64,6 +67,9 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"opsgenie_alert_api_key",
 		"opsgenie_incident_api_key",
 		"openai_api_key",
+		"azure_client_id",
+		"azure_client_secret",
+		"azure_tenent_id",
 	},
 	ExcludePatterns: []string{
 		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid

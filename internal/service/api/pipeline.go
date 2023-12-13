@@ -115,6 +115,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
+
 	getPipelineresponse, err := GetPipeline(uri.PipelineName)
 	if err != nil {
 		common.AbortWithError(c, err)
@@ -244,6 +245,7 @@ func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es
 		"flowpipe": map[string]interface{}{
 			"execution_id":          pipelineCmd.Event.ExecutionID,
 			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+			"pipeline":              pipelineCmd.Name,
 		},
 	}
 	return response, pipelineCmd, nil

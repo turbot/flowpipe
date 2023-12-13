@@ -3,6 +3,8 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
@@ -54,10 +56,22 @@ func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error 
 
 	// Validate the timeout attribute
 	if i[schema.AttributeTypeTimeout] != nil {
-		switch i[schema.AttributeTypeTimeout].(type) {
-		case float64, int64:
+		switch duration := i[schema.AttributeTypeTimeout].(type) {
+		case string:
+			_, err := time.ParseDuration(duration)
+			if err != nil {
+				return perr.BadRequestWithMessage("invalid sleep duration " + duration)
+			}
+		case int64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		case float64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
 		default:
-			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeTimeout + "' must be an integer")
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a string or a whole number")
 		}
 	}
 
@@ -202,16 +216,20 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	}
 
 	if input[schema.AttributeTypeTimeout] != nil {
-		var timeout int64
-		switch t := input[schema.AttributeTypeTimeout].(type) {
-		case float64:
-			timeout = int64(t)
+		var timeout time.Duration
+		switch timeoutDuration := input[schema.AttributeTypeTimeout].(type) {
+		case string:
+			timeout, _ = time.ParseDuration(timeoutDuration)
 		case int64:
-			timeout = t
-		default:
-			break
+			timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+		case float64:
+			timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
 		}
-		c.Timeout = &timeout
+		timeoutInMs := timeout.Milliseconds()
+
+		// Convert milliseconds to seconds, and round up to the nearest second
+		timeoutInSeconds := int64(math.Ceil(float64(timeoutInMs) / 1000))
+		c.Timeout = &timeoutInSeconds
 	}
 
 	if input[schema.AttributeTypeCpuShares] != nil {

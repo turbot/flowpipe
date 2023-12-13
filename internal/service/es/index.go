@@ -8,10 +8,11 @@ import (
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/pubsub/gochannel"
-	"github.com/denisss025/slog-watermill"
+	slogwatermill "github.com/denisss025/slog-watermill"
 	_ "github.com/garsue/watermillzap"
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/handler"
+	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -70,7 +71,7 @@ func (es *ESService) Start() error {
 		// OutputChannelBuffer: 10000,
 		// Persistent:          true,
 	}
-	wLogger := slogwatermill.New(slog.Default())
+	wLogger := slogwatermill.New(log.FlowipeLogger())
 	commandsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 

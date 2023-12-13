@@ -27,6 +27,22 @@ func TestSleepOK(t *testing.T) {
 	assert.Equal(float64(1), math.Floor(diff.Seconds()), "output does not match the provided duration")
 }
 
+func TestSleepWithDurationInNumber(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	q := Sleep{}
+	input := modconfig.Input(map[string]interface{}{"duration": int64(1000)})
+
+	output, err := q.Run(ctx, input)
+	assert.Nil(err)
+
+	startTime := output.Get("started_at").(time.Time)
+	finishTime := output.Get("finished_at").(time.Time)
+	diff := finishTime.Sub(startTime)
+	assert.Equal(float64(1), math.Floor(diff.Seconds()), "output does not match the provided duration")
+}
+
 func TestSleepInvalidDuration(t *testing.T) {
 	ctx := context.Background()
 
@@ -39,5 +55,20 @@ func TestSleepInvalidDuration(t *testing.T) {
 
 	fpErr := err.(perr.ErrorModel)
 	assert.Equal("invalid sleep duration 5", fpErr.Detail)
+	assert.Equal(400, fpErr.Status)
+}
+
+func TestSleepNegativeDuration(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	q := Sleep{}
+	input := modconfig.Input(map[string]interface{}{"duration": int64(-1)})
+
+	_, err := q.Run(ctx, input)
+	assert.NotNil(err)
+
+	fpErr := err.(perr.ErrorModel)
+	assert.Equal("The attribute 'duration' must be a positive whole number", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }

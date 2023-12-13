@@ -326,6 +326,7 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptio
 type ParsedEventRegistryItem struct {
 	Name    string
 	Started time.Time
+	Args    *modconfig.Input
 }
 
 type PrintableParsedEvent struct {
@@ -356,7 +357,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
-			p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt}
+			p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt, &e.Args}
 		case event.HandlerPipelineStarted:
 			var e event.PipelineStarted
 			err := json.Unmarshal([]byte(log.Payload), &e)
@@ -364,15 +365,21 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 			fullName := "unknown.unknown"
+			var args modconfig.Input
 			if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
-				p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{entry.Name, e.Event.CreatedAt}
+				p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{entry.Name, e.Event.CreatedAt, entry.Args}
 				fullName = entry.Name
+				args = *entry.Args
 			}
-			parsed := ParsedEvent{
-				ParsedEventPrefix: NewPrefix(fullName),
-				Type:              log.EventType,
-				Message:           "Starting pipeline",
-				execId:            e.Event.ExecutionID,
+			parsed := ParsedEventWithInput{
+				ParsedEvent: ParsedEvent{
+					ParsedEventPrefix: NewPrefix(fullName),
+					Type:              log.EventType,
+					StepType:          "pipeline",
+					execId:            e.Event.ExecutionID,
+				},
+				Input:  args,
+				isSkip: false,
 			}
 			out = append(out, parsed)
 		case event.HandlerPipelineFinished:
@@ -464,7 +471,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 
-			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt}
+			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt, &e.StepInput}
 
 			pipeline := p.Registry[e.PipelineExecutionID]
 			fullStepName := e.StepName
@@ -613,7 +620,7 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 	kind := reflect.TypeOf(input).Kind()
 	switch kind {
 	case reflect.Bool:
-		return au.Sprintf("%s", au.Yellow(input))
+		return au.Sprintf("%t", au.Yellow(input))
 	case reflect.String:
 		return au.Sprintf("%s", au.Green(input))
 	case
@@ -632,8 +639,9 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 		reflect.Uint32,
 		reflect.Uint64:
 		return au.Sprintf("%d", au.Cyan(input))
+	default:
+		return ""
 	}
-	return ""
 }
 
 func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts RenderOptions) string {
@@ -655,7 +663,11 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 				valueString = string(s)
 			}
 		}
-		out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
+		if typeString == "" {
+			out += fmt.Sprintf("%s %s = %s\n", prefix, au.Blue(key), valueString)
+		} else {
+			out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
+		}
 	}
 	return out
 }

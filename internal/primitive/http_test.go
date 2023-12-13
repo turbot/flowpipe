@@ -479,3 +479,35 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	}
 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
+
+func TestHTTPMethodGETWithTimeoutNumber(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:     "https://steampipe.io/",
+		schema.AttributeTypeTimeout: int64(1),
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "Client.Timeout exceeded")
+}
+
+func TestHTTPMethodGETWithTimeoutString(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := HTTPRequest{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeUrl:     "https://steampipe.io/",
+		schema.AttributeTypeTimeout: "1ms",
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "Client.Timeout exceeded")
+}

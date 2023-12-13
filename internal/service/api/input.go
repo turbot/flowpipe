@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -81,14 +81,12 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 
 		decodedValue, err := url.QueryUnescape(string(bodyBytes))
 		if err != nil {
-			log.Fatal(err)
+			slog.Error("error decoding body", "error", err)
+			os.Exit(1)
 			return
 		}
 
 		decodedValue = decodedValue[8:]
-
-		// TODO: Remove this log
-		// slog.Info("decodedValue", "decodedValue>>>>>", decodedValue)
 
 		var bodyJSON map[string]interface{}
 		err = json.Unmarshal([]byte(decodedValue), &bodyJSON)

@@ -56,7 +56,6 @@ linters-settings:
         # Packages that are not allowed where the value is a suggestion.
         deny:
           - pkg: "go.uber.org/zap"
-            desc: do not use Uber zap directly, use the fplog package instead
+            desc: Do not use Uber zap, use slog instead
           - pkg: "github.com/pkg/errors"
             desc: Should be replaced by standard lib errors package
-

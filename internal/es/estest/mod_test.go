@@ -4,6 +4,7 @@ package estest
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"path"
@@ -1209,6 +1210,75 @@ func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert.Equal("jerry garcia was 53", pex.PipelineOutput["text_1"].(map[string]interface{})["jerry"].(map[string]interface{})["value"])
 }
 
+func (suite *ModTestSuite) TestStepHttpTimeout() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_http_timeout", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+
+	// Step #1
+	stepOutput := pex.StepStatus["http.http_with_timeout_string"]["0"].StepExecutions[0].Output
+	stepError := stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+
+	// Step #2
+	stepOutput = pex.StepStatus["http.http_with_timeout_number"]["0"].StepExecutions[0].Output
+	stepError = stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+
+	// Step #3
+	stepOutput = pex.StepStatus["http.http_with_timeout_string_unresolved"]["0"].StepExecutions[0].Output
+	stepError = stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+
+	// Step #4
+	stepOutput = pex.StepStatus["http.http_with_timeout_number_unresolved"]["0"].StepExecutions[0].Output
+	stepError = stepOutput.Errors[0].Error
+	assert.Contains(stepError.Detail, "Client.Timeout exceeded")
+}
+
+func (suite *ModTestSuite) TestStepSleep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.pipeline_with_sleep_step_int_duration", 200*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+	assert.Equal(1, len(pex.StepStatus["sleep.sleep_test"]))
+
+	outputData := pex.StepStatus["sleep.sleep_test"]["0"].StepExecutions[0].Output.Data
+	startTime, _ := time.Parse(outputData[schema.AttributeTypeStartedAt].(string), time.RFC3339)
+	finishTime, _ := time.Parse(outputData[schema.AttributeTypeFinishedAt].(string), time.RFC3339)
+	diff := finishTime.Sub(startTime)
+	assert.Equal(float64(0), math.Floor(diff.Seconds()), "output does not match the provided duration")
+
+}
+
 func (suite *ModTestSuite) TestNestedPipelineErrorBubbleUp() {
 	assert := assert.New(suite.T())
 	_, cmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.validate_error", 500*time.Millisecond, nil)
@@ -2359,7 +2429,7 @@ func (suite *ModTestSuite) TestContainerStep() {
 	input := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Input
 	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
 	assert.Equal("root", input[schema.AttributeTypeUser].(string))
-	assert.Equal(float64(60), input[schema.AttributeTypeTimeout].(float64))
+	assert.Equal(float64(60000), input[schema.AttributeTypeTimeout].(float64))
 	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
 	assert.Equal(float64(64), input[schema.AttributeTypeMemoryReservation].(float64))
 	assert.Equal(float64(256), input[schema.AttributeTypeMemorySwap].(float64))
@@ -2421,7 +2491,7 @@ func (suite *ModTestSuite) TestContainerStepWithParam() {
 	input := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Input
 	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
 	assert.Equal("root", input[schema.AttributeTypeUser].(string))
-	assert.Equal(float64(60), input[schema.AttributeTypeTimeout].(float64))
+	assert.Equal(float64(60000), input[schema.AttributeTypeTimeout].(float64))
 	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
 	assert.Equal(float64(64), input[schema.AttributeTypeMemoryReservation].(float64))
 	assert.Equal(float64(256), input[schema.AttributeTypeMemorySwap].(float64))
@@ -2465,7 +2535,7 @@ func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
 
 	pipelineInput := modconfig.Input{
 		"user":    "root",
-		"timeout": 120,
+		"timeout": 120000,
 	}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_container_step_with_param_override", 500*time.Millisecond, pipelineInput)
@@ -2486,7 +2556,7 @@ func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
 	input := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Input
 	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
 	assert.Equal("root", input[schema.AttributeTypeUser].(string))
-	assert.Equal(float64(120), input[schema.AttributeTypeTimeout].(float64))
+	assert.Equal(float64(120000), input[schema.AttributeTypeTimeout].(float64))
 	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
 	assert.Equal(false, input[schema.AttributeTypeReadOnly].(bool))
 
@@ -2567,6 +2637,130 @@ func (suite *ModTestSuite) TestContainerStepInvalidMemory() {
 	assert.Equal(1, len(pex.Errors))
 	assert.Equal(int(500), pex.Errors[0].Error.Status)
 	assert.Contains(pex.Errors[0].Error.Detail, "Minimum memory limit allowed is 6MB")
+}
+
+func (suite *ModTestSuite) TestContainerStepWithStringTimeout() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_container_step_with_string_timeout", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	// Validate inputs
+	input := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Input
+	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
+	assert.Equal("root", input[schema.AttributeTypeUser].(string))
+	assert.Equal("60s", input[schema.AttributeTypeTimeout].(string))
+	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
+	assert.Equal(float64(64), input[schema.AttributeTypeMemoryReservation].(float64))
+	assert.Equal(float64(256), input[schema.AttributeTypeMemorySwap].(float64))
+	assert.Equal(float64(10), input[schema.AttributeTypeMemorySwappiness].(float64))
+	assert.Equal(false, input[schema.AttributeTypeReadOnly].(bool))
+
+	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
+		assert.Fail("Cmd should be an array of strings")
+	}
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
+
+	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
+		assert.Fail("Cmd should be a map")
+	}
+	assert.Equal("bar", input[schema.AttributeTypeEnv].(map[string]interface{})["FOO"].(string))
+
+	output := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+	assert.Equal("", output.Data["stderr"])
+	assert.Equal(float64(0), output.Data["exit_code"])
+
+	if _, ok := output.Data["lines"].([]interface{}); !ok {
+		assert.Fail("Container ID should be a list of strings")
+	}
+	lines := output.Data["lines"].([]interface{})
+	assert.Equal(3, len(lines))
+
+	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+}
+
+func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_container_step_with_string_timeout_with_param", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	// Validate inputs
+	input := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Input
+	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
+	assert.Equal("root", input[schema.AttributeTypeUser].(string))
+	assert.Equal("60s", input[schema.AttributeTypeTimeout].(string))
+	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
+	assert.Equal(float64(64), input[schema.AttributeTypeMemoryReservation].(float64))
+	assert.Equal(float64(256), input[schema.AttributeTypeMemorySwap].(float64))
+	assert.Equal(float64(10), input[schema.AttributeTypeMemorySwappiness].(float64))
+	assert.Equal(false, input[schema.AttributeTypeReadOnly].(bool))
+
+	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
+		assert.Fail("Cmd should be an array of strings")
+	}
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
+
+	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
+		assert.Fail("Cmd should be a map")
+	}
+	assert.Equal("bar", input[schema.AttributeTypeEnv].(map[string]interface{})["FOO"].(string))
+
+	output := pex.StepStatus["container.container_test_1"]["0"].StepExecutions[0].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+	assert.Equal("", output.Data["stderr"])
+	assert.Equal(float64(0), output.Data["exit_code"])
+
+	if _, ok := output.Data["lines"].([]interface{}); !ok {
+		assert.Fail("Container ID should be a list of strings")
+	}
+	lines := output.Data["lines"].([]interface{})
+	assert.Equal(3, len(lines))
+
+	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+
+	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
+	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
 }
 
 func (suite *ModTestSuite) TestBufferTokenTooLarge() {
