@@ -42,10 +42,22 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+  - id: homebrew
+    files:
+      - none*
+    format: zip
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+    - goos: linux
+      format: tar.gz
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
+
 changelog:
   skip: true
   sort: asc
@@ -53,3 +65,19 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
+
+brews:
+  - ids:
+      - homebrew
+    name: flowpipe@{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+    tap:
+      owner: turbot
+      name: homebrew-tap
+      branch: flowpipe-brew
+    folder: Formula
+    url_template: "https://github.com/turbot/flowpipe/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    homepage: "https://flowpipe.io/"
+    description: "Flowpipe: The cloud scripting engine."
+    skip_upload: auto
+    install: |-
+      bin.install "flowpipe"
