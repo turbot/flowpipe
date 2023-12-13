@@ -1,6 +1,11 @@
 #!/bin/sh
 # TODO(everyone): Keep this script simple and easily auditable.
 
+# Function to check if a command exists
+command_exists() {
+    type "$1" &> /dev/null
+}
+
 set -e
 
 if ! command -v tar >/dev/null; then
@@ -18,17 +23,24 @@ if ! command -v install >/dev/null; then
 	exit 1
 fi
 
-if ! command -v netstat >/dev/null; then
-	echo "Error: 'netstat' is required to install Flowpipe." 1>&2
-	exit 1
-fi
-
 if command -v flowpipe >/dev/null; then
-    # Check if port 7103 is in use
-    if netstat -an | grep ':7103' >/dev/null; then
-        echo "Error: Port 7103 is already in use. Please stop the service using this port before running installation." 1>&2
-        exit 1
-    fi
+	# Check if port 7103 is in use
+	if command_exists ss; then
+		# Use ss if available
+		if ss -lnt | grep ':7103' >/dev/null; then
+			echo "Error: Port 7103 is already in use. Please stop the service using this port before running installation." 1>&2
+			exit 1
+		fi
+	elif command_exists netstat; then
+		# Fallback to netstat if ss is not available
+		if netstat -an | grep ':7103' >/dev/null; then
+			echo "Error: Port 7103 is already in use. Please stop the service using this port before running installation." 1>&2
+			exit 1
+		fi
+	else
+		echo "Error: Neither ss nor netstat command is available." 1>&2
+		exit 1
+	fi
 fi
 
 if [ "$OS" = "Windows_NT" ]; then
