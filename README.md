@@ -51,7 +51,6 @@ Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for
   <a href="https://hub.flowpipe.io/mods/turbot/azure">Azure</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/gcp">GCP</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/github">GitHub</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/googleworkspace">GoogleWorkspace</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/jira">Jira</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/okta">Okta</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/pagerduty">PagerDuty</a>, 
@@ -60,7 +59,7 @@ Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for
   <a href="https://hub.flowpipe.io/mods/turbot/teams">Teams</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/zendesk">Zendesk</a> ... and many more!
 
-Check out [Flowpipe samples](https://hub-flowpipe-io-git-development-turbot.vercel.app/?type=samples) for ready-to-run samples that use various library mods.
+Check out [Flowpipe samples](https://hub.flowpipe.io/?type=samples) for ready-to-run samples that use various library mods.
 
 ## Developing
 
