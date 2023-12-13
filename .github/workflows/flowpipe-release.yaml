@@ -88,6 +88,16 @@ jobs:
     needs: [build_and_release]
     runs-on: ubuntu-latest
     steps:
+      - name: Calculate version
+        id: calculate_version
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
+
+
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1
@@ -121,9 +131,16 @@ jobs:
     if: ${{ github.event.inputs.environment == 'Final' }}
     needs: [ensure_branch_in_homebrew]
     runs-on: ubuntu-latest
-    env:
-      Version: ${{ github.event.inputs.version }}
     steps:
+      - name: Calculate version
+        id: calculate_version
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
+
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1
@@ -162,9 +179,16 @@ jobs:
     if: ${{ github.event.inputs.environment == 'Final' }}
     needs: [create_pr_in_homebrew]
     runs-on: ubuntu-latest
-    env:
-      Version: ${{ github.event.inputs.version }}
     steps:
+      - name: Calculate version
+        id: calculate_version
+        run: |
+          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
+
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@v1
