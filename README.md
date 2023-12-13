@@ -119,14 +119,12 @@ Now run a simple pipeline:
 
 That's it! You're ready to start developing.
 
-There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the [Developer Setup](#developer-setup) section for more details.
+There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the Developer Setup section for more details.
 
 </details>
 
 <details>
 <summary>Developer Setup</summary>
-
-### Flowpipe Development Setup
 
 1. Install [Docker](https://docs.docker.com/get-docker/)
 
