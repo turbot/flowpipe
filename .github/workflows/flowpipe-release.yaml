@@ -26,7 +26,6 @@ env:
 jobs:
   ensure_branch_in_homebrew:
     name: Ensure branch exists in homebrew-tap
-    if: ${{ github.event.inputs.environment == 'Final' }}
     runs-on: ubuntu-latest
     steps:
       - name: Calculate version
