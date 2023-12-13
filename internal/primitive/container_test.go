@@ -2,28 +2,14 @@ package primitive
 
 import (
 	"context"
-	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/container"
-	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
-
-func initializeCocker() {
-	ctx := context.Background()
-	// Start MailHog server as a separate process
-	slog.Debug("Initializing Docker")
-
-	err := docker.Initialize(ctx)
-	if err != nil {
-		slog.Error("Failed to start MailHog", "error", err.Error())
-	}
-	slog.Debug("Docker initialized")
-}
 
 func TestSimpleContainerStep(t *testing.T) {
 	ctx := context.Background()

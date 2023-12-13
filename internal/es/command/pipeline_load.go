@@ -4,9 +4,11 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 type PipelineLoadHandler CommandHandler
@@ -35,7 +37,25 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 
 	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+		}
+		return nil
+	}
+
+	for _, step := range defn.Steps {
+		if step.GetType() == schema.BlockTypePipelineStepContainer || step.GetType() == schema.BlockTypePipelineStepFunction {
+			err := docker.Initialize(ctx)
+			if err != nil {
+				slog.Error("Error initializing Docker client", "error", err)
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, perr.InternalWithMessage("Error initializing Docker client")))
+				if err2 != nil {
+					slog.Error("Error publishing PipelineFailed event", "error", err2)
+				}
+				return nil
+			}
+		}
 	}
 
 	e := event.NewPipelineLoadedFromPipelineLoad(cmd, defn)
