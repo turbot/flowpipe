@@ -238,6 +238,7 @@ func (api *APIService) Start() error {
 	// Initializing the server in a goroutine so that
 	// it won't block the graceful shutdown handling below
 	go func() {
+		fmt.Println("Flowpipe server listening on", api.httpServer.Addr) //nolint:forbidigo // Output
 		if err := api.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("API server failed to start", "error", err)
 			os.Exit(1)

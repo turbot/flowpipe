@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -26,6 +27,8 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("invalid event type", "expected", "*event.PipelineStarted", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineStarted")
 	}
+
+	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline started", e.Event.ExecutionID))
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStarted(e))
 	if err != nil {

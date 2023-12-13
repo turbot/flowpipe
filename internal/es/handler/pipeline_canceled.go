@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	"log/slog"
 
@@ -34,6 +35,8 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 	if err != nil {
 		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
+
+	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline cancelled", e.Event.ExecutionID))
 
 	event.ReleaseEventLogMutex(e.Event.ExecutionID)
 

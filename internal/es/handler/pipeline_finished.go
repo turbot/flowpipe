@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -78,6 +79,8 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("Pipeline definition not found", "error", err)
 		return err
 	}
+
+	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s finished", e.Event.ExecutionID, pipelineDefn.FullName))
 
 	if len(pipelineDefn.OutputConfig) > 0 {
 		data[schema.BlockTypePipelineOutput] = e.PipelineOutput

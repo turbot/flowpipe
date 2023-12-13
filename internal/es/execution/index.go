@@ -3,8 +3,10 @@ package execution
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"strconv"
 
@@ -14,6 +16,15 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
 )
+
+// TODO: make this better
+var Mode string
+
+func ServerOutput(output string) {
+	if Mode == "server" {
+		fmt.Printf("%s %s\n", time.Now().Format(time.RFC3339), output) //nolint:forbidigo // Output
+	}
+}
 
 func LoadEventStoreEntries(executionID string) ([]types.EventLogEntry, error) {
 

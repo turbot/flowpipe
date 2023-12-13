@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -25,6 +26,8 @@ func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 		slog.Error("invalid command type", "expected", "*event.PipelineQueue", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineQueue")
 	}
+
+	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s queue", cmd.Event.ExecutionID, cmd.Name))
 
 	e, err := event.NewPipelineQueued(event.ForPipelineQueue(cmd))
 	if err != nil {

@@ -3,6 +3,7 @@ package es
 import (
 	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -181,9 +182,11 @@ func (es *ESService) Start() error {
 
 	// processors are based on router, so they will work when router will start
 	go func() {
+		// fmt.Println("Event Sourcing engine started") //nolint:forbidigo // Output
 		err := router.Run(es.ctx)
 		if err != nil {
-			panic(err)
+			slog.Error("Error running event sourcing enging", "error", err)
+			os.Exit(1)
 		}
 	}()
 

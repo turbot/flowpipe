@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -59,6 +60,14 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 		return h.CommandBus.Send(ctx, cmd)
 	}
+
+	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
+	if err != nil {
+		slog.Error("Pipeline definition not found", "error", err)
+		return err
+	}
+
+	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s failed", e.Event.ExecutionID, pipelineDefn.FullName))
 
 	// Sanitize event store file
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
