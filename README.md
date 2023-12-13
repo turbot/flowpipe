@@ -19,9 +19,9 @@ to the people, systems and data that matter.
 
 **Code, not clicks**. Build and deploy DevOps workflows like infrastructure. Code in HCL and deploy from version control.
 
-## Flowpipe in action
+## Flowpipe Demo
 
-<img width="524" src="https://steampipe.io/images/steampipe-sql-demo.gif" />
+[![Flowpipe Demo](https://img.youtube.com/vi/h4mWhMzaS7Y/0.jpg)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
 
 ## Getting Started
 
