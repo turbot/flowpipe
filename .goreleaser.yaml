@@ -62,6 +62,6 @@ brews:
     url_template: "https://github.com/turbot/flowpipe/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://flowpipe.io/"
     description: "Flowpipe: The cloud scripting engine."
-    skip_upload: auto
+    # skip_upload: auto
     install: |-
       bin.install "flowpipe"
