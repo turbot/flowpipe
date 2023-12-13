@@ -46,7 +46,8 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 
 	for _, step := range defn.Steps {
 		if step.GetType() == schema.BlockTypePipelineStepContainer || step.GetType() == schema.BlockTypePipelineStepFunction {
-			err := docker.Initialize(ctx)
+			// TODO: If I pass ctx here Docker will initialize OK but then fail when we're trying to use it later. Not sure why, worth investigating
+			err := docker.Initialize(context.Background())
 			if err != nil {
 				slog.Error("Error initializing Docker client", "error", err)
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, perr.InternalWithMessage("Error initializing Docker client")))
@@ -55,6 +56,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 				}
 				return nil
 			}
+			break
 		}
 	}
 

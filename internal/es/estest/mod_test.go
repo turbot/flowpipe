@@ -2368,8 +2368,6 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 	assert.NotNil(pex.Errors)
 	assert.Equal(1, len(pex.Errors))
 	assert.Contains(pex.Errors[0].Error.Detail, "InvalidClientTokenId")
-
-	//
 }
 
 func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {
