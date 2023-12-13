@@ -9,12 +9,6 @@ func WithESService() ManagerOption {
 	}
 }
 
-func WithDocker() ManagerOption {
-	return func(m *Manager) {
-		m.startup |= startDocker
-	}
-}
-
 func WithServerConfig(addr string, port int) ManagerOption {
 	return func(m *Manager) {
 
@@ -33,6 +27,6 @@ func WithServerConfig(addr string, port int) ManagerOption {
 
 		}
 		m.HTTPPort = port
-		m.startup |= startDocker | startES | startAPI | startScheduler
+		m.startup |= startES | startAPI | startScheduler
 	}
 }

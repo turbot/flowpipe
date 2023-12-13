@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
@@ -80,11 +79,6 @@ func (suite *DefaultModTestSuite) SetupSuite() {
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 	suite.esService = m.ESService
-
-	err = docker.Initialize(ctx)
-	if err != nil {
-		panic(err)
-	}
 
 	suite.manager = m
 

@@ -2,7 +2,6 @@ package primitive
 
 import (
 	"context"
-	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,20 +12,13 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-func initializeCocker() {
+func TestSimpleContainerStep(t *testing.T) {
 	ctx := context.Background()
-	// Start MailHog server as a separate process
-	slog.Debug("Initializing Docker")
 
 	err := docker.Initialize(ctx)
 	if err != nil {
-		slog.Error("Failed to start MailHog", "error", err.Error())
+		assert.Fail(t, "Error initializing Docker client", err)
 	}
-	slog.Debug("Docker initialized")
-}
-
-func TestSimpleContainerStep(t *testing.T) {
-	ctx := context.Background()
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -74,6 +66,11 @@ func TestSimpleContainerStep(t *testing.T) {
 func TestContainerStepMissingImage(t *testing.T) {
 	ctx := context.Background()
 
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
+
 	assert := assert.New(t)
 	hr := Container{}
 
@@ -84,7 +81,7 @@ func TestContainerStepMissingImage(t *testing.T) {
 		schema.LabelName:            "container_test",
 	})
 
-	_, err := hr.Run(ctx, input)
+	_, err = hr.Run(ctx, input)
 	assert.NotNil(err)
 
 	fpErr := err.(perr.ErrorModel)

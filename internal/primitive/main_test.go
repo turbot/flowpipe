@@ -10,9 +10,6 @@ func TestMain(m *testing.M) {
 	// Start MailHog before running tests
 	startMailHog()
 
-	// Initialize Docker
-	initializeCocker()
-
 	time.Sleep(2 * time.Second) // Wait for the server to be ready
 
 	// Run tests

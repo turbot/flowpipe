@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -18,8 +19,22 @@ import (
 
 var GlobalDockerClient *DockerClient
 
+var dockerInitializeMutex sync.Mutex
+
 func Initialize(ctx context.Context) error {
-	slog.Info("Initializing Docker client")
+	slog.Info("Initializing Docker client, attempting to lock")
+	dockerInitializeMutex.Lock()
+	defer func() {
+		slog.Info("Docker client initialization complete, releasing lock")
+		dockerInitializeMutex.Unlock()
+	}()
+
+	if GlobalDockerClient != nil {
+		slog.Info("Docker client already initialized")
+		return nil
+	}
+	slog.Info("Lock acquired, initializing Docker client")
+
 	dc, err := New(WithContext(ctx), WithPingTest())
 	if err != nil {
 		slog.Error("Failed to initialize Docker client", "error", err)
@@ -114,7 +129,7 @@ func (dc *DockerClient) ImageExists(imageName string) (bool, error) {
 		if client.IsErrNotFound(err) {
 			return false, nil
 		}
-		return false, fmt.Errorf("error checking for image %s: %v", imageName, err)
+		return false, perr.InternalWithMessage(fmt.Sprintf("error checking for image %s: %v", imageName, err.Error()))
 	}
 	return true, nil
 }
