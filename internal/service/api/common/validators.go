@@ -8,6 +8,6 @@ func APIVersionValidator() validator.Func {
 		if !ok {
 			return false
 		}
-		return version == "v0" || version == "v1" || version == "latest"
+		return version == "v0" || version == "latest"
 	}
 }

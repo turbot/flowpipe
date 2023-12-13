@@ -170,16 +170,17 @@ func (c *Container) Run() (string, int, error) {
 		imageExistsStart := time.Now()
 		imageExists, err := c.dockerClient.ImageExists(c.Image)
 
-		slog.Info("image exists", "since", time.Since(imageExistsStart), "image", c.Image)
+		slog.Info("image exists check completed", "since", time.Since(imageExistsStart), "image", c.Image)
 
 		if err != nil {
+			slog.Error("image exists check error", "error", err)
 			return containerID, -1, perr.InternalWithMessage("Error checking if image exists: " + err.Error())
 		}
 
 		if !imageExists {
 			imagePullStart := time.Now()
 			err = c.dockerClient.ImagePull(c.Image)
-			slog.Info("image pull", "elapsed", time.Since(imagePullStart), "image", c.Image)
+			slog.Info("image pull completed", "elapsed", time.Since(imagePullStart), "image", c.Image)
 
 			if err != nil {
 				return containerID, -1, perr.InternalWithMessage("Error pulling image: " + err.Error())
