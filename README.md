@@ -86,6 +86,8 @@ make
 Check the version:
 ```sh
 ./flowpipe --version
+```
+```
 Flowpipe v0.0.1-local.1
 ```
 
@@ -95,6 +97,8 @@ Try it!
 
 ```sh
 ./flowpipe pipeline list --mod-location ./internal/es/estest/test_suite_mod/
+```
+```
 MOD                   NAME                                                                                                        DESCRIPTION
 mod.mod_depend_a      mod_depend_a.pipeline.echo_one_depend_a
 mod.test_suite_mod    test_suite_mod.pipeline.any_param
@@ -107,6 +111,8 @@ mod.test_suite_mod    test_suite_mod.pipeline.bad_http_not_ignored              
 Now run a simple pipeline:
 ```sh
 ./flowpipe pipeline run --mod-location ./internal/es/estest/test_suite_mod/ simple
+```
+```
 [flowpipe] Execution ID: exec_clsm62ko47mjp5f74730
 [simple] Starting pipeline
 [simple.echo] Starting transform
