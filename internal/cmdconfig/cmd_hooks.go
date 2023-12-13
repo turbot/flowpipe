@@ -50,7 +50,7 @@ func preRunHook(cmd *cobra.Command, args []string) error {
 	// check telemetry setting
 	telemetrySetting(cmd.Context())
 
-	checkUpdate(cmd)
+	waitForTasksChannel = runScheduledTasks(cmd.Context(), cmd, []string{})
 
 	return nil
 }
@@ -72,20 +72,17 @@ func telemetrySetting(ctx context.Context) {
 	}
 }
 
-func checkUpdate(cmd *cobra.Command) {
-	updateCheck := viper.GetBool(constants.ArgUpdateCheck)
-	updateCheck = true //nolint:ineffassign // remove when we enable update check
-	if updateCheck {
-		// runScheduledTasks skips running tasks if this instance is the plugin manager
-		waitForTasksChannel = runScheduledTasks(cmd.Context(), cmd, []string{})
-	}
-}
-
 // runScheduledTasks runs the task runner and returns a channel which is closed when
 // task run is complete
 //
 // runScheduledTasks skips running tasks if this instance is the plugin manager
 func runScheduledTasks(ctx context.Context, cmd *cobra.Command, args []string) chan struct{} {
+	updateCheck := viper.GetBool(constants.ArgUpdateCheck)
+	// for now the only scheduled task we support is update check so if that is disabled, do nothing
+	if !updateCheck {
+		return nil
+	}
+
 	taskUpdateCtx, cancelFn := context.WithCancel(ctx)
 	tasksCancelFn = cancelFn
 
@@ -96,7 +93,6 @@ func runScheduledTasks(ctx context.Context, cmd *cobra.Command, args []string) c
 		// pass the config value in rather than runRasks querying viper directly - to avoid concurrent map access issues
 		// (we can use the update-check viper config here, since initGlobalConfig has already set it up
 		// with values from the config files and ENV settings - update-check cannot be set from the command line)
-		// task.WithUpdateCheck(viper.GetBool(constants.ArgUpdateCheck)),
-		task.WithUpdateCheck(true),
+		task.WithUpdateCheck(updateCheck),
 	)
 }
