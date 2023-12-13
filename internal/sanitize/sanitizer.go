@@ -56,7 +56,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"clickup_token",
 		"pagerduty_token",
 		"discord_token",
-		"ip2location_api_key",
+		"ip2locationio_api_key",
 		"ipstack_access_key",
 		"teams_access_token",
 		"pipes_token",

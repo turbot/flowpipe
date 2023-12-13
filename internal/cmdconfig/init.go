@@ -41,9 +41,9 @@ func initGlobalConfig() *modconfig.FlowpipeConfig {
 // build defaults, combine global and cmd specific defaults
 func getConfigDefaults(cmd *cobra.Command) map[string]any {
 	var res = map[string]any{}
-	maps.Copy(res, configDefaults)
+	maps.Copy(res, configDefaults())
 
-	cmdSpecificDefaults, ok := cmdSpecificDefaults[cmd.Name()]
+	cmdSpecificDefaults, ok := cmdSpecificDefaults()[cmd.Name()]
 	if ok {
 		maps.Copy(res, cmdSpecificDefaults)
 	}
