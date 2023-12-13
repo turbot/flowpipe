@@ -8,15 +8,20 @@ import (
 )
 
 // global config defaults
-var configDefaults = map[string]any{
-	constants.ArgMemoryMaxMb: 1024,
-	constants.ArgTelemetry:   constants.TelemetryInfo,
-	constants.ArgUpdateCheck: true,
+func configDefaults() map[string]any {
+	return map[string]any{
+		constants.ArgMemoryMaxMb: 1024,
+		constants.ArgTelemetry:   constants.TelemetryInfo,
+		constants.ArgUpdateCheck: true,
+		constants.ArgInstallDir:  app_specific.DefaultInstallDir,
+	}
 }
 
 // command specific config defaults (keyed by comand name)
-var cmdSpecificDefaults = map[string]map[string]any{
-	"server": serviceconfig.ConfigDefaults,
+func cmdSpecificDefaults() map[string]map[string]any {
+	return map[string]map[string]any{
+		"server": serviceconfig.ConfigDefaults,
+	}
 }
 
 // environment variable mappings for directory paths which must be set as part of the viper bootstrap process
