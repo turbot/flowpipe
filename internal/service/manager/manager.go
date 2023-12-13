@@ -43,7 +43,6 @@ const (
 	startAPI       StartupFlag = 1 << iota // 1
 	startES                                // 2
 	startScheduler                         // 4
-	startDocker                            // 8
 )
 
 // Manager manages and represents the status of the service.
