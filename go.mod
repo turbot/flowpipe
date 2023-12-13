@@ -39,8 +39,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/denisss025/slog-watermill v0.1.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/turbot/flowpipe-sdk-go v0.1.0-rc.2
-	github.com/turbot/pipe-fittings v0.1.0-rc.2
+	github.com/turbot/flowpipe-sdk-go v0.1.0
+	github.com/turbot/pipe-fittings v0.1.0
 	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 
