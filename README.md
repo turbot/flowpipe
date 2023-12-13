@@ -23,7 +23,7 @@ to the people, systems and data that matter.
 
 **[Watch on YouTube →](https://www.youtube.com/watch?v=h4mWhMzaS7Y)**
 
-[![Flowpipe Demo](https://img.youtube.com/vi/h4mWhMzaS7Y/0.jpg)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
+[![Flowpipe Demo](https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
 
 ## Getting Started
 
