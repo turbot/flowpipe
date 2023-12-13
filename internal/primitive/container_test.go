@@ -15,7 +15,10 @@ import (
 func TestSimpleContainerStep(t *testing.T) {
 	ctx := context.Background()
 
-	docker.Initialize(ctx)
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -63,7 +66,10 @@ func TestSimpleContainerStep(t *testing.T) {
 func TestContainerStepMissingImage(t *testing.T) {
 	ctx := context.Background()
 
-	docker.Initialize(ctx)
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
 
 	assert := assert.New(t)
 	hr := Container{}
