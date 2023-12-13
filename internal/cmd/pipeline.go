@@ -225,11 +225,19 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	// if a host is set, use it to connect to API server
-	resp, pollLogFunc, err = executePipeline(cmd, args, isRemote)
+	var m *manager.Manager
+	m, resp, pollLogFunc, err = executePipeline(cmd, args, isRemote)
 	if err != nil {
 		error_helpers.ShowErrorWithMessage(ctx, err, "failed executing pipeline")
 		return
 	}
+
+	// ensure to shut the manager when we are done
+	defer func() {
+		if m != nil {
+			_ = m.Stop()
+		}
+	}()
 
 	output := viper.GetString(constants.ArgOutput)
 	streamLogs := output == "plain" || output == "pretty"
@@ -247,25 +255,19 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (map[string]any, pollEventLogFunc, error) {
+func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, map[string]any, pollEventLogFunc, error) {
 	if isRemote {
 		// run pipeline on server
 		resp, err := runPipelineRemote(cmd, args)
 		pollLogFunc := pollServerEventLog
-		return resp, pollLogFunc, err
+		return nil, resp, pollLogFunc, err
 	}
 	// run pipeline in-process
 	var m *manager.Manager
 	resp, m, err := runPipelineLocal(cmd, args)
-	// ensure to shut the manager when we are done
-	defer func() {
-		if m != nil {
-			_ = m.Stop()
-		}
-	}()
 
 	pollLogFunc := pollLocalEventLog
-	return resp, pollLogFunc, err
+	return m, resp, pollLogFunc, err
 }
 
 func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
