@@ -81,7 +81,7 @@ func TestContainerStepMissingImage(t *testing.T) {
 		schema.LabelName:            "container_test",
 	})
 
-	_, err := hr.Run(ctx, input)
+	_, err = hr.Run(ctx, input)
 	assert.NotNil(err)
 
 	fpErr := err.(perr.ErrorModel)
