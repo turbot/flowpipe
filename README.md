@@ -56,7 +56,7 @@ Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for
   <a href="https://hub.flowpipe.io/mods/turbot/okta">Okta</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/pagerduty">PagerDuty</a>, 
   <a href="https://hub.flowpipe.io/mods/turbot/sendgrid">SendGrid</a>,
-  <a href="https://hub.flowpipe.io/mods/turbot/Slack">Slack</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/slack">Slack</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/teams">Teams</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/zendesk">Zendesk</a> ... and many more!
 
