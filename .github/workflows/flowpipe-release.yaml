@@ -193,7 +193,7 @@ jobs:
       - name: Update live version
         if: steps.semver_parser.outputs.prerelease == ''
         run: |
-          scripts/formula_versioning.sh
+          scripts/formula_versioning_flowpipe.sh
           git config user.name "Flowpipe GitHub Actions Bot"
           git config user.email noreply@github.com
           git add .
