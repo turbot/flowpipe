@@ -48,11 +48,22 @@ pipeline "lambda_example" {
         type = any
     }
 
+    param "timeout_number" {
+        type = number
+        default = 60000
+    }
+
+    param "timeout_string" {
+        type    = string
+        default = "60s"
+    }
+
     step "function" "validate_policy_step" {
         runtime = "nodejs:18"
         handler = "index.handler"
-        src = "./functions/validate-policy"
-        event = param.event
+        source  = "./functions/validate-policy"
+        event   = param.event
+        timeout = param.timeout_number
 
         env = {
             "restrictedActions" = param.restricted_actions
@@ -71,8 +82,9 @@ pipeline "lambda_example" {
         if = step.function.validate_policy_step.result.action == "remedy"
         runtime = "nodejs:18"
         handler = "index.handler"
-        src = "./functions/revert-policy"
-        event = param.event
+        source  = "./functions/revert-policy"
+        event   = param.event
+        timeout = param.timeout_string
 
         env = {
             "restrictedActions" = param.restricted_actions
