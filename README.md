@@ -19,7 +19,9 @@ to the people, systems and data that matter.
 
 **Code, not clicks**. Build and deploy DevOps workflows like infrastructure. Code in HCL and deploy from version control.
 
-## Flowpipe Demo
+## Demo Time!
+
+**[Watch on YouTube →](https://www.youtube.com/watch?v=h4mWhMzaS7Y)**
 
 [![Flowpipe Demo](https://img.youtube.com/vi/h4mWhMzaS7Y/0.jpg)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
 
