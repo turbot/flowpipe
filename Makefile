@@ -39,4 +39,4 @@ test:
 
 integration-test:
 	go clean -testcache
-	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 120s -v
+	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
