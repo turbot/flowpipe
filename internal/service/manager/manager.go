@@ -43,7 +43,6 @@ const (
 	startAPI       StartupFlag = 1 << iota // 1
 	startES                                // 2
 	startScheduler                         // 4
-	startDocker                            // 8
 )
 
 // Manager manages and represents the status of the service.
@@ -99,12 +98,6 @@ func (m *Manager) Start() (*Manager, error) {
 		return nil, err
 	}
 
-	if m.shouldStartDocker() {
-		if err := docker.Initialize(m.ctx); err != nil {
-			return nil, err
-		}
-	}
-
 	if m.shouldStartES() {
 		err := m.startESService()
 		if err != nil {
@@ -146,10 +139,6 @@ func (m *Manager) shouldStartAPI() bool {
 
 func (m *Manager) shouldStartES() bool {
 	return m.startup&startES != 0
-}
-
-func (m *Manager) shouldStartDocker() bool {
-	return m.startup&startDocker != 0
 }
 
 func (m *Manager) shouldStartScheduler() bool {

@@ -3,9 +3,10 @@ package handler
 import (
 	"context"
 
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"log/slog"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -21,9 +22,6 @@ func (PipelineQueued) NewEvent() interface{} {
 
 // Path from here:
 // * PipelineQueued -> PipelineLoad command -> PipelineLoaded event handler
-//
-// ? is this meant to be when something is being picked up from the queue?
-// ? so the PipelineQueue *command* is the one that puts it in a some sort of a queue?
 func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	e, ok := ei.(*event.PipelineQueued)

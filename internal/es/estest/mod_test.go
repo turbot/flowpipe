@@ -20,7 +20,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -92,11 +91,6 @@ func (suite *ModTestSuite) SetupSuite() {
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
 	suite.esService = m.ESService
-
-	err = docker.Initialize(ctx)
-	if err != nil {
-		panic(err)
-	}
 
 	suite.manager = m
 
@@ -2374,8 +2368,6 @@ func (suite *ModTestSuite) TestBadContainerStep() {
 	assert.NotNil(pex.Errors)
 	assert.Equal(1, len(pex.Errors))
 	assert.Contains(pex.Errors[0].Error.Detail, "InvalidClientTokenId")
-
-	//
 }
 
 func (suite *ModTestSuite) TestBadContainerStepWithIsErrorFunc() {

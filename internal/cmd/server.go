@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/docker"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/cmdconfig"
@@ -50,8 +49,6 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 			error_helpers.FailOnError(perr.InternalWithMessage("The designated port (" + strconv.Itoa(viper.GetInt(constants.ArgPort)) + ") is already in use"))
 			return
 		}
-
-		error_helpers.FailOnError(docker.Initialize(ctx))
 
 		// start manager, passing server config
 		// (this will ensure manager starts API, ES, Scheduling and docker services
