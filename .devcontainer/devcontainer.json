@@ -2,12 +2,6 @@
 	"name": "flowpipe-devcontainer",
 	"image": "ghcr.io/turbot/flowpipe-devcontainer:latest",
 
-	"mounts": [
-		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder}/../terraform-components,target=/workspaces/terraform-components,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder}/../pipe-fittings,target=/workspaces/pipe-fittings,type=bind,consistency=cached"
-	],
-
 	"containerEnv": {
 		"GOPRIVATE=github.com/": "github.com/turbot/*"
 	},
