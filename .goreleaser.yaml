@@ -33,24 +33,8 @@ release:
 
 archives:
   - format: tar.gz
-    # Additional files/globs
-    # this name template makes the OS and Arch compatible with the results of uname.
-    name_template: >-
-      {{ .ProjectName }}.
-      {{- .Os }}.
-      {{- if eq .Arch "amd64" }}amd64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-
-  - id: homebrew
-    files:
-      - none*
-    format: zip
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
-    - goos: linux
-      format: tar.gz
+    id: homebrew
+    name_template: "{{ .ProjectName }}.{{ .Os }}.{{ .Arch }}"
 
 checksum:
   name_template: 'checksums.txt'
