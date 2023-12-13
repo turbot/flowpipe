@@ -27,7 +27,7 @@ pipeline "with_functions" {
 
         runtime = "nodejs:18"
         handler = "index.handler"
-        src     = "./functions/hello-nodejs"
+        source  = "./functions/hello-nodejs"
         event   = param.event
         timeout = 60000
 
@@ -74,7 +74,7 @@ pipeline "with_functions_no_env_var" {
     step "function" "hello_nodejs_step" {
         runtime = "nodejs:18"
         handler = "index.handler"
-        src     = "./functions/hello-nodejs"
+        source  = "./functions/hello-nodejs"
         event   = param.event
         timeout = "60s"
     }

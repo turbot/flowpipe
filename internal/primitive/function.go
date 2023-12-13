@@ -95,7 +95,7 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		if input[schema.AttributeTypeHandler] != nil {
 			fn.Handler = input[schema.AttributeTypeHandler].(string)
 		}
-		fn.Src = input[schema.AttributeTypeSrc].(string)
+		fn.Source = input[schema.AttributeTypeSource].(string)
 
 		fn.Env = newEnvs
 

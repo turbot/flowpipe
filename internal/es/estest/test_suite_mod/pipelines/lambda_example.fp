@@ -61,7 +61,7 @@ pipeline "lambda_example" {
     step "function" "validate_policy_step" {
         runtime = "nodejs:18"
         handler = "index.handler"
-        src     = "./functions/validate-policy"
+        source  = "./functions/validate-policy"
         event   = param.event
         timeout = param.timeout_number
 
@@ -82,7 +82,7 @@ pipeline "lambda_example" {
         if = step.function.validate_policy_step.result.action == "remedy"
         runtime = "nodejs:18"
         handler = "index.handler"
-        src     = "./functions/revert-policy"
+        source  = "./functions/revert-policy"
         event   = param.event
         timeout = param.timeout_string
 
