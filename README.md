@@ -40,7 +40,7 @@ brew tap turbot/tap
 brew install flowpipe
 ```
 
-_Note: Flowpipe container and function steps require Docker to be installed and running. (The CLI itself does not.)_
+_Note: Flowpipe container and function steps require Docker to be running. (The CLI itself does not.)_
 
 Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
 
