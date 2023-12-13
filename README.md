@@ -4,7 +4,7 @@
 
 <p>
 
-[![mods](https://img.shields.io/badge/mods-47-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp; 
+[![mods](https://img.shields.io/badge/mods-47-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp;
 [![pipelines](https://img.shields.io/badge/pipelines-532-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme)
 
@@ -13,7 +13,7 @@ to the people, systems and data that matter.
 
 **Connect people and tools**. Connect your cloud data to people and systems using email, chat & APIs. Workflow steps can even run containers, custom functions, and more.
 
-**Orchestrate your cloud**. Build simple steps into complex workflows. Run and test locally. Compose solutions across clouds using open source mods. 
+**Orchestrate your cloud**. Build simple steps into complex workflows. Run and test locally. Compose solutions across clouds using open source mods.
 
 **Respond to events**. Run workflows manually or on a schedule. Trigger pipelines from webhooks or changes in data.
 
@@ -26,7 +26,7 @@ to the people, systems and data that matter.
 ## Getting Started
 
 The <a href="https://flowpipe.io/downloads?utm_id=gfpreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme">downloads</a> page shows you how but tl;dr:
- 
+
 Linux or WSL
 
 ```sh
@@ -46,14 +46,14 @@ Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
 
 ## Libraries and samples
 
-Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for services including 
-  <a href="https://hub.flowpipe.io/mods/turbot/aws">AWS</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/azure">Azure</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/gcp">GCP</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/github">GitHub</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/jira">Jira</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/okta">Okta</a>, 
-  <a href="https://hub.flowpipe.io/mods/turbot/pagerduty">PagerDuty</a>, 
+Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for services including
+  <a href="https://hub.flowpipe.io/mods/turbot/aws">AWS</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/azure">Azure</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/gcp">GCP</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/github">GitHub</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/jira">Jira</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/okta">Okta</a>,
+  <a href="https://hub.flowpipe.io/mods/turbot/pagerduty">PagerDuty</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/sendgrid">SendGrid</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/slack">Slack</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/teams">Teams</a>,
@@ -66,47 +66,61 @@ Check out [Flowpipe samples](https://hub.flowpipe.io/?type=samples) for ready-to
 <details>
 <summary>Developing Flowpipe</summary>
 
-### VS Code Dev Container
+Prerequisites:
 
-1. If you are using VS Code, follow the Developer Setup instructions below. Using the Dev Container in VS Code will ensure that you have all the required tools and dependencies installed.
+- [Golang](https://golang.org/doc/install) Version 1.21 or higher.
 
-1. Run the following commands to build and start the Flowpipe service:
-    ```bash
-    # Starts the service, reads pipeline definition from the `pipelines` directory
-    $ make
-    FLOWPIPE_LOG_LEVEL=DEBUG go run . service start --mod-location ./pipeline
-    2023-06-06T11:53:49.835Z        DEBUG   Manager starting
-    2023-06-06T11:53:49.835Z        DEBUG   ES starting
-    2023-06-06T11:53:49.835Z        DEBUG   Pipeline dir    {"dir": "./pipeline"}
-    2023-06-06T11:53:49.835Z        DEBUG   Loading pipelines       {"directory": "./pipeline"}
-    2023-06-06T11:53:49.835Z        DEBUG   Loaded pipeline {"name": "for_loop_using_http_request_body_json", "file": "pipeline/for_loop_using_http_request_body_json.yaml"}
-    2023-06-06T11:53:49.847Z        DEBUG   Loaded pipeline {"name": "series_of_for_loop_steps", "file": "pipeline/series_of_for_loop_steps.yaml"}
-    2023-06-06T11:53:49.858Z        DEBUG   Loaded pipeline {"name": "simple_parallel", "file": "pipeline/simple_parallel.yaml"}
-    2023-06-06T11:53:49.879Z        DEBUG   Adding middleware       {"count": "1"}
-    </snip>
-    ```
+Clone:
 
-### Running
+```sh
+git clone git@github.com:turbot/flowpipe
+cd flowpipe
+```
 
-1. In your API tool of choice (e.g. Postman, Insomnia, etc.) send a `GET` request to the following URL to check that the API server is running:
-    ```
-    http://localhost:7103/api/v0/service
-    ```
+Build will build flowpipe binary in the current directory:
 
-1. Check the available pipelines by sending a `GET` request to the following URL:
-    ```
-    http://localhost:7103/api/v0/pipeline
-    ```
+```sh
+make
+```
 
-1. Now run one of the pipeline by sending a `POST` to the following URL:
-    ```
-    http://localhost:7103/api/v0/pipeline/series_of_for_loop_steps
-    ```
+Check the version:
+```sh
+./flowpipe --version
+Flowpipe v0.0.1-local.1
+```
 
-1. Copy the resulting `exec_<xxx>` ID and do a `GET` to the following URL:
-    ```
-    http://localhost:7103/api/v0/process/exec_chvgkvmu69j2b44q3e60
-    ```
+Flowpipe local version will always be `v0.0.1-local.1`. The real version is generated during the release process.
+
+Try it!
+
+```sh
+./flowpipe pipeline list --mod-location ./internal/es/estest/test_suite_mod/
+MOD                   NAME                                                                                                        DESCRIPTION
+mod.mod_depend_a      mod_depend_a.pipeline.echo_one_depend_a
+mod.test_suite_mod    test_suite_mod.pipeline.any_param
+mod.test_suite_mod    test_suite_mod.pipeline.bad_email_with_expr
+mod.test_suite_mod    test_suite_mod.pipeline.bad_http_ignored                                                                    Ignored bad HTTP step.
+mod.test_suite_mod    test_suite_mod.pipeline.bad_http_not_ignored                                                                Pipeline with a HTTP step that will fail. Error is not ignored.
+</snip>
+```
+
+Now run a simple pipeline:
+```sh
+./flowpipe pipeline run --mod-location ./internal/es/estest/test_suite_mod/ simple
+[flowpipe] Execution ID: exec_clsm62ko47mjp5f74730
+[simple] Starting pipeline
+[simple.echo] Starting transform
+[simple.echo] Output echo_1 = echo 1
+[simple.echo] Output echo_2 = echo 2
+[simple.echo] Complete 2ms
+[simple] Output val = Hello World
+[simple] Complete 12ms exec_clsm62ko47mjp5f74730
+```
+
+That's it! You're ready to start developing.
+
+There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the [Developer Setup](#developer-setup) section for more details.
+
 </details>
 
 <details>
@@ -114,33 +128,18 @@ Check out [Flowpipe samples](https://hub.flowpipe.io/?type=samples) for ready-to
 
 ### Flowpipe Development Setup
 
+1. Install [Docker](https://docs.docker.com/get-docker/)
 
-1. Clone `flowpipe`, `flowpipe-sdk-go`, `pipe-fittings` and `terraform-components` in the following directory structure:
-    ```
-    workspace
-       |
-       |-- flowpipe
-       |
-       |-- flowpipe-sdk-go
-       |
-       |-- pipe-fittings
-       |
-       |-- terraform-components
-    ```
+1. Install [VS Code](https://code.visualstudio.com/)
 
-1. There should be a devcontainer ready for use in `ghcr.io`. To pull this devcontainer while we're still in private mode you need to create a class GitHub PAT with the following scopes:
-    1. `read:packages`: must have
-    1. `write:packages` & `delete:packages`: optional
-
-1. Pull the devcontainer: `docker pull ghcr.io/turbot/flowpipe-devcontainer:latest`
+1. Pull the Dev Container: `docker pull ghcr.io/turbot/flowpipe-devcontainer:latest`
 
 1. In VS Code install `devcontainer` extension.
 
-1. Open `flowpipe` in `Dev Containers: Open Folder in Container...` option. It will automatically open in a dev container where the `flowpipe-sdk-go` directory automatically mounted in the correct file structure.
+1. Open `flowpipe` in `Dev Containers: Open Folder in Container...` option.
 
-1. In the terminal, run `go run . service start`
+1. Run `make` to build the Flowpipe binary.
 
-1. Check that API server is running.
 </details>
 
 ## Open Source & Contributing

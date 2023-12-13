@@ -1,5 +1,5 @@
 # Flowpipe
 
-## v0.1.0-rc.1 [2023-12-10]
+## v0.1.0 [2023-12-13]
 
 Initial release
