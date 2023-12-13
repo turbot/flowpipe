@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/hashicorp/hcl/v2"
@@ -94,6 +95,8 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		var output *modconfig.Output
+
+		execution.ServerOutput(fmt.Sprintf("[%s] Step %s started", cmd.Event.ExecutionID, stepDefn.GetName()))
 
 		var primitiveError error
 		switch stepDefn.GetType() {

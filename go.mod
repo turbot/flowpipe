@@ -2,10 +2,6 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
-
-replace github.com/turbot/pipe-fittings => ../pipe-fittings/
-
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/ThreeDotsLabs/watermill v1.3.3
@@ -43,8 +39,8 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/denisss025/slog-watermill v0.1.0
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/turbot/flowpipe-sdk-go v0.0.0-00010101000000-000000000000
-	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
+	github.com/turbot/flowpipe-sdk-go v0.1.0-rc.2
+	github.com/turbot/pipe-fittings v0.1.0-rc.2
 	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 

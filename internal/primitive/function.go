@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"math"
 	"sync"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -22,6 +24,27 @@ var functionCacheMutex sync.Mutex
 type Function struct{}
 
 func (e *Function) ValidateInput(ctx context.Context, i modconfig.Input) error {
+	// Validate the timeout attribute
+	if i[schema.AttributeTypeTimeout] != nil {
+		switch duration := i[schema.AttributeTypeTimeout].(type) {
+		case string:
+			_, err := time.ParseDuration(duration)
+			if err != nil {
+				return perr.BadRequestWithMessage("invalid sleep duration " + duration)
+			}
+		case int64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		case float64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		default:
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a string or a whole number")
+		}
+	}
+
 	return nil
 }
 
@@ -72,9 +95,26 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		if input[schema.AttributeTypeHandler] != nil {
 			fn.Handler = input[schema.AttributeTypeHandler].(string)
 		}
-		fn.Src = input[schema.AttributeTypeSrc].(string)
+		fn.Source = input[schema.AttributeTypeSource].(string)
 
 		fn.Env = newEnvs
+
+		if input[schema.AttributeTypeTimeout] != nil {
+			var timeout time.Duration
+			switch timeoutDuration := input[schema.AttributeTypeTimeout].(type) {
+			case string:
+				timeout, _ = time.ParseDuration(timeoutDuration)
+			case int64:
+				timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+			case float64:
+				timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+			}
+			timeoutInMs := timeout.Milliseconds()
+
+			// Convert milliseconds to seconds, and round up to the nearest second
+			timeoutInSeconds := int64(math.Ceil(float64(timeoutInMs) / 1000))
+			fn.Timeout = &timeoutInSeconds
+		}
 
 		err = fn.Load()
 		if err != nil {

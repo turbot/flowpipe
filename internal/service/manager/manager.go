@@ -18,6 +18,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
@@ -258,6 +259,7 @@ func (m *Manager) initializeResources() error {
 
 		// if we are running in server mode, setup the file watcher
 		if m.shouldStartAPI() {
+			execution.Mode = "server"
 			if err := m.setupWatcher(w); err != nil {
 				return err
 			}

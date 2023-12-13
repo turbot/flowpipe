@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 
 	"log/slog"
 
@@ -30,6 +31,8 @@ func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("invalid event type", "expected", "*event.PipelineQueued", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineQueued")
 	}
+
+	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s queued", e.Event.ExecutionID, e.Name))
 
 	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(e))
 	if err != nil {

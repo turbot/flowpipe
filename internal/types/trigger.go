@@ -22,14 +22,9 @@ type FpTrigger struct {
 	Schedule      *string           `json:"schedule,omitempty"`
 }
 
-func (t FpTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if t, err = sanitize.SanitizeStruct(sanitizer, t); err != nil {
-		return ""
-	}
 
 	if t.Title != nil {
 		output += fmt.Sprintf("%s%s\n", au.Blue("Title:    ").Bold(), *t.Title)
