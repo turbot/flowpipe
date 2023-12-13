@@ -24,8 +24,47 @@ env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
 jobs:
+  ensure_branch_in_homebrew:
+    name: Ensure branch exists in homebrew-tap
+    if: ${{ github.event.inputs.environment == 'Final' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Calculate version
+        id: calculate_version
+        run: |
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@v1
+        with:
+          input_string: ${{ github.event.inputs.version }}
+
+      - name: Checkout
+        # if: steps.semver_parser.outputs.prerelease == ''
+        uses: actions/checkout@v4
+        with:
+          repository: turbot/homebrew-tap
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          ref: main
+
+      - name: Delete base branch if exists
+        # if: steps.semver_parser.outputs.prerelease == ''
+        run: |
+          git fetch --all
+          git push origin --delete flowpipe-brew
+          git push origin --delete $VERSION
+        continue-on-error: true
+
+      - name: Create base branch
+        # if: steps.semver_parser.outputs.prerelease == ''
+        run: |
+          git checkout -b flowpipe-brew
+          git push --set-upstream origin flowpipe-brew
+
   build_and_release:
     name: Build and Release Flowpipe
+    needs: [ensure_branch_in_homebrew]
     runs-on: ubuntu-latest
     steps:
       - name: validate
@@ -82,49 +121,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           VERSION: $VERSION
 
-  ensure_branch_in_homebrew:
-    name: Ensure branch exists in homebrew-tap
-    if: ${{ github.event.inputs.environment == 'Final' }}
-    needs: [build_and_release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Calculate version
-        id: calculate_version
-        run: |
-          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-
-      - name: Parse semver string
-        id: semver_parser
-        uses: booxmedialtd/ws-action-parse-semver@v1
-        with:
-          input_string: ${{ github.event.inputs.version }}
-
-      - name: Checkout
-        # if: steps.semver_parser.outputs.prerelease == ''
-        uses: actions/checkout@v4
-        with:
-          repository: turbot/homebrew-tap
-          token: ${{ secrets.GH_ACCESS_TOKEN }}
-          ref: main
-
-      - name: Delete base branch if exists
-        # if: steps.semver_parser.outputs.prerelease == ''
-        run: |
-          git fetch --all
-          git push origin --delete flowpipe-brew
-          git push origin --delete $VERSION
-        continue-on-error: true
-
-      - name: Create base branch
-        # if: steps.semver_parser.outputs.prerelease == ''
-        run: |
-          git checkout -b flowpipe-brew
-          git push --set-upstream origin flowpipe-brew
-
   create_pr_in_homebrew:
     name: Create PR in homebrew-tap
     if: ${{ github.event.inputs.environment == 'Final' }}
-    needs: [ensure_branch_in_homebrew]
+    needs: [build_and_release]
     runs-on: ubuntu-latest
     steps:
       - name: Calculate version
