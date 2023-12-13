@@ -91,12 +91,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
-          else
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          fi
-
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Parse semver string
         id: semver_parser
@@ -135,11 +130,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
-          else
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          fi
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Parse semver string
         id: semver_parser
@@ -172,7 +163,7 @@ jobs:
       - name: Create pull request
         # if: steps.semver_parser.outputs.prerelease == ''
         run: |
-          gh pr create --base main --head $VERSION --title "$Version" --body "Update formula"
+          gh pr create --base main --head $VERSION --title "$VERSION" --body "Update formula"
 
   update_pr_for_versioning:
     name: Update PR
@@ -183,11 +174,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
-          else
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
-          fi
+          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Parse semver string
         id: semver_parser
