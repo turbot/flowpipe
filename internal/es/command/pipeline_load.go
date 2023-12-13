@@ -50,7 +50,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 			err := docker.Initialize(context.Background())
 			if err != nil {
 				slog.Error("Error initializing Docker client", "error", err)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, perr.InternalWithMessage("Error initializing Docker client")))
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, perr.InternalWithMessage("Unable to initialize the Docker client. Please ensure that Docker is installed and running.")))
 				if err2 != nil {
 					slog.Error("Error publishing PipelineFailed event", "error", err2)
 				}
