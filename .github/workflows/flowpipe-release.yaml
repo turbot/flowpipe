@@ -32,7 +32,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Parse semver string
         id: semver_parser
@@ -92,9 +92,9 @@ jobs:
         id: calculate_version
         run: |
           if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
+            echo "VERSION=v${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
           else
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+            echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
           fi
 
       - name: Tag Release
@@ -130,7 +130,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Parse semver string
         id: semver_parser
@@ -174,7 +174,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV
 
       - name: Parse semver string
         id: semver_parser
