@@ -327,23 +327,23 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 	assert.Equal(400, fpErr.Status)
 }
 
-func TestQueryMissingArgs(t *testing.T) {
+func TestQueryWithTimestamp(t *testing.T) {
 	ctx := context.Background()
 
 	assert := assert.New(t)
-	hr := Query{}
+	queryPrimitive := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeConnectionString: "this is a connection string",
-		schema.AttributeTypeSql:              "SELECT * from aws_ec2_instance where instance_id = $1",
+
+		// This query string used to cause issue because we were trying to detect args in the query string, i.e. $1, ? or :name (Oracle)
+		// In retrospect, we believe it's difficult to cover all possible cases especially with complex SQL. So, we decided to remove the
+		// detection of args in the query string and let the query fails if user does not supply args with the query.
+		schema.AttributeTypeSql: "select * from hackernews.hackernews_new where time::timestamp < now()",
 	})
 
-	_, err := hr.Run(ctx, input)
-	assert.NotNil(err)
-
-	fpErr := err.(perr.ErrorModel)
-	assert.Equal("Query input must define args if the sql has placeholders", fpErr.Detail)
-	assert.Equal(400, fpErr.Status)
+	err := queryPrimitive.ValidateInput(ctx, input)
+	assert.Nil(err)
 }
 
 func TestQueryMissingConnectionString(t *testing.T) {
