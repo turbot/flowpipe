@@ -139,6 +139,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 				if decodedData, err := base64.StdEncoding.DecodeString(string(ba)); err == nil {
 					// It's valid base64
 					row[k] = string(decodedData)
+					continue
 				}
 				row[k] = string(ba)
 			}
