@@ -11,7 +11,6 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
-
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
 func SetAppSpecificConstants() {
 	app_specific.AppName = "flowpipe"
@@ -53,7 +52,4 @@ func SetAppSpecificConstants() {
 		globalConfigPath = filepath.Join(envInstallDir, "config")
 	}
 	app_specific.DefaultConfigPath = strings.Join([]string{".", globalConfigPath}, ":")
-
-
-
 }
