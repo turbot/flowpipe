@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log/slog"
-	"regexp"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -30,11 +29,6 @@ func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	if i[schema.AttributeTypeSql] == nil {
 		return perr.BadRequestWithMessage("Query input must define sql")
-	}
-
-	sql := i[schema.AttributeTypeSql].(string)
-	if hasPlaceholder(sql) && i[schema.AttributeTypeArgs] == nil {
-		return perr.BadRequestWithMessage("Query input must define args if the sql has placeholders")
 	}
 	return nil
 }
@@ -161,12 +155,4 @@ func mapScan(r *sql.Rows, dest map[string]interface{}) error {
 	}
 
 	return r.Err()
-}
-
-func hasPlaceholder(query string) bool {
-	// $1, $2, $3, etc. - PostgreSQL and some other databases use the dollar-sign syntax for positional parameters.
-	// ? - Commonly used as a positional parameter placeholder in many databases, including MySQL, SQLite, and SQL Server.
-	// :name - Oracle and some other databases use colon : followed by a parameter name for named parameters.
-	placeholderPattern := regexp.MustCompile(`(\$[0-9]+|\?|:\w+)`)
-	return placeholderPattern.MatchString(query)
 }
