@@ -61,7 +61,7 @@ Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for
   <a href="https://hub.flowpipe.io/mods/turbot/teams">Teams</a>,
   <a href="https://hub.flowpipe.io/mods/turbot/zendesk">Zendesk</a> ... and many more!
 
-Check out [Flowpipe samples](https://hub.flowpipe.io/?type=samples) for ready-to-run samples that use various library mods.
+Check out [Flowpipe samples](https://hub.flowpipe.io/?type=sample) for ready-to-run samples that use various library mods.
 
 ## Developing
 
