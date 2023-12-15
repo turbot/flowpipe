@@ -248,11 +248,9 @@ func (m *Manager) initializeResources() error {
 		error_helpers.FailOnError(err)
 
 		flowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(configPath)
-		if ew != nil {
-			ew.ShowWarnings()
-			// check for error
-			error_helpers.FailOnError(ew.Error)
-		}
+		// check for error
+		error_helpers.FailOnError(ew.Error)
+		ew.ShowWarnings()
 
 		// Add the "Credentials" in the context
 		// effectively forever .. we don't want to expire the config
