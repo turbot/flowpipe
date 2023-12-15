@@ -1,6 +1,8 @@
 package cmdconfig
 
 import (
+	"github.com/Masterminds/semver/v3"
+	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,7 +18,8 @@ func SetAppSpecificConstants() {
 	app_specific.AppName = "flowpipe"
 
 	// TODO unify version logic with steampipe and powerpipe
-	//app_specific.AppVersion
+	versionString := viper.GetString("main.version")
+	app_specific.AppVersion = semver.MustParse(versionString)
 
 	// set all app specific env var keys
 	app_specific.SetAppSpecificEnvVarKeys("FLOWPIPE_")
@@ -50,6 +53,15 @@ func SetAppSpecificConstants() {
 	// check whether install-dir env has been set - if so, respect it
 	if envInstallDir, ok := os.LookupEnv(app_specific.EnvInstallDir); ok {
 		globalConfigPath = filepath.Join(envInstallDir, "config")
+		app_specific.InstallDir = envInstallDir
+	} else {
+		/*
+			NOTE:
+			If InstallDir is settable outside of default & env var, need to add
+			the following code to end of initGlobalConfig in init.go
+			app_specific.InstallDir = viper.GetString(constants.ArgInstallDir) at end of
+		*/
+		app_specific.InstallDir = defaultInstallDir
 	}
 	app_specific.DefaultConfigPath = strings.Join([]string{".", globalConfigPath}, ":")
 }

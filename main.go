@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-
 	"github.com/spf13/viper"
+
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
@@ -30,16 +30,16 @@ func main() {
 		}
 	}()
 
-	localcmdconfig.SetAppSpecificConstants()
-	log.SetDefaultLogger()
-	cache.InMemoryInitialize(nil)
-
 	// TODO kai can we pass these into SetAppSpecificConstants?
 	//  look into namespacing of config
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
 	viper.SetDefault("main.date", date)
 	viper.SetDefault("main.builtBy", builtBy)
+
+	localcmdconfig.SetAppSpecificConstants()
+	log.SetDefaultLogger()
+	cache.InMemoryInitialize(nil)
 
 	// Run the CLI
 	cmd.RunCLI(ctx)
