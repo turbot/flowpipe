@@ -52,6 +52,7 @@ func (suite *EsTestSuite) SetupSuite() {
 	pipelineDirPath := path.Join(cwd, "pipelines")
 
 	// sets app specific constants defined in pipe-fittings
+	viper.SetDefault("main.version", "0.0.0-test.0")
 	localcmdconfig.SetAppSpecificConstants()
 
 	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
