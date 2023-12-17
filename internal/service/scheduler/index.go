@@ -62,6 +62,8 @@ func (s *SchedulerService) RescheduleTriggers() error {
 			scheduleString = config.Schedule
 		case *modconfig.TriggerInterval:
 			scheduleString = config.Schedule
+		case *modconfig.TriggerQuery:
+			scheduleString = config.Schedule
 		}
 
 		if scheduleString == "" {
@@ -158,6 +160,21 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
 
 		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
+		_, err := s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
+		if err != nil {
+			return err
+		}
+
+	case *modconfig.TriggerQuery:
+		tags := []string{
+			"id:" + t.FullName,
+			"schedule:" + config.Schedule,
+			"pipeline:" + pipelineName,
+		}
+
+		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
+
+		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
 		_, err := s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
 		if err != nil {
 			return err
