@@ -3,16 +3,25 @@ package primitive
 import (
 	"context"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"log/slog"
+	"strings"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 
 	"github.com/DATA-DOG/go-sqlmock"
+)
+
+const (
+	DriverPostgres = "postgres"
+	DriverMySQL    = "mysql"
 )
 
 type Query struct {
@@ -51,7 +60,16 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	}
 
 	dbConnectionString := i[schema.AttributeTypeConnectionString].(string)
-	db, err = sql.Open("postgres", dbConnectionString)
+	switch {
+	case strings.Contains(dbConnectionString, "postgres://"):
+		db, err = sql.Open(DriverPostgres, dbConnectionString)
+	case strings.Contains(dbConnectionString, "mysql://"):
+		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
+		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
+	default:
+		return nil, perr.BadRequestWithMessage("Unsupported database type")
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -106,13 +124,25 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		for k, encoded := range row {
 			switch ba := encoded.(type) {
 			case []byte:
-				var col interface{}
-				err := json.Unmarshal(ba, &col)
-				if err != nil {
-					slog.Error("error unmarshalling jsonb", "column", k, "error", err)
-					return nil, err
+				// Check it it's a valid JSON object
+				if isJSON, _ := isJSON(ba); isJSON {
+					var col interface{}
+					err := json.Unmarshal(ba, &col)
+					if err != nil {
+						slog.Error("error unmarshalling jsonb", "column", k, "error", err)
+						return nil, err
+					}
+					row[k] = col
+					continue
 				}
-				row[k] = col
+
+				// Check if it's base64 encoded
+				if decodedData, err := base64.StdEncoding.DecodeString(string(ba)); err == nil {
+					// It's valid base64
+					row[k] = string(decodedData)
+					continue
+				}
+				row[k] = string(ba)
 			}
 		}
 		results = append(results, row)
@@ -131,6 +161,20 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return output, nil
+}
+
+func isJSON(b []byte) (bool, error) {
+	var col interface{}
+	err := json.Unmarshal(b, &col)
+	if err != nil {
+		return false, err
+	}
+
+	// Check if it's a JSON object (map) or array (slice)
+	_, isObject := col.(map[string]interface{})
+	_, isArray := col.([]interface{})
+
+	return isObject || isArray, nil
 }
 
 func mapScan(r *sql.Rows, dest map[string]interface{}) error {
