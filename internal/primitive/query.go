@@ -63,8 +63,9 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	switch {
 	case strings.Contains(dbConnectionString, "postgres://"):
 		db, err = sql.Open(DriverPostgres, dbConnectionString)
-	case strings.Contains(dbConnectionString, "@tcp("): // Common pattern in MySQL DSN
-		db, err = sql.Open(DriverMySQL, dbConnectionString)
+	case strings.Contains(dbConnectionString, "mysql://"):
+		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
+		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
 	default:
 		return nil, perr.BadRequestWithMessage("Unsupported database type")
 	}
