@@ -17,7 +17,7 @@ import (
 func SetAppSpecificConstants() {
 	app_specific.AppName = "flowpipe"
 
-	// TODO unify version logic with steampipe and powerpipe
+	// TODO unify version logic with steampipe
 	versionString := viper.GetString("main.version")
 	app_specific.AppVersion = semver.MustParse(versionString)
 
