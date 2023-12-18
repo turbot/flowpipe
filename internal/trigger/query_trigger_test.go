@@ -29,7 +29,7 @@ func TestTriggerQuery(t *testing.T) {
 		Sql:              "select * from hackernews.hackernews_new",
 		PrimaryKey:       "id",
 	}
-	triggerRunner := NewTriggerRunner(ctx, nil, trigger)
+	triggerRunner := NewTriggerRunner(ctx, nil, nil, trigger)
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
