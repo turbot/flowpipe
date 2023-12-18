@@ -34,5 +34,4 @@ func TestTriggerQuery(t *testing.T) {
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
 	triggerRunner.Run()
-
 }
