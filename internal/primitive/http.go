@@ -22,13 +22,6 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-const (
-	// HTTPRequestDefaultTimeoutMs is the default timeout for HTTP requests
-	// For now the value is hardcoded to 3000 milliseconds
-	// TODO: Make this configurable
-	HTTPRequestDefaultTimeoutMs = 3000
-)
-
 type HTTPRequest struct {
 	Input modconfig.Input
 }
