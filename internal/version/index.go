@@ -6,7 +6,7 @@ package version
 //
 // Local build (Makefile): use the default value in DOCKERFILE
 
-// TODO KAI unify this with steampipe and powerpipe
+// TODO KAI unify this with steampipe
 var (
 	version   = "0.0.1-beta.1"
 	buildTime string
