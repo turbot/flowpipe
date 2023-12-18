@@ -3,7 +3,13 @@ package container
 import (
 	"context"
 	"fmt"
+	"github.com/docker/docker/pkg/archive"
+	"github.com/radovskyb/watcher"
+	"io"
 	"log/slog"
+	"os"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -45,6 +51,9 @@ type Container struct {
 	ctx          context.Context
 	runCtx       context.Context
 	dockerClient *docker.DockerClient
+	watcher      *watcher.Watcher
+	buildMutex   sync.Mutex
+	buildQueued  bool
 }
 
 type ContainerRun struct {
@@ -55,10 +64,10 @@ type ContainerRun struct {
 	Lines       []OutputLine `json:"lines"`
 }
 
-// Option defines a function signature for configuring the Docker client.
+// ContainerOption defines a function signature for configuring the Container.
 type ContainerOption func(*Container) error
 
-// WithContext configures the Docker client with a specific context.
+// WithContext configures the Container with a specific context.
 func WithContext(ctx context.Context) ContainerOption {
 	return func(c *Container) error {
 		c.ctx = ctx
@@ -66,6 +75,7 @@ func WithContext(ctx context.Context) ContainerOption {
 	}
 }
 
+// WithRunContext configures the Container with a specific run context.
 func WithRunContext(ctx context.Context) ContainerOption {
 	return func(c *Container) error {
 		c.runCtx = ctx
@@ -73,7 +83,7 @@ func WithRunContext(ctx context.Context) ContainerOption {
 	}
 }
 
-// WithConfigDockerClient configures the Docker client.
+// WithDockerClient configures the Docker client.
 func WithDockerClient(client *docker.DockerClient) ContainerOption {
 	return func(c *Container) error {
 		c.dockerClient = client
@@ -81,7 +91,7 @@ func WithDockerClient(client *docker.DockerClient) ContainerOption {
 	}
 }
 
-// NewConfig creates a new Function Config with the provided options.
+// NewContainer creates a new Container with the provided ContainerOption.
 func NewContainer(options ...ContainerOption) (*Container, error) {
 
 	now := time.Now()
@@ -127,13 +137,24 @@ func (c *Container) Load() error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
+
+	if c.IsFromSource() {
+		if err := c.Watch(); err != nil {
+			return err
+		}
+		if err := c.Build(); err != nil {
+			return err
+		}
+		c.ImageExists = true
+	}
+
 	return nil
 }
 
 // Unload unloads the function config.
 func (c *Container) Unload() error {
 	// Cleanup artifacts from Docker
-	return c.CleanupArtifacts()
+	return c.CleanupArtifacts(false)
 }
 
 // Validate validates the function config.
@@ -143,8 +164,8 @@ func (c *Container) Validate() error {
 		return perr.BadRequestWithMessage("name required for container")
 	}
 
-	if c.Image == "" {
-		return perr.BadRequestWithMessage("image required for container: " + c.Name)
+	if c.Image == "" && c.Source == "" {
+		return perr.BadRequestWithMessage("image or source required for container: " + c.Name)
 	}
 
 	return nil
@@ -199,7 +220,7 @@ func (c *Container) Run() (string, int, error) {
 
 	// Create a container using the specified image
 	createConfig := container.Config{
-		Image: c.Image,
+		Image: c.Image, // TODO: Figure out elegant way of overriding this
 		Cmd:   c.Cmd,
 		Labels: map[string]string{
 			// Set on the container since it's not on the image
@@ -414,8 +435,148 @@ func truncateString(s string, maxLength int) string {
 	return s
 }
 
-// Cleanup all docker containers for the given container
-func (c *Container) CleanupArtifacts() error {
+// CleanupArtifacts will clean up all docker artifacts for the given container
+func (c *Container) CleanupArtifacts(keepLatest bool) error {
 	slog.Info("cleanup artifacts", "name", c.Name)
-	return c.dockerClient.CleanupArtifactsForLabel("io.flowpipe.name", c.Name)
+	return c.dockerClient.CleanupArtifactsForLabel("io.flowpipe.name", c.Name, docker.WithSkipLatest(keepLatest))
+}
+
+func (c *Container) IsFromSource() bool {
+	return c.Image == "" && c.Source != ""
+}
+
+func (c *Container) Watch() error {
+	if c.Image != "" {
+		return nil
+	}
+
+	c.watcher = watcher.New()
+	c.watcher.SetMaxEvents(1)
+	if err := c.watcher.Add(c.Source); err != nil {
+		return perr.BadRequestWithMessage("failed to add watch for container source: " + c.Source)
+	}
+
+	// watch for changes
+	go func() {
+		for {
+			select {
+			case event := <-c.watcher.Event:
+				go func() {
+					slog.Info("container watch event", "event", event)
+					if err := c.Build(); err != nil {
+						slog.Error(fmt.Sprintf("failed to build container image %s, got error: %v", c.Name, err), "error", err, "containerName", c.Name)
+					}
+				}()
+			case err := <-c.watcher.Error:
+				slog.Error("file watcher error", "error", err)
+			case <-c.watcher.Closed:
+				return
+			}
+		}
+	}()
+
+	// watcher in background
+	go func() {
+		if err := c.watcher.Start(time.Millisecond * 1000); err != nil {
+			slog.Error("failed to start file watcher", "container", c.Name, "error", err)
+		}
+	}()
+
+	return nil
+}
+
+func (c *Container) Build() error {
+	err := c.build()
+	if err != nil {
+		return err
+	}
+
+	// If a build was queued, run it now.
+	if c.buildQueued {
+		c.buildQueued = false
+		return c.build()
+	}
+
+	return nil
+}
+
+func (c *Container) build() error {
+	if !c.buildMutex.TryLock() {
+		c.buildQueued = true
+		return nil
+	}
+	defer c.buildMutex.Unlock()
+
+	c.SetUpdatedAt()
+	if err := c.buildImage(); err != nil {
+		return err
+	}
+
+	return c.CleanupArtifacts(true)
+}
+
+// buildImage actually builds the container image. Should only be called by build.
+func (c *Container) buildImage() error {
+	dockerFilePath := c.Source
+	if strings.HasSuffix(dockerFilePath, "/Dockerfile") {
+		dockerFilePath = strings.TrimSuffix(dockerFilePath, "/Dockerfile")
+	}
+
+	buildCtx, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{})
+	if err != nil {
+		return err
+	}
+	defer buildCtx.Close()
+
+	buildOptions := types.ImageBuildOptions{
+		Tags: []string{
+			c.GetImageTag(),
+			c.GetImageLatestTag(),
+		},
+		PullParent:     true,
+		SuppressOutput: false,
+		Labels: map[string]string{
+			"io.flowpipe.type":                 "container",
+			"io.flowpipe.name":                 c.Name,
+			"org.opencontainers.image.created": time.Now().Format(time.RFC3339),
+		},
+	}
+
+	slog.Info("Building image ...", "container", c.Name)
+
+	resp, err := c.dockerClient.CLI.ImageBuild(c.ctx, buildCtx, buildOptions)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(os.Stdout, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Docker image built successfully.", "container", c.Name)
+
+	return nil
+}
+
+// GetImageName returns the docker image name (e.g. flowpipe/my_func) for the function.
+func (c *Container) GetImageName() string {
+	return fmt.Sprintf("flowpipe/%s", c.Name)
+}
+
+// GetImageTag returns the docker image name and a timestamped tag
+func (c *Container) GetImageTag() string {
+	tagTimestampFormat := "20060102T150405.000"
+	tag := c.CreatedAt.Format(tagTimestampFormat)
+	if c.UpdatedAt != nil {
+		tag = c.UpdatedAt.Format(tagTimestampFormat)
+	}
+	tag = strings.ReplaceAll(tag, ".", "")
+	return fmt.Sprintf("%s:%s", c.GetImageName(), tag)
+}
+
+// GetImageLatestTag returns the docker image name with latest as tag
+func (c *Container) GetImageLatestTag() string {
+	return fmt.Sprintf("%s:%s", c.GetImageName(), "latest")
 }

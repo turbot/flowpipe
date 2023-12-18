@@ -2,6 +2,8 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
+replace github.com/turbot/pipe-fittings => ../pipe-fittings
+
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/ThreeDotsLabs/watermill v1.3.3

@@ -26,11 +26,17 @@ func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error 
 	}
 
 	// Validate the image attribute
-	if i[schema.AttributeTypeImage] == nil {
-		return perr.BadRequestWithMessage("Container input must define '" + schema.AttributeTypeImage + "'")
+	if i[schema.AttributeTypeImage] == nil && i[schema.AttributeTypeSource] == nil {
+		return perr.BadRequestWithMessage("Container input must define '" + schema.AttributeTypeImage + "' or '" + schema.AttributeTypeSource + "', but not both")
 	}
-	if _, ok := i[schema.AttributeTypeImage].(string); !ok {
-		return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeImage + "' must be a string")
+	if i[schema.AttributeTypeImage] != nil {
+		if _, ok := i[schema.AttributeTypeImage].(string); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeImage + "' must be a string")
+		}
+	} else {
+		if _, ok := i[schema.AttributeTypeSource].(string); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeSource + "' must be a string")
+		}
 	}
 
 	// Validate the cmd attribute
@@ -189,7 +195,15 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	}
 
 	c.Name = input[schema.LabelName].(string)
-	c.Image = input[schema.AttributeTypeImage].(string)
+
+	if input[schema.AttributeTypeImage] != nil {
+		c.Image = input[schema.AttributeTypeImage].(string)
+	}
+
+	if input[schema.AttributeTypeSource] != nil {
+		c.Source = input[schema.AttributeTypeSource].(string)
+	}
+
 	if input[schema.AttributeTypeCmd] != nil {
 		c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
 	}
