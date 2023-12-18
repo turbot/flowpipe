@@ -23,8 +23,8 @@ import (
 type ESService struct {
 	ctx        context.Context
 	runID      string
-	commandBus *handler.FpCommandBus
-	eventBus   *command.FpEventBus
+	commandBus *handler.FpCommandBusImpl
+	eventBus   *command.FpEventBusImpl
 	router     *message.Router
 
 	RootMod   *modconfig.Mod
@@ -115,19 +115,19 @@ func (es *ESService) Start() error {
 
 		CommandHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.CommandHandler {
 			return []cqrs.CommandHandler{
-				command.PipelineCancelHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineFailHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineFinishHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineLoadHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelinePauseHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelinePlanHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineQueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineResumeHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.PipelineStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.StepPipelineFinishHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.StepQueueHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.StepStartHandler{EventBus: &command.FpEventBus{Eb: eb}},
-				command.StepForEachPlanHandler{EventBus: &command.FpEventBus{Eb: eb}},
+				command.PipelineCancelHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelineFailHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelineFinishHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelineLoadHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelinePauseHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelinePlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelineQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelineResumeHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.PipelineStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.StepPipelineFinishHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.StepQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.StepStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.StepForEachPlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -140,19 +140,19 @@ func (es *ESService) Start() error {
 		},
 		EventHandlers: func(cb *cqrs.CommandBus, eb *cqrs.EventBus) []cqrs.EventHandler {
 			return []cqrs.EventHandler{
-				handler.PipelineCanceled{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelineFailed{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelineFinished{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelineLoaded{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelinePaused{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelinePlanned{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelineQueued{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelineResumed{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.PipelineStarted{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.StepFinished{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.StepQueued{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.StepPipelineStarted{CommandBus: &handler.FpCommandBus{Cb: cb}},
-				handler.StepForEachPlanned{CommandBus: &handler.FpCommandBus{Cb: cb}},
+				handler.PipelineCanceled{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelineFailed{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelineFinished{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelineLoaded{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelinePaused{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelinePlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelineQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelineResumed{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.PipelineStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.StepFinished{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.StepQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.StepPipelineStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.StepForEachPlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 			}
 		},
 		EventsPublisher: eventsPubSub,
@@ -175,8 +175,8 @@ func (es *ESService) Start() error {
 	runID := util.NewProcessID()
 
 	es.runID = runID
-	es.commandBus = &handler.FpCommandBus{Cb: cqrsFacade.CommandBus()}
-	es.eventBus = &command.FpEventBus{Eb: cqrsFacade.EventBus()}
+	es.commandBus = &handler.FpCommandBusImpl{Cb: cqrsFacade.CommandBus()}
+	es.eventBus = &command.FpEventBusImpl{Eb: cqrsFacade.EventBus()}
 
 	es.router = router
 

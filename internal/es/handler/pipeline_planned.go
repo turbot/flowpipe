@@ -132,7 +132,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	return nil
 }
 
-func runNonForEachStep(ctx context.Context, commandBus *FpCommandBus, e *event.PipelinePlanned, forEachOutput modconfig.Output, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, stepLoop *modconfig.StepLoop) {
+func runNonForEachStep(ctx context.Context, commandBus FpCommandBus, e *event.PipelinePlanned, forEachOutput modconfig.Output, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, stepLoop *modconfig.StepLoop) {
 
 	// If a step does not have a for_each, we still build a for_each control but with key of "0"
 	forEachControl := &modconfig.StepForEach{

@@ -17,15 +17,20 @@ import (
 type EventHandler struct {
 	// Event handlers can only send commands, they are not even permitted access
 	// to the EventBus.
-	CommandBus *FpCommandBus
+	CommandBus FpCommandBus
 }
 
-type FpCommandBus struct {
+type FpCommandBus interface {
+	Send(ctx context.Context, command interface{}) error
+	SendWithLock(ctx context.Context, command interface{}, lock *sync.Mutex) error
+}
+
+type FpCommandBusImpl struct {
 	Cb *cqrs.CommandBus
 }
 
 // Send sends command to the command bus.
-func (c FpCommandBus) Send(ctx context.Context, cmd interface{}) error {
+func (c FpCommandBusImpl) Send(ctx context.Context, cmd interface{}) error {
 
 	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
@@ -37,7 +42,7 @@ func (c FpCommandBus) Send(ctx context.Context, cmd interface{}) error {
 	return c.Cb.Send(ctx, cmd)
 }
 
-func (c FpCommandBus) SendWithLock(ctx context.Context, cmd interface{}, lock *sync.Mutex) error {
+func (c FpCommandBusImpl) SendWithLock(ctx context.Context, cmd interface{}, lock *sync.Mutex) error {
 
 	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
