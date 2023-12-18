@@ -23,8 +23,8 @@ import (
 type ESService struct {
 	ctx        context.Context
 	runID      string
-	commandBus *handler.FpCommandBusImpl
-	eventBus   *command.FpEventBusImpl
+	CommandBus handler.FpCommandBus
+	eventBus   command.FpEventBus
 	router     *message.Router
 
 	RootMod   *modconfig.Mod
@@ -43,8 +43,7 @@ func NewESService(ctx context.Context) (*ESService, error) {
 }
 
 func (es *ESService) Send(cmd interface{}) error {
-	err := es.commandBus.Send(es.ctx, cmd)
-
+	err := es.CommandBus.Send(es.ctx, cmd)
 	return err
 }
 
@@ -175,7 +174,7 @@ func (es *ESService) Start() error {
 	runID := util.NewProcessID()
 
 	es.runID = runID
-	es.commandBus = &handler.FpCommandBusImpl{Cb: cqrsFacade.CommandBus()}
+	es.CommandBus = &handler.FpCommandBusImpl{Cb: cqrsFacade.CommandBus()}
 	es.eventBus = &command.FpEventBusImpl{Eb: cqrsFacade.EventBus()}
 
 	es.router = router

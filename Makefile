@@ -19,7 +19,10 @@ clean-tmp:
 clean-dist:
 	rm -rf ./dist/*
 
-clean: clean-tmp clean-dist
+clean-debug:
+	rm -rf __debug*
+
+clean: clean-tmp clean-dist clean-debug
 
 build-open-api:
 	rm -rf service/api/docs

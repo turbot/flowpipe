@@ -157,7 +157,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
 
-		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
+		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
 		_, err := s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
 		if err != nil {
 			return err
@@ -172,7 +172,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 
 		slog.Info("Scheduling trigger", "name", t.Name(), "interval", config.Schedule)
 
-		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService, t)
+		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
 
 		var err error
 		switch strings.ToLower(config.Schedule) {

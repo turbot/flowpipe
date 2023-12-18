@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -16,30 +16,29 @@ import (
 )
 
 type TriggerRunnerBase struct {
-	Ctx       context.Context
-	Trigger   *modconfig.Trigger
-	EsService *es.ESService
+	Trigger    *modconfig.Trigger
+	commandBus handler.FpCommandBus
+	rootMod    *modconfig.Mod
 }
 
 type TriggerRunner interface {
 	Run()
 }
 
-func NewTriggerRunner(ctx context.Context, esService *es.ESService, trigger *modconfig.Trigger) TriggerRunner {
+func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
-			Ctx:       ctx,
-			Trigger:   trigger,
-			EsService: esService,
+			Trigger:    trigger,
+			commandBus: commandBus,
+			rootMod:    rootMod,
 		}
 	case *modconfig.TriggerQuery:
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
-				Ctx:       ctx,
-				Trigger:   trigger,
-				EsService: esService,
-			},
+				Trigger:    trigger,
+				commandBus: commandBus,
+				rootMod:    rootMod},
 		}
 	default:
 		return nil
@@ -62,19 +61,13 @@ func (tr *TriggerRunnerBase) Run() {
 
 	// We can only run trigger from root mod
 
-	mod := tr.EsService.RootMod
-	if mod == nil {
-		slog.Info("No root mod detected, cannot schedule triggers")
-		return
-	}
-
-	if modFullName != mod.FullName {
-		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", mod.FullName)
+	if modFullName != tr.rootMod.FullName {
+		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
 		return
 	}
 
 	vars := map[string]cty.Value{}
-	for _, v := range mod.ResourceMaps.Variables {
+	for _, v := range tr.rootMod.ResourceMaps.Variables {
 		vars[v.GetMetadata().ResourceName] = v.Value
 	}
 
@@ -102,7 +95,7 @@ func (tr *TriggerRunnerBase) Run() {
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
 
-	if err := tr.EsService.Send(pipelineCmd); err != nil {
+	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
 		return
 	}
