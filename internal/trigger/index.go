@@ -77,9 +77,10 @@ func (tr *TriggerRunnerBase) Run() {
 	executionVariables := map[string]cty.Value{}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
-	evalContext := &hcl.EvalContext{
-		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
+	evalContext, err := buildEvalContext(tr.rootMod)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return
 	}
 
 	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
@@ -102,4 +103,22 @@ func (tr *TriggerRunnerBase) Run() {
 		slog.Error("Error sending pipeline command", "error", err)
 		return
 	}
+}
+
+func buildEvalContext(rootMod *modconfig.Mod) (*hcl.EvalContext, error) {
+	vars := make(map[string]cty.Value)
+	if rootMod != nil {
+		for _, v := range rootMod.ResourceMaps.Variables {
+			vars[v.GetMetadata().ResourceName] = v.Value
+		}
+	}
+
+	executionVariables := map[string]cty.Value{}
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
+	}
+	return evalContext, nil
 }

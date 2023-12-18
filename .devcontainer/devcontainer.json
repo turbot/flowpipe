@@ -29,7 +29,8 @@
 			"ms-vscode.makefile-tools",
 			"hashicorp.terraform",
 			"GitHub.vscode-github-actions",
-			"HashiCorp.HCL"]
+			"HashiCorp.HCL",
+			"alexcvzz.vscode-sqlit"]
 		}
-	  }
+	}
 }

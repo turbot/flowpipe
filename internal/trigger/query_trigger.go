@@ -7,7 +7,10 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -79,7 +82,7 @@ func (tr *TriggerRunnerQuery) Run() {
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
 
-	db, err := InitializeDB("./test.db", safeTriggerName)
+	db, err := InitializeQueryTriggerDB("./test.db", safeTriggerName)
 	if err != nil {
 		slog.Error("Error initializing db", "error", err)
 		return
@@ -90,16 +93,91 @@ func (tr *TriggerRunnerQuery) Run() {
 		return
 	}
 
+	newRows := []map[string]interface{}{}
 	for _, k := range newItemPrimaryKeys {
 		slog.Info("New item key", "key", k)
 		row := primaryKeyRowMap[k]
 		slog.Info("New item rows", "row", row)
+		newRows = append(newRows, row.(map[string]interface{}))
+	}
+
+	evalContext, err := buildEvalContext(tr.rootMod)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return
+	}
+
+	newRowsCty, err := newRowsCty(newRows)
+	if err != nil {
+		slog.Error("Error building new rows cty", "error", err)
+		return
+	}
+
+	// Add the new rows to the pipeline args
+
+	selfVars := map[string]cty.Value{}
+	selfVars["inserted_rows"] = cty.ListVal(newRowsCty)
+
+	varsEvalContext := evalContext.Variables
+	varsEvalContext["self"] = cty.ObjectVal(selfVars)
+
+	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
+	if diags.HasErrors() {
+		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
+		return
+	}
+
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewExecutionEvent(),
+		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Name:                pipelineName,
+		Args:                pipelineArgs,
+	}
+
+	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+
+	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
+		slog.Error("Error sending pipeline command", "error", err)
+		return
 	}
 }
 
-func InitializeDB(dbPath, tableName string) (*sql.DB, error) {
+func newRowsCty(newRows []map[string]interface{}) ([]cty.Value, error) {
+	var newRowsCty []cty.Value
+	for _, r := range newRows {
+		rowCty, err := newRowCty(r)
+		if err != nil {
+			return nil, err
+		}
+		newRowsCty = append(newRowsCty, rowCty)
+	}
+	return newRowsCty, nil
+}
 
+func newRowCty(row map[string]interface{}) (cty.Value, error) {
+	rowCty := map[string]cty.Value{}
+	for k, v := range row {
+		ctyVal, err := hclhelpers.ConvertInterfaceToCtyValue(v)
+		if err != nil {
+			return cty.NilVal, err
+		}
+		rowCty[k] = ctyVal
+	}
+	return cty.ObjectVal(rowCty), nil
+}
+
+func InitializeDB(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func InitializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
+
+	db, err := InitializeDB(dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +223,7 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + `_temp_items (data) VALUES (?)`)
+	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + `_temp_items (data) VALUES (?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -178,7 +256,11 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
     `
 	rows, err := tx.Query(newItemsSQL)
 	if err != nil {
-		tx.Rollback()
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+			return nil, err
+		}
 		return nil, err
 	}
 	defer rows.Close()

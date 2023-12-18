@@ -62,16 +62,23 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	}
 
 	dbConnectionString := i[schema.AttributeTypeConnectionString].(string)
-	switch {
-	case strings.Contains(dbConnectionString, "postgres://"):
-		db, err = sql.Open(DriverPostgres, dbConnectionString)
-	case strings.Contains(dbConnectionString, "mysql://"):
+
+	if strings.HasPrefix(dbConnectionString, "postgres://") || strings.HasPrefix(dbConnectionString, "postgresql://") {
+		db, err = sql.Open("postgres", dbConnectionString)
+
+	} else if strings.HasPrefix(dbConnectionString, "mysql://") {
 		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
-	case strings.HasPrefix(dbConnectionString, "duckdb:"):
+
+	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
 		db, err = sql.Open(DriverDuckDB, dbConnectionString)
-	default:
-		return nil, perr.BadRequestWithMessage("Unsupported database type")
+
+	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
+		db, err = sql.Open("sqlite3", dbConnectionString[7:])
+
+	} else {
+		return nil, perr.BadRequestWithMessage("Invalid database connection string")
+
 	}
 
 	if err != nil {
