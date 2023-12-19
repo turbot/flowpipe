@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/radovskyb/watcher"
-	"io"
+	"github.com/spf13/viper"
+	"github.com/turbot/pipe-fittings/constants"
 	"log/slog"
-	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -454,9 +455,12 @@ func (c *Container) Watch() error {
 		return nil
 	}
 
+	wd := viper.GetString(constants.ArgModLocation)
+	df := filepath.Join(wd, c.Source)
+
 	c.watcher = watcher.New()
 	c.watcher.SetMaxEvents(1)
-	if err := c.watcher.Add(c.Source); err != nil {
+	if err := c.watcher.Add(df); err != nil {
 		return perr.BadRequestWithMessage("failed to add watch for container source: " + c.Source)
 	}
 
@@ -521,10 +525,9 @@ func (c *Container) build() error {
 
 // buildImage actually builds the container image. Should only be called by build.
 func (c *Container) buildImage() error {
-	dockerFilePath := c.Source
-	if strings.HasSuffix(dockerFilePath, "/Dockerfile") {
-		dockerFilePath = strings.TrimSuffix(dockerFilePath, "/Dockerfile")
-	}
+	wd := viper.GetString(constants.ArgModLocation)
+	df := filepath.Join(wd, c.Source)
+	dockerFilePath := strings.TrimSuffix(df, "/Dockerfile")
 
 	buildCtx, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{})
 	if err != nil {
@@ -538,7 +541,7 @@ func (c *Container) buildImage() error {
 			c.GetImageLatestTag(),
 		},
 		PullParent:     true,
-		SuppressOutput: false,
+		SuppressOutput: true,
 		Labels: map[string]string{
 			"io.flowpipe.type":                 "container",
 			"io.flowpipe.name":                 c.Name,
@@ -548,16 +551,11 @@ func (c *Container) buildImage() error {
 
 	slog.Info("Building image ...", "container", c.Name)
 
-	resp, err := c.dockerClient.CLI.ImageBuild(c.ctx, buildCtx, buildOptions)
+	_, err = c.dockerClient.CLI.ImageBuild(c.ctx, buildCtx, buildOptions)
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(os.Stdout, resp.Body)
-	if err != nil {
-		return err
-	}
+	// defer resp.Body.Close()
 
 	slog.Info("Docker image built successfully.", "container", c.Name)
 
