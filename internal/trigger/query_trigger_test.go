@@ -394,6 +394,41 @@ func TestTriggerQuery(t *testing.T) {
 
 	triggerRunner.Run()
 
+	assert.NotNil(triggerCommand, "trigger command should not be nil")
+	// The callback to the mocks should have been called by now
+	if generatedEvalContext == nil {
+		assert.Fail("generated eval context should not be nil")
+		return
+	}
+
+	selfVar = generatedEvalContext.Variables["self"]
+	if selfVar == cty.NilVal {
+		assert.Fail("self variable should not be nil")
+		return
+	}
+
+	selfVarMap = selfVar.AsValueMap()
+	insertedRows = selfVarMap["inserted_rows"]
+	assert.Equal(cty.NilVal, insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+
+	updatedRows := selfVarMap["updated_rows"]
+	assert.NotNil(updatedRows, "updated rows should not be nil")
+	updatedRowsList := updatedRows.AsValueSlice()
+	assert.Equal(1, len(updatedRowsList), "wrong number of updated rows")
+	for _, row := range updatedRowsList {
+		rowMap := row.AsValueMap()
+		id := rowMap["id"].AsString()
+		if id == "1" {
+			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(35), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
+		} else {
+			assert.Fail("wrong id")
+			return
+		}
+	}
+
 	//
 	// FOURTH RUN
 	//
