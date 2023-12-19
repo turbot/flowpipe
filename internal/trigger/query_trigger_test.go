@@ -99,6 +99,11 @@ func populateTestTable(db *sql.DB, tableName string, data []map[string]interface
 // }
 
 func TestTriggerQuery(t *testing.T) {
+
+	// TODO: Test with integer as primary key
+	// TODO: Test with jsonb column (does SQLIte support jsonb?)
+	// TODO: Test with blob ... how do we detect changes?
+
 	ctx := context.Background()
 
 	assert := assert.New(t)
@@ -208,6 +213,9 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
+
+	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
+	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 

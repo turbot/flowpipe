@@ -2,9 +2,13 @@ package trigger
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -18,6 +22,49 @@ import (
 
 type TriggerRunnerQuery struct {
 	TriggerRunnerBase
+	DatabasePath string
+}
+
+type queryTriggerMetadata struct {
+	PrimaryKey string
+	RowHash    string
+}
+
+// hashRow generates a hash for the given row, properly handling blob data.
+func hashRow(row map[string]interface{}) string {
+	// Sort the keys to ensure consistent ordering
+	var keys []string
+	for k := range row {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	// Initialize a hash writer
+	hasher := sha256.New()
+
+	// Process each key-value pair
+	for _, k := range keys {
+		value := row[k]
+
+		// Check if the value is a slice of bytes (blob data)
+		if reflect.TypeOf(value).Kind() == reflect.Slice {
+			slice, ok := value.([]byte)
+			if ok {
+				// Write the raw bytes directly to the hasher
+				hasher.Write(slice)
+				continue
+			}
+		}
+
+		// For other data types, use fmt.Sprintf to convert them to strings
+		hasher.Write([]byte(fmt.Sprintf("%v=%v;", k, value)))
+	}
+
+	// Compute the hash
+	hashBytes := hasher.Sum(nil)
+
+	// Convert the hash to a hexadecimal string
+	return hex.EncodeToString(hashBytes)
 }
 
 // TODO: ensure only 1 trigger query is running at any given time
@@ -60,7 +107,8 @@ func (tr *TriggerRunnerQuery) Run() {
 		return
 	}
 
-	primaryKeys := []string{}
+	controlItems := []queryTriggerMetadata{}
+
 	primaryKeyRowMap := map[string]interface{}{}
 	for _, r := range rows {
 		// get the primary key
@@ -75,21 +123,26 @@ func (tr *TriggerRunnerQuery) Run() {
 		}
 
 		primaryKeyRowMap[pkString] = r
-		primaryKeys = append(primaryKeys, pkString)
-	}
 
-	slog.Info("Output", "primaryKeys", primaryKeys)
+		rowHash := hashRow(r)
+
+		controlItem := queryTriggerMetadata{
+			PrimaryKey: pkString,
+			RowHash:    rowHash,
+		}
+		controlItems = append(controlItems, controlItem)
+	}
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
 
-	db, err := initializeQueryTriggerDB("./flowpipe.db", safeTriggerName)
+	db, err := initializeQueryTriggerDB(tr.DatabasePath, safeTriggerName)
 	if err != nil {
 		slog.Error("Error initializing db", "error", err)
 		return
 	}
 	defer db.Close()
 
-	newItemPrimaryKeys, err := storeQueryTriggerData(db, safeTriggerName, primaryKeys)
+	newItemPrimaryKeys, err := storeQueryTriggerData(db, safeTriggerName, controlItems)
 	if err != nil {
 		slog.Error("Error storing slice", "error", err)
 		return
@@ -203,9 +256,9 @@ func initializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 	return db, nil
 }
 
-func storeQueryTriggerData(db *sql.DB, tableName string, data []string) ([]string, error) {
+func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTriggerMetadata) ([]string, error) {
 
-	if len(data) == 0 {
+	if len(controlItems) == 0 {
 		return nil, nil
 	}
 
@@ -227,7 +280,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, data []string) ([]strin
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`insert into ` + tableName + `_temp_items (_fp_data) values (?)`) //nolint:gosec // should be safe to use
+	tempStmt, err := tx.Prepare(`insert into ` + tableName + `_temp_items (_fp_data, _fp_hash) values (?, ?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -239,8 +292,8 @@ func storeQueryTriggerData(db *sql.DB, tableName string, data []string) ([]strin
 	defer tempStmt.Close()
 
 	// Insert all items into the temporary table
-	for _, item := range data {
-		_, err = tempStmt.Exec(item)
+	for _, item := range controlItems {
+		_, err = tempStmt.Exec(item.PrimaryKey, item.RowHash)
 		if err != nil {
 			err2 := tx.Rollback()
 			if err2 != nil {
