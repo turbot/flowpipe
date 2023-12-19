@@ -372,7 +372,7 @@ func TestQueryDuckDB(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "./database_files/new_database.duckdb",
+		schema.AttributeTypeConnectionString: "duckdb:./database_files/new_database.duckdb",
 		schema.AttributeTypeSql:              "select * from employee order by id;",
 	})
 

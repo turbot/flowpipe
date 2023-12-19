@@ -68,7 +68,7 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	case strings.Contains(dbConnectionString, "mysql://"):
 		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
-	case strings.HasSuffix(dbConnectionString, ".duckdb"): // Check if the database file has .duckdb extension
+	case strings.HasPrefix(dbConnectionString, "duckdb:"):
 		db, err = sql.Open(DriverDuckDB, dbConnectionString)
 	default:
 		return nil, perr.BadRequestWithMessage("Unsupported database type")
