@@ -150,16 +150,16 @@ func (tr *TriggerRunnerQuery) Run() {
 
 	newRows := []map[string]interface{}{}
 	for _, k := range newItemPrimaryKeys {
-		slog.Info("New item key", "key", k)
+		slog.Debug("New item key", "key", k)
 		row := primaryKeyRowMap[k]
-		slog.Info("New item rows", "row", row)
-		newRows = append(newRows, row.(map[string]interface{}))
-	}
 
-	evalContext, err := buildEvalContext(tr.rootMod)
-	if err != nil {
-		slog.Error("Error building eval context", "error", err)
-		return
+		if row == nil {
+			slog.Warn("New item not found in row map", "key", k)
+			continue
+		}
+
+		slog.Debug("New item rows", "row", row)
+		newRows = append(newRows, row.(map[string]interface{}))
 	}
 
 	newRowsCty, err := newRowsCty(newRows)
@@ -173,6 +173,12 @@ func (tr *TriggerRunnerQuery) Run() {
 	selfVars := map[string]cty.Value{}
 	if len(newRowsCty) > 0 {
 		selfVars["inserted_rows"] = cty.ListVal(newRowsCty)
+	}
+
+	evalContext, err := buildEvalContext(tr.rootMod)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return
 	}
 
 	varsEvalContext := evalContext.Variables
@@ -257,7 +263,6 @@ func initializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 }
 
 func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTriggerMetadata) ([]string, error) {
-
 	if len(controlItems) == 0 {
 		return nil, nil
 	}
@@ -274,7 +279,6 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		err2 := tx.Rollback()
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
-			return nil, err
 		}
 		return nil, err
 	}
@@ -285,7 +289,6 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		err2 := tx.Rollback()
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
-			return nil, err
 		}
 		return nil, err
 	}
@@ -298,44 +301,30 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 			err2 := tx.Rollback()
 			if err2 != nil {
 				slog.Error("Error rolling back transaction", "error", err2)
-				return nil, err
 			}
 			return nil, err
 		}
 	}
 
-	// Find new items by comparing with the main table
-	newItemsSQL := `
-        insert into ` + tableName + ` (_fp_data)
-        select _fp_data from ` + tableName + `_temp_items
-        where _fp_data not in (select _fp_data from ` + tableName + `)
-        returning _fp_data
-    `
-	rows, err := tx.Query(newItemsSQL)
+	newItems, err := insertNewItems(tx, tableName)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
-			return nil, err
 		}
 		return nil, err
 	}
-	defer rows.Close()
 
-	// Collect new items
-	var newItems []string
-	for rows.Next() {
-		var newData string
-		if err := rows.Scan(&newData); err != nil {
-			err2 := tx.Rollback()
-			if err2 != nil {
-				slog.Error("Error rolling back transaction", "error", err2)
-				return nil, err
-			}
-			return nil, err
+	updatedItems, err := updateItems2(tx, tableName)
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		newItems = append(newItems, newData)
+		return nil, err
 	}
+
+	slog.Info("updatedItems", "updatedItems", updatedItems)
 
 	// Find deleted items by comparing with the main table
 	deletedItemsSQL := `
@@ -348,7 +337,6 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		err2 := tx.Rollback()
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
-			return nil, err
 		}
 		return nil, err
 	}
@@ -358,11 +346,10 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 	var deletedItems []string
 	for deletedRows.Next() {
 		var deletedData string
-		if err := rows.Scan(&deletedData); err != nil {
+		if err := deletedRows.Scan(&deletedData); err != nil {
 			err2 := tx.Rollback()
 			if err2 != nil {
 				slog.Error("Error rolling back transaction", "error", err2)
-				return nil, err
 			}
 		}
 		deletedItems = append(deletedItems, deletedData)
@@ -375,7 +362,6 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		err2 := tx.Rollback()
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
-			return nil, err
 		}
 		return nil, err
 	}
@@ -387,4 +373,108 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 	}
 
 	return newItems, nil
+}
+
+func insertNewItems(tx *sql.Tx, tableName string) ([]string, error) {
+	// Find new items by comparing with the main table
+	newItemsSQL := `
+        insert into ` + tableName + ` (_fp_data, _fp_hash)
+        select _fp_data, _fp_hash from ` + tableName + `_temp_items
+        where _fp_data not in (select _fp_data from ` + tableName + `)
+        returning _fp_data
+    `
+	rows, err := tx.Query(newItemsSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Collect new items
+	var newItems []string
+	for rows.Next() {
+		var newData string
+		if err := rows.Scan(&newData); err != nil {
+			return nil, err
+		}
+		newItems = append(newItems, newData)
+	}
+	return newItems, nil
+}
+
+func updateItems(tx *sql.Tx, tableName string) ([]string, error) {
+	sourceTable := tableName + "_temp_items"
+
+	updateItemsSQL := `UPDATE ` + tableName + `
+	SET _fp_hash = (
+		SELECT ` + sourceTable + `._fp_hash
+		FROM ` + sourceTable + `
+		WHERE ` + sourceTable + `._fp_data = ` + tableName + `._fp_data
+	)
+	WHERE EXISTS (
+		SELECT 1
+		FROM ` + sourceTable + `
+		WHERE ` + sourceTable + `._fp_data = ` + tableName + `._fp_data AND
+		` + sourceTable + `._fp_hash <> ` + tableName + `._fp_hash
+	)
+	RETURNING _fp_data;
+
+	`
+	rows, err := tx.Query(updateItemsSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Collect new items
+	var updatedItesm []string
+	for rows.Next() {
+		var newData string
+		if err := rows.Scan(&newData); err != nil {
+			return nil, err
+		}
+		updatedItesm = append(updatedItesm, newData)
+	}
+	return updatedItesm, nil
+}
+
+func updateItems2(tx *sql.Tx, tableName string) ([]string, error) {
+
+	//sourceTable := tableName + "_temp_items"
+
+	updateItemsSQL := `WITH Updated AS (
+		SELECT _fp_data
+		FROM query_test_trigger
+		WHERE EXISTS (
+			SELECT 1
+			FROM query_test_trigger_temp_items
+			WHERE query_test_trigger_temp_items._fp_data = query_test_trigger._fp_data
+			  AND query_test_trigger._fp_hash <> query_test_trigger_temp_items._fp_hash
+		)
+	)
+	UPDATE query_test_trigger
+	SET _fp_hash = (
+		SELECT _fp_hash
+		FROM query_test_trigger_temp_items
+		WHERE query_test_trigger_temp_items._fp_data = query_test_trigger._fp_data
+	)
+	WHERE _fp_data IN (SELECT _fp_data FROM Updated)
+	RETURNING _fp_data;
+	`
+
+	rows, err := tx.Query(updateItemsSQL)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Collect new items
+	var updatedItems []string
+	for rows.Next() {
+		var newData string
+		if err := rows.Scan(&newData); err != nil {
+			return nil, err
+		}
+		updatedItems = append(updatedItems, newData)
+	}
+	return updatedItems, nil
 }

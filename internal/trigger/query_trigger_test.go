@@ -68,6 +68,40 @@ func populateTestTable(db *sql.DB, tableName string, data []map[string]interface
 	return nil
 }
 
+func updateTestTable(db *sql.DB, tableName string, data map[string]interface{}) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ? WHERE id = ?`) //nolint:gosec // should be safe to use
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return err
+	}
+	defer tempStmt.Close()
+
+	_, err = tempStmt.Exec(data["name"], data["age"], data["registration_date"], data["is_active"], data["id"])
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
+
+	return nil
+}
+
 // func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
 // 	// Start a transaction
 // 	tx, err := db.Begin()
@@ -349,6 +383,16 @@ func TestTriggerQuery(t *testing.T) {
 			assert.Fail("wrong id")
 		}
 	}
+
+	updateTestTable(db, "test_one", map[string]interface{}{
+		"id":                "1",
+		"name":              "John",
+		"age":               35,
+		"registration_date": "2020-01-01",
+		"is_active":         false,
+	})
+
+	triggerRunner.Run()
 
 	//
 	// FOURTH RUN
