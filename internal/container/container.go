@@ -187,7 +187,7 @@ func (c *Container) Run() (string, int, error) {
 	start := time.Now()
 
 	// Pull the Docker image if it's not already available
-	if !c.ImageExists {
+	if !c.ImageExists && !c.IsFromSource() {
 		imageExistsStart := time.Now()
 		imageExists, err := c.dockerClient.ImageExists(c.Image)
 
@@ -219,8 +219,12 @@ func (c *Container) Run() (string, int, error) {
 	}
 
 	// Create a container using the specified image
+	imageName := c.Image
+	if c.IsFromSource() {
+		imageName = c.GetImageLatestTag()
+	}
 	createConfig := container.Config{
-		Image: c.Image, // TODO: Figure out elegant way of overriding this
+		Image: imageName,
 		Cmd:   c.Cmd,
 		Labels: map[string]string{
 			// Set on the container since it's not on the image
