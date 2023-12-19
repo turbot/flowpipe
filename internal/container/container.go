@@ -222,7 +222,7 @@ func (c *Container) Run() (string, int, error) {
 	// Create a container using the specified image
 	imageName := c.Image
 	if c.IsFromSource() {
-		imageName = c.GetImageLatestTag()
+		imageName = c.GetImageTag()
 	}
 	createConfig := container.Config{
 		Image: imageName,
