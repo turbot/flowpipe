@@ -82,7 +82,7 @@ func (tr *TriggerRunnerQuery) Run() {
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
 
-	db, err := InitializeQueryTriggerDB("./test.db", safeTriggerName)
+	db, err := InitializeQueryTriggerDB("./flowpipe.db", safeTriggerName)
 	if err != nil {
 		slog.Error("Error initializing db", "error", err)
 		return
@@ -116,7 +116,9 @@ func (tr *TriggerRunnerQuery) Run() {
 	// Add the new rows to the pipeline args
 
 	selfVars := map[string]cty.Value{}
-	selfVars["inserted_rows"] = cty.ListVal(newRowsCty)
+	if len(newRowsCty) > 0 {
+		selfVars["inserted_rows"] = cty.ListVal(newRowsCty)
+	}
 
 	varsEvalContext := evalContext.Variables
 	varsEvalContext["self"] = cty.ObjectVal(selfVars)
@@ -182,7 +184,7 @@ func InitializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	createTableSQL := `CREATE TABLE IF NOT EXISTS ` + tableName + ` (data TEXT);`
+	createTableSQL := `create table if not exists ` + tableName + ` (data text primary key, hash text);`
 
 	slog.Info("Creating table", "sql", createTableSQL)
 	_, err = db.Exec(createTableSQL)
@@ -190,7 +192,7 @@ func InitializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	crateIndexSQL := `CREATE INDEX IF NOT EXISTS idx_data ON ` + tableName + ` (data);`
+	crateIndexSQL := `create index if not exists idx_data on ` + tableName + ` (data);`
 	_, err = db.Exec(crateIndexSQL)
 	if err != nil {
 		return nil, err
@@ -212,7 +214,7 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 	}
 
 	// Create a temporary table
-	_, err = tx.Exec(`CREATE TEMPORARY TABLE ` + tableName + `_temp_items (data TEXT)`)
+	_, err = tx.Exec(`create temporary table ` + tableName + `_temp_items (data text)`)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -223,7 +225,7 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + `_temp_items (data) VALUES (?)`) //nolint:gosec // should be safe to use
+	tempStmt, err := tx.Prepare(`insert into ` + tableName + `_temp_items (data) values (?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -249,10 +251,10 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 
 	// Find new items by comparing with the main table
 	newItemsSQL := `
-        INSERT INTO ` + tableName + ` (data)
-        SELECT data FROM ` + tableName + `_temp_items
-        WHERE data NOT IN (SELECT data FROM ` + tableName + `)
-        RETURNING data
+        Insert into ` + tableName + ` (data)
+        select data from ` + tableName + `_temp_items
+        where data not in (select data from ` + tableName + `)
+        returning data
     `
 	rows, err := tx.Query(newItemsSQL)
 	if err != nil {
