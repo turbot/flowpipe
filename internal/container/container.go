@@ -542,6 +542,7 @@ func (c *Container) buildImage() error {
 		},
 		PullParent:     true,
 		SuppressOutput: true,
+		Remove:         true,
 		Labels: map[string]string{
 			"io.flowpipe.type":                 "container",
 			"io.flowpipe.name":                 c.Name,
@@ -555,7 +556,6 @@ func (c *Container) buildImage() error {
 	if err != nil {
 		return err
 	}
-	// defer resp.Body.Close()
 
 	slog.Info("Docker image built successfully.", "container", c.Name)
 
