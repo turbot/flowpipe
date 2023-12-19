@@ -68,6 +68,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s failed", e.Event.ExecutionID, pipelineDefn.FullName))
+	execution.ServerOutput(fmt.Sprintf("[%s] Error %v", e.Event.ExecutionID, e.Errors))
 
 	// Sanitize event store file
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
