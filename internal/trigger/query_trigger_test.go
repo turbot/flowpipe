@@ -68,6 +68,36 @@ func populateTestTable(db *sql.DB, tableName string, data []map[string]interface
 	return nil
 }
 
+// func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
+// 	// Start a transaction
+// 	tx, err := db.Begin()
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Prepare statement for inserting into the temporary table
+// 	placeholders := strings.Join(strings.Split(strings.Repeat("?", len(idsToDelete)), ""), ",")
+
+// 	tempStmt, err := tx.Prepare(fmt.Sprintf("DELETE FROM %s WHERE id in (%s)", tableName, placeholders))
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer tempStmt.Close()
+
+// 	_, err = tempStmt.Exec(idsToDelete...)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	// Commit the transaction
+// 	if err := tx.Commit(); err != nil {
+// 		slog.Error("Error committing transaction", "error", err)
+// 		return err
+// 	}
+
+// 	return nil
+// }
+
 func TestTriggerQuery(t *testing.T) {
 	ctx := context.Background()
 
@@ -97,7 +127,7 @@ func TestTriggerQuery(t *testing.T) {
 		}
 	}
 
-	db, err := InitializeDB(outputPath)
+	db, err := initializeDB(outputPath)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
@@ -157,7 +187,7 @@ func TestTriggerQuery(t *testing.T) {
 
 	trigger := &modconfig.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
-			FullName: "foo.bar.baz",
+			FullName: "query.test_trigger",
 		},
 		Pipeline: cty.ObjectVal(pipeline),
 		ArgsRaw:  hclExpressionMock,
@@ -311,4 +341,16 @@ func TestTriggerQuery(t *testing.T) {
 			assert.Fail("wrong id")
 		}
 	}
+
+	//
+	// FOURTH RUN
+	//
+	// Delete some data
+
+	// idsToDelete := []any{"1", "4"}
+	// err = deleteFromTestTable(db, "test_one", idsToDelete)
+	// if err != nil {
+	// 	assert.Fail("Error deleting from test table", err)
+	// 	return
+	// }
 }

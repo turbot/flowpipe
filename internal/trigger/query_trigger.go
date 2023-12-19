@@ -82,12 +82,14 @@ func (tr *TriggerRunnerQuery) Run() {
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
 
-	db, err := InitializeQueryTriggerDB("./flowpipe.db", safeTriggerName)
+	db, err := initializeQueryTriggerDB("./flowpipe.db", safeTriggerName)
 	if err != nil {
 		slog.Error("Error initializing db", "error", err)
 		return
 	}
-	newItemPrimaryKeys, err := StoreSlice(db, safeTriggerName, primaryKeys)
+	defer db.Close()
+
+	newItemPrimaryKeys, err := storeQueryTriggerData(db, safeTriggerName, primaryKeys)
 	if err != nil {
 		slog.Error("Error storing slice", "error", err)
 		return
@@ -168,7 +170,7 @@ func newRowCty(row map[string]interface{}) (cty.Value, error) {
 	return cty.ObjectVal(rowCty), nil
 }
 
-func InitializeDB(dbPath string) (*sql.DB, error) {
+func initializeDB(dbPath string) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
@@ -177,14 +179,14 @@ func InitializeDB(dbPath string) (*sql.DB, error) {
 	return db, nil
 }
 
-func InitializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
+func initializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 
-	db, err := InitializeDB(dbPath)
+	db, err := initializeDB(dbPath)
 	if err != nil {
 		return nil, err
 	}
 
-	createTableSQL := `create table if not exists ` + tableName + ` (data text primary key, hash text);`
+	createTableSQL := `create table if not exists ` + tableName + ` (_fp_data text primary key, _fp_hash text);`
 
 	slog.Info("Creating table", "sql", createTableSQL)
 	_, err = db.Exec(createTableSQL)
@@ -192,7 +194,7 @@ func InitializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 		return nil, err
 	}
 
-	crateIndexSQL := `create index if not exists idx_data on ` + tableName + ` (data);`
+	crateIndexSQL := `create index if not exists idx_data on ` + tableName + ` (_fp_data);`
 	_, err = db.Exec(crateIndexSQL)
 	if err != nil {
 		return nil, err
@@ -201,9 +203,9 @@ func InitializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 	return db, nil
 }
 
-func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) {
+func storeQueryTriggerData(db *sql.DB, tableName string, data []string) ([]string, error) {
 
-	if len(slice) == 0 {
+	if len(data) == 0 {
 		return nil, nil
 	}
 
@@ -214,7 +216,7 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 	}
 
 	// Create a temporary table
-	_, err = tx.Exec(`create temporary table ` + tableName + `_temp_items (data text)`)
+	_, err = tx.Exec(`create temporary table ` + tableName + `_temp_items (_fp_data text primary key, _fp_hash text)`)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -225,7 +227,7 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`insert into ` + tableName + `_temp_items (data) values (?)`) //nolint:gosec // should be safe to use
+	tempStmt, err := tx.Prepare(`insert into ` + tableName + `_temp_items (_fp_data) values (?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -237,7 +239,7 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 	defer tempStmt.Close()
 
 	// Insert all items into the temporary table
-	for _, item := range slice {
+	for _, item := range data {
 		_, err = tempStmt.Exec(item)
 		if err != nil {
 			err2 := tx.Rollback()
@@ -251,10 +253,10 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 
 	// Find new items by comparing with the main table
 	newItemsSQL := `
-        Insert into ` + tableName + ` (data)
-        select data from ` + tableName + `_temp_items
-        where data not in (select data from ` + tableName + `)
-        returning data
+        insert into ` + tableName + ` (_fp_data)
+        select _fp_data from ` + tableName + `_temp_items
+        where _fp_data not in (select _fp_data from ` + tableName + `)
+        returning _fp_data
     `
 	rows, err := tx.Query(newItemsSQL)
 	if err != nil {
@@ -282,7 +284,40 @@ func StoreSlice(db *sql.DB, tableName string, slice []string) ([]string, error) 
 		newItems = append(newItems, newData)
 	}
 
-	_, err = tx.Exec(`DROP TABLE ` + tableName + `_temp_items`)
+	// Find deleted items by comparing with the main table
+	deletedItemsSQL := `
+		select _fp_data from ` + tableName + `
+		where _fp_data not in (select _fp_data from ` + tableName + `_temp_items)
+	`
+
+	deletedRows, err := tx.Query(deletedItemsSQL)
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+			return nil, err
+		}
+		return nil, err
+	}
+	defer deletedRows.Close()
+
+	// Collect deleted items
+	var deletedItems []string
+	for deletedRows.Next() {
+		var deletedData string
+		if err := rows.Scan(&deletedData); err != nil {
+			err2 := tx.Rollback()
+			if err2 != nil {
+				slog.Error("Error rolling back transaction", "error", err2)
+				return nil, err
+			}
+		}
+		deletedItems = append(deletedItems, deletedData)
+	}
+
+	slog.Info("deletedItems", "deletedItems", deletedItems)
+
+	_, err = tx.Exec(`drop table ` + tableName + `_temp_items`)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
