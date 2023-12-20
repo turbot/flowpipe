@@ -1,4 +1,3 @@
-//nolint:forbidigo //TODO: initial import
 package docker
 
 import (
@@ -272,7 +271,6 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 
 	// Iterate through the containers and stop/remove them
 	for _, c := range containers {
-		fmt.Println("delete container?", c.Image)
 		if cleanupOptions.SkipLatest && strings.HasSuffix(c.Image, ":latest") {
 			continue
 		}
@@ -327,7 +325,6 @@ func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...
 	}
 
 	for _, image := range images {
-		fmt.Println("delete image?", image.RepoTags)
 		if cleanupOptions.SkipLatest {
 			isLatest := false
 			for _, tag := range image.RepoTags {
