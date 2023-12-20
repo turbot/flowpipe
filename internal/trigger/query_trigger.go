@@ -142,7 +142,7 @@ func (tr *TriggerRunnerQuery) Run() {
 	}
 	defer db.Close()
 
-	newItemPrimaryKeys, updatedItemPrimaryKeys, err := storeQueryTriggerData(db, safeTriggerName, controlItems)
+	newItemPrimaryKeys, updatedItemPrimaryKeys, deletedPrimaryKeys, err := calculatedNewUpdatedDeletedData(db, safeTriggerName, controlItems)
 	if err != nil {
 		slog.Error("Error storing slice", "error", err)
 		return
@@ -188,8 +188,12 @@ func (tr *TriggerRunnerQuery) Run() {
 		return
 	}
 
-	// Add the new rows to the pipeline args
+	deletedKeysCty := []cty.Value{}
+	for _, k := range deletedPrimaryKeys {
+		deletedKeysCty = append(deletedKeysCty, cty.StringVal(k))
+	}
 
+	// Add the new rows to the pipeline args
 	selfVars := map[string]cty.Value{}
 	if len(newRowCtyVals) > 0 {
 		selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
@@ -201,6 +205,12 @@ func (tr *TriggerRunnerQuery) Run() {
 		selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
 	} else {
 		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+	}
+
+	if len(deletedKeysCty) > 0 {
+		selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
+	} else {
+		selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod)
@@ -290,15 +300,15 @@ func initializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 	return db, nil
 }
 
-func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTriggerMetadata) ([]string, []string, error) {
+func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems []queryTriggerMetadata) ([]string, []string, []string, error) {
 	if len(controlItems) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Create a temporary table
@@ -308,7 +318,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Prepare statement for inserting into the temporary table
@@ -318,7 +328,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer tempStmt.Close()
 
@@ -330,7 +340,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 			if err2 != nil {
 				slog.Error("Error rolling back transaction", "error", err2)
 			}
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 	}
 
@@ -340,7 +350,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	updatedItems, err := updatedItems(tx, tableName)
@@ -349,7 +359,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	slog.Info("updatedItems", "updatedItems", updatedItems)
@@ -366,7 +376,7 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	defer deletedRows.Close()
 
@@ -391,16 +401,16 @@ func storeQueryTriggerData(db *sql.DB, tableName string, controlItems []queryTri
 		if err2 != nil {
 			slog.Error("Error rolling back transaction", "error", err2)
 		}
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		slog.Error("Error committing transaction", "error", err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
-	return newItems, updatedItems, nil
+	return newItems, updatedItems, deletedItems, nil
 }
 
 func insertNewItems(tx *sql.Tx, tableName string) ([]string, error) {

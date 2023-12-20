@@ -384,13 +384,17 @@ func TestTriggerQuery(t *testing.T) {
 		}
 	}
 
-	updateTestTable(db, "test_one", map[string]interface{}{
+	err = updateTestTable(db, "test_one", map[string]interface{}{
 		"id":                "1",
 		"name":              "John",
 		"age":               35,
 		"registration_date": "2020-01-01",
 		"is_active":         false,
 	})
+	if err != nil {
+		assert.Fail("Error updating test table", err)
+		return
+	}
 
 	triggerRunner.Run()
 
