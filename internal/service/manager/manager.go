@@ -401,7 +401,7 @@ func (m *Manager) Stop() error {
 	// Ensure any log messages are synced before we exit
 	defer func() {
 		// TODO do we need this for slog
-		//_ = slog.Sync()
+		// _ = slog.Sync()
 	}()
 
 	if m.apiService != nil {
@@ -433,7 +433,7 @@ func (m *Manager) Stop() error {
 
 func (m *Manager) InterruptHandler() {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
 	done := make(chan bool, 1)
 	go func() {
 		sig := <-sigs
