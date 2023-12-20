@@ -494,7 +494,7 @@ func (c *Container) Watch() error {
 }
 
 func (c *Container) Build() error {
-	err := c.build()
+	err := c.BuildOne()
 	if err != nil {
 		return err
 	}
@@ -502,13 +502,14 @@ func (c *Container) Build() error {
 	// If a build was queued, run it now.
 	if c.buildQueued {
 		c.buildQueued = false
-		return c.build()
+		return c.Build()
 	}
 
 	return nil
 }
 
-func (c *Container) build() error {
+func (c *Container) BuildOne() error {
+	// TODO: Look into channels as a better approach, see functions/function.go[BuildOne]
 	if !c.buildMutex.TryLock() {
 		c.buildQueued = true
 		return nil
