@@ -502,7 +502,7 @@ func (c *Container) Build() error {
 	// If a build was queued, run it now.
 	if c.buildQueued {
 		c.buildQueued = false
-		return c.Build()
+		return c.BuildOne()
 	}
 
 	return nil
