@@ -193,9 +193,14 @@ func (tr *TriggerRunnerQuery) Run() {
 	selfVars := map[string]cty.Value{}
 	if len(newRowCtyVals) > 0 {
 		selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
+	} else {
+		selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
 	}
+
 	if len(updatedRowCtyVals) > 0 {
 		selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
+	} else {
+		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod)
@@ -220,7 +225,7 @@ func (tr *TriggerRunnerQuery) Run() {
 		Args:                pipelineArgs,
 	}
 
-	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs)
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
@@ -426,23 +431,23 @@ func insertNewItems(tx *sql.Tx, tableName string) ([]string, error) {
 
 func updatedItems(tx *sql.Tx, tableName string) ([]string, error) {
 
-	//sourceTable := tableName + "_temp_items"
+	sourceTable := tableName + "_temp_items"
 
 	updateItemsSQL := `WITH Updated AS (
 		SELECT _fp_data
-		FROM query_test_trigger
+		FROM ` + tableName + `
 		WHERE EXISTS (
 			SELECT 1
-			FROM query_test_trigger_temp_items
-			WHERE query_test_trigger_temp_items._fp_data = query_test_trigger._fp_data
-			  AND query_test_trigger._fp_hash <> query_test_trigger_temp_items._fp_hash
+			FROM ` + sourceTable + `
+			WHERE ` + sourceTable + `._fp_data = ` + tableName + `._fp_data
+			  AND ` + tableName + `._fp_hash <> ` + sourceTable + `._fp_hash
 		)
 	)
-	UPDATE query_test_trigger
+	UPDATE ` + tableName + `
 	SET _fp_hash = (
 		SELECT _fp_hash
-		FROM query_test_trigger_temp_items
-		WHERE query_test_trigger_temp_items._fp_data = query_test_trigger._fp_data
+		FROM ` + sourceTable + `
+		WHERE ` + sourceTable + `._fp_data = ` + tableName + `._fp_data
 	)
 	WHERE _fp_data IN (SELECT _fp_data FROM Updated)
 	RETURNING _fp_data;

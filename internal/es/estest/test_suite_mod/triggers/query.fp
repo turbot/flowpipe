@@ -5,7 +5,7 @@ trigger "query" "simple" {
     sql = "select * from test_one"
     primary_key = "id"
 
-    pipeline = pipeline.simple_with_trigger
+    pipeline = pipeline.query_trigger_display
 
     args = {
         inserted_rows = self.inserted_rows
