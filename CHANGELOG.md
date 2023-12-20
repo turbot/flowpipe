@@ -1,5 +1,8 @@
 # Flowpipe
 
+## v0.2.0 [tbd]
+
+
 ## v0.1.0 [2023-12-13]
 
 Introducing Flowpipe, a cloud scripting engine. Automation and workflow to connect your clouds to the people, systems and data that matter. Pipelines for DevOps written in HCL.

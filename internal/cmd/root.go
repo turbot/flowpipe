@@ -41,7 +41,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	cmdconfig.
 		OnCmd(rootCmd).
 		// Flowpipe API
-		AddPersistentStringFlag(constants.ArgHost, "", "API server host, including the port number").
+		AddPersistentStringFlag(constants.ArgHost, "", "API server host, including the port number - Example: --host http://localhost:7103").
 		AddPersistentStringFlag(constants.ArgConfigPath, "", "Colon separated list of paths to search for workspace files, in order of decreasing precedence").
 		// Common (steampipe, flowpipe) flags
 		AddPersistentStringFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory").
