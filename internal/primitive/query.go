@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	_ "github.com/marcboeker/go-duckdb"
 
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -22,6 +23,7 @@ import (
 const (
 	DriverPostgres = "postgres"
 	DriverMySQL    = "mysql"
+	DriverDuckDB   = "duckdb"
 )
 
 type Query struct {
@@ -66,6 +68,8 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	case strings.Contains(dbConnectionString, "mysql://"):
 		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
+	case strings.HasPrefix(dbConnectionString, "duckdb:"):
+		db, err = sql.Open(DriverDuckDB, dbConnectionString)
 	default:
 		return nil, perr.BadRequestWithMessage("Unsupported database type")
 	}

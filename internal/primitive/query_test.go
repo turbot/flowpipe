@@ -364,3 +364,64 @@ func TestQueryMissingConnectionString(t *testing.T) {
 	assert.Equal("Query input must define connection_string", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
+
+func TestQueryDuckDB(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "duckdb:./database_files/new_database.duckdb",
+		schema.AttributeTypeSql:              "select * from employee order by id;",
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(3, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	rows := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+
+	// Row 1
+	assert.Equal(int32(1), rows[0]["id"])
+	assert.Equal("john@example.com", rows[0]["email"])
+	assert.Equal("{\"theme\": \"dark\", \"notifications\": true}", rows[0]["preferences"])
+
+	// Row 2
+	assert.Equal(int32(2), rows[1]["id"])
+	assert.Equal("adam@example.com", rows[1]["email"])
+	assert.Equal("{\"theme\": \"light\", \"notifications\": true}", rows[1]["preferences"])
+
+	// Row 3
+	assert.Equal(int32(3), rows[2]["id"])
+	assert.Equal("alice@example.com", rows[2]["email"])
+	assert.Equal("{\"theme\": \"dark\", \"notifications\": true}", rows[2]["preferences"])
+}
+
+func TestQueryInvalidDatabase(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "abcd",
+		schema.AttributeTypeSql:              "select * from employee order by id;",
+	})
+
+	// Initialize the DB connection
+	_, err := hr.InitializeDB(ctx, input)
+	if err != nil {
+		return
+	}
+
+	_, err = hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Equal("Unsupported database type", err.Error())
+}
