@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
@@ -76,7 +77,7 @@ func (tr *TriggerRunnerBase) Run() {
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
 
 	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)

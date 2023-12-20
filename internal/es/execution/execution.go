@@ -23,6 +23,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/types"
+	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -56,7 +57,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+		Functions: funcs.ContextFunctions(viper.GetString(pfconstants.ArgModLocation)),
 	}
 
 	params := map[string]cty.Value{}

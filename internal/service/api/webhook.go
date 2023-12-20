@@ -15,6 +15,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -133,7 +134,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
 
 	pipelineArgs, diags := t.GetArgs(evalContext)
