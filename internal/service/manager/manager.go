@@ -433,7 +433,7 @@ func (m *Manager) Stop() error {
 
 func (m *Manager) InterruptHandler() {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGKILL, syscall.SIGQUIT)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	done := make(chan bool, 1)
 	go func() {
 		sig := <-sigs
