@@ -3,11 +3,13 @@ package trigger
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -29,6 +31,7 @@ type TriggerRunner interface {
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
+
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
@@ -37,11 +40,14 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			rootMod:    rootMod,
 		}
 	case *modconfig.TriggerQuery:
+		internalDir := filepaths.ModInternalDir()
+		dbFile := filepath.Join(internalDir, "flowpipe.db")
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:    trigger,
 				commandBus: commandBus,
 				rootMod:    rootMod},
+			DatabasePath: dbFile,
 		}
 	default:
 		return nil

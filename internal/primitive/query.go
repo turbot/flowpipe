@@ -6,13 +6,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/marcboeker/go-duckdb"
+	"github.com/spf13/viper"
 
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -74,7 +77,14 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 		db, err = sql.Open(DriverDuckDB, dbConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
-		db, err = sql.Open("sqlite3", dbConnectionString[7:])
+		sqlLiteFile := dbConnectionString[7:]
+		if sqlLiteFile == "" {
+			return nil, perr.BadRequestWithMessage("Invalid database connection string")
+		}
+		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), sqlLiteFile)
+
+		slog.Debug("Opening sqlite database", "file", dbFile)
+		db, err = sql.Open("sqlite3", dbFile)
 
 	} else {
 		return nil, perr.BadRequestWithMessage("Invalid database connection string")

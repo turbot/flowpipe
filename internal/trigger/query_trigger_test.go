@@ -414,6 +414,7 @@ func TestTriggerQuery(t *testing.T) {
 	updatedRows := selfVarMap["updated_rows"]
 	assert.NotNil(updatedRows, "updated rows should not be nil")
 	updatedRowsList := updatedRows.AsValueSlice()
+
 	assert.Equal(1, len(updatedRowsList), "wrong number of updated rows")
 	for _, row := range updatedRowsList {
 		rowMap := row.AsValueMap()
@@ -432,7 +433,28 @@ func TestTriggerQuery(t *testing.T) {
 	//
 	// FOURTH RUN
 	//
-	// Delete some data
+	// run it again, shouldn't have any new updates
+
+	triggerRunner.Run()
+	assert.NotNil(triggerCommand, "trigger command should not be nil")
+	// The callback to the mocks should have been called by now
+	if generatedEvalContext == nil {
+		assert.Fail("generated eval context should not be nil")
+		return
+	}
+
+	selfVar = generatedEvalContext.Variables["self"]
+	if selfVar == cty.NilVal {
+		assert.Fail("self variable should not be nil")
+		return
+	}
+
+	selfVarMap = selfVar.AsValueMap()
+	insertedRows = selfVarMap["inserted_rows"]
+	assert.Equal(cty.NilVal, insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+
+	updatedRows = selfVarMap["updated_rows"]
+	assert.Equal(cty.NilVal, updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
 	// idsToDelete := []any{"1", "4"}
 	// err = deleteFromTestTable(db, "test_one", idsToDelete)

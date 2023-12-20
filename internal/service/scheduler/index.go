@@ -99,6 +99,7 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		job := jobs[0]
 		jobTags := job.Tags()
 
+		// Detect changes
 		if jobTags[1] != "schedule:"+scheduleString {
 			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
 			s.cronScheduler.RemoveByReference(job)
