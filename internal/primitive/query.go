@@ -12,7 +12,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	_ "github.com/marcboeker/go-duckdb"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
 
@@ -75,7 +74,8 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
-		db, err = sql.Open(DriverDuckDB, dbConnectionString)
+		// db, err = sql.Open(DriverDuckDB, dbConnectionString)
+		return nil, perr.BadRequestWithMessage("DuckDB not yet supported")
 
 	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
 		sqlLiteFile := dbConnectionString[7:]
