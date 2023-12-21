@@ -542,7 +542,7 @@ func (m *Manager) renderServerStartOutput() {
 			}
 		}
 	}
-	output.RenderServerOutput(context.Background(), outputs...)
+	output.RenderServerOutput(m.ctx, outputs...)
 }
 
 func (m *Manager) renderServerShutdownOutput() {
@@ -551,5 +551,5 @@ func (m *Manager) renderServerShutdownOutput() {
 		stopTime = *m.StoppedAt
 	}
 	msg := types.NewServerOutput(stopTime, app_specific.AppName, "server stopped")
-	output.RenderServerOutput(context.Background(), msg)
+	output.RenderServerOutput(m.ctx, msg)
 }
