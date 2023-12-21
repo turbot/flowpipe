@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/turbot/pipe-fittings/schema"
-
 	"log/slog"
 	"os"
 	"os/signal"
@@ -542,9 +541,8 @@ func (m *Manager) renderServerStartOutput() {
 				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s'\n\tSchedule: %s\n\tQuery: %s", tt, t.Name(), tc.Schedule, tc.Sql)))
 			}
 		}
-
 	}
-	output.RenderServerOutput(m.ctx, outputs...)
+	output.RenderServerOutput(context.Background(), outputs...)
 }
 
 func (m *Manager) renderServerShutdownOutput() {
@@ -553,5 +551,5 @@ func (m *Manager) renderServerShutdownOutput() {
 		stopTime = *m.StoppedAt
 	}
 	msg := types.NewServerOutput(stopTime, app_specific.AppName, "server stopped")
-	output.RenderServerOutput(m.ctx, msg)
+	output.RenderServerOutput(context.Background(), msg)
 }
