@@ -673,7 +673,7 @@ func TestTriggerQueryB(t *testing.T) {
 	for _, item := range data {
 		blobData := make([]byte, 10*(blobSizeMultiplier+1))
 		for i := range blobData {
-			blobData[i] = byte(rand.Intn(256))
+			blobData[i] = byte(rand.Intn(256)) //nolint:gosec // just a test case
 		}
 
 		item["blob_data"] = blobData
@@ -822,10 +822,14 @@ func TestTriggerQueryB(t *testing.T) {
 
 	data[1]["blob_data"] = make([]byte, 10*(blobSizeMultiplier+2))
 	for i := range data[1]["blob_data"].([]byte) {
-		data[1]["blob_data"].([]byte)[i] = byte(rand.Intn(256))
+		data[1]["blob_data"].([]byte)[i] = byte(rand.Intn(256)) //nolint:gosec // just a test case
 	}
 
-	updateTestTableB(db, "test_one", data[1])
+	err = updateTestTableB(db, "test_one", data[1])
+	if err != nil {
+		assert.Fail("Error updating test table", err)
+		return
+	}
 
 	triggerRunner.Run()
 
