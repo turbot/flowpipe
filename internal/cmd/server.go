@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/turbot/flowpipe/internal/output"
 	"net"
 	"strconv"
 
@@ -49,6 +50,8 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 			error_helpers.FailOnError(perr.InternalWithMessage("The designated port (" + strconv.Itoa(viper.GetInt(constants.ArgPort)) + ") is already in use"))
 			return
 		}
+
+		output.IsServerMode = true
 
 		// start manager, passing server config
 		// (this will ensure manager starts API, ES, Scheduling and docker services

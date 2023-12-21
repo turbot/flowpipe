@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
+
 	"log/slog"
 	"os"
 	"os/signal"
@@ -20,10 +22,13 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
@@ -130,6 +135,10 @@ func (m *Manager) Start() (*Manager, error) {
 
 	m.StartedAt = utils.TimeNow()
 	m.Status = "running"
+
+	if output.IsServerMode {
+		m.renderServerStartOutput()
+	}
 
 	return m, nil
 }
@@ -428,6 +437,10 @@ func (m *Manager) Stop() error {
 
 	m.StoppedAt = utils.TimeNow()
 
+	if output.IsServerMode {
+		m.renderServerShutdownOutput()
+	}
+
 	return nil
 }
 
@@ -492,4 +505,53 @@ func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
 	hashString := util.CalculateHash(trigger.FullName, salt.(string))
 
 	return "/api/latest/hook/" + trigger.FullName + "/" + hashString, nil
+}
+
+func (m *Manager) renderServerStartOutput() {
+	var outputs []types.SanitizedStringer
+	startTime := time.Now()
+	if !helpers.IsNil(m.StartedAt) {
+		startTime = *m.StartedAt
+	}
+	outputs = append(outputs, types.NewServerOutput(startTime, app_specific.AppName, "server started"))
+	outputs = append(outputs, types.NewServerOutput(startTime, app_specific.AppName, fmt.Sprintf("server listening on %s:%d", m.HTTPAddress, m.HTTPPort)))
+	modText := fmt.Sprintf("loaded: %s", m.RootMod.Name())
+	if !helpers.IsNil(m.RootMod.Version) {
+		modText += fmt.Sprintf(" (%s)", m.RootMod.Version.String())
+	}
+	outputs = append(outputs, types.NewServerOutput(startTime, "mod", modText))
+
+	for _, t := range m.triggers {
+		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+		switch tt {
+		case schema.TriggerTypeHttp:
+			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
+				// TODO: Add Payload Requirements?
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - POST %s", tt, t.Name(), tc.Url)))
+			}
+		case schema.TriggerTypeSchedule:
+			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - Schedule: %s", tt, t.Name(), tc.Schedule)))
+			}
+		case schema.TriggerTypeInterval:
+			if tc, ok := t.Config.(*modconfig.TriggerInterval); ok {
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - Schedule: %s", tt, t.Name(), tc.Schedule)))
+			}
+		case schema.TriggerTypeQuery:
+			if tc, ok := t.Config.(*modconfig.TriggerQuery); ok {
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s'\n\tSchedule: %s\n\tQuery: %s", tt, t.Name(), tc.Schedule, tc.Sql)))
+			}
+		}
+
+	}
+	output.RenderServerOutput(m.ctx, outputs...)
+}
+
+func (m *Manager) renderServerShutdownOutput() {
+	stopTime := time.Now()
+	if !helpers.IsNil(m.StoppedAt) {
+		stopTime = *m.StoppedAt
+	}
+	msg := types.NewServerOutput(stopTime, app_specific.AppName, "server stopped")
+	output.RenderServerOutput(m.ctx, msg)
 }
