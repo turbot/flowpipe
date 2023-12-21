@@ -6,13 +6,16 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"log/slog"
+	"path/filepath"
 	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/marcboeker/go-duckdb"
+	"github.com/spf13/viper"
 
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -62,16 +65,30 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	}
 
 	dbConnectionString := i[schema.AttributeTypeConnectionString].(string)
-	switch {
-	case strings.Contains(dbConnectionString, "postgres://"):
-		db, err = sql.Open(DriverPostgres, dbConnectionString)
-	case strings.Contains(dbConnectionString, "mysql://"):
+
+	if strings.HasPrefix(dbConnectionString, "postgres://") || strings.HasPrefix(dbConnectionString, "postgresql://") {
+		db, err = sql.Open("postgres", dbConnectionString)
+
+	} else if strings.HasPrefix(dbConnectionString, "mysql://") {
 		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
-	case strings.HasPrefix(dbConnectionString, "duckdb:"):
+
+	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
 		db, err = sql.Open(DriverDuckDB, dbConnectionString)
-	default:
-		return nil, perr.BadRequestWithMessage("Unsupported database type")
+
+	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
+		sqlLiteFile := dbConnectionString[7:]
+		if sqlLiteFile == "" {
+			return nil, perr.BadRequestWithMessage("Invalid database connection string")
+		}
+		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), sqlLiteFile)
+
+		slog.Debug("Opening sqlite database", "file", dbFile)
+		db, err = sql.Open("sqlite3", dbFile)
+
+	} else {
+		return nil, perr.BadRequestWithMessage("Invalid database connection string")
+
 	}
 
 	if err != nil {

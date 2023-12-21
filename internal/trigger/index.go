@@ -3,17 +3,21 @@ package trigger
 import (
 	"context"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type TriggerRunnerBase struct {
@@ -27,6 +31,7 @@ type TriggerRunner interface {
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
+
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
@@ -35,11 +40,14 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			rootMod:    rootMod,
 		}
 	case *modconfig.TriggerQuery:
+		internalDir := filepaths.ModInternalDir()
+		dbFile := filepath.Join(internalDir, "flowpipe.db")
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:    trigger,
 				commandBus: commandBus,
 				rootMod:    rootMod},
+			DatabasePath: dbFile,
 		}
 	default:
 		return nil
@@ -75,9 +83,10 @@ func (tr *TriggerRunnerBase) Run() {
 	executionVariables := map[string]cty.Value{}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
-	evalContext := &hcl.EvalContext{
-		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
+	evalContext, err := buildEvalContext(tr.rootMod)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return
 	}
 
 	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
@@ -102,9 +111,20 @@ func (tr *TriggerRunnerBase) Run() {
 	}
 }
 
-type TriggerRunnerQuery struct {
-	TriggerRunnerBase
-}
+func buildEvalContext(rootMod *modconfig.Mod) (*hcl.EvalContext, error) {
+	vars := make(map[string]cty.Value)
+	if rootMod != nil {
+		for _, v := range rootMod.ResourceMaps.Variables {
+			vars[v.GetMetadata().ResourceName] = v.Value
+		}
+	}
 
-func (tr *TriggerRunnerQuery) Run() {
+	executionVariables := map[string]cty.Value{}
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
+	}
+	return evalContext, nil
 }

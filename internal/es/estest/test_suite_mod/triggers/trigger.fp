@@ -1,15 +1,15 @@
-// pipeline "simple_with_trigger" {
-//     description = "simple pipeline that will be referred to by a trigger"
+pipeline "simple_with_trigger" {
+    description = "simple pipeline that will be referred to by a trigger"
 
-//     param "param_one" {
-//         type = string
-//         default = "this is the default value"
-//     }
+    param "param_one" {
+        type = string
+        default = "this is the default value"
+    }
 
-//     step "transform" "simple_echo" {
-//         value = "foo bar: ${param.param_one}"
-//     }
-// }
+    step "transform" "simple_echo" {
+        value = "foo bar: ${param.param_one}"
+    }
+}
 
 // trigger "schedule" "my_every_minute_trigger" {
 //     schedule = "* * * * *"

@@ -41,8 +41,9 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/marcboeker/go-duckdb v1.5.4
+	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/turbot/flowpipe-sdk-go v0.1.0
-	github.com/turbot/pipe-fittings v0.2.0-beta.1
+	github.com/turbot/pipe-fittings v0.2.0-beta.2
 	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 

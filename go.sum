@@ -823,6 +823,8 @@ github.com/mattn/go-runewidth v0.0.4/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzp
 github.com/mattn/go-runewidth v0.0.9/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
 github.com/mattn/go-runewidth v0.0.13 h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4OSgU=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
+github.com/mattn/go-sqlite3 v1.14.19 h1:fhGleo2h1p8tVChob4I9HpmVFIAkKGpiukdrgQbWfGI=
+github.com/mattn/go-sqlite3 v1.14.19/go.mod h1:2eHXhiwb8IkHr+BDWZGa96P6+rkvnG63S2DGjv9HUNg=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
 github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
@@ -1045,8 +1047,8 @@ github.com/turbot/flowpipe-sdk-go v0.1.0 h1:tQH3phj5+V2ue/u4X5cjjQNroAPfsXrvVpyg
 github.com/turbot/flowpipe-sdk-go v0.1.0/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
 github.com/turbot/go-kit v0.9.0-rc.3 h1:EXGeXNanalq9tWBXjxE/OKAC3WCASHKFKAH+OrfF6yI=
 github.com/turbot/go-kit v0.9.0-rc.3/go.mod h1:u7tPCxKe2w0V3Ap3JmzVF4eVbzVL0wk5muYOYI83DzA=
-github.com/turbot/pipe-fittings v0.2.0-beta.1 h1:PXsQOFZwR813wa63xPWIQxJ0cp+xs+UfHzAGfoKhJXo=
-github.com/turbot/pipe-fittings v0.2.0-beta.1/go.mod h1:8bOBTcD5GbnNO8kzX7HKXHFbpCubYuKvVn4M4maWs4Q=
+github.com/turbot/pipe-fittings v0.2.0-beta.2 h1:arB/fAmIOuhWcSt4lFnPoHxpk0CYJW+daxNY0HV4BDw=
+github.com/turbot/pipe-fittings v0.2.0-beta.2/go.mod h1:NxFC3+PGXO68Kv78DarCmDRr7dbiaNaT4Bui2mrRXc4=
 github.com/turbot/steampipe-plugin-code v0.5.1 h1:7p5GrJqMvkh2okLxDy08cTc07EtLecMePjHVUvBB5e4=
 github.com/turbot/steampipe-plugin-code v0.5.1/go.mod h1:qS6tdz86K4e06rnK0noP7fwJSPlpYpEAPRnnuJHyFZg=
 github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 h1:B2gkMJK1m5GYQfmxjO9VREAwdUsGxf48vOzKouoyFIM=
