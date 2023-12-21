@@ -16,8 +16,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type TriggerRunnerBase struct {

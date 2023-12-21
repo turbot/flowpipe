@@ -162,7 +162,7 @@ func (tr *TriggerRunnerQuery) Run() {
 		newRows = append(newRows, row.(map[string]interface{}))
 	}
 
-	newRowCtyVals, err := newRowsCty(newRows)
+	newRowCtyVals, err := rowsToCtyList(newRows)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
 		return
@@ -182,7 +182,7 @@ func (tr *TriggerRunnerQuery) Run() {
 		updatedRows = append(updatedRows, row.(map[string]interface{}))
 	}
 
-	updatedRowCtyVals, err := newRowsCty(updatedRows)
+	updatedRowCtyVals, err := rowsToCtyList(updatedRows)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
 		return
@@ -243,10 +243,10 @@ func (tr *TriggerRunnerQuery) Run() {
 	}
 }
 
-func newRowsCty(newRows []map[string]interface{}) ([]cty.Value, error) {
+func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {
 	var newRowsCty []cty.Value
 	for _, r := range newRows {
-		rowCty, err := newRowCty(r)
+		rowCty, err := rowToCty(r)
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +255,7 @@ func newRowsCty(newRows []map[string]interface{}) ([]cty.Value, error) {
 	return newRowsCty, nil
 }
 
-func newRowCty(row map[string]interface{}) (cty.Value, error) {
+func rowToCty(row map[string]interface{}) (cty.Value, error) {
 	rowCty := map[string]cty.Value{}
 	for k, v := range row {
 		ctyVal, err := hclhelpers.ConvertInterfaceToCtyValue(v)

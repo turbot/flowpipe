@@ -13,6 +13,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 	_ "github.com/marcboeker/go-duckdb"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
 
 	"github.com/turbot/pipe-fittings/constants"
@@ -163,7 +164,6 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					row[k] = string(decodedData)
 					continue
 				}
-				row[k] = string(ba)
 			}
 		}
 		results = append(results, row)
