@@ -110,27 +110,42 @@ func (tr *TriggerRunnerQuery) Run() {
 	controlItems := []queryTriggerMetadata{}
 
 	primaryKeyRowMap := map[string]interface{}{}
-	for _, r := range rows {
-		// get the primary key
-		primaryKey := r[config.PrimaryKey]
-		if primaryKey == nil {
-			slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
-			return
-		}
-		pkString, ok := primaryKey.(string)
-		if !ok {
-			pkString = fmt.Sprintf("%v", primaryKey)
-		}
 
-		primaryKeyRowMap[pkString] = r
+	if config.PrimaryKey != "" {
+		for _, r := range rows {
+			// get the primary key
+			primaryKey := r[config.PrimaryKey]
+			if primaryKey == nil {
+				slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
+				return
+			}
+			pkString, ok := primaryKey.(string)
+			if !ok {
+				pkString = fmt.Sprintf("%v", primaryKey)
+			}
 
-		rowHash := hashRow(r)
+			primaryKeyRowMap[pkString] = r
 
-		controlItem := queryTriggerMetadata{
-			PrimaryKey: pkString,
-			RowHash:    rowHash,
+			rowHash := hashRow(r)
+
+			controlItem := queryTriggerMetadata{
+				PrimaryKey: pkString,
+				RowHash:    rowHash,
+			}
+			controlItems = append(controlItems, controlItem)
 		}
-		controlItems = append(controlItems, controlItem)
+	} else {
+		for _, r := range rows {
+			rowHash := hashRow(r)
+			// use the rowHash as the primary key
+			primaryKeyRowMap[rowHash] = r
+
+			controlItem := queryTriggerMetadata{
+				PrimaryKey: rowHash,
+				RowHash:    rowHash,
+			}
+			controlItems = append(controlItems, controlItem)
+		}
 	}
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
