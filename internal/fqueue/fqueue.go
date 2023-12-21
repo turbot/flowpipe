@@ -1,37 +1,51 @@
 package fqueue
 
 import (
-	"fmt"
+	"log/slog"
 	"sync"
 )
 
 type FunctionCall func()
 
 type FunctionQueue struct {
-	Callback chan string
+	Name      string
+	Callback  chan string
+	DropCount int
 
-	queue     chan FunctionCall
-	isRunning bool
-	runLock   sync.Mutex
+	queue      chan FunctionCall
+	isRunning  bool
+	runLock    sync.Mutex
+	queueCount int
 }
 
-func NewFunctionQueueWithSize(size int) *FunctionQueue {
+func NewFunctionQueueWithSize(name string, size int) *FunctionQueue {
 	return &FunctionQueue{
-		queue:     make(chan FunctionCall, size),
-		isRunning: false,
+		Name:       name,
+		DropCount:  0,
+		queue:      make(chan FunctionCall, size),
+		isRunning:  false,
+		queueCount: 0,
 	}
 }
 
-func NewFunctionQueue() *FunctionQueue {
-	return NewFunctionQueueWithSize(2)
+func NewFunctionQueue(name string) *FunctionQueue {
+	return NewFunctionQueueWithSize(name, 2)
 }
 
 func (fq *FunctionQueue) Enqueue(fn FunctionCall) {
+	fq.runLock.Lock()
+	defer fq.runLock.Unlock()
+
 	select {
 	case fq.queue <- fn:
 		// Function added to queue
+		fq.queueCount++
+		slog.Debug("Added to queue", "queue", fq.Name, "queue_count", fq.queueCount)
+
 	default:
 		// Queue is full, function call is dropped or handled otherwise
+		slog.Debug("Dropped from queue", "queue", fq.Name, "queue_count", fq.queueCount)
+		fq.DropCount++
 	}
 }
 
@@ -50,19 +64,29 @@ func (fq *FunctionQueue) Execute() {
 		fq.runLock.Unlock()
 
 		for fn := range fq.queue {
-			fmt.Println("Before execute")
+			slog.Debug("Before execute", "queue", fq.Name, "queue_count", fq.queueCount)
 			fn() // Execute the function call
-			fmt.Println("After execute")
-		}
+			slog.Debug("After execute", "queue", fq.Name, "queue_count", fq.queueCount)
 
-		fmt.Println("Function queue finished trying to unlock isRuning")
-		fq.runLock.Lock()
-		fq.isRunning = false
-		fq.runLock.Unlock()
-		fmt.Println("Function queue finished mutex unlocked")
+			fq.runLock.Lock()
+			fq.queueCount--
 
-		if fq.Callback != nil {
-			fq.Callback <- "done"
+			if fq.queueCount == 0 {
+				slog.Debug("No item in the queue .. returning", "queue", fq.Name, "queue_count", fq.queueCount)
+
+				defer func() {
+					fq.isRunning = false
+
+					if fq.Callback != nil {
+						fq.Callback <- "done"
+					}
+					fq.runLock.Unlock()
+				}()
+
+				return
+			}
+			fq.runLock.Unlock()
+
 		}
 	}()
 }

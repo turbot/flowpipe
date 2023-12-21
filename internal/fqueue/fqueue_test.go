@@ -15,38 +15,43 @@ func TestFunctionQueue(t *testing.T) {
 
 	// Create a new function queue
 	// fq := NewFunctionQueueWithSize(4)
-	fq := NewFunctionQueue()
+	fq := NewFunctionQueue("TestFunctionQueue")
 
 	fq.Callback = make(chan string)
 
+	runMap := map[string]bool{}
+
 	// Add a function call to the queue
 	fq.Enqueue(func() {
-		fmt.Println("start 1 second sleep")
-		time.Sleep(1 * time.Second)
-		fmt.Println("** end 1 second sleep")
+		fmt.Println("start sleep 0")
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println("** end sleep 0")
+		runMap["0"] = true
 	})
 
 	// Start the function queue
 	fq.Execute()
 
 	fq.Enqueue(func() {
-		fmt.Println("start 3 second sleep")
-		time.Sleep(3 * time.Second)
-		fmt.Println("** end 3 second sleep")
+		fmt.Println("start sleep 1")
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println("** end sleep 1")
+		runMap["1"] = true
 	})
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(25 * time.Millisecond)
 
 	fq.Enqueue(func() {
-		fmt.Println("start 1 second sleep A")
-		time.Sleep(1 * time.Second)
-		fmt.Println("** end 1 second sleep")
+		fmt.Println("start sleep A")
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println("** end sleep A")
+		runMap["A"] = true
 	})
 
 	fq.Enqueue(func() {
-		fmt.Println("start 1 second sleep B")
-		time.Sleep(1 * time.Second)
-		fmt.Println("** end 1 second sleep")
+		fmt.Println("start sleep B")
+		time.Sleep(100 * time.Millisecond)
+		fmt.Println("** end sleep B")
 	})
 
 	fq.Enqueue(func() {
@@ -87,5 +92,10 @@ func TestFunctionQueue(t *testing.T) {
 
 	res := <-fq.Callback
 	assert.Equal("done", res)
-	fmt.Println("res is " + res)
+	assert.Equal(3, len(runMap))
+	assert.True(runMap["0"])
+	assert.True(runMap["1"])
+	assert.True(runMap["A"])
+	assert.Equal(7, fq.DropCount)
+	fmt.Println("res is: " + res)
 }

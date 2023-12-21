@@ -38,7 +38,7 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			Trigger:    trigger,
 			commandBus: commandBus,
 			rootMod:    rootMod,
-			fqueue:     fqueue.NewFunctionQueue(),
+			fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
 		}
 	case *modconfig.TriggerQuery:
 		internalDir := filepaths.ModInternalDir()
@@ -48,7 +48,7 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 				Trigger:    trigger,
 				commandBus: commandBus,
 				rootMod:    rootMod,
-				fqueue:     fqueue.NewFunctionQueue()},
+				fqueue:     fqueue.NewFunctionQueue(trigger.FullName)},
 			DatabasePath: dbFile,
 		}
 	default:
