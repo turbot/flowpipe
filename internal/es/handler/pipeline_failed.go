@@ -2,7 +2,8 @@ package handler
 
 import (
 	"context"
-	"fmt"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -67,8 +68,14 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
-	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s failed", e.Event.ExecutionID, pipelineDefn.FullName))
-	execution.ServerOutput(fmt.Sprintf("[%s] Error %v", e.Event.ExecutionID, e.Errors))
+	if output.IsServerMode {
+		p := types.NewServerOutputPipelineExecution(
+			types.NewServerOutput(e.Event.CreatedAt, "pipeline", "failed"),
+			e.Event.ExecutionID, pipelineDefn.PipelineName)
+		p.Errors = e.Errors
+		p.Output = e.PipelineOutput
+		output.RenderServerOutput(ctx, p)
+	}
 
 	// Sanitize event store file
 	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)

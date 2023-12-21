@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -89,7 +88,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	execution.ServerOutput(fmt.Sprintf("[%s] Step %s finished", e.Event.ExecutionID, stepDefn.GetName()))
+	// execution.ServerOutput(fmt.Sprintf("[%s] Step %s finished", e.Event.ExecutionID, stepDefn.GetName()))
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 	if err != nil {

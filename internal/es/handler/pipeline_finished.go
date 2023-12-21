@@ -3,7 +3,8 @@ package handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -80,10 +81,16 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
-	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s finished", e.Event.ExecutionID, pipelineDefn.FullName))
+	if output.IsServerMode {
+		p := types.NewServerOutputPipelineExecution(
+			types.NewServerOutput(e.Event.CreatedAt, "pipeline", "finished"),
+			e.Event.ExecutionID, pipelineDefn.PipelineName)
+		p.Output = e.PipelineOutput
+		output.RenderServerOutput(ctx, p)
+	}
 
 	if len(pipelineDefn.OutputConfig) > 0 {
-		execution.ServerOutput(fmt.Sprintf("[%s] Output %v", e.Event.ExecutionID, e.PipelineOutput))
+		// execution.ServerOutput(fmt.Sprintf("[%s] Output %v", e.Event.ExecutionID, e.PipelineOutput))
 		data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 	}
 
