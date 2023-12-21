@@ -2,8 +2,6 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings/
-
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/ThreeDotsLabs/watermill v1.3.3
@@ -43,8 +41,9 @@ require (
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/marcboeker/go-duckdb v1.5.4
+	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/turbot/flowpipe-sdk-go v0.1.0
-	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
+	github.com/turbot/pipe-fittings v0.2.0-beta.1
 	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 
@@ -174,7 +173,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
-	github.com/mattn/go-sqlite3 v1.14.19 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
