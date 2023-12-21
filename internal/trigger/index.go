@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -22,6 +23,7 @@ type TriggerRunnerBase struct {
 	Trigger    *modconfig.Trigger
 	commandBus handler.FpCommandBus
 	rootMod    *modconfig.Mod
+	fqueue     *fqueue.FunctionQueue
 }
 
 type TriggerRunner interface {
@@ -36,6 +38,7 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			Trigger:    trigger,
 			commandBus: commandBus,
 			rootMod:    rootMod,
+			fqueue:     fqueue.NewFunctionQueue(),
 		}
 	case *modconfig.TriggerQuery:
 		internalDir := filepaths.ModInternalDir()
@@ -44,7 +47,8 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:    trigger,
 				commandBus: commandBus,
-				rootMod:    rootMod},
+				rootMod:    rootMod,
+				fqueue:     fqueue.NewFunctionQueue()},
 			DatabasePath: dbFile,
 		}
 	default:

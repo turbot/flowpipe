@@ -67,8 +67,12 @@ func hashRow(row map[string]interface{}) string {
 	return hex.EncodeToString(hashBytes)
 }
 
-// TODO: ensure only 1 trigger query is running at any given time
 func (tr *TriggerRunnerQuery) Run() {
+	tr.fqueue.Enqueue(tr.RunOne)
+	tr.fqueue.Execute()
+}
+
+func (tr *TriggerRunnerQuery) RunOne() {
 	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
