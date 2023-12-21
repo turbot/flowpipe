@@ -3,8 +3,10 @@ package trigger
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/hcl/v2"
@@ -102,35 +104,35 @@ func updateTestTable(db *sql.DB, tableName string, data map[string]interface{}) 
 	return nil
 }
 
-// func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
-// 	// Start a transaction
-// 	tx, err := db.Begin()
-// 	if err != nil {
-// 		return err
-// 	}
+func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
 
-// 	// Prepare statement for inserting into the temporary table
-// 	placeholders := strings.Join(strings.Split(strings.Repeat("?", len(idsToDelete)), ""), ",")
+	// Prepare statement for inserting into the temporary table
+	placeholders := strings.Join(strings.Split(strings.Repeat("?", len(idsToDelete)), ""), ",")
 
-// 	tempStmt, err := tx.Prepare(fmt.Sprintf("DELETE FROM %s WHERE id in (%s)", tableName, placeholders))
-// 	if err != nil {
-// 		return err
-// 	}
-// 	defer tempStmt.Close()
+	tempStmt, err := tx.Prepare(fmt.Sprintf("DELETE FROM %s WHERE id in (%s)", tableName, placeholders))
+	if err != nil {
+		return err
+	}
+	defer tempStmt.Close()
 
-// 	_, err = tempStmt.Exec(idsToDelete...)
-// 	if err != nil {
-// 		return err
-// 	}
+	_, err = tempStmt.Exec(idsToDelete...)
+	if err != nil {
+		return err
+	}
 
-// 	// Commit the transaction
-// 	if err := tx.Commit(); err != nil {
-// 		slog.Error("Error committing transaction", "error", err)
-// 		return err
-// 	}
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func TestTriggerQuery(t *testing.T) {
 
@@ -317,7 +319,7 @@ func TestTriggerQuery(t *testing.T) {
 
 	selfVarMap = selfVar.AsValueMap()
 	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.NilVal, insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
 
 	//
 	// THIRD RUN
@@ -413,7 +415,7 @@ func TestTriggerQuery(t *testing.T) {
 
 	selfVarMap = selfVar.AsValueMap()
 	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.NilVal, insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
 
 	updatedRows := selfVarMap["updated_rows"]
 	assert.NotNil(updatedRows, "updated rows should not be nil")
@@ -455,15 +457,52 @@ func TestTriggerQuery(t *testing.T) {
 
 	selfVarMap = selfVar.AsValueMap()
 	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.NilVal, insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
 
 	updatedRows = selfVarMap["updated_rows"]
-	assert.Equal(cty.NilVal, updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
-	// idsToDelete := []any{"1", "4"}
-	// err = deleteFromTestTable(db, "test_one", idsToDelete)
-	// if err != nil {
-	// 	assert.Fail("Error deleting from test table", err)
-	// 	return
-	// }
+	//
+	// FIFTY RUN
+	//
+	// Delete some rows
+	idsToDelete := []any{"1", "4"}
+	err = deleteFromTestTable(db, "test_one", idsToDelete)
+	if err != nil {
+		assert.Fail("Error deleting from test table", err)
+		return
+	}
+
+	triggerRunner.Run()
+	// The callback to the mocks should have been called by now
+	if generatedEvalContext == nil {
+		assert.Fail("generated eval context should not be nil")
+		return
+	}
+
+	selfVar = generatedEvalContext.Variables["self"]
+	if selfVar == cty.NilVal {
+		assert.Fail("self variable should not be nil")
+		return
+	}
+
+	selfVarMap = selfVar.AsValueMap()
+	insertedRows = selfVarMap["inserted_rows"]
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+
+	updatedRows = selfVarMap["updated_rows"]
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
+
+	deletedKeys := selfVarMap["deleted_keys"]
+
+	deletedKeyValueSlice := deletedKeys.AsValueSlice()
+	assert.Equal(2, len(deletedKeyValueSlice), "wrong number of deleted keys")
+
+	for _, deletedKey := range deletedKeyValueSlice {
+		deletedKeyString := deletedKey.AsString()
+		if deletedKeyString != "1" && deletedKeyString != "4" {
+			assert.Fail("wrong deleted key")
+			return
+		}
+	}
 }

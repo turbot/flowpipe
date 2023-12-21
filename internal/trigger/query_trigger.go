@@ -393,7 +393,29 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 		deletedItems = append(deletedItems, deletedData)
 	}
 
-	slog.Info("deletedItems", "deletedItems", deletedItems)
+	slog.Debug("deleted items found", "deletedItems", deletedItems)
+
+	deleteItemsFromTrackingDb := `delete from ` + tableName + ` where _fp_data = ?`
+	deleteStmt, err := tx.Prepare(deleteItemsFromTrackingDb)
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return nil, nil, nil, err
+	}
+	defer deleteStmt.Close()
+	for _, deletedItem := range deletedItems {
+		slog.Debug("Deleting item", "item", deletedItem, "table", tableName)
+		_, err = deleteStmt.Exec(deletedItem)
+		if err != nil {
+			err2 := tx.Rollback()
+			if err2 != nil {
+				slog.Error("Error rolling back transaction", "error", err2)
+			}
+			return nil, nil, nil, err
+		}
+	}
 
 	_, err = tx.Exec(`drop table ` + tableName + `_temp_items`)
 	if err != nil {
