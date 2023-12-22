@@ -9,17 +9,34 @@ import (
 	"time"
 )
 
-type ServerOutput struct {
+type ServerOutputPrefix struct {
 	TimeStamp time.Time
 	Category  string
-	Message   string
+}
+
+func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
+	return ServerOutputPrefix{
+		TimeStamp: ts,
+		Category:  category,
+	}
+}
+
+func (o ServerOutputPrefix) String() string {
+	return fmt.Sprintf("%s [%s]", o.TimeStamp.Format(time.RFC3339), o.Category)
+}
+
+type ServerOutput struct {
+	ServerOutputPrefix
+	Message string
 }
 
 func NewServerOutput(ts time.Time, category string, msg string) ServerOutput {
 	return ServerOutput{
-		TimeStamp: ts,
-		Category:  category,
-		Message:   msg,
+		ServerOutputPrefix: ServerOutputPrefix{
+			TimeStamp: ts,
+			Category:  category,
+		},
+		Message: msg,
 	}
 }
 
@@ -30,22 +47,24 @@ func (o ServerOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) 
 		return ""
 	}
 
-	return fmt.Sprintf("%s [%s] %s\n", o.TimeStamp.Format(time.RFC3339), o.Category, o.Message)
+	return fmt.Sprintf("%s %s\n", o.ServerOutputPrefix.String(), o.Message)
 }
 
 type ServerOutputPipelineExecution struct {
-	ServerOutput
+	ServerOutputPrefix
 	ExecutionID  string
 	PipelineName string
+	Status       string
 	Output       map[string]any
 	Errors       []modconfig.StepError
 }
 
-func NewServerOutputPipelineExecution(serverOutput ServerOutput, execId string, name string) *ServerOutputPipelineExecution {
+func NewServerOutputPipelineExecution(prefix ServerOutputPrefix, execId string, name string, status string) *ServerOutputPipelineExecution {
 	return &ServerOutputPipelineExecution{
-		ServerOutput: serverOutput,
-		ExecutionID:  execId,
-		PipelineName: name,
+		ServerOutputPrefix: prefix,
+		ExecutionID:        execId,
+		PipelineName:       name,
+		Status:             status,
 	}
 }
 
@@ -61,13 +80,12 @@ func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opt
 	if n != "" {
 		n = fmt.Sprintf("[%s]", n)
 	}
-	pre := fmt.Sprintf("%s [%s] [%s%s]",
-		o.TimeStamp.Format(time.RFC3339),
-		o.Category,
+	pre := fmt.Sprintf("%s [%s%s]",
+		o.ServerOutputPrefix.String(),
 		o.ExecutionID,
 		n,
 	)
-	lines = append(lines, fmt.Sprintf("%s Pipeline %s\n", pre, o.Message))
+	lines = append(lines, fmt.Sprintf("%s Pipeline %s\n", pre, o.Status))
 
 	if opts.Verbose {
 		if len(o.Output) > 0 {
@@ -82,6 +100,32 @@ func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opt
 		}
 	}
 	return strings.Join(lines, "")
+}
+
+type ServerOutputTriggerExecution struct {
+	ServerOutputPrefix
+	ExecutionID  string
+	TriggerName  string
+	PipelineName string
+}
+
+func NewServerOutputTriggerExecution(prefix ServerOutputPrefix, execId string, name string, pipeline string) *ServerOutputTriggerExecution {
+	return &ServerOutputTriggerExecution{
+		ServerOutputPrefix: prefix,
+		ExecutionID:        execId,
+		TriggerName:        name,
+		PipelineName:       pipeline,
+	}
+}
+
+func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%s Trigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(), o.TriggerName, o.PipelineName, o.ExecutionID)
 }
 
 type PrintableServerOutput struct {

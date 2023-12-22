@@ -34,8 +34,8 @@ func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutput(e.Event.CreatedAt, "pipeline", "queued"),
-			e.Event.ExecutionID, e.Name)
+			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			e.Event.ExecutionID, e.Name, "queued")
 		output.RenderServerOutput(ctx, p)
 	}
 

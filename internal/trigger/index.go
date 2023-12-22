@@ -2,8 +2,11 @@ package trigger
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 	"path/filepath"
+	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -108,6 +111,11 @@ func (tr *TriggerRunnerBase) Run() {
 	}
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+
+	if output.IsServerMode {
+		t := types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.Event.ExecutionID, tr.Trigger.Name(), pipelineName)
+		output.RenderServerOutput(context.TODO(), t)
+	}
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)

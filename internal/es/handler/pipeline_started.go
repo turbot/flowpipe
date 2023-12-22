@@ -30,8 +30,8 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutput(e.Event.CreatedAt, "pipeline", "started"),
-			e.Event.ExecutionID, "")
+			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			e.Event.ExecutionID, "", "started")
 		output.RenderServerOutput(ctx, p)
 	}
 
