@@ -11,9 +11,9 @@ exports.handler = async (event, context) => {
   console.log("")
   const currentTime = moment().format('YYYY-MM-DD HH:mm:ss');
   const response = {
-    statusCode: 200,
+    statusCode: 300,
     body: {
-      message: `Hola, World! The current time is ${currentTime}. From ${event.user.name} with age: ${event.user.age}. Not nested: ${event.notNested}.`,
+      message: `Hola, World! The current time is ${currentTime}. From ${event.user.name} with age: ${event.user.age}. Not nested is: ${event.notNested}.`,
       event,
       env: process.env,
       context

@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/turbot/flowpipe/internal/runtime"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -132,10 +133,17 @@ func (v *Version) buildImage() error {
 	slog.Info("Building Docker image...")
 
 	// Output the build progress
-	_, err = io.Copy(os.Stdout, resp.Body)
-	if err != nil {
-		slog.Error("Error reading build output: "+err.Error(), "error", err)
-		return err
+	logLevel := os.Getenv(app_specific.EnvLogLevel)
+	if strings.ToLower(logLevel) == "debug" || strings.ToLower(logLevel) == "trace" {
+		_, err = io.Copy(os.Stderr, resp.Body)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = io.Copy(io.Discard, resp.Body)
+		if err != nil {
+			return err
+		}
 	}
 
 	slog.Info("Docker image built successfully.")

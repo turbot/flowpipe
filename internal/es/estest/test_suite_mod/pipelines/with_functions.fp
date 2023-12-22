@@ -58,21 +58,8 @@ pipeline "with_functions_no_env_var" {
         type = any
     }
 
-    param "aws_region" {
-        type = string
-        default = "us-east-1"
-    }
-    param "aws_access_key_id" {
-        type = string
-        default = "abc"
-    }
-    param "aws_secret_access_key" {
-        type = string
-        default = "abc"
-    }
-
     step "function" "hello_nodejs_step" {
-        runtime = "nodejs:18"
+        runtime = "nodejs:20"
         handler = "index.handler"
         source  = "./functions/hello-nodejs"
         event   = param.event

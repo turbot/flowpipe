@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -72,12 +73,12 @@ func (tr *TriggerRunnerQuery) Run() {
 	tr.Fqueue.Execute()
 }
 
-func (tr *TriggerRunnerQuery) RunOne() {
+func (tr *TriggerRunnerQuery) RunOne() error {
 	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
 		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return
+		return perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
 	}
 
 	pipelineDefn := pipeline.AsValueMap()
@@ -97,18 +98,18 @@ func (tr *TriggerRunnerQuery) RunOne() {
 	output, err := queryPrimitive.Run(context.Background(), input)
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
-		return
+		return err
 	}
 
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
-		return
+		return nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
 	if !ok {
 		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
-		return
+		return nil
 	}
 
 	controlItems := []queryTriggerMetadata{}
@@ -121,7 +122,7 @@ func (tr *TriggerRunnerQuery) RunOne() {
 			primaryKey := r[config.PrimaryKey]
 			if primaryKey == nil {
 				slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
-				return
+				return perr.InternalWithMessage("Primary key not found in row")
 			}
 			pkString, ok := primaryKey.(string)
 			if !ok {
@@ -157,14 +158,14 @@ func (tr *TriggerRunnerQuery) RunOne() {
 	db, err := initializeQueryTriggerDB(tr.DatabasePath, safeTriggerName)
 	if err != nil {
 		slog.Error("Error initializing db", "error", err)
-		return
+		return err
 	}
 	defer db.Close()
 
 	newItemPrimaryKeys, updatedItemPrimaryKeys, deletedPrimaryKeys, err := calculatedNewUpdatedDeletedData(db, safeTriggerName, controlItems)
 	if err != nil {
 		slog.Error("Error storing slice", "error", err)
-		return
+		return err
 	}
 
 	newRows := []map[string]interface{}{}
@@ -184,7 +185,7 @@ func (tr *TriggerRunnerQuery) RunOne() {
 	newRowCtyVals, err := rowsToCtyList(newRows)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
-		return
+		return err
 	}
 
 	updatedRows := []map[string]interface{}{}
@@ -204,7 +205,7 @@ func (tr *TriggerRunnerQuery) RunOne() {
 	updatedRowCtyVals, err := rowsToCtyList(updatedRows)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
-		return
+		return err
 	}
 
 	deletedKeysCty := []cty.Value{}
@@ -235,7 +236,7 @@ func (tr *TriggerRunnerQuery) RunOne() {
 	evalContext, err := buildEvalContext(tr.rootMod)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
-		return
+		return err
 	}
 
 	varsEvalContext := evalContext.Variables
@@ -244,7 +245,7 @@ func (tr *TriggerRunnerQuery) RunOne() {
 	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return
+		return err
 	}
 
 	pipelineCmd := &event.PipelineQueue{
@@ -258,8 +259,10 @@ func (tr *TriggerRunnerQuery) RunOne() {
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
-		return
+		return err
 	}
+
+	return nil
 }
 
 func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {

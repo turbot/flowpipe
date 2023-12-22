@@ -5,12 +5,12 @@ import (
 	"sync"
 )
 
-type FunctionCall func()
+type FunctionCall func() error
 
 type FunctionQueue struct {
-	Name      string
-	Callback  chan string
-	DropCount int
+	Name             string
+	CallbackChannels []chan error
+	DropCount        int
 
 	queue      chan FunctionCall
 	isRunning  bool
@@ -20,16 +20,21 @@ type FunctionQueue struct {
 
 func NewFunctionQueueWithSize(name string, size int) *FunctionQueue {
 	return &FunctionQueue{
-		Name:       name,
-		DropCount:  0,
-		queue:      make(chan FunctionCall, size),
-		isRunning:  false,
-		queueCount: 0,
+		Name:             name,
+		DropCount:        0,
+		queue:            make(chan FunctionCall, size),
+		isRunning:        false,
+		queueCount:       0,
+		CallbackChannels: []chan error{},
 	}
 }
 
 func NewFunctionQueue(name string) *FunctionQueue {
 	return NewFunctionQueueWithSize(name, 2)
+}
+
+func (fq *FunctionQueue) RegisterCallback(callback chan error) {
+	fq.CallbackChannels = append(fq.CallbackChannels, callback)
 }
 
 func (fq *FunctionQueue) Enqueue(fn FunctionCall) {
@@ -65,7 +70,7 @@ func (fq *FunctionQueue) Execute() {
 
 		for fn := range fq.queue {
 			slog.Debug("Before execute", "queue", fq.Name, "queue_count", fq.queueCount)
-			fn() // Execute the function call
+			err := fn() // Execute the function call
 			slog.Debug("After execute", "queue", fq.Name, "queue_count", fq.queueCount)
 
 			fq.runLock.Lock()
@@ -76,9 +81,15 @@ func (fq *FunctionQueue) Execute() {
 
 				fq.isRunning = false
 
-				if fq.Callback != nil {
-					fq.Callback <- "done"
+				for _, ch := range fq.CallbackChannels {
+					ch <- err
 				}
+
+				for _, ch := range fq.CallbackChannels {
+					close(ch)
+				}
+				fq.CallbackChannels = []chan error{}
+
 				fq.runLock.Unlock()
 
 				return

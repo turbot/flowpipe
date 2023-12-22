@@ -86,12 +86,13 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 			function.WithContext(context.Background()),
 			function.WithRunContext(ctx),
 			function.WithDockerClient(docker.GlobalDockerClient),
+			function.WithName(input[schema.LabelName].(string)),
+			function.WithRuntime(input[schema.AttributeTypeRuntime].(string)),
 		)
 		if err != nil {
 			return nil, err
 		}
-		fn.Name = input[schema.LabelName].(string)
-		fn.Runtime = input[schema.AttributeTypeRuntime].(string)
+
 		if input[schema.AttributeTypeHandler] != nil {
 			fn.Handler = input[schema.AttributeTypeHandler].(string)
 		}
@@ -127,7 +128,6 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 	}
 
 	if input[schema.AttributeTypeEvent] != nil {
-
 		fn.Event = input[schema.AttributeTypeEvent].(map[string]interface{})
 	}
 
@@ -153,8 +153,13 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 	// Unmarshal the JSON string into the struct
 	err = json.Unmarshal(result, &resultsJson)
 	if err != nil {
-
 		return nil, err
+	}
+
+	// Guess if the result is actually an error
+	if resultsJson["errorType"] != nil && resultsJson["errorMessage"] != nil && resultsJson["trace"] != nil {
+		slog.Error("Function returned an error", "errorType", resultsJson["errorType"], "errorMessage", resultsJson["errorMessage"], "trace", resultsJson["trace"])
+		return nil, perr.InternalWithMessage("Function returned an error: " + resultsJson["errorMessage"].(string))
 	}
 
 	o := modconfig.Output{

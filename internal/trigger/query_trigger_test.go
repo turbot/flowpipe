@@ -345,10 +345,12 @@ func TestTriggerQuery(t *testing.T) {
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
-	triggerRunner.GetFqueue().Callback = make(chan string)
+	receiveChannel := make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res := <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res := <-receiveChannel
+	assert.Nil(res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -395,9 +397,12 @@ func TestTriggerQuery(t *testing.T) {
 	// SECOND RUN
 	//
 	// Without changing anything, the second run should not have any new "inserted_rows"
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -450,9 +455,12 @@ func TestTriggerQuery(t *testing.T) {
 		return
 	}
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -506,9 +514,12 @@ func TestTriggerQuery(t *testing.T) {
 		return
 	}
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -551,9 +562,12 @@ func TestTriggerQuery(t *testing.T) {
 	//
 	// run it again, shouldn't have any new updates
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -586,9 +600,12 @@ func TestTriggerQuery(t *testing.T) {
 		return
 	}
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -738,11 +755,12 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
-	triggerRunner.GetFqueue().Callback = make(chan string)
+	receiveChannel := make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
 	triggerRunner.Run()
-	res := <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res := <-receiveChannel
+	assert.Nil(res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -789,9 +807,12 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	// SECOND RUN
 	//
 	// Without changing anything, the second run should not have any new "inserted_rows"
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -844,9 +865,12 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		return
 	}
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -907,9 +931,12 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		return
 	}
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -1078,10 +1105,12 @@ func TestTriggerQueryB(t *testing.T) {
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
-	triggerRunner.GetFqueue().Callback = make(chan string)
+	receiveChannel := make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res := <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res := <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 
@@ -1142,9 +1171,12 @@ func TestTriggerQueryB(t *testing.T) {
 	//
 	// No update
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -1185,9 +1217,12 @@ func TestTriggerQueryB(t *testing.T) {
 		return
 	}
 
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
 	triggerRunner.Run()
-	res = <-triggerRunner.GetFqueue().Callback
-	assert.Equal("done", res)
+	res = <-receiveChannel
+	assert.Nil(res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now

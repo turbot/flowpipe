@@ -1,18 +1,18 @@
-trigger "query" "simple" {
-    schedule = "* * * * *"
+// trigger "query" "simple" {
+//     schedule = "* * * * *"
 
-    connection_string = "sqlite:./query_source.db"
-    sql = "select * from test_one"
-    primary_key = "id"
+//     connection_string = "sqlite:./query_source.db"
+//     sql = "select * from test_one"
+//     primary_key = "id"
 
-    pipeline = pipeline.query_trigger_display
+//     pipeline = pipeline.query_trigger_display
 
-    args = {
-        inserted_rows = self.inserted_rows
-        updated_rows = self.updated_rows
-        deleted_keys = self.deleted_keys
-    }
-}
+//     args = {
+//         inserted_rows = self.inserted_rows
+//         updated_rows = self.updated_rows
+//         deleted_keys = self.deleted_keys
+//     }
+// }
 
 
 pipeline "query_trigger_display" {
