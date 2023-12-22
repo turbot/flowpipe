@@ -90,7 +90,6 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if len(pipelineDefn.OutputConfig) > 0 {
-		// execution.ServerOutput(fmt.Sprintf("[%s] Output %v", e.Event.ExecutionID, e.PipelineOutput))
 		data[schema.BlockTypePipelineOutput] = e.PipelineOutput
 	}
 

@@ -128,6 +128,64 @@ func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts
 	return fmt.Sprintf("%s Trigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(), o.TriggerName, o.PipelineName, o.ExecutionID)
 }
 
+type ServerOutputStepExecution struct {
+	ServerOutputPrefix
+	ExecutionID  string
+	PipelineName string
+	StepName     string
+	StepType     string
+	Status       string
+	Output       map[string]any
+	Errors       []modconfig.StepError
+}
+
+func NewServerOutputStepExecution(prefix ServerOutputPrefix, execId string, pipelineName string, stepName string, stepType string, status string) *ServerOutputStepExecution {
+	return &ServerOutputStepExecution{
+		ServerOutputPrefix: prefix,
+		ExecutionID:        execId,
+		PipelineName:       pipelineName,
+		StepName:           stepName,
+		StepType:           stepType,
+		Status:             status,
+	}
+}
+
+func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	var lines []string
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
+		return ""
+	}
+
+	// put Steps behind verbose flag
+	if !opts.Verbose {
+		return ""
+	}
+
+	p := o.PipelineName
+	if p != "" {
+		p = fmt.Sprintf("[%s]", p)
+	}
+
+	pre := fmt.Sprintf("%s [%s%s]", o.ServerOutputPrefix.String(), o.ExecutionID, p)
+
+	lines = append(lines, fmt.Sprintf("%s %s step %s %s\n", pre, o.StepType, o.StepName, o.Status))
+
+	if len(o.Output) > 0 {
+		outputs := sortAndParseMap(o.Output, "Output", " ", au, opts)
+		lines = append(lines, fmt.Sprintf("%s Outputs\n%s\n", pre, outputs))
+	}
+
+	if len(o.Errors) > 0 {
+		for _, e := range o.Errors {
+			lines = append(lines, fmt.Sprintf("%s error on %s step %s: %s\n", pre, o.StepType, o.StepName, e.Error.Error()))
+		}
+	}
+	return strings.Join(lines, "")
+}
+
 type PrintableServerOutput struct {
 	Items []SanitizedStringer
 }

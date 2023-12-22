@@ -35,8 +35,9 @@ func serverCmd() *cobra.Command {
 	cmdconfig.
 		OnCmd(cmd).
 		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
-		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "listen address port.").
-		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server")
+		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "Listen address port.").
+		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server").
+		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output")
 
 	return cmd
 }
