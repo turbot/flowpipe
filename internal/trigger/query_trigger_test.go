@@ -345,7 +345,10 @@ func TestTriggerQuery(t *testing.T) {
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
+	triggerRunner.GetFqueue().Callback = make(chan string)
 	triggerRunner.Run()
+	res := <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -393,6 +396,8 @@ func TestTriggerQuery(t *testing.T) {
 	//
 	// Without changing anything, the second run should not have any new "inserted_rows"
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -446,6 +451,8 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -500,6 +507,8 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -543,6 +552,9 @@ func TestTriggerQuery(t *testing.T) {
 	// run it again, shouldn't have any new updates
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
+
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -564,7 +576,7 @@ func TestTriggerQuery(t *testing.T) {
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
 	//
-	// FIFTY RUN
+	// FIFTH RUN
 	//
 	// Delete some rows
 	idsToDelete := []any{"1", "4"}
@@ -575,6 +587,9 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
+
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -723,7 +738,11 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
+	triggerRunner.GetFqueue().Callback = make(chan string)
+
 	triggerRunner.Run()
+	res := <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -771,6 +790,8 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	//
 	// Without changing anything, the second run should not have any new "inserted_rows"
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -824,6 +845,8 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	}
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -885,6 +908,8 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	}
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -1053,7 +1078,10 @@ func TestTriggerQueryB(t *testing.T) {
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
+	triggerRunner.GetFqueue().Callback = make(chan string)
 	triggerRunner.Run()
+	res := <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 
@@ -1115,6 +1143,8 @@ func TestTriggerQueryB(t *testing.T) {
 	// No update
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
@@ -1156,6 +1186,8 @@ func TestTriggerQueryB(t *testing.T) {
 	}
 
 	triggerRunner.Run()
+	res = <-triggerRunner.GetFqueue().Callback
+	assert.Equal("done", res)
 
 	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
