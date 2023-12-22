@@ -24,5 +24,5 @@ func RenderServerOutput(ctx context.Context, outputs ...types.SanitizedStringer)
 	printableResource := types.NewPrintableServerOutput()
 	printableResource.Items = outputs
 
-	err = printer.PrintResource(ctx, printableResource, os.Stdout)
+	_ = printer.PrintResource(ctx, printableResource, os.Stdout)
 }
