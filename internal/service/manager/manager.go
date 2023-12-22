@@ -322,6 +322,9 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 
 	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 		slog.Error("error watching workspace", "error", e)
+		if output.IsServerMode {
+			output.RenderServerOutput(c, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: reloading mod %s\n%s", w.Mod.Name(), e.Error())))
+		}
 		m.apiService.ModMetadata.IsStale = true
 	})
 
@@ -330,13 +333,17 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	}
 
 	w.SetOnFileWatcherEventMessages(func() {
+		var serverOutput []types.SanitizedStringer
 		slog.Info("caching pipelines and triggers")
+		serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Reloading mod: %s", m.RootMod.Name())))
 		m.triggers = w.Mod.ResourceMaps.Triggers
 		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 		if err != nil {
 			slog.Error("error caching pipelines and triggers", "error", err)
+			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: caching pipelines and triggers failed\n%s", err.Error())))
 		} else {
 			slog.Info("cached pipelines and triggers")
+			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "cached pipelines and triggers"))
 			m.apiService.ModMetadata.IsStale = false
 			m.apiService.ModMetadata.LastLoaded = time.Now()
 		}
@@ -348,9 +355,15 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 			err := m.schedulerService.RescheduleTriggers()
 			if err != nil {
 				slog.Error("error rescheduling triggers", "error", err)
+				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: rescheduling triggers failed\n%s", err.Error())))
 			} else {
 				slog.Info("rescheduled triggers")
+				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "rescheduled triggers"))
 			}
+		}
+
+		if output.IsServerMode {
+			output.RenderServerOutput(m.ctx, serverOutput...)
 		}
 	})
 	return nil
