@@ -42,7 +42,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/turbot/flowpipe-sdk-go v0.1.0
-	github.com/turbot/pipe-fittings v0.2.0-beta.3
+	github.com/turbot/pipe-fittings v0.2.0-beta.4
 	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 
