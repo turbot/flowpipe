@@ -74,14 +74,12 @@ func (fq *FunctionQueue) Execute() {
 			if fq.queueCount == 0 {
 				slog.Debug("No item in the queue .. returning", "queue", fq.Name, "queue_count", fq.queueCount)
 
-				defer func() {
-					fq.isRunning = false
+				fq.isRunning = false
 
-					if fq.Callback != nil {
-						fq.Callback <- "done"
-					}
-					fq.runLock.Unlock()
-				}()
+				if fq.Callback != nil {
+					fq.Callback <- "done"
+				}
+				fq.runLock.Unlock()
 
 				return
 			}
