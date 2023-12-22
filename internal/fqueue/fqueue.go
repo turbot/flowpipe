@@ -86,7 +86,6 @@ func (fq *FunctionQueue) Execute() {
 				return
 			}
 			fq.runLock.Unlock()
-
 		}
 	}()
 }

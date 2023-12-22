@@ -23,11 +23,13 @@ type TriggerRunnerBase struct {
 	Trigger    *modconfig.Trigger
 	commandBus handler.FpCommandBus
 	rootMod    *modconfig.Mod
-	fqueue     *fqueue.FunctionQueue
+	Fqueue     *fqueue.FunctionQueue
 }
 
 type TriggerRunner interface {
 	Run()
+	GetTrigger() *modconfig.Trigger
+	GetFqueue() *fqueue.FunctionQueue
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
@@ -38,7 +40,7 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			Trigger:    trigger,
 			commandBus: commandBus,
 			rootMod:    rootMod,
-			fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
+			Fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
 		}
 	case *modconfig.TriggerQuery:
 		internalDir := filepaths.ModInternalDir()
@@ -48,7 +50,7 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 				Trigger:    trigger,
 				commandBus: commandBus,
 				rootMod:    rootMod,
-				fqueue:     fqueue.NewFunctionQueue(trigger.FullName)},
+				Fqueue:     fqueue.NewFunctionQueue(trigger.FullName)},
 			DatabasePath: dbFile,
 		}
 	default:
@@ -111,6 +113,14 @@ func (tr *TriggerRunnerBase) Run() {
 		slog.Error("Error sending pipeline command", "error", err)
 		return
 	}
+}
+
+func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
+	return tr.Trigger
+}
+
+func (tr *TriggerRunnerBase) GetFqueue() *fqueue.FunctionQueue {
+	return tr.Fqueue
 }
 
 func buildEvalContext(rootMod *modconfig.Mod) (*hcl.EvalContext, error) {

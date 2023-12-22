@@ -68,8 +68,8 @@ func hashRow(row map[string]interface{}) string {
 }
 
 func (tr *TriggerRunnerQuery) Run() {
-	tr.fqueue.Enqueue(tr.RunOne)
-	tr.fqueue.Execute()
+	tr.Fqueue.Enqueue(tr.RunOne)
+	tr.Fqueue.Execute()
 }
 
 func (tr *TriggerRunnerQuery) RunOne() {
