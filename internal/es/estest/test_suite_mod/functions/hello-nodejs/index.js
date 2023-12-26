@@ -13,7 +13,7 @@ exports.handler = async (event, context) => {
   const response = {
     statusCode: 300,
     body: {
-      message: `Hola, World! The current time is ${currentTime}. From ${event.user.name} with age: ${event.user.age}. Not nested is: ${event.notNested}.`,
+      message: `Hola, World! The current time is ${currentTime}. From ${event.user.name} with age: ${event.user.age}. Not nested: ${event.notNested}.`,
       event,
       env: process.env,
       context

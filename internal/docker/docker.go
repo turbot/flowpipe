@@ -280,7 +280,7 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 			if err != nil {
 				slog.Warn(fmt.Sprintf("failed to stop container %s: %s", c.ID, err))
 			} else {
-				slog.Info(fmt.Sprintf("container %s stopped\n", c.ID))
+				slog.Info(fmt.Sprintf("container %s stopped", c.ID), "containerID", c.ID)
 			}
 		}
 		// Remove the container
@@ -288,7 +288,7 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 		if err != nil {
 			slog.Warn(fmt.Sprintf("failed to remove container %s: %s\n", c.ID, err))
 		} else {
-			slog.Info(fmt.Sprintf("container %s deleted\n", c.ID))
+			slog.Info(fmt.Sprintf("container %s deleted\n", c.ID), "containerID", c.ID)
 		}
 	}
 
