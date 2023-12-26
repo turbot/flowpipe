@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/docker/cli/cli/command/image/build"
@@ -52,7 +51,6 @@ type Function struct {
 	CreatedAt               *time.Time         `json:"created_at,omitempty"`
 	UpdatedAt               *time.Time         `json:"updated_at,omitempty"`
 	ParentImageLastPulledAt *time.Time         `json:"-"`
-	BuildQueued             bool               `json:"build_queued"`
 	CurrentVersionName      string             `json:"current_version_name"`
 	Versions                map[string]Version `json:"versions"`
 
@@ -62,7 +60,6 @@ type Function struct {
 	// Flowpipe run context (e.g. for logging)
 	runCtx       context.Context      `json:"-"`
 	watcher      *watcher.Watcher     `json:"-"`
-	buildMutex   sync.Mutex           `json:"-"`
 	dockerClient *docker.DockerClient `json:"-"`
 }
 
@@ -450,7 +447,7 @@ func (fn *Function) Build() error {
 	receiveChannel := make(chan error)
 	fn.fqueue.RegisterCallback(receiveChannel)
 
-	fn.fqueue.Enqueue(fn.BuildOne)
+	fn.fqueue.Enqueue(fn.buildOne)
 
 	// execute returns immediately
 	fn.fqueue.Execute()
@@ -459,16 +456,7 @@ func (fn *Function) Build() error {
 	return err
 }
 
-func (fn *Function) BuildOne() error {
-
-	// Ensure only one build is running at a time. I feel there is probably
-	// a better way to do this with channels, but this works for now.
-	if !fn.buildMutex.TryLock() {
-		// Already building
-		fn.BuildQueued = true
-		return nil
-	}
-	defer fn.buildMutex.Unlock()
+func (fn *Function) buildOne() error {
 
 	// The UpdatedAt time is used as the build tag, ensuring unique
 	// versions.

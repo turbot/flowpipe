@@ -189,12 +189,11 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		container.WithContext(context.Background()),
 		container.WithRunContext(ctx),
 		container.WithDockerClient(docker.GlobalDockerClient),
+		container.WithName(input[schema.LabelName].(string)),
 	)
 	if err != nil {
 		return nil, perr.InternalWithMessage("Error creating function config with the provided options:" + err.Error())
 	}
-
-	c.Name = input[schema.LabelName].(string)
 
 	if input[schema.AttributeTypeImage] != nil {
 		c.Image = input[schema.AttributeTypeImage].(string)

@@ -3,20 +3,23 @@ package container
 import (
 	"context"
 	"fmt"
+	"io"
+	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/docker/docker/pkg/archive"
 	"github.com/radovskyb/watcher"
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/constants"
-	"log/slog"
-	"path/filepath"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -34,6 +37,8 @@ type Container struct {
 	CpuShares       *int64            `json:"cpu_shares"`
 	User            string            `json:"user"`
 	Workdir         string            `json:"workdir"`
+
+	fqueue *fqueue.FunctionQueue
 
 	// Host configuration
 	Memory            *int64 `json:"memory"`
@@ -53,8 +58,6 @@ type Container struct {
 	runCtx       context.Context
 	dockerClient *docker.DockerClient
 	watcher      *watcher.Watcher
-	buildMutex   sync.Mutex
-	buildQueued  bool
 }
 
 type ContainerRun struct {
@@ -92,6 +95,13 @@ func WithDockerClient(client *docker.DockerClient) ContainerOption {
 	}
 }
 
+func WithName(name string) ContainerOption {
+	return func(c *Container) error {
+		c.Name = name
+		return nil
+	}
+}
+
 // NewContainer creates a new Container with the provided ContainerOption.
 func NewContainer(options ...ContainerOption) (*Container, error) {
 
@@ -115,6 +125,8 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 	if fc.ctx == nil {
 		fc.ctx = context.Background()
 	}
+
+	fc.fqueue = fqueue.NewFunctionQueue(fc.Name)
 
 	return fc, nil
 }
@@ -494,28 +506,20 @@ func (c *Container) Watch() error {
 }
 
 func (c *Container) Build() error {
-	err := c.BuildOne()
-	if err != nil {
-		return err
-	}
+	// if we want to wait for the result, we can do so like this
+	receiveChannel := make(chan error)
+	c.fqueue.RegisterCallback(receiveChannel)
 
-	// If a build was queued, run it now.
-	if c.buildQueued {
-		c.buildQueued = false
-		return c.BuildOne()
-	}
+	c.fqueue.Enqueue(c.buildOne)
 
-	return nil
+	// execute returns immediately
+	c.fqueue.Execute()
+
+	err := <-receiveChannel
+	return err
 }
 
-func (c *Container) BuildOne() error {
-	// TODO: Look into channels as a better approach, see functions/function.go[BuildOne]
-	if !c.buildMutex.TryLock() {
-		c.buildQueued = true
-		return nil
-	}
-	defer c.buildMutex.Unlock()
-
+func (c *Container) buildOne() error {
 	c.SetUpdatedAt()
 	if err := c.buildImage(); err != nil {
 		return err
@@ -553,7 +557,13 @@ func (c *Container) buildImage() error {
 
 	slog.Info("Building image ...", "container", c.Name)
 
-	_, err = c.dockerClient.CLI.ImageBuild(c.ctx, buildCtx, buildOptions)
+	resp, err := c.dockerClient.CLI.ImageBuild(c.ctx, buildCtx, buildOptions)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(os.Stderr, resp.Body)
 	if err != nil {
 		return err
 	}
