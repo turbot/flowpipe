@@ -37,8 +37,6 @@ import (
 // is tied to a trigger (webhook, cronjob, etc) and may result in multiple
 // pipelines being executed.
 type Execution struct {
-	Context context.Context `json:"-"`
-
 	// Unique identifier for this execution.
 	ID string `json:"id"`
 
@@ -176,7 +174,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 		}
 	}
 
-	credentialMap, err := buildCredentialMapForEvalContext(ex.Context, relevantCredentials)
+	credentialMap, err := buildCredentialMapForEvalContext(context.TODO(), relevantCredentials)
 	if err != nil {
 		return nil, err
 	}
@@ -337,7 +335,6 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 
 	ex := &Execution{
 		// ID is empty by default, so it will be populated from the given event
-		Context:            ctx,
 		PipelineExecutions: map[string]*PipelineExecution{},
 	}
 

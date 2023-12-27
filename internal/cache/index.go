@@ -1,9 +1,11 @@
 package cache
 
 import (
+	"os"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/sagikazarmark/slog-shim"
 )
 
 // simple cache implemented using ristretto cache library
@@ -23,8 +25,10 @@ func InMemoryInitialize(config *ristretto.Config) *InMemoryCache {
 	}
 	cache, err := ristretto.NewCache(config)
 	if err != nil {
-		panic(err)
+		slog.Error("error initializing in-memory cache", "error", err)
+		os.Exit(1)
 	}
+
 	inMemoryCache = &InMemoryCache{cache}
 	return inMemoryCache
 }
