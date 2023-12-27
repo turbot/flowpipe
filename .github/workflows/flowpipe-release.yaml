@@ -84,6 +84,13 @@ jobs:
           path: flowpipe
           ref: ${{ github.event.ref }}
 
+      - name: Checkout Pipe Fittings Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/pipe-fittings
+          path: pipe-fittings
+
       # - name: Unshallow
       #   run: git fetch --prune --unshallow
 
