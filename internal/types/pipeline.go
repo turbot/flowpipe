@@ -3,9 +3,10 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
 	"strings"
 	"time"
+
+	"github.com/turbot/go-kit/helpers"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
@@ -56,6 +57,8 @@ type FpPipeline struct {
 	Mod           string                     `json:"mod"`
 	Title         *string                    `json:"title,omitempty"`
 	Documentation *string                    `json:"documentation,omitempty"`
+	Filename      string                     `json:"filename,omitempty"`
+	Linenumber    int                        `json:"linenumber,omitempty"`
 	Tags          map[string]string          `json:"tags,omitempty"`
 	Steps         []modconfig.PipelineStep   `json:"steps,omitempty"`
 	OutputConfig  []modconfig.PipelineOutput `json:"outputs,omitempty"`
@@ -160,6 +163,10 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 
 		resp.Params = pipelineParams
 	}
+
+	resp.Filename = pipeline.Filename
+	resp.Linenumber = pipeline.Linenumber
+
 	return resp, nil
 }
 
