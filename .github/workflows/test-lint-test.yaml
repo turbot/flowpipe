@@ -19,6 +19,13 @@ jobs:
         with:
           path: flowpipe
 
+      - name: Checkout Pipe Fittings Components repository
+        uses: actions/checkout@v3
+        with:
+          ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/pipe-fittings
+          path: pipe-fittings
+
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
