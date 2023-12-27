@@ -2,24 +2,28 @@ package types
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
-	"strings"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )
 
 type FpTrigger struct {
-	Name          string            `json:"name"`
-	Type          string            `json:"type"`
-	Description   *string           `json:"description,omitempty"`
-	Pipeline      string            `json:"pipeline"`
-	Url           *string           `json:"url,omitempty"`
-	Title         *string           `json:"title,omitempty"`
-	Documentation *string           `json:"documentation,omitempty"`
-	Tags          map[string]string `json:"tags,omitempty"`
-	Schedule      *string           `json:"schedule,omitempty"`
+	Name            string            `json:"name"`
+	Type            string            `json:"type"`
+	Description     *string           `json:"description,omitempty"`
+	Pipeline        string            `json:"pipeline"`
+	Url             *string           `json:"url,omitempty"`
+	Title           *string           `json:"title,omitempty"`
+	FileName        string            `json:"file_name,omitempty"`
+	StartLineNumber int               `json:"start_line_number,omitempty"`
+	EndLineNumber   int               `json:"end_line_number,omitempty"`
+	Documentation   *string           `json:"documentation,omitempty"`
+	Tags            map[string]string `json:"tags,omitempty"`
+	Schedule        *string           `json:"schedule,omitempty"`
 }
 
 func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
