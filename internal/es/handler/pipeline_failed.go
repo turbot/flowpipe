@@ -80,7 +80,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
 			evt.Event.ExecutionID, pipelineDefn.PipelineName, "failed")
 		p.Errors = evt.Errors
 		p.Output = evt.PipelineOutput

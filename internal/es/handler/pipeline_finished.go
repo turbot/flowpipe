@@ -106,7 +106,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
 			evt.Event.ExecutionID, pipelineDefn.PipelineName, "finished")
 		p.Output = evt.PipelineOutput
 		output.RenderServerOutput(ctx, p)

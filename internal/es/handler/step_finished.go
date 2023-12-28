@@ -89,10 +89,10 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	// Check if we are in a retry block
-	if e.StepRetry != nil && !e.StepRetry.RetryCompleted {
+	if evt.StepRetry != nil && !evt.StepRetry.RetryCompleted {
 		if output.IsServerMode {
 			step := types.NewServerOutputStepExecution(
-				types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+				types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
 				evt.Event.ExecutionID,
 				pipelineDefn.PipelineName,
 				stepName,
@@ -101,22 +101,22 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 			)
 			output.RenderServerOutput(ctx, step)
 		}
-		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(e, stepName)
+		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(evt, stepName)
 		return h.CommandBus.Send(ctx, cmd)
 	} else if evt.StepRetry != nil && evt.StepRetry.RetryCompleted {
 		// this means we have an error BUT the retry has been exhausted, run the planner
 		if output.IsServerMode {
 			step := types.NewServerOutputStepExecution(
-				types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+				types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
 				evt.Event.ExecutionID,
 				pipelineDefn.PipelineName,
 				stepName,
 				stepDefn.GetType(),
 				"failed",
 			)
-			step.Output = e.StepOutput
-			if !helpers.IsNil(e.Output) && len(e.Output.Errors) > 0 {
-				step.Errors = e.Output.Errors
+			step.Output = evt.StepOutput
+			if !helpers.IsNil(evt.Output) && len(evt.Output.Errors) > 0 {
+				step.Errors = evt.Output.Errors
 			}
 			output.RenderServerOutput(ctx, step)
 		}
@@ -144,16 +144,16 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	if output.IsServerMode {
 		step := types.NewServerOutputStepExecution(
-			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
 			evt.Event.ExecutionID,
 			pipelineDefn.PipelineName,
 			stepName,
 			stepDefn.GetType(),
 			"finished",
 		)
-		step.Output = e.StepOutput
-		if !helpers.IsNil(e.Output) && len(e.Output.Errors) > 0 {
-			step.Errors = e.Output.Errors
+		step.Output = evt.StepOutput
+		if !helpers.IsNil(evt.Output) && len(evt.Output.Errors) > 0 {
+			step.Errors = evt.Output.Errors
 			step.Status = "failed"
 		}
 		output.RenderServerOutput(ctx, step)
