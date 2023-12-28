@@ -29,13 +29,24 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		return perr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
 	}
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-	if err != nil {
-		slog.Error("pipeline_fail error constructing execution", "error", err)
-		return err
+	executionID := cmd.Event.ExecutionID
+	var pe *execution.PipelineExecution
+	if execution.ExecutionMode == "in-memory" {
+		var err error
+		ex, _, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
+		if err != nil {
+			// catasthropic failure here
+			return err
+		}
+		pe = ex.PipelineExecutions[cmd.PipelineExecutionID]
+	} else {
+		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+		if err != nil {
+			slog.Error("pipeline_fail error constructing execution", "error", err)
+			return err
+		}
+		pe = ex.PipelineExecutions[cmd.PipelineExecutionID]
 	}
-
-	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	// 2023-12-05: do not calculate output if pipeline fails
 	output := make(map[string]any, 1)
@@ -47,12 +58,6 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	for _, stepExecution := range pe.StepExecutions {
-		if err != nil {
-			slog.Error("Error getting step definition during pipeline_fail event", "error", err)
-			// do not fail, continue to the next step, we are already in pipeline_fail event, what else can we do here?
-			continue
-		}
-
 		if stepExecution.Output.HasErrors() {
 			if stepExecution.StepRetry != nil && !stepExecution.StepRetry.RetryCompleted {
 				// Don't add to pipeline errors if it's not the final retry

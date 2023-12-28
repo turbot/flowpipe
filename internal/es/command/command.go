@@ -10,6 +10,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -71,6 +72,26 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		Payload:   evt,
 	}
 
+	executionID := commandEvent.GetEvent().ExecutionID
+
+	var ex *execution.ExecutionInMemory
+	if execution.ExecutionMode == "in-memory" {
+		var err error
+
+		ex, err = execution.GetExecution(executionID)
+		if err != nil {
+			slog.Error("Error getting execution", "error", err)
+			return perr.InternalWithMessage("Error getting execution")
+		}
+
+		err = ex.AddEvent(logMessage)
+		if err != nil {
+			slog.Error("Error adding event to execution", "error", err)
+			return perr.InternalWithMessage("Error adding event to execution")
+		}
+		return nil
+	}
+
 	// Marshal the struct to JSON
 	fileData, err := json.Marshal(logMessage) // No indent, single line
 	if err != nil {
@@ -78,10 +99,10 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		os.Exit(1)
 	}
 
-	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(executionID)
 
 	if lock == nil {
-		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
+		executionMutex := event.GetEventStoreMutex(executionID)
 		executionMutex.Lock()
 		defer executionMutex.Unlock()
 	}

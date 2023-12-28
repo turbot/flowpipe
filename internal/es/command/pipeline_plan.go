@@ -39,25 +39,40 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
-	ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(evt.Event))
-	if err != nil {
-		slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
-	}
+	var pex *execution.PipelineExecution
+	var pipelineDefn *modconfig.Pipeline
+	var ex *execution.ExecutionInMemory
+	var err error
 
-	// Convenience
-	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
+	executionID := evt.Event.ExecutionID
+
+	if execution.ExecutionMode == "in-memory" {
+		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
+		if err != nil {
+			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
+		}
+		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
+
+	} else {
+		ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(evt.Event))
+		if err != nil {
+			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
+		}
+		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
+		pipelineDefn, err = ex.PipelineDefinition(evt.PipelineExecutionID)
+
+		if err != nil {
+			slog.Error("Error loading pipeline definition", "error", err)
+			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
+		}
+	}
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.
 	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
 		return nil
-	}
-
-	pipelineDefn, err := ex.PipelineDefinition(evt.PipelineExecutionID)
-	if err != nil {
-		slog.Error("Error loading pipeline definition", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
 	}
 
 	// Create a new PipelinePlanned event

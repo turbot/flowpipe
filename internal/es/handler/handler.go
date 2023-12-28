@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -71,6 +73,40 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		Payload:   commandEvent,
 	}
 
+	executionID := commandEvent.GetEvent().ExecutionID
+
+	var ex *execution.ExecutionInMemory
+	if execution.ExecutionMode == "in-memory" {
+		if commandEvent.HandlerName() == "command.pipeline_queue" {
+			ex = &execution.ExecutionInMemory{
+				ID:                 executionID,
+				PipelineExecutions: map[string]*execution.PipelineExecution{},
+				Lock:               event.GetEventStoreMutex(executionID),
+			}
+
+			// Effectively forever
+			ok := cache.GetCache().SetWithTTL(executionID, ex, 10*365*24*time.Hour)
+			if !ok {
+				slog.Error("Error setting execution in cache", "execution_id", executionID)
+				return perr.InternalWithMessage("Error setting execution in cache")
+			}
+		} else {
+			var err error
+			ex, err = execution.GetExecution(executionID)
+			if err != nil {
+				slog.Error("Error getting execution from cache", "execution_id", executionID)
+				return perr.InternalWithMessage("Error getting execution from cache")
+			}
+		}
+
+		err := ex.AddEvent(logMessage)
+		if err != nil {
+			slog.Error("Error adding event to execution", "error", err)
+			return err
+		}
+		return nil
+	}
+
 	// Marshal the struct to JSON
 	fileData, err := json.Marshal(logMessage) // No indent, single line
 	if err != nil {
@@ -78,10 +114,10 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		os.Exit(1)
 	}
 
-	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(executionID)
 
 	if lock == nil {
-		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
+		executionMutex := event.GetEventStoreMutex(executionID)
 		executionMutex.Lock()
 		defer executionMutex.Unlock()
 	}
