@@ -31,33 +31,22 @@ func (h StepPipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepPipelineStarted")
 	}
 
-	var ex *execution.ExecutionInMemory
-	var err error
-
-	executionID := evt.Event.ExecutionID
-
-	if execution.ExecutionMode == "in-memory" {
-		ex, _, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
-		if err != nil {
-			slog.Error("step_pipeline_started: Error loading pipeline execution", "error", err)
-			err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepPipelineStartedToPipelineFail(evt, err)))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
+	ex, err := execution.GetExecution(evt.Event.ExecutionID)
+	if err != nil {
+		slog.Error("step_pipeline_started: Error loading pipeline execution", "error", err)
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepPipelineStartedToPipelineFail(evt, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
 		}
-
-	} else {
-		_, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
-		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepPipelineStartedToPipelineFail(evt, err)))
-		}
-
+		return nil
 	}
 
 	stepDefn, err := ex.StepDefinition(evt.PipelineExecutionID, evt.StepExecutionID)
 	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepPipelineStartedToPipelineFail(evt, err)))
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepPipelineStartedToPipelineFail(evt, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+		}
 	}
 
 	switch stepDefn.GetType() {

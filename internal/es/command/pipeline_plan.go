@@ -39,35 +39,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
-	var pex *execution.PipelineExecution
-	var pipelineDefn *modconfig.Pipeline
-	var ex *execution.ExecutionInMemory
-	var err error
-
-	executionID := cmd.Event.ExecutionID
-
-	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
-		if err != nil {
-			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
-		}
-		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
-
-	} else {
-		ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(cmd.Event))
-		if err != nil {
-			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
-		}
-		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
-		pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
-
-		if err != nil {
-			slog.Error("Error loading pipeline definition", "error", err)
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
-		}
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(cmd.Event.ExecutionID, cmd.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
 	}
+	pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.

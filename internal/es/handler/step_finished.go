@@ -9,7 +9,6 @@ import (
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -34,40 +33,17 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepFinished")
 	}
 
-	var pipelineDefn *modconfig.Pipeline
-	var ex *execution.ExecutionInMemory
-	var pex *execution.PipelineExecution
-	var err error
-
-	executionID := evt.Event.ExecutionID
-
-	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
-		if err != nil {
-			slog.Error("step_finished: Error loading pipeline execution", "error", err)
-			err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(evt, err)))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("step_finished: Error loading pipeline execution", "error", err)
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(evt, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
 		}
-
-		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
-	} else {
-
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
-		if err != nil {
-			slog.Error("error creating pipeline_plan command", "error", err)
-			err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStepFinishedToPipelineFail(evt, err)))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
-		}
-
-		// Convenience
-		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
+		return nil
 	}
+
+	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.

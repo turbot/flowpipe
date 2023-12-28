@@ -32,48 +32,17 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
-	var pipelineDefn *modconfig.Pipeline
-	var ex *execution.ExecutionInMemory
-	var pex *execution.PipelineExecution
-	var err error
-
-	executionID := evt.Event.ExecutionID
-
-	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
-		if err != nil {
-			slog.Error("pipeline_planned: Error loading pipeline execution", "error", err)
-			err2 := h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_planned: Error loading pipeline execution", "error", err)
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
 		}
-
-		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
-	} else {
-
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
-		if err != nil {
-			err2 := h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
-		}
-
-		pipelineDefn, err = ex.PipelineDefinition(evt.PipelineExecutionID)
-		if err != nil {
-			err2 := h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
-		}
-
-		// Convenience
-		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
+		return nil
 	}
+
+	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
 
 	// If the pipeline has been canceled or paused, then no planning is required as no
 	// more work should be done.

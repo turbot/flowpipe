@@ -2,8 +2,9 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
+
+	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -47,45 +48,16 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
-		var pipelineDefn *modconfig.Pipeline
-		var ex *execution.ExecutionInMemory
-		var err error
-
 		executionID := cmd.Event.ExecutionID
 
-		if execution.ExecutionMode == "in-memory" {
-			ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
-			if err != nil {
-				slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					slog.Error("Error publishing event", "error", err2)
-				}
-				return
+		ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
+		if err != nil {
+			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				slog.Error("Error publishing event", "error", err2)
 			}
-		} else {
-
-			ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-			if err != nil {
-				slog.Error("Error loading pipeline execution", "error", err)
-
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					slog.Error("Error publishing event", "error", err2)
-				}
-				return
-			}
-
-			pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
-			if err != nil {
-				slog.Error("Error loading pipeline definition", "error", err)
-
-				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-				if err2 != nil {
-					slog.Error("Error publishing event", "error", err2)
-				}
-				return
-			}
+			return
 		}
 
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)

@@ -12,7 +12,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -37,41 +36,15 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	slog.Debug("pipeline_finished event handler", "executionID", evt.Event.ExecutionID, "pipelineExecutionID", evt.PipelineExecutionID)
 
-	var parentStepExecution *execution.StepExecution
-	var pipelineDefn *modconfig.Pipeline
-	var ex *execution.ExecutionInMemory
-	var err error
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+	}
 
-	executionID := evt.Event.ExecutionID
-
-	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
-		if err != nil {
-			slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
-		}
-
-		parentStepExecution, err = ex.ParentStepExecution(evt.PipelineExecutionID)
-		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
-		}
-
-	} else {
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
-		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
-		}
-
-		parentStepExecution, err = ex.ParentStepExecution(evt.PipelineExecutionID)
-		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
-		}
-
-		pipelineDefn, err = ex.PipelineDefinition(evt.PipelineExecutionID)
-		if err != nil {
-			slog.Error("Pipeline definition not found", "error", err)
-			return err
-		}
+	parentStepExecution, err := ex.ParentStepExecution(evt.PipelineExecutionID)
+	if err != nil {
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
 	}
 
 	if parentStepExecution != nil {

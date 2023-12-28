@@ -11,7 +11,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type PipelineFailed EventHandler
@@ -29,24 +28,10 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 	slog.Debug("pipeline_failed handler", "event", evt)
 
-	var pipelineDefn *modconfig.Pipeline
-	var ex *execution.ExecutionInMemory
-	var err error
-
-	executionID := evt.Event.ExecutionID
-
-	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
-		if err != nil {
-			slog.Error("pipeline_failed error loading pipeline execution", "error", err)
-			return err
-		}
-	} else {
-		_, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
-		if err != nil {
-			slog.Error("pipeline_failed error constructing execution", "error", err)
-			return err
-		}
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_failed error loading pipeline execution", "error", err)
+		return err
 	}
 
 	parentStepExecution, err := ex.ParentStepExecution(evt.PipelineExecutionID)
