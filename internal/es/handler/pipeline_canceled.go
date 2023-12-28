@@ -2,8 +2,8 @@ package handler
 
 import (
 	"context"
-	"fmt"
-
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -36,7 +36,12 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
-	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline cancelled", e.Event.ExecutionID))
+	if output.IsServerMode {
+		p := types.NewServerOutputPipelineExecution(
+			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			e.Event.ExecutionID, "", "cancelled")
+		output.RenderServerOutput(ctx, p)
+	}
 
 	event.ReleaseEventLogMutex(e.Event.ExecutionID)
 

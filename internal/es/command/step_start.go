@@ -2,7 +2,7 @@ package command
 
 import (
 	"context"
-	"fmt"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 
 	"github.com/hashicorp/hcl/v2"
@@ -15,6 +15,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -96,7 +97,17 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		var output *modconfig.Output
 
-		execution.ServerOutput(fmt.Sprintf("[%s] Step %s started", cmd.Event.ExecutionID, stepDefn.GetName()))
+		if o.IsServerMode {
+			step := types.NewServerOutputStepExecution(
+				types.NewServerOutputPrefix(cmd.Event.CreatedAt, "pipeline"),
+				cmd.Event.ExecutionID,
+				pipelineDefn.PipelineName,
+				cmd.StepName,
+				stepDefn.GetType(),
+				"started",
+			)
+			o.RenderServerOutput(ctx, step)
+		}
 
 		var primitiveError error
 		switch stepDefn.GetType() {

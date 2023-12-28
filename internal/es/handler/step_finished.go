@@ -2,14 +2,14 @@ package handler
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"log/slog"
 )
 
 type StepFinished EventHandler
@@ -63,10 +63,36 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	// Check if we are in a retry block
 	if e.StepRetry != nil && !e.StepRetry.RetryCompleted {
+		if output.IsServerMode {
+			step := types.NewServerOutputStepExecution(
+				types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+				e.Event.ExecutionID,
+				pipelineDefn.PipelineName,
+				stepName,
+				stepDefn.GetType(),
+				"retrying",
+			)
+			output.RenderServerOutput(ctx, step)
+		}
 		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(e, stepName)
 		return h.CommandBus.Send(ctx, cmd)
 	} else if e.StepRetry != nil && e.StepRetry.RetryCompleted {
 		// this means we have an error BUT the retry has been exhausted, run the planner
+		if output.IsServerMode {
+			step := types.NewServerOutputStepExecution(
+				types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+				e.Event.ExecutionID,
+				pipelineDefn.PipelineName,
+				stepName,
+				stepDefn.GetType(),
+				"failed",
+			)
+			step.Output = e.StepOutput
+			if !helpers.IsNil(e.Output) && len(e.Output.Errors) > 0 {
+				step.Errors = e.Output.Errors
+			}
+			output.RenderServerOutput(ctx, step)
+		}
 		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 		if err != nil {
 			slog.Error("error creating pipeline_plan command", "error", err)
@@ -89,7 +115,22 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	execution.ServerOutput(fmt.Sprintf("[%s] Step %s finished", e.Event.ExecutionID, stepDefn.GetName()))
+	if output.IsServerMode {
+		step := types.NewServerOutputStepExecution(
+			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			e.Event.ExecutionID,
+			pipelineDefn.PipelineName,
+			stepName,
+			stepDefn.GetType(),
+			"finished",
+		)
+		step.Output = e.StepOutput
+		if !helpers.IsNil(e.Output) && len(e.Output.Errors) > 0 {
+			step.Errors = e.Output.Errors
+			step.Status = "failed"
+		}
+		output.RenderServerOutput(ctx, step)
+	}
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(e))
 	if err != nil {

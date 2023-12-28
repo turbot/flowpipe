@@ -198,9 +198,7 @@ func (s *Sanitizer) SanitizeString(v string) string {
 	var lastReplacement *replacement
 	for _, r := range replacements {
 		if lastReplacement != nil && r.start < lastReplacement.end {
-			a := v[r.start:r.end]
-			b := v[lastReplacement.start:lastReplacement.end]
-			slog.Debug("Overlapping replacements", "a", a, "b", b)
+			slog.Debug("Overlapping replacements", "r1_start", r.start, "r1_end", r.end, "r2_start", lastReplacement.start, "r2_end", lastReplacement.end)
 			// expand previous replacement
 			lastReplacement.end = r.end
 			continue

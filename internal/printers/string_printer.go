@@ -32,13 +32,14 @@ func NewStringPrinter[T any]() (*StringPrinter[T], error) {
 
 func (p StringPrinter[T]) PrintResource(_ context.Context, r types.PrintableResource[T], writer io.Writer) error {
 	items := r.GetItems()
+	enableColor := viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty
 	for _, item := range items {
 		if item, isSanitizedStringer := any(item).(types.SanitizedStringer); isSanitizedStringer {
 			colorOpts := types.RenderOptions{
 				ColorGenerator: p.colorGenerator,
-				ColorEnabled:   viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty,
+				ColorEnabled:   enableColor,
 				Verbose:        viper.GetBool(constants.ArgVerbose),
-				JsonFormatter:  color.NewJsonFormatter(),
+				JsonFormatter:  color.NewJsonFormatter(!enableColor),
 			}
 
 			str := item.String(sanitize.Instance, colorOpts)

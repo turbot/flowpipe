@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/turbot/flowpipe/internal/output"
 	"io"
 	"log/slog"
 	"net/http"
@@ -153,6 +154,11 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	}
 
 	pipelineCmd.Args = pipelineArgs
+
+	if output.IsServerMode {
+		tr := types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName)
+		output.RenderServerOutput(c, tr)
+	}
 
 	if err := api.EsService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
