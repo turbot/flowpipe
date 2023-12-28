@@ -3,14 +3,16 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
-	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -27,27 +29,54 @@ func (PipelineFinished) NewEvent() interface{} {
 
 func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
-	e, ok := ei.(*event.PipelineFinished)
+	evt, ok := ei.(*event.PipelineFinished)
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.PipelineFinished", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineFinished")
 	}
 
-	slog.Debug("pipeline_finished event handler", "executionID", e.Event.ExecutionID, "pipelineExecutionID", e.PipelineExecutionID)
+	slog.Debug("pipeline_finished event handler", "executionID", evt.Event.ExecutionID, "pipelineExecutionID", evt.PipelineExecutionID)
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
-	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
-	}
+	var parentStepExecution *execution.StepExecution
+	var pipelineDefn *modconfig.Pipeline
+	var ex *execution.ExecutionInMemory
+	var err error
 
-	parentStepExecution, err := ex.ParentStepExecution(e.PipelineExecutionID)
-	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
+	executionID := evt.Event.ExecutionID
+
+	if execution.ExecutionMode == "in-memory" {
+		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
+		if err != nil {
+			slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		}
+
+		parentStepExecution, err = ex.ParentStepExecution(evt.PipelineExecutionID)
+		if err != nil {
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		}
+
+	} else {
+		ex, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
+		if err != nil {
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		}
+
+		parentStepExecution, err = ex.ParentStepExecution(evt.PipelineExecutionID)
+		if err != nil {
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		}
+
+		pipelineDefn, err = ex.PipelineDefinition(evt.PipelineExecutionID)
+		if err != nil {
+			slog.Error("Pipeline definition not found", "error", err)
+			return err
+		}
 	}
 
 	if parentStepExecution != nil {
 		cmd, err := event.NewStepPipelineFinish(
-			event.ForPipelineFinished(e),
+			event.ForPipelineFinished(evt),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
 			event.WithStepExecutionID(parentStepExecution.ID),
 
@@ -60,14 +89,14 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		cmd.StepLoop = parentStepExecution.StepLoop
 
 		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(e, err)))
+			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
 		}
 
 		return h.CommandBus.Send(ctx, cmd)
 
 	}
 	// Generate output data
-	data, err := ex.PipelineData(e.PipelineExecutionID)
+	data, err := ex.PipelineData(evt.PipelineExecutionID)
 	if err != nil {
 		slog.Error("pipeline_finished (2)", "error", err)
 	} else {
@@ -75,32 +104,26 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		slog.Debug("json string", "json", string(jsonStr))
 	}
 
-	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
-	if err != nil {
-		slog.Error("Pipeline definition not found", "error", err)
-		return err
-	}
-
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
 			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
-			e.Event.ExecutionID, pipelineDefn.PipelineName, "finished")
-		p.Output = e.PipelineOutput
+			evt.Event.ExecutionID, pipelineDefn.PipelineName, "finished")
+		p.Output = evt.PipelineOutput
 		output.RenderServerOutput(ctx, p)
 	}
 
 	if len(pipelineDefn.OutputConfig) > 0 {
-		data[schema.BlockTypePipelineOutput] = e.PipelineOutput
+		data[schema.BlockTypePipelineOutput] = evt.PipelineOutput
 	}
 
-	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
 	if err != nil {
 		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
-	event.ReleaseEventLogMutex(e.Event.ExecutionID)
+	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
 
 	return nil
 }

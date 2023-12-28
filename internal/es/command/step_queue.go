@@ -8,6 +8,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -30,19 +31,42 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	if cmd.StepRetry != nil {
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-		if err != nil {
-			slog.Error("step_queue: Error loading pipeline execution", "error", err)
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
-		}
 
-		pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
-		if err != nil {
-			slog.Error("Error loading pipeline definition", "error", err)
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
-		}
+		var pex *execution.PipelineExecution
+		var pipelineDefn *modconfig.Pipeline
+		var ex *execution.ExecutionInMemory
+		var err error
 
-		pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
+		executionID := cmd.Event.ExecutionID
+
+		if execution.ExecutionMode == "in-memory" {
+			ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
+			if err != nil {
+				slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+				if err2 != nil {
+					slog.Error("Error publishing PipelineFailed event", "error", err2)
+				}
+				return nil
+			}
+
+			pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
+		} else {
+
+			ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+			if err != nil {
+				slog.Error("step_queue: Error loading pipeline execution", "error", err)
+				return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+			}
+
+			pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
+			if err != nil {
+				slog.Error("Error loading pipeline definition", "error", err)
+				return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+			}
+
+			pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
+		}
 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 		if err != nil {

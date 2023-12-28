@@ -2,14 +2,16 @@ package handler
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
-	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type PipelineFailed EventHandler
@@ -23,17 +25,31 @@ func (PipelineFailed) NewEvent() interface{} {
 }
 
 func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
-	e := ei.(*event.PipelineFailed)
+	evt := ei.(*event.PipelineFailed)
 
-	slog.Debug("pipeline_failed handler", "event", e)
+	slog.Debug("pipeline_failed handler", "event", evt)
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
-	if err != nil {
-		slog.Error("pipeline_failed error constructing execution", "error", err)
-		return err
+	var pipelineDefn *modconfig.Pipeline
+	var ex *execution.ExecutionInMemory
+	var err error
+
+	executionID := evt.Event.ExecutionID
+
+	if execution.ExecutionMode == "in-memory" {
+		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
+		if err != nil {
+			slog.Error("pipeline_failed error loading pipeline execution", "error", err)
+			return err
+		}
+	} else {
+		_, err := execution.NewExecution(ctx, execution.WithEvent(evt.Event))
+		if err != nil {
+			slog.Error("pipeline_failed error constructing execution", "error", err)
+			return err
+		}
 	}
 
-	parentStepExecution, err := ex.ParentStepExecution(e.PipelineExecutionID)
+	parentStepExecution, err := ex.ParentStepExecution(evt.PipelineExecutionID)
 	if err != nil {
 		// We're already in a pipeline failed event handler
 		slog.Error("pipeline_failed error getting parent step execution", "error", err)
@@ -42,7 +58,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 	if parentStepExecution != nil {
 		cmd, err := event.NewStepPipelineFinish(
-			event.ForPipelineFailed(e),
+			event.ForPipelineFailed(evt),
 			event.WithPipelineExecutionID(parentStepExecution.PipelineExecutionID),
 			event.WithStepExecutionID(parentStepExecution.ID),
 
@@ -62,30 +78,24 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
-	if err != nil {
-		slog.Error("Pipeline definition not found", "error", err)
-		return err
-	}
-
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
 			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
-			e.Event.ExecutionID, pipelineDefn.PipelineName, "failed")
-		p.Errors = e.Errors
-		p.Output = e.PipelineOutput
+			evt.Event.ExecutionID, pipelineDefn.PipelineName, "failed")
+		p.Errors = evt.Errors
+		p.Output = evt.PipelineOutput
 		output.RenderServerOutput(ctx, p)
 	}
 
 	// Sanitize event store file
-	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
+	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
 	if err != nil {
 		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
-	event.ReleaseEventLogMutex(e.Event.ExecutionID)
+	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
 
 	return nil
 }
