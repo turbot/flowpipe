@@ -38,26 +38,41 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineStepFinish")
 	}
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-	if err != nil {
-		slog.Error("Error loading pipeline execution", "error", err)
+	var pex *execution.PipelineExecution
+	var pipelineDefn *modconfig.Pipeline
+	var ex *execution.ExecutionInMemory
+	var err error
 
-		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
-		if err2 != nil {
-			slog.Error("Error publishing event", "error", err2)
+	executionID := cmd.Event.ExecutionID
+
+	if execution.ExecutionMode == "in-memory" {
+		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
+		if err != nil {
+			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+			raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
+			return nil
 		}
-		return nil
+		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
+
+	} else {
+		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+		if err != nil {
+			slog.Error("Error loading pipeline execution", "error", err)
+
+			raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
+			return nil
+		}
+
+		pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
+		if err != nil {
+			slog.Error("Error loading pipeline definition", "error", err)
+			raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
+			return nil
+		}
+
+		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
 	}
 
-	pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
-	if err != nil {
-		slog.Error("Error loading pipeline definition", "error", err)
-
-		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
-		return nil
-	}
-
-	pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
 	stepExecution := pex.StepExecutions[cmd.StepExecutionID]
 	stepDefn := pipelineDefn.GetStep(stepExecution.Name)
 

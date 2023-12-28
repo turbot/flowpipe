@@ -27,13 +27,13 @@ func (h PipelinePlanHandler) NewCommand() interface{} {
 
 func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
-	evt, ok := c.(*event.PipelinePlan)
+	cmd, ok := c.(*event.PipelinePlan)
 	if !ok {
 		slog.Error("invalid command type", "expected", "*event.PipelinePlan", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelinePlan")
 	}
 
-	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
 	plannerMutex.Lock()
 	defer func() {
 		plannerMutex.Unlock()
@@ -44,28 +44,28 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	var ex *execution.ExecutionInMemory
 	var err error
 
-	executionID := evt.Event.ExecutionID
+	executionID := cmd.Event.ExecutionID
 
 	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, evt.PipelineExecutionID)
+		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
 		if err != nil {
 			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
+			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
 		}
-		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
+		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	} else {
-		ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(evt.Event))
+		ex, err := execution.NewExecution(ctx, execution.WithLock(plannerMutex), execution.WithEvent(cmd.Event))
 		if err != nil {
 			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
+			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
 		}
-		pex = ex.PipelineExecutions[evt.PipelineExecutionID]
-		pipelineDefn, err = ex.PipelineDefinition(evt.PipelineExecutionID)
+		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
+		pipelineDefn, err = ex.PipelineDefinition(cmd.PipelineExecutionID)
 
 		if err != nil {
 			slog.Error("Error loading pipeline definition", "error", err)
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, "", "")
+			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
 		}
 	}
 
@@ -76,15 +76,15 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Create a new PipelinePlanned event
-	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(evt))
+	e, err := event.NewPipelinePlanned(event.ForPipelinePlan(cmd))
 	if err != nil {
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, "")
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, "")
 	}
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
 		slog.Error("Error building eval context for step", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, "")
+		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, "")
 	}
 
 	// Each defined step in the pipeline can be in a few states:
@@ -187,7 +187,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					err := error_helpers.HclDiagsToError("diags", diags)
 
 					slog.Error("Error evaluating if condition", "error", err)
-					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
 				if val.False() {
@@ -206,12 +206,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
 				if err != nil {
 					slog.Error("Error adding credentials to eval context", "error", err)
-					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
 				stepInputs, err := stepDefn.GetInputs(evalContext)
 				if err != nil {
-					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, evt, err, pex.Name, stepDefn.GetName())
+					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 				// There's no for_each, there's only a single input
 				input = stepInputs
@@ -230,7 +230,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 	// Pipeline has been planned, now publish this event
 	if err := h.EventBus.PublishWithLock(ctx, e, plannerMutex); err != nil {
-		return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(evt, err, pex.Name, "")), plannerMutex)
+		return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pex.Name, "")), plannerMutex)
 	}
 
 	return nil
