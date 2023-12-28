@@ -30,23 +30,12 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	executionID := cmd.Event.ExecutionID
-	var pe *execution.PipelineExecution
-	if execution.ExecutionMode == "in-memory" {
-		var err error
-		ex, _, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
-		if err != nil {
-			// catasthropic failure here
-			return err
-		}
-		pe = ex.PipelineExecutions[cmd.PipelineExecutionID]
-	} else {
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-		if err != nil {
-			slog.Error("pipeline_fail error constructing execution", "error", err)
-			return err
-		}
-		pe = ex.PipelineExecutions[cmd.PipelineExecutionID]
+	ex, _, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
+	if err != nil {
+		// catasthropic failure here
+		return err
 	}
+	pe := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	// 2023-12-05: do not calculate output if pipeline fails
 	output := make(map[string]any, 1)

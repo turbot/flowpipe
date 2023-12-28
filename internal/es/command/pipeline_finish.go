@@ -9,7 +9,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -30,34 +29,17 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
 	}
 
-	var pipelineDefn *modconfig.Pipeline
-	var pex *execution.PipelineExecution
-	var ex *execution.ExecutionInMemory
-	var err error
-
 	executionID := cmd.Event.ExecutionID
 
-	if execution.ExecutionMode == "in-memory" {
-		ex, pipelineDefn, err = execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
-		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
+	if err != nil {
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
 		}
-		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
-	} else {
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-		if err != nil {
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				slog.Error("Error publishing PipelineFailed event", "error", err2)
-			}
-			return nil
-		}
-		pex = ex.PipelineExecutions[cmd.PipelineExecutionID]
+		return nil
 	}
+	pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
 	var output map[string]interface{}
 	var outputCalculationErrors []perr.ErrorModel
@@ -69,7 +51,10 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 		if err != nil {
 			slog.Error("Error building eval context while calculating output in pipeline_finish", "error", err)
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				slog.Error("Error publishing PipelineFailed event", "error", err2)
+			}
 		}
 
 		for _, output := range pipelineDefn.OutputConfig {
