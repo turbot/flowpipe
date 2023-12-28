@@ -176,12 +176,6 @@ func (api *APIService) runWebhook(c *gin.Context) {
 }
 
 func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue, waitRetry int) {
-	ex, err := execution.NewExecution(api.ctx)
-	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("error creating execution object"))
-		return
-	}
-
 	if waitRetry == 0 {
 		waitRetry = 60
 	}
@@ -194,36 +188,37 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	for i := 0; i < waitRetry; i++ {
 		time.Sleep(waitTime)
 
-		err = ex.LoadProcess(pipelineCmd.Event)
+		ex, err := execution.GetExecution(pipelineCmd.Event.ExecutionID)
+
 		if err != nil {
 			if errorModel, ok := err.(perr.ErrorModel); ok {
-				if errorModel.Type == perr.ErrorCodeInternalTokenTooLarge || errorModel.Type == perr.ErrorCodeJsonSyntaxError {
-					response := map[string]interface{}{}
+				response := map[string]interface{}{}
 
-					response["errors"] = []modconfig.StepError{
-						{
-							PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-							Pipeline:            pipelineCmd.Name,
-							Error:               errorModel,
-						},
-					}
-
-					c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
-					c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
-					c.Header("flowpipe-status", "failed")
-
-					c.JSON(500, response)
-					return
+				response["errors"] = []modconfig.StepError{
+					{
+						PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+						Pipeline:            pipelineCmd.Name,
+						Error:               errorModel,
+					},
 				}
+
+				c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+				c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+				c.Header("flowpipe-status", "failed")
+
+				c.JSON(500, response)
+				return
+			} else {
+				common.AbortWithError(c, err)
+				return
 			}
-			slog.Warn("error loading process", "error", err)
-			continue
 		}
 
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 		if pex == nil {
 			slog.Warn("Pipeline execution not found", "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
-			continue
+			common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution not found"))
+			return
 		}
 
 		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {

@@ -512,7 +512,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	f, err := os.Open(eventStoreFilePath)
 	if err != nil {
-		slog.Error("Failed to open log file", "execution", ex.ID, "error", err)
+		slog.Error("Failed to open log file", "execution", ex.ID, "error", err, "event", e)
 		return err
 	}
 	defer f.Close()

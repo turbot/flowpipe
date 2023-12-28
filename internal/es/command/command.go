@@ -84,6 +84,11 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 			return perr.InternalWithMessage("Error getting execution")
 		}
 
+		if lock == nil {
+			ex.Lock.Lock()
+			defer ex.Lock.Unlock()
+		}
+
 		err = ex.AddEvent(logMessage)
 		if err != nil {
 			slog.Error("Error adding event to execution", "error", err)

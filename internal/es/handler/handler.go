@@ -99,6 +99,12 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 			}
 		}
 
+		if lock == nil {
+			// If lock is already provided, don't lock again, otherwise use the lock that comes with the execution
+			ex.Lock.Lock()
+			defer ex.Lock.Unlock()
+		}
+
 		err := ex.AddEvent(logMessage)
 		if err != nil {
 			slog.Error("Error adding event to execution", "error", err)

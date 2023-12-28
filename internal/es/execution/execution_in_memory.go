@@ -722,7 +722,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogEntry) e
 		pe.Status = "paused"
 
 	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
-		et, ok := logEntry.Payload.(*event.PipelineFinished)
+		et, ok := logEntry.Payload.(*event.PipelineFinish)
 		if !ok {
 			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
