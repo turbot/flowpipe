@@ -39,12 +39,20 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
 	if err != nil {
 		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+		}
+		return nil
 	}
 
 	parentStepExecution, err := ex.ParentStepExecution(evt.PipelineExecutionID)
 	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+		}
+		return nil
 	}
 
 	if parentStepExecution != nil {
@@ -62,7 +70,11 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		cmd.StepLoop = parentStepExecution.StepLoop
 
 		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+			err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineFinishedToPipelineFail(evt, err)))
+			if err2 != nil {
+				slog.Error("Error publishing PipelineFailed event", "error", err2)
+			}
+			return nil
 		}
 
 		return h.CommandBus.Send(ctx, cmd)
@@ -87,6 +99,16 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	if len(pipelineDefn.OutputConfig) > 0 {
 		data[schema.BlockTypePipelineOutput] = evt.PipelineOutput
+	}
+
+	ex.Lock.Lock()
+	defer ex.Lock.Unlock()
+
+	err = ex.SaveToFile()
+	if err != nil {
+		slog.Error("pipeline_finished: Error saving execution", "error", err)
+		// Should we raise pipeline fail here?
+		return nil
 	}
 
 	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)

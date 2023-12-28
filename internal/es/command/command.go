@@ -2,16 +2,13 @@ package command
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -75,59 +72,23 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 	executionID := commandEvent.GetEvent().ExecutionID
 
 	var ex *execution.ExecutionInMemory
-	if execution.ExecutionMode == "in-memory" {
-		var err error
+	var err error
 
-		ex, err = execution.GetExecution(executionID)
-		if err != nil {
-			slog.Error("Error getting execution", "error", err)
-			return perr.InternalWithMessage("Error getting execution")
-		}
-
-		if lock == nil {
-			ex.Lock.Lock()
-			defer ex.Lock.Unlock()
-		}
-
-		err = ex.AddEvent(logMessage)
-		if err != nil {
-			slog.Error("Error adding event to execution", "error", err)
-			return perr.InternalWithMessage("Error adding event to execution")
-		}
-		return nil
-	}
-
-	// Marshal the struct to JSON
-	fileData, err := json.Marshal(logMessage) // No indent, single line
+	ex, err = execution.GetExecution(executionID)
 	if err != nil {
-		slog.Error("Error marshalling JSON", "error", err)
-		os.Exit(1)
+		slog.Error("Error getting execution", "error", err)
+		return perr.InternalWithMessage("Error getting execution")
 	}
-
-	eventStoreFilePath := filepaths.EventStoreFilePath(executionID)
 
 	if lock == nil {
-		executionMutex := event.GetEventStoreMutex(executionID)
-		executionMutex.Lock()
-		defer executionMutex.Unlock()
+		ex.Lock.Lock()
+		defer ex.Lock.Unlock()
 	}
 
-	// Append the JSON data to a file
-	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err = ex.AddEvent(logMessage)
 	if err != nil {
-		return perr.InternalWithMessage("Error opening file " + err.Error())
+		slog.Error("Error adding event to execution", "error", err)
+		return perr.InternalWithMessage("Error adding event to execution")
 	}
-	defer file.Close()
-
-	_, err = file.Write(fileData)
-	if err != nil {
-		return perr.InternalWithMessage("Error writing to file " + err.Error())
-	}
-
-	_, err = file.WriteString("\n")
-	if err != nil {
-		return perr.InternalWithMessage("Error writing to file " + err.Error())
-	}
-
 	return nil
 }

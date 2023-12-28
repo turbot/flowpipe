@@ -72,6 +72,16 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		output.RenderServerOutput(ctx, p)
 	}
 
+	ex.Lock.Lock()
+	defer ex.Lock.Unlock()
+
+	err = ex.SaveToFile()
+	if err != nil {
+		slog.Error("pipeline_finished: Error saving execution", "error", err)
+		// Should we raise pipeline fail here?
+		return nil
+	}
+
 	// Sanitize event store file
 	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)
 	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)

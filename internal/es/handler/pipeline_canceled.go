@@ -2,9 +2,10 @@ package handler
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
-	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -24,26 +25,42 @@ func (PipelineCanceled) NewEvent() interface{} {
 }
 
 func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
-	e, ok := ei.(*event.PipelineCanceled)
+	evt, ok := ei.(*event.PipelineCanceled)
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.PipelineCanceled", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineCanceled")
 	}
 
-	eventStoreFilePath := filepaths.EventStoreFilePath(e.Event.ExecutionID)
-	err := sanitize.Instance.SanitizeFile(eventStoreFilePath)
+	ex, err := execution.GetExecution(evt.Event.ExecutionID)
+	if err != nil {
+		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
+		return err
+	}
+
+	ex.Lock.Lock()
+	defer ex.Lock.Unlock()
+
+	err = ex.SaveToFile()
+	if err != nil {
+		slog.Error("pipeline_finished: Error saving execution", "error", err)
+		// Should we raise pipeline fail here?
+		return nil
+	}
+
+	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)
+	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
 	if err != nil {
 		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
-			e.Event.ExecutionID, "", "cancelled")
+			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
+			evt.Event.ExecutionID, "", "cancelled")
 		output.RenderServerOutput(ctx, p)
 	}
 
-	event.ReleaseEventLogMutex(e.Event.ExecutionID)
+	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
 
 	return nil
 }

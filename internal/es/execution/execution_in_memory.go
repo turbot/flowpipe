@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -42,14 +43,6 @@ type ExecutionInMemory struct {
 	Events                  []event.EventLogEntry `json:"events"`
 	LastProcessedEventIndex int
 	Lock                    *sync.Mutex `json:"-"`
-}
-
-func NewInMemoryExecution(executionID string) *ExecutionInMemory {
-	return &ExecutionInMemory{
-		ID:                 executionID,
-		PipelineExecutions: map[string]*PipelineExecution{},
-		Lock:               event.GetEventStoreMutex(executionID),
-	}
 }
 
 func GetExecution(executionID string) (*ExecutionInMemory, error) {
@@ -79,6 +72,45 @@ func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*Exe
 	}
 
 	return ex, defn, nil
+}
+
+func (ex *ExecutionInMemory) SaveToFile() error {
+	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
+
+	stat, _ := os.Stat(eventStoreFilePath)
+	if stat != nil {
+		// Keeping this simple, we don't want to overwrite the file. This may change in the future when we can resume execution.
+		// Right now if Flowpipe stops/crashes there's no way to resume the execution because it's no longer in memory and not
+		// persisted
+		return perr.BadRequestWithMessage("execution file already exists. execution can only be serialised once at termination")
+	}
+
+	// Append the JSON data to a file
+	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return perr.InternalWithMessage("Error opening file " + err.Error())
+	}
+	defer file.Close()
+
+	for _, event := range ex.Events {
+		// Marshal the struct to JSON
+		fileData, err := json.Marshal(event) // No indent, single line
+		if err != nil {
+			slog.Error("Error marshalling JSON", "error", err)
+			return err
+		}
+
+		_, err = file.Write(fileData)
+		if err != nil {
+			return perr.InternalWithMessage("Error writing to file " + err.Error())
+		}
+
+		_, err = file.WriteString("\n")
+		if err != nil {
+			return perr.InternalWithMessage("Error writing to file " + err.Error())
+		}
+	}
+	return nil
 }
 
 func (ex *ExecutionInMemory) AddEvent(evt event.EventLogEntry) error {
