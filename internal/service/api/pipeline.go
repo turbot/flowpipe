@@ -179,11 +179,10 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 
 	response, pipelineCmd, err := ExecutePipeline(input, pipelineName, api.EsService)
 	if err != nil {
-		{
-			common.AbortWithError(c, err)
-			return
-		}
+		common.AbortWithError(c, err)
+		return
 	}
+
 	if executionMode == localconstants.ExecutionModeSynchronous {
 		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return

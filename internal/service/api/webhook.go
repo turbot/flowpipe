@@ -1,11 +1,12 @@
 package api
 
 import (
-	"github.com/turbot/flowpipe/internal/output"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/output"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
