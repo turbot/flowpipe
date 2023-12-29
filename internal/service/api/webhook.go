@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/sanitize"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
@@ -236,6 +237,10 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 
 	if response == nil {
 		response = map[string]interface{}{}
+	}
+
+	for k, v := range pex.PipelineOutput {
+		response[k] = sanitize.Instance.Sanitize(v)
 	}
 
 	if response["errors"] != nil {
