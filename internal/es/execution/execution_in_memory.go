@@ -19,6 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -94,13 +95,15 @@ func (ex *ExecutionInMemory) SaveToFile() error {
 
 	for _, event := range ex.Events {
 		// Marshal the struct to JSON
-		fileData, err := json.Marshal(event) // No indent, single line
+		eventData, err := json.Marshal(event) // No indent, single line
 		if err != nil {
 			slog.Error("Error marshalling JSON", "error", err)
 			return err
 		}
 
-		_, err = file.Write(fileData)
+		sanitizedEventData := sanitize.Instance.SanitizeString(string(eventData))
+
+		_, err = file.Write([]byte(sanitizedEventData))
 		if err != nil {
 			return perr.InternalWithMessage("Error writing to file " + err.Error())
 		}

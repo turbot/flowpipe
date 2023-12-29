@@ -2,11 +2,12 @@ package output
 
 import (
 	"context"
+	"os"
+
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"os"
 )
 
 var IsServerMode bool

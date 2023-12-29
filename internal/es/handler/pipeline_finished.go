@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/output"
@@ -10,8 +9,6 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -83,10 +80,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	// Generate output data
 	data, err := ex.PipelineData(evt.PipelineExecutionID)
 	if err != nil {
-		slog.Error("pipeline_finished (2)", "error", err)
-	} else {
-		jsonStr, _ := json.MarshalIndent(data, "", "  ")
-		slog.Debug("json string", "json", string(jsonStr))
+		slog.Error("pipeline_finished ", "error", err)
 	}
 
 	if output.IsServerMode {
@@ -109,12 +103,6 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("pipeline_finished: Error saving execution", "error", err)
 		// Should we raise pipeline fail here?
 		return nil
-	}
-
-	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)
-	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
-	if err != nil {
-		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)

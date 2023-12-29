@@ -9,8 +9,6 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/sanitize"
 )
 
 type PipelineFailed EventHandler
@@ -80,13 +78,6 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("pipeline_finished: Error saving execution", "error", err)
 		// Should we raise pipeline fail here?
 		return nil
-	}
-
-	// Sanitize event store file
-	eventStoreFilePath := filepaths.EventStoreFilePath(evt.Event.ExecutionID)
-	err = sanitize.Instance.SanitizeFile(eventStoreFilePath)
-	if err != nil {
-		slog.Error("Failed to sanitize file", "eventStoreFilePath", eventStoreFilePath)
 	}
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
