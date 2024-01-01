@@ -4,8 +4,8 @@
 
 <p>
 
-[![libraries](https://img.shields.io/badge/libraries-28-blue)](https://hub.flowpipe.io/?type=library) &nbsp; 
-[![samples](https://img.shields.io/badge/samples-35-blue)](https://hub.flowpipe.io/?type=sample) &nbsp; 
+[![libraries](https://img.shields.io/badge/libraries-28-blue)](https://hub.flowpipe.io/?type=library) &nbsp;
+[![samples](https://img.shields.io/badge/samples-35-blue)](https://hub.flowpipe.io/?type=sample) &nbsp;
 [![pipelines](https://img.shields.io/badge/pipelines-515-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme)
 
@@ -72,10 +72,11 @@ Prerequisites:
 
 - [Golang](https://golang.org/doc/install) Version 1.21 or higher.
 
-Clone:
+Clone `github.com/flowpipe` and `github.com/turbot/pipe-fittings` repositories:
 
 ```sh
 git clone git@github.com:turbot/flowpipe
+git clone git@github.com:turbot/pipe-fittings
 cd flowpipe
 ```
 
