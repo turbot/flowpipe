@@ -420,8 +420,6 @@ func (ex *ExecutionInMemory) ParentStepExecution(pipelineExecutionID string) (*S
 	return se, nil
 }
 
-// PipelineStepExecutions returns a list of step executions for the given
-// pipeline execution ID and step name.
 func (ex *ExecutionInMemory) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
@@ -434,8 +432,6 @@ func (ex *ExecutionInMemory) PipelineStepExecutions(pipelineExecutionID, stepNam
 	return results
 }
 
-// LoadProcess loads the event log file (the .jsonl file) continously and update the
-// ex.PipelineExecutions and ex.StepExecutions
 func (ex *ExecutionInMemory) ProcessEvents() error {
 	// Do not attempt to lock, the calling function must orchestrate the locking
 

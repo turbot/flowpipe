@@ -301,10 +301,10 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 
 	assert.Equal("failed", pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Status)
 	assert.NotNil(pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Errors)
-	assert.Equal(float64(404), pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
+	assert.Equal(404, pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
 
 	assert.NotNil(pex.PipelineOutput["errors"])
-	assert.Equal(int(404), pex.PipelineOutput["errors"].([]modconfig.StepError)[0].Error.Status)
+	assert.Equal(404, pex.PipelineOutput["errors"].([]modconfig.StepError)[0].Error.Status)
 }
 
 func (suite *EsTestSuite) TestParentChildPipeline() {
@@ -358,7 +358,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 
 	assert.Equal("failed", pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Status)
 	assert.NotNil(pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Errors)
-	assert.Equal(float64(404), pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
+	assert.Equal(404, pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
 
 	// end pipeline test
 
@@ -442,10 +442,10 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	assert.Equal(float64(404), pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
+	assert.Equal(404, pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
 	assert.Equal(float64(404), pex.StepStatus["transform.bad_http"]["0"].StepExecutions[0].Output.Data["value"])
 
-	assert.Equal(float64(404), output.(float64))
+	assert.Equal(404, output.(int))
 
 	// reset ex (so we don't forget if we copy & paste the block)
 	ex = nil
@@ -468,9 +468,9 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.True(pex.IsComplete())
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal(float64(404), pex.StepStatus["http.http_step"]["0"].StepExecutions[0].Output.Data["status_code"])
-	assert.Equal(float64(404), pex.StepStatus["http.http_step"]["1"].StepExecutions[0].Output.Data["status_code"])
-	assert.Equal(float64(200), pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
+	assert.Equal(404, pex.StepStatus["http.http_step"]["0"].StepExecutions[0].Output.Data["status_code"])
+	assert.Equal(404, pex.StepStatus["http.http_step"]["1"].StepExecutions[0].Output.Data["status_code"])
+	assert.Equal(200, pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
 
 	if pex.StepStatus["transform.http_step"] == nil {
 		p := filepaths.EventStoreFilePath(cmd.Event.ExecutionID)
