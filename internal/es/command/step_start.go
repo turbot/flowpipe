@@ -2,8 +2,9 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
+
+	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -47,21 +48,11 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+		executionID := cmd.Event.ExecutionID
+
+		ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
 		if err != nil {
-			slog.Error("Error loading pipeline execution", "error", err)
-
-			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
-			if err2 != nil {
-				slog.Error("Error publishing event", "error", err2)
-			}
-			return
-		}
-
-		pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
-		if err != nil {
-			slog.Error("Error loading pipeline definition", "error", err)
-
+			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				slog.Error("Error publishing event", "error", err2)
@@ -354,7 +345,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 	return false
 }
 
-func endStep(ex *execution.Execution, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
+func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
 	endStepEvalContext, err := execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, evalContext)
@@ -609,7 +600,7 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	return stepRetry, hcl.Diagnostics{}
 }
 
-func calculateLoop(ctx context.Context, ex *execution.Execution, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
+func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
 
 	loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
 	if loopDefn == nil {

@@ -2,11 +2,12 @@ package types
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
-	"time"
 )
 
 // The definition of a single Flowpipe Process

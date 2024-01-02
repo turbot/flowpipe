@@ -30,12 +30,9 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineLoad")
 	}
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
-	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
-	}
+	executionID := cmd.Event.ExecutionID
 
-	defn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
+	_, pipelineDefn, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
 	if err != nil {
 		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, err))
 		if err2 != nil {
@@ -44,12 +41,15 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		return nil
 	}
 
-	for _, step := range defn.Steps {
+	for _, step := range pipelineDefn.Steps {
 		if step.GetType() == schema.BlockTypePipelineStepContainer || step.GetType() == schema.BlockTypePipelineStepFunction {
-			// TODO: If I pass ctx here Docker will initialize OK but then fail when we're trying to use it later. Not sure why, worth investigating
+
+			// NOTE: if you pass the context passed to this Handle function, Docker will fail to initialize. Not entirely sure why, but I suspect it has something to do
+			// with the fact that the context passed to this function is a Watermill context, and not a standard context.Context.
 			err := docker.Initialize(context.Background())
 			if err != nil {
 				slog.Error("Error initializing Docker client", "error", err)
+
 				err2 := h.EventBus.Publish(ctx, event.NewPipelineFailedFromPipelineLoad(cmd, perr.InternalWithMessage("Unable to initialize the Docker client. Please ensure that Docker is installed and running.")))
 				if err2 != nil {
 					slog.Error("Error publishing PipelineFailed event", "error", err2)
@@ -60,7 +60,7 @@ func (h PipelineLoadHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 	}
 
-	e := event.NewPipelineLoadedFromPipelineLoad(cmd, defn)
+	e := event.NewPipelineLoadedFromPipelineLoad(cmd, pipelineDefn)
 
 	return h.EventBus.Publish(ctx, e)
 }

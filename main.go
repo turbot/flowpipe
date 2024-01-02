@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/spf13/viper"
 
 	"github.com/turbot/flowpipe/internal/cache"

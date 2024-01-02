@@ -1,17 +1,14 @@
 package execution
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/turbot/go-kit/helpers"
 
@@ -22,7 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -33,12 +30,10 @@ import (
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
-var ExecutionMode string
-
 // Execution represents the current state of an execution. A single execution
 // is tied to a trigger (webhook, cronjob, etc) and may result in multiple
 // pipelines being executed.
-type Execution struct {
+type ExecutionInMemory struct {
 	// Unique identifier for this execution.
 	ID string `json:"id"`
 
@@ -46,10 +41,88 @@ type Execution struct {
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
 
-	Lock *sync.Mutex `json:"-"`
+	Events                  []event.EventLogEntry `json:"events"`
+	LastProcessedEventIndex int
+	Lock                    *sync.Mutex `json:"-"`
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func GetExecution(executionID string) (*ExecutionInMemory, error) {
+	exCached, found := cache.GetCache().Get(executionID)
+	if !found {
+		slog.Error("Error getting execution from cache", "execution_id", executionID)
+		return nil, perr.NotFoundWithMessage("Execution " + executionID + " not found")
+	}
+
+	ex, ok := exCached.(*ExecutionInMemory)
+	if !ok {
+		slog.Error("Error casting execution from cache", "execution_id", executionID)
+		return nil, perr.InternalWithMessage("Error casting execution " + executionID + " from cache")
+	}
+
+	return ex, nil
+}
+
+func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*ExecutionInMemory, *modconfig.Pipeline, error) {
+	ex, err := GetExecution(executionID)
+	if err != nil {
+		return nil, nil, err
+	}
+	defn, err := ex.PipelineDefinition(pipelineExecutionID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ex, defn, nil
+}
+
+func (ex *ExecutionInMemory) SaveToFile() error {
+	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
+
+	stat, _ := os.Stat(eventStoreFilePath)
+	if stat != nil {
+		// Keeping this simple, we don't want to overwrite the file. This may change in the future when we can resume execution.
+		// Right now if Flowpipe stops/crashes there's no way to resume the execution because it's no longer in memory and not
+		// persisted
+		return perr.BadRequestWithMessage("execution file already exists. execution can only be serialised once at termination")
+	}
+
+	// Append the JSON data to a file
+	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return perr.InternalWithMessage("Error opening file " + err.Error())
+	}
+	defer file.Close()
+
+	for _, event := range ex.Events {
+		// Marshal the struct to JSON
+		eventData, err := json.Marshal(event) // No indent, single line
+		if err != nil {
+			slog.Error("Error marshalling JSON", "error", err)
+			return err
+		}
+
+		sanitizedEventData := sanitize.Instance.SanitizeString(string(eventData))
+
+		_, err = file.Write([]byte(sanitizedEventData))
+		if err != nil {
+			return perr.InternalWithMessage("Error writing to file " + err.Error())
+		}
+
+		_, err = file.WriteString("\n")
+		if err != nil {
+			return perr.InternalWithMessage("Error writing to file " + err.Error())
+		}
+	}
+	return nil
+}
+
+func (ex *ExecutionInMemory) AddEvent(evt event.EventLogEntry) error {
+	ex.Events = append(ex.Events, evt)
+	err := ex.ProcessEvents()
+	return err
+}
+
+func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -118,7 +191,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 }
 
 // This function mutates evalContext
-func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
 	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
 		params := map[string]cty.Value{}
 
@@ -138,8 +211,7 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
-func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
-
+func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
 		return nil, err
@@ -184,66 +256,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	return credentialMap, nil
 }
 
-func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]modconfig.Credential) (map[string]cty.Value, error) {
-	credentialMap := map[string]cty.Value{}
-
-	cache := cache.GetCache()
-	for _, c := range allCredentials {
-		parts := strings.Split(c.Name(), ".")
-		if len(parts) != 2 {
-			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
-		}
-
-		var credToUse modconfig.Credential
-
-		cachedCred, found := cache.Get(c.GetHclResourceImpl().FullName)
-		if !found {
-			// if not found, call the "resolve" function to resolve this credential, for temp cred this will
-			// generate the temp creds
-			newC, err := c.Resolve(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			if newC.GetTtl() > 0 {
-				cache.SetWithTTL(c.GetHclResourceImpl().FullName, newC, time.Duration(newC.GetTtl())*time.Second)
-			}
-			credToUse = newC
-		} else {
-			var ok bool
-			credToUse, ok = cachedCred.(modconfig.Credential)
-			if !ok {
-				return nil, perr.BadRequestWithMessage("invalid credential type: " + c.Name())
-			}
-		}
-
-		pCty, err := credToUse.CtyValue()
-		if err != nil {
-			return nil, err
-		}
-
-		credentialType := parts[0]
-
-		if pCty != cty.NilVal {
-			// Check if the credential type already exists in the map
-			if existing, ok := credentialMap[credentialType]; ok {
-				// If it exists, merge the new object with the existing one
-				existingMap := existing.AsValueMap()
-				existingMap[parts[1]] = pCty
-				credentialMap[credentialType] = cty.ObjectVal(existingMap)
-			} else {
-				// If it doesn't exist, create a new entry
-				credentialMap[credentialType] = cty.ObjectVal(map[string]cty.Value{
-					parts[1]: pCty,
-				})
-			}
-		}
-	}
-
-	return credentialMap, nil
-}
-
-func (ex *Execution) buildPipelineMapForEvalContext() (map[string]cty.Value, error) {
+func (ex *ExecutionInMemory) buildPipelineMapForEvalContext() (map[string]cty.Value, error) {
 	allPipelines, err := db.ListAllPipelines()
 	if err != nil {
 		return nil, err
@@ -268,7 +281,7 @@ func (ex *Execution) buildPipelineMapForEvalContext() (map[string]cty.Value, err
 	return pipelineMap, nil
 }
 
-func (ex *Execution) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+func (ex *ExecutionInMemory) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
 	integrationMap := map[string]cty.Value{}
 	slackIntegrationMap := map[string]cty.Value{}
 	emailIntegrationMap := map[string]cty.Value{}
@@ -311,79 +324,8 @@ func (ex *Execution) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.P
 
 }
 
-// ExecutionStepOutputs is a map for all the step execution. It's stored in this format:
-//
-// ExecutionStepOutputs = {
-//    "echo" = {
-//			"echo_1": {},
-//          "my_other_echo": {},
-//     },
-
-//	  "http" = {
-//	     "http_1": {},
-//	     "http_2": {},
-//	  }
-//	}
-//
-// The first level is grouping the output by the step type
-// The next level group the output by the step name
-// The value can be a StepOutput OR a slice of StepOutput
-type ExecutionStepOutputs map[string]map[string]interface{}
-
-// ExecutionOption is a function that modifies an Execution instance.
-type ExecutionOption func(*Execution) error
-
-func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, error) {
-
-	ex := &Execution{
-		// ID is empty by default, so it will be populated from the given event
-		PipelineExecutions: map[string]*PipelineExecution{},
-	}
-
-	// Loop through each option
-	for _, opt := range opts {
-		// Call the option giving the instantiated
-		// *Execution as the argument
-		err := opt(ex)
-		if err != nil {
-			return ex, err
-		}
-	}
-
-	// return the modified execution instance
-	return ex, nil
-
-}
-
-// There are only 2 use cases for creator of Execution to provide the lock:
-// 1) pipeline planner, and
-// 2) step for each planner
-//
-// # Any other use case we should let the execution object aquire its own lock
-//
-// NOTE: ensure that WithLock is called *before* WithEvent is called
-func WithLock(lock *sync.Mutex) ExecutionOption {
-	return func(ex *Execution) error {
-		ex.Lock = lock
-		return nil
-	}
-}
-
-func WithID(id string) ExecutionOption {
-	return func(ex *Execution) error {
-		ex.ID = id
-		return nil
-	}
-}
-
-func WithEvent(e *event.Event) ExecutionOption {
-	return func(ex *Execution) error {
-		return ex.LoadProcess(e)
-	}
-}
-
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
+func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -401,7 +343,21 @@ func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string)
 	return sd, nil
 }
 
-func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interface{}, error) {
+func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*modconfig.Pipeline, error) {
+	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
+	if !ok {
+		return nil, perr.BadRequestWithMessage("pipeline execution " + pipelineExecutionID + " not found")
+	}
+
+	pipeline, err := db.GetPipeline(pe.Name)
+
+	if err != nil {
+		return nil, err
+	}
+	return pipeline, nil
+}
+
+func (ex *ExecutionInMemory) PipelineData(pipelineExecutionID string) (map[string]interface{}, error) {
 
 	// Get the outputs from prior steps in the pipeline
 	data, err := ex.PipelineStepOutputs(pipelineExecutionID)
@@ -425,7 +381,7 @@ func (ex *Execution) PipelineData(pipelineExecutionID string) (map[string]interf
 // PipelineStepOutputs returns a single map of all outputs from all steps in
 // the given pipeline execution. The map is keyed by the step name. If a step
 // has a ForTemplate then the result is an array of outputs.
-func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string]interface{}, error) {
+func (ex *ExecutionInMemory) PipelineStepOutputs(pipelineExecutionID string) (map[string]interface{}, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	outputs := map[string]interface{}{}
@@ -443,7 +399,7 @@ func (ex *Execution) PipelineStepOutputs(pipelineExecutionID string) (map[string
 
 // ParentStepExecution returns the parent step execution for the given pipeline
 // execution ID.
-func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecution, error) {
+func (ex *ExecutionInMemory) ParentStepExecution(pipelineExecutionID string) (*StepExecution, error) {
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
 		return nil, fmt.Errorf("pipeline execution %s not found", pipelineExecutionID)
@@ -464,9 +420,7 @@ func (ex *Execution) ParentStepExecution(pipelineExecutionID string) (*StepExecu
 	return se, nil
 }
 
-// PipelineStepExecutions returns a list of step executions for the given
-// pipeline execution ID and step name.
-func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
+func (ex *ExecutionInMemory) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	results := []StepExecution{}
@@ -478,79 +432,24 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	return results
 }
 
-// LoadProcess loads the event log file (the .jsonl file) continously and update the
-// ex.PipelineExecutions and ex.StepExecutions
-func (ex *Execution) LoadProcess(e *event.Event) error {
+func (ex *ExecutionInMemory) ProcessEvents() error {
+	// Do not attempt to lock, the calling function must orchestrate the locking
 
-	// Attempt to aquire the execution lock if it's not given. If the execution lock is given then we assume the calling
-	// function is responsible for locking & unlocking the event load process.
-	var localLock *sync.Mutex
-	if ex.Lock == nil {
-		localLock = event.GetEventStoreMutex(e.ExecutionID)
-		localLock.Lock()
-		defer func() {
-			if localLock != nil {
-				localLock.Unlock()
-			}
-		}()
-	}
-
-	if e.ExecutionID == "" {
-		return perr.BadRequestWithMessage("event execution ID is empty")
-	}
-
-	if ex.ID == "" {
-		ex.ID = e.ExecutionID
-	}
-
-	if ex.ID != e.ExecutionID {
-		return perr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
-	}
-
-	// Open the event log
-	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
-
-	f, err := os.Open(eventStoreFilePath)
-	if err != nil {
-		slog.Error("Failed to open log file", "execution", ex.ID, "error", err, "event", e)
-		return err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, constants.MaxScanSize), constants.MaxScanSize)
-	for scanner.Scan() {
-
-		ba := scanner.Bytes()
-
-		// Get the run ID from the payload
-		var ele types.EventLogEntry
-		err := json.Unmarshal(ba, &ele)
+	for i := ex.LastProcessedEventIndex; i < len(ex.Events); i++ {
+		event := ex.Events[i]
+		err := ex.AppendEventLogEntry(event)
 		if err != nil {
-			slog.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba))
-			return perr.InternalWithMessageAndType(perr.ErrorCodeJsonSyntaxError, "Fail to unmarshall event log entry "+err.Error())
-		}
-
-		err = ex.AppendEventLogEntry(ele)
-		if err != nil {
-			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", string(ba))
+			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "event", event)
 			return err
 		}
-
 	}
-
-	if err := scanner.Err(); err != nil {
-		if err.Error() == bufio.ErrTooLong.Error() {
-			return perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(constants.MaxScanSize))
-		}
-		return err
-	}
+	ex.LastProcessedEventIndex = len(ex.Events)
 
 	return nil
 }
 
 // LoadFromFile loads an execution from a JSON file.
-func (ex *Execution) LoadJSON(fileName string) error {
+func (ex *ExecutionInMemory) LoadJSON(fileName string) error {
 	jsonFile, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -568,54 +467,17 @@ func (ex *Execution) LoadJSON(fileName string) error {
 	return nil
 }
 
-// Events
-var (
-	PipelineQueuedEvent   = event.PipelineQueued{}
-	PipelineStartedEvent  = event.PipelineStarted{}
-	PipelineResumedEvent  = event.PipelineResumed{}
-	PipelinePlannedEvent  = event.PipelinePlanned{}
-	PipelineCanceledEvent = event.PipelineCanceled{}
-	PipelinePausedEvent   = event.PipelinePaused{}
-	PipelineFinishedEvent = event.PipelineFinished{}
-	PipelineFailedEvent   = event.PipelineFailed{}
-	PipelineLoadedEvent   = event.PipelineLoaded{}
-
-	StepQueuedEvent          = event.StepQueued{}
-	StepFinishedEvent        = event.StepFinished{} // this is the generic step finish event that is fired by the command.step_start command
-	StepForEachPlannedEvent  = event.StepForEachPlanned{}
-	StepPipelineStartedEvent = event.StepPipelineStarted{} // this event is fired for a specific step type: pipeline step (step that launches a pipeline)
-
-)
-
-// Commands
-var (
-	PipelineCancelCommand = event.PipelineCancel{}
-	PipelinePlanCommand   = event.PipelinePlan{}
-	PipelineFinishCommand = event.PipelineFinish{}
-	PipelineFailCommand   = event.PipelineFail{}
-	PipelineLoadCommand   = event.PipelineLoad{}
-	PipelinePauseCommand  = event.PipelinePause{}
-	PipelineQueueCommand  = event.PipelineQueue{}
-	PipelineResumeCommand = event.PipelineResume{}
-	PipelineStartCommand  = event.PipelineStart{}
-
-	StepQueueCommand = event.StepQueue{}
-	StepStartCommand = event.StepStart{}
-
-	StepPipelineFinishCommand = event.StepPipelineFinish{} // this command is fired when a child pipeline has finished. This is to inform the parent pipeline to continue the execution
-)
-
-func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
+func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogEntry) error {
 
 	switch logEntry.EventType {
 
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
-		var et event.PipelineQueued
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelineQueued)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
 		}
+
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
 			ID:                    et.PipelineExecutionID,
 			Name:                  et.Name,
@@ -629,41 +491,39 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		}
 
 	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
-		var et event.PipelineStarted
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelineStarted)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "started"
 		pe.StartTime = et.Event.CreatedAt
 
 	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
-		var et event.PipelineStarted
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelineResumed)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		// TODO: is this right?
 		pe.Status = "started"
 
 	case PipelinePlanCommand.HandlerName(): // "command.pipeline_plan"
-		var et event.PipelinePlan
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall command.pipeline_plan event", "execution", ex.ID, "error", err)
-			return err
+		_, ok := logEntry.Payload.(*event.PipelinePlan)
+		if !ok {
+			slog.Error("Fail to unmarshall command.pipeline_plan event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_plan event")
 		}
 
 	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
-		var et event.PipelinePlanned
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelinePlanned)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
 		}
 
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
@@ -676,12 +536,12 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 	// TODO: for the step (just like we're queueing the pipeline). But I'm not sure if it's really required, we could just
 	// TODO: delay the start. We need to evolve this as we go.
 	case StepQueueCommand.HandlerName(): //  "command.step_queue"
-		var et event.StepStart
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.StepQueue)
+		if !ok {
+			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
 		}
+
 		// Set the overall step status
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 
@@ -717,20 +577,19 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].Queue(et.StepExecutionID)
 
 	case StepQueuedEvent.HandlerName(): // "handler.step_queued"
-		var et event.StepQueued
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.step_queued event", "execution", ex.ID, "error", err)
-			return err
+		_, ok := logEntry.Payload.(*event.StepQueued)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.step_queued event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_queued event")
 		}
 
 	case StepStartCommand.HandlerName(): // "command.step_start"
-		var et event.StepStart
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.StepStart)
+		if !ok {
+			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 		pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
@@ -739,12 +598,12 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 	// handler.step_pipeline_started is the event when the pipeline is starting a child pipeline, i.e. "pipeline step", this isn't
 	// a generic step start event
 	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
-		var et event.StepPipelineStarted
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.StepPipelineStarted)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 
 		// Step the specific step execution status
@@ -760,12 +619,12 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 
 	// this is the generic step finish event that is fired by the command.step_start command
 	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
-		var et event.StepFinished
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.StepFinished)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		stepDefn, err := ex.StepDefinition(pe.ID, et.StepExecutionID)
 		if err != nil {
@@ -833,12 +692,12 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		}
 
 	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
-		var et event.StepForEachPlanned
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.StepForEachPlanned)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		stepStatusMap := pe.StepStatus[et.StepName]
 
@@ -873,55 +732,56 @@ func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 		// if there's NextSteps .. then we assume that the step is still running
 
 	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
-		var et event.PipelineCanceled
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelineCanceled)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "canceled"
 		pe.EndTime = et.Event.CreatedAt
 
 	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
-		var et event.PipelinePaused
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelinePaused)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "paused"
 
 	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
-		var et event.PipelineFinished
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelineFinish)
+		if !ok {
+			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "finishing"
 
 	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
-		var et event.PipelineFinished
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
-			return err
+		et, ok := logEntry.Payload.(*event.PipelineFinished)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "finished"
 		pe.EndTime = et.Event.CreatedAt
 		pe.PipelineOutput = et.PipelineOutput
 
 	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
-		var et event.PipelineFailed
-		err := json.Unmarshal(logEntry.Payload, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
-			return err
+
+		et, ok := logEntry.Payload.(*event.PipelineFailed)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
 		}
+
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = constants.StateFailed
 		pe.EndTime = et.Event.CreatedAt

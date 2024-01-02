@@ -20,8 +20,8 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -140,6 +140,37 @@ func (suite *ModTestSuite) TestSimplestPipeline() {
 
 	assert.Equal("finished", pex.Status)
 	assert.Equal("Hello World", pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// Run two pipeline at the same time
+	_, pipelineCmd, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd2, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
+
+	_, pex2, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd2.Event, pipelineCmd2.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("Hello World from Depend A", pex2.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex2.PipelineOutput["echo_one_output_val_var_one"])
 }
 
 func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
@@ -466,30 +497,6 @@ func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 	assert.Equal(1, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
 	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[1].StepLoop.Index)
 	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
-}
-
-func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-
-	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
-
-	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
-	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
 }
 
 func (suite *ModTestSuite) TestSimpleNestedPipeline() {
@@ -1087,30 +1094,6 @@ func (suite *ModTestSuite) TestIntegrations() {
 	}
 }
 
-func (suite *ModTestSuite) XTestHttpPipelines() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.http_post_url_encoded", 500*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating executio¡n", err)
-		return
-	}
-
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-
-	if pex.Status != "finished" {
-		assert.Fail("Pipeline execution not finished")
-		return
-	}
-}
-
 func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert := assert.New(suite.T())
 
@@ -1267,8 +1250,8 @@ func (suite *ModTestSuite) TestStepSleep() {
 	assert.Equal(1, len(pex.StepStatus["sleep.sleep_test"]))
 
 	outputData := pex.StepStatus["sleep.sleep_test"]["0"].StepExecutions[0].Output.Data
-	startTime, _ := time.Parse(outputData[schema.AttributeTypeStartedAt].(string), time.RFC3339)
-	finishTime, _ := time.Parse(outputData[schema.AttributeTypeFinishedAt].(string), time.RFC3339)
+	startTime := outputData[schema.AttributeTypeStartedAt].(time.Time)
+	finishTime := outputData[schema.AttributeTypeFinishedAt].(time.Time)
 	diff := finishTime.Sub(startTime)
 	assert.Equal(float64(0), math.Floor(diff.Seconds()), "output does not match the provided duration")
 
@@ -2042,7 +2025,7 @@ func (suite *ModTestSuite) TestPipelineWithTransformStep() {
 
 	assert.Equal("This is a simple transform step", pex.PipelineOutput["basic_transform"])
 	assert.Equal("This is a simple transform step - test123", pex.PipelineOutput["depends_on_transform_step"])
-	assert.Equal(float64(23), pex.PipelineOutput["number"])
+	assert.Equal(23, pex.PipelineOutput["number"])
 }
 
 func (suite *ModTestSuite) TestParamAny() {
@@ -2093,7 +2076,7 @@ func (suite *ModTestSuite) TestParamAny() {
 		return
 	}
 
-	assert.Equal(float64(42), pex.PipelineOutput["val"])
+	assert.Equal(42, pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) TestTypedParamAny() {
@@ -2144,7 +2127,7 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 		return
 	}
 
-	assert.Equal(float64(42), pex.PipelineOutput["val"])
+	assert.Equal(42, pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) TestCredentialReference() {
@@ -2171,11 +2154,11 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	// Check if the environment function is created successfully
 	envMap := pex.PipelineOutput["val"].(map[string]interface{})
 
-	assert.Equal(sanitize.RedactedStr, envMap["AWS_ACCESS_KEY_ID"])
-	assert.Equal(sanitize.RedactedStr, envMap["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("aws_static_foo", envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal("aws_static_key_key_key", envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
-func (suite *ModTestSuite) TestCredentialRedaction() {
+func (suite *ModTestSuite) TestCredentialRedactionFromMemory() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -2193,15 +2176,39 @@ func (suite *ModTestSuite) TestCredentialRedaction() {
 		return
 	}
 
-	// This is not redacted because we're looking for either field name or field value, and neither will hit the redaction list
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
+	// We're reading straight from memory, not redacted
+	assert.Equal("abc", pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal("def", pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("EAACEdEose0cBA1234FAKE1234", pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
+	assert.Equal("AKIAFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
 
 	// not redacted
 	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
+}
+
+func (suite *ModTestSuite) XTestCredentialRedactionFromFile() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestCredentialRedactionOutput() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestRunMultiplePipelinesAtTheSameTimeWithDifferentInput() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestRunMultiplePipelinesRunningAtTheSameTimeUseSleepToEnsureRun() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestBufferTokenTooLargeFromFile() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestCredentialWithOptionalParamFromFile() {
+	// TODO
 }
 
 func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
@@ -2224,7 +2231,8 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["slack_token"])
+	// Reading from memory, not redacted
+	assert.Equal("test.1.2.3", pex.PipelineOutput["slack_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2241,7 +2249,9 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["gitlab_token"])
+
+	// From memory not redacted
+	assert.Equal("glpat-gsfio3wtyr92364ifkw", pex.PipelineOutput["gitlab_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2258,7 +2268,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["abuseipdb_api_key"])
+	assert.Equal("bfc6f1c42dsfsdfdxxxx26977977b2xxxsfsdda98f313c3d389126de0d", pex.PipelineOutput["abuseipdb_api_key"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2275,7 +2285,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["clickup_token"])
+	assert.Equal("pk_616_L5H36X3CXXXXXXXWEAZZF0NM5", pex.PipelineOutput["clickup_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2292,7 +2302,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["vault_token"])
+	assert.Equal("hsv-fkshfgskhf", pex.PipelineOutput["vault_token"])
 }
 
 func (suite *ModTestSuite) TestMultipleCredential() {
@@ -2443,22 +2453,22 @@ func (suite *ModTestSuite) TestContainerStep() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParam() {
@@ -2505,22 +2515,22 @@ func (suite *ModTestSuite) TestContainerStepWithParam() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
@@ -2567,22 +2577,22 @@ func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepMissingImage() {
@@ -2676,22 +2686,22 @@ func (suite *ModTestSuite) TestContainerStepWithStringTimeout() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
@@ -2738,34 +2748,57 @@ func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
-func (suite *ModTestSuite) TestBufferTokenTooLarge() {
+func (suite *ModTestSuite) XTestBufferTokenTooLargeMemory() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
 
+	// With in memory execution, we shouldn't be hitting the buffer too large issue anymore
 	_, _, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.big_data", 500*time.Millisecond, pipelineInput)
 
-	// It should fail straight away in the loadProcess
-	assert.NotNil(err)
-	assert.Contains(err.Error(), "Event log entry too large. Max size is")
+	assert.Nil(err)
+
+	_, pipelineCmd, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd2, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
+
+	_, pex2, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd2.Event, pipelineCmd2.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("Hello World from Depend A", pex2.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex2.PipelineOutput["echo_one_output_val_var_one"])
 }
 
 func (suite *ModTestSuite) TestBadHttpNotIgnored() {

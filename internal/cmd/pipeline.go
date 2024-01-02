@@ -1,14 +1,11 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -18,10 +15,8 @@ import (
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -580,85 +575,52 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 }
 
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
-	ex, err := execution.NewExecution(ctx, execution.WithID(exId))
+	ex, err := execution.GetExecution(exId)
 	if err != nil {
 		return true, 0, nil, err
 	}
-
-	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
-
-	slog.Debug("Opening file", "event store file", eventStoreFilePath)
-	file, err := os.Open(eventStoreFilePath)
-	if err != nil {
-		// TODO KAI use perr? wrap?
-		return true, 0, nil, err
-	}
-
-	slog.Debug("File opened", "event store file", eventStoreFilePath)
-	defer func() {
-		// ensure we close the file
-		_ = file.Close()
-	}()
-
-	// var lastSize int64
-	// if last != -1 {
-	// 	lastSize = int64(last)
-	// }
 
 	var res types.ProcessEventLogs
 	var complete bool
 
-	// TODO: this code section is buggy, the json unmarshall errors out maybe 50% of the time
-	// TODO: with unexpected error in JSON file
-	// Seek to the last read position
-	// if _, err := file.Seek(lastSize, 0); err != nil {
-	// 	//nolint:nilerr // just return without passing error - we will try again next time
-	// 	slog.Info("Returning here because of error", "error", err)
-	// 	return complete, int(lastSize), res, nil
-	// }
-
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, fpconstants.MaxScanSize), fpconstants.MaxScanSize)
 	currentIndex := 0
-	for scanner.Scan() {
+
+	for _, item := range ex.Events {
 		if currentIndex < last {
 			currentIndex++
 			continue
 		}
 
-		line := scanner.Bytes()
-		var entry types.EventLogEntry
+		// Parse the string back to time.Time struct
+		parsedTime, err := time.Parse(time.RFC3339, item.Timestamp)
+		if err != nil {
+			slog.Error("Error parsing timestamp", "error", err)
+			return true, 0, nil, err
+		}
 
-		if err := json.Unmarshal(line, &entry); err != nil {
-			slog.Warn("Error loading event entry", "error", err)
-			return complete, last, res, nil
+		// marshall item.Payload to JSON string
+		jsonData, err := json.Marshal(item.Payload)
+		if err != nil {
+			slog.Error("Error marshalling payload", "error", err)
+			return true, 0, nil, err
 		}
 
 		res = append(res, types.ProcessEventLog{
-			EventType: entry.EventType,
-			Timestamp: entry.Timestamp,
-			Payload:   string(entry.Payload),
+			EventType: item.EventType,
+			Timestamp: &parsedTime,
+			Payload:   string(jsonData),
 		})
 
 		// check to see if event logs complete
-		if entry.EventType == event.HandlerPipelineFinished || entry.EventType == event.HandlerPipelineFailed {
+		if item.EventType == event.HandlerPipelineFinished || item.EventType == event.HandlerPipelineFailed {
 			payload := make(map[string]any)
-			if err := json.Unmarshal(entry.Payload, &payload); err != nil {
-				return false, 0, nil, perr.InternalWithMessage(fmt.Sprintf("error parsing payload from %s", entry.Payload))
+			if err := json.Unmarshal(jsonData, &payload); err != nil {
+				return false, 0, nil, perr.InternalWithMessage(fmt.Sprintf("error parsing payload from %s", item.Payload))
 			}
 			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 		}
 
 		currentIndex++
-	}
-
-	if err := scanner.Err(); err != nil {
-		if err.Error() == bufio.ErrTooLong.Error() {
-			return false, 0, nil, perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(fpconstants.MaxScanSize))
-		}
-
-		slog.Error("Unable to scan event store file", "error", err)
-		return complete, last, res, nil
 	}
 
 	return complete, currentIndex, res, nil
