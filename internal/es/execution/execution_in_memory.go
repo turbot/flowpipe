@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/turbot/go-kit/helpers"
 
@@ -62,6 +63,24 @@ func GetExecution(executionID string) (*ExecutionInMemory, error) {
 	return ex, nil
 }
 
+func CompleteExecution(executionID string) error {
+	ex, err := GetExecution(executionID)
+	if err != nil && !perr.IsNotFound(err) {
+		slog.Error("Error getting execution from cache", "execution_id", executionID)
+		return err
+	} else if perr.IsNotFound(err) {
+		return nil
+	}
+
+	// Leave in cache for 10 minutes
+	ok := cache.GetCache().SetWithTTL(executionID, ex, 10*time.Minute)
+	if !ok {
+		slog.Error("Error setting execution in cache", "execution_id", executionID)
+		return perr.InternalWithMessage("Error setting execution in cache")
+	}
+	return nil
+}
+
 func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*ExecutionInMemory, *modconfig.Pipeline, error) {
 	ex, err := GetExecution(executionID)
 	if err != nil {
@@ -113,6 +132,14 @@ func (ex *ExecutionInMemory) SaveToFile() error {
 			return perr.InternalWithMessage("Error writing to file " + err.Error())
 		}
 	}
+
+	// This seems a convenient place to expire the execution from the cache
+	err = CompleteExecution(ex.ID)
+	if err != nil {
+		slog.Error("Error completing execution", "error", err)
+		return err
+	}
+
 	return nil
 }
 

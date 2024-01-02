@@ -1,6 +1,8 @@
 package event
 
-import "sync"
+import (
+	"sync"
+)
 
 // Define a struct that represents your JSON structure
 type EventLogEntry struct {

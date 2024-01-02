@@ -2,11 +2,13 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -14,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
@@ -193,6 +196,48 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
+		return
+	}
+
+	ex, err := execution.GetExecution(uri.ProcessId)
+	if err == nil && ex != nil {
+
+		var items []types.ProcessEventLog
+		for _, event := range ex.Events {
+			var ts time.Time
+			if event.Timestamp != "" {
+				ts, err = time.Parse(time.RFC3339, event.Timestamp)
+				if err != nil {
+					slog.Error("Error parsing timestamp", "timestamp", event.Timestamp, "error", err)
+					common.AbortWithError(c, perr.InternalWithMessage("Error parsing timestamp"))
+					return
+				}
+			} else {
+				ts = time.Now()
+			}
+
+			jsonData, err := json.Marshal(event.Payload)
+			if err != nil {
+				slog.Error("Error marshalling payload", "payload", event.Payload, "error", err)
+				common.AbortWithError(c, perr.InternalWithMessage("Error marshalling payload"))
+				return
+			}
+
+			// Convert JSON bytes to string and print
+			jsonString := string(jsonData)
+
+			items = append(items, types.ProcessEventLog{
+				EventType: event.EventType,
+				Timestamp: &ts,
+				Payload:   jsonString,
+			})
+		}
+
+		result := types.ListProcessLogJSONResponse{
+			Items: items,
+		}
+
+		c.JSON(http.StatusOK, result)
 		return
 	}
 
