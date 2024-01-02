@@ -133,7 +133,7 @@ func TestContainerStepInvalidMemory(t *testing.T) {
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 
-	output.HasErrors()
+	assert.True(output.HasErrors())
 	assert.Equal(1, len(output.Errors))
 	assert.Contains(output.Errors[0].Error.Detail, "Minimum memory limit allowed is 6MB")
 	assert.Equal(500, output.Errors[0].Error.Status)
