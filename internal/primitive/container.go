@@ -194,73 +194,6 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		return nil, err
 	}
 
-	// Construct the output
-	output := modconfig.Output{
-		Data: map[string]interface{}{},
-	}
-
-	containerID, exitCode, err := c.Run()
-	if err != nil {
-		if e, ok := err.(perr.ErrorModel); !ok {
-			output.Errors = []modconfig.StepError{
-				{
-					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
-				},
-			}
-		} else {
-			output.Errors = []modconfig.StepError{
-				{
-					Error: e,
-				},
-			}
-		}
-		output.Status = "failed"
-	} else {
-		output.Status = "finished"
-	}
-
-	output.Data["container_id"] = containerID
-	output.Data["exit_code"] = exitCode
-
-	// If there are any error while creating the container, then the containerID will be empty
-	if c.Runs[containerID] != nil {
-		output.Data["stdout"] = c.Runs[containerID].Stdout
-		output.Data["stderr"] = c.Runs[containerID].Stderr
-		output.Data["lines"] = c.Runs[containerID].Lines
-	}
-
-	return &output, nil
-}
-
-func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input) (*container.Container, error) {
-	name := input[schema.LabelName].(string)
-	c := containerCache[name]
-	if c != nil {
-		// TODO: Figure out if need to clear from cache
-		return c, nil
-	}
-
-	containerCacheMutex.Lock()
-	defer containerCacheMutex.Unlock()
-
-	c, err := container.NewContainer(
-		container.WithContext(context.Background()),
-		container.WithRunContext(ctx),
-		container.WithDockerClient(docker.GlobalDockerClient),
-		container.WithName(name),
-	)
-	if err != nil {
-		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
-	}
-
-	if input[schema.AttributeTypeImage] != nil {
-		c.Image = input[schema.AttributeTypeImage].(string)
-	}
-
-	if input[schema.AttributeTypeSource] != nil {
-		c.Source = input[schema.AttributeTypeSource].(string)
-	}
-
 	if input[schema.AttributeTypeCmd] != nil {
 		c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
 	}
@@ -366,6 +299,73 @@ func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input
 			break
 		}
 		c.MemorySwappiness = &memorySwappiness
+	}
+
+	// Construct the output
+	output := modconfig.Output{
+		Data: map[string]interface{}{},
+	}
+
+	containerID, exitCode, err := c.Run()
+	if err != nil {
+		if e, ok := err.(perr.ErrorModel); !ok {
+			output.Errors = []modconfig.StepError{
+				{
+					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
+				},
+			}
+		} else {
+			output.Errors = []modconfig.StepError{
+				{
+					Error: e,
+				},
+			}
+		}
+		output.Status = "failed"
+	} else {
+		output.Status = "finished"
+	}
+
+	output.Data["container_id"] = containerID
+	output.Data["exit_code"] = exitCode
+
+	// If there are any error while creating the container, then the containerID will be empty
+	if c.Runs[containerID] != nil {
+		output.Data["stdout"] = c.Runs[containerID].Stdout
+		output.Data["stderr"] = c.Runs[containerID].Stderr
+		output.Data["lines"] = c.Runs[containerID].Lines
+	}
+
+	return &output, nil
+}
+
+func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input) (*container.Container, error) {
+	name := input[schema.LabelName].(string)
+	c := containerCache[name]
+	if c != nil {
+		// TODO: Figure out if need to clear from cache
+		return c, nil
+	}
+
+	containerCacheMutex.Lock()
+	defer containerCacheMutex.Unlock()
+
+	c, err := container.NewContainer(
+		container.WithContext(context.Background()),
+		container.WithRunContext(ctx),
+		container.WithDockerClient(docker.GlobalDockerClient),
+		container.WithName(name),
+	)
+	if err != nil {
+		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
+	}
+
+	if input[schema.AttributeTypeImage] != nil {
+		c.Image = input[schema.AttributeTypeImage].(string)
+	}
+
+	if input[schema.AttributeTypeSource] != nil {
+		c.Source = input[schema.AttributeTypeSource].(string)
 	}
 
 	err = c.Load()
