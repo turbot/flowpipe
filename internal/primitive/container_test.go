@@ -113,6 +113,10 @@ func TestContainerStepInvalidImage(t *testing.T) {
 
 func TestContainerStepInvalidMemory(t *testing.T) {
 	ctx := context.Background()
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -181,6 +185,10 @@ func TestContainerStepInvalidEntrypoint(t *testing.T) {
 
 func TestContainerStepTimeoutString(t *testing.T) {
 	ctx := context.Background()
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
 
 	assert := assert.New(t)
 	hr := Container{}
