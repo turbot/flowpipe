@@ -20,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -2443,22 +2444,22 @@ func (suite *ModTestSuite) TestContainerStep() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParam() {
@@ -2505,22 +2506,22 @@ func (suite *ModTestSuite) TestContainerStepWithParam() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
@@ -2567,22 +2568,22 @@ func (suite *ModTestSuite) TestContainerStepWithParamOverride() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepMissingImage() {
@@ -2756,16 +2757,19 @@ func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
 	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
 }
 
-func (suite *ModTestSuite) TestBufferTokenTooLarge() {
+func (suite *ModTestSuite) TestBufferTokenTooLargeMemory() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
 
+	// With in memory execution, we shouldn't be hitting the buffer too large issue anymore
 	_, _, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.big_data", 500*time.Millisecond, pipelineInput)
 
-	// It should fail straight away in the loadProcess
-	assert.NotNil(err)
-	assert.Contains(err.Error(), "Event log entry too large. Max size is")
+	assert.Nil(err)
+}
+
+func (suite *ModTestSuite) XTestBufferTokenTooLargeFromFile() {
+	// TODO
 }
 
 func (suite *ModTestSuite) TestBadHttpNotIgnored() {
