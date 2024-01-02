@@ -10,7 +10,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/docker/cli/cli/command/image/build"
@@ -22,14 +21,16 @@ import (
 	"github.com/radovskyb/watcher"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/runtime"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type Function struct {
 
-	// fnuration
+	// fnuration information
 	Name    string                 `json:"name"`
 	Runtime string                 `json:"runtime"`
 	Handler string                 `json:"handler"`
@@ -37,6 +38,8 @@ type Function struct {
 	Env     map[string]string      `json:"env"`
 	Event   map[string]interface{} `json:"event"`
 	Timeout *int64                 `json:"timeout"`
+
+	fqueue *fqueue.FunctionQueue
 
 	// PullParentImagePeriod defines how often the parent image should be pulled.
 	// This is useful for keeping the parent image up to date. Default is every
@@ -48,7 +51,6 @@ type Function struct {
 	CreatedAt               *time.Time         `json:"created_at,omitempty"`
 	UpdatedAt               *time.Time         `json:"updated_at,omitempty"`
 	ParentImageLastPulledAt *time.Time         `json:"-"`
-	BuildQueued             bool               `json:"build_queued"`
 	CurrentVersionName      string             `json:"current_version_name"`
 	Versions                map[string]Version `json:"versions"`
 
@@ -58,7 +60,6 @@ type Function struct {
 	// Flowpipe run context (e.g. for logging)
 	runCtx       context.Context      `json:"-"`
 	watcher      *watcher.Watcher     `json:"-"`
-	buildMutex   sync.Mutex           `json:"-"`
 	dockerClient *docker.DockerClient `json:"-"`
 }
 
@@ -94,6 +95,20 @@ func WithDockerClient(client *docker.DockerClient) FunctionOption {
 	}
 }
 
+func WithName(name string) FunctionOption {
+	return func(c *Function) error {
+		c.Name = name
+		return nil
+	}
+}
+
+func WithRuntime(runtime string) FunctionOption {
+	return func(c *Function) error {
+		c.Runtime = runtime
+		return nil
+	}
+}
+
 // New creates a new Function fn with the provided options.
 func New(options ...FunctionOption) (*Function, error) {
 
@@ -115,6 +130,8 @@ func New(options ...FunctionOption) (*Function, error) {
 	if fc.ctx == nil {
 		fc.ctx = context.Background()
 	}
+
+	fc.fqueue = fqueue.NewFunctionQueue(fc.Name)
 
 	return fc, nil
 }
@@ -426,31 +443,20 @@ func (fn *Function) Restart(containerID string) (string, error) {
 }
 
 func (fn *Function) Build() error {
+	// if we want to wait for the result, we can do so like this
+	receiveChannel := make(chan error)
+	fn.fqueue.RegisterCallback(receiveChannel)
 
-	err := fn.BuildOne()
-	if err != nil {
-		return err
-	}
+	fn.fqueue.Enqueue(fn.buildOne)
 
-	// If a build was queued, run it now.
-	if fn.BuildQueued {
-		fn.BuildQueued = false
-		return fn.BuildOne()
-	}
+	// execute returns immediately
+	fn.fqueue.Execute()
 
-	return nil
+	err := <-receiveChannel
+	return err
 }
 
-func (fn *Function) BuildOne() error {
-
-	// Ensure only one build is running at a time. I feel there is probably
-	// a better way to do this with channels, but this works for now.
-	if !fn.buildMutex.TryLock() {
-		// Already building
-		fn.BuildQueued = true
-		return nil
-	}
-	defer fn.buildMutex.Unlock()
+func (fn *Function) buildOne() error {
 
 	// The UpdatedAt time is used as the build tag, ensuring unique
 	// versions.
@@ -560,10 +566,21 @@ func (fn *Function) buildImage() error {
 		fn.SetParentImageLastPulledAt()
 	}
 
+	// TODO: without doing this the first run will always fail, not 100% sure why I think it has something to do with the Docker need some "time"
+	// to make the image available, need to investigate
+
 	// Output the build progress
-	_, err = io.Copy(os.Stdout, resp.Body)
-	if err != nil {
-		return err
+	logLevel := os.Getenv(app_specific.EnvLogLevel)
+	if strings.ToLower(logLevel) == "debug" || strings.ToLower(logLevel) == "trace" {
+		_, err = io.Copy(os.Stderr, resp.Body)
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err = io.Copy(io.Discard, resp.Body)
+		if err != nil {
+			return err
+		}
 	}
 
 	slog.Info("Docker image built successfully.", "functionName", fn.Name)

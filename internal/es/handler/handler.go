@@ -2,15 +2,14 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
-	"os"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -71,36 +70,46 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		Payload:   commandEvent,
 	}
 
-	// Marshal the struct to JSON
-	fileData, err := json.Marshal(logMessage) // No indent, single line
-	if err != nil {
-		slog.Error("Error marshalling JSON", "error", err)
-		os.Exit(1)
+	newExecution := false
+
+	pipelineQueueCmd, ok := commandEvent.(*event.PipelineQueue)
+	if ok && pipelineQueueCmd.ParentStepExecutionID == "" {
+		newExecution = true
 	}
 
-	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)
+	var ex *execution.ExecutionInMemory
+	executionID := commandEvent.GetEvent().ExecutionID
+	if newExecution {
+		ex = &execution.ExecutionInMemory{
+			ID:                 executionID,
+			PipelineExecutions: map[string]*execution.PipelineExecution{},
+			Lock:               event.GetEventStoreMutex(executionID),
+		}
+
+		// Effectively forever
+		ok := cache.GetCache().SetWithTTL(executionID, ex, 10*365*24*time.Hour)
+		if !ok {
+			slog.Error("Error setting execution in cache", "execution_id", executionID)
+			return perr.InternalWithMessage("Error setting execution in cache")
+		}
+	} else {
+		var err error
+		ex, err = execution.GetExecution(executionID)
+		if err != nil {
+			slog.Error("Error getting execution from cache", "execution_id", executionID)
+			return perr.InternalWithMessage("Error getting execution from cache")
+		}
+	}
 
 	if lock == nil {
-		executionMutex := event.GetEventStoreMutex(commandEvent.GetEvent().ExecutionID)
-		executionMutex.Lock()
-		defer executionMutex.Unlock()
+		ex.Lock.Lock()
+		defer ex.Lock.Unlock()
 	}
 
-	// Append the JSON data to a file
-	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err := ex.AddEvent(logMessage)
 	if err != nil {
-		return perr.InternalWithMessage("Error opening file " + err.Error())
+		slog.Error("Error adding event to execution", "error", err)
+		return err
 	}
-	defer file.Close()
-
-	_, err = file.Write(fileData)
-	if err != nil {
-		return perr.InternalWithMessage("Error writing to file " + err.Error())
-	}
-	_, err = file.WriteString("\n")
-	if err != nil {
-		return perr.InternalWithMessage("Error writing to file " + err.Error())
-	}
-
 	return nil
 }

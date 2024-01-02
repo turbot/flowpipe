@@ -6,6 +6,10 @@
 		"GOPRIVATE=github.com/": "github.com/turbot/*"
 	},
 
+	"mounts": [
+		"source=${localWorkspaceFolder}/../pipe-fittings,target=/workspaces/pipe-fittings,type=bind,consistency=cached"
+	],
+
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {}
 	},
@@ -27,5 +31,5 @@
 			"GitHub.vscode-github-actions",
 			"HashiCorp.HCL"]
 		}
-	  }
+	}
 }

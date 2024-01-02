@@ -23,6 +23,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/types"
+	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -32,12 +33,12 @@ import (
 	"github.com/zclconf/go-cty/cty/gocty"
 )
 
+var ExecutionMode string
+
 // Execution represents the current state of an execution. A single execution
 // is tied to a trigger (webhook, cronjob, etc) and may result in multiple
 // pipelines being executed.
 type Execution struct {
-	Context context.Context `json:"-"`
-
 	// Unique identifier for this execution.
 	ID string `json:"id"`
 
@@ -56,7 +57,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+		Functions: funcs.ContextFunctions(viper.GetString(pfconstants.ArgModLocation)),
 	}
 
 	params := map[string]cty.Value{}
@@ -175,7 +176,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 		}
 	}
 
-	credentialMap, err := buildCredentialMapForEvalContext(ex.Context, relevantCredentials)
+	credentialMap, err := buildCredentialMapForEvalContext(context.TODO(), relevantCredentials)
 	if err != nil {
 		return nil, err
 	}
@@ -336,7 +337,6 @@ func NewExecution(ctx context.Context, opts ...ExecutionOption) (*Execution, err
 
 	ex := &Execution{
 		// ID is empty by default, so it will be populated from the given event
-		Context:            ctx,
 		PipelineExecutions: map[string]*PipelineExecution{},
 	}
 
@@ -512,7 +512,7 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 
 	f, err := os.Open(eventStoreFilePath)
 	if err != nil {
-		slog.Error("Failed to open log file", "execution", ex.ID, "error", err)
+		slog.Error("Failed to open log file", "execution", ex.ID, "error", err, "event", e)
 		return err
 	}
 	defer f.Close()

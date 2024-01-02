@@ -26,46 +26,45 @@ func (PipelinePlanned) NewEvent() interface{} {
 }
 
 func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
-	e, ok := ei.(*event.PipelinePlanned)
+	evt, ok := ei.(*event.PipelinePlanned)
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.PipelinePlanned", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
-	ex, err := execution.NewExecution(ctx, execution.WithEvent(e.Event))
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
 	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
-	}
-
-	pipelineDefn, err := ex.PipelineDefinition(e.PipelineExecutionID)
-	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
-	}
-
-	// Convenience
-	pe := ex.PipelineExecutions[e.PipelineExecutionID]
-
-	// If the pipeline has been canceled or paused, then no planning is required as no
-	// more work should be done.
-	if pe.IsCanceled() || pe.IsPaused() || pe.IsFinishing() || pe.IsFinished() {
+		slog.Error("pipeline_planned: Error loading pipeline execution", "error", err)
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+		}
 		return nil
 	}
 
-	if len(e.NextSteps) == 0 {
+	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
+
+	// If the pipeline has been canceled or paused, then no planning is required as no
+	// more work should be done.
+	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
+		return nil
+	}
+
+	if len(evt.NextSteps) == 0 {
 		// PRE: No new steps to execute, so the planner should just check to see if
 		// all existing steps are complete.
-		if pe.IsComplete() {
-			if pe.ShouldFail() {
+		if pex.IsComplete() {
+			if pex.ShouldFail() {
 				// There's no error supplied here because it's the step failure that is causing the pipeline to fail
-				cmd := event.NewPipelineFailFromPipelinePlanned(e, nil)
+				cmd := event.NewPipelineFailFromPipelinePlanned(evt, nil)
 				if err != nil {
-					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
 				}
 				return h.CommandBus.Send(ctx, cmd)
 			} else {
-				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(e))
+				cmd, err := event.NewPipelineFinish(event.ForPipelinePlannedToPipelineFinish(evt))
 				if err != nil {
-					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
+					return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
 				}
 				return h.CommandBus.Send(ctx, cmd)
 			}
@@ -79,7 +78,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// TODO: there's optimisation here, we could potentially run all the other steps that can run
 	// TODO: but for now take the simplest route
 	pipelineInaccessible := false
-	for _, nextStep := range e.NextSteps {
+	for _, nextStep := range evt.NextSteps {
 		if nextStep.Action == modconfig.NextStepActionInaccessible {
 			pipelineInaccessible = true
 			break
@@ -89,15 +88,15 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	if pipelineInaccessible {
 		slog.Info("Pipeline is inaccessible, terminating", "pipeline", pipelineDefn.Name())
 		// TODO: what is the error on the pipeline?
-		cmd := event.NewPipelineFailFromPipelinePlanned(e, nil)
+		cmd := event.NewPipelineFailFromPipelinePlanned(evt, nil)
 		if err != nil {
-			return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
+			return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
 		}
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	// PRE: The planner has told us what steps to run next, our job is to start them
-	for _, nextStep := range e.NextSteps {
+	for _, nextStep := range evt.NextSteps {
 
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
 		stepForEach := stepDefn.GetForEach()
@@ -106,11 +105,11 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		if !helpers.IsNil(stepForEach) {
 			var err error
 
-			stepForEachPlanCmd := event.NewStepForEachPlanFromPipelinePlanned(e, nextStep.StepName)
+			stepForEachPlanCmd := event.NewStepForEachPlanFromPipelinePlanned(evt, nextStep.StepName)
 			err = h.CommandBus.Send(ctx, stepForEachPlanCmd)
 
 			if err != nil {
-				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))
+				return h.CommandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(evt, err))
 			}
 
 			// don't return here, but process the next step
@@ -126,7 +125,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		// Start each step in parallel
-		runNonForEachStep(ctx, h.CommandBus, e, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
+		runNonForEachStep(ctx, h.CommandBus, evt, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
 	}
 
 	return nil

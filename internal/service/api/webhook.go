@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/sanitize"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -15,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -133,7 +137,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
 
 	pipelineArgs, diags := t.GetArgs(evalContext)
@@ -153,6 +157,11 @@ func (api *APIService) runWebhook(c *gin.Context) {
 
 	pipelineCmd.Args = pipelineArgs
 
+	if output.IsServerMode {
+		tr := types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName)
+		output.RenderServerOutput(c, tr)
+	}
+
 	if err := api.EsService.Send(pipelineCmd); err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -169,12 +178,6 @@ func (api *APIService) runWebhook(c *gin.Context) {
 }
 
 func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue, waitRetry int) {
-	ex, err := execution.NewExecution(api.ctx)
-	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("error creating execution object"))
-		return
-	}
-
 	if waitRetry == 0 {
 		waitRetry = 60
 	}
@@ -187,36 +190,37 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	for i := 0; i < waitRetry; i++ {
 		time.Sleep(waitTime)
 
-		err = ex.LoadProcess(pipelineCmd.Event)
+		ex, err := execution.GetExecution(pipelineCmd.Event.ExecutionID)
+
 		if err != nil {
 			if errorModel, ok := err.(perr.ErrorModel); ok {
-				if errorModel.Type == perr.ErrorCodeInternalTokenTooLarge || errorModel.Type == perr.ErrorCodeJsonSyntaxError {
-					response := map[string]interface{}{}
+				response := map[string]interface{}{}
 
-					response["errors"] = []modconfig.StepError{
-						{
-							PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-							Pipeline:            pipelineCmd.Name,
-							Error:               errorModel,
-						},
-					}
-
-					c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
-					c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
-					c.Header("flowpipe-status", "failed")
-
-					c.JSON(500, response)
-					return
+				response["errors"] = []modconfig.StepError{
+					{
+						PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+						Pipeline:            pipelineCmd.Name,
+						Error:               errorModel,
+					},
 				}
+
+				c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+				c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+				c.Header("flowpipe-status", "failed")
+
+				c.JSON(500, response)
+				return
+			} else {
+				common.AbortWithError(c, err)
+				return
 			}
-			slog.Warn("error loading process", "error", err)
-			continue
 		}
 
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 		if pex == nil {
 			slog.Warn("Pipeline execution not found", "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
-			continue
+			common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution not found"))
+			return
 		}
 
 		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
@@ -233,6 +237,10 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 
 	if response == nil {
 		response = map[string]interface{}{}
+	}
+
+	for k, v := range pex.PipelineOutput {
+		response[k] = sanitize.Instance.Sanitize(v)
 	}
 
 	if response["errors"] != nil {

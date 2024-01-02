@@ -3,9 +3,10 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
 	"strings"
 	"time"
+
+	"github.com/turbot/go-kit/helpers"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
@@ -51,15 +52,18 @@ func (o ListPipelineResponse) GetResourceType() string {
 }
 
 type FpPipeline struct {
-	Name          string                     `json:"name"`
-	Description   *string                    `json:"description,omitempty"`
-	Mod           string                     `json:"mod"`
-	Title         *string                    `json:"title,omitempty"`
-	Documentation *string                    `json:"documentation,omitempty"`
-	Tags          map[string]string          `json:"tags,omitempty"`
-	Steps         []modconfig.PipelineStep   `json:"steps,omitempty"`
-	OutputConfig  []modconfig.PipelineOutput `json:"outputs,omitempty"`
-	Params        []FpPipelineParam          `json:"params,omitempty"`
+	Name            string                     `json:"name"`
+	Description     *string                    `json:"description,omitempty"`
+	Mod             string                     `json:"mod"`
+	Title           *string                    `json:"title,omitempty"`
+	Documentation   *string                    `json:"documentation,omitempty"`
+	FileName        string                     `json:"file_name,omitempty"`
+	StartLineNumber int                        `json:"start_line_number,omitempty"`
+	EndLineNumber   int                        `json:"end_line_number,omitempty"`
+	Tags            map[string]string          `json:"tags,omitempty"`
+	Steps           []modconfig.PipelineStep   `json:"steps,omitempty"`
+	OutputConfig    []modconfig.PipelineOutput `json:"outputs,omitempty"`
+	Params          []FpPipelineParam          `json:"params,omitempty"`
 }
 
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -160,6 +164,11 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 
 		resp.Params = pipelineParams
 	}
+
+	resp.FileName = pipeline.FileName
+	resp.StartLineNumber = pipeline.StartLineNumber
+	resp.EndLineNumber = pipeline.EndLineNumber
+
 	return resp, nil
 }
 

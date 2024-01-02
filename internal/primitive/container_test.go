@@ -63,7 +63,7 @@ func TestSimpleContainerStep(t *testing.T) {
 	assert.Equal("Line 3\n", lines[2].Line)
 }
 
-func TestContainerStepMissingImage(t *testing.T) {
+func TestContainerStepMissingImageAndSource(t *testing.T) {
 	ctx := context.Background()
 
 	err := docker.Initialize(ctx)
@@ -85,7 +85,7 @@ func TestContainerStepMissingImage(t *testing.T) {
 	assert.NotNil(err)
 
 	fpErr := err.(perr.ErrorModel)
-	assert.Equal("Container input must define 'image'", fpErr.Detail)
+	assert.Equal("Container input must define 'image' or 'source', but not both", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
 

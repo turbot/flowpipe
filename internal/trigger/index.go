@@ -2,13 +2,20 @@ package trigger
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
+	"path/filepath"
+	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
+	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
@@ -19,26 +26,35 @@ type TriggerRunnerBase struct {
 	Trigger    *modconfig.Trigger
 	commandBus handler.FpCommandBus
 	rootMod    *modconfig.Mod
+	Fqueue     *fqueue.FunctionQueue
 }
 
 type TriggerRunner interface {
 	Run()
+	GetTrigger() *modconfig.Trigger
+	GetFqueue() *fqueue.FunctionQueue
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
+
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
 		return &TriggerRunnerBase{
 			Trigger:    trigger,
 			commandBus: commandBus,
 			rootMod:    rootMod,
+			Fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
 		}
 	case *modconfig.TriggerQuery:
+		internalDir := filepaths.ModInternalDir()
+		dbFile := filepath.Join(internalDir, "flowpipe.db")
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:    trigger,
 				commandBus: commandBus,
-				rootMod:    rootMod},
+				rootMod:    rootMod,
+				Fqueue:     fqueue.NewFunctionQueue(trigger.FullName)},
+			DatabasePath: dbFile,
 		}
 	default:
 		return nil
@@ -74,9 +90,10 @@ func (tr *TriggerRunnerBase) Run() {
 	executionVariables := map[string]cty.Value{}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
-	evalContext := &hcl.EvalContext{
-		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString("work.dir")),
+	evalContext, err := buildEvalContext(tr.rootMod)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return
 	}
 
 	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
@@ -95,15 +112,39 @@ func (tr *TriggerRunnerBase) Run() {
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
 
+	if output.IsServerMode {
+		t := types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.Event.ExecutionID, tr.Trigger.Name(), pipelineName)
+		output.RenderServerOutput(context.TODO(), t)
+	}
+
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
 		return
 	}
 }
 
-type TriggerRunnerQuery struct {
-	TriggerRunnerBase
+func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
+	return tr.Trigger
 }
 
-func (tr *TriggerRunnerQuery) Run() {
+func (tr *TriggerRunnerBase) GetFqueue() *fqueue.FunctionQueue {
+	return tr.Fqueue
+}
+
+func buildEvalContext(rootMod *modconfig.Mod) (*hcl.EvalContext, error) {
+	vars := make(map[string]cty.Value)
+	if rootMod != nil {
+		for _, v := range rootMod.ResourceMaps.Variables {
+			vars[v.GetMetadata().ResourceName] = v.Value
+		}
+	}
+
+	executionVariables := map[string]cty.Value{}
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
+	}
+	return evalContext, nil
 }

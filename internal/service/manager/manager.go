@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -18,12 +19,14 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
@@ -130,6 +133,10 @@ func (m *Manager) Start() (*Manager, error) {
 
 	m.StartedAt = utils.TimeNow()
 	m.Status = "running"
+
+	if output.IsServerMode {
+		m.renderServerStartOutput()
+	}
 
 	return m, nil
 }
@@ -259,7 +266,6 @@ func (m *Manager) initializeResources() error {
 
 		// if we are running in server mode, setup the file watcher
 		if m.shouldStartAPI() {
-			execution.Mode = "server"
 			if err := m.setupWatcher(w); err != nil {
 				return err
 			}
@@ -316,6 +322,9 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 
 	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 		slog.Error("error watching workspace", "error", e)
+		if output.IsServerMode {
+			output.RenderServerOutput(c, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: reloading mod %s\n%s", w.Mod.Name(), e.Error())))
+		}
 		m.apiService.ModMetadata.IsStale = true
 	})
 
@@ -324,13 +333,17 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	}
 
 	w.SetOnFileWatcherEventMessages(func() {
+		var serverOutput []types.SanitizedStringer
 		slog.Info("caching pipelines and triggers")
+		serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Reloading mod: %s", m.RootMod.Name())))
 		m.triggers = w.Mod.ResourceMaps.Triggers
 		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 		if err != nil {
 			slog.Error("error caching pipelines and triggers", "error", err)
+			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: caching pipelines and triggers failed\n%s", err.Error())))
 		} else {
 			slog.Info("cached pipelines and triggers")
+			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "cached pipelines and triggers"))
 			m.apiService.ModMetadata.IsStale = false
 			m.apiService.ModMetadata.LastLoaded = time.Now()
 		}
@@ -342,9 +355,15 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 			err := m.schedulerService.RescheduleTriggers()
 			if err != nil {
 				slog.Error("error rescheduling triggers", "error", err)
+				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: rescheduling triggers failed\n%s", err.Error())))
 			} else {
 				slog.Info("rescheduled triggers")
+				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "rescheduled triggers"))
 			}
+		}
+
+		if output.IsServerMode {
+			output.RenderServerOutput(m.ctx, serverOutput...)
 		}
 	})
 	return nil
@@ -401,7 +420,7 @@ func (m *Manager) Stop() error {
 	// Ensure any log messages are synced before we exit
 	defer func() {
 		// TODO do we need this for slog
-		//_ = slog.Sync()
+		// _ = slog.Sync()
 	}()
 
 	if m.apiService != nil {
@@ -428,12 +447,16 @@ func (m *Manager) Stop() error {
 
 	m.StoppedAt = utils.TimeNow()
 
+	if output.IsServerMode {
+		m.renderServerShutdownOutput()
+	}
+
 	return nil
 }
 
 func (m *Manager) InterruptHandler() {
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	done := make(chan bool, 1)
 	go func() {
 		sig := <-sigs
@@ -492,4 +515,52 @@ func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
 	hashString := util.CalculateHash(trigger.FullName, salt.(string))
 
 	return "/api/latest/hook/" + trigger.FullName + "/" + hashString, nil
+}
+
+func (m *Manager) renderServerStartOutput() {
+	var outputs []types.SanitizedStringer
+	startTime := time.Now()
+	if !helpers.IsNil(m.StartedAt) {
+		startTime = *m.StartedAt
+	}
+	outputs = append(outputs, types.NewServerOutput(startTime, app_specific.AppName, "server started"))
+	outputs = append(outputs, types.NewServerOutput(startTime, app_specific.AppName, fmt.Sprintf("server listening on %s:%d", m.HTTPAddress, m.HTTPPort)))
+	modText := fmt.Sprintf("loaded: %s", m.RootMod.Name())
+	if !helpers.IsNil(m.RootMod.Version) {
+		modText += fmt.Sprintf(" (%s)", m.RootMod.Version.String())
+	}
+	outputs = append(outputs, types.NewServerOutput(startTime, "mod", modText))
+
+	for _, t := range m.triggers {
+		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+		switch tt {
+		case schema.TriggerTypeHttp:
+			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
+				// TODO: Add Payload Requirements?
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - POST %s", tt, t.Name(), tc.Url)))
+			}
+		case schema.TriggerTypeSchedule:
+			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - Schedule: %s", tt, t.Name(), tc.Schedule)))
+			}
+		case schema.TriggerTypeInterval:
+			if tc, ok := t.Config.(*modconfig.TriggerInterval); ok {
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - Schedule: %s", tt, t.Name(), tc.Schedule)))
+			}
+		case schema.TriggerTypeQuery:
+			if tc, ok := t.Config.(*modconfig.TriggerQuery); ok {
+				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s'\n\tSchedule: %s\n\tQuery: %s", tt, t.Name(), tc.Schedule, tc.Sql)))
+			}
+		}
+	}
+	output.RenderServerOutput(m.ctx, outputs...)
+}
+
+func (m *Manager) renderServerShutdownOutput() {
+	stopTime := time.Now()
+	if !helpers.IsNil(m.StoppedAt) {
+		stopTime = *m.StoppedAt
+	}
+	msg := types.NewServerOutput(stopTime, app_specific.AppName, "server stopped")
+	output.RenderServerOutput(m.ctx, msg)
 }

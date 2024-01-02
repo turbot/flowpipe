@@ -30,16 +30,14 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	if cmd.StepRetry != nil {
-		ex, err := execution.NewExecution(ctx, execution.WithEvent(cmd.Event))
+		ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(cmd.Event.ExecutionID, cmd.PipelineExecutionID)
 		if err != nil {
-			slog.Error("step_queue: Error loading pipeline execution", "error", err)
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
-		}
-
-		pipelineDefn, err := ex.PipelineDefinition(cmd.PipelineExecutionID)
-		if err != nil {
-			slog.Error("Error loading pipeline definition", "error", err)
-			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+			slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				slog.Error("Error publishing PipelineFailed event", "error", err2)
+			}
+			return nil
 		}
 
 		pex := ex.PipelineExecutions[cmd.PipelineExecutionID]

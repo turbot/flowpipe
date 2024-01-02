@@ -175,13 +175,16 @@ func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 	pipelineName := pipelineInfo["name"].AsString()
 
 	fpTrigger := &types.FpTrigger{
-		Name:          trigger.FullName,
-		Type:          modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
-		Description:   trigger.Description,
-		Pipeline:      pipelineName,
-		Title:         trigger.Title,
-		Tags:          trigger.Tags,
-		Documentation: trigger.Documentation,
+		Name:            trigger.FullName,
+		Type:            modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
+		Description:     trigger.Description,
+		Pipeline:        pipelineName,
+		Title:           trigger.Title,
+		Tags:            trigger.Tags,
+		Documentation:   trigger.Documentation,
+		FileName:        trigger.FileName,
+		StartLineNumber: trigger.StartLineNumber,
+		EndLineNumber:   trigger.EndLineNumber,
 	}
 
 	if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {

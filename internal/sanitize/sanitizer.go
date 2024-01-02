@@ -24,6 +24,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"sessiontoken",
 		"smtp_password",
 		"api_key",
+		"app_key",
 		"api_token",
 		"alert_api_key",
 		"incident_api_key",
@@ -36,6 +37,7 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"clientsecret",
 		"access_token",
 		"access_key",
+		"secret_key",
 		"client_id",
 		"client_secret",
 		"tenant_id",
@@ -70,6 +72,14 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"azure_client_id",
 		"azure_client_secret",
 		"azure_tenent_id",
+		"bitbucket_password",
+		"dd_client_api_key",
+		"dd_client_app_key",
+		"freshdesk_api_key",
+		"turbot_access_key",
+		"turbot_secret_key",
+		"servicenow_password",
+		"jumpcloud_api_key",
 	},
 	ExcludePatterns: []string{
 		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid
@@ -198,9 +208,7 @@ func (s *Sanitizer) SanitizeString(v string) string {
 	var lastReplacement *replacement
 	for _, r := range replacements {
 		if lastReplacement != nil && r.start < lastReplacement.end {
-			a := v[r.start:r.end]
-			b := v[lastReplacement.start:lastReplacement.end]
-			slog.Debug("Overlapping replacements", "a", a, "b", b)
+			slog.Debug("Overlapping replacements", "r1_start", r.start, "r1_end", r.end, "r2_start", lastReplacement.start, "r2_end", lastReplacement.end)
 			// expand previous replacement
 			lastReplacement.end = r.end
 			continue

@@ -1,4 +1,3 @@
-//nolint:forbidigo //TODO: initial import
 package docker
 
 import (
@@ -272,7 +271,6 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 
 	// Iterate through the containers and stop/remove them
 	for _, c := range containers {
-		fmt.Println("delete container?", c.Image)
 		if cleanupOptions.SkipLatest && strings.HasSuffix(c.Image, ":latest") {
 			continue
 		}
@@ -282,7 +280,7 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 			if err != nil {
 				slog.Warn(fmt.Sprintf("failed to stop container %s: %s", c.ID, err))
 			} else {
-				slog.Info(fmt.Sprintf("container %s stopped\n", c.ID))
+				slog.Info(fmt.Sprintf("container %s stopped", c.ID), "containerID", c.ID)
 			}
 		}
 		// Remove the container
@@ -290,7 +288,7 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 		if err != nil {
 			slog.Warn(fmt.Sprintf("failed to remove container %s: %s\n", c.ID, err))
 		} else {
-			slog.Info(fmt.Sprintf("container %s deleted\n", c.ID))
+			slog.Info(fmt.Sprintf("container %s deleted\n", c.ID), "containerID", c.ID)
 		}
 	}
 
@@ -327,7 +325,6 @@ func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...
 	}
 
 	for _, image := range images {
-		fmt.Println("delete image?", image.RepoTags)
 		if cleanupOptions.SkipLatest {
 			isLatest := false
 			for _, tag := range image.RepoTags {

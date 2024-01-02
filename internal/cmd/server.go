@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/turbot/flowpipe/internal/output"
 	"net"
 	"strconv"
 
@@ -34,8 +35,9 @@ func serverCmd() *cobra.Command {
 	cmdconfig.
 		OnCmd(cmd).
 		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
-		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "listen address port.").
-		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server")
+		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "Listen address port.").
+		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server").
+		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output")
 
 	return cmd
 }
@@ -49,6 +51,17 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 			error_helpers.FailOnError(perr.InternalWithMessage("The designated port (" + strconv.Itoa(viper.GetInt(constants.ArgPort)) + ") is already in use"))
 			return
 		}
+
+		// Error on unsupported JSON/YAML outputs, convert pretty to plain (no color)
+		switch viper.GetString(constants.ArgOutput) {
+		case constants.OutputFormatJSON, constants.OutputFormatYAML:
+			error_helpers.FailOnError(perr.BadRequestWithMessage("Currently '--output' is not supported for json or yaml"))
+			return
+		case constants.OutputFormatPretty:
+			viper.Set(constants.ArgOutput, constants.OutputFormatPlain)
+		}
+
+		output.IsServerMode = true
 
 		// start manager, passing server config
 		// (this will ensure manager starts API, ES, Scheduling and docker services

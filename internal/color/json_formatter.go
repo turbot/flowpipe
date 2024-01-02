@@ -5,7 +5,7 @@ import (
 	"github.com/hokaccha/go-prettyjson"
 )
 
-func NewJsonFormatter() *prettyjson.Formatter {
+func NewJsonFormatter(disableColor bool) *prettyjson.Formatter {
 	return &prettyjson.Formatter{
 		KeyColor:        color.New(color.FgBlue),
 		StringColor:     color.New(color.FgGreen),
@@ -13,7 +13,7 @@ func NewJsonFormatter() *prettyjson.Formatter {
 		NumberColor:     color.New(color.FgCyan),
 		NullColor:       color.New(color.FgBlack),
 		StringMaxLength: 0,
-		DisabledColor:   false,
+		DisabledColor:   disableColor,
 		Indent:          2,
 		Newline:         "\n",
 	}

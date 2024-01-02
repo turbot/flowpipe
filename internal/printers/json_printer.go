@@ -31,7 +31,7 @@ func (p JsonPrinter[T]) PrintResource(ctx context.Context, r types.PrintableReso
 	s = []byte(p.Sanitizer.SanitizeString(string(s)))
 
 	// format
-	s, err = color.NewJsonFormatter().Format(s)
+	s, err = color.NewJsonFormatter(false).Format(s)
 	if err != nil {
 		return err
 	}

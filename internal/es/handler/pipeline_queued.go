@@ -2,8 +2,8 @@ package handler
 
 import (
 	"context"
-	"fmt"
-
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -32,7 +32,12 @@ func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineQueued")
 	}
 
-	execution.ServerOutput(fmt.Sprintf("[%s] Pipeline %s queued", e.Event.ExecutionID, e.Name))
+	if output.IsServerMode {
+		p := types.NewServerOutputPipelineExecution(
+			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
+			e.Event.ExecutionID, e.Name, "queued")
+		output.RenderServerOutput(ctx, p)
+	}
 
 	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(e))
 	if err != nil {
