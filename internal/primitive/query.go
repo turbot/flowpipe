@@ -171,7 +171,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	start := time.Now().UTC()
 	rows, err := db.QueryContext(ctx, sql, args...)
 	if err != nil {
-		if err == context.DeadlineExceeded {
+		if err == context.DeadlineExceeded || err == context.Canceled {
 			return nil, perr.InternalWithMessage("Query execution exceeded timeout")
 		}
 		return nil, err
