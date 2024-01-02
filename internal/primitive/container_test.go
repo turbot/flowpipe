@@ -126,7 +126,7 @@ func TestContainerStepInvalidMemory(t *testing.T) {
 		schema.AttributeTypeCmd:     []interface{}{"echo", "hello world"},
 		schema.AttributeTypeEnv:     map[string]interface{}{"FOO": "bar"},
 		schema.AttributeTypeTimeout: int64(120000),
-		schema.LabelName:            "container_test",
+		schema.LabelName:            "container_test_invalid_memory",
 		schema.AttributeTypeMemory:  int64(1),
 	})
 
