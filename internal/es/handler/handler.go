@@ -81,9 +81,11 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 	executionID := commandEvent.GetEvent().ExecutionID
 	if newExecution {
 		ex = &execution.ExecutionInMemory{
-			ID:                 executionID,
-			PipelineExecutions: map[string]*execution.PipelineExecution{},
-			Lock:               event.GetEventStoreMutex(executionID),
+			Execution: execution.Execution{
+				ID:                 executionID,
+				PipelineExecutions: map[string]*execution.PipelineExecution{},
+				Lock:               event.GetEventStoreMutex(executionID),
+			},
 		}
 
 		// Effectively forever

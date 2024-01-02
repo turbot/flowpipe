@@ -21,7 +21,9 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/container"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -2185,10 +2187,33 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemory() {
 	// not redacted
 	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
-}
 
-func (suite *ModTestSuite) XTestCredentialRedactionFromFile() {
-	// TODO
+	// Now load the execution from file, it should be redacted
+	time.Sleep(250 * time.Millisecond)
+	// check if the execution id has been completed, check 3 times
+	ex, err := execution.NewExecution(suite.ctx)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	err = ex.LoadProcess(pipelineCmd.Event)
+	if err != nil {
+		assert.Fail("Error loading process", err)
+		return
+	}
+
+	pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
+
+	// Since we are reading this from file, they should be redacted
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
+
+	// not redacted
+	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
+	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
 }
 
 func (suite *ModTestSuite) XTestCredentialRedactionOutput() {
