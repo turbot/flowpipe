@@ -8,7 +8,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
-	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -42,8 +41,6 @@ func main() {
 	localcmdconfig.SetAppSpecificConstants()
 	log.SetDefaultLogger()
 	cache.InMemoryInitialize(nil)
-
-	execution.ExecutionMode = "in-memory"
 
 	// Run the CLI
 	cmd.RunCLI(ctx)

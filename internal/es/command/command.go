@@ -53,7 +53,6 @@ func (c FpEventBusImpl) PublishWithLock(ctx context.Context, event interface{}, 
 }
 
 func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) error {
-
 	commandEvent, ok := evt.(event.CommandEvent)
 
 	if !ok {

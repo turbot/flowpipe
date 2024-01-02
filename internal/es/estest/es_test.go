@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
@@ -142,11 +143,12 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 	for i := 0; i < 3 && !pex.IsComplete(); i++ {
 		time.Sleep(100 * time.Millisecond)
 
-		err = ex.LoadProcess(pipelineCmd.Event)
+		ex, err = execution.GetExecution(pipelineCmd.Event.ExecutionID)
 		if err != nil {
-			assert.Fail("Error loading process", err)
+			assert.Fail("Error loading execution", err)
 			return
 		}
+
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 	}
 

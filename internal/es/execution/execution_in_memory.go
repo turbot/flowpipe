@@ -50,13 +50,13 @@ func GetExecution(executionID string) (*ExecutionInMemory, error) {
 	exCached, found := cache.GetCache().Get(executionID)
 	if !found {
 		slog.Error("Error getting execution from cache", "execution_id", executionID)
-		return nil, perr.InternalWithMessage("Error getting execution from cache")
+		return nil, perr.NotFoundWithMessage("Execution " + executionID + " not found")
 	}
 
 	ex, ok := exCached.(*ExecutionInMemory)
 	if !ok {
 		slog.Error("Error casting execution from cache", "execution_id", executionID)
-		return nil, perr.InternalWithMessage("Error casting execution from cache")
+		return nil, perr.InternalWithMessage("Error casting execution " + executionID + " from cache")
 	}
 
 	return ex, nil
