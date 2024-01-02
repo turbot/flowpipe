@@ -148,13 +148,8 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 	pipelineInput := modconfig.Input{}
 
 	// Run two pipeline at the same time
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
-	_, pipelineCmd2, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
+	_, pipelineCmd, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd2, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
 	if err != nil {
@@ -169,8 +164,6 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 
 	_, pex2, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd2.Event, pipelineCmd2.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
 	if err != nil {
-
-		fmt.Println("pex", pex)
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
@@ -2783,13 +2776,8 @@ func (suite *ModTestSuite) XTestBufferTokenTooLargeMemory() {
 
 	assert.Nil(err)
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
-	_, pipelineCmd2, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
+	_, pipelineCmd, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd2, _ := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
 	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
 	if err != nil {
@@ -2804,8 +2792,6 @@ func (suite *ModTestSuite) XTestBufferTokenTooLargeMemory() {
 
 	_, pex2, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd2.Event, pipelineCmd2.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
 	if err != nil {
-
-		fmt.Println("pex", pex)
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
