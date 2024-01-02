@@ -311,7 +311,7 @@ func (c *Container) Run() (string, int, error) {
 		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024 // in bytes
 	}
 
-	fmt.Printf("Memory: %v", hostConfig.Resources.Memory) //nolint:forbidigo
+	fmt.Printf("Memory: %v", hostConfig.Resources.Memory) //nolint:forbidigo // test
 
 	if c.MemoryReservation != nil {
 		hostConfig.Resources.MemoryReservation = *c.MemoryReservation * 1024 * 1024
