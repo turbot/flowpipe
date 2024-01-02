@@ -311,6 +311,8 @@ func (c *Container) Run() (string, int, error) {
 		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024 // in bytes
 	}
 
+	panic(fmt.Sprintf("Memory: %v", hostConfig.Resources.Memory))
+
 	if c.MemoryReservation != nil {
 		hostConfig.Resources.MemoryReservation = *c.MemoryReservation * 1024 * 1024
 	}
