@@ -260,7 +260,7 @@ func (m *Manager) initializeResources() error {
 			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, flowpipeConfig.Credentials, app_specific.ModDataExtension)
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, workspace.WithCredentials(flowpipeConfig.Credentials))
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}
