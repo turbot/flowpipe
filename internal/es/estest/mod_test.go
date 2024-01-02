@@ -22,7 +22,6 @@ import (
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -2172,11 +2171,11 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	// Check if the environment function is created successfully
 	envMap := pex.PipelineOutput["val"].(map[string]interface{})
 
-	assert.Equal(sanitize.RedactedStr, envMap["AWS_ACCESS_KEY_ID"])
-	assert.Equal(sanitize.RedactedStr, envMap["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("aws_static_foo", envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal("aws_static_key_key_key", envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
-func (suite *ModTestSuite) TestCredentialRedaction() {
+func (suite *ModTestSuite) TestCredentialRedactionFromMemory() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -2194,15 +2193,23 @@ func (suite *ModTestSuite) TestCredentialRedaction() {
 		return
 	}
 
-	// This is not redacted because we're looking for either field name or field value, and neither will hit the redaction list
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
+	// We're reading straight from memory, not redacted
+	assert.Equal("abc", pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal("def", pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal("EAACEdEose0cBA1234FAKE1234", pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
+	assert.Equal("AKIAFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
 
 	// not redacted
 	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
+}
+
+func (suite *ModTestSuite) XTestCredentialRedactionFromFile() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestCredentialRedactionOutput() {
+	// TODO
 }
 
 func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
@@ -2225,7 +2232,8 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["slack_token"])
+	// Reading from memory, not redacted
+	assert.Equal("test.1.2.3", pex.PipelineOutput["slack_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2242,7 +2250,9 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["gitlab_token"])
+
+	// From memory not redacted
+	assert.Equal("glpat-gsfio3wtyr92364ifkw", pex.PipelineOutput["gitlab_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2259,7 +2269,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["abuseipdb_api_key"])
+	assert.Equal("bfc6f1c42dsfsdfdxxxx26977977b2xxxsfsdda98f313c3d389126de0d", pex.PipelineOutput["abuseipdb_api_key"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2276,7 +2286,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["clickup_token"])
+	assert.Equal("pk_616_L5H36X3CXXXXXXXWEAZZF0NM5", pex.PipelineOutput["clickup_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
@@ -2293,7 +2303,11 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
-	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["vault_token"])
+	assert.Equal("hsv-fkshfgskhf", pex.PipelineOutput["vault_token"])
+}
+
+func (suite *ModTestSuite) XTestCredentialWithOptionalParamFromFile() {
+	// TODO
 }
 
 func (suite *ModTestSuite) TestMultipleCredential() {
@@ -2677,22 +2691,22 @@ func (suite *ModTestSuite) TestContainerStepWithStringTimeout() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
@@ -2739,22 +2753,22 @@ func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
 	assert.Equal("finished", output.Status)
 	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
 	assert.Equal("", output.Data["stderr"])
-	assert.Equal(float64(0), output.Data["exit_code"])
+	assert.Equal(0, output.Data["exit_code"])
 
-	if _, ok := output.Data["lines"].([]interface{}); !ok {
+	if _, ok := output.Data["lines"].([]container.OutputLine); !ok {
 		assert.Fail("Container ID should be a list of strings")
 	}
-	lines := output.Data["lines"].([]interface{})
+	lines := output.Data["lines"].([]container.OutputLine)
 	assert.Equal(3, len(lines))
 
-	assert.Equal("stdout", lines[0].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 1\n", lines[0].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[0].Stream)
+	assert.Equal("Line 1\n", lines[0].Line)
 
-	assert.Equal("stdout", lines[1].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 2\n", lines[1].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[1].Stream)
+	assert.Equal("Line 2\n", lines[1].Line)
 
-	assert.Equal("stdout", lines[2].(map[string]interface{})["stream"].(string))
-	assert.Equal("Line 3\n", lines[2].(map[string]interface{})["line"].(string))
+	assert.Equal("stdout", lines[2].Stream)
+	assert.Equal("Line 3\n", lines[2].Line)
 }
 
 func (suite *ModTestSuite) TestBufferTokenTooLargeMemory() {
