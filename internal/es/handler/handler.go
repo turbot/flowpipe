@@ -85,6 +85,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 				ID:                 executionID,
 				PipelineExecutions: map[string]*execution.PipelineExecution{},
 				Lock:               event.GetEventStoreMutex(executionID),
+				InternalMapLock:    &sync.Mutex{},
 			},
 		}
 
