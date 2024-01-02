@@ -67,6 +67,10 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipeline
 		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
 	}
 
+	if pex.Status == expectedState {
+		return ex, pex, nil
+	}
+
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < waitRetry; i++ {
 		time.Sleep(waitTime)

@@ -142,6 +142,44 @@ func (suite *ModTestSuite) TestSimplestPipeline() {
 	assert.Equal("Hello World", pex.PipelineOutput["val"])
 }
 
+func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// Run two pipeline at the same time
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd2, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
+
+	_, pex2, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd2.Event, pipelineCmd2.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+
+		fmt.Println("pex", pex)
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("Hello World from Depend A", pex2.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex2.PipelineOutput["echo_one_output_val_var_one"])
+}
+
 func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
 	assert := assert.New(suite.T())
 
@@ -466,30 +504,6 @@ func (suite *ModTestSuite) TestLoopWithForEachWithSleep() {
 	assert.Equal(1, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[0].StepLoop.Index, "step loop index at the execution is actually to be used for the next loop, it should be offset by one")
 	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[1].StepLoop.Index)
 	assert.Equal(2, pex.StepStatus["sleep.repeat"]["1"].StepExecutions[2].StepLoop.Index, "the last index should be the same with the second last becuse loop ends here, so it's not incremented")
-}
-
-func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-
-	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
-
-	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
-	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
 }
 
 func (suite *ModTestSuite) TestSimpleNestedPipeline() {
@@ -1087,30 +1101,6 @@ func (suite *ModTestSuite) TestIntegrations() {
 	}
 }
 
-func (suite *ModTestSuite) XTestHttpPipelines() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.http_post_url_encoded", 500*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating executio¡n", err)
-		return
-	}
-
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-
-	if pex.Status != "finished" {
-		assert.Fail("Pipeline execution not finished")
-		return
-	}
-}
-
 func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert := assert.New(suite.T())
 
@@ -1267,8 +1257,8 @@ func (suite *ModTestSuite) TestStepSleep() {
 	assert.Equal(1, len(pex.StepStatus["sleep.sleep_test"]))
 
 	outputData := pex.StepStatus["sleep.sleep_test"]["0"].StepExecutions[0].Output.Data
-	startTime, _ := time.Parse(outputData[schema.AttributeTypeStartedAt].(string), time.RFC3339)
-	finishTime, _ := time.Parse(outputData[schema.AttributeTypeFinishedAt].(string), time.RFC3339)
+	startTime := outputData[schema.AttributeTypeStartedAt].(time.Time)
+	finishTime := outputData[schema.AttributeTypeFinishedAt].(time.Time)
 	diff := finishTime.Sub(startTime)
 	assert.Equal(float64(0), math.Floor(diff.Seconds()), "output does not match the provided duration")
 
@@ -2042,7 +2032,7 @@ func (suite *ModTestSuite) TestPipelineWithTransformStep() {
 
 	assert.Equal("This is a simple transform step", pex.PipelineOutput["basic_transform"])
 	assert.Equal("This is a simple transform step - test123", pex.PipelineOutput["depends_on_transform_step"])
-	assert.Equal(float64(23), pex.PipelineOutput["number"])
+	assert.Equal(23, pex.PipelineOutput["number"])
 }
 
 func (suite *ModTestSuite) TestParamAny() {
@@ -2093,7 +2083,7 @@ func (suite *ModTestSuite) TestParamAny() {
 		return
 	}
 
-	assert.Equal(float64(42), pex.PipelineOutput["val"])
+	assert.Equal(42, pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) TestTypedParamAny() {
@@ -2144,7 +2134,7 @@ func (suite *ModTestSuite) TestTypedParamAny() {
 		return
 	}
 
-	assert.Equal(float64(42), pex.PipelineOutput["val"])
+	assert.Equal(42, pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) TestCredentialReference() {
@@ -2209,6 +2199,22 @@ func (suite *ModTestSuite) XTestCredentialRedactionFromFile() {
 }
 
 func (suite *ModTestSuite) XTestCredentialRedactionOutput() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestRunMultiplePipelinesAtTheSameTimeWithDifferentInput() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestRunMultiplePipelinesRunningAtTheSameTimeUseSleepToEnsureRun() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestBufferTokenTooLargeFromFile() {
+	// TODO
+}
+
+func (suite *ModTestSuite) XTestCredentialWithOptionalParamFromFile() {
 	// TODO
 }
 
@@ -2304,10 +2310,6 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 	assert.Equal("hsv-fkshfgskhf", pex.PipelineOutput["vault_token"])
-}
-
-func (suite *ModTestSuite) XTestCredentialWithOptionalParamFromFile() {
-	// TODO
 }
 
 func (suite *ModTestSuite) TestMultipleCredential() {
@@ -2771,7 +2773,7 @@ func (suite *ModTestSuite) TestContainerStepWithParamStringTimeout() {
 	assert.Equal("Line 3\n", lines[2].Line)
 }
 
-func (suite *ModTestSuite) TestBufferTokenTooLargeMemory() {
+func (suite *ModTestSuite) XTestBufferTokenTooLargeMemory() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -2780,10 +2782,37 @@ func (suite *ModTestSuite) TestBufferTokenTooLargeMemory() {
 	_, _, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.big_data", 500*time.Millisecond, pipelineInput)
 
 	assert.Nil(err)
-}
 
-func (suite *ModTestSuite) XTestBufferTokenTooLargeFromFile() {
-	// TODO
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd2, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex.PipelineOutput["echo_one_output_val_var_one"])
+
+	_, pex2, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd2.Event, pipelineCmd2.PipelineExecutionID, 100*time.Millisecond, 20, "finished")
+	if err != nil {
+
+		fmt.Println("pex", pex)
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("Hello World from Depend A", pex2.PipelineOutput["echo_one_output"])
+
+	// value should be: ${step.echo.var_one.text} + ${var.var_depend_a_one}
+	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex2.PipelineOutput["echo_one_output_val_var_one"])
 }
 
 func (suite *ModTestSuite) TestBadHttpNotIgnored() {

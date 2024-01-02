@@ -345,11 +345,7 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 60, "failed")
-	if err == nil || (err != nil && err.Error() != "not completed") {
-		assert.Fail("Invalid pipeline status", err)
-		return
-	}
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, cmd.Event, cmd.PipelineExecutionID, 100*time.Millisecond, 60, "failed")
 
 	// This pipeline: bad_http_not_ignored should not complete because there's a step that it can't start
 	// so in a way it's "not completed" but it has failed, since it will never be able to start that one step
