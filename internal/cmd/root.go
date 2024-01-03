@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -19,7 +18,7 @@ import (
 var outputMode types.OutputMode
 
 // Build the cobra command that handles our command line tool.
-func rootCommand(ctx context.Context) *cobra.Command {
+func rootCommand() *cobra.Command {
 	// Define our command
 	rootCmd := &cobra.Command{
 		Use:     app_specific.AppName,
@@ -28,9 +27,7 @@ func rootCommand(ctx context.Context) *cobra.Command {
 		Version: viper.GetString("main.version"),
 		Run: func(cmd *cobra.Command, args []string) {
 			err := cmd.Help()
-			if err != nil {
-				error_helpers.FailOnError(err)
-			}
+			error_helpers.FailOnError(err)
 		},
 	}
 	rootCmd.SetVersionTemplate("Flowpipe v{{.Version}}\n")
@@ -62,11 +59,12 @@ func rootCommand(ctx context.Context) *cobra.Command {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 
 	// add all the subcommands
-	rootCmd.AddCommand(serverCmd())
-	rootCmd.AddCommand(pipelineCmd())
-	rootCmd.AddCommand(triggerCmd())
-	rootCmd.AddCommand(processCmd())
-	rootCmd.AddCommand(modCmd())
+	rootCmd.AddCommand(
+		serverCmd(),
+		pipelineCmd(),
+		triggerCmd(),
+		processCmd(),
+		modCmd())
 
 	return rootCmd
 }
