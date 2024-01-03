@@ -31,6 +31,12 @@ func (h StepPipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepPipelineStarted")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	ex, err := execution.GetExecution(evt.Event.ExecutionID)
 	if err != nil {
 		slog.Error("step_pipeline_started: Error loading pipeline execution", "error", err)

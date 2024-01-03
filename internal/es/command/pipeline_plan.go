@@ -206,15 +206,15 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Pipeline has been planned, now publish this event
-	if err := h.EventBus.PublishWithLock(ctx, e, plannerMutex); err != nil {
-		return h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pex.Name, "")), plannerMutex)
+	if err := h.EventBus.Publish(ctx, e); err != nil {
+		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pex.Name, "")))
 	}
 
 	return nil
 }
 
 func (h PipelinePlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, cmd *event.PipelinePlan, err error, pipelineName, stepName string) error {
-	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pipelineName, stepName)), plannerMutex)
+	publishErr := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelinePlanToPipelineFailed(cmd, err, pipelineName, stepName)))
 	if publishErr != nil {
 		slog.Error("pipeline_plan: Error publishing pipeline failed event", "error", publishErr)
 	}

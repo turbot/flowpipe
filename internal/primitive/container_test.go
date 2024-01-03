@@ -113,6 +113,10 @@ func TestContainerStepInvalidImage(t *testing.T) {
 
 func TestContainerStepInvalidMemory(t *testing.T) {
 	ctx := context.Background()
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
 
 	assert := assert.New(t)
 	hr := Container{}
@@ -122,14 +126,14 @@ func TestContainerStepInvalidMemory(t *testing.T) {
 		schema.AttributeTypeCmd:     []interface{}{"echo", "hello world"},
 		schema.AttributeTypeEnv:     map[string]interface{}{"FOO": "bar"},
 		schema.AttributeTypeTimeout: int64(120000),
-		schema.LabelName:            "container_test",
+		schema.LabelName:            "container_test_invalid_memory",
 		schema.AttributeTypeMemory:  int64(1),
 	})
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 
-	output.HasErrors()
+	assert.True(output.HasErrors())
 	assert.Equal(1, len(output.Errors))
 	assert.Contains(output.Errors[0].Error.Detail, "Minimum memory limit allowed is 6MB")
 	assert.Equal(500, output.Errors[0].Error.Status)
@@ -181,6 +185,10 @@ func TestContainerStepInvalidEntrypoint(t *testing.T) {
 
 func TestContainerStepTimeoutString(t *testing.T) {
 	ctx := context.Background()
+	err := docker.Initialize(ctx)
+	if err != nil {
+		assert.Fail(t, "Error initializing Docker client", err)
+	}
 
 	assert := assert.New(t)
 	hr := Container{}

@@ -3,7 +3,6 @@ package command
 import (
 	"context"
 	"strconv"
-	"sync"
 
 	"log/slog"
 
@@ -63,7 +62,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(cmd.Event.ExecutionID, cmd.PipelineExecutionID)
 	if err != nil {
 		slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+		return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 	}
 	pex := ex.PipelineExecutions[cmd.PipelineExecutionID]
 
@@ -76,19 +75,19 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 	stepDefn := pipelineDefn.GetStep(cmd.StepName)
 	if stepDefn == nil {
 		slog.Error("step not found", "step_name", cmd.StepName)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, perr.BadRequestWithMessage("step not found"))
+		return h.raiseNewPipelineFailedEvent(ctx, cmd, perr.BadRequestWithMessage("step not found"))
 	}
 
 	stepForEach := stepDefn.GetForEach()
 	if helpers.IsNil(stepForEach) {
 		slog.Error("step does not have a for_each", "step_name", cmd.StepName)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, perr.BadRequestWithMessage("step does not have a for_each"))
+		return h.raiseNewPipelineFailedEvent(ctx, cmd, perr.BadRequestWithMessage("step does not have a for_each"))
 	}
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
 		slog.Error("Error building eval context for for_each", "error", err)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+		return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 	}
 
 	if stepDefn.GetUnresolvedBodies()["loop"] != nil {
@@ -111,7 +110,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 
 	if diags.HasErrors() {
 		err := error_helpers.HclDiagsToError("param", diags)
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+		return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 	}
 
 	forEachCtyVals := map[string]map[string]cty.Value{}
@@ -134,7 +133,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		}
 	} else {
 		err := perr.BadRequestWithMessage("for_each must be a list, set, tuple, map or object for step " + stepDefn.GetName())
-		return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+		return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 	}
 
 	var nextSteps []modconfig.NextStep
@@ -184,7 +183,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("diags", diags)
 				slog.Error("Error evaluating if condition", "error", err)
-				return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+				return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 			}
 
 			if val.False() {
@@ -202,13 +201,13 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 			evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
 			if err != nil {
 				slog.Error("Error adding credentials to eval context", "error", err)
-				return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+				return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 			}
 
 			stepInputs, err := stepDefn.GetInputs(evalContext)
 			if err != nil {
 				slog.Error("Error resolving step inputs for for_each step", "error", err)
-				return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+				return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 			}
 			nextStep.Input = stepInputs
 		} else {
@@ -228,9 +227,9 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		nextSteps = append(nextSteps, nextStep)
 	}
 
-	err = h.EventBus.PublishWithLock(ctx, event.NewStepForEachPlannedFromStepForEachPlan(cmd, nextSteps), plannerMutex)
+	err = h.EventBus.Publish(ctx, event.NewStepForEachPlannedFromStepForEachPlan(cmd, nextSteps))
 	if err != nil {
-		err = h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err)
+		err = h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 		if err != nil {
 			slog.Error("Error publishing new pipeline failed event", "error", err)
 		}
@@ -238,8 +237,8 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 	return nil
 }
 
-func (h StepForEachPlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, plannerMutex *sync.Mutex, e *event.StepForEachPlan, err error) error {
-	publishErr := h.EventBus.PublishWithLock(ctx, event.NewPipelineFailedFromStepForEachPlan(e, err), plannerMutex)
+func (h StepForEachPlanHandler) raiseNewPipelineFailedEvent(ctx context.Context, e *event.StepForEachPlan, err error) error {
+	publishErr := h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepForEachPlan(e, err))
 	if publishErr != nil {
 		slog.Error("Error publishing pipeline failed event", "error", publishErr)
 	}

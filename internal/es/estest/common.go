@@ -55,9 +55,17 @@ func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Dur
 	return ex, pipelineCmd, nil
 }
 
-func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.ExecutionInMemory, *execution.PipelineExecution, error) {
+func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.ExecutionInMemory, *execution.PipelineExecution, error) {
 
-	ex, err := execution.GetExecution(event.ExecutionID)
+	plannerMutex := event.GetEventStoreMutex(evt.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		if plannerMutex != nil {
+			plannerMutex.Unlock()
+		}
+	}()
+
+	ex, err := execution.GetExecution(evt.ExecutionID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -73,9 +81,15 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, event *event.Event, pipeline
 
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < waitRetry; i++ {
+		plannerMutex.Unlock()
+		plannerMutex = nil
+
 		time.Sleep(waitTime)
 
-		ex, err = execution.GetExecution(event.ExecutionID)
+		plannerMutex = event.GetEventStoreMutex(evt.ExecutionID)
+		plannerMutex.Lock()
+
+		ex, err = execution.GetExecution(evt.ExecutionID)
 		if err != nil {
 			return nil, nil, err
 		}

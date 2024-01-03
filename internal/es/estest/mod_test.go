@@ -21,7 +21,9 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/container"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -2156,9 +2158,35 @@ func (suite *ModTestSuite) TestCredentialReference() {
 
 	assert.Equal("aws_static_foo", envMap["AWS_ACCESS_KEY_ID"])
 	assert.Equal("aws_static_key_key_key", envMap["AWS_SECRET_ACCESS_KEY"])
+
+	// Now load the execution from file, it should be redacted
+	time.Sleep(50 * time.Millisecond)
+
+	ex, err := execution.NewExecution(suite.ctx)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	err = ex.LoadProcess(pipelineCmd.Event)
+	if err != nil {
+		assert.Fail("Error loading process", err)
+		return
+	}
+
+	pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
+
+	// This is not redacted because we're looking for either field name or field value, and neither will hit the redaction list
+	assert.Equal("aws_static_foo", pex.PipelineOutput["val_access_key"])
+
+	// Check if the environment function is created successfully
+	envMap = pex.PipelineOutput["val"].(map[string]interface{})
+
+	assert.Equal(sanitize.RedactedStr, envMap["AWS_ACCESS_KEY_ID"])
+	assert.Equal(sanitize.RedactedStr, envMap["AWS_SECRET_ACCESS_KEY"])
 }
 
-func (suite *ModTestSuite) TestCredentialRedactionFromMemory() {
+func (suite *ModTestSuite) TestCredentialRedactionFromMemoryAndFile() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -2185,14 +2213,33 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemory() {
 	// not redacted
 	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
-}
 
-func (suite *ModTestSuite) XTestCredentialRedactionFromFile() {
-	// TODO
-}
+	// Now load the execution from file, it should be redacted
+	time.Sleep(50 * time.Millisecond)
 
-func (suite *ModTestSuite) XTestCredentialRedactionOutput() {
-	// TODO
+	ex, err := execution.NewExecution(suite.ctx)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	err = ex.LoadProcess(pipelineCmd.Event)
+	if err != nil {
+		assert.Fail("Error loading process", err)
+		return
+	}
+
+	pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
+
+	// Since we are reading this from file, they should be redacted
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["facebook_access_token"])
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["val"].(map[string]interface{})["pattern_match_aws_access_key_id"])
+
+	// not redacted
+	assert.Equal("AKFFFAKEFAKEFAKEFAKE", pex.PipelineOutput["val"].(map[string]interface{})["close_but_no_cigar"])
+	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
 }
 
 func (suite *ModTestSuite) XTestRunMultiplePipelinesAtTheSameTimeWithDifferentInput() {
@@ -2234,6 +2281,25 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	// Reading from memory, not redacted
 	assert.Equal("test.1.2.3", pex.PipelineOutput["slack_token"])
 
+	// Now load the execution from file, it should be redacted
+	time.Sleep(50 * time.Millisecond)
+
+	ex, err := execution.NewExecution(suite.ctx)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	err = ex.LoadProcess(pipelineCmd.Event)
+	if err != nil {
+		assert.Fail("Error loading process", err)
+		return
+	}
+
+	pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
+
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["slack_token"])
+
 	//
 	pipelineInput = modconfig.Input{}
 	os.Setenv("GITLAB_TOKEN", "glpat-gsfio3wtyr92364ifkw")
@@ -2252,6 +2318,24 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 
 	// From memory not redacted
 	assert.Equal("glpat-gsfio3wtyr92364ifkw", pex.PipelineOutput["gitlab_token"])
+
+	// Now load the execution from file, it should be redacted
+	time.Sleep(50 * time.Millisecond)
+
+	ex, err = execution.NewExecution(suite.ctx)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	err = ex.LoadProcess(pipelineCmd.Event)
+	if err != nil {
+		assert.Fail("Error loading process", err)
+		return
+	}
+
+	pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
+	assert.Equal(sanitize.RedactedStr, pex.PipelineOutput["gitlab_token"])
 
 	//
 	pipelineInput = modconfig.Input{}
