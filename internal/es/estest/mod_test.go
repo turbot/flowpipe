@@ -3473,6 +3473,22 @@ func (suite *ModTestSuite) TestSimpleErrorIgnoredWithIfMatches() {
 	assert.Equal("should be calculated", pex.PipelineOutput["val"])
 }
 
+func (suite *ModTestSuite) TestTier3PipelinesNotRunnableDirectly() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "mod_depend_b.pipeline.echo_from_depend_b", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "pipeline definition not found: mod_depend_b.pipeline.echo_from_depend_b")
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
