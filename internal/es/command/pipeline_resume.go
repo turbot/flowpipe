@@ -29,6 +29,12 @@ func (h PipelineResumeHandler) Handle(ctx context.Context, c interface{}) error 
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineResume")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	ex, err := execution.GetExecution(cmd.Event.ExecutionID)
 	if err != nil {
 		slog.Error("pipeline_resume: Error loading pipeline execution", "error", err)

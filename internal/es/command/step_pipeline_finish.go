@@ -38,6 +38,12 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineStepFinish")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(cmd.Event.ExecutionID, cmd.PipelineExecutionID)
 	if err != nil {
 		slog.Error("pipeline_plan: Error loading pipeline execution", "error", err)

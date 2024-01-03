@@ -48,6 +48,14 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
+		plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+		plannerMutex.Lock()
+		defer func() {
+			if plannerMutex != nil {
+				plannerMutex.Unlock()
+			}
+		}()
+
 		executionID := cmd.Event.ExecutionID
 
 		ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
@@ -100,6 +108,10 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			o.RenderServerOutput(ctx, step)
 		}
 
+		// Release the lock so we can have multiple steps running at the same time
+		plannerMutex.Unlock()
+		plannerMutex = nil
+
 		var primitiveError error
 		switch stepDefn.GetType() {
 		case schema.BlockTypePipelineStepHttp:
@@ -135,12 +147,20 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			slog.Error("Unknown step type", "type", stepDefn.GetType())
+
+			plannerMutex = event.GetEventStoreMutex(cmd.Event.ExecutionID)
+			plannerMutex.Lock()
+
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				slog.Error("Error publishing event", "error", err2)
 			}
+
 			return
 		}
+
+		plannerMutex = event.GetEventStoreMutex(cmd.Event.ExecutionID)
+		plannerMutex.Lock()
 
 		if primitiveError != nil {
 			slog.Error("primitive failed", "error", primitiveError)

@@ -2,9 +2,10 @@ package handler
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
-	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -25,23 +26,29 @@ func (PipelineQueued) NewEvent() interface{} {
 // * PipelineQueued -> PipelineLoad command -> PipelineLoaded event handler
 func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 
-	e, ok := ei.(*event.PipelineQueued)
+	evt, ok := ei.(*event.PipelineQueued)
 
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.PipelineQueued", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineQueued")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(e.Event.CreatedAt, "pipeline"),
-			e.Event.ExecutionID, e.Name, "queued")
+			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
+			evt.Event.ExecutionID, evt.Name, "queued")
 		output.RenderServerOutput(ctx, p)
 	}
 
-	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(e))
+	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(evt))
 	if err != nil {
-		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineQueuedToPipelineFail(e, err)))
+		return h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineQueuedToPipelineFail(evt, err)))
 	}
 	return h.CommandBus.Send(ctx, cmd)
 }

@@ -26,6 +26,12 @@ func (h PipelineStartHandler) Handle(ctx context.Context, c interface{}) error {
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineStart")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	e, err := event.NewPipelineStarted(event.ForPipelineStart(cmd))
 	if err != nil {
 		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineStartToPipelineFailed(cmd, err)))

@@ -29,14 +29,17 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineCanceled")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	ex, err := execution.GetExecution(evt.Event.ExecutionID)
 	if err != nil {
 		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
 		return err
 	}
-
-	ex.Lock.Lock()
-	defer ex.Lock.Unlock()
 
 	err = ex.SaveToFile()
 	if err != nil {

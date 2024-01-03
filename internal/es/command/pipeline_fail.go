@@ -29,6 +29,12 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 		return perr.BadRequestWithMessage("pipeline_fail handler expected PipelineFail event")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	executionID := cmd.Event.ExecutionID
 	ex, _, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
 	if err != nil {

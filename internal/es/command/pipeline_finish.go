@@ -29,6 +29,12 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineFinish")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	executionID := cmd.Event.ExecutionID
 
 	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(executionID, cmd.PipelineExecutionID)
