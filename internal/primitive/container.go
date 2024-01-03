@@ -194,10 +194,6 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		return nil, err
 	}
 
-	if input[schema.AttributeTypeImage] != nil {
-		c.Image = input[schema.AttributeTypeImage].(string)
-	}
-
 	if input[schema.AttributeTypeCmd] != nil {
 		c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
 	}
@@ -352,6 +348,11 @@ func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input
 		c = nil
 	}
 
+	// if image has been changed in input ignore cache and create new reference
+	if c != nil && input[schema.AttributeTypeImage] != nil && c.Image != input[schema.AttributeTypeImage].(string) {
+		c = nil
+	}
+
 	if c != nil {
 		return c, nil
 	}
@@ -367,6 +368,10 @@ func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input
 	)
 	if err != nil {
 		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
+	}
+
+	if input[schema.AttributeTypeImage] != nil {
+		c.Image = input[schema.AttributeTypeImage].(string)
 	}
 
 	if input[schema.AttributeTypeSource] != nil {
