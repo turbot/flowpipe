@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"sync"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/container"
@@ -14,6 +15,9 @@ import (
 )
 
 type Container struct{}
+
+var containerCache = map[string]*container.Container{}
+var containerCacheMutex sync.Mutex
 
 func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
@@ -185,22 +189,9 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		return nil, err
 	}
 
-	c, err := container.NewContainer(
-		container.WithContext(context.Background()),
-		container.WithRunContext(ctx),
-		container.WithDockerClient(docker.GlobalDockerClient),
-		container.WithName(input[schema.LabelName].(string)),
-	)
+	c, err := e.getFromCacheOrNew(ctx, input)
 	if err != nil {
-		return nil, perr.InternalWithMessage("Error creating function config with the provided options:" + err.Error())
-	}
-
-	if input[schema.AttributeTypeImage] != nil {
-		c.Image = input[schema.AttributeTypeImage].(string)
-	}
-
-	if input[schema.AttributeTypeSource] != nil {
-		c.Source = input[schema.AttributeTypeSource].(string)
+		return nil, err
 	}
 
 	if input[schema.AttributeTypeCmd] != nil {
@@ -310,11 +301,6 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		c.MemorySwappiness = &memorySwappiness
 	}
 
-	err = c.Load()
-	if err != nil {
-		return nil, perr.InternalWithMessage("Error loading function config: " + err.Error())
-	}
-
 	// Construct the output
 	output := modconfig.Output{
 		Data: map[string]interface{}{},
@@ -351,4 +337,53 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	}
 
 	return &output, nil
+}
+
+func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input) (*container.Container, error) {
+	name := input[schema.LabelName].(string)
+	c := containerCache[name]
+
+	// if Dockerfile source path changed ignore cache & rebuild
+	if c != nil && input[schema.AttributeTypeSource] != nil && c.Source != input[schema.AttributeTypeSource].(string) {
+		c = nil
+	}
+
+	// if image has been changed in input ignore cache and create new reference
+	if c != nil && input[schema.AttributeTypeImage] != nil && c.Image != input[schema.AttributeTypeImage].(string) {
+		c = nil
+	}
+
+	if c != nil {
+		return c, nil
+	}
+
+	containerCacheMutex.Lock()
+	defer containerCacheMutex.Unlock()
+
+	c, err := container.NewContainer(
+		container.WithContext(context.Background()),
+		container.WithRunContext(ctx),
+		container.WithDockerClient(docker.GlobalDockerClient),
+		container.WithName(name),
+	)
+	if err != nil {
+		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
+	}
+
+	if input[schema.AttributeTypeImage] != nil {
+		c.Image = input[schema.AttributeTypeImage].(string)
+	}
+
+	if input[schema.AttributeTypeSource] != nil {
+		c.Source = input[schema.AttributeTypeSource].(string)
+	}
+
+	err = c.Load()
+	if err != nil {
+		return nil, perr.InternalWithMessage("failed loading container config: " + err.Error())
+	}
+
+	containerCache[name] = c
+
+	return c, nil
 }
