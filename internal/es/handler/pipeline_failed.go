@@ -32,6 +32,12 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	parentStepExecution, err := ex.ParentStepExecution(evt.PipelineExecutionID)
 	if err != nil {
 		// We're already in a pipeline failed event handler
@@ -69,9 +75,6 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		p.Output = evt.PipelineOutput
 		output.RenderServerOutput(ctx, p)
 	}
-
-	ex.Lock.Lock()
-	defer ex.Lock.Unlock()
 
 	err = ex.SaveToFile()
 	if err != nil {

@@ -32,6 +32,12 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelinePlanned")
 	}
 
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
 	if err != nil {
 		slog.Error("pipeline_planned: Error loading pipeline execution", "error", err)

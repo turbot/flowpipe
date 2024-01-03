@@ -20,7 +20,6 @@ type CommandHandler struct {
 
 type FpEventBus interface {
 	Publish(ctx context.Context, event interface{}) error
-	PublishWithLock(ctx context.Context, event interface{}, lock *sync.Mutex) error
 }
 
 type FpEventBusImpl struct {
@@ -33,18 +32,6 @@ func (c FpEventBusImpl) Publish(ctx context.Context, event interface{}) error {
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
 	//
 	err := LogEventMessage(ctx, event, nil)
-	if err != nil {
-		return err
-	}
-
-	return c.Eb.Publish(ctx, event)
-}
-
-func (c FpEventBusImpl) PublishWithLock(ctx context.Context, event interface{}, lock *sync.Mutex) error {
-	// Unfortunately we need to save the event log *before* we send this command to Watermill. This mean we have to figure out what the
-	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
-	//
-	err := LogEventMessage(ctx, event, lock)
 	if err != nil {
 		return err
 	}
@@ -77,11 +64,6 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 	if err != nil {
 		slog.Error("Error getting execution", "error", err)
 		return perr.InternalWithMessage("Error getting execution")
-	}
-
-	if lock == nil {
-		ex.Lock.Lock()
-		defer ex.Lock.Unlock()
 	}
 
 	err = ex.AddEvent(logMessage)

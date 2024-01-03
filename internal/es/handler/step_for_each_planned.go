@@ -22,25 +22,31 @@ func (StepForEachPlanned) NewEvent() interface{} {
 }
 
 func (h StepForEachPlanned) Handle(ctx context.Context, ei interface{}) error {
-	e, ok := ei.(*event.StepForEachPlanned)
+	evt, ok := ei.(*event.StepForEachPlanned)
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.StepForEachPlanned", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.StepForEachPlanned")
 	}
 
-	slog.Debug("step_for_each_planned event handler", "event", e)
+	slog.Debug("step_for_each_planned event handler", "event", evt)
 
-	if len(e.NextSteps) == 0 {
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
+	if len(evt.NextSteps) == 0 {
 		slog.Debug("step_for_each_planned event handler - no next steps")
 
 		// If nothing is planned, then we're done for this "step_for_each" step. Run the pipeline planner (not the step_for_each_planner)
-		cmd := event.NewPipelinePlanFromStepForEachPlanned(e)
+		cmd := event.NewPipelinePlanFromStepForEachPlanned(evt)
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	for i := range e.NextSteps {
-		nextStep := e.NextSteps[i]
-		runOneStep(ctx, h.CommandBus, e, &nextStep)
+	for i := range evt.NextSteps {
+		nextStep := evt.NextSteps[i]
+		runOneStep(ctx, h.CommandBus, evt, &nextStep)
 	}
 	return nil
 }

@@ -21,7 +21,6 @@ type EventHandler struct {
 
 type FpCommandBus interface {
 	Send(ctx context.Context, command interface{}) error
-	SendWithLock(ctx context.Context, command interface{}, lock *sync.Mutex) error
 }
 
 type FpCommandBusImpl struct {
@@ -35,18 +34,6 @@ func (c FpCommandBusImpl) Send(ctx context.Context, cmd interface{}) error {
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
 	//
 	err := LogEventMessage(ctx, cmd, nil)
-	if err != nil {
-		return err
-	}
-	return c.Cb.Send(ctx, cmd)
-}
-
-func (c FpCommandBusImpl) SendWithLock(ctx context.Context, cmd interface{}, lock *sync.Mutex) error {
-
-	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
-	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
-	//
-	err := LogEventMessage(ctx, cmd, lock)
 	if err != nil {
 		return err
 	}
@@ -85,7 +72,6 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 				ID:                 executionID,
 				PipelineExecutions: map[string]*execution.PipelineExecution{},
 				Lock:               event.GetEventStoreMutex(executionID),
-				InternalMapLock:    &sync.Mutex{},
 			},
 		}
 
@@ -102,11 +88,6 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 			slog.Error("Error getting execution from cache", "execution_id", executionID)
 			return perr.InternalWithMessage("Error getting execution from cache")
 		}
-	}
-
-	if lock == nil {
-		ex.Lock.Lock()
-		defer ex.Lock.Unlock()
 	}
 
 	err := ex.AddEvent(logMessage)

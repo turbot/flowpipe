@@ -33,6 +33,12 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	slog.Debug("pipeline_finished event handler", "executionID", evt.Event.ExecutionID, "pipelineExecutionID", evt.PipelineExecutionID)
 
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
 	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
 	if err != nil {
 		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
@@ -94,9 +100,6 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	if len(pipelineDefn.OutputConfig) > 0 {
 		data[schema.BlockTypePipelineOutput] = evt.PipelineOutput
 	}
-
-	ex.Lock.Lock()
-	defer ex.Lock.Unlock()
 
 	err = ex.SaveToFile()
 	if err != nil {

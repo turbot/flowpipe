@@ -346,10 +346,8 @@ func (ex *ExecutionInMemory) buildIntegrationMapForEvalContext(pipelineDefn *mod
 // StepDefinition returns the step definition for the given step execution ID.
 func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
 
-	ex.InternalMapLock.Lock()
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 	se, ok := pe.StepExecutions[stepExecutionID]
-	ex.InternalMapLock.Unlock()
 
 	if !ok {
 		return nil, perr.BadRequestWithMessage("step execution not found: " + stepExecutionID)
@@ -366,8 +364,6 @@ func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID
 }
 
 func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*modconfig.Pipeline, error) {
-	ex.InternalMapLock.Lock()
-	defer ex.InternalMapLock.Unlock()
 
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
@@ -391,9 +387,7 @@ func (ex *ExecutionInMemory) PipelineData(pipelineExecutionID string) (map[strin
 	}
 
 	// Add arguments data for this pipeline execution
-	ex.InternalMapLock.Lock()
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
-	ex.InternalMapLock.Unlock()
 
 	if !ok {
 		return nil, perr.BadRequestWithMessage("pipeline execution not found: " + pipelineExecutionID)
@@ -410,8 +404,6 @@ func (ex *ExecutionInMemory) PipelineData(pipelineExecutionID string) (map[strin
 // the given pipeline execution. The map is keyed by the step name. If a step
 // has a ForTemplate then the result is an array of outputs.
 func (ex *ExecutionInMemory) PipelineStepOutputs(pipelineExecutionID string) (map[string]interface{}, error) {
-	ex.InternalMapLock.Lock()
-	defer ex.InternalMapLock.Unlock()
 
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
@@ -452,8 +444,6 @@ func (ex *ExecutionInMemory) ParentStepExecution(pipelineExecutionID string) (*S
 }
 
 func (ex *ExecutionInMemory) PipelineStepExecutions(pipelineExecutionID, stepName string) []StepExecution {
-	ex.InternalMapLock.Lock()
-	defer ex.InternalMapLock.Unlock()
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	results := []StepExecution{}
@@ -466,8 +456,6 @@ func (ex *ExecutionInMemory) PipelineStepExecutions(pipelineExecutionID, stepNam
 }
 
 func (ex *ExecutionInMemory) ProcessEvents() error {
-	// Do not attempt to lock, the calling function must orchestrate the locking
-
 	for i := ex.LastProcessedEventIndex; i < len(ex.Events); i++ {
 		event := ex.Events[i]
 		err := ex.AppendEventLogEntry(event)

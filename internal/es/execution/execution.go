@@ -46,8 +46,7 @@ type Execution struct {
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
 
-	Lock            *sync.Mutex `json:"-"`
-	InternalMapLock *sync.Mutex `json:"-"`
+	Lock *sync.Mutex `json:"-"`
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {

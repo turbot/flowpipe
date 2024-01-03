@@ -18,6 +18,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -141,14 +142,20 @@ func (suite *EsTestSuite) TestExpressionWithDependenciesFunctions() {
 
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < 3 && !pex.IsComplete(); i++ {
+
 		time.Sleep(100 * time.Millisecond)
+
+		plannerMutex := event.GetEventStoreMutex(pipelineCmd.Event.ExecutionID)
+		plannerMutex.Lock()
 
 		ex, err = execution.GetExecution(pipelineCmd.Event.ExecutionID)
 		if err != nil {
+			plannerMutex.Unlock()
 			assert.Fail("Error loading execution", err)
 			return
 		}
 
+		plannerMutex.Unlock()
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 	}
 

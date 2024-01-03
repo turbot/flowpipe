@@ -20,12 +20,18 @@ func (h PipelineCancelHandler) NewCommand() interface{} {
 }
 
 func (h PipelineCancelHandler) Handle(ctx context.Context, c interface{}) error {
-	evt, ok := c.(*event.PipelineCancel)
+	cmd, ok := c.(*event.PipelineCancel)
 	if !ok {
 		slog.Error("invalid command type", "expected", "*event.PipelineCancel", "actual", c)
 		return perr.BadRequestWithMessage("invalid command type expected *event.PipelineCancel")
 	}
 
-	e := event.NewPipelineCanceledFromPipelineCancel(evt)
+	plannerMutex := event.GetEventStoreMutex(cmd.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
+	e := event.NewPipelineCanceledFromPipelineCancel(cmd)
 	return h.EventBus.Publish(ctx, e)
 }
