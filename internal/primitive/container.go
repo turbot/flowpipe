@@ -194,6 +194,10 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		return nil, err
 	}
 
+	if input[schema.AttributeTypeImage] != nil {
+		c.Image = input[schema.AttributeTypeImage].(string)
+	}
+
 	if input[schema.AttributeTypeCmd] != nil {
 		c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
 	}
@@ -342,8 +346,13 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input) (*container.Container, error) {
 	name := input[schema.LabelName].(string)
 	c := containerCache[name]
+
+	// if Dockerfile source path changed ignore cache & rebuild
+	if c != nil && input[schema.AttributeTypeSource] != nil && c.Source != input[schema.AttributeTypeSource].(string) {
+		c = nil
+	}
+
 	if c != nil {
-		// TODO: Figure out if need to clear from cache
 		return c, nil
 	}
 
@@ -358,10 +367,6 @@ func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input
 	)
 	if err != nil {
 		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
-	}
-
-	if input[schema.AttributeTypeImage] != nil {
-		c.Image = input[schema.AttributeTypeImage].(string)
 	}
 
 	if input[schema.AttributeTypeSource] != nil {
