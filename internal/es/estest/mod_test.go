@@ -3,7 +3,9 @@ package estest
 // Basic imports
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"os"
@@ -1402,6 +1404,19 @@ func (suite *ModTestSuite) TestErrorWithIfMultiStep() {
 
 	// The step should be executed 3 times. First attempt + 2 retries
 	assert.Equal(3, len(pex.StepStatus["http.bad_http"]["0"].StepExecutions))
+
+	if len(pex.StepStatus["http.bad_http"]["0"].StepExecutions) != 3 {
+		// Print some debugging info trying to understand why this pipeline test often fails
+		jsonData, err := json.Marshal(pex.StepStatus["http.bad_http"]["0"].StepExecutions)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// Convert JSON bytes to string and print
+		jsonString := string(jsonData)
+		fmt.Println(jsonString) //nolint:forbidigo // test code
+	}
+
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[1].Output.Status)
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[2].Output.Status)
