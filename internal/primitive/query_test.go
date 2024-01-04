@@ -404,6 +404,39 @@ func TestQueryDuckDB(t *testing.T) {
 	assert.Equal("{\"theme\": \"dark\", \"notifications\": true}", rows[2]["preferences"])
 }
 
+func TestQuerySQLiteDB(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:              "select * from employee order by id;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(15, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	rows := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+
+	// Row 1
+	assert.Equal(int64(1), rows[0]["id"])
+	assert.Equal("john@example.com", rows[0]["email"])
+	assert.Equal("{\"theme\": \"dark\", \"notifications\": true}", rows[0]["preferences"])
+
+	// Row 2
+	assert.Equal(int64(2), rows[1]["id"])
+	assert.Equal("adam@example.com", rows[1]["email"])
+	assert.Equal("{\"theme\": \"dark\", \"notifications\": true}", rows[1]["preferences"])
+
+	// Row 3
+	assert.Equal(int64(3), rows[2]["id"])
+	assert.Equal("alice@example.com", rows[2]["email"])
+	assert.Equal("{\"theme\": \"dark\", \"notifications\": false}", rows[2]["preferences"])
+}
+
 func TestQueryInvalidDatabase(t *testing.T) {
 	ctx := context.Background()
 
