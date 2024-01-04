@@ -500,3 +500,37 @@ func TestQueryInvalidDatabase(t *testing.T) {
 	assert.NotNil(err)
 	assert.Equal("Unsupported database type", err.Error())
 }
+
+func TestQueryTimeout(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:              "select * from employee order by id;",
+		schema.AttributeTypeTimeout:          int64(1),
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "Query execution exceeded timeout")
+}
+
+func TestQueryTimeoutInString(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:              "select * from employee order by id;",
+		schema.AttributeTypeTimeout:          "1ms",
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "Query execution exceeded timeout")
+}

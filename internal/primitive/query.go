@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -171,7 +172,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	start := time.Now().UTC()
 	rows, err := db.QueryContext(ctx, sql, args...)
 	if err != nil {
-		if err == context.DeadlineExceeded || err == context.Canceled {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 			return nil, perr.InternalWithMessage("Query execution exceeded timeout")
 		}
 		return nil, err
@@ -214,6 +215,9 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	}
 
 	if err = rows.Err(); err != nil {
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return nil, perr.InternalWithMessage("Query execution exceeded timeout")
+		}
 		return nil, err
 	}
 
