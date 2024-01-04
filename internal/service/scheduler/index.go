@@ -176,7 +176,24 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
 
 		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
-		_, err := s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
+		var err error
+		switch strings.ToLower(config.Schedule) {
+		case "hourly":
+			ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		case "daily":
+			ts := randomizeTimestamp(0.1, 0.5, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Day().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		case "weekly":
+			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Week().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		case "monthly":
+			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
+			_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
+		default:
+			_, err = s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
+		}
+
 		if err != nil {
 			return err
 		}
