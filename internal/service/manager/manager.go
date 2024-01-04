@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/turbot/pipe-fittings/schema"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
@@ -559,12 +560,6 @@ func renderServerTriggers(triggers map[string]*modconfig.Trigger) []types.Saniti
 			}
 		case schema.TriggerTypeSchedule:
 			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
-				o := types.NewServerOutputTrigger(prefix, key, tt)
-				o.Schedule = &tc.Schedule
-				outputs = append(outputs, o)
-			}
-		case schema.TriggerTypeInterval:
-			if tc, ok := t.Config.(*modconfig.TriggerInterval); ok {
 				o := types.NewServerOutputTrigger(prefix, key, tt)
 				o.Schedule = &tc.Schedule
 				outputs = append(outputs, o)
