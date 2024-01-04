@@ -40,16 +40,7 @@ type WebhookRequestUri struct {
 }
 
 type WebhookRequestQuery struct {
-	ExecutionMode *string `json:"execution_mode" form:"execution_mode" binding:"omitempty,oneof=synchronous asynchronous"`
 	WaitTime      *int    `json:"wait_time" form:"wait_time" binding:"omitempty"`
-}
-
-func (c *WebhookRequestQuery) GetExecutionMode() string {
-	executionMode := localconstants.DefaultExecutionMode
-	if c.ExecutionMode != nil {
-		executionMode = *c.ExecutionMode
-	}
-	return executionMode
 }
 
 func (c *WebhookRequestQuery) GetWaitTime() int {

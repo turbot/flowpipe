@@ -45,7 +45,6 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	executionMode := webhookQuery.GetExecutionMode()
 	waitRetry := webhookQuery.GetWaitTime()
 
 	webhookTriggerName := webhookUri.Trigger
@@ -65,7 +64,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	_, ok = t.Config.(*modconfig.TriggerHttp)
+	httpTriggerConfig, ok := t.Config.(*modconfig.TriggerHttp)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
 		return
@@ -167,7 +166,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	if executionMode == "synchronous" {
+	if httpTriggerConfig.ExecutionMode == "synchronous" {
 		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
 	}
