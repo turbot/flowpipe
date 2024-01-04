@@ -198,7 +198,7 @@ func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opt
 		return ""
 	}
 
-	c := opts.ColorGenerator.GetColorForElement(o.PipelineName)
+	c := opts.ColorGenerator.GetColorForElement(o.ExecutionID)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
 	dot := au.BrightBlack(".")
@@ -312,7 +312,7 @@ func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts Re
 		return ""
 	}
 
-	c := opts.ColorGenerator.GetColorForElement(o.PipelineName)
+	c := opts.ColorGenerator.GetColorForElement(o.ExecutionID)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
 	dot := au.BrightBlack(".")
