@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -81,6 +82,8 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 			slog.Error("Error setting execution in cache", "execution_id", executionID)
 			return perr.InternalWithMessage("Error setting execution in cache")
 		}
+
+		metrics.RunMetricInstance.StartExecution(executionID, pipelineQueueCmd.Name)
 	} else {
 		var err error
 		ex, err = execution.GetExecution(executionID)

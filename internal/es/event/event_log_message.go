@@ -2,6 +2,8 @@ package event
 
 import (
 	"sync"
+
+	"github.com/turbot/flowpipe/internal/metrics"
 )
 
 // Define a struct that represents your JSON structure
@@ -35,4 +37,5 @@ func ReleaseEventLogMutex(executionId string) {
 	defer eventStoreWriteMutexLock.Unlock()
 
 	delete(eventStoreWriteMutexes, executionId)
+	metrics.RunMetricInstance.EndExecution(executionId)
 }

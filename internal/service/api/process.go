@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
@@ -63,6 +64,26 @@ func (api *APIService) listProcess(c *gin.Context) {
 }
 
 func ListProcesses() (*types.ListProcessResponse, error) {
+	var processList []types.Process
+
+	allExec := metrics.RunMetricInstance.RunningExecutions()
+	for _, exMetric := range allExec {
+		slog.Debug("allExec", "ex", exMetric)
+		ex, err := execution.GetExecution(exMetric.ExecutionID)
+		if err != nil {
+			slog.Error("Error loading execution", "error", err)
+			return nil, err
+		}
+
+		processList = append(processList, types.Process{
+			ID:        ex.ID,
+			Pipeline:  exMetric.Pipeline,
+			CreatedAt: exMetric.StartTimestamp,
+			Status:    "started", // We assume started as the finished pipeline shouldn't be in the Metrics instance``
+		})
+
+	}
+
 	// Read the log directory to list out all the process that have been executed
 	eventStoreDir := filepaths.EventStoreDir()
 	processLogFiles, err := os.ReadDir(eventStoreDir)
@@ -78,7 +99,7 @@ func ListProcesses() (*types.ListProcessResponse, error) {
 	}
 
 	// Get the log entries using the execution ID and extract the pipeline name
-	var processList []types.Process
+
 	for _, execID := range executionIDs {
 
 		evt := &event.Event{
