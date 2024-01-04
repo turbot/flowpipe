@@ -346,7 +346,8 @@ func (api *APIService) getProcessExecution(c *gin.Context) {
 	}
 
 	if ex != nil {
-		c.JSON(http.StatusOK, ex)
+		c.JSON(http.StatusOK, ex.Execution)
+		return
 	}
 
 	evt := &event.Event{
