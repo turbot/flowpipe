@@ -167,27 +167,57 @@ func (api *APIService) getProcess(c *gin.Context) {
 }
 
 func GetProcess(executionId string) (*types.Process, error) {
-	var process types.Process
+
+	// check in memory first
+	ex, err := execution.GetExecution(executionId)
+	if err != nil && !perr.IsNotFound(err) {
+		return nil, err
+	}
+
+	// get outer pipeline (not child)
+	var outerPipeline *execution.PipelineExecution
+
+	if ex != nil {
+		for _, pex := range ex.PipelineExecutions {
+			if pex.ParentExecutionID == "" && pex.ParentStepExecutionID == "" {
+				outerPipeline = pex
+				break
+			}
+		}
+
+		if outerPipeline == nil {
+			return nil, perr.NotFoundWithMessage("No pipeline found for process " + executionId)
+		}
+
+		process := types.Process{
+			ID:        ex.ID,
+			Pipeline:  outerPipeline.Name,
+			CreatedAt: outerPipeline.StartTime,
+			Status:    outerPipeline.Status,
+		}
+
+		return &process, nil
+	}
+
+	// Read the execution from file system
 	evt := &event.Event{
 		ExecutionID: executionId,
 	}
 
 	// WithEvent loads the process
-	ex, err := execution.NewExecution(context.Background(), execution.WithEvent(evt))
+	exFile, err := execution.NewExecution(context.Background(), execution.WithEvent(evt))
 	if err != nil {
 		return nil, err
 	}
 
-	// get outer pipeline (not child)
-	var outerPipeline execution.PipelineExecution
-	for _, pipeline := range ex.PipelineExecutions {
-		if pipeline.ParentExecutionID == "" && pipeline.ParentStepExecutionID == "" {
-			outerPipeline = *pipeline
-			continue
+	for _, pex := range exFile.PipelineExecutions {
+		if pex.ParentExecutionID == "" && pex.ParentStepExecutionID == "" {
+			outerPipeline = pex
+			break
 		}
 	}
 
-	process = types.Process{
+	process := types.Process{
 		ID:        ex.ID,
 		Pipeline:  outerPipeline.Name,
 		Status:    outerPipeline.Status,
@@ -307,22 +337,35 @@ func (api *APIService) getProcessExecution(c *gin.Context) {
 		return
 	}
 
+	// check in memory first
+	ex, err := execution.GetExecution(uri.ProcessId)
+	if err != nil && !perr.IsNotFound(err) {
+		slog.Error("Error loading execution", "error", err)
+		common.AbortWithError(c, perr.InternalWithMessage("Error loading execution"))
+		return
+	}
+
+	if ex != nil {
+		c.JSON(http.StatusOK, ex.Execution)
+		return
+	}
+
 	evt := &event.Event{
 		ExecutionID: uri.ProcessId,
 	}
 
-	ex, err := execution.NewExecution(c, execution.WithEvent(evt))
+	exFile, err := execution.NewExecution(c, execution.WithEvent(evt))
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 
 	}
 
-	err = ex.LoadProcess(evt)
+	err = exFile.LoadProcess(evt)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, ex)
+	c.JSON(http.StatusOK, exFile)
 }
