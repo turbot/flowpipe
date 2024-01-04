@@ -640,6 +640,211 @@ func TestTriggerQuery(t *testing.T) {
 	}
 }
 
+func TestTriggerQueryWithEventFilter(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+
+	outputPath := "./test_trigger_query.db"
+	// Check if the directory exists
+	_, err := os.Stat(outputPath)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(outputPath)
+		if err != nil {
+			assert.Fail("Error removing test directory", err)
+			return
+		}
+	}
+
+	flowpipeDb := "./flowpipe.db"
+	// Check if the directory exists
+	_, err = os.Stat(flowpipeDb)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(flowpipeDb)
+		if err != nil {
+			assert.Fail("Error removing test directory", err)
+			return
+		}
+	}
+
+	db, err := initializeDB(outputPath)
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
+	defer db.Close()
+
+	err = createTestTableA(db, "test_one")
+	if err != nil {
+		assert.Fail("Error creating test table", err)
+		return
+	}
+
+	data := []map[string]interface{}{
+		{
+			"id":                "1",
+			"name":              "John",
+			"age":               30,
+			"registration_date": "2020-01-01",
+			"is_active":         true,
+		},
+		{
+			"id":                "2",
+			"name":              "Jane",
+			"age":               25,
+			"registration_date": "2020-02-20",
+			"is_active":         false,
+		},
+		{
+			"id":                "3",
+			"name":              "Joe",
+			"age":               40,
+			"registration_date": "2020-03-05",
+			"is_active":         true,
+		},
+	}
+
+	err = populateTestTableA(db, "test_one", data)
+	if err != nil {
+		assert.Fail("Error populating test table", err)
+		return
+	}
+
+	pipeline := map[string]cty.Value{
+		"name": cty.StringVal("test"),
+	}
+
+	var generatedEvalContext *hcl.EvalContext
+	hclExpressionMock := &util.HclExpressionMock{
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+			generatedEvalContext = evalCtx
+			res := map[string]cty.Value{
+				"from": cty.StringVal("test"),
+			}
+			return cty.ObjectVal(res), nil
+		},
+	}
+
+	trigger := &modconfig.Trigger{
+		HclResourceImpl: modconfig.HclResourceImpl{
+			FullName: "query.test_trigger",
+		},
+		Pipeline: cty.ObjectVal(pipeline),
+		ArgsRaw:  hclExpressionMock,
+	}
+
+	trigger.Config = &modconfig.TriggerQuery{
+		ConnectionString: "sqlite:./test_trigger_query.db",
+		Sql:              "select * from test_one",
+		PrimaryKey:       "id",
+		Events:           []string{"insert", "update"},
+	}
+
+	var triggerCommand interface{}
+	commandBusMock := &util.CommandBusMock{
+		SendFunc: func(ctx context.Context, command interface{}) error {
+			triggerCommand = command
+			return nil
+		},
+	}
+
+	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
+
+	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
+	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
+
+	assert.NotNil(triggerRunner, "trigger runner should not be nil")
+
+	receiveChannel := make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	triggerRunner.Run()
+	res := <-receiveChannel
+	assert.Nil(res)
+
+	// The callback to the mocks should have been called by now
+	if generatedEvalContext == nil {
+		assert.Fail("generated eval context should not be nil")
+		return
+	}
+
+	selfVar := generatedEvalContext.Variables["self"]
+	if selfVar == cty.NilVal {
+		assert.Fail("self variable should not be nil")
+		return
+	}
+
+	selfVarMap := selfVar.AsValueMap()
+	insertedRows := selfVarMap["inserted_rows"]
+	assert.NotEqual(cty.NilVal, insertedRows, "inserted rows should not be nil")
+
+	insertedRowsList := insertedRows.AsValueSlice()
+	assert.Equal(3, len(insertedRowsList), "wrong number of inserted rows")
+	for _, row := range insertedRowsList {
+		rowMap := row.AsValueMap()
+		id := rowMap["id"].AsString()
+		if id == "1" {
+			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
+		} else if id == "2" {
+			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal("2020-02-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
+		} else if id == "3" {
+			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
+		} else {
+			assert.Fail("wrong id")
+		}
+	}
+
+	//
+	// Delete some rows
+	idsToDelete := []any{"1", "3"}
+	err = deleteFromTestTable(db, "test_one", idsToDelete)
+	if err != nil {
+		assert.Fail("Error deleting from test table", err)
+		return
+	}
+
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	triggerRunner.Run()
+	res = <-receiveChannel
+	assert.Nil(res)
+	assert.NotNil(triggerCommand, "trigger command should not be nil")
+
+	// The callback to the mocks should have been called by now
+	if generatedEvalContext == nil {
+		assert.Fail("generated eval context should not be nil")
+		return
+	}
+
+	selfVar = generatedEvalContext.Variables["self"]
+	if selfVar == cty.NilVal {
+		assert.Fail("self variable should not be nil")
+		return
+	}
+
+	selfVarMap = selfVar.AsValueMap()
+	insertedRows = selfVarMap["inserted_rows"]
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
+
+	updatedRows := selfVarMap["updated_rows"]
+	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
+
+	deletedKeys := selfVarMap["deleted_keys"]
+	assert.Equal(cty.NilVal, deletedKeys, "deleted rows should be empty since we only listen to insert and update events")
+}
+
 func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	ctx := context.Background()
 
