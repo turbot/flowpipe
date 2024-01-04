@@ -16,66 +16,108 @@ func TestQueryListAll(t *testing.T) {
 	ctx := context.Background()
 
 	assert := assert.New(t)
-	hr := Query{
-		Setting: "go-sqlmock",
-	}
+	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeSql: "SELECT * from aws_ec2_instance order by instance_id",
+		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:              "select * from employee order by id;",
 	})
-
-	// Initialize the DB connection
-	_, err := hr.InitializeDB(ctx, input)
-	if err != nil {
-		return
-	}
-	mock := *hr.Mock
-
-	// Add the rows to the table
-	rows := sqlmock.NewRows([]string{"instance_id", "arn", "type", "state"}).
-		AddRow("i-000a000b0000c00d1", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1", "t2.micro", "stopped").
-		AddRow("i-000a000b0000c00d2", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d2", "t2.micro", "stopped").
-		AddRow("i-000a000b0000c00d3", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d3", "t2.micro", "running").
-		AddRow("i-000a000b0000c00d4", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d4", "t2.micro", "running").
-		AddRow("i-000a000b0000c00d5", "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d5", "m5.xlarge", "stopped")
-
-	mock.ExpectQuery("^SELECT (.+) from aws_ec2_instance order by instance_id$").WillReturnRows(rows)
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(5, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+	assert.Equal(15, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
 	// Expected output from the query
 	expectedResult := []map[string]interface{}{
 		{
-			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d1",
-			"instance_id": "i-000a000b0000c00d1",
-			"state":       "stopped",
-			"type":        "t2.micro",
+			"email":       "john@example.com",
+			"id":          int64(1),
+			"name":        "John",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
 		},
 		{
-			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d2",
-			"instance_id": "i-000a000b0000c00d2",
-			"state":       "stopped",
-			"type":        "t2.micro",
+			"email":       "adam@example.com",
+			"id":          int64(2),
+			"name":        "Adam",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
 		},
 		{
-			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d3",
-			"instance_id": "i-000a000b0000c00d3",
-			"state":       "running",
-			"type":        "t2.micro",
+			"email":       "alice@example.com",
+			"id":          int64(3),
+			"name":        "Alice",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": false}",
 		},
 		{
-			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d4",
-			"instance_id": "i-000a000b0000c00d4",
-			"state":       "running",
-			"type":        "t2.micro",
+			"email":       "bob@example.com",
+			"id":          int64(4),
+			"name":        "Bob",
+			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
 		},
 		{
-			"arn":         "arn:aws:ec2:ap-south-1:0123456789:instance/i-000a000b0000c00d5",
-			"instance_id": "i-000a000b0000c00d5",
-			"state":       "stopped",
-			"type":        "m5.xlarge",
+			"email":       "alex@example.com",
+			"id":          int64(5),
+			"name":        "Alex",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+		},
+		{
+			"email":       "carey@example.com",
+			"id":          int64(6),
+			"name":        "Carey",
+			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+		},
+		{
+			"email":       "cody@example.com",
+			"id":          int64(7),
+			"name":        "Cody",
+			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+		},
+		{
+			"email":       "andrew@example.com",
+			"id":          int64(8),
+			"name":        "Andrew",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+		},
+		{
+			"email":       "alexandra@example.com",
+			"id":          int64(9),
+			"name":        "Alexandra",
+			"preferences": "{\"theme\": \"light\", \"notifications\": true}",
+		},
+		{
+			"email":       "jon@example.com",
+			"id":          int64(10),
+			"name":        "Jon",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+		},
+		{
+			"email":       "jennifer@example.com",
+			"id":          int64(11),
+			"name":        "Jennifer",
+			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+		},
+		{
+			"email":       "alan@example.com",
+			"id":          int64(12),
+			"name":        "Alan",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+		},
+		{
+			"email":       "mia@example.com",
+			"id":          int64(13),
+			"name":        "Mia",
+			"preferences": "{\"theme\": \"light\", \"notifications\": true}",
+		},
+		{
+			"email":       "aaron@example.com",
+			"id":          int64(14),
+			"name":        "Aaron",
+			"preferences": "{\"theme\": \"light\", \"notifications\": true}",
+		},
+		{
+			"email":       "adrian@example.com",
+			"id":          int64(15),
+			"name":        "Adrian",
+			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
 		},
 	}
 
