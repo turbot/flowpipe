@@ -51,7 +51,7 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 	if output.IsServerMode {
 		p := types.NewServerOutputPipelineExecution(
 			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-			evt.Event.ExecutionID, "", "cancelled")
+			evt.Event.ExecutionID, "", "canceled")
 		output.RenderServerOutput(ctx, p)
 	}
 

@@ -52,13 +52,10 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 			return
 		}
 
-		// Error on unsupported JSON/YAML outputs, convert pretty to plain (no color)
-		switch viper.GetString(constants.ArgOutput) {
-		case constants.OutputFormatJSON, constants.OutputFormatYAML:
+		outputMode := viper.GetString(constants.ArgOutput)
+		if outputMode == constants.OutputFormatJSON || outputMode == constants.OutputFormatYAML {
 			error_helpers.FailOnError(perr.BadRequestWithMessage("Currently '--output' is not supported for json or yaml"))
 			return
-		case constants.OutputFormatPretty:
-			viper.Set(constants.ArgOutput, constants.OutputFormatPlain)
 		}
 
 		output.IsServerMode = true

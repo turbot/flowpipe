@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
+	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"strings"
 	"time"
@@ -21,8 +22,94 @@ func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
 	}
 }
 
-func (o ServerOutputPrefix) String() string {
-	return fmt.Sprintf("%s [%s]", o.TimeStamp.Format(time.RFC3339), o.Category)
+func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+	var cat aurora.Value
+	switch o.Category {
+	case "flowpipe":
+		cat = au.Cyan(o.Category)
+	case "mod":
+		cat = au.Green(o.Category)
+	case "pipeline":
+		cat = au.Magenta(o.Category)
+	case "trigger":
+		cat = au.Yellow(o.Category)
+	default:
+		cat = au.Blue(o.Category)
+	}
+	return aurora.Sprintf("%s %s%s%s ", au.BrightBlack(o.TimeStamp.Format(time.RFC3339)), left, cat, right)
+}
+
+type ServerOutputStatusChange struct {
+	ServerOutputPrefix
+	Status     string
+	Additional string
+}
+
+func NewServerOutputStatusChange(ts time.Time, status string, additional string) ServerOutputStatusChange {
+	return ServerOutputStatusChange{
+		ServerOutputPrefix: ServerOutputPrefix{
+			TimeStamp: ts,
+			Category:  "flowpipe",
+		},
+		Status:     status,
+		Additional: additional,
+	}
+}
+
+func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
+		return ""
+	}
+
+	pre := o.ServerOutputPrefix.String(sanitizer, opts)
+
+	switch o.Status {
+	case "started":
+		return fmt.Sprintf("%sserver %s\n", pre, au.Green(o.Status))
+	case "stopped":
+		return fmt.Sprintf("%sserver %s\n", pre, au.Red(o.Status))
+	case "listening":
+		return fmt.Sprintf("%sserver %s on %s\n", pre, au.Yellow(o.Status), au.Yellow(o.Additional))
+	default:
+		return fmt.Sprintf("%sserver %s\n", pre, o.Status)
+	}
+}
+
+type ServerOutputLoaded struct {
+	ServerOutputPrefix
+	ModName  string
+	IsReload bool
+}
+
+func NewServerOutputLoaded(serverOutputPrefix ServerOutputPrefix, modName string, isReload bool) *ServerOutputLoaded {
+	return &ServerOutputLoaded{
+		ServerOutputPrefix: serverOutputPrefix,
+		ModName:            modName,
+		IsReload:           isReload,
+	}
+}
+
+func (o ServerOutputLoaded) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
+		return ""
+	}
+
+	pre := o.ServerOutputPrefix.String(nil, opts)
+	text := "loaded"
+	if o.IsReload {
+		text = "reloaded"
+	}
+
+	return fmt.Sprintf("%s%s mod %s\n", pre, text, au.Green(o.ModName))
 }
 
 type ServerOutput struct {
@@ -47,7 +134,41 @@ func (o ServerOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) 
 		return ""
 	}
 
-	return fmt.Sprintf("%s %s\n", o.ServerOutputPrefix.String(), o.Message)
+	return fmt.Sprintf("%s%s\n", o.ServerOutputPrefix.String(sanitizer, opts), o.Message)
+}
+
+type ServerOutputError struct {
+	ServerOutputPrefix
+	Message string
+	Error   error
+}
+
+func NewServerOutputError(serverOutputPrefix ServerOutputPrefix, message string, error error) *ServerOutputError {
+	return &ServerOutputError{
+		ServerOutputPrefix: serverOutputPrefix,
+		Message:            message,
+		Error:              error,
+	}
+}
+
+func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
+		return ""
+	}
+
+	suffix := ""
+	if opts.Verbose {
+		suffix = fmt.Sprintf("\n%s", au.BrightRed(o.Error.Error()))
+	}
+
+	return fmt.Sprintf("%s%s %s%s",
+		o.ServerOutputPrefix.String(sanitizer, opts),
+		au.Red("error"),
+		au.Red(o.Message),
+		suffix)
 }
 
 type ServerOutputPipelineExecution struct {
@@ -76,30 +197,57 @@ func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opt
 	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
 		return ""
 	}
-	n := o.PipelineName
-	if n != "" {
-		n = fmt.Sprintf("[%s]", n)
-	}
-	pre := fmt.Sprintf("%s [%s%s]",
-		o.ServerOutputPrefix.String(),
-		o.ExecutionID,
-		n,
+
+	c := opts.ColorGenerator.GetColorForElement(o.PipelineName)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+	dot := au.BrightBlack(".")
+
+	pre := fmt.Sprintf("%s%s%s%s%s%s",
+		o.ServerOutputPrefix.String(sanitizer, opts),
+		left,
+		au.Sprintf(au.Index(c, o.PipelineName)),
+		dot,
+		au.Sprintf(au.Index(c, o.ExecutionID)),
+		right,
 	)
-	lines = append(lines, fmt.Sprintf("%s Pipeline %s\n", pre, o.Status))
+	var status string
+	switch o.Status {
+	case "started":
+		status = au.Cyan(o.Status).String()
+	case "finished":
+		status = au.Green(o.Status).String()
+	case "failed":
+		status = au.Red(o.Status).String()
+	case "canceled":
+		status = au.Blue(o.Status).String()
+	case "queued":
+		status = au.Yellow(o.Status).String()
+	default:
+		status = o.Status
+	}
+	lines = append(lines, fmt.Sprintf("%s pipeline %s\n", pre, status))
 
 	if opts.Verbose {
 		if len(o.Output) > 0 {
-			outputs := sortAndParseMap(o.Output, "Output", " ", au, opts)
-			lines = append(lines, fmt.Sprintf("%s Outputs\n%s\n", pre, outputs))
+			outputs := sortAndParseMap(o.Output, "output:", " ", au, opts)
+			lines = append(lines, fmt.Sprintf("%s pipeline outputs\n%s\n", pre, outputs))
 		}
 	}
 
 	if len(o.Errors) > 0 {
 		for _, e := range o.Errors {
-			lines = append(lines, fmt.Sprintf("%s error on step %s: %s\n", pre, e.Step, e.Error.Error()))
+			errLine := fmt.Sprintf("error on step %s: %s\n", e.Step, e.Error.Error())
+			lines = append(lines, fmt.Sprintf("%s%s", pre, au.Red(errLine)))
 		}
 	}
-	return strings.Join(lines, "")
+
+	out := strings.Join(lines, "")
+	// trim double new line ending
+	if strings.HasSuffix(out, "\n\n") {
+		out = strings.TrimSuffix(out, "\n")
+	}
+	return out
 }
 
 type ServerOutputTriggerExecution struct {
@@ -125,7 +273,7 @@ func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts
 		return ""
 	}
 
-	return fmt.Sprintf("%s Trigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(), o.TriggerName, o.PipelineName, o.ExecutionID)
+	return fmt.Sprintf("%strigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(sanitizer, opts), o.TriggerName, o.PipelineName, o.ExecutionID)
 }
 
 type ServerOutputStepExecution struct {
@@ -164,26 +312,99 @@ func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts Re
 		return ""
 	}
 
-	p := o.PipelineName
-	if p != "" {
-		p = fmt.Sprintf("[%s]", p)
+	c := opts.ColorGenerator.GetColorForElement(o.PipelineName)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+	dot := au.BrightBlack(".")
+
+	pre := fmt.Sprintf("%s%s%s%s%s%s",
+		o.ServerOutputPrefix.String(sanitizer, opts),
+		left,
+		au.Sprintf(au.Index(c, o.PipelineName)),
+		dot,
+		au.Sprintf(au.Index(c, o.ExecutionID)),
+		right,
+	)
+
+	var status string
+	switch o.Status {
+	case "started":
+		status = au.Cyan(o.Status).String()
+	case "finished":
+		status = au.Green(o.Status).String()
+	case "failed":
+		status = au.Red(o.Status).String()
+	case "retrying":
+		status = au.Yellow(o.Status).String()
+	default:
+		status = o.Status
 	}
 
-	pre := fmt.Sprintf("%s [%s%s]", o.ServerOutputPrefix.String(), o.ExecutionID, p)
-
-	lines = append(lines, fmt.Sprintf("%s %s step %s %s\n", pre, o.StepType, o.StepName, o.Status))
+	lines = append(lines, fmt.Sprintf("%s %s step %s %s\n", pre, au.Blue(o.StepType), au.BrightBlue(o.StepName), status))
 
 	if len(o.Output) > 0 {
-		outputs := sortAndParseMap(o.Output, "Output", " ", au, opts)
-		lines = append(lines, fmt.Sprintf("%s Outputs\n%s\n", pre, outputs))
+		outputs := sortAndParseMap(o.Output, "output", " ", au, opts)
+		lines = append(lines, fmt.Sprintf("%s step outputs\n%s\n", pre, outputs))
 	}
 
 	if len(o.Errors) > 0 {
 		for _, e := range o.Errors {
-			lines = append(lines, fmt.Sprintf("%s error on %s step %s: %s\n", pre, o.StepType, o.StepName, e.Error.Error()))
+			errLine := fmt.Sprintf("error on %s step %s: %s\n", o.StepType, o.StepName, e.Error.Error())
+			lines = append(lines, fmt.Sprintf("%s%s", pre, au.Red(errLine)))
 		}
 	}
-	return strings.Join(lines, "")
+
+	out := strings.Join(lines, "")
+	// trim double new line ending
+	if strings.HasSuffix(out, "\n\n") {
+		out = strings.TrimSuffix(out, "\n")
+	}
+	return out
+}
+
+type ServerOutputTrigger struct {
+	ServerOutputPrefix
+	Name     string
+	Type     string
+	Schedule *string
+	Method   *string
+	Url      *string
+	Sql      *string
+}
+
+func NewServerOutputTrigger(prefix ServerOutputPrefix, n string, t string) *ServerOutputTrigger {
+	return &ServerOutputTrigger{
+		ServerOutputPrefix: prefix,
+		Name:               n,
+		Type:               t,
+	}
+}
+
+func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+
+	// deliberately skip sanitizer as want to keep Url
+
+	pre := o.ServerOutputPrefix.String(sanitizer, opts)
+	var suffix string
+	switch o.Type {
+	case "http":
+		m := strings.ToUpper(kitTypes.SafeString(o.Method))
+		u := kitTypes.SafeString(o.Url)
+
+		suffix = fmt.Sprintf("%s %s", au.BrightBlack(m), au.Yellow(u))
+	case "schedule", "interval":
+		s := kitTypes.SafeString(o.Schedule)
+		suffix = fmt.Sprintf("%s", au.Yellow(s))
+	case "query":
+		s := kitTypes.SafeString(o.Schedule)
+		q := kitTypes.SafeString(o.Sql)
+		suffix = fmt.Sprintf("schedule %s - query %s", au.Yellow(s), au.Yellow(q))
+	default:
+		suffix = "loaded"
+	}
+
+	return fmt.Sprintf("%s%s %s - %s\n", pre, au.BrightBlue(o.Name), o.Type, suffix)
 }
 
 type PrintableServerOutput struct {
