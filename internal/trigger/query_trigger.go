@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -215,22 +216,29 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 
 	// Add the new rows to the pipeline args
 	selfVars := map[string]cty.Value{}
-	if len(newRowCtyVals) > 0 {
-		selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
-	} else {
-		selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+
+	if slices.Contains(config.Events, "insert") {
+		if len(newRowCtyVals) > 0 && slices.Contains(config.Events, "insert") {
+			selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
+		} else {
+			selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+		}
 	}
 
-	if len(updatedRowCtyVals) > 0 {
-		selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
-	} else {
-		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+	if slices.Contains(config.Events, "update") {
+		if len(updatedRowCtyVals) > 0 {
+			selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
+		} else {
+			selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+		}
 	}
 
-	if len(deletedKeysCty) > 0 {
-		selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
-	} else {
-		selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
+	if slices.Contains(config.Events, "delete") {
+		if len(deletedKeysCty) > 0 {
+			selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
+		} else {
+			selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
+		}
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod)
