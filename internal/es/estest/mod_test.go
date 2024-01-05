@@ -3504,6 +3504,26 @@ func (suite *ModTestSuite) TestTier3PipelinesNotRunnableDirectly() {
 	assert.Contains(pex.Errors[0].Error.Error(), "pipeline definition not found: mod_depend_b.pipeline.echo_from_depend_b")
 }
 
+func (suite *ModTestSuite) TestLoopWithResultArguments() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.request_body_loop", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(3, len(pex.StepExecutions))
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

@@ -43,7 +43,7 @@ func StartServer() *http.Server {
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			slog.Error("API server failed to start", "error", err)
+			slog.Error("Mock HTTP server failed to start", "error", err)
 			os.Exit(1)
 		}
 	}()

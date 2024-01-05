@@ -75,7 +75,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
-			slog.Error("Error building eval context while calculating output", "error", err)
+			slog.Error("Error building eval context", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				slog.Error("Error publishing event", "error", err2)
@@ -368,7 +368,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, h StepStartHandler, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
-	endStepEvalContext, err := execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, evalContext)
+	endStepEvalContext, err := execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, &cmd.StepInput, evalContext)
 	if err != nil {
 		// catastrophic error - raise pipeline failed straight away
 		slog.Error("Error adding step output as results", "error", err)
