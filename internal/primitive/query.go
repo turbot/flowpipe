@@ -133,7 +133,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	if e.DB == nil {
 		db, err = e.InitializeDB(ctx, input)
 		if err != nil {
-			return nil, err
+			return nil, perr.InternalWithMessage("Error initializing the database: " + err.Error())
 		}
 	} else {
 		db = e.DB
@@ -172,7 +172,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	start := time.Now().UTC()
 	rows, err := db.QueryContext(ctx, sql, args...)
 	if err != nil {
-		return nil, err
+		return nil, perr.InternalWithMessage("Error executing query: " + err.Error())
 	}
 	defer rows.Close()
 
@@ -181,7 +181,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		row := make(map[string]interface{})
 		err = mapScan(rows, row)
 		if err != nil {
-			return nil, err
+			return nil, perr.InternalWithMessage("Failed to scan row: " + err.Error())
 		}
 		// sqlx doesn't handle jsonb columns, so we need to do it manually
 		// https://github.com/jmoiron/sqlx/issues/225
@@ -194,7 +194,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					err := json.Unmarshal(ba, &col)
 					if err != nil {
 						slog.Error("error unmarshalling jsonb", "column", k, "error", err)
-						return nil, err
+						return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
 					}
 					row[k] = col
 					continue
@@ -216,7 +216,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, perr.TimeoutWithMessage("Query execution exceeded timeout")
 		}
-		return nil, err
+		return nil, perr.InternalWithMessage("Error iterating over query results: " + err.Error())
 	}
 
 	output := &modconfig.Output{
