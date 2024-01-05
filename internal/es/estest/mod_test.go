@@ -1415,6 +1415,23 @@ func (suite *ModTestSuite) TestErrorWithIfMultiStep() {
 		// Convert JSON bytes to string and print
 		jsonString := string(jsonData)
 		fmt.Println(jsonString) //nolint:forbidigo // test code
+		fmt.Println()           //nolint:forbidigo // test code
+		fmt.Println()           //nolint:forbidigo // test code
+
+		ex, err := execution.GetExecution(pipelineCmd.Event.ExecutionID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		jsonData, err = json.Marshal(ex)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		jsonString = string(jsonData)
+		fmt.Println(jsonString) //nolint:forbidigo // test code
+
+		return
 	}
 
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)

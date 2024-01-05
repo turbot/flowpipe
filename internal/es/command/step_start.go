@@ -223,6 +223,11 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output.Status = constants.StateFinished
 		}
 
+		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput {
+			slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+			return
+		}
+
 		// Only calculate the step output if there are no errors or if the error is ignored. Either way it will end up
 		// with output.Status == constants.StateFinished
 		if output.Status == constants.StateFinished || output.FailureMode == constants.FailureModeIgnored {
@@ -356,9 +361,6 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			slog.Error("Error publishing event", "error", err)
 		}
 
-		return true
-	} else if stepDefn.GetType() == schema.BlockTypeInput {
-		slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 		return true
 	}
 
