@@ -56,7 +56,7 @@ func AddStepPrimitiveOutputAsResults(stepName string, output *modconfig.Output, 
 }
 
 // This function *mutates* the evalContext passed in
-func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]interface{}, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
+func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]interface{}, stepInput *modconfig.Input, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
 
 	var err error
 
@@ -91,6 +91,21 @@ func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]int
 		}
 
 		stepNativeOutputMap["output"] = cty.ObjectVal(nestedOutputValueMap)
+	}
+
+	if stepInput != nil {
+		inputCtyMap, err := stepInput.AsCtyMap()
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range inputCtyMap {
+			if stepNativeOutputMap[k].IsNull() {
+				stepNativeOutputMap[k] = v
+			}
+			// some cases, like the transform step, the input & output share the same name: value. However they won't change value, so
+			// just add the output since that's the "final" value and ignore the input
+		}
 	}
 
 	evalContext.Variables["result"] = cty.ObjectVal(stepNativeOutputMap)

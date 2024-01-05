@@ -1415,6 +1415,23 @@ func (suite *ModTestSuite) TestErrorWithIfMultiStep() {
 		// Convert JSON bytes to string and print
 		jsonString := string(jsonData)
 		fmt.Println(jsonString) //nolint:forbidigo // test code
+		fmt.Println()           //nolint:forbidigo // test code
+		fmt.Println()           //nolint:forbidigo // test code
+
+		ex, err := execution.GetExecution(pipelineCmd.Event.ExecutionID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		jsonData, err = json.Marshal(ex)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		jsonString = string(jsonData)
+		fmt.Println(jsonString) //nolint:forbidigo // test code
+
+		return
 	}
 
 	assert.Equal("failed", pex.StepStatus["http.bad_http"]["0"].StepExecutions[0].Output.Status)
@@ -3502,6 +3519,26 @@ func (suite *ModTestSuite) TestTier3PipelinesNotRunnableDirectly() {
 	assert.Equal("failed", pex.Status)
 	assert.Equal(1, len(pex.Errors))
 	assert.Contains(pex.Errors[0].Error.Error(), "pipeline definition not found: mod_depend_b.pipeline.echo_from_depend_b")
+}
+
+func (suite *ModTestSuite) TestLoopWithResultArguments() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.request_body_loop", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(3, len(pex.StepExecutions))
 }
 
 func TestModTestingSuite(t *testing.T) {

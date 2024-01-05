@@ -110,3 +110,5 @@ pipeline "transform_loop" {
         value = step.transform.foo[2].value
     }
 }
+
+

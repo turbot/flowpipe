@@ -131,3 +131,23 @@ pipeline "nested_echo" {
         value = step.transform.echo.value
     }
 }
+
+pipeline "request_body_loop" {
+
+  step "http" "random" {
+    url = "http://localhost:7104/special-case"
+    method = "post"
+    request_body = jsonencode({
+      query = "bar"
+    })
+
+    loop {
+      until = loop.index >= 2
+      request_body = replace(result.request_body, "bar", "baz")
+    }
+  }
+
+  output "val" {
+    value = step.http.random
+  }
+}

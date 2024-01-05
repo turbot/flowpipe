@@ -126,7 +126,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		return nil
 	}
 
-	endStepEvalContext, err = execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, endStepEvalContext)
+	endStepEvalContext, err = execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, &cmd.StepInput, endStepEvalContext)
 	if err != nil {
 		slog.Error("Error adding step calculated output as results", "error", err)
 		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
