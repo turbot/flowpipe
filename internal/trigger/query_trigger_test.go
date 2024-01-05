@@ -400,32 +400,16 @@ func TestTriggerQuery(t *testing.T) {
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
-
-	selfVar = generatedEvalContext.Variables["self"]
-	if selfVar == cty.NilVal {
-		assert.Fail("self variable should not be nil")
-		return
-	}
-
-	selfVarMap = selfVar.AsValueMap()
-	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
-
-	updatedRows := selfVarMap["updated_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
-
-	deletedKeys := selfVarMap["deleted_keys"]
-	assert.Equal(cty.ListValEmpty(cty.String), deletedKeys, "deleted keys should be nil, there's no new deletion detected by the query trigger")
+	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// THIRD RUN
@@ -457,6 +441,10 @@ func TestTriggerQuery(t *testing.T) {
 
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
@@ -517,11 +505,14 @@ func TestTriggerQuery(t *testing.T) {
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -538,7 +529,7 @@ func TestTriggerQuery(t *testing.T) {
 	insertedRows = selfVarMap["inserted_rows"]
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
 
-	updatedRows = selfVarMap["updated_rows"]
+	updatedRows := selfVarMap["updated_rows"]
 	assert.NotNil(updatedRows, "updated rows should not be nil")
 	updatedRowsList := updatedRows.AsValueSlice()
 
@@ -558,36 +549,23 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	//
-	// FOURTH RUN
+	// FIFTH RUN
 	//
 	// run it again, shouldn't have any new updates
 
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
-
-	selfVar = generatedEvalContext.Variables["self"]
-	if selfVar == cty.NilVal {
-		assert.Fail("self variable should not be nil")
-		return
-	}
-
-	selfVarMap = selfVar.AsValueMap()
-	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
-
-	updatedRows = selfVarMap["updated_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
+	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// FIFTH RUN
@@ -603,6 +581,10 @@ func TestTriggerQuery(t *testing.T) {
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
@@ -626,7 +608,7 @@ func TestTriggerQuery(t *testing.T) {
 	updatedRows = selfVarMap["updated_rows"]
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
-	deletedKeys = selfVarMap["deleted_keys"]
+	deletedKeys := selfVarMap["deleted_keys"]
 
 	deletedKeyValueSlice := deletedKeys.AsValueSlice()
 	assert.Equal(2, len(deletedKeyValueSlice), "wrong number of deleted keys")
@@ -807,6 +789,8 @@ func TestTriggerQueryWithEventFilter(t *testing.T) {
 
 	//
 	// Delete some rows
+	//
+
 	idsToDelete := []any{"1", "3"}
 	err = deleteFromTestTable(db, "test_one", idsToDelete)
 	if err != nil {
@@ -817,32 +801,17 @@ func TestTriggerQueryWithEventFilter(t *testing.T) {
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
 
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
-
-	selfVar = generatedEvalContext.Variables["self"]
-	if selfVar == cty.NilVal {
-		assert.Fail("self variable should not be nil")
-		return
-	}
-
-	selfVarMap = selfVar.AsValueMap()
-	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
-
-	updatedRows := selfVarMap["updated_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
-
-	deletedKeys := selfVarMap["deleted_keys"]
-	assert.Equal(cty.NilVal, deletedKeys, "deleted rows should be empty since we only listen to insert and update events")
+	// pipeline shouldn't be executed because "delete" is not one of the event that we are interested on
+	assert.Nil(generatedEvalContext, "generated eval context should be nil, delete is not in the events filter")
+	assert.Nil(triggerCommand, "trigger command should be nil, delete is not in the events filter")
 }
 
 func TestTriggerQueryNoPrimaryKey(t *testing.T) {
@@ -1015,32 +984,16 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
-
-	selfVar = generatedEvalContext.Variables["self"]
-	if selfVar == cty.NilVal {
-		assert.Fail("self variable should not be nil")
-		return
-	}
-
-	selfVarMap = selfVar.AsValueMap()
-	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
-
-	updatedRows := selfVarMap["updated_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
-
-	deletedKeys := selfVarMap["deleted_keys"]
-	assert.Equal(cty.ListValEmpty(cty.String), deletedKeys, "deleted keys should be nil, there's no new deletion detected by the query trigger")
+	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// THIRD RUN
@@ -1092,10 +1045,10 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	selfVarMap = selfVar.AsValueMap()
 
-	updatedRows = selfVarMap["updated_rows"]
+	updatedRows := selfVarMap["updated_rows"]
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
-	deletedKeys = selfVarMap["deleted_keys"]
+	deletedKeys := selfVarMap["deleted_keys"]
 	assert.Equal(cty.ListValEmpty(cty.String), deletedKeys, "deleted keys should be nil, there's no new deletion detected by the query trigger")
 
 	insertedRows = selfVarMap["inserted_rows"]
@@ -1138,6 +1091,10 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
@@ -1379,6 +1336,40 @@ func TestTriggerQueryB(t *testing.T) {
 	receiveChannel = make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
+	triggerRunner.Run()
+	res = <-receiveChannel
+	assert.Nil(res)
+
+	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
+
+	//
+	// THIRD RUN
+	//
+	// Update the blob data
+
+	data[1]["blob_data"] = make([]byte, 10*(blobSizeMultiplier+2))
+	for i := range data[1]["blob_data"].([]byte) {
+		data[1]["blob_data"].([]byte)[i] = byte(rand.Intn(256)) //nolint:gosec // just a test case
+	}
+
+	err = updateTestTableB(db, "test_one", data[1])
+	if err != nil {
+		assert.Fail("Error updating test table", err)
+		return
+	}
+
+	receiveChannel = make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	// Reset
+	generatedEvalContext = nil
+	triggerCommand = nil
+
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
@@ -1401,52 +1392,6 @@ func TestTriggerQueryB(t *testing.T) {
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
 
 	updatedRows := selfVarMap["updated_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
-
-	deletedKeys := selfVarMap["deleted_keys"]
-	assert.Equal(cty.ListValEmpty(cty.String), deletedKeys, "deleted keys should be nil, there's no new deletion detected by the query trigger")
-
-	//
-	// THIRD RUN
-	//
-	// Update the blob data
-
-	data[1]["blob_data"] = make([]byte, 10*(blobSizeMultiplier+2))
-	for i := range data[1]["blob_data"].([]byte) {
-		data[1]["blob_data"].([]byte)[i] = byte(rand.Intn(256)) //nolint:gosec // just a test case
-	}
-
-	err = updateTestTableB(db, "test_one", data[1])
-	if err != nil {
-		assert.Fail("Error updating test table", err)
-		return
-	}
-
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
-
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
-
-	selfVar = generatedEvalContext.Variables["self"]
-	if selfVar == cty.NilVal {
-		assert.Fail("self variable should not be nil")
-		return
-	}
-
-	selfVarMap = selfVar.AsValueMap()
-	insertedRows = selfVarMap["inserted_rows"]
-	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), insertedRows, "inserted rows should be nil, there's no new addition detected by the query trigger")
-
-	updatedRows = selfVarMap["updated_rows"]
 	assert.NotNil(updatedRows, "updated rows should not be nil")
 	updatedRowsList := updatedRows.AsValueSlice()
 	assert.Equal(1, len(updatedRowsList), "wrong number of updated rows")
