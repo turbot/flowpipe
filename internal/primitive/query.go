@@ -19,8 +19,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-
-	"github.com/DATA-DOG/go-sqlmock"
 )
 
 const (
@@ -29,15 +27,11 @@ const (
 	DriverDuckDB   = "duckdb"
 )
 
-type Query struct {
-	Setting string
-	Mock    *sqlmock.Sqlmock
-	DB      *sql.DB
-}
+type Query struct{}
 
 func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
-	if e.Setting != "go-sqlmock" && i[schema.AttributeTypeConnectionString] == nil {
+	if i[schema.AttributeTypeConnectionString] == nil {
 		return perr.BadRequestWithMessage("Query input must define connection_string")
 	}
 
@@ -50,19 +44,6 @@ func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, error) {
 	var db *sql.DB
 	var err error
-
-	// The Run method opens a database connection by connecting to the provided database connection string.
-	// But, while running the tests, we can't pass the connection string, hence we need to mock a database connection.
-	if e.Setting == "go-sqlmock" {
-		db, mock, err := sqlmock.New()
-		if err != nil {
-			return nil, perr.BadRequestWithMessage("Failed to open stub database connection: " + err.Error())
-		}
-		e.Mock = &mock
-		e.DB = db
-
-		return db, nil
-	}
 
 	dbConnectionString := i[schema.AttributeTypeConnectionString].(string)
 
@@ -104,16 +85,10 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		return nil, err
 	}
 
-	var db *sql.DB
-	var err error
-
-	if e.DB == nil {
-		db, err = e.InitializeDB(ctx, input)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		db = e.DB
+	db, err := e.InitializeDB(ctx, input)
+	if err != nil {
+		slog.Error("Error initializing the database", "error", err)
+		return nil, perr.InternalWithMessage("Error initializing the database: " + err.Error())
 	}
 	defer db.Close()
 

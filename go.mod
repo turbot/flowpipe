@@ -5,7 +5,6 @@ go 1.21.0
 replace github.com/turbot/pipe-fittings => ../pipe-fittings/
 
 require (
-	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/didip/tollbooth/v7 v7.0.1
