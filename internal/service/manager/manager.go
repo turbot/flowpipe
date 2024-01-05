@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/turbot/pipe-fittings/schema"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
@@ -323,7 +324,7 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 		slog.Error("error watching workspace", "error", e)
 		if output.IsServerMode {
-			output.RenderServerOutput(c, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: reloading mod %s\n%s", w.Mod.Name(), e.Error())))
+			output.RenderServerOutput(c, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "mod"), fmt.Sprintf("failed watching workspace for mod %s", w.Mod.Name()), e))
 		}
 		m.apiService.ModMetadata.IsStale = true
 	})
@@ -335,12 +336,12 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	w.SetOnFileWatcherEventMessages(func() {
 		var serverOutput []types.SanitizedStringer
 		slog.Info("caching pipelines and triggers")
-		serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Reloading mod: %s", m.RootMod.Name())))
+		serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "mod"), m.RootMod.Name(), true))
 		m.triggers = w.Mod.ResourceMaps.Triggers
 		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 		if err != nil {
 			slog.Error("error caching pipelines and triggers", "error", err)
-			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: caching pipelines and triggers failed\n%s", err.Error())))
+			serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "mod"), "failed caching pipelines and triggers", err))
 		} else {
 			slog.Info("cached pipelines and triggers")
 			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "cached pipelines and triggers"))
@@ -355,10 +356,11 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 			err := m.schedulerService.RescheduleTriggers()
 			if err != nil {
 				slog.Error("error rescheduling triggers", "error", err)
-				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", fmt.Sprintf("Error: rescheduling triggers failed\n%s", err.Error())))
+				serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "mod"), "failed rescheduling triggers", err))
 			} else {
 				slog.Info("rescheduled triggers")
 				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "rescheduled triggers"))
+				serverOutput = append(serverOutput, renderServerTriggers(m.triggers)...)
 			}
 		}
 
@@ -523,36 +525,11 @@ func (m *Manager) renderServerStartOutput() {
 	if !helpers.IsNil(m.StartedAt) {
 		startTime = *m.StartedAt
 	}
-	outputs = append(outputs, types.NewServerOutput(startTime, app_specific.AppName, "server started"))
-	outputs = append(outputs, types.NewServerOutput(startTime, app_specific.AppName, fmt.Sprintf("server listening on %s:%d", m.HTTPAddress, m.HTTPPort)))
-	modText := fmt.Sprintf("loaded: %s", m.RootMod.Name())
-	if !helpers.IsNil(m.RootMod.Version) {
-		modText += fmt.Sprintf(" (%s)", m.RootMod.Version.String())
-	}
-	outputs = append(outputs, types.NewServerOutput(startTime, "mod", modText))
+	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "started", ""))
+	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
+	outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "mod"), m.RootMod.Name(), false))
+	outputs = append(outputs, renderServerTriggers(m.triggers)...)
 
-	for _, t := range m.triggers {
-		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
-		switch tt {
-		case schema.TriggerTypeHttp:
-			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
-				// TODO: Add Payload Requirements?
-				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - POST %s", tt, t.Name(), tc.Url)))
-			}
-		case schema.TriggerTypeSchedule:
-			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
-				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - Schedule: %s", tt, t.Name(), tc.Schedule)))
-			}
-		case schema.TriggerTypeInterval:
-			if tc, ok := t.Config.(*modconfig.TriggerInterval); ok {
-				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s' - Schedule: %s", tt, t.Name(), tc.Schedule)))
-			}
-		case schema.TriggerTypeQuery:
-			if tc, ok := t.Config.(*modconfig.TriggerQuery); ok {
-				outputs = append(outputs, types.NewServerOutput(startTime, "trigger", fmt.Sprintf("%s trigger '%s'\n\tSchedule: %s\n\tQuery: %s", tt, t.Name(), tc.Schedule, tc.Sql)))
-			}
-		}
-	}
 	output.RenderServerOutput(m.ctx, outputs...)
 }
 
@@ -561,6 +538,41 @@ func (m *Manager) renderServerShutdownOutput() {
 	if !helpers.IsNil(m.StoppedAt) {
 		stopTime = *m.StoppedAt
 	}
-	msg := types.NewServerOutput(stopTime, app_specific.AppName, "server stopped")
+	msg := types.NewServerOutputStatusChange(stopTime, "stopped", "")
 	output.RenderServerOutput(m.ctx, msg)
+}
+
+func renderServerTriggers(triggers map[string]*modconfig.Trigger) []types.SanitizedStringer {
+	var outputs []types.SanitizedStringer
+
+	for key, t := range triggers {
+		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+		prefix := types.NewServerOutputPrefix(time.Now(), "trigger")
+		switch tt {
+		case schema.TriggerTypeHttp:
+			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
+				// TODO: Add Payload Requirements?
+				o := types.NewServerOutputTrigger(prefix, key, tt)
+				defaultMethod := "post" // TODO: Update when config stores method
+				o.Method = &defaultMethod
+				o.Url = &tc.Url
+				outputs = append(outputs, o)
+			}
+		case schema.TriggerTypeSchedule:
+			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
+				o := types.NewServerOutputTrigger(prefix, key, tt)
+				o.Schedule = &tc.Schedule
+				outputs = append(outputs, o)
+			}
+		case schema.TriggerTypeQuery:
+			if tc, ok := t.Config.(*modconfig.TriggerQuery); ok {
+				o := types.NewServerOutputTrigger(prefix, key, tt)
+				o.Schedule = &tc.Schedule
+				o.Sql = &tc.Sql
+				outputs = append(outputs, o)
+			}
+		}
+	}
+
+	return outputs
 }

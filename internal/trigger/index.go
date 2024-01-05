@@ -2,11 +2,12 @@ package trigger
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 	"path/filepath"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -38,7 +39,7 @@ type TriggerRunner interface {
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
 
 	switch trigger.Config.(type) {
-	case *modconfig.TriggerSchedule, *modconfig.TriggerInterval:
+	case *modconfig.TriggerSchedule:
 		return &TriggerRunnerBase{
 			Trigger:    trigger,
 			commandBus: commandBus,

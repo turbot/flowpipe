@@ -34,7 +34,7 @@ pipeline "if" {
     }
 }
 
-trigger "interval" "every_hour_trigger_on_if" {
+trigger "schedule" "every_hour_trigger_on_if" {
     description = "trigger that will run every hour"
     schedule    = "hourly"
     pipeline    = pipeline.if

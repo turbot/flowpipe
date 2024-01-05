@@ -11,19 +11,25 @@ import (
 )
 
 var IsServerMode bool
+var serverOutputPrinter *printers.StringPrinter[types.SanitizedStringer]
 
 func RenderServerOutput(ctx context.Context, outputs ...types.SanitizedStringer) {
 	if !IsServerMode {
 		return
 	}
-	printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
-	if err != nil {
-		error_helpers.ShowError(ctx, err)
-		return
+
+	// TODO: determine if we should set this up once when server command is started...
+	if serverOutputPrinter == nil {
+		printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
+		if err != nil {
+			error_helpers.ShowError(ctx, err)
+			return
+		}
+		printer.Sanitizer = sanitize.Instance
+		serverOutputPrinter = printer
 	}
-	printer.Sanitizer = sanitize.Instance
 	printableResource := types.NewPrintableServerOutput()
 	printableResource.Items = outputs
 
-	_ = printer.PrintResource(ctx, printableResource, os.Stdout)
+	_ = serverOutputPrinter.PrintResource(ctx, printableResource, os.Stdout)
 }
