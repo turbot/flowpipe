@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"reflect"
-	"slices"
 	"sort"
 	"strings"
 
@@ -214,37 +213,35 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		deletedKeysCty = append(deletedKeysCty, cty.StringVal(k))
 	}
 
-	// Add the new rows to the pipeline args
-	selfVars := map[string]cty.Value{}
-
-	if len(config.Events) == 0 || slices.Contains(config.Events, "insert") {
-		if len(newRowCtyVals) > 0 {
-			selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
-		} else {
-			selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
-		}
-	}
-
-	if len(config.Events) == 0 || slices.Contains(config.Events, "update") {
-		if len(updatedRowCtyVals) > 0 {
-			selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
-		} else {
-			selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
-		}
-	}
-
-	if len(config.Events) == 0 || slices.Contains(config.Events, "delete") {
-		if len(deletedKeysCty) > 0 {
-			selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
-		} else {
-			selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
-		}
+	// Check if we need to trigger the pipeline
+	runPipeline := shouldRunPipeline(config.Events, len(newRowCtyVals), len(updatedRowCtyVals), len(deletedKeysCty))
+	if !runPipeline {
+		return nil
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 		return err
+	}
+
+	// Add the new rows to the pipeline args
+	selfVars := map[string]cty.Value{}
+
+	if len(newRowCtyVals) > 0 {
+		selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
+	} else {
+		selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+	}
+	if len(updatedRowCtyVals) > 0 {
+		selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
+	} else {
+		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+	}
+	if len(deletedKeysCty) > 0 {
+		selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
+	} else {
+		selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
 	}
 
 	varsEvalContext := evalContext.Variables
@@ -271,6 +268,39 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	}
 
 	return nil
+}
+
+func shouldRunPipeline(events []string, insertedRow, updatedRow, deletedKey int) bool {
+	// Check if Events slice is empty
+	if len(events) == 0 {
+		// Run syncData if there's at least one change
+		if insertedRow > 0 || updatedRow > 0 || deletedKey > 0 {
+			return true
+		}
+	}
+
+	// If Events slice is not empty
+	shouldRun := false
+
+	// Check for each event type
+	for _, event := range events {
+		switch event {
+		case "insert":
+			if insertedRow > 0 {
+				shouldRun = true
+			}
+		case "update":
+			if updatedRow > 0 {
+				shouldRun = true
+			}
+		case "delete":
+			if deletedKey > 0 {
+				shouldRun = true
+			}
+		}
+	}
+
+	return shouldRun
 }
 
 func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {
