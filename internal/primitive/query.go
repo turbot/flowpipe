@@ -212,7 +212,8 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	}
 
 	if err = rows.Err(); err != nil {
-		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		// Check for context deadline exceeded error
+		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, perr.TimeoutWithMessage("Query execution exceeded timeout")
 		}
 		return nil, err
