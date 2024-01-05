@@ -509,13 +509,24 @@ func TestQueryTimeout(t *testing.T) {
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from employee order by id;",
-		schema.AttributeTypeTimeout:          int64(1),
+		schema.AttributeTypeSql: `WITH RECURSIVE fibo (curr, next) AS
+		( SELECT 1,1
+		UNION ALL
+		SELECT next, curr+next FROM fibo
+		LIMIT 10000000 )
+		SELECT group_concat(curr) FROM fibo;`,
+		schema.AttributeTypeTimeout: int64(50),
 	})
 
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
-	assert.Contains(err.Error(), "Query execution exceeded timeout")
+
+	timeoutErr, ok := err.(perr.ErrorModel)
+	if !ok {
+		assert.Fail("Error should be of type perr.ErrorModel")
+	}
+	assert.Equal(408, timeoutErr.Status)
+	assert.Equal("Query execution exceeded timeout", timeoutErr.Detail)
 }
 
 func TestQueryTimeoutInString(t *testing.T) {
@@ -526,11 +537,22 @@ func TestQueryTimeoutInString(t *testing.T) {
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from employee order by id;",
-		schema.AttributeTypeTimeout:          "1ms",
+		schema.AttributeTypeSql: `WITH RECURSIVE fibo (curr, next) AS
+		( SELECT 1,1
+		UNION ALL
+		SELECT next, curr+next FROM fibo
+		LIMIT 10000000 )
+		SELECT group_concat(curr) FROM fibo;`,
+		schema.AttributeTypeTimeout: "50ms",
 	})
 
 	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
-	assert.Contains(err.Error(), "Query execution exceeded timeout")
+
+	timeoutErr, ok := err.(perr.ErrorModel)
+	if !ok {
+		assert.Fail("Error should be of type perr.ErrorModel")
+	}
+	assert.Equal(408, timeoutErr.Status)
+	assert.Equal("Query execution exceeded timeout", timeoutErr.Detail)
 }
