@@ -500,3 +500,59 @@ func TestQueryInvalidDatabase(t *testing.T) {
 	assert.NotNil(err)
 	assert.Equal("Unsupported database type", err.Error())
 }
+
+func TestQueryTimeout(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql: `WITH RECURSIVE fibo (curr, next) AS
+		( SELECT 1,1
+		UNION ALL
+		SELECT next, curr+next FROM fibo
+		LIMIT 10000000 )
+		SELECT group_concat(curr) FROM fibo;`,
+		schema.AttributeTypeTimeout: int64(50),
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+
+	timeoutErr, ok := err.(perr.ErrorModel)
+	if !ok {
+		assert.Fail("Error should be of type perr.ErrorModel")
+	}
+	assert.Equal(408, timeoutErr.Status)
+	assert.Equal("Query execution exceeded timeout", timeoutErr.Detail)
+}
+
+func TestQueryTimeoutInString(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql: `WITH RECURSIVE fibo (curr, next) AS
+		( SELECT 1,1
+		UNION ALL
+		SELECT next, curr+next FROM fibo
+		LIMIT 10000000 )
+		SELECT group_concat(curr) FROM fibo;`,
+		schema.AttributeTypeTimeout: "50ms",
+	})
+
+	_, err := hr.Run(ctx, input)
+	assert.NotNil(err)
+
+	timeoutErr, ok := err.(perr.ErrorModel)
+	if !ok {
+		assert.Fail("Error should be of type perr.ErrorModel")
+	}
+	assert.Equal(408, timeoutErr.Status)
+	assert.Equal("Query execution exceeded timeout", timeoutErr.Detail)
+}

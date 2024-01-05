@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,28 @@ func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	if i[schema.AttributeTypeSql] == nil {
 		return perr.BadRequestWithMessage("Query input must define sql")
 	}
+
+	// Validate the timeout attribute
+	if i[schema.AttributeTypeTimeout] != nil {
+		switch duration := i[schema.AttributeTypeTimeout].(type) {
+		case string:
+			_, err := time.ParseDuration(duration)
+			if err != nil {
+				return perr.BadRequestWithMessage("invalid sleep duration " + duration)
+			}
+		case int64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		case float64:
+			if duration < 0 {
+				return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a positive whole number")
+			}
+		default:
+			return perr.BadRequestWithMessage("The attribute '" + schema.AttributeTypeTimeout + "' must be a string or a whole number")
+		}
+	}
+
 	return nil
 }
 
@@ -110,7 +133,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	if e.DB == nil {
 		db, err = e.InitializeDB(ctx, input)
 		if err != nil {
-			return nil, err
+			return nil, perr.InternalWithMessage("Error initializing the database: " + err.Error())
 		}
 	} else {
 		db = e.DB
@@ -125,12 +148,31 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		args = input[schema.AttributeTypeArgs].([]interface{})
 	}
 
+	var timeout time.Duration
+	if input[schema.AttributeTypeTimeout] != nil {
+		switch timeoutDuration := input[schema.AttributeTypeTimeout].(type) {
+		case string:
+			timeout, _ = time.ParseDuration(timeoutDuration)
+		case int64:
+			timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+		case float64:
+			timeout = time.Duration(timeoutDuration) * time.Millisecond // in milliseconds
+		}
+	}
+
+	var cancel context.CancelFunc
+	if timeout > 0 {
+		// Set the timeout
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
 	results := []map[string]interface{}{}
 
 	start := time.Now().UTC()
-	rows, err := db.Query(sql, args...)
+	rows, err := db.QueryContext(ctx, sql, args...)
 	if err != nil {
-		return nil, err
+		return nil, perr.InternalWithMessage("Error executing query: " + err.Error())
 	}
 	defer rows.Close()
 
@@ -139,7 +181,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		row := make(map[string]interface{})
 		err = mapScan(rows, row)
 		if err != nil {
-			return nil, err
+			return nil, perr.InternalWithMessage("Failed to scan row: " + err.Error())
 		}
 		// sqlx doesn't handle jsonb columns, so we need to do it manually
 		// https://github.com/jmoiron/sqlx/issues/225
@@ -152,7 +194,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					err := json.Unmarshal(ba, &col)
 					if err != nil {
 						slog.Error("error unmarshalling jsonb", "column", k, "error", err)
-						return nil, err
+						return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
 					}
 					row[k] = col
 					continue
@@ -170,7 +212,11 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, err
+		// Check for context deadline exceeded error
+		if errors.Is(err, context.DeadlineExceeded) {
+			return nil, perr.TimeoutWithMessage("Query execution exceeded timeout")
+		}
+		return nil, perr.InternalWithMessage("Error iterating over query results: " + err.Error())
 	}
 
 	output := &modconfig.Output{
