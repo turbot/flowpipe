@@ -3,7 +3,7 @@ before:
     - go mod tidy
     - go generate ./...
 builds:
-  - id: flowpipe
+  - id: flowpipe-linux
 
     # Custom ldflags.
     #
@@ -14,26 +14,23 @@ builds:
       # This is how it determinse the value of {{.Version}}.
       - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
-    # Default: [ 'darwin', 'linux', 'windows' ]
     goos:
       - linux
-      - darwin
 
-    # Default: [ '386', 'amd64', 'arm64' ]
     goarch:
       - amd64
       - arm64
 
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
 
 release:
   # Always set as pre-release. Publishing release must be done manually.
   prerelease: true
 
 archives:
-  - format: tar.gz
-    id: homebrew
+  - id: homebrew
+    format: tar.gz
     name_template: "{{ .ProjectName }}.{{ .Os }}.{{ .Arch }}"
 
 checksum:
