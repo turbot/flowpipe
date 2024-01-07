@@ -5,14 +5,7 @@ before:
 builds:
   - id: flowpipe-linux
 
-    # Custom ldflags.
-    #
-    # Default: '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
-    # Templates: allowed
-    ldflags:
-      # Go Releaser analyzes your Git repository and identifies the most recent Git tag (typically the highest version number) as the version for your release.
-      # This is how it determinse the value of {{.Version}}.
-      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
+    binary: golang-cross
 
     goos:
       - linux
@@ -21,8 +14,14 @@ builds:
       - amd64
       - arm64
 
-    env:
-      - CGO_ENABLED=1
+    # Custom ldflags.
+    #
+    # Default: '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser'
+    # Templates: allowed
+    ldflags:
+      # Go Releaser analyzes your Git repository and identifies the most recent Git tag (typically the highest version number) as the version for your release.
+      # This is how it determinse the value of {{.Version}}.
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
 release:
   # Always set as pre-release. Publishing release must be done manually.
