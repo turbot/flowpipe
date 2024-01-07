@@ -4,7 +4,7 @@ before:
     - go generate ./...
 builds:
   - id: flowpipe-linux
-    binary: golang-cross
+    binary: flowpipe
     goos:
       - linux
     goarch:
@@ -21,7 +21,7 @@ builds:
       - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
   - id: flowpipe-darwin
-    binary: golang-cross
+    binary: flowpipe
     goos:
       - darwin
     goarch:
