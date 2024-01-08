@@ -19,6 +19,7 @@
 * Implemented a more descriptive error message for server startup failures.
 * Step arguments are now able to be referenced in the pipeline definition.
 * Added missing `execution_mode` argument to HTTP Trigger. [#533](https://github.com/turbot/flowpipe/issues/533).
+* Removed inaccurate SQL Query string validation to check for arguments. [#516](https://github.com/turbot/flowpipe/issues/516)
 
 ## v0.1.0 [2023-12-13]
 
