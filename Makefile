@@ -1,7 +1,7 @@
 PACKAGE_NAME          := github.com/turbot/flowpipe
 GOLANG_CROSS_VERSION  ?= v1.21.5
 
-.PHONE: build
+.PHONY: build
 build:
 	go build .
 
@@ -35,11 +35,12 @@ build-open-api:
 beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
 
-.PHONE: test
+.PHONY: test
 test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
 
+.PHONY: integration-test
 integration-test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
