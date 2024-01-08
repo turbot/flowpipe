@@ -73,7 +73,6 @@ archives:
   - id: homebrew
     format: tar.gz
     name_template: "{{ .ProjectName }}.{{ .Os }}.{{ .Arch }}"
-    allow_different_binary_count: true
     wrap_in_directory: true
 
 
