@@ -1,3 +1,7 @@
+PACKAGE_NAME          := github.com/turbot/flowpipe
+GOLANG_CROSS_VERSION  ?= v1.21.5
+
+.PHONY: build
 build:
 	go build .
 
@@ -31,15 +35,42 @@ build-open-api:
 beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
 
-release-local:
-	# --snapshot means that Go Releaser will not check if the repo is dirty to use the latest atg
-	# it simply use the latest commit for the build
-	goreleaser release --snapshot --clean
-
+.PHONY: test
 test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
 
+.PHONY: integration-test
 integration-test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
+
+.PHONY: release-dry-run
+release-dry-run:
+	@docker run \
+		--rm \
+		-e CGO_ENABLED=1 \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/flowpipe \
+		-v `pwd`/../pipe-fittings:/go/src/pipe-fittings \
+		-w /go/src/flowpipe \
+		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		--clean --skip=validate --skip=publish
+
+
+.PHONY: release
+release:
+	@if [ ! -f ".release-env" ]; then \
+		echo ".release-env is required for release";\
+		exit 1;\
+	fi
+	docker run \
+		--rm \
+		-e CGO_ENABLED=1 \
+		--env-file .release-env \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		-v `pwd`:/go/src/flowpipe \
+		-v `pwd`/../pipe-fittings:/go/src/pipe-fittings \
+		-w /go/src/flowpipe \
+		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
+		release --clean

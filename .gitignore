@@ -45,3 +45,6 @@ dist/
 tmp/
 
 **/*.jsonl
+
+# release process token (example taken from goreleaser-cross)
+.release-env

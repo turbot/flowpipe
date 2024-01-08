@@ -1,9 +1,14 @@
-before:
-  hooks:
-    - go mod tidy
-    - go generate ./...
 builds:
-  - id: flowpipe
+  - id: flowpipe-linux-arm64
+    binary: flowpipe
+    goos:
+      - linux
+    goarch:
+      - arm64
+
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
 
     # Custom ldflags.
     #
@@ -14,27 +19,58 @@ builds:
       # This is how it determinse the value of {{.Version}}.
       - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
-    # Default: [ 'darwin', 'linux', 'windows' ]
+  - id: flowpipe-linux-amd64
+    binary: flowpipe
     goos:
       - linux
-      - darwin
-
-    # Default: [ '386', 'amd64', 'arm64' ]
     goarch:
       - amd64
+
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
+
+  - id: flowpipe-darwin-arm64
+    binary: flowpipe
+    goos:
+      - darwin
+    goarch:
       - arm64
 
     env:
-      - CGO_ENABLED=0
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
+
+  - id: flowpipe-darwin-amd64
+    binary: flowpipe
+    goos:
+      - darwin
+    goarch:
+      - amd64
+
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
 release:
   # Always set as pre-release. Publishing release must be done manually.
   prerelease: true
 
 archives:
-  - format: tar.gz
-    id: homebrew
+  - id: homebrew
+    format: tar.gz
     name_template: "{{ .ProjectName }}.{{ .Os }}.{{ .Arch }}"
+    wrap_in_directory: true
+
 
 checksum:
   name_template: 'checksums.txt'
