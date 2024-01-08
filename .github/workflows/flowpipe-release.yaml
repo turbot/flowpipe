@@ -121,7 +121,7 @@ jobs:
         run: |-
           echo 'GITHUB_TOKEN=${{secrets.GH_ACCESS_TOKEN}}' > .release-env
 
-      - name: release publish
+      - name: Release publish
         run: make release
 
   create_pr_in_homebrew:
