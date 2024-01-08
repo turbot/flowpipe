@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	o "github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 	"reflect"
 	"sort"
@@ -15,7 +13,9 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
