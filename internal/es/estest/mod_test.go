@@ -3564,6 +3564,25 @@ func (suite *ModTestSuite) TestSqliteQuery() {
 	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
 }
 
+func (suite *ModTestSuite) TestSqliteQueryTimeout() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqlite_query_with_timeout", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "Timeout: Query execution exceeded timeout")
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
