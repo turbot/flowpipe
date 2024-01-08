@@ -3,13 +3,16 @@ before:
     - go mod tidy
     - go generate ./...
 builds:
-  - id: flowpipe-linux
+  - id: flowpipe-linux-arm64
     binary: flowpipe
     goos:
       - linux
     goarch:
-      - amd64
       - arm64
+
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
 
     # Custom ldflags.
     #
@@ -20,13 +23,44 @@ builds:
       # This is how it determinse the value of {{.Version}}.
       - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
-  - id: flowpipe-darwin
+  - id: flowpipe-linux-amd64
+    binary: flowpipe
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+    env:
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
+
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
+
+  - id: flowpipe-darwin-arm64
     binary: flowpipe
     goos:
       - darwin
     goarch:
-      - amd64
       - arm64
+
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
+
+  - id: flowpipe-darwin-amd64
+    binary: flowpipe
+    goos:
+      - darwin
+    goarch:
+      - arm64
+
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
 
     ldflags:
       - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
