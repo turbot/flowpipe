@@ -119,6 +119,7 @@ jobs:
 
       - name: Setup release environment
         run: |-
+          cd flowpipe
           echo 'GITHUB_TOKEN=${{secrets.GH_ACCESS_TOKEN}}' > .release-env
 
       - name: Release publish
