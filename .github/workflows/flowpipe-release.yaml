@@ -122,7 +122,9 @@ jobs:
           echo 'GITHUB_TOKEN=${{secrets.GH_ACCESS_TOKEN}}' > .release-env
 
       - name: Release publish
-        run: make release
+        run: |-
+          cd flowpipe
+          make release
 
   create_pr_in_homebrew:
     name: Create PR in homebrew-tap
