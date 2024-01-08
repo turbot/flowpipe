@@ -56,7 +56,7 @@ builds:
     goos:
       - darwin
     goarch:
-      - arm64
+      - amd64
 
     env:
       - CC=o64-clang
