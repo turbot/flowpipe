@@ -71,7 +71,7 @@ func (es *ESService) Start() error {
 		// OutputChannelBuffer: 10000,
 		// Persistent:          true,
 	}
-	wLogger := slogwatermill.New(log.FlowipeLogger())
+	wLogger := slogwatermill.New(log.FlowpipeLogger())
 	commandsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 
