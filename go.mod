@@ -2,6 +2,8 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
+//replace github.com/turbot/pipe-fittings => ../pipe-fittings
+
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
@@ -42,7 +44,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
 	github.com/turbot/flowpipe-sdk-go v0.1.0
-	github.com/turbot/pipe-fittings v0.2.0-rc.1
+	// pp branch
+	github.com/turbot/pipe-fittings v0.2.0-beta.5.0.20240108102736-74f875f6559c
 	github.com/turbot/steampipe-plugin-code v0.5.1
 )
 
