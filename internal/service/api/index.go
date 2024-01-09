@@ -141,7 +141,7 @@ func (api *APIService) Start() error {
 	//   - Logs all requests, like a combined access and error log.
 	//   - Logs to stdout.
 	//   - RFC3339 with UTC time format.
-	router.Use(ginlogger.New(log.FlowipeLogger()))
+	router.Use(ginlogger.New(log.FlowpipeLogger()))
 
 	// Logs all panic to error log
 	//   - stack means whether output the stack info.

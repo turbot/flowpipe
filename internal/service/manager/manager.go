@@ -248,11 +248,9 @@ func (m *Manager) initializeResources() error {
 		error_helpers.FailOnError(err)
 
 		flowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(configPath)
-		if ew != nil {
-			ew.ShowWarnings()
-			// check for error
-			error_helpers.FailOnError(ew.Error)
-		}
+		// check for error
+		error_helpers.FailOnError(ew.Error)
+		ew.ShowWarnings()
 
 		// Add the "Credentials" in the context
 		// effectively forever .. we don't want to expire the config
@@ -260,7 +258,7 @@ func (m *Manager) initializeResources() error {
 			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, flowpipeConfig.Credentials, app_specific.ModDataExtension)
+		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(m.ctx, modLocation, workspace.WithCredentials(flowpipeConfig.Credentials))
 		if errorAndWarning.Error != nil {
 			return errorAndWarning.Error
 		}

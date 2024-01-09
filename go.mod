@@ -2,6 +2,8 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
+replace github.com/turbot/pipe-fittings => ../pipe-fittings
+
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
@@ -216,6 +218,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
+	github.com/turbot/steampipe-cloud-sdk-go v0.6.0 // indirect
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 // indirect
 	github.com/turbot/terraform-components v0.0.0-20231108031935-358f803c1a8b // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
