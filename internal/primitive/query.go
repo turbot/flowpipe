@@ -144,7 +144,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	// When we test the query test, it runs the primitive directly, so the context is clean.
 	// But, when we run it inside watermill (e.g. in the integration tests), the context is already full of stuff which
 	// causes a context cancellation error for some test which don't have timeout set.
-	// So, fo now we use 2 different methods to run the query, depending on whether the timeout is set or not.
+	// So, for now we use 2 different methods to run the query, depending on whether the timeout is set or not.
 	// If set, we use the context with timeout, otherwise we use the sql.Query method.
 	if timeout > 0 {
 		var cancel context.CancelFunc
