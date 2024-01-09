@@ -2,11 +2,12 @@ package types
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"time"
 
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
 )
 
@@ -18,7 +19,7 @@ type Process struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-func (p Process) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p Process) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -81,8 +82,8 @@ func (p PrintableProcess) GetItems() []Process {
 	return p.Items
 }
 
-func (p PrintableProcess) GetTable() (Table, error) {
-	var tableRows []TableRow
+func (p PrintableProcess) GetTable() (printers.Table, error) {
+	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		cells := []any{
 			item.ID,
@@ -90,14 +91,14 @@ func (p PrintableProcess) GetTable() (Table, error) {
 			item.CreatedAt,
 			item.Status,
 		}
-		tableRows = append(tableRows, TableRow{Cells: cells})
+		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintableProcess) getColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{
+func (PrintableProcess) getColumns() (columns []printers.TableColumnDefinition) {
+	return []printers.TableColumnDefinition{
 		{
 			Name:        "EXECUTION_ID",
 			Type:        "string",

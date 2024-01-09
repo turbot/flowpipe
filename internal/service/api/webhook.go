@@ -1,13 +1,11 @@
 package api
 
 import (
+	"github.com/turbot/pipe-fittings/sanitize"
 	"io"
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/sanitize"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
@@ -15,6 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
