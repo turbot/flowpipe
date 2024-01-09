@@ -4,7 +4,7 @@
 
 *Bug fixes*
 
-* Removed inaccurate SQL Query string validation to check for arguments. [#516](https://github.com/turbot/flowpipe/issues/516)
+* Removed inaccurate SQL Query string validation to check for arguments. ([#516](https://github.com/turbot/flowpipe/issues/516))
 
 ## v0.1.0 [2023-12-13]
 
