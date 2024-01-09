@@ -31,8 +31,6 @@ func main() {
 		}
 	}()
 
-	// TODO kai can we pass these into SetAppSpecificConstants?
-	//  look into namespacing of config
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
 	viper.SetDefault("main.date", date)

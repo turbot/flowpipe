@@ -17,7 +17,7 @@ var waitForTasksChannel chan struct{}
 var tasksCancelFn context.CancelFunc
 
 // postRunHook is a function that is executed after the PostRun of every command handler
-func postRunHook(cmd *cobra.Command, args []string) error {
+func postRunHook(_ *cobra.Command, _ []string) error {
 	utils.LogTime("cmdhook.postRunHook start")
 	defer utils.LogTime("cmdhook.postRunHook end")
 
