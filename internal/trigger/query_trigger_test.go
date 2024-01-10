@@ -649,7 +649,7 @@ func TestTriggerQuery(t *testing.T) {
 	updatedRows = selfVarMap["updated_rows"]
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
-	deletedKeys := selfVarMap["deleted_keys"]
+	deletedKeys := selfVarMap["deleted_rows"]
 
 	deletedKeyValueSlice := deletedKeys.AsValueSlice()
 	assert.Equal(2, len(deletedKeyValueSlice), "wrong number of deleted keys")
@@ -982,7 +982,7 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	updatedRows := selfVarMap["updated_rows"]
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows should be nil, there's no new update detected by the query trigger")
 
-	deletedKeys := selfVarMap["deleted_keys"]
+	deletedKeys := selfVarMap["deleted_rows"]
 	assert.Equal(cty.ListValEmpty(cty.String), deletedKeys, "deleted keys should be nil, there's no new deletion detected by the query trigger")
 
 	insertedRows = selfVarMap["inserted_rows"]
@@ -1065,7 +1065,7 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	assert.Equal(cty.ListValEmpty(cty.DynamicPseudoType), updatedRows, "updated rows does not work with no primary key query trigger")
 
 	// The "updated row" is now a deleted entry
-	deletedKeys = selfVarMap["deleted_keys"]
+	deletedKeys = selfVarMap["deleted_rows"]
 	deletedKeysSlice := deletedKeys.AsValueSlice()
 	assert.Equal(1, len(deletedKeysSlice), "wrong number of deleted keys")
 	assert.Equal("a7f390faa9ddca021f647b042c2c127f70e49ed3bdec2194df4e784367b5416a", deletedKeysSlice[0].AsString(), "wrong deleted key")

@@ -240,9 +240,9 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
 	}
 	if len(deletedKeysCty) > 0 {
-		selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
+		selfVars["deleted_rows"] = cty.ListVal(deletedKeysCty)
 	} else {
-		selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
+		selfVars["deleted_rows"] = cty.ListValEmpty(cty.String)
 	}
 
 	varsEvalContext := evalContext.Variables
@@ -270,7 +270,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 		return nil
 	}
 
-	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
+	pipelineArgs, diags := capture.GetArgs(evalContext)
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
 		return perr.InternalWithMessage("Error getting trigger args")
@@ -293,7 +293,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 		Args:                pipelineArgs,
 	}
 
-	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs)
+	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])
 	if o.IsServerMode {
 		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
 	}
@@ -308,39 +308,6 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 
 	return nil
 }
-
-// func shouldRunPipeline(events []string, insertedRow, updatedRow, deletedKey int) bool {
-// 	// Check if Events slice is empty
-// 	if len(events) == 0 {
-// 		// Run syncData if there's at least one change
-// 		if insertedRow > 0 || updatedRow > 0 || deletedKey > 0 {
-// 			return true
-// 		}
-// 	}
-
-// 	// If Events slice is not empty
-// 	shouldRun := false
-
-// 	// Check for each event type
-// 	for _, event := range events {
-// 		switch event {
-// 		case "insert":
-// 			if insertedRow > 0 {
-// 				shouldRun = true
-// 			}
-// 		case "update":
-// 			if updatedRow > 0 {
-// 				shouldRun = true
-// 			}
-// 		case "delete":
-// 			if deletedKey > 0 {
-// 				shouldRun = true
-// 			}
-// 		}
-// 	}
-
-// 	return shouldRun
-// }
 
 func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {
 	var newRowsCty []cty.Value
