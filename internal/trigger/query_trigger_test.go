@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -301,8 +302,15 @@ func TestTriggerQuery(t *testing.T) {
 		return
 	}
 
-	pipeline := map[string]cty.Value{
-		"name": cty.StringVal("test"),
+	// We just need a name for the pipeline
+	insertPipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("insert_pipe"),
+	}
+	updatePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("update_pipe"),
+	}
+	deletePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("delete_pipe"),
 	}
 
 	var generatedEvalContext *hcl.EvalContext
@@ -320,20 +328,43 @@ func TestTriggerQuery(t *testing.T) {
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
-		Pipeline: cty.ObjectVal(pipeline),
-		ArgsRaw:  hclExpressionMock,
+		ArgsRaw: hclExpressionMock,
+	}
+
+	// build the captures
+	insertPipelineCty := cty.ObjectVal(insertPipelineMap)
+	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
+	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
+
+	// TODO: args?
+	insertCapture := &modconfig.TriggerQueryCapture{
+		Type:     "insert",
+		Pipeline: insertPipelineCty,
+	}
+	updateCapture := &modconfig.TriggerQueryCapture{
+		Type:     "update",
+		Pipeline: updatePipelineCty,
+	}
+	deleteCapture := &modconfig.TriggerQueryCapture{
+		Type:     "delete",
+		Pipeline: deletePipelineCty,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
 		ConnectionString: "sqlite:./test_trigger_query.db",
 		Sql:              "select * from test_one",
 		PrimaryKey:       "id",
+		Captures: map[string]*modconfig.TriggerQueryCapture{
+			"insert": insertCapture,
+			"update": updateCapture,
+			"delete": deleteCapture,
+		},
 	}
 
-	var triggerCommand interface{}
+	var triggerCommands []interface{}
 	commandBusMock := &util.CommandBusMock{
 		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommand = command
+			triggerCommands = append(triggerCommands, command)
 			return nil
 		},
 	}
@@ -393,6 +424,10 @@ func TestTriggerQuery(t *testing.T) {
 		}
 	}
 
+	// check the triggerCommands .. we check how many pipeline is executed and which pipeline is executed
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	//
 	// SECOND RUN
 	//
@@ -402,13 +437,13 @@ func TestTriggerQuery(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(triggerCommands), "trigger command should be nil, since there's no change the pipeline should NOT be called")
 	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
 
 	//
@@ -444,13 +479,13 @@ func TestTriggerQuery(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
+	assert.NotNil(triggerCommands, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -485,6 +520,9 @@ func TestTriggerQuery(t *testing.T) {
 		}
 	}
 
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	//
 	// FOURTH RUN
 	//
@@ -507,7 +545,7 @@ func TestTriggerQuery(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
@@ -548,6 +586,9 @@ func TestTriggerQuery(t *testing.T) {
 		}
 	}
 
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the update pipeline should be executed")
+	assert.Equal("update_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	//
 	// FIFTH RUN
 	//
@@ -558,17 +599,17 @@ func TestTriggerQuery(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
 	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(triggerCommands), "no update")
 
 	//
-	// FIFTH RUN
+	// SIXTH RUN
 	//
 	// Delete some rows
 	idsToDelete := []any{"1", "4"}
@@ -583,7 +624,7 @@ func TestTriggerQuery(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
@@ -620,71 +661,28 @@ func TestTriggerQuery(t *testing.T) {
 			return
 		}
 	}
-}
 
-func TestTriggerQueryWithEventFilter(t *testing.T) {
-	ctx := context.Background()
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Equal("delete_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
 
-	assert := assert.New(t)
-
-	outputPath := "./test_trigger_query.db"
-	// Check if the directory exists
-	_, err := os.Stat(outputPath)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	flowpipeDb := "./flowpipe.db"
-	// Check if the directory exists
-	_, err = os.Stat(flowpipeDb)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(flowpipeDb)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	db, err := initializeDB(outputPath)
-	if err != nil {
-		assert.Fail("Error initializing db", err)
-		return
-	}
-	defer db.Close()
-
-	err = createTestTableA(db, "test_one")
-	if err != nil {
-		assert.Fail("Error creating test table", err)
-		return
-	}
-
-	data := []map[string]interface{}{
+	//
+	// SEVENTH RUN
+	//
+	// Multiple pipeline get executed
+	data = []map[string]interface{}{
 		{
-			"id":                "1",
-			"name":              "John",
+			"id":                "6",
+			"name":              "Jack",
+			"age":               35,
+			"registration_date": "2020-04-01",
+			"is_active":         true,
+		},
+		{
+			"id":                "7",
+			"name":              "Jill",
 			"age":               30,
-			"registration_date": "2020-01-01",
-			"is_active":         true,
-		},
-		{
-			"id":                "2",
-			"name":              "Jane",
-			"age":               25,
-			"registration_date": "2020-02-20",
+			"registration_date": "2020-05-20",
 			"is_active":         false,
-		},
-		{
-			"id":                "3",
-			"name":              "Joe",
-			"age":               40,
-			"registration_date": "2020-03-05",
-			"is_active":         true,
 		},
 	}
 
@@ -694,104 +692,7 @@ func TestTriggerQueryWithEventFilter(t *testing.T) {
 		return
 	}
 
-	pipeline := map[string]cty.Value{
-		"name": cty.StringVal("test"),
-	}
-
-	var generatedEvalContext *hcl.EvalContext
-	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
-			generatedEvalContext = evalCtx
-			res := map[string]cty.Value{
-				"from": cty.StringVal("test"),
-			}
-			return cty.ObjectVal(res), nil
-		},
-	}
-
-	trigger := &modconfig.Trigger{
-		HclResourceImpl: modconfig.HclResourceImpl{
-			FullName: "query.test_trigger",
-		},
-		Pipeline: cty.ObjectVal(pipeline),
-		ArgsRaw:  hclExpressionMock,
-	}
-
-	trigger.Config = &modconfig.TriggerQuery{
-		ConnectionString: "sqlite:./test_trigger_query.db",
-		Sql:              "select * from test_one",
-		PrimaryKey:       "id",
-		Events:           []string{"insert", "update"},
-	}
-
-	var triggerCommand interface{}
-	commandBusMock := &util.CommandBusMock{
-		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommand = command
-			return nil
-		},
-	}
-
-	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
-	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
-
-	assert.NotNil(triggerRunner, "trigger runner should not be nil")
-
-	receiveChannel := make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res := <-receiveChannel
-	assert.Nil(res)
-
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
-
-	selfVar := generatedEvalContext.Variables["self"]
-	if selfVar == cty.NilVal {
-		assert.Fail("self variable should not be nil")
-		return
-	}
-
-	selfVarMap := selfVar.AsValueMap()
-	insertedRows := selfVarMap["inserted_rows"]
-	assert.NotEqual(cty.NilVal, insertedRows, "inserted rows should not be nil")
-
-	insertedRowsList := insertedRows.AsValueSlice()
-	assert.Equal(3, len(insertedRowsList), "wrong number of inserted rows")
-	for _, row := range insertedRowsList {
-		rowMap := row.AsValueMap()
-		id := rowMap["id"].AsString()
-		if id == "1" {
-			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
-			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
-			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
-		} else if id == "2" {
-			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
-			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-02-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
-			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
-		} else if id == "3" {
-			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
-			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
-			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
-		} else {
-			assert.Fail("wrong id")
-		}
-	}
-
-	//
-	// Delete some rows
-	//
-
-	idsToDelete := []any{"1", "3"}
+	idsToDelete = []any{"2"}
 	err = deleteFromTestTable(db, "test_one", idsToDelete)
 	if err != nil {
 		assert.Fail("Error deleting from test table", err)
@@ -803,15 +704,16 @@ func TestTriggerQueryWithEventFilter(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	// pipeline shouldn't be executed because "delete" is not one of the event that we are interested on
-	assert.Nil(generatedEvalContext, "generated eval context should be nil, delete is not in the events filter")
-	assert.Nil(triggerCommand, "trigger command should be nil, delete is not in the events filter")
+	assert.Equal(2, len(triggerCommands), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[1].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.False(triggerCommands[0].(*event.PipelineQueue).Name == triggerCommands[1].(*event.PipelineQueue).Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
 }
 
 func TestTriggerQueryNoPrimaryKey(t *testing.T) {
@@ -886,8 +788,15 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		return
 	}
 
-	pipeline := map[string]cty.Value{
-		"name": cty.StringVal("test"),
+	// We just need a name for the pipeline
+	insertPipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("insert_pipe"),
+	}
+	updatePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("update_pipe"),
+	}
+	deletePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("delete_pipe"),
 	}
 
 	var generatedEvalContext *hcl.EvalContext
@@ -905,19 +814,42 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
-		Pipeline: cty.ObjectVal(pipeline),
-		ArgsRaw:  hclExpressionMock,
+		ArgsRaw: hclExpressionMock,
+	}
+
+	// build the captures
+	insertPipelineCty := cty.ObjectVal(insertPipelineMap)
+	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
+	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
+
+	// TODO: args?
+	insertCapture := &modconfig.TriggerQueryCapture{
+		Type:     "insert",
+		Pipeline: insertPipelineCty,
+	}
+	updateCapture := &modconfig.TriggerQueryCapture{
+		Type:     "update",
+		Pipeline: updatePipelineCty,
+	}
+	deleteCapture := &modconfig.TriggerQueryCapture{
+		Type:     "delete",
+		Pipeline: deletePipelineCty,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
 		ConnectionString: "sqlite:./test_trigger_query.db",
 		Sql:              "select * from test_one",
+		Captures: map[string]*modconfig.TriggerQueryCapture{
+			"insert": insertCapture,
+			"update": updateCapture,
+			"delete": deleteCapture,
+		},
 	}
 
-	var triggerCommand interface{}
+	var triggerCommands []interface{}
 	commandBusMock := &util.CommandBusMock{
 		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommand = command
+			triggerCommands = append(triggerCommands, command)
 			return nil
 		},
 	}
@@ -977,6 +909,9 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		}
 	}
 
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	//
 	// SECOND RUN
 	//
@@ -986,13 +921,13 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(triggerCommands), "trigger command should be nil, since there's no change the pipeline should NOT be called")
 	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
 
 	//
@@ -1030,7 +965,6 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -1072,6 +1006,9 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		}
 	}
 
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	//
 	// FOURTH RUN
 	//
@@ -1094,18 +1031,11 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
-
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
 
 	selfVar = generatedEvalContext.Variables["self"]
 	if selfVar == cty.NilVal {
@@ -1139,6 +1069,12 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	deletedKeysSlice := deletedKeys.AsValueSlice()
 	assert.Equal(1, len(deletedKeysSlice), "wrong number of deleted keys")
 	assert.Equal("a7f390faa9ddca021f647b042c2c127f70e49ed3bdec2194df4e784367b5416a", deletedKeysSlice[0].AsString(), "wrong deleted key")
+
+	// because update doesn't work without primary key, we have insert & delete instead
+	assert.Equal(2, len(triggerCommands), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[1].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.False(triggerCommands[0].(*event.PipelineQueue).Name == triggerCommands[1].(*event.PipelineQueue).Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
 }
 
 func TestTriggerQueryB(t *testing.T) {
@@ -1223,8 +1159,15 @@ func TestTriggerQueryB(t *testing.T) {
 		return
 	}
 
-	pipeline := map[string]cty.Value{
-		"name": cty.StringVal("test"),
+	// We just need a name for the pipeline
+	insertPipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("insert_pipe"),
+	}
+	updatePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("update_pipe"),
+	}
+	deletePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("delete_pipe"),
 	}
 
 	var generatedEvalContext *hcl.EvalContext
@@ -1242,20 +1185,43 @@ func TestTriggerQueryB(t *testing.T) {
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger_b",
 		},
-		Pipeline: cty.ObjectVal(pipeline),
-		ArgsRaw:  hclExpressionMock,
+		ArgsRaw: hclExpressionMock,
+	}
+
+	// build the captures
+	insertPipelineCty := cty.ObjectVal(insertPipelineMap)
+	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
+	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
+
+	// TODO: args?
+	insertCapture := &modconfig.TriggerQueryCapture{
+		Type:     "insert",
+		Pipeline: insertPipelineCty,
+	}
+	updateCapture := &modconfig.TriggerQueryCapture{
+		Type:     "update",
+		Pipeline: updatePipelineCty,
+	}
+	deleteCapture := &modconfig.TriggerQueryCapture{
+		Type:     "delete",
+		Pipeline: deletePipelineCty,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
 		ConnectionString: "sqlite:./test_trigger_query_b.db",
 		Sql:              "select * from test_one",
 		PrimaryKey:       "id",
+		Captures: map[string]*modconfig.TriggerQueryCapture{
+			"insert": insertCapture,
+			"update": updateCapture,
+			"delete": deleteCapture,
+		},
 	}
 
-	var triggerCommand interface{}
+	var triggerCommands []interface{}
 	commandBusMock := &util.CommandBusMock{
 		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommand = command
+			triggerCommands = append(triggerCommands, command)
 			return nil
 		},
 	}
@@ -1273,8 +1239,6 @@ func TestTriggerQueryB(t *testing.T) {
 	triggerRunner.Run()
 	res := <-receiveChannel
 	assert.Nil(res)
-
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -1328,6 +1292,10 @@ func TestTriggerQueryB(t *testing.T) {
 		}
 	}
 
+	// check the triggerCommands .. we check how many pipeline is executed and which pipeline is executed
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	//
 	// SECOND RUN
 	//
@@ -1338,13 +1306,13 @@ func TestTriggerQueryB(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.Nil(triggerCommand, "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(triggerCommands), "trigger command should be nil, since there's no change the pipeline should NOT be called")
 	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
 
 	//
@@ -1368,13 +1336,15 @@ func TestTriggerQueryB(t *testing.T) {
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommand = nil
+	triggerCommands = nil
 
 	triggerRunner.Run()
 	res = <-receiveChannel
 	assert.Nil(res)
 
-	assert.NotNil(triggerCommand, "trigger command should not be nil")
+	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the update pipeline should be executed")
+	assert.Equal("update_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -1421,4 +1391,162 @@ func TestTriggerQueryB(t *testing.T) {
 			assert.Fail("wrong id")
 		}
 	}
+}
+
+func TestTriggerQueryBCustomCapture(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+
+	outputPath := "./test_trigger_query_b.db"
+	// Check if the directory exists
+	_, err := os.Stat(outputPath)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(outputPath)
+		if err != nil {
+			assert.Fail("Error removing test directory", err)
+			return
+		}
+	}
+
+	flowpipeDb := "./flowpipe.db"
+	// Check if the directory exists
+	_, err = os.Stat(flowpipeDb)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(flowpipeDb)
+		if err != nil {
+			assert.Fail("Error removing test directory", err)
+			return
+		}
+	}
+
+	db, err := initializeDB(outputPath)
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
+	defer db.Close()
+
+	err = createTestTableB(db, "test_one")
+	if err != nil {
+		assert.Fail("Error creating test table", err)
+		return
+	}
+
+	data := []map[string]interface{}{
+		{
+			"id":                1,
+			"name":              "John",
+			"age":               30,
+			"registration_date": "2020-01-01",
+			"is_active":         true,
+		},
+		{
+			"id":                2,
+			"name":              "Jane",
+			"age":               25,
+			"registration_date": "2020-02-20",
+			"is_active":         false,
+		},
+		{
+			"id":                3,
+			"name":              "Joe",
+			"age":               40,
+			"registration_date": "2020-03-05",
+			"is_active":         true,
+		},
+	}
+
+	blobSizeMultiplier := 20
+	for _, item := range data {
+		blobData := make([]byte, 10*(blobSizeMultiplier+1))
+		for i := range blobData {
+			blobData[i] = byte(rand.Intn(256)) //nolint:gosec // just a test case
+		}
+
+		item["blob_data"] = blobData
+	}
+
+	err = populateTestTableB(db, "test_one", data)
+	if err != nil {
+		assert.Fail("Error populating test table", err)
+		return
+	}
+
+	// We just need a name for the pipeline
+	updatePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("update_pipe"),
+	}
+	deletePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("delete_pipe"),
+	}
+
+	var generatedEvalContext *hcl.EvalContext
+	hclExpressionMock := &util.HclExpressionMock{
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+			generatedEvalContext = evalCtx
+			res := map[string]cty.Value{
+				"from": cty.StringVal("test"),
+			}
+			return cty.ObjectVal(res), nil
+		},
+	}
+
+	trigger := &modconfig.Trigger{
+		HclResourceImpl: modconfig.HclResourceImpl{
+			FullName: "query.test_trigger_b",
+		},
+		ArgsRaw: hclExpressionMock,
+	}
+
+	// build the captures
+	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
+	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
+
+	// TODO: args?
+	updateCapture := &modconfig.TriggerQueryCapture{
+		Type:     "update",
+		Pipeline: updatePipelineCty,
+	}
+	deleteCapture := &modconfig.TriggerQueryCapture{
+		Type:     "delete",
+		Pipeline: deletePipelineCty,
+	}
+
+	trigger.Config = &modconfig.TriggerQuery{
+		ConnectionString: "sqlite:./test_trigger_query_b.db",
+		Sql:              "select * from test_one",
+		PrimaryKey:       "id",
+		Captures: map[string]*modconfig.TriggerQueryCapture{
+			"update": updateCapture,
+			"delete": deleteCapture,
+		},
+	}
+
+	var triggerCommands []interface{}
+	commandBusMock := &util.CommandBusMock{
+		SendFunc: func(ctx context.Context, command interface{}) error {
+			triggerCommands = append(triggerCommands, command)
+			return nil
+		},
+	}
+
+	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
+
+	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
+	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
+
+	assert.NotNil(triggerRunner, "trigger runner should not be nil")
+
+	receiveChannel := make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	triggerRunner.Run()
+	res := <-receiveChannel
+	assert.Nil(res)
+
+	assert.Nil(generatedEvalContext, "generated eval context should be nil, insert capture not defined no pipeline should be executed")
+	assert.Equal(0, len(triggerCommands), "insert capture not defined no pipeline should be executed")
 }
