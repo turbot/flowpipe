@@ -323,12 +323,6 @@ func TestQueryDuckDB(t *testing.T) {
 		schema.AttributeTypeSql:              "select * from employee order by id;",
 	})
 
-	// Initialize the DB connection
-	_, err := hr.InitializeDB(ctx, input)
-	if err != nil {
-		return
-	}
-
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
 	assert.Equal(3, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
@@ -395,13 +389,7 @@ func TestQueryInvalidDatabase(t *testing.T) {
 		schema.AttributeTypeSql:              "select * from employee order by id;",
 	})
 
-	// Initialize the DB connection
-	_, err := hr.InitializeDB(ctx, input)
-	if err != nil {
-		return
-	}
-
-	_, err = hr.Run(ctx, input)
+	_, err := hr.Run(ctx, input)
 	assert.NotNil(err)
-	assert.Equal("Unsupported database type", err.Error())
+	assert.Contains(err.Error(), "Bad Request: Invalid database connection string")
 }
