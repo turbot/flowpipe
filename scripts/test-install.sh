@@ -1,5 +1,12 @@
 #!/bin/sh
-# TODO(everyone): Keep this script simple and easily auditable.
+# Test installation script for bash. Mirrors install.sh script in the root directory. Any changes must be reflected in both scripts
+
+# Check if exactly one argument is given
+if [ "$#" -ne 1 ]; then
+    echo "Error: This script requires exactly one argument which is the version of Flowpipe to install. For example: sudo ./test-install.sh v0.2.0-rc.2"
+    exit 1
+fi
+
 
 # Function to check if a command exists
 command_exists() {
@@ -8,7 +15,8 @@ command_exists() {
 
 set -e
 
-flowpipe_uri="https://github.com/turbot/flowpipe/releases/download/v0.1.1/flowpipe.linux.arm64.tar.gz"
+FLOWPIPE_TEST_VERSION=$1
+flowpipe_uri="https://github.com/turbot/flowpipe/releases/download/${FLOWPIPE_TEST_VERSION}/flowpipe.linux.arm64.tar.gz"
 
 bin_dir="/usr/local/bin"
 exe="$bin_dir/flowpipe"
