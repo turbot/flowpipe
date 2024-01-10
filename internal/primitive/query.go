@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	_ "github.com/marcboeker/go-duckdb"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
 
@@ -55,13 +56,19 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
-		// db, err = sql.Open(DriverDuckDB, dbConnectionString)
-		return nil, perr.BadRequestWithMessage("DuckDB not yet supported")
+		duckDBFile := dbConnectionString[7:]
+		if duckDBFile == "" {
+			return nil, perr.BadRequestWithMessage("Invalid duckDB database connection string")
+		}
+		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), duckDBFile)
+
+		slog.Debug("Opening duckDB database", "file", dbFile)
+		db, err = sql.Open(DriverDuckDB, dbFile)
 
 	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
 		sqlLiteFile := dbConnectionString[7:]
 		if sqlLiteFile == "" {
-			return nil, perr.BadRequestWithMessage("Invalid database connection string")
+			return nil, perr.BadRequestWithMessage("Invalid sqlite database connection string")
 		}
 		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), sqlLiteFile)
 
