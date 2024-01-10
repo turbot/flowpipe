@@ -161,7 +161,7 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOpti
 
 	suffix := ""
 	if opts.Verbose {
-		suffix = fmt.Sprintf("%s", au.BrightRed(o.Error.Error()))
+		suffix = fmt.Sprintf("\n%s", au.BrightRed(o.Error.Error()))
 	}
 
 	return fmt.Sprintf("%s%s %s%s\n",
