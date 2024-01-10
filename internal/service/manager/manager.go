@@ -407,6 +407,7 @@ func (m *Manager) startAPIService() error {
 func (m *Manager) startSchedulerService() error {
 	s := scheduler.NewSchedulerService(m.ctx, m.ESService, m.triggers)
 	if err := s.Start(); err != nil {
+		slog.Error("error starting scheduler service", "error", err)
 		return err
 	}
 
