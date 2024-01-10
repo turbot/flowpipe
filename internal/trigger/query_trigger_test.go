@@ -340,14 +340,17 @@ func TestTriggerQuery(t *testing.T) {
 	insertCapture := &modconfig.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	updateCapture := &modconfig.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	deleteCapture := &modconfig.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
@@ -826,14 +829,17 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	insertCapture := &modconfig.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	updateCapture := &modconfig.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	deleteCapture := &modconfig.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
@@ -1197,14 +1203,17 @@ func TestTriggerQueryB(t *testing.T) {
 	insertCapture := &modconfig.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	updateCapture := &modconfig.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	deleteCapture := &modconfig.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
@@ -1509,10 +1518,12 @@ func TestTriggerQueryBCustomCapture(t *testing.T) {
 	updateCapture := &modconfig.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 	deleteCapture := &modconfig.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
+		ArgsRaw:  hclExpressionMock,
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
