@@ -10,9 +10,12 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/turbot/flowpipe/internal/es/event"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -85,7 +88,9 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	pipelineName := pipelineDefn["name"].AsString()
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName)
-
+	if o.IsServerMode {
+		o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("running query trigger %s", tr.Trigger.Name())))
+	}
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
 
 	queryPrimitive := primitive.Query{}
@@ -98,17 +103,26 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	output, err := queryPrimitive.Run(context.Background(), input)
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error running query trigger", err))
+		}
 		return err
 	}
 
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("no rows returned from query trigger %s", tr.Trigger.Name())))
+		}
 		return nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
 	if !ok {
 		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error converting query rows to []interface{}", err))
+		}
 		return nil
 	}
 
@@ -261,9 +275,15 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	}
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs)
+	if o.IsServerMode {
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
+	}
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error sending pipeline command", err))
+		}
 		return err
 	}
 
