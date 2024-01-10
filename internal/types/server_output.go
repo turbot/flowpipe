@@ -161,10 +161,10 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOpti
 
 	suffix := ""
 	if opts.Verbose {
-		suffix = fmt.Sprintf("\n%s", au.BrightRed(o.Error.Error()))
+		suffix = fmt.Sprintf("%s", au.BrightRed(o.Error.Error()))
 	}
 
-	return fmt.Sprintf("%s%s %s%s",
+	return fmt.Sprintf("%s%s %s%s\n",
 		o.ServerOutputPrefix.String(sanitizer, opts),
 		au.Red("error"),
 		au.Red(o.Message),
@@ -238,7 +238,7 @@ func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opt
 	if len(o.Errors) > 0 {
 		for _, e := range o.Errors {
 			errLine := fmt.Sprintf("error on step %s: %s\n", e.Step, e.Error.Error())
-			lines = append(lines, fmt.Sprintf("%s%s", pre, au.Red(errLine)))
+			lines = append(lines, fmt.Sprintf("%s %s", pre, au.Red(errLine)))
 		}
 	}
 
@@ -350,7 +350,7 @@ func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts Re
 	if len(o.Errors) > 0 {
 		for _, e := range o.Errors {
 			errLine := fmt.Sprintf("error on %s step %s: %s\n", o.StepType, o.StepName, e.Error.Error())
-			lines = append(lines, fmt.Sprintf("%s%s", pre, au.Red(errLine)))
+			lines = append(lines, fmt.Sprintf("%s %s", pre, au.Red(errLine)))
 		}
 	}
 
