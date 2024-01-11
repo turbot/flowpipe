@@ -39,7 +39,7 @@ func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts RenderOptions) st
 	default:
 		cat = au.Blue(o.Category)
 	}
-	return aurora.Sprintf("%s %s%s%s ", au.BrightBlack(o.TimeStamp.Format(time.RFC3339)), left, cat, right)
+	return aurora.Sprintf("%s %s%s%s ", au.BrightBlack(o.TimeStamp.Local().Format(time.DateTime)), left, cat, right)
 }
 
 type ServerOutputStatusChange struct {
