@@ -137,23 +137,29 @@ func (s *SchedulerService) RescheduleTriggers() error {
 }
 
 func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
-	pipelineValueMap := t.Pipeline.AsValueMap()
-	if pipelineValueMap == nil {
-		return perr.BadRequestWithMessage("pipeline not found for trigger " + t.Name())
-	}
 
-	if pipelineValueMap[schema.LabelName] == cty.NilVal {
-		return perr.BadRequestWithMessage("pipeline name not found for trigger " + t.Name())
-	}
+	pipelineName := ""
+	if t.Pipeline != cty.NilVal {
+		pipelineValueMap := t.Pipeline.AsValueMap()
+		if pipelineValueMap == nil {
+			return perr.BadRequestWithMessage("pipeline not found for trigger " + t.Name())
+		}
 
-	pipelineName := t.Pipeline.AsValueMap()[schema.LabelName].AsString()
+		if pipelineValueMap[schema.LabelName] == cty.NilVal {
+			return perr.BadRequestWithMessage("pipeline name not found for trigger " + t.Name())
+		}
+
+		pipelineName = t.Pipeline.AsValueMap()[schema.LabelName].AsString()
+	}
 	switch config := t.Config.(type) {
 	case *modconfig.TriggerSchedule:
 
 		tags := []string{
 			"id:" + t.FullName,
 			"schedule:" + config.Schedule,
-			"pipeline:" + pipelineName,
+		}
+		if pipelineName != "" {
+			tags = append(tags, "pipeline:"+pipelineName)
 		}
 
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
@@ -187,7 +193,6 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		tags := []string{
 			"id:" + t.FullName,
 			"schedule:" + config.Schedule,
-			"pipeline:" + pipelineName,
 		}
 
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)

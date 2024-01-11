@@ -10,9 +10,13 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -74,17 +78,11 @@ func (tr *TriggerRunnerQuery) Run() {
 }
 
 func (tr *TriggerRunnerQuery) RunOne() error {
-	pipeline := tr.Trigger.GetPipeline()
 
-	if pipeline == cty.NilVal {
-		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
+	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
+	if o.IsServerMode {
+		o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("running query trigger %s", tr.Trigger.Name())))
 	}
-
-	pipelineDefn := pipeline.AsValueMap()
-	pipelineName := pipelineDefn["name"].AsString()
-
-	slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName)
 
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
 
@@ -98,17 +96,26 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	output, err := queryPrimitive.Run(context.Background(), input)
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error running query trigger", err))
+		}
 		return err
 	}
 
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("no rows returned from query trigger %s", tr.Trigger.Name())))
+		}
 		return nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
 	if !ok {
 		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error converting query rows to []interface{}", err))
+		}
 		return nil
 	}
 
@@ -213,12 +220,6 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		deletedKeysCty = append(deletedKeysCty, cty.StringVal(k))
 	}
 
-	// Check if we need to trigger the pipeline
-	runPipeline := shouldRunPipeline(config.Events, len(newRowCtyVals), len(updatedRowCtyVals), len(deletedKeysCty))
-	if !runPipeline {
-		return nil
-	}
-
 	evalContext, err := buildEvalContext(tr.rootMod)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
@@ -239,19 +240,51 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
 	}
 	if len(deletedKeysCty) > 0 {
-		selfVars["deleted_keys"] = cty.ListVal(deletedKeysCty)
+		selfVars["deleted_rows"] = cty.ListVal(deletedKeysCty)
 	} else {
-		selfVars["deleted_keys"] = cty.ListValEmpty(cty.String)
+		selfVars["deleted_rows"] = cty.ListValEmpty(cty.String)
 	}
 
 	varsEvalContext := evalContext.Variables
 	varsEvalContext["self"] = cty.ObjectVal(selfVars)
 
-	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
+	queryStat := map[string]int{
+		"insert": len(newRowCtyVals),
+		"update": len(updatedRowCtyVals),
+		"delete": len(deletedKeysCty),
+	}
+	for _, capture := range config.Captures {
+		err := runPipeline(capture, tr, evalContext, queryStat)
+		if err != nil {
+			slog.Error("Error running pipeline", "error", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) error {
+
+	if queryStat[capture.Type] <= 0 {
+		return nil
+	}
+
+	pipelineArgs, diags := capture.GetArgs(evalContext)
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return err
+		return perr.InternalWithMessage("Error getting trigger args")
 	}
+
+	pipeline := capture.Pipeline
+
+	if pipeline == cty.NilVal {
+		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
+		return perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
+	}
+
+	pipelineDefn := pipeline.AsValueMap()
+	pipelineName := pipelineDefn["name"].AsString()
 
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(),
@@ -260,47 +293,20 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		Args:                pipelineArgs,
 	}
 
-	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs)
+	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])
+	if o.IsServerMode {
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
+	}
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error sending pipeline command", err))
+		}
 		return err
 	}
 
 	return nil
-}
-
-func shouldRunPipeline(events []string, insertedRow, updatedRow, deletedKey int) bool {
-	// Check if Events slice is empty
-	if len(events) == 0 {
-		// Run syncData if there's at least one change
-		if insertedRow > 0 || updatedRow > 0 || deletedKey > 0 {
-			return true
-		}
-	}
-
-	// If Events slice is not empty
-	shouldRun := false
-
-	// Check for each event type
-	for _, event := range events {
-		switch event {
-		case "insert":
-			if insertedRow > 0 {
-				shouldRun = true
-			}
-		case "update":
-			if updatedRow > 0 {
-				shouldRun = true
-			}
-		case "delete":
-			if deletedKey > 0 {
-				shouldRun = true
-			}
-		}
-	}
-
-	return shouldRun
 }
 
 func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {

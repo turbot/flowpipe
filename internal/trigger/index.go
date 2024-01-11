@@ -47,8 +47,9 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			Fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
 		}
 	case *modconfig.TriggerQuery:
-		internalDir := filepaths.ModInternalDir()
-		dbFile := filepath.Join(internalDir, "flowpipe.db")
+		dbDir := filepaths.ModDir()
+		dbFile := filepath.Join(dbDir, "flowpipe.db")
+
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:    trigger,

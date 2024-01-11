@@ -1,18 +1,39 @@
-// trigger "query" "simple" {
-//     schedule = "hourly"
+trigger "query" "simple" {
+    schedule = "* * * * *"
 
-//     connection_string = "sqlite:./query_source.db"
-//     sql = "select * from test_one"
-//     primary_key = "id"
+    connection_string = "sqlite:./query_source.db"
 
-//     pipeline = pipeline.query_trigger_display
+    sql = "select * from test_one"
 
-//     args = {
-//         inserted_rows = self.inserted_rows
-//         updated_rows = self.updated_rows
-//         deleted_keys = self.deleted_keys
-//     }
-// }
+    primary_key = "id"
+
+    capture "insert" {
+        pipeline = pipeline.query_trigger_display
+        args = {
+            inserted_rows = self.inserted_rows
+            updated_rows = self.updated_rows
+            deleted_rows = self.deleted_rows
+        }
+    }
+
+    capture "update" {
+        pipeline = pipeline.query_trigger_display
+        args = {
+            inserted_rows = self.inserted_rows
+            updated_rows = self.updated_rows
+            deleted_rows = self.deleted_rows
+        }
+    }
+
+    capture "delete" {
+        pipeline = pipeline.query_trigger_display
+        args = {
+            inserted_rows = self.inserted_rows
+            updated_rows = self.updated_rows
+            deleted_rows = self.deleted_rows
+        }
+    }
+}
 
 
 pipeline "query_trigger_display" {
@@ -23,7 +44,7 @@ pipeline "query_trigger_display" {
     param "updated_rows" {
     }
 
-    param "deleted_keys" {
+    param "deleted_rows" {
     }
 
     output "inserted_rows" {
@@ -34,8 +55,8 @@ pipeline "query_trigger_display" {
         value = param.updated_rows
     }
 
-    output "deleted_keys" {
-        value = param.deleted_keys
+    output "deleted_rows" {
+        value = param.deleted_rows
     }
 }
 

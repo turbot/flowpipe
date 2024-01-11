@@ -25,6 +25,10 @@ func ModInternalDir() string {
 	return modInternalDir
 }
 
+func ModDir() string {
+	return viper.GetString(constants.ArgModLocation)
+}
+
 func EventStoreFilePath(executionId string) string {
 	return path.Join(EventStoreDir(), fmt.Sprintf("%s.jsonl", executionId))
 }

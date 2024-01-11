@@ -2,24 +2,25 @@
 
 ## v0.2.0 [tbd]
 
-*What's new?*
+_What's new?_
 
-* Query trigger. [See more in our documentation](https://flowpipe.io/docs/).
-* Query step now supports:
+* Query Trigger. [See more in our documentation](https://flowpipe.io/docs/).
+* Added Query Step's database support for:
     - MySQL
     - SQLite
+    - DuckDB
 
-*Enhancements*
+_Enhancements_
 
 * Improved output when running in `server` mode.
-* Container step now supports `Source` in addition to `Image`. [See more in our documentation](https://flowpipe.io/docs/).
+* Added `Source` argument to Container Step in addition to `Image`. [See more in our documentation](https://flowpipe.io/docs/).
+* Added `timeout` argument to Pipeline steps.
 
-*Bug fixes*
+_Bug fixes_
 
 * Implemented a more descriptive error message for server startup failures.
-* Step arguments are now able to be referenced in the pipeline definition.
+* Fixed Step Arguments unable to be referenced in the Pipeline definition.
 * Added missing `execution_mode` argument to HTTP Trigger. [#533](https://github.com/turbot/flowpipe/issues/533).
-* Removed inaccurate SQL Query string validation to check for arguments. [#516](https://github.com/turbot/flowpipe/issues/516)
 
 ## v0.1.0 [2023-12-13]
 
