@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"log/slog"
 	"net/http"
 	"os"
@@ -238,9 +240,11 @@ func (api *APIService) Start() error {
 	// Initializing the server in a goroutine so that
 	// it won't block the graceful shutdown handling below
 	go func() {
-		fmt.Println("Flowpipe server listening on", api.httpServer.Addr) //nolint:forbidigo // Output
 		if err := api.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			slog.Error("API server failed to start", "error", err)
+			if output.IsServerMode {
+				output.RenderServerOutput(api.ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "API server failed to start", err))
+			}
 			os.Exit(1)
 		}
 	}()
