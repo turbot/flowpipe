@@ -6,9 +6,5 @@ import (
 )
 
 func GetPrinter[T any](cmd *cobra.Command) (printers.ResourcePrinter[T], error) {
-	return printers.GetPrinter[T](cmd, printers.WithTableCommands([]string{
-		"flowpipe.trigger.list",
-		"flowpipe.pipeline.list",
-		"flowpipe.process.list",
-	}))
+	return printers.GetPrinter[T](cmd, printers.WithStringPrinterCommands([]string{"flowpipe.mod.list"}))
 }
