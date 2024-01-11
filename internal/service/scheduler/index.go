@@ -62,8 +62,12 @@ func (s *SchedulerService) RescheduleTriggers() error {
 			scheduleString = config.Schedule
 		case *modconfig.TriggerQuery:
 			scheduleString = config.Schedule
+		case *modconfig.TriggerHttp:
+			continue
 		}
 
+		// TODO: no scheduled string means every 15 minutes for Query Trigger
+		// TODO: no scheduled string for Schedule Trigger means an error
 		if scheduleString == "" {
 			continue
 		}
@@ -73,12 +77,14 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		// Find the job in the scheduler
 		jobs, err := s.cronScheduler.FindJobsByTag("id:" + t.FullName)
 		if err != nil && err == gocron.ErrJobNotFoundWithTag {
+			// Job not found in the scheduler, schedule it
 			err := s.scheduleTrigger(t)
 			if err != nil {
 				return err
 			}
 			continue
 		} else if err != nil {
+			// Real error, return the error
 			return err
 		}
 
@@ -97,18 +103,10 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		job := jobs[0]
 		jobTags := job.Tags()
 
-		// Detect changes
+		// Detect changes, only changes in the schedule should result in a re-schedule. Changes in the trigger config itself,
+		// i.e. pipeline changes don't need a re-schedule. We trigger config is not stored in the scheduler, when mod is updated
+		// the cache is updated and the definition is retrieved again when we run the trigger.
 		if jobTags[1] != "schedule:"+scheduleString {
-			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
-			s.cronScheduler.RemoveByReference(job)
-			err := s.scheduleTrigger(t)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-
-		if jobTags[2] != "pipeline:"+t.Pipeline.AsValueMap()[schema.LabelName].AsString() {
 			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
 			s.cronScheduler.RemoveByReference(job)
 			err := s.scheduleTrigger(t)
