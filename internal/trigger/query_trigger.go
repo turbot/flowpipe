@@ -18,7 +18,6 @@ import (
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -309,64 +308,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 	return nil
 }
 
-func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {
-	var newRowsCty []cty.Value
-	for _, r := range newRows {
-		rowCty, err := rowToCty(r)
-		if err != nil {
-			return nil, err
-		}
-		newRowsCty = append(newRowsCty, rowCty)
-	}
-	return newRowsCty, nil
-}
-
-func rowToCty(row map[string]interface{}) (cty.Value, error) {
-	rowCty := map[string]cty.Value{}
-	for k, v := range row {
-		ctyVal, err := hclhelpers.ConvertInterfaceToCtyValue(v)
-		if err != nil {
-			return cty.NilVal, err
-		}
-		rowCty[k] = ctyVal
-	}
-	return cty.ObjectVal(rowCty), nil
-}
-
-func initializeDB(dbPath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
-func initializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
-
-	db, err := initializeDB(dbPath)
-	if err != nil {
-		return nil, err
-	}
-
-	createTableSQL := `create table if not exists ` + tableName + ` (_fp_data text primary key, _fp_hash text);`
-
-	slog.Info("Creating table", "sql", createTableSQL)
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		return nil, err
-	}
-
-	crateIndexSQL := `create index if not exists idx_data on ` + tableName + ` (_fp_data);`
-	_, err = db.Exec(crateIndexSQL)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
-func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems []queryTriggerMetadata) ([]string, []string, []string, error) {
+func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItems []queryTriggerMetadata) ([]string, []string, []string, error) {
 	if len(controlItems) == 0 {
 		return nil, nil, nil, nil
 	}
@@ -378,7 +320,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 	}
 
 	// Create a temporary table
-	_, err = tx.Exec(`create temporary table ` + tableName + `_temp_items (_fp_data text primary key, _fp_hash text)`)
+	_, err = tx.Exec(`create temporary table ` + triggerName + `_temp_items (primary_key text primary key, row_hash text, created_at text)`)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -388,7 +330,8 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`insert into ` + tableName + `_temp_items (_fp_data, _fp_hash) values (?, ?)`) //nolint:gosec // should be safe to use
+	timeNow := time.Now()
+	tempStmt, err := tx.Prepare(`insert into ` + triggerName + `_temp_items (primary_key, row_hash, created_at) values (?, ?, ?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -400,7 +343,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 
 	// Insert all items into the temporary table
 	for _, item := range controlItems {
-		_, err = tempStmt.Exec(item.PrimaryKey, item.RowHash)
+		_, err = tempStmt.Exec(item.PrimaryKey, item.RowHash, timeNow.UTC().Format(util.RFC3389WithMS))
 		if err != nil {
 			err2 := tx.Rollback()
 			if err2 != nil {
@@ -410,7 +353,8 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 		}
 	}
 
-	newItems, err := insertNewItems(tx, tableName)
+	// Insert the "new items" into our tracking table
+	newItems, err := insertNewItems(tx, triggerName)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -419,7 +363,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 		return nil, nil, nil, err
 	}
 
-	updatedItems, err := updatedItems(tx, tableName)
+	updatedItems, err := updatedItems(tx, triggerName)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -431,12 +375,10 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 	slog.Info("updatedItems", "updatedItems", updatedItems)
 
 	// Find deleted items by comparing with the main table
-	deletedItemsSQL := `
-		select _fp_data from ` + tableName + `
-		where _fp_data not in (select _fp_data from ` + tableName + `_temp_items)
-	`
+	deletedItemsSQL := `select primary_key from query_trigger_captured_row
+						where primary_key not in (select primary_key from ` + triggerName + `_temp_items) and trigger_name = ?`
 
-	deletedRows, err := tx.Query(deletedItemsSQL)
+	deletedRows, err := tx.Query(deletedItemsSQL, triggerName)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -461,7 +403,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 
 	slog.Debug("deleted items found", "deletedItems", deletedItems)
 
-	deleteItemsFromTrackingDb := `delete from ` + tableName + ` where _fp_data = ?`
+	deleteItemsFromTrackingDb := `delete from query_trigger_captured_row where primary_key = ? and trigger_name = ?`
 	deleteStmt, err := tx.Prepare(deleteItemsFromTrackingDb)
 	if err != nil {
 		err2 := tx.Rollback()
@@ -472,8 +414,8 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 	}
 	defer deleteStmt.Close()
 	for _, deletedItem := range deletedItems {
-		slog.Debug("Deleting item", "item", deletedItem, "table", tableName)
-		_, err = deleteStmt.Exec(deletedItem)
+		slog.Debug("Deleting item", "item", deletedItem, "table", triggerName)
+		_, err = deleteStmt.Exec(deletedItem, triggerName)
 		if err != nil {
 			err2 := tx.Rollback()
 			if err2 != nil {
@@ -483,7 +425,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 		}
 	}
 
-	_, err = tx.Exec(`drop table ` + tableName + `_temp_items`)
+	_, err = tx.Exec(`drop table ` + triggerName + `_temp_items`)
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -501,15 +443,15 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, tableName string, controlItems 
 	return newItems, updatedItems, deletedItems, nil
 }
 
-func insertNewItems(tx *sql.Tx, tableName string) ([]string, error) {
+func insertNewItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	// Find new items by comparing with the main table
 	newItemsSQL := `
-        insert into ` + tableName + ` (_fp_data, _fp_hash)
-        select _fp_data, _fp_hash from ` + tableName + `_temp_items
-        where _fp_data not in (select _fp_data from ` + tableName + `)
-        returning _fp_data
+        insert into query_trigger_captured_row (trigger_name, primary_key, row_hash, created_at)
+        select '` + triggerName + `', primary_key, row_hash, created_at from ` + triggerName + `_temp_items
+        where primary_key not in (select primary_key from query_trigger_captured_row where trigger_name = ?)
+        returning primary_key
     `
-	rows, err := tx.Query(newItemsSQL)
+	rows, err := tx.Query(newItemsSQL, triggerName)
 	if err != nil {
 		return nil, err
 	}
@@ -527,31 +469,32 @@ func insertNewItems(tx *sql.Tx, tableName string) ([]string, error) {
 	return newItems, nil
 }
 
-func updatedItems(tx *sql.Tx, tableName string) ([]string, error) {
+func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 
-	sourceTable := tableName + "_temp_items"
+	sourceTable := triggerName + "_temp_items"
 
+	timeNow := time.Now()
 	updateItemsSQL := `WITH Updated AS (
-		SELECT _fp_data
-		FROM ` + tableName + `
+		SELECT primary_key
+		FROM query_trigger_captured_row
 		WHERE EXISTS (
 			SELECT 1
 			FROM ` + sourceTable + `
-			WHERE ` + sourceTable + `._fp_data = ` + tableName + `._fp_data
-			  AND ` + tableName + `._fp_hash <> ` + sourceTable + `._fp_hash
-		)
+			WHERE ` + sourceTable + `.primary_key = query_trigger_captured_row.primary_key
+			  AND ` + sourceTable + `.row_hash <>  query_trigger_captured_row.row_hash
+		) AND trigger_name = '` + triggerName + `'
 	)
-	UPDATE ` + tableName + `
-	SET _fp_hash = (
-		SELECT _fp_hash
+	UPDATE query_trigger_captured_row
+	SET row_hash = (
+		SELECT row_hash
 		FROM ` + sourceTable + `
-		WHERE ` + sourceTable + `._fp_data = ` + tableName + `._fp_data
-	)
-	WHERE _fp_data IN (SELECT _fp_data FROM Updated)
-	RETURNING _fp_data;
+		WHERE ` + sourceTable + `.primary_key = query_trigger_captured_row.primary_key
+	), updated_at  = ?
+	WHERE primary_key IN (SELECT primary_key FROM Updated) AND trigger_name = '` + triggerName + `'
+	RETURNING primary_key;
 	`
 
-	rows, err := tx.Query(updateItemsSQL)
+	rows, err := tx.Query(updateItemsSQL, timeNow.UTC().Format(util.RFC3389WithMS))
 	if err != nil {
 		return nil, err
 	}
