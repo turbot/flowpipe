@@ -64,6 +64,13 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
+	// Check if the HTTP trigger is enabled
+	// If not enabled, return a 404 error with a custom error type
+	if t.Enabled != nil && !*t.Enabled {
+		common.AbortWithError(c, perr.NotFoundWithMessageAndType(perr.ErrorCodeTriggerDisabled, "Trigger Disabled"))
+		return
+	}
+
 	httpTriggerConfig, ok := t.Config.(*modconfig.TriggerHttp)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
