@@ -20,6 +20,7 @@ on:
         required: true
         type: boolean
 
+
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
@@ -90,6 +91,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
+          ref: v0.2.x
 
       # - name: Unshallow
       #   run: git fetch --prune --unshallow
