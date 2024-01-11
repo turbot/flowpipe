@@ -25,6 +25,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
+          ref: v0.2.x
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
