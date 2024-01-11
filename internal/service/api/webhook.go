@@ -57,7 +57,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	// check if the t is a webhook t
+	// check if the t is a webhook trigger
 	t, ok := triggerCached.(*modconfig.Trigger)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a trigger"))
