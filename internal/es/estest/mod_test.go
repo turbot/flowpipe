@@ -2274,6 +2274,26 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemoryAndFile() {
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
 }
 
+func (suite *ModTestSuite) TestExcudeSHARedaction() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.github_sha_exclude_redaction", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("https://github.com/turbot/flowpipe/commit/7a2c8fd9789a9b6rc8f29c41b42036823e2fceab", pex.PipelineOutput["sha"].(string))
+}
+
 func (suite *ModTestSuite) XTestRunMultiplePipelinesAtTheSameTimeWithDifferentInput() {
 	// TODO
 }

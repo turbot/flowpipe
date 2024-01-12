@@ -82,8 +82,9 @@ var Instance = NewSanitizer(SanitizerOptions{
 		"jumpcloud_api_key",
 	},
 	ExcludePatterns: []string{
-		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`, // sendgrid
-		`AccountKey=[a-zA-Z0-9+/=]{88}`,            // azure storage account key
+		`SG\.[a-zA-Z0-9_-]{22}\.[a-zA-Z0-9_-]{43}`,   // sendgrid
+		`AccountKey=[a-zA-Z0-9+/=]{88}`,              // azure storage account key
+		`(?m)(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{36}`, // github_personal_access_token
 	},
 	ImportCodeMatchers: true,
 })
@@ -105,7 +106,8 @@ type Sanitizer struct {
 
 var codePluginExcludedRegex = []string{
 	"heroku_api_key",
-	"azure_storage_account_key", // code plugin defines 2 regexes for this, one we want to use but the other is a bit loose, we will use just the one we want and define it in this package
+	"azure_storage_account_key",    // code plugin defines 2 regexes for this, one we want to use but the other is a bit loose, we will use just the one we want and define it in this package
+	"github_personal_access_token", // code plugin defines 2 regexes, one for github PAT and another one for SHA. We will use just the PAT one and define it in this package
 }
 
 func NewSanitizer(opts SanitizerOptions) *Sanitizer {
