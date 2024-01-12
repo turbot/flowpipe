@@ -141,6 +141,9 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		if scheduleString == "" {
 			scheduleString = "hourly"
 		}
+	default:
+		// can't schedule HTTP Trigger
+		return nil
 	}
 
 	tags := []string{
