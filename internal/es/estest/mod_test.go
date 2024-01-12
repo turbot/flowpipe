@@ -3606,6 +3606,74 @@ func (suite *ModTestSuite) TestSqliteQueryTimeout() {
 	assert.Contains(pex.Errors[0].Error.Error(), "Timeout: Query execution exceeded timeout")
 }
 
+func (suite *ModTestSuite) TestPipelineStepLoopWithArgs() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_pipeline_loop_with_args", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(4, len(pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions))
+
+	// Iteration 0
+	output := pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[0].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! iteration index 0", output["greet_world"].(string))
+
+	// Iteration 1
+	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[1].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! loop index_0 0", output["greet_world"].(string))
+
+	// Iteration 2
+	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[2].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! loop index_1 1", output["greet_world"].(string))
+
+	// Iteration 3
+	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[3].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! loop index_2 2", output["greet_world"].(string))
+}
+
+func (suite *ModTestSuite) TestPipelineStepLoopWithArgsLiteral() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.simple_pipeline_loop_with_arg_literal", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(4, len(pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions))
+
+	// Iteration 0
+	output := pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[0].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! iteration index 0", output["greet_world"].(string))
+
+	// Iteration 1
+	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[1].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! loop index 1", output["greet_world"].(string))
+
+	// Iteration 2
+	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[2].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! loop index 1", output["greet_world"].(string))
+
+	// Iteration 3
+	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[3].Output.Data["output"].(map[string]interface{})
+	assert.Equal("Hello world! loop index 1", output["greet_world"].(string))
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
