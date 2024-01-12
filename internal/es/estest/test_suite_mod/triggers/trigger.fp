@@ -11,13 +11,13 @@ pipeline "simple_with_trigger" {
     }
 }
 
-// trigger "schedule" "my_every_minute_trigger" {
-//     schedule = "* * * * *"
-//     pipeline = pipeline.simple_with_trigger
-//     args = {
-//         param_one = "from trigger"
-//     }
-// }
+trigger "schedule" "my_every_hour_trigger" {
+    schedule = "hourly"
+    pipeline = pipeline.simple_with_trigger
+    args = {
+        param_one = "from trigger"
+    }
+}
 
 // trigger "schedule" "my_every_minute_trigger_nine" {
 //     schedule = "* * * * *"

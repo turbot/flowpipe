@@ -528,6 +528,7 @@ func (m *Manager) renderServerStartOutput() {
 	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
 	outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "mod"), m.RootMod.Name(), false))
 	outputs = append(outputs, renderServerTriggers(m.triggers)...)
+	outputs = append(outputs, types.NewServerOutput(startTime, "flowpipe", "Press Ctrl+C to exit."))
 
 	output.RenderServerOutput(m.ctx, outputs...)
 }
