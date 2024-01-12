@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -332,7 +333,7 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	}
 
 	w.SetOnFileWatcherEventMessages(func() {
-		var serverOutput []types.SanitizedStringer
+		var serverOutput []sanitize.SanitizedStringer
 		slog.Info("caching pipelines and triggers")
 		serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "mod"), m.RootMod.Name(), true))
 		m.triggers = w.Mod.ResourceMaps.Triggers
@@ -519,7 +520,7 @@ func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
 }
 
 func (m *Manager) renderServerStartOutput() {
-	var outputs []types.SanitizedStringer
+	var outputs []sanitize.SanitizedStringer
 	startTime := time.Now()
 	if !helpers.IsNil(m.StartedAt) {
 		startTime = *m.StartedAt
@@ -542,8 +543,8 @@ func (m *Manager) renderServerShutdownOutput() {
 	output.RenderServerOutput(m.ctx, msg)
 }
 
-func renderServerTriggers(triggers map[string]*modconfig.Trigger) []types.SanitizedStringer {
-	var outputs []types.SanitizedStringer
+func renderServerTriggers(triggers map[string]*modconfig.Trigger) []sanitize.SanitizedStringer {
+	var outputs []sanitize.SanitizedStringer
 
 	for key, t := range triggers {
 		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)

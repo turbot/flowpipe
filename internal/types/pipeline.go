@@ -3,14 +3,14 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"strings"
 	"time"
 
 	"github.com/turbot/go-kit/helpers"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/flowpipe/internal/sanitize"
-
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	typehelpers "github.com/turbot/go-kit/types"
@@ -66,7 +66,7 @@ type FpPipeline struct {
 	Params          []FpPipelineParam          `json:"params,omitempty"`
 }
 
-func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -281,7 +281,7 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -346,8 +346,8 @@ func (p PrintablePipeline) GetItems() []FpPipeline {
 	return p.Items
 }
 
-func (p PrintablePipeline) GetTable() (Table, error) {
-	var tableRows []TableRow
+func (p PrintablePipeline) GetTable() (printers.Table, error) {
+	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		var description string
 		if item.Description != nil {
@@ -359,14 +359,14 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 			item.Name,
 			description,
 		}
-		tableRows = append(tableRows, TableRow{Cells: cells})
+		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipeline) getColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{
+func (PrintablePipeline) getColumns() (columns []printers.TableColumnDefinition) {
+	return []printers.TableColumnDefinition{
 		{
 			Name:        "MOD",
 			Type:        "string",
@@ -395,7 +395,7 @@ type FpPipelineExecution struct {
 	Errors              []modconfig.StepError `json:"errors,omitempty"`
 }
 
-func (p FpPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p FpPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -460,21 +460,21 @@ func (p PrintablePipelineExecution) GetItems() []FpPipelineExecution {
 	return p.Items
 }
 
-func (p PrintablePipelineExecution) GetTable() (Table, error) {
-	var tableRows []TableRow
+func (p PrintablePipelineExecution) GetTable() (printers.Table, error) {
+	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		cells := []any{
 			item.ExecutionId,
 			item.PipelineName,
 			item.Status,
 		}
-		tableRows = append(tableRows, TableRow{Cells: cells})
+		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
-	return NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipelineExecution) getColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{
+func (PrintablePipelineExecution) getColumns() (columns []printers.TableColumnDefinition) {
+	return []printers.TableColumnDefinition{
 		{
 			Name:        "EXECUTION ID",
 			Type:        "string",

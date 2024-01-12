@@ -1,12 +1,12 @@
 package log
 
 import (
+	"github.com/turbot/pipe-fittings/sanitize"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
 
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 )

@@ -2,10 +2,11 @@ package types
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -26,7 +27,7 @@ type FpTrigger struct {
 	Schedule        *string           `json:"schedule,omitempty"`
 }
 
-func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
+func (t FpTrigger) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
 
@@ -125,8 +126,8 @@ func NewPrintableTriggerFromSingle(input *FpTrigger) *PrintableTrigger {
 	}
 }
 
-func (p PrintableTrigger) GetTable() (Table, error) {
-	var tableRows []TableRow
+func (p PrintableTrigger) GetTable() (printers.Table, error) {
+	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 
 		var description string
@@ -152,14 +153,14 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 			url,
 			schedule,
 		}
-		tableRows = append(tableRows, TableRow{Cells: cells})
+		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable(tableRows, p.getColumns()), nil
 }
 
-func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
-	return []TableColumnDefinition{
+func (PrintableTrigger) getColumns() (columns []printers.TableColumnDefinition) {
+	return []printers.TableColumnDefinition{
 		{
 			Name:        "NAME",
 			Type:        "string",

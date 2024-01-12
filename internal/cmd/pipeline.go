@@ -9,15 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/sanitize"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/printers"
+	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -25,6 +23,8 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 )
 
 // pipeline commands
@@ -73,7 +73,7 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
+		printer, err := output.GetPrinter[types.FpPipeline](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
 			return
@@ -147,7 +147,7 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
+		printer, err := output.GetPrinter[types.FpPipeline](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
 			return
@@ -349,7 +349,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 
 		lastIndex := -1
 
-		printer, err := printers.NewStringPrinter[types.SanitizedStringer]()
+		printer, err := printers.NewStringPrinter[sanitize.SanitizedStringer]()
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed instantiating string printer")
 			return
@@ -358,7 +358,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 		printableResource := types.NewPrintableParsedEvent(pipelineId)
 
 		// print execution_id / stale info
-		var header []types.SanitizedStringer
+		var header []sanitize.SanitizedStringer
 		header = append(header, types.ParsedHeader{
 			ExecutionId: executionId,
 			IsStale:     stale,

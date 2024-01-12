@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/printers"
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/service/api"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/internal/printers"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )

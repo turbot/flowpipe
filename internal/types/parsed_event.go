@@ -4,30 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/color"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/flowpipe/internal/color"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/utils"
 )
-
-type RenderOptions struct {
-	ColorEnabled   bool
-	ColorGenerator *color.DynamicColorGenerator
-	Verbose        bool
-	JsonFormatter  *prettyjson.Formatter
-}
-
-type SanitizedStringer interface {
-	String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string
-}
 
 type ParsedHeader struct {
 	ExecutionId string `json:"execution_id"`
@@ -35,7 +24,7 @@ type ParsedHeader struct {
 	LastLoaded  string `json:"last_loaded"`
 }
 
-func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p ParsedHeader) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -123,7 +112,7 @@ func (p ParsedEventPrefix) getStepString(eachString string, loopString string, a
 	}
 }
 
-func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -157,7 +146,7 @@ type ParsedEvent struct {
 	execId   string
 }
 
-func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -177,7 +166,7 @@ type ParsedEventWithInput struct {
 	isSkip bool
 }
 
-func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -230,7 +219,7 @@ type ParsedEventWithOutput struct {
 	isClosingEvent bool
 }
 
-func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -286,7 +275,7 @@ type ParsedErrorEvent struct {
 	retriesComplete bool
 }
 
-func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -330,7 +319,7 @@ type ParsedEventRegistryItem struct {
 }
 
 type PrintableParsedEvent struct {
-	Items             []SanitizedStringer
+	Items             []sanitize.SanitizedStringer
 	Registry          map[string]ParsedEventRegistryItem
 	initialPipelineId string
 }
@@ -342,12 +331,12 @@ func NewPrintableParsedEvent(pipelineId string) *PrintableParsedEvent {
 	}
 }
 
-func (p *PrintableParsedEvent) GetItems() []SanitizedStringer {
+func (p *PrintableParsedEvent) GetItems() []sanitize.SanitizedStringer {
 	return p.Items
 }
 
 func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
-	var out []SanitizedStringer
+	var out []sanitize.SanitizedStringer
 
 	for _, log := range logs {
 		switch log.EventType {
@@ -581,8 +570,8 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 
 }
 
-func (p *PrintableParsedEvent) GetTable() (Table, error) {
-	return Table{}, nil
+func (p *PrintableParsedEvent) GetTable() (printers.Table, error) {
+	return printers.Table{}, nil
 }
 
 type ProcessEventLogs []ProcessEventLog
@@ -644,7 +633,7 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 	}
 }
 
-func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts RenderOptions) string {
+func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts sanitize.RenderOptions) string {
 	out := ""
 	sortedKeys := utils.SortedMapKeys(input)
 	for _, key := range sortedKeys {

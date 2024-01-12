@@ -3,9 +3,10 @@ package types
 import (
 	"fmt"
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/flowpipe/internal/sanitize"
 	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"strings"
 	"time"
 )
@@ -22,7 +23,7 @@ func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
 	}
 }
 
-func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
@@ -59,7 +60,7 @@ func NewServerOutputStatusChange(ts time.Time, status string, additional string)
 	}
 }
 
-func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -95,7 +96,7 @@ func NewServerOutputLoaded(serverOutputPrefix ServerOutputPrefix, modName string
 	}
 }
 
-func (o ServerOutputLoaded) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputLoaded) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -127,7 +128,7 @@ func NewServerOutput(ts time.Time, category string, msg string) ServerOutput {
 	}
 }
 
-func (o ServerOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
@@ -151,7 +152,7 @@ func NewServerOutputError(serverOutputPrefix ServerOutputPrefix, message string,
 	}
 }
 
-func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -189,7 +190,7 @@ func NewServerOutputPipelineExecution(prefix ServerOutputPrefix, execId string, 
 	}
 }
 
-func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	var lines []string
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -266,7 +267,7 @@ func NewServerOutputTriggerExecution(prefix ServerOutputPrefix, execId string, n
 	}
 }
 
-func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
@@ -298,7 +299,7 @@ func NewServerOutputStepExecution(prefix ServerOutputPrefix, execId string, pipe
 	}
 }
 
-func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	var lines []string
 	// deliberately shadow the receiver with a sanitized version of the struct
@@ -380,7 +381,7 @@ func NewServerOutputTrigger(prefix ServerOutputPrefix, n string, t string) *Serv
 	}
 }
 
-func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 
 	// deliberately skip sanitizer as want to keep Url
@@ -408,17 +409,17 @@ func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 }
 
 type PrintableServerOutput struct {
-	Items []SanitizedStringer
+	Items []sanitize.SanitizedStringer
 }
 
 func NewPrintableServerOutput() *PrintableServerOutput {
 	return &PrintableServerOutput{}
 }
 
-func (p *PrintableServerOutput) GetItems() []SanitizedStringer {
+func (p *PrintableServerOutput) GetItems() []sanitize.SanitizedStringer {
 	return p.Items
 }
 
-func (p *PrintableServerOutput) GetTable() (Table, error) {
-	return Table{}, nil
+func (p *PrintableServerOutput) GetTable() (printers.Table, error) {
+	return printers.Table{}, nil
 }
