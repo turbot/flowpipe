@@ -11,15 +11,12 @@ trigger "query" "simple" {
         pipeline = pipeline.query_trigger_display
         args = {
             inserted_rows = self.inserted_rows
-            updated_rows = self.updated_rows
-            deleted_rows = self.deleted_rows
         }
     }
 
     capture "update" {
         pipeline = pipeline.query_trigger_display
         args = {
-            inserted_rows = self.inserted_rows
             updated_rows = self.updated_rows
             deleted_rows = self.deleted_rows
         }
@@ -28,8 +25,6 @@ trigger "query" "simple" {
     capture "delete" {
         pipeline = pipeline.query_trigger_display
         args = {
-            inserted_rows = self.inserted_rows
-            updated_rows = self.updated_rows
             deleted_rows = self.deleted_rows
         }
     }

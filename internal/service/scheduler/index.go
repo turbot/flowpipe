@@ -2,14 +2,13 @@ package scheduler
 
 import (
 	"context"
-	"crypto/rand"
 	"log/slog"
-	"math/big"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/go-co-op/gocron"
+	"github.com/turbot/flowpipe/internal/schedule"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -33,21 +32,6 @@ func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers 
 	}
 }
 
-func randomizeTimestamp(start, end float64, baseTime time.Time, interval time.Duration) time.Time {
-	rangeStart := int64(interval.Seconds() * start)
-	rangeEnd := int64(interval.Seconds() * end)
-
-	// Generate a random offset within the range
-	n, _ := rand.Int(rand.Reader, big.NewInt(rangeEnd-rangeStart))
-
-	randomOffset := time.Duration((n.Int64() + rangeStart) * int64(time.Second))
-
-	// Create the randomized timestamp
-	randomTimestamp := baseTime.Add(randomOffset)
-
-	return randomTimestamp
-}
-
 func (s *SchedulerService) RescheduleTriggers() error {
 	if s.cronScheduler == nil {
 		return nil
@@ -62,9 +46,10 @@ func (s *SchedulerService) RescheduleTriggers() error {
 			scheduleString = config.Schedule
 		case *modconfig.TriggerQuery:
 			scheduleString = config.Schedule
-		}
-
-		if scheduleString == "" {
+			if scheduleString == "" {
+				scheduleString = "hourly"
+			}
+		case *modconfig.TriggerHttp:
 			continue
 		}
 
@@ -73,12 +58,14 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		// Find the job in the scheduler
 		jobs, err := s.cronScheduler.FindJobsByTag("id:" + t.FullName)
 		if err != nil && err == gocron.ErrJobNotFoundWithTag {
+			// Job not found in the scheduler, schedule it
 			err := s.scheduleTrigger(t)
 			if err != nil {
 				return err
 			}
 			continue
 		} else if err != nil {
+			// Real error, return the error
 			return err
 		}
 
@@ -97,18 +84,10 @@ func (s *SchedulerService) RescheduleTriggers() error {
 		job := jobs[0]
 		jobTags := job.Tags()
 
-		// Detect changes
+		// Detect changes, only changes in the schedule should result in a re-schedule. Changes in the trigger config itself,
+		// i.e. pipeline changes don't need a re-schedule. We trigger config is not stored in the scheduler, when mod is updated
+		// the cache is updated and the definition is retrieved again when we run the trigger.
 		if jobTags[1] != "schedule:"+scheduleString {
-			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
-			s.cronScheduler.RemoveByReference(job)
-			err := s.scheduleTrigger(t)
-			if err != nil {
-				return err
-			}
-			continue
-		}
-
-		if jobTags[2] != "pipeline:"+t.Pipeline.AsValueMap()[schema.LabelName].AsString() {
 			slog.Info("Rescheduling trigger", "name", t.Name(), "schedule", scheduleString)
 			s.cronScheduler.RemoveByReference(job)
 			err := s.scheduleTrigger(t)
@@ -151,71 +130,41 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 
 		pipelineName = t.Pipeline.AsValueMap()[schema.LabelName].AsString()
 	}
+
+	scheduleString := ""
+
 	switch config := t.Config.(type) {
 	case *modconfig.TriggerSchedule:
-
-		tags := []string{
-			"id:" + t.FullName,
-			"schedule:" + config.Schedule,
+		scheduleString = config.Schedule
+	case *modconfig.TriggerQuery:
+		scheduleString = config.Schedule
+		if scheduleString == "" {
+			scheduleString = "hourly"
 		}
-		if pipelineName != "" {
-			tags = append(tags, "pipeline:"+pipelineName)
-		}
+	}
 
-		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
+	tags := []string{
+		"id:" + t.FullName,
+		"schedule:" + scheduleString,
+	}
+	if pipelineName != "" {
+		tags = append(tags, "pipeline:"+pipelineName)
+	}
 
-		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
+	slog.Info("Scheduling trigger", "name", t.Name(), "schedule", scheduleString, "tags", tags)
 
-		var err error
-		switch strings.ToLower(config.Schedule) {
-		case "hourly":
-			ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		case "daily":
-			ts := randomizeTimestamp(0.1, 0.5, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Day().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		case "weekly":
-			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Week().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		case "monthly":
-			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		default:
-			// Assume it's cron
-			_, err = s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
-		}
+	triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
 
+	// try cron expression first
+	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(triggerRunner.Run)
+	if err != nil {
+		cronExpression, err := schedule.IntervalToCronExpression(t.FullName, scheduleString)
 		if err != nil {
 			return err
 		}
 
-	case *modconfig.TriggerQuery:
-		tags := []string{
-			"id:" + t.FullName,
-			"schedule:" + config.Schedule,
-		}
-
-		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", config.Schedule, "tags", tags)
-
-		triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
-		var err error
-		switch strings.ToLower(config.Schedule) {
-		case "hourly":
-			ts := randomizeTimestamp(0.0, 0.1, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Hour().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		case "daily":
-			ts := randomizeTimestamp(0.1, 0.5, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Day().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		case "weekly":
-			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Week().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		case "monthly":
-			ts := randomizeTimestamp(0.2, 1.0, time.Now().UTC(), 1*time.Hour)
-			_, err = s.cronScheduler.Every(1).Month().StartAt(ts).Tag(tags...).Do(triggerRunner.Run)
-		default:
-			_, err = s.cronScheduler.Cron(config.Schedule).Tag(tags...).Do(triggerRunner.Run)
-		}
-
+		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", scheduleString, "tags", tags, "cronExpression", cronExpression)
+		_, err = s.cronScheduler.Cron(cronExpression).Tag(tags...).Do(triggerRunner.Run)
 		if err != nil {
 			return err
 		}
