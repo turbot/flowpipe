@@ -2,10 +2,6 @@ package handler
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/utils"
-	"log/slog"
-	"time"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
@@ -13,6 +9,8 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"github.com/turbot/pipe-fittings/utils"
+	"log/slog"
 )
 
 type StepFinished EventHandler
@@ -83,7 +81,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 			sp := types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID)
 			prefix := types.NewParsedEventPrefix(pipelineDefn.PipelineName, &stepName, feKey, li, ri, &sp)
 			pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, h.HandlerName(), stepDefn.GetType(), "")
-			duration := utils.HumanizeDuration(time.Now().Sub(stepExecution.StartTime))
+			duration := utils.HumanizeDuration(evt.Event.CreatedAt.Sub(stepExecution.StartTime))
 			output.RenderServerOutput(ctx, types.NewParsedErrorEvent(pe, evt.Output.Errors, evt.Output.Data, &duration, false, true))
 		}
 		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(evt))
@@ -113,7 +111,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		sp := types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID)
 		prefix := types.NewParsedEventPrefix(pipelineDefn.PipelineName, &stepName, feKey, li, ri, &sp)
 		pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, h.HandlerName(), stepDefn.GetType(), "")
-		duration := utils.HumanizeDuration(time.Now().Sub(stepExecution.StartTime))
+		duration := utils.HumanizeDuration(evt.Event.CreatedAt.Sub(stepExecution.StartTime))
 		switch evt.Output.Status {
 		case "finished":
 			output.RenderServerOutput(ctx, types.NewParsedEventWithOutput(pe, evt.Output.Data, evt.StepOutput, &duration, false))
