@@ -37,16 +37,23 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 
 	if output.IsServerMode {
 		pipelineName := ""
-		_, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+		ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
 		if err != nil {
 			slog.Error("pipeline_started: error loading pipeline definition from execution", "error", err)
 		} else {
 			pipelineName = pipelineDefn.PipelineName
 		}
-		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-			evt.Event.ExecutionID, pipelineName, "started")
-		output.RenderServerOutput(ctx, p)
+
+		var args map[string]any
+		pex := ex.PipelineExecutions[evt.PipelineExecutionID]
+		if pex != nil {
+			args = pex.Args
+		}
+		sp := types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID)
+		prefix := types.NewPrefixWithServer(pipelineName, sp)
+		pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, event.HandlerPipelineStarted, "", "")
+		o := types.NewParsedEventWithInput(pe, args, false)
+		output.RenderServerOutput(ctx, o)
 	}
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStarted(evt))
