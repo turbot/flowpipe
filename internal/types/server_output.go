@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/sanitize"
+	"github.com/turbot/go-kit/helpers"
 	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"strings"
@@ -13,6 +14,7 @@ import (
 type ServerOutputPrefix struct {
 	TimeStamp time.Time
 	Category  string
+	execId    *string
 }
 
 func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
@@ -22,22 +24,36 @@ func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
 	}
 }
 
+func NewServerOutputPrefixWithExecId(ts time.Time, category string, execId *string) ServerOutputPrefix {
+	return ServerOutputPrefix{
+		TimeStamp: ts,
+		Category:  category,
+		execId:    execId,
+	}
+}
+
 func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
-	var cat aurora.Value
+	dot := au.BrightBlack(".")
+	var cat string
 	switch o.Category {
 	case "flowpipe":
-		cat = au.Cyan(o.Category)
+		cat = au.Cyan(o.Category).String()
 	case "mod":
-		cat = au.Green(o.Category)
+		cat = au.Green(o.Category).String()
 	case "pipeline":
-		cat = au.Magenta(o.Category)
+		if !helpers.IsNil(o.execId) {
+			c := opts.ColorGenerator.GetColorForElement(*o.execId)
+			cat = aurora.Sprintf("%s%s%s", au.Magenta(o.Category), dot, au.Index(c, *o.execId))
+		} else {
+			cat = au.Magenta(o.Category).String()
+		}
 	case "trigger":
-		cat = au.Yellow(o.Category)
+		cat = au.Yellow(o.Category).String()
 	default:
-		cat = au.Blue(o.Category)
+		cat = au.Blue(o.Category).String()
 	}
 	return aurora.Sprintf("%s %s%s%s ", au.BrightBlack(o.TimeStamp.Local().Format(time.DateTime)), left, cat, right)
 }
@@ -405,6 +421,54 @@ func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 	}
 
 	return fmt.Sprintf("%s%s %s - %s\n", pre, au.BrightBlue(o.Name), o.Type, suffix)
+}
+
+type ServerOutputParsedEventWithInput struct {
+	ServerOutputPrefix
+	ParsedEventWithInput
+}
+
+func NewServerOutputParsedEventWithInput(prefix ServerOutputPrefix, eventWithInput ParsedEventWithInput) ServerOutputParsedEventWithInput {
+	return ServerOutputParsedEventWithInput{
+		ServerOutputPrefix:   prefix,
+		ParsedEventWithInput: eventWithInput,
+	}
+}
+
+func (o ServerOutputParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	return fmt.Sprintf("%s%s", o.ServerOutputPrefix.String(sanitizer, opts), o.ParsedEventWithInput.String(sanitizer, opts))
+}
+
+type ServerOutputParsedEventWithOutput struct {
+	ServerOutputPrefix
+	ParsedEventWithOutput
+}
+
+func NewServerOutputParsedEventWithOutput(prefix ServerOutputPrefix, eventWithOutput ParsedEventWithOutput) ServerOutputParsedEventWithOutput {
+	return ServerOutputParsedEventWithOutput{
+		ServerOutputPrefix:    prefix,
+		ParsedEventWithOutput: eventWithOutput,
+	}
+}
+
+func (o ServerOutputParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	return fmt.Sprintf("%s%s", o.ServerOutputPrefix.String(sanitizer, opts), o.ParsedEventWithOutput.String(sanitizer, opts))
+}
+
+type ServerOutputParsedErrorEvent struct {
+	ServerOutputPrefix
+	ParsedErrorEvent
+}
+
+func NewServerOutputParsedErrorEvent(serverOutputPrefix ServerOutputPrefix, parsedErrorEvent ParsedErrorEvent) ServerOutputParsedErrorEvent {
+	return ServerOutputParsedErrorEvent{
+		ServerOutputPrefix: serverOutputPrefix,
+		ParsedErrorEvent:   parsedErrorEvent,
+	}
+}
+
+func (o ServerOutputParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	return fmt.Sprintf("%s%s", o.ServerOutputPrefix.String(sanitizer, opts), o.ParsedErrorEvent.String(sanitizer, opts))
 }
 
 type PrintableServerOutput struct {

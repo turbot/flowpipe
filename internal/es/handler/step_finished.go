@@ -2,8 +2,6 @@ package handler
 
 import (
 	"context"
-	"log/slog"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
@@ -11,6 +9,8 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"github.com/turbot/pipe-fittings/utils"
+	"log/slog"
 )
 
 type StepFinished EventHandler
@@ -72,36 +72,17 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	// Check if we are in a retry block
 	if evt.StepRetry != nil && !evt.StepRetry.RetryCompleted {
-		if output.IsServerMode {
-			step := types.NewServerOutputStepExecution(
-				types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-				evt.Event.ExecutionID,
-				pipelineDefn.PipelineName,
-				stepName,
-				stepDefn.GetType(),
-				"retrying",
-			)
-			output.RenderServerOutput(ctx, step)
-		}
 		cmd := event.NewStepQueueFromPipelineStepFinishedForRetry(evt, stepName)
 		return h.CommandBus.Send(ctx, cmd)
 	} else if evt.StepRetry != nil && evt.StepRetry.RetryCompleted {
-
 		// this means we have an error BUT the retry has been exhausted, run the planner
 		if output.IsServerMode {
-			step := types.NewServerOutputStepExecution(
-				types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-				evt.Event.ExecutionID,
-				pipelineDefn.PipelineName,
-				stepName,
-				stepDefn.GetType(),
-				"failed",
-			)
-			step.Output = evt.StepOutput
-			if !helpers.IsNil(evt.Output) && len(evt.Output.Errors) > 0 {
-				step.Errors = evt.Output.Errors
-			}
-			output.RenderServerOutput(ctx, step)
+			feKey, li, ri := getIndices(evt)
+			sp := types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID)
+			prefix := types.NewParsedEventPrefix(pipelineDefn.PipelineName, &stepName, feKey, li, ri, &sp)
+			pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, h.HandlerName(), stepDefn.GetType(), "")
+			duration := utils.HumanizeDuration(evt.Event.CreatedAt.Sub(stepExecution.StartTime))
+			output.RenderServerOutput(ctx, types.NewParsedErrorEvent(pe, evt.Output.Errors, evt.Output.Data, &duration, false, true))
 		}
 		cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(evt))
 		if err != nil {
@@ -125,21 +106,22 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	if output.IsServerMode {
-		step := types.NewServerOutputStepExecution(
-			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-			evt.Event.ExecutionID,
-			pipelineDefn.PipelineName,
-			stepName,
-			stepDefn.GetType(),
-			"finished",
-		)
-		step.Output = evt.StepOutput
-		if !helpers.IsNil(evt.Output) && len(evt.Output.Errors) > 0 {
-			step.Errors = evt.Output.Errors
-			step.Status = "failed"
+	if output.IsServerMode && evt.Output != nil && evt.Output.Status != "skipped" {
+		feKey, li, ri := getIndices(evt)
+		sp := types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID)
+		prefix := types.NewParsedEventPrefix(pipelineDefn.PipelineName, &stepName, feKey, li, ri, &sp)
+		pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, h.HandlerName(), stepDefn.GetType(), "")
+		duration := utils.HumanizeDuration(evt.Event.CreatedAt.Sub(stepExecution.StartTime))
+		switch evt.Output.Status {
+		case "finished":
+			output.RenderServerOutput(ctx, types.NewParsedEventWithOutput(pe, evt.Output.Data, evt.StepOutput, &duration, false))
+		case "failed":
+			rc := true
+			if evt.StepRetry != nil {
+				rc = evt.StepRetry.RetryCompleted
+			}
+			output.RenderServerOutput(ctx, types.NewParsedErrorEvent(pe, evt.Output.Errors, evt.Output.Data, &duration, false, rc))
 		}
-		output.RenderServerOutput(ctx, step)
 	}
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(evt))
@@ -149,4 +131,21 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	return h.CommandBus.Send(ctx, cmd)
+}
+
+func getIndices(evt *event.StepFinished) (*string, *int, *int) {
+	var feKey *string
+	var li, ri *int
+	if evt.StepForEach != nil && evt.StepForEach.ForEachStep {
+		feKey = &evt.StepForEach.Key
+	}
+	if evt.StepLoop != nil {
+		i := evt.StepLoop.Index - 1
+		li = &i
+	}
+	if evt.StepRetry != nil {
+		ri = &evt.StepRetry.Count
+	}
+
+	return feKey, li, ri
 }

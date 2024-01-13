@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/utils"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/output"
@@ -68,12 +69,11 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	if output.IsServerMode {
-		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-			evt.Event.ExecutionID, pipelineDefn.PipelineName, "failed")
-		p.Errors = evt.Errors
-		p.Output = evt.PipelineOutput
-		output.RenderServerOutput(ctx, p)
+		duration := utils.HumanizeDuration(evt.Event.CreatedAt.Sub(ex.PipelineExecutions[evt.PipelineExecutionID].StartTime))
+		prefix := types.NewPrefixWithServer(pipelineDefn.PipelineName, types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID))
+		pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, event.HandlerPipelineFailed, "", "")
+		o := types.NewParsedErrorEvent(pe, evt.Errors, evt.PipelineOutput, &duration, false, true)
+		output.RenderServerOutput(ctx, o)
 	}
 
 	err = ex.SaveToFile()

@@ -4,9 +4,6 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/perr"
@@ -38,13 +35,6 @@ func (h PipelineQueued) Handle(ctx context.Context, ei interface{}) error {
 	defer func() {
 		plannerMutex.Unlock()
 	}()
-
-	if output.IsServerMode {
-		p := types.NewServerOutputPipelineExecution(
-			types.NewServerOutputPrefix(evt.Event.CreatedAt, "pipeline"),
-			evt.Event.ExecutionID, evt.Name, "queued")
-		output.RenderServerOutput(ctx, p)
-	}
 
 	cmd, err := event.NewPipelineLoad(event.ForPipelineQueued(evt))
 	if err != nil {
