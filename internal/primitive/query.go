@@ -198,23 +198,13 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 				// TODO:: Revalidate the handling
 
 				// Check if it's a numereic value
-				if isNumeric(ba) {
-					numericVal, err := strconv.ParseFloat(string(ba), 64)
-					if err != nil {
-						slog.Error("error converting row data to numeric", "column", k, "error", err)
-						return nil, perr.InternalWithMessage("Error converting numeric column value: " + err.Error())
-					}
+				if numericVal, err := strconv.ParseFloat(string(ba), 64); err == nil {
 					row[k] = numericVal
 					continue
 				}
 
 				// Check if it's a boolean value
-				if isBool(ba) {
-					boolVal, err := strconv.ParseBool(string(ba))
-					if err != nil {
-						slog.Error("error converting row data to boolean", "column", k, "error", err)
-						return nil, perr.InternalWithMessage("Error converting boolean column value: " + err.Error())
-					}
+				if boolVal, err := strconv.ParseBool(string(ba)); err == nil {
 					row[k] = boolVal
 					continue
 				}
@@ -256,16 +246,6 @@ func isJSON(b []byte) (bool, error) {
 	_, isArray := col.([]interface{})
 
 	return isObject || isArray, nil
-}
-
-func isNumeric(b []byte) bool {
-	_, err := strconv.ParseFloat(string(b), 64)
-	return err == nil
-}
-
-func isBool(b []byte) bool {
-	_, err := strconv.ParseBool(string(b))
-	return err == nil
 }
 
 func mapScan(r *sql.Rows, dest map[string]interface{}) error {
