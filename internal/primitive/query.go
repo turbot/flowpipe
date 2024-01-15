@@ -3,11 +3,11 @@ package primitive
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -195,12 +195,21 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					continue
 				}
 
-				// Check if it's base64 encoded
-				if decodedData, err := base64.StdEncoding.DecodeString(string(ba)); err == nil {
-					// It's valid base64
-					row[k] = string(decodedData)
+				// TODO:: Revalidate the handling
+
+				// Check if it's a numereic value
+				if numericVal, err := strconv.ParseFloat(string(ba), 64); err == nil {
+					row[k] = numericVal
 					continue
 				}
+
+				// Check if it's a boolean value
+				if boolVal, err := strconv.ParseBool(string(ba)); err == nil {
+					row[k] = boolVal
+					continue
+				}
+
+				row[k] = string(ba)
 			}
 		}
 		results = append(results, row)
