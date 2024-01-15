@@ -3,13 +3,14 @@ package primitive
 import (
 	"context"
 	"database/sql"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -195,10 +196,20 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					continue
 				}
 
-				// Check if it's base64 encoded
-				if decodedData, err := base64.StdEncoding.DecodeString(string(ba)); err == nil {
-					// It's valid base64
-					row[k] = string(decodedData)
+				// Check if it's a numereic value
+				if isNumeric(ba) {
+					numericVal, err := strconv.ParseFloat(string(ba), 64)
+					if err != nil {
+						slog.Error("error converting row data to numeric", "column", k, "error", err)
+						return nil, perr.InternalWithMessage("Error converting numeric column value: " + err.Error())
+					}
+					row[k] = numericVal
+					continue
+				}
+
+				// Check if it's a valid UTF-8 string
+				if utf8.Valid(ba) {
+					row[k] = string(ba)
 					continue
 				}
 			}
@@ -237,6 +248,11 @@ func isJSON(b []byte) (bool, error) {
 	_, isArray := col.([]interface{})
 
 	return isObject || isArray, nil
+}
+
+func isNumeric(b []byte) bool {
+	_, err := strconv.ParseFloat(string(b), 64)
+	return err == nil
 }
 
 func mapScan(r *sql.Rows, dest map[string]interface{}) error {
