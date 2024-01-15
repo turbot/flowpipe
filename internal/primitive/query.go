@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -196,6 +195,8 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					continue
 				}
 
+				// TODO:: Revalidate the handling
+
 				// Check if it's a numereic value
 				if isNumeric(ba) {
 					numericVal, err := strconv.ParseFloat(string(ba), 64)
@@ -207,11 +208,18 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 					continue
 				}
 
-				// Check if it's a valid UTF-8 string
-				if utf8.Valid(ba) {
-					row[k] = string(ba)
+				// Check if it's a boolean value
+				if isBool(ba) {
+					boolVal, err := strconv.ParseBool(string(ba))
+					if err != nil {
+						slog.Error("error converting row data to boolean", "column", k, "error", err)
+						return nil, perr.InternalWithMessage("Error converting boolean column value: " + err.Error())
+					}
+					row[k] = boolVal
 					continue
 				}
+
+				row[k] = string(ba)
 			}
 		}
 		results = append(results, row)
@@ -252,6 +260,11 @@ func isJSON(b []byte) (bool, error) {
 
 func isNumeric(b []byte) bool {
 	_, err := strconv.ParseFloat(string(b), 64)
+	return err == nil
+}
+
+func isBool(b []byte) bool {
+	_, err := strconv.ParseBool(string(b))
 	return err == nil
 }
 
