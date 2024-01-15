@@ -6,7 +6,6 @@ import (
 	"github.com/turbot/flowpipe/internal/sanitize"
 	"github.com/turbot/go-kit/helpers"
 	kitTypes "github.com/turbot/go-kit/types"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"strings"
 	"time"
 )
@@ -187,85 +186,6 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOpti
 		suffix)
 }
 
-type ServerOutputPipelineExecution struct {
-	ServerOutputPrefix
-	ExecutionID  string
-	PipelineName string
-	Status       string
-	Output       map[string]any
-	Errors       []modconfig.StepError
-}
-
-func NewServerOutputPipelineExecution(prefix ServerOutputPrefix, execId string, name string, status string) *ServerOutputPipelineExecution {
-	return &ServerOutputPipelineExecution{
-		ServerOutputPrefix: prefix,
-		ExecutionID:        execId,
-		PipelineName:       name,
-		Status:             status,
-	}
-}
-
-func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	var lines []string
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
-		return ""
-	}
-
-	c := opts.ColorGenerator.GetColorForElement(o.ExecutionID)
-	left := au.BrightBlack("[")
-	right := au.BrightBlack("]")
-	dot := au.BrightBlack(".")
-
-	pre := fmt.Sprintf("%s%s%s%s%s%s",
-		o.ServerOutputPrefix.String(sanitizer, opts),
-		left,
-		au.Sprintf(au.Index(c, o.PipelineName)),
-		dot,
-		au.Sprintf(au.Index(c, o.ExecutionID)),
-		right,
-	)
-	var status string
-	switch o.Status {
-	case "started":
-		status = au.Cyan(o.Status).String()
-	case "finished":
-		status = au.Green(o.Status).String()
-	case "failed":
-		status = au.Red(o.Status).String()
-	case "canceled":
-		status = au.Blue(o.Status).String()
-	case "queued":
-		status = au.Yellow(o.Status).String()
-	default:
-		status = o.Status
-	}
-	lines = append(lines, fmt.Sprintf("%s pipeline %s\n", pre, status))
-
-	if opts.Verbose {
-		if len(o.Output) > 0 {
-			outputs := sortAndParseMap(o.Output, "output:", " ", au, opts)
-			lines = append(lines, fmt.Sprintf("%s pipeline outputs\n%s\n", pre, outputs))
-		}
-	}
-
-	if len(o.Errors) > 0 {
-		for _, e := range o.Errors {
-			errLine := fmt.Sprintf("error on step %s: %s\n", e.Step, e.Error.Error())
-			lines = append(lines, fmt.Sprintf("%s %s", pre, au.Red(errLine)))
-		}
-	}
-
-	out := strings.Join(lines, "")
-	// trim double new line ending
-	if strings.HasSuffix(out, "\n\n") {
-		out = strings.TrimSuffix(out, "\n")
-	}
-	return out
-}
-
 type ServerOutputTriggerExecution struct {
 	ServerOutputPrefix
 	ExecutionID  string
@@ -290,92 +210,6 @@ func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts
 	}
 
 	return fmt.Sprintf("%strigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(sanitizer, opts), o.TriggerName, o.PipelineName, o.ExecutionID)
-}
-
-type ServerOutputStepExecution struct {
-	ServerOutputPrefix
-	ExecutionID  string
-	PipelineName string
-	StepName     string
-	StepType     string
-	Status       string
-	Output       map[string]any
-	Errors       []modconfig.StepError
-}
-
-func NewServerOutputStepExecution(prefix ServerOutputPrefix, execId string, pipelineName string, stepName string, stepType string, status string) *ServerOutputStepExecution {
-	return &ServerOutputStepExecution{
-		ServerOutputPrefix: prefix,
-		ExecutionID:        execId,
-		PipelineName:       pipelineName,
-		StepName:           stepName,
-		StepType:           stepType,
-		Status:             status,
-	}
-}
-
-func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	var lines []string
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
-		return ""
-	}
-
-	// put Steps behind verbose flag
-	if !opts.Verbose {
-		return ""
-	}
-
-	c := opts.ColorGenerator.GetColorForElement(o.ExecutionID)
-	left := au.BrightBlack("[")
-	right := au.BrightBlack("]")
-	dot := au.BrightBlack(".")
-
-	pre := fmt.Sprintf("%s%s%s%s%s%s",
-		o.ServerOutputPrefix.String(sanitizer, opts),
-		left,
-		au.Sprintf(au.Index(c, o.PipelineName)),
-		dot,
-		au.Sprintf(au.Index(c, o.ExecutionID)),
-		right,
-	)
-
-	var status string
-	switch o.Status {
-	case "started":
-		status = au.Cyan(o.Status).String()
-	case "finished":
-		status = au.Green(o.Status).String()
-	case "failed":
-		status = au.Red(o.Status).String()
-	case "retrying":
-		status = au.Yellow(o.Status).String()
-	default:
-		status = o.Status
-	}
-
-	lines = append(lines, fmt.Sprintf("%s %s step %s %s\n", pre, au.Blue(o.StepType), au.BrightBlue(o.StepName), status))
-
-	if len(o.Output) > 0 {
-		outputs := sortAndParseMap(o.Output, "output", " ", au, opts)
-		lines = append(lines, fmt.Sprintf("%s step outputs\n%s\n", pre, outputs))
-	}
-
-	if len(o.Errors) > 0 {
-		for _, e := range o.Errors {
-			errLine := fmt.Sprintf("error on %s step %s: %s\n", o.StepType, o.StepName, e.Error.Error())
-			lines = append(lines, fmt.Sprintf("%s %s", pre, au.Red(errLine)))
-		}
-	}
-
-	out := strings.Join(lines, "")
-	// trim double new line ending
-	if strings.HasSuffix(out, "\n\n") {
-		out = strings.TrimSuffix(out, "\n")
-	}
-	return out
 }
 
 type ServerOutputTrigger struct {
@@ -421,54 +255,6 @@ func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 	}
 
 	return fmt.Sprintf("%s%s %s - %s\n", pre, au.BrightBlue(o.Name), o.Type, suffix)
-}
-
-type ServerOutputParsedEventWithInput struct {
-	ServerOutputPrefix
-	ParsedEventWithInput
-}
-
-func NewServerOutputParsedEventWithInput(prefix ServerOutputPrefix, eventWithInput ParsedEventWithInput) ServerOutputParsedEventWithInput {
-	return ServerOutputParsedEventWithInput{
-		ServerOutputPrefix:   prefix,
-		ParsedEventWithInput: eventWithInput,
-	}
-}
-
-func (o ServerOutputParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	return fmt.Sprintf("%s%s", o.ServerOutputPrefix.String(sanitizer, opts), o.ParsedEventWithInput.String(sanitizer, opts))
-}
-
-type ServerOutputParsedEventWithOutput struct {
-	ServerOutputPrefix
-	ParsedEventWithOutput
-}
-
-func NewServerOutputParsedEventWithOutput(prefix ServerOutputPrefix, eventWithOutput ParsedEventWithOutput) ServerOutputParsedEventWithOutput {
-	return ServerOutputParsedEventWithOutput{
-		ServerOutputPrefix:    prefix,
-		ParsedEventWithOutput: eventWithOutput,
-	}
-}
-
-func (o ServerOutputParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	return fmt.Sprintf("%s%s", o.ServerOutputPrefix.String(sanitizer, opts), o.ParsedEventWithOutput.String(sanitizer, opts))
-}
-
-type ServerOutputParsedErrorEvent struct {
-	ServerOutputPrefix
-	ParsedErrorEvent
-}
-
-func NewServerOutputParsedErrorEvent(serverOutputPrefix ServerOutputPrefix, parsedErrorEvent ParsedErrorEvent) ServerOutputParsedErrorEvent {
-	return ServerOutputParsedErrorEvent{
-		ServerOutputPrefix: serverOutputPrefix,
-		ParsedErrorEvent:   parsedErrorEvent,
-	}
-}
-
-func (o ServerOutputParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
-	return fmt.Sprintf("%s%s", o.ServerOutputPrefix.String(sanitizer, opts), o.ParsedErrorEvent.String(sanitizer, opts))
 }
 
 type PrintableServerOutput struct {
