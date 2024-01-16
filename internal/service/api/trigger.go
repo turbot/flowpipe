@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -67,32 +68,12 @@ func ListTriggers() (*types.ListTriggerResponse, error) {
 	var fpTriggers []types.FpTrigger
 
 	for _, trigger := range triggers {
-		pipelineInfo := trigger.Pipeline.AsValueMap()
-		pipelineName := pipelineInfo["name"].AsString()
-
-		fpTrigger := types.FpTrigger{
-			Name:          trigger.FullName,
-			Type:          modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
-			Description:   trigger.Description,
-			Pipeline:      pipelineName,
-			Title:         trigger.Title,
-			Tags:          trigger.Tags,
-			Documentation: trigger.Documentation,
-		}
-
-		if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
-			fpTrigger.Url = &tc.Url
-		} else if tc, ok := trigger.Config.(*modconfig.TriggerSchedule); ok {
-			fpTrigger.Schedule = &tc.Schedule
-		}
+		fpTrigger := getFpTriggerFromTrigger(&trigger)
 		fpTriggers = append(fpTriggers, fpTrigger)
 	}
 
-	// Sort the triggers by pipeline, type, name
+	// Sort the triggers by type, name
 	sort.Slice(fpTriggers, func(i, j int) bool {
-		if fpTriggers[i].Pipeline != fpTriggers[j].Pipeline {
-			return fpTriggers[i].Pipeline < fpTriggers[j].Pipeline
-		}
 		if fpTriggers[i].Type != fpTriggers[j].Type {
 			return fpTriggers[i].Type < fpTriggers[j].Type
 		}
@@ -167,28 +148,58 @@ func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	// Get the pipeline name from the trigger
-	pipelineInfo := trigger.GetPipeline().AsValueMap()
-	pipelineName := pipelineInfo["name"].AsString()
+	fpTrigger := getFpTriggerFromTrigger(trigger)
+	return &fpTrigger, nil
+}
 
-	fpTrigger := &types.FpTrigger{
-		Name:            trigger.FullName,
-		Type:            modconfig.GetTriggerTypeFromTriggerConfig(trigger.Config),
-		Description:     trigger.Description,
-		Pipeline:        pipelineName,
-		Title:           trigger.Title,
-		Tags:            trigger.Tags,
-		Documentation:   trigger.Documentation,
-		FileName:        trigger.FileName,
-		StartLineNumber: trigger.StartLineNumber,
-		EndLineNumber:   trigger.EndLineNumber,
+func getFpTriggerFromTrigger(t *modconfig.Trigger) types.FpTrigger {
+	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+
+	fpTrigger := types.FpTrigger{
+		Name:            t.FullName,
+		Type:            tt,
+		Description:     t.Description,
+		Title:           t.Title,
+		Tags:            t.Tags,
+		Documentation:   t.Documentation,
+		FileName:        t.FileName,
+		StartLineNumber: t.StartLineNumber,
+		EndLineNumber:   t.EndLineNumber,
 	}
 
-	if tc, ok := trigger.Config.(*modconfig.TriggerHttp); ok {
-		fpTrigger.Url = &tc.Url
-	} else if tc, ok := trigger.Config.(*modconfig.TriggerSchedule); ok {
-		fpTrigger.Schedule = &tc.Schedule
+	switch tt {
+	case schema.TriggerTypeHttp:
+		cfg := t.Config.(*modconfig.TriggerHttp)
+		fpTrigger.Url = &cfg.Url
+		for _, method := range cfg.Method {
+			pipelineInfo := method.Pipeline.AsValueMap()
+			pipelineName := pipelineInfo["name"].AsString()
+			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
+				CaptureGroup: method.Type,
+				Pipeline:     pipelineName,
+			})
+		}
+	case schema.TriggerTypeQuery:
+		cfg := t.Config.(*modconfig.TriggerQuery)
+		fpTrigger.Schedule = &cfg.Schedule
+		for _, capture := range cfg.Captures {
+			pipelineInfo := capture.Pipeline.AsValueMap()
+			pipelineName := pipelineInfo["name"].AsString()
+			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
+				CaptureGroup: capture.Type,
+				Pipeline:     pipelineName,
+			})
+		}
+	case schema.TriggerTypeSchedule:
+		cfg := t.Config.(*modconfig.TriggerSchedule)
+		fpTrigger.Schedule = &cfg.Schedule
+		pipelineInfo := t.GetPipeline().AsValueMap()
+		pipelineName := pipelineInfo["name"].AsString()
+		fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
+			CaptureGroup: "default",
+			Pipeline:     pipelineName,
+		})
 	}
 
-	return fpTrigger, nil
+	return fpTrigger
 }
