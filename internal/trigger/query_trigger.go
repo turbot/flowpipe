@@ -294,7 +294,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])
 	if o.IsServerMode {
-		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
 	}
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {

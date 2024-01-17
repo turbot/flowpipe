@@ -58,7 +58,7 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 
 		outputMode := viper.GetString(constants.ArgOutput)
 		if outputMode == constants.OutputFormatJSON || outputMode == constants.OutputFormatYAML {
-			errMsg := "currently '--output' is not supported for json or yaml"
+			errMsg := "server command currently only supports '--output' for 'pretty' or 'plain'"
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg)))
 			error_helpers.FailOnError(perr.BadRequestWithMessage(errMsg))
 			return
