@@ -179,8 +179,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	pipelineCmd.Args = pipelineArgs
 
 	if output.IsServerMode {
-		tr := types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName)
-		output.RenderServerOutput(c, tr)
+		output.RenderServerOutput(c, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName))
 	}
 
 	if err := api.EsService.Send(pipelineCmd); err != nil {

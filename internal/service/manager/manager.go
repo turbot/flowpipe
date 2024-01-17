@@ -93,6 +93,12 @@ func (m *Manager) Start() (*Manager, error) {
 	slog.Debug("Manager starting")
 	defer slog.Debug("Manager started")
 
+	if output.IsServerMode {
+		vStr := fmt.Sprintf("Version: v%s", app_specific.AppVersion)
+		output.RenderServerOutput(m.ctx,
+			types.NewServerOutput(time.Now(), "flowpipe", vStr))
+	}
+
 	if err := m.initializeModDirectory(); err != nil {
 		return nil, err
 	}
@@ -324,7 +330,7 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
 		slog.Error("error watching workspace", "error", e)
 		if output.IsServerMode {
-			output.RenderServerOutput(c, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "mod"), fmt.Sprintf("failed watching workspace for mod %s", w.Mod.Name()), e))
+			output.RenderServerOutput(c, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), fmt.Sprintf("Failed watching workspace for mod %s", w.Mod.Name()), e))
 		}
 		m.apiService.ModMetadata.IsStale = true
 	})
@@ -336,15 +342,15 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	w.SetOnFileWatcherEventMessages(func() {
 		var serverOutput []types.SanitizedStringer
 		slog.Info("caching pipelines and triggers")
-		serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "mod"), m.RootMod.Name(), true))
+		serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "flowpipe"), m.RootMod.Name(), true))
 		m.triggers = w.Mod.ResourceMaps.Triggers
 		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
 		if err != nil {
 			slog.Error("error caching pipelines and triggers", "error", err)
-			serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "mod"), "failed caching pipelines and triggers", err))
+			serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "Failed caching pipelines and triggers", err))
 		} else {
 			slog.Info("cached pipelines and triggers")
-			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "cached pipelines and triggers"))
+			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "flowpipe", "Cached pipelines and triggers"))
 			m.apiService.ModMetadata.IsStale = false
 			m.apiService.ModMetadata.LastLoaded = time.Now()
 		}
@@ -356,10 +362,10 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 			err := m.schedulerService.RescheduleTriggers()
 			if err != nil {
 				slog.Error("error rescheduling triggers", "error", err)
-				serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "mod"), "failed rescheduling triggers", err))
+				serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "Failed rescheduling triggers", err))
 			} else {
 				slog.Info("rescheduled triggers")
-				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "mod", "rescheduled triggers"))
+				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "flowpipe", "Rescheduled triggers"))
 				serverOutput = append(serverOutput, renderServerTriggers(m.triggers)...)
 			}
 		}
@@ -526,11 +532,11 @@ func (m *Manager) renderServerStartOutput() {
 	if !helpers.IsNil(m.StartedAt) {
 		startTime = *m.StartedAt
 	}
-	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "started", ""))
-	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
-	outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "mod"), m.RootMod.Name(), false))
+	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Started", ""))
+	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
+	outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "flowpipe"), m.RootMod.Name(), false))
 	outputs = append(outputs, renderServerTriggers(m.triggers)...)
-	outputs = append(outputs, types.NewServerOutput(startTime, "flowpipe", "Press Ctrl+C to exit."))
+	outputs = append(outputs, types.NewServerOutput(startTime, "flowpipe", "Press Ctrl+C to exit"))
 
 	output.RenderServerOutput(m.ctx, outputs...)
 }
@@ -540,8 +546,7 @@ func (m *Manager) renderServerShutdownOutput() {
 	if !helpers.IsNil(m.StoppedAt) {
 		stopTime = *m.StoppedAt
 	}
-	msg := types.NewServerOutputStatusChange(stopTime, "stopped", "")
-	output.RenderServerOutput(m.ctx, msg)
+	output.RenderServerOutput(m.ctx, types.NewServerOutputStatusChange(stopTime, "Stopped", ""))
 }
 
 func renderServerTriggers(triggers map[string]*modconfig.Trigger) []types.SanitizedStringer {
@@ -550,25 +555,23 @@ func renderServerTriggers(triggers map[string]*modconfig.Trigger) []types.Saniti
 	for key, t := range triggers {
 		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
 		prefix := types.NewServerOutputPrefix(time.Now(), "trigger")
+		o := types.NewServerOutputTrigger(prefix, key, tt, t.Enabled)
 		switch tt {
 		case schema.TriggerTypeHttp:
 			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
 				// TODO: Add Payload Requirements?
-				o := types.NewServerOutputTrigger(prefix, key, tt)
-				defaultMethod := "post" // TODO: Update when config stores method
-				o.Method = &defaultMethod
+				methods := strings.Join(utils.SortedMapKeys(tc.Method), " ")
+				o.Method = &methods
 				o.Url = &tc.Url
 				outputs = append(outputs, o)
 			}
 		case schema.TriggerTypeSchedule:
 			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
-				o := types.NewServerOutputTrigger(prefix, key, tt)
 				o.Schedule = &tc.Schedule
 				outputs = append(outputs, o)
 			}
 		case schema.TriggerTypeQuery:
 			if tc, ok := t.Config.(*modconfig.TriggerQuery); ok {
-				o := types.NewServerOutputTrigger(prefix, key, tt)
 				o.Schedule = &tc.Schedule
 				o.Sql = &tc.Sql
 				outputs = append(outputs, o)

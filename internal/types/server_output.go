@@ -35,26 +35,18 @@ func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts RenderOptions) st
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
-	dot := au.BrightBlack(".")
-	var cat string
-	switch o.Category {
-	case "flowpipe":
-		cat = au.Cyan(o.Category).String()
-	case "mod":
-		cat = au.Green(o.Category).String()
-	case "pipeline":
-		if !helpers.IsNil(o.execId) {
-			c := opts.ColorGenerator.GetColorForElement(*o.execId)
-			cat = aurora.Sprintf("%s%s%s", au.Magenta(o.Category), dot, au.Index(c, *o.execId))
-		} else {
-			cat = au.Magenta(o.Category).String()
-		}
-	case "trigger":
-		cat = au.Yellow(o.Category).String()
-	default:
-		cat = au.Blue(o.Category).String()
+	timeStamp := au.BrightBlack(o.TimeStamp.Local().Format(time.DateTime))
+
+	if !helpers.IsNil(o.execId) {
+		c := opts.ColorGenerator.GetColorForElement(*o.execId)
+		return au.Sprintf("%s %s ", timeStamp, au.Index(c, *o.execId))
 	}
-	return aurora.Sprintf("%s %s%s%s ", au.BrightBlack(o.TimeStamp.Local().Format(time.DateTime)), left, cat, right)
+
+	if o.Category == "flowpipe" {
+		return au.Sprintf("%s %s%s%s ", timeStamp, left, au.Cyan(o.Category), right)
+	}
+
+	return au.Sprintf("%s ", timeStamp)
 }
 
 type ServerOutputStatusChange struct {
@@ -84,15 +76,15 @@ func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts Ren
 
 	pre := o.ServerOutputPrefix.String(sanitizer, opts)
 
-	switch o.Status {
+	switch strings.ToLower(o.Status) {
 	case "started":
-		return fmt.Sprintf("%sserver %s\n", pre, au.Green(o.Status))
+		return fmt.Sprintf("%s%s\n", pre, au.Green(o.Status))
 	case "stopped":
-		return fmt.Sprintf("%sserver %s\n", pre, au.Red(o.Status))
+		return fmt.Sprintf("%s%s\n", pre, au.Red(o.Status))
 	case "listening":
-		return fmt.Sprintf("%sserver %s on %s\n", pre, au.Yellow(o.Status), au.Yellow(o.Additional))
+		return fmt.Sprintf("%s%s on %s\n", pre, au.Yellow(o.Status), au.Yellow(o.Additional))
 	default:
-		return fmt.Sprintf("%sserver %s\n", pre, o.Status)
+		return fmt.Sprintf("%s%s %s\n", pre, o.Status, o.Additional)
 	}
 }
 
@@ -119,12 +111,12 @@ func (o ServerOutputLoaded) String(sanitizer *sanitize.Sanitizer, opts RenderOpt
 	}
 
 	pre := o.ServerOutputPrefix.String(nil, opts)
-	text := "loaded"
+	text := "Loaded"
 	if o.IsReload {
-		text = "reloaded"
+		text = "Reloaded"
 	}
 
-	return fmt.Sprintf("%s%s mod %s\n", pre, text, au.Green(o.ModName))
+	return fmt.Sprintf("%s%s %s\n", pre, text, au.Green(o.ModName))
 }
 
 type ServerOutput struct {
@@ -188,73 +180,93 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOpti
 
 type ServerOutputTriggerExecution struct {
 	ServerOutputPrefix
-	ExecutionID  string
 	TriggerName  string
 	PipelineName string
 }
 
-func NewServerOutputTriggerExecution(prefix ServerOutputPrefix, execId string, name string, pipeline string) *ServerOutputTriggerExecution {
+func NewServerOutputTriggerExecution(ts time.Time, execId string, name string, pipeline string) *ServerOutputTriggerExecution {
+	prefix := NewServerOutputPrefixWithExecId(ts, "trigger", &execId)
 	return &ServerOutputTriggerExecution{
 		ServerOutputPrefix: prefix,
-		ExecutionID:        execId,
 		TriggerName:        name,
 		PipelineName:       pipeline,
 	}
 }
 
 func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+	sep := au.BrightBlack(":")
+
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
 		return ""
 	}
+	triggerSplit := strings.Split(o.TriggerName, ".")
+	// triggerType := triggerSplit[len(triggerSplit)-2]
+	triggerName := triggerSplit[len(triggerSplit)-1]
 
-	return fmt.Sprintf("%strigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(sanitizer, opts), o.TriggerName, o.PipelineName, o.ExecutionID)
+	shortTrigger := fmt.Sprintf("%s%s%s", au.Yellow("trigger"), sep, au.Yellow(triggerName))
+	shortPipeline := strings.Split(o.PipelineName, ".")[len(strings.Split(o.PipelineName, "."))-1]
+	c := opts.ColorGenerator.GetColorForElement(shortPipeline)
+	return fmt.Sprintf("%s%s%s%s fired, executing %s\n", o.ServerOutputPrefix.String(sanitizer, opts), left, shortTrigger, right, au.Index(c, shortPipeline))
 }
 
 type ServerOutputTrigger struct {
 	ServerOutputPrefix
 	Name     string
 	Type     string
+	Enabled  *bool
 	Schedule *string
 	Method   *string
 	Url      *string
 	Sql      *string
 }
 
-func NewServerOutputTrigger(prefix ServerOutputPrefix, n string, t string) *ServerOutputTrigger {
+func NewServerOutputTrigger(prefix ServerOutputPrefix, n string, t string, e *bool) *ServerOutputTrigger {
 	return &ServerOutputTrigger{
 		ServerOutputPrefix: prefix,
 		Name:               n,
 		Type:               t,
+		Enabled:            e,
 	}
 }
 
 func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
 
 	// deliberately skip sanitizer as want to keep Url
 
 	pre := o.ServerOutputPrefix.String(sanitizer, opts)
+	shortName := strings.Split(o.Name, ".")[len(strings.Split(o.Name, "."))-1]
+	nameType := au.Yellow(fmt.Sprintf("trigger.%s.%s", o.Type, shortName))
+
+	if !helpers.IsNil(o.Enabled) && !*o.Enabled {
+		return fmt.Sprintf("%s%s%s%s %s\n", pre, left, nameType, right, au.Red("Disabled"))
+	}
 	var suffix string
 	switch o.Type {
 	case "http":
 		m := strings.ToUpper(kitTypes.SafeString(o.Method))
 		u := kitTypes.SafeString(o.Url)
 
-		suffix = fmt.Sprintf("%s %s", au.BrightBlack(m), au.Yellow(u))
+		suffix = fmt.Sprintf("HTTP %s %s", au.BrightBlack(m), au.Blue(u))
 	case "schedule", "interval":
 		s := kitTypes.SafeString(o.Schedule)
-		suffix = fmt.Sprintf("%s", au.Yellow(s))
+		suffix = fmt.Sprintf("Schedule: %s", au.Blue(s))
 	case "query":
 		s := kitTypes.SafeString(o.Schedule)
 		q := kitTypes.SafeString(o.Sql)
-		suffix = fmt.Sprintf("schedule %s - query %s", au.Yellow(s), au.Yellow(q))
+		suffix = fmt.Sprintf("Schedule: %s - Query: %s", au.Blue(s), au.Blue(q))
 	default:
 		suffix = "loaded"
 	}
 
-	return fmt.Sprintf("%s%s %s - %s\n", pre, au.BrightBlue(o.Name), o.Type, suffix)
+	return fmt.Sprintf("%s%s%s%s %s\n", pre, left, nameType, right, suffix)
 }
 
 type PrintableServerOutput struct {
