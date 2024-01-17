@@ -68,7 +68,7 @@ func ListTriggers() (*types.ListTriggerResponse, error) {
 	var fpTriggers []types.FpTrigger
 
 	for _, trigger := range triggers {
-		fpTrigger := getFpTriggerFromTrigger(&trigger)
+		fpTrigger := getFpTriggerFromTrigger(trigger)
 		fpTriggers = append(fpTriggers, fpTrigger)
 	}
 
@@ -148,11 +148,11 @@ func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	fpTrigger := getFpTriggerFromTrigger(trigger)
+	fpTrigger := getFpTriggerFromTrigger(*trigger)
 	return &fpTrigger, nil
 }
 
-func getFpTriggerFromTrigger(t *modconfig.Trigger) types.FpTrigger {
+func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
 
 	fpTrigger := types.FpTrigger{
