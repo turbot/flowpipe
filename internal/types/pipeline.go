@@ -69,6 +69,10 @@ type FpPipeline struct {
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
+	keyWidth := 9
+	if p.Description != nil {
+		keyWidth = 13
+	}
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -76,57 +80,45 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 	}
 
 	if p.Title != nil {
-		output += fmt.Sprintf("%s%s\n", au.Blue("Title:  ").Bold(), *p.Title)
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:").Bold(), *p.Title)
+	}
+	if p.Description != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:").Bold(), *p.Description)
 	}
 
-	output += fmt.Sprintf("%s%s", au.Blue("Name:   ").Bold(), p.Name)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:").Bold(), p.Name)
 
 	if len(p.Tags) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Tags:").Bold())
-		isFirstTag := true
+		output += fmt.Sprintf("%s\n", au.Blue("Tags:").Bold())
 		for k, v := range p.Tags {
-			if isFirstTag {
-				output += "  " + k + " = " + v
-				isFirstTag = false
-			} else {
-				output += ", " + k + " = " + v
-			}
+			output += fmt.Sprintf("- %s %s\n", au.Blue(k+":"), v)
 		}
-	}
-
-	if p.Description != nil {
-		output += fmt.Sprintf("\n\n%s\n", au.Blue("Description:").Bold())
-		output += *p.Description
 	}
 
 	var pArg string
 	if len(p.Params) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Params:").Bold())
-		for _, p := range p.Params {
-			output += fmt.Sprintf("  %s\n", p.String(sanitizer, opts))
-			if !helpers.IsNil(p.Default) || (p.Optional != nil && *p.Optional) {
+		output += fmt.Sprintf("%s\n", au.Blue("Params:").Bold())
+		for _, param := range p.Params {
+			output += param.String(sanitizer, opts)
+
+			// below is to build param string for usage
+			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
 				continue
 			}
-			pArg += " --arg " + p.Name + "=<value>"
+			pArg += " --arg " + param.Name + "=<value>"
 		}
 	}
 
 	if len(p.OutputConfig) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Outputs:").Bold())
+		output += fmt.Sprintf("%s\n", au.Blue("Outputs:").Bold())
+		outputKeyWidth := 13
 		for _, o := range p.OutputConfig {
-			desc := ""
-			if len(o.Description) > 0 {
-				desc = fmt.Sprintf(": %s", o.Description)
-			}
-			output += fmt.Sprintf("  %s %s\n", au.Blue(o.Name), desc)
+			output += fmt.Sprintf("- %-*s%s\n", outputKeyWidth, au.Blue("Name:"), o.Name)
+			output += fmt.Sprintf("  %-*s%s\n", outputKeyWidth, au.Blue("Description:"), o.Description)
 		}
 	}
 
-	output += fmt.Sprintf("\n%s\n", au.Blue("Usage:").Bold())
-	output += "  flowpipe pipeline run " + p.Name + pArg
-	if !strings.HasSuffix(output, "\n") {
-		output += "\n"
-	}
+	output += fmt.Sprintf("%-*sflowpipe pipeline run %s%s\n", keyWidth, au.Blue("Usage:").Bold(), p.Name, pArg)
 	return output
 }
 
@@ -283,6 +275,10 @@ type FpPipelineParam struct {
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	keyWidth := 10
+	if p.Description != nil && len(*p.Description) > 0 {
+		keyWidth = 13
+	}
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -291,14 +287,39 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOption
 
 	o := ""
 	if p.Optional != nil && *p.Optional {
-		o = au.Sprintf(",%s", au.Yellow("Optional"))
+		o = au.Sprintf(" %s", au.Yellow("Optional").Italic())
 	}
 
-	d := ""
+	output := fmt.Sprintf("- %-*s%s%s\n", keyWidth, au.Blue("Name:"), p.Name, o)
+	output += fmt.Sprintf("  %-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
 	if p.Description != nil && len(*p.Description) > 0 {
-		d = fmt.Sprintf(": %s", *p.Description)
+		output += fmt.Sprintf("  %-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
-	return au.Sprintf("%s [%s%s]%s", au.Blue(p.Name), au.Green(p.Type), o, d)
+	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+		if v, ok := defaults[p.Name]; ok {
+			var valueString string
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, au)
+			} else {
+				s, err := opts.JsonFormatter.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			output += fmt.Sprintf("  %-*s%s\n", keyWidth, au.Blue("Default:"), valueString)
+		} else {
+			output += fmt.Sprintf("  %-*s%s\n", keyWidth, au.Blue("Default:"), "")
+		}
+	} else {
+		output += fmt.Sprintf("  %-*s%s\n", keyWidth, au.Blue("Default:"), "")
+	}
+
+	if strings.HasSuffix(output, "\n\n") {
+		output = strings.TrimSuffix(output, "\n")
+	}
+	return output
 }
 
 type PipelineExecutionResponse map[string]interface{}

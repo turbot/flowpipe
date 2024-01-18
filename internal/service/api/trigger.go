@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"net/http"
@@ -165,6 +166,7 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 		FileName:        t.FileName,
 		StartLineNumber: t.StartLineNumber,
 		EndLineNumber:   t.EndLineNumber,
+		Enabled:         helpers.IsNil(t.Enabled) || *t.Enabled,
 	}
 
 	switch tt {
@@ -182,6 +184,7 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 	case schema.TriggerTypeQuery:
 		cfg := t.Config.(*modconfig.TriggerQuery)
 		fpTrigger.Schedule = &cfg.Schedule
+		fpTrigger.Query = &cfg.Sql
 		for _, capture := range cfg.Captures {
 			pipelineInfo := capture.Pipeline.AsValueMap()
 			pipelineName := pipelineInfo["name"].AsString()
