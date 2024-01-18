@@ -218,7 +218,7 @@ func GetProcess(executionId string) (*types.Process, error) {
 	}
 
 	process := types.Process{
-		ID:        ex.ID,
+		ID:        exFile.ID,
 		Pipeline:  outerPipeline.Name,
 		Status:    outerPipeline.Status,
 		CreatedAt: outerPipeline.StartTime,

@@ -15,6 +15,7 @@ import (
 type FpTrigger struct {
 	Name            string              `json:"name"`
 	Type            string              `json:"type"`
+	Enabled         bool                `json:"enabled"`
 	Description     *string             `json:"description,omitempty"`
 	Pipelines       []FpTriggerPipeline `json:"pipelines,omitempty"`
 	Url             *string             `json:"url,omitempty"`
@@ -25,6 +26,7 @@ type FpTrigger struct {
 	Documentation   *string             `json:"documentation,omitempty"`
 	Tags            map[string]string   `json:"tags,omitempty"`
 	Schedule        *string             `json:"schedule,omitempty"`
+	Query           *string             `json:"query,omitempty"`
 }
 
 type FpTriggerPipeline struct {
@@ -35,6 +37,10 @@ type FpTriggerPipeline struct {
 func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
+	statusText := au.Green("Enabled").String()
+	if !t.Enabled {
+		statusText = au.Red("Disabled").String()
+	}
 	keyWidth := 10
 	if t.Description != nil {
 		keyWidth = 13
@@ -43,42 +49,46 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	if t.Title != nil {
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:").Bold(), *t.Title)
 	}
-	output += fmt.Sprintf("%-*s%s", keyWidth, au.Blue("Name:").Bold(), t.Name)
+	if t.Description != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:").Bold(), *t.Description)
+	}
+	output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Name:").Bold(), t.Name, statusText)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:").Bold(), t.Type)
 
 	switch t.Type {
-	case schema.TriggerTypeHttp, schema.TriggerTypeQuery:
+	case schema.TriggerTypeHttp:
+		if t.Url != nil {
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Url:").Bold(), *t.Url)
+		}
 		for _, pipeline := range t.Pipelines {
-			output += fmt.Sprintf("\n%-*s%s %s", keyWidth, au.Blue("Pipeline:").Bold(), au.BrightBlack(strings.ToUpper(pipeline.CaptureGroup)), pipeline.Pipeline)
+			output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Pipeline:").Bold(), au.BrightBlack(strings.ToUpper(pipeline.CaptureGroup)), pipeline.Pipeline)
+		}
+	case schema.TriggerTypeQuery:
+		if t.Schedule != nil {
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:").Bold(), *t.Schedule)
+		}
+		if t.Query != nil {
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Query:").Bold(), *t.Query)
+		}
+		for _, pipeline := range t.Pipelines {
+			output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Pipeline:").Bold(), au.BrightBlack(strings.ToUpper(pipeline.CaptureGroup)), pipeline.Pipeline)
 		}
 	case schema.TriggerTypeSchedule:
-		output += fmt.Sprintf("\n%-*s%s", keyWidth, au.Blue("Pipeline:").Bold(), t.Pipelines[0].Pipeline)
-	}
-	output += fmt.Sprintf("\n%-*s%s", keyWidth, au.Blue("Type:").Bold(), t.Type)
-	if t.Url != nil {
-		output += fmt.Sprintf("\n%-*s%s", keyWidth, au.Blue("Url:").Bold(), *t.Url)
-	}
-	if t.Schedule != nil {
-		output += fmt.Sprintf("\n%-*s%s", keyWidth, au.Blue("Schedule:").Bold(), *t.Schedule)
-	}
-	if len(t.Tags) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Tags:").Bold())
-		isFirstTag := true
-		for k, v := range t.Tags {
-			if isFirstTag {
-				output += "  " + k + " = " + v
-				isFirstTag = false
-			} else {
-				output += ", " + k + " = " + v
-			}
+		if t.Schedule != nil {
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:").Bold(), *t.Schedule)
 		}
-	}
-	if t.Description != nil {
-		output += fmt.Sprintf("\n\n%s\n", au.Blue("Description:").Bold())
-		output += *t.Description
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:").Bold(), t.Pipelines[0].Pipeline)
 	}
 
-	if !strings.HasSuffix(output, "\n") {
-		output += "\n"
+	if len(t.Tags) > 0 {
+		output += fmt.Sprintf("%s\n", au.Blue("Tags:").Bold())
+		for k, v := range t.Tags {
+			output += fmt.Sprintf("- %s %s\n", au.Blue(k+":"), v)
+		}
+	}
+
+	if strings.HasSuffix(output, "\n\n") {
+		output = strings.TrimSuffix(output, "\n")
 	}
 	return output
 }
@@ -119,12 +129,14 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 	res := FpTrigger{
 		Name:          typehelpers.SafeString(apiTrigger.Name),
 		Type:          typehelpers.SafeString(apiTrigger.Type),
+		Enabled:       *apiTrigger.Enabled,
 		Description:   apiTrigger.Description,
 		Pipelines:     pls,
 		Url:           apiTrigger.Url,
 		Title:         apiTrigger.Title,
 		Documentation: apiTrigger.Documentation,
 		Schedule:      apiTrigger.Schedule,
+		Query:         apiTrigger.Query,
 		Tags:          make(map[string]string),
 	}
 	if apiTrigger.Tags != nil {
@@ -162,22 +174,18 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 			description = *item.Description
 		}
 
-		var url string
-		if item.Url != nil {
-			url = *item.Url
-		}
-
-		var schedule string
-		if item.Schedule != nil {
-			schedule = *item.Schedule
+		var status string
+		if item.Enabled {
+			status = "Enabled"
+		} else {
+			status = "Disabled"
 		}
 
 		cells := []any{
 			item.Name,
 			item.Type,
+			status,
 			description,
-			url,
-			schedule,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
 	}
@@ -198,19 +206,14 @@ func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 			Description: "The type of the trigger",
 		},
 		{
+			Name:        "STATUS",
+			Type:        "string",
+			Description: "The status Enabled/Disabled of the trigger",
+		},
+		{
 			Name:        "DESCRIPTION",
 			Type:        "string",
 			Description: "Trigger description",
-		},
-		{
-			Name:        "URL",
-			Type:        "string",
-			Description: "HTTP Trigger URL",
-		},
-		{
-			Name:        "SCHEDULE",
-			Type:        "string",
-			Description: "Schedule or Interval",
 		},
 	}
 }
