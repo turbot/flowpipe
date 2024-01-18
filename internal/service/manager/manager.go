@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -92,12 +93,6 @@ func (m *Manager) Start() (*Manager, error) {
 
 	slog.Debug("Manager starting")
 	defer slog.Debug("Manager started")
-
-	if output.IsServerMode {
-		vStr := fmt.Sprintf("Version: v%s", app_specific.AppVersion)
-		output.RenderServerOutput(m.ctx,
-			types.NewServerOutput(time.Now(), "flowpipe", vStr))
-	}
 
 	if err := m.initializeModDirectory(); err != nil {
 		return nil, err
@@ -501,7 +496,7 @@ func (m *Manager) cachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipe
 		// if it's a webhook trigger, calculate the URL
 		_, ok := trigger.Config.(*modconfig.TriggerHttp)
 		if ok && !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
-			triggerUrl, err := calculateTriggerUrl(trigger)
+			triggerUrl, err := calculateTriggerUrl(trigger, m.HTTPAddress, m.HTTPPort)
 			if err != nil {
 				return err
 			}
@@ -515,15 +510,21 @@ func (m *Manager) cachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipe
 	return nil
 }
 
-func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
+func calculateTriggerUrl(trigger *modconfig.Trigger, httpHost string, httpPort int) (string, error) {
 	salt, ok := cache.GetCache().Get("salt")
 	if !ok {
 		return "", perr.InternalWithMessage("salt not found")
 	}
 
 	hashString := util.CalculateHash(trigger.FullName, salt.(string))
-
-	return "/api/latest/hook/" + trigger.FullName + "/" + hashString, nil
+	httpSchema := "http" // TODO: revise if we support HTTPS
+	if httpHost == "" {
+		httpHost = "localhost"
+	}
+	if httpPort == 0 {
+		httpPort = localconstants.DefaultServerPort
+	}
+	return fmt.Sprintf("%s://%s:%d/api/latest/hook/%s/%s", httpSchema, httpHost, httpPort, trigger.FullName, hashString), nil
 }
 
 func (m *Manager) renderServerStartOutput() {
@@ -532,7 +533,7 @@ func (m *Manager) renderServerStartOutput() {
 	if !helpers.IsNil(m.StartedAt) {
 		startTime = *m.StartedAt
 	}
-	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Started", ""))
+	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Started", app_specific.AppVersion.String()))
 	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
 	outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "flowpipe"), m.RootMod.Name(), false))
 	outputs = append(outputs, renderServerTriggers(m.triggers)...)
