@@ -78,7 +78,7 @@ func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts Ren
 
 	switch strings.ToLower(o.Status) {
 	case "started":
-		return fmt.Sprintf("%s%s\n", pre, au.Green(o.Status))
+		return fmt.Sprintf("%s%s v%s\n", pre, au.Green(o.Status), o.Additional)
 	case "stopped":
 		return fmt.Sprintf("%s%s\n", pre, au.Red(o.Status))
 	case "listening":
@@ -197,7 +197,6 @@ func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
-	sep := au.BrightBlack(":")
 
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -205,13 +204,14 @@ func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts
 		return ""
 	}
 	triggerSplit := strings.Split(o.TriggerName, ".")
-	// triggerType := triggerSplit[len(triggerSplit)-2]
+	triggerType := triggerSplit[len(triggerSplit)-2]
 	triggerName := triggerSplit[len(triggerSplit)-1]
+	shortTrigger := fmt.Sprintf("trigger.%s.%s", triggerType, triggerName)
+	triggerColor := opts.ColorGenerator.GetColorForElement(shortTrigger)
 
-	shortTrigger := fmt.Sprintf("%s%s%s", au.Yellow("trigger"), sep, au.Yellow(triggerName))
 	shortPipeline := strings.Split(o.PipelineName, ".")[len(strings.Split(o.PipelineName, "."))-1]
 	c := opts.ColorGenerator.GetColorForElement(shortPipeline)
-	return fmt.Sprintf("%s%s%s%s fired, executing %s\n", o.ServerOutputPrefix.String(sanitizer, opts), left, shortTrigger, right, au.Index(c, shortPipeline))
+	return fmt.Sprintf("%s%s%s%s fired, executing %s\n", o.ServerOutputPrefix.String(sanitizer, opts), left, au.Index(triggerColor, shortTrigger), right, au.Index(c, shortPipeline))
 }
 
 type ServerOutputTrigger struct {
@@ -243,10 +243,11 @@ func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 
 	pre := o.ServerOutputPrefix.String(sanitizer, opts)
 	shortName := strings.Split(o.Name, ".")[len(strings.Split(o.Name, "."))-1]
-	nameType := au.Yellow(fmt.Sprintf("trigger.%s.%s", o.Type, shortName))
+	shortTrigger := fmt.Sprintf("trigger.%s.%s", o.Type, shortName)
+	triggerColor := opts.ColorGenerator.GetColorForElement(shortTrigger)
 
 	if !helpers.IsNil(o.Enabled) && !*o.Enabled {
-		return fmt.Sprintf("%s%s%s%s %s\n", pre, left, nameType, right, au.Red("Disabled"))
+		return fmt.Sprintf("%s%s%s%s %s\n", pre, left, au.Index(triggerColor, shortTrigger), right, au.Red("Disabled"))
 	}
 	var suffix string
 	switch o.Type {
@@ -266,7 +267,7 @@ func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts RenderOp
 		suffix = "loaded"
 	}
 
-	return fmt.Sprintf("%s%s%s%s %s\n", pre, left, nameType, right, suffix)
+	return fmt.Sprintf("%s%s%s%s %s %s\n", pre, left, au.Index(triggerColor, shortTrigger), right, au.Green("Enabled"), suffix)
 }
 
 type PrintableServerOutput struct {
