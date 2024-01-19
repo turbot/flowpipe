@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 
 	"github.com/turbot/pipe-fittings/schema"
 
@@ -561,7 +562,7 @@ func renderServerTriggers(triggers map[string]*modconfig.Trigger) []types.Saniti
 		case schema.TriggerTypeHttp:
 			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
 				// TODO: Add Payload Requirements?
-				methods := strings.Join(utils.SortedMapKeys(tc.Method), " ")
+				methods := strings.Join(utils.SortedMapKeys(tc.Methods), " ")
 				o.Method = &methods
 				o.Url = &tc.Url
 				outputs = append(outputs, o)
