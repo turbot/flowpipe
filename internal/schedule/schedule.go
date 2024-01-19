@@ -3,7 +3,8 @@ package schedule
 import (
 	"fmt"
 	"log/slog"
-	"time"
+	"strconv"
+	"strings"
 
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/utils"
@@ -43,7 +44,10 @@ func generateDayCron(distributionID string) (int64, error) {
 }
 
 func IntervalToCronExpression(id, interval string) (string, error) {
-	if interval == "weekly" {
+
+	switch interval {
+
+	case "weekly":
 		hourCron, err := generateHourCron(id)
 		if err != nil {
 			return "", err
@@ -60,7 +64,7 @@ func IntervalToCronExpression(id, interval string) (string, error) {
 		}
 
 		return fmt.Sprintf("%d %d * * %d", minuteCron, hourCron, dayCron), nil
-	} else if interval == "daily" {
+	case "daily":
 		hourCron, err := generateHourCron(id)
 		if err != nil {
 			return "", err
@@ -72,32 +76,58 @@ func IntervalToCronExpression(id, interval string) (string, error) {
 		}
 
 		return fmt.Sprintf("%d %d * * *", minuteCron, hourCron), nil
-	} else if interval == "hourly" {
+	case "hourly", "60m", "1h":
 		minuteCron, err := generateMinuteCron(id)
 		if err != nil {
 			return "", err
 		}
 
 		return fmt.Sprintf("%d * * * *", minuteCron), nil
-	}
 
-	return "", perr.BadRequestWithMessage("Invalid Interval Request passed for Pipeline")
+	case "5m", "10m", "15m", "30m", "2h", "4h", "6h", "8h", "12h":
+		return durationToCron(id, interval)
+
+	default:
+		return "", perr.BadRequestWithMessage("Invalid Interval Request passed for Pipeline")
+	}
 }
 
-func DurationToCron(duration time.Duration) (string, error) {
-	if duration >= 24*time.Hour {
-		return "", fmt.Errorf("duration must be less than 24 hours")
+func durationToCron(id, duration string) (string, error) {
+	if strings.HasSuffix(duration, "m") {
+		minuteString := strings.TrimSuffix(duration, "m")
+		minuteInt, err := strconv.Atoi(minuteString)
+		if err != nil {
+			return "", perr.BadRequestWithMessage("Invalid Duration Request passed for Pipeline")
+		}
+
+		offset, err := utils.DistributedStringIndex(id, "", int64(minuteInt-1))
+		if err != nil {
+			return "", err
+		}
+
+		cron := fmt.Sprintf("%d-59/%d * * * *", offset, minuteInt)
+		return cron, err
+
+	} else if strings.HasSuffix(duration, "h") {
+		hourString := strings.TrimSuffix(duration, "h")
+		hourInt, err := strconv.Atoi(hourString)
+		if err != nil {
+			return "", perr.BadRequestWithMessage("Invalid Duration Request passed for Pipeline")
+		}
+
+		offset, err := utils.DistributedStringIndex(id, "", int64(hourInt-1))
+		if err != nil {
+			return "", err
+		}
+
+		minute, err := utils.DistributedStringIndex(id, "", 59)
+		if err != nil {
+			return "", err
+		}
+
+		cron := fmt.Sprintf("%d %d-23/%d * * *", minute, offset, hourInt)
+		return cron, nil
 	}
 
-	if duration%time.Hour == 0 {
-		// Duration is in whole hours
-		hours := duration / time.Hour
-		return fmt.Sprintf("0 */%d * * *", hours), nil
-	} else if duration%time.Minute == 0 {
-		// Duration is in whole minutes
-		minutes := duration / time.Minute
-		return fmt.Sprintf("*/%d * * * *", minutes), nil
-	}
-
-	return "", fmt.Errorf("duration must be in whole minutes or hours")
+	return "", perr.BadRequestWithMessage("Invalid Duration Request passed for Pipeline")
 }

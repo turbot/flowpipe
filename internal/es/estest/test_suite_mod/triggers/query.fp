@@ -1,5 +1,5 @@
 trigger "query" "simple" {
-    schedule = "* * * * *"
+    schedule = "15m"
 
     connection_string = "sqlite:./query_source.db"
 

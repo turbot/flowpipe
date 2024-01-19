@@ -12,7 +12,7 @@ pipeline "simple_with_trigger" {
 }
 
 trigger "schedule" "my_every_hour_trigger" {
-    schedule = "hourly"
+    schedule = "1h"
     pipeline = pipeline.simple_with_trigger
     args = {
         param_one = "from trigger"

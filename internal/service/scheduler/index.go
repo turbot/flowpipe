@@ -154,8 +154,6 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		tags = append(tags, "pipeline:"+pipelineName)
 	}
 
-	slog.Info("Scheduling trigger", "name", t.Name(), "schedule", scheduleString, "tags", tags)
-
 	triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
 
 	// try cron expression first
