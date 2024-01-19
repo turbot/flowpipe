@@ -92,20 +92,6 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
-	// check if we are in a loop. If we are in a loop start the next loop
-	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
-	if loopBlock != nil && evt.StepLoop != nil && !evt.StepLoop.LoopCompleted {
-		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(evt, stepName)
-		return h.CommandBus.Send(ctx, cmd)
-	}
-
-	// If the step is a for each step, run the for each planner, not the pipeline planner
-	if !helpers.IsNil(stepDefn.GetForEach()) {
-		cmd := event.NewStepForEachPlanFromPipelineStepFinished(evt, stepName)
-		return h.CommandBus.Send(ctx, cmd)
-	}
-
 	if output.IsServerMode && evt.Output != nil && evt.Output.Status != "skipped" {
 		feKey, li, ri := getIndices(evt)
 		sp := types.NewServerOutputPrefixWithExecId(evt.Event.CreatedAt, "pipeline", &evt.Event.ExecutionID)
@@ -122,6 +108,20 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 			}
 			output.RenderServerOutput(ctx, types.NewParsedErrorEvent(pe, evt.Output.Errors, evt.Output.Data, &duration, false, rc))
 		}
+	}
+
+	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
+	// check if we are in a loop. If we are in a loop start the next loop
+	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+	if loopBlock != nil && evt.StepLoop != nil && !evt.StepLoop.LoopCompleted {
+		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(evt, stepName)
+		return h.CommandBus.Send(ctx, cmd)
+	}
+
+	// If the step is a for each step, run the for each planner, not the pipeline planner
+	if !helpers.IsNil(stepDefn.GetForEach()) {
+		cmd := event.NewStepForEachPlanFromPipelineStepFinished(evt, stepName)
+		return h.CommandBus.Send(ctx, cmd)
 	}
 
 	cmd, err := event.NewPipelinePlan(event.ForPipelineStepFinished(evt))
@@ -141,6 +141,9 @@ func getIndices(evt *event.StepFinished) (*string, *int, *int) {
 	}
 	if evt.StepLoop != nil {
 		i := evt.StepLoop.Index - 1
+		if evt.StepLoop.LoopCompleted {
+			i = evt.StepLoop.Index
+		}
 		li = &i
 	}
 	if evt.StepRetry != nil {
