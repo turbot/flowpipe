@@ -53,7 +53,7 @@ func (s *SchedulerService) RescheduleTriggers() error {
 			continue
 		}
 
-		if t.Enabled != nil && *t.Enabled == false {
+		if t.Enabled != nil && !*t.Enabled {
 			// if trigger is disabled, skip the scheduling logic, do not add to the validJobNames list
 			// it will be removed below
 			continue
@@ -138,7 +138,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		return nil
 	}
 
-	if t.Enabled != nil && *t.Enabled == false {
+	if t.Enabled != nil && !*t.Enabled {
 		slog.Debug("Trigger is disabled", "name", t.Name())
 		return nil
 	}
