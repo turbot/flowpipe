@@ -151,7 +151,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 
 	// Get the available methods for the trigger
 	var triggerMethods []string
-	for method := range httpTriggerConfig.Method {
+	for method := range httpTriggerConfig.Methods {
 		triggerMethods = append(triggerMethods, method)
 	}
 	requestMethod := strings.ToLower(c.Request.Method)
@@ -160,7 +160,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	if !slices.Contains(triggerMethods, requestMethod) {
 		common.AbortWithError(c, perr.MethodNotAllowed())
 	}
-	triggerMethod := httpTriggerConfig.Method[requestMethod]
+	triggerMethod := httpTriggerConfig.Methods[requestMethod]
 
 	pipelineArgs, diags := triggerMethod.GetArgs(evalContext)
 	if diags.HasErrors() {

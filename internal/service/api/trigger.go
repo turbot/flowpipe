@@ -2,12 +2,13 @@ package api
 
 import (
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/schema"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -173,7 +174,7 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 	case schema.TriggerTypeHttp:
 		cfg := t.Config.(*modconfig.TriggerHttp)
 		fpTrigger.Url = &cfg.Url
-		for _, method := range cfg.Method {
+		for _, method := range cfg.Methods {
 			pipelineInfo := method.Pipeline.AsValueMap()
 			pipelineName := pipelineInfo["name"].AsString()
 			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
