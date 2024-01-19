@@ -158,7 +158,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 
 	// Return error if the request method is not allowed
 	if !slices.Contains(triggerMethods, requestMethod) {
-		common.AbortWithError(c, perr.NotFoundWithMessage("method not allowed"))
+		common.AbortWithError(c, perr.MethodNotAllowed())
 	}
 	triggerMethod := httpTriggerConfig.Method[requestMethod]
 
