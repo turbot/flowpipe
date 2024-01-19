@@ -53,6 +53,12 @@ func (s *SchedulerService) RescheduleTriggers() error {
 			continue
 		}
 
+		if t.Enabled != nil && *t.Enabled == false {
+			// if trigger is disabled, skip the scheduling logic, do not add to the validJobNames list
+			// it will be removed below
+			continue
+		}
+
 		validJobsNames = append(validJobsNames, "id:"+t.FullName)
 
 		// Find the job in the scheduler
@@ -102,7 +108,7 @@ func (s *SchedulerService) RescheduleTriggers() error {
 	allJobs := s.cronScheduler.Jobs()
 	for _, job := range allJobs {
 		jobTags := job.Tags()
-		if len(jobTags) != 3 || !strings.HasPrefix(jobTags[0], "id:") {
+		if !strings.HasPrefix(jobTags[0], "id:") {
 			continue
 		}
 
@@ -116,20 +122,6 @@ func (s *SchedulerService) RescheduleTriggers() error {
 }
 
 func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
-
-	pipelineName := ""
-	if t.Pipeline != cty.NilVal {
-		pipelineValueMap := t.Pipeline.AsValueMap()
-		if pipelineValueMap == nil {
-			return perr.BadRequestWithMessage("pipeline not found for trigger " + t.Name())
-		}
-
-		if pipelineValueMap[schema.LabelName] == cty.NilVal {
-			return perr.BadRequestWithMessage("pipeline name not found for trigger " + t.Name())
-		}
-
-		pipelineName = t.Pipeline.AsValueMap()[schema.LabelName].AsString()
-	}
 
 	scheduleString := ""
 
@@ -146,10 +138,30 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		return nil
 	}
 
+	if t.Enabled != nil && *t.Enabled == false {
+		slog.Debug("Trigger is disabled", "name", t.Name())
+		return nil
+	}
+
 	tags := []string{
 		"id:" + t.FullName,
 		"schedule:" + scheduleString,
 	}
+
+	pipelineName := ""
+	if t.Pipeline != cty.NilVal {
+		pipelineValueMap := t.Pipeline.AsValueMap()
+		if pipelineValueMap == nil {
+			return perr.BadRequestWithMessage("pipeline not found for trigger " + t.Name())
+		}
+
+		if pipelineValueMap[schema.LabelName] == cty.NilVal {
+			return perr.BadRequestWithMessage("pipeline name not found for trigger " + t.Name())
+		}
+
+		pipelineName = t.Pipeline.AsValueMap()[schema.LabelName].AsString()
+	}
+
 	if pipelineName != "" {
 		tags = append(tags, "pipeline:"+pipelineName)
 	}

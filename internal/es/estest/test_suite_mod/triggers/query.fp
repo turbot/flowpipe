@@ -1,6 +1,8 @@
 trigger "query" "simple" {
     schedule = "15m"
 
+    enabled = false
+
     connection_string = "sqlite:./query_source.db"
 
     sql = "select * from test_one"
