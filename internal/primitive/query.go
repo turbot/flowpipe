@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -79,24 +80,30 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
-		duckDBFile := dbConnectionString[7:]
-		if duckDBFile == "" {
-			return nil, perr.BadRequestWithMessage("Invalid duckDB database connection string")
+		duckDBConnectionString := dbConnectionString[7:]
+		if duckDBConnectionString == "" {
+			return nil, perr.BadRequestWithMessage("Invalid DuckDB database connection string")
 		}
-		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), duckDBFile)
+		duckDBConnectionString, err = formatSqlConnectionString(duckDBConnectionString)
+		if err != nil {
+			return nil, err
+		}
 
-		slog.Debug("Opening duckDB database", "file", dbFile)
-		db, err = sql.Open(DriverDuckDB, dbFile)
+		slog.Debug("Opening DuckDB database", "connectionString", duckDBConnectionString)
+		db, err = sql.Open(DriverDuckDB, duckDBConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
-		sqlLiteFile := dbConnectionString[7:]
-		if sqlLiteFile == "" {
+		sqliteConnectionString := dbConnectionString[7:]
+		if sqliteConnectionString == "" {
 			return nil, perr.BadRequestWithMessage("Invalid sqlite database connection string")
 		}
-		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), sqlLiteFile)
+		sqliteConnectionString, err = formatSqlConnectionString(sqliteConnectionString)
+		if err != nil {
+			return nil, err
+		}
 
-		slog.Debug("Opening sqlite database", "file", dbFile)
-		db, err = sql.Open("sqlite3", dbFile)
+		slog.Debug("Opening sqlite database", "connection string", sqliteConnectionString)
+		db, err = sql.Open("sqlite3", sqliteConnectionString)
 
 	} else {
 		return nil, perr.BadRequestWithMessage("Invalid database connection string")
@@ -108,6 +115,24 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	}
 
 	return db, nil
+}
+
+// Function to append basePath to the file part of the  connection string
+func formatSqlConnectionString(connStr string) (string, error) {
+	parts := strings.SplitN(connStr, "?", 2)
+	if len(parts) == 0 {
+		return "", perr.BadRequestWithMessage(fmt.Sprintf("Invalid connection string: %s", connStr))
+	}
+
+	// Append the base path to the file part
+	formatted := filepath.Join(viper.GetString(constants.ArgModLocation), parts[0])
+
+	// If there are additional parameters, append them back
+	if len(parts) > 1 {
+		formatted += "?" + parts[1]
+	}
+
+	return formatted, nil
 }
 
 func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
