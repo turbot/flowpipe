@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"github.com/turbot/pipe-fittings/schema"
+	"github.com/turbot/pipe-fittings/utils"
 	"golang.org/x/exp/maps"
 	"strings"
 
@@ -37,54 +38,59 @@ type FpTriggerPipeline struct {
 
 func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
-	output := ""
-	statusText := au.Green("Enabled").String()
-	if !t.Enabled {
-		statusText = au.Red("Disabled").String()
-	}
+	var output string
+	var statusText string
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
 	keyWidth := 10
 	if t.Description != nil {
 		keyWidth = 13
 	}
 
+	if !t.Enabled {
+		statusText = fmt.Sprintf("%s%s%s", left, au.Red("disabled"), right)
+	}
+	output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Name:"), t.Name, statusText)
 	if t.Title != nil {
-		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:").Bold(), *t.Title)
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:"), *t.Title)
 	}
 	if t.Description != nil {
-		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:").Bold(), *t.Description)
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *t.Description)
 	}
-	output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Name:").Bold(), t.Name, statusText)
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:").Bold(), t.Type)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), t.Type)
 
 	switch t.Type {
 	case schema.TriggerTypeHttp:
 		if t.Url != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Url:").Bold(), *t.Url)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("URL:"), *t.Url)
 		}
+		output += fmt.Sprintf("%s\n", au.Blue("Pipeline:"))
 		for _, pipeline := range t.Pipelines {
-			output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Pipeline:").Bold(), au.BrightBlack(strings.ToUpper(pipeline.CaptureGroup)), pipeline.Pipeline)
+			output += fmt.Sprintf("  %s %s\n", au.Blue(utils.ToTitleCase(pipeline.CaptureGroup)+":"), pipeline.Pipeline)
 		}
+		// TODO: Add usage section
 	case schema.TriggerTypeQuery:
 		if t.Schedule != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:").Bold(), *t.Schedule)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:"), *t.Schedule)
 		}
 		if t.Query != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Query:").Bold(), *t.Query)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Query:"), *t.Query)
 		}
+		output += fmt.Sprintf("%s\n", au.Blue("Pipeline:"))
 		for _, pipeline := range t.Pipelines {
-			output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Pipeline:").Bold(), au.BrightBlack(strings.ToUpper(pipeline.CaptureGroup)), pipeline.Pipeline)
+			output += fmt.Sprintf("  %s %s\n", au.Blue(utils.ToTitleCase(pipeline.CaptureGroup)+":"), pipeline.Pipeline)
 		}
 	case schema.TriggerTypeSchedule:
 		if t.Schedule != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:").Bold(), *t.Schedule)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:"), *t.Schedule)
 		}
-		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:").Bold(), t.Pipelines[0].Pipeline)
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:"), t.Pipelines[0].Pipeline)
 	}
 
 	if len(t.Tags) > 0 {
-		output += fmt.Sprintf("%s\n", au.Blue("Tags:").Bold())
+		output += fmt.Sprintf("%s\n", au.Blue("Tags:"))
 		for k, v := range t.Tags {
-			output += fmt.Sprintf("- %s %s\n", au.Blue(k+":"), v)
+			output += fmt.Sprintf("  %s %s\n", au.BrightBlue(k+":").Bold(), v)
 		}
 	}
 
