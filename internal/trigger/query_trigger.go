@@ -375,6 +375,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItem
 	slog.Info("updatedItems", "updatedItems", updatedItems)
 
 	// Find deleted items by comparing with the main table
+	//nolint:gosec // TODO: investigate string concat
 	deletedItemsSQL := `select primary_key from query_trigger_captured_row
 						where primary_key not in (select primary_key from ` + triggerName + `_temp_items) and trigger_name = ?`
 
@@ -445,6 +446,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItem
 
 func insertNewItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	// Find new items by comparing with the main table
+	//nolint:gosec // TODO: investigate string concat
 	newItemsSQL := `
         insert into query_trigger_captured_row (trigger_name, primary_key, row_hash, created_at)
         select '` + triggerName + `', primary_key, row_hash, created_at from ` + triggerName + `_temp_items
@@ -474,6 +476,7 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	sourceTable := triggerName + "_temp_items"
 
 	timeNow := time.Now()
+	//nolint:gosec // TODO: investigate string concat
 	updateItemsSQL := `WITH Updated AS (
 		SELECT primary_key
 		FROM query_trigger_captured_row

@@ -137,7 +137,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 	}
 
 	var pipelineParams []FpPipelineParam
-	for _, param := range pipeline.Params {
+	for i, param := range pipeline.Params {
 
 		var paramDefault any
 		if !param.Default.IsNull() {
@@ -151,7 +151,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 		pipelineParams = append(pipelineParams, FpPipelineParam{
 			Name:        param.Name,
 			Description: utils.ToStringPointer(param.Description),
-			Optional:    &param.Optional,
+			Optional:    &pipeline.Params[i].Optional,
 			Type:        param.Type.FriendlyName(),
 			Default:     paramDefault,
 		})
