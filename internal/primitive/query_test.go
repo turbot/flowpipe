@@ -17,7 +17,7 @@ func TestQueryListAll(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:///workspaces/flowpipe/internal/primitive/database_files/employee.db",
+		schema.AttributeTypeConnectionString: "sqlite:./database_files/employee.db",
 		schema.AttributeTypeSql:              "select * from employee order by id;",
 	})
 
