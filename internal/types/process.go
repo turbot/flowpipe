@@ -20,7 +20,7 @@ type Process struct {
 
 func (p Process) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
-	keyWidth := 13
+	keyWidth := 14
 	output := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -28,10 +28,10 @@ func (p Process) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) strin
 		return ""
 	}
 
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("ExecutionID:").Bold(), p.ID)
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:").Bold(), p.Pipeline)
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Status:").Bold(), p.Status)
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Created:").Bold(), p.CreatedAt.Local().Format(time.DateTime))
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Execution ID:"), p.ID)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:"), p.Pipeline)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Status:"), p.Status)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Created:"), p.CreatedAt.Local().Format(time.DateTime))
 	return output
 }
 
