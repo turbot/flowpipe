@@ -376,7 +376,7 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 		}
 
 		cells := []any{
-			item.Mod,
+			strings.Split(item.Mod, ".")[len(strings.Split(item.Mod, "."))-1],
 			item.Name,
 			description,
 		}

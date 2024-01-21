@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"github.com/turbot/pipe-fittings/schema"
+	"golang.org/x/exp/maps"
 	"strings"
 
 	"github.com/logrusorgru/aurora"
@@ -93,6 +94,11 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	return output
 }
 
+func (t FpTrigger) getTypeAndName() string {
+	shortName := strings.Split(t.Name, ".")[len(strings.Split(t.Name, "."))-1]
+	return fmt.Sprintf("%s.%s", t.Type, shortName)
+}
+
 // This type is used by the API to return a list of triggers.
 type ListTriggerResponse struct {
 	Items     []FpTrigger `json:"items"`
@@ -174,17 +180,22 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 			description = *item.Description
 		}
 
-		var status string
-		if item.Enabled {
-			status = "Enabled"
+		distinct := make(map[string]bool)
+		for _, i := range item.Pipelines {
+			distinct[i.Pipeline] = true
+		}
+
+		var pipelineText string
+		if len(distinct) == 1 {
+			pipelineText = maps.Keys(distinct)[0]
 		} else {
-			status = "Disabled"
+			pipelineText = fmt.Sprintf("%d pipelines", len(distinct))
 		}
 
 		cells := []any{
-			item.Name,
-			item.Type,
-			status,
+			item.getTypeAndName(),
+			item.Enabled,
+			pipelineText,
 			description,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
@@ -201,14 +212,14 @@ func (PrintableTrigger) getColumns() (columns []TableColumnDefinition) {
 			Description: "The name of the trigger",
 		},
 		{
-			Name:        "TYPE",
-			Type:        "string",
-			Description: "The type of the trigger",
+			Name:        "ENABLED",
+			Type:        "boolean",
+			Description: "If true, trigger is enabled",
 		},
 		{
-			Name:        "STATUS",
+			Name:        "PIPELINE",
 			Type:        "string",
-			Description: "The status Enabled/Disabled of the trigger",
+			Description: "Pipeline associated with trigger",
 		},
 		{
 			Name:        "DESCRIPTION",
