@@ -90,7 +90,7 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	if len(t.Tags) > 0 {
 		output += fmt.Sprintf("%s\n", au.Blue("Tags:"))
 		for k, v := range t.Tags {
-			output += fmt.Sprintf("  %s %s\n", au.BrightBlue(k+":").Bold(), v)
+			output += fmt.Sprintf("  %s %s\n", au.Cyan(k+":"), v)
 		}
 	}
 

@@ -91,7 +91,7 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 	if len(p.Tags) > 0 {
 		output += fmt.Sprintf("%s\n", au.Blue("Tags:"))
 		for k, v := range p.Tags {
-			output += fmt.Sprintf("  %s %s\n", au.BrightBlue(k+":").Bold(), v)
+			output += fmt.Sprintf("  %s %s\n", au.Cyan(k+":"), v)
 		}
 	}
 
@@ -112,10 +112,11 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 	if len(p.OutputConfig) > 0 {
 		output += fmt.Sprintf("%s\n", au.Blue("Outputs:"))
 		for _, o := range p.OutputConfig {
-			output += fmt.Sprintf("  %s\n", au.BrightBlue(o.Name+":").Bold())
+			output += fmt.Sprintf("  %s\n", au.Cyan(o.Name+":"))
 			if len(o.Description) > 0 {
-				output += fmt.Sprintf("    %s %s\n", au.Blue("Description:"), o.Description)
+				output += fmt.Sprintf("    %-13s%s\n", au.Blue("Description:"), o.Description)
 			}
+			output += fmt.Sprintf("    %-13s%s\n", au.Blue("Type:"), "any")
 		}
 	}
 
@@ -289,11 +290,11 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts RenderOption
 		return ""
 	}
 
-	o := fmt.Sprintf(" %s%s%s%s", left, au.Red("required"), right, au.BrightBlue(":").Bold())
+	o := fmt.Sprintf(" %s%s%s", left, au.Red("required"), right)
 	if p.Optional != nil && *p.Optional {
-		o = au.BrightBlue(":").Bold().String()
+		o = ""
 	}
-	output := fmt.Sprintf("  %s%s\n", au.BrightBlue(p.Name).Bold(), o)
+	output := fmt.Sprintf("  %s%s%s\n", au.Cyan(p.Name), o, au.Cyan(":"))
 	output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
 	if p.Description != nil && len(*p.Description) > 0 {
 		output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
