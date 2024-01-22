@@ -22,7 +22,7 @@ pipeline "sqlite_query_path_alternate_b" {
 
 pipeline "sqlite_query_path_alternate_c" {
   step "query" "list" {
-    connection_string = "sqlite://query_source_cleans.db"
+    connection_string = "sqlite://query_source_clean.db"
     sql               = "select * from test_one order by id"
   }
 

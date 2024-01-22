@@ -3607,7 +3607,7 @@ func (suite *ModTestSuite) TestSqliteQueryPathAlternateB() {
 	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
 }
 
-func (suite *ModTestSuite) XTestSqliteQueryPathAlternateC() {
+func (suite *ModTestSuite) TestSqliteQueryPathAlternateC() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
