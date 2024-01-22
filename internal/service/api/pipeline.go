@@ -55,7 +55,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 
 	slog.Info("received list pipelines request", "next_token", nextToken, "limit", limit)
 
-	result, err := ListPipelines()
+	result, err := ListPipelines(api.EsService.RootMod.Name())
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -63,7 +63,7 @@ func (api *APIService) listPipelines(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func ListPipelines() (*types.ListPipelineResponse, error) {
+func ListPipelines(rootMod string) (*types.ListPipelineResponse, error) {
 	pipelines, err := db.ListAllPipelines()
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func ListPipelines() (*types.ListPipelineResponse, error) {
 	var listPipelineResponseItems []types.FpPipeline
 
 	for _, pipeline := range pipelines {
-		item, err := types.FpPipelineFromModPipeline(pipeline)
+		item, err := types.FpPipelineFromModPipeline(pipeline, rootMod)
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +116,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 		return
 	}
 
-	getPipelineresponse, err := GetPipeline(uri.PipelineName)
+	getPipelineresponse, err := GetPipeline(uri.PipelineName, api.EsService.RootMod.Name())
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -125,7 +125,7 @@ func (api *APIService) getPipeline(c *gin.Context) {
 	c.JSON(http.StatusOK, getPipelineresponse)
 }
 
-func GetPipeline(pipelineName string) (*types.FpPipeline, error) {
+func GetPipeline(pipelineName string, rootMod string) (*types.FpPipeline, error) {
 	pipelineFullName := ConstructPipelineFullyQualifiedName(pipelineName)
 
 	pipelineCached, found := cache.GetCache().Get(pipelineFullName)
@@ -138,7 +138,7 @@ func GetPipeline(pipelineName string) (*types.FpPipeline, error) {
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	return types.FpPipelineFromModPipeline(pipeline)
+	return types.FpPipelineFromModPipeline(pipeline, rootMod)
 }
 
 // @Summary Execute a pipeline command

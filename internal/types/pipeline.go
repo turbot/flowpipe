@@ -64,6 +64,7 @@ type FpPipeline struct {
 	Steps           []modconfig.PipelineStep   `json:"steps,omitempty"`
 	OutputConfig    []modconfig.PipelineOutput `json:"outputs,omitempty"`
 	Params          []FpPipelineParam          `json:"params,omitempty"`
+	RootMod         string                     `json:"root_mod"`
 }
 
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) string {
@@ -79,7 +80,8 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 		return ""
 	}
 
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), p.Name)
+	displayName := p.pipelineDisplayName()
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), displayName)
 
 	if p.Title != nil {
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:"), *p.Title)
@@ -121,11 +123,19 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts RenderOptions) st
 	}
 
 	output += fmt.Sprintf("%s\n", au.Blue("Usage:"))
-	output += fmt.Sprintf("  flowpipe pipeline run %s%s\n", p.Name, pArg)
+	output += fmt.Sprintf("  flowpipe pipeline run %s%s\n", displayName, pArg)
 	return output
 }
 
-func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
+func (p FpPipeline) pipelineDisplayName() string {
+	if p.RootMod == p.Mod {
+		return strings.Split(p.Name, ".")[len(strings.Split(p.Name, "."))-1]
+	}
+
+	return p.Name
+}
+
+func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
 	resp := &FpPipeline{
 		Name:          pipeline.Name(),
 		Description:   pipeline.Description,
@@ -135,6 +145,8 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 		Documentation: pipeline.Documentation,
 		Steps:         pipeline.Steps,
 		OutputConfig:  pipeline.OutputConfig,
+
+		RootMod: rootMod,
 	}
 
 	var pipelineParams []FpPipelineParam
@@ -179,6 +191,8 @@ func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipelin
 		Steps:        make([]modconfig.PipelineStep, 0, len(apiResp.Steps)),
 		Params:       make([]FpPipelineParam, 0, len(apiResp.Params)),
 		OutputConfig: make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
+
+		RootMod: typehelpers.SafeString(apiResp.RootMod),
 	}
 
 	for _, s := range apiResp.Steps {
@@ -378,7 +392,7 @@ func (p PrintablePipeline) GetTable() (Table, error) {
 
 		cells := []any{
 			strings.Split(item.Mod, ".")[len(strings.Split(item.Mod, "."))-1],
-			item.Name,
+			item.pipelineDisplayName(),
 			description,
 		}
 		tableRows = append(tableRows, TableRow{Cells: cells})
