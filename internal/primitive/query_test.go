@@ -393,3 +393,56 @@ func TestQueryInvalidDatabase(t *testing.T) {
 	assert.NotNil(err)
 	assert.Contains(err.Error(), "Bad Request: Invalid database connection string")
 }
+
+func XTestQueryMariaDB(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: "mysql://root:flowpipe@tcp(localhost:3306)/flowpipe_test",
+		schema.AttributeTypeSql:              "select * from DataTypeDemo;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.NotNil(output)
+	/**
+	CREATE TABLE DataTypeDemo (
+	    id INT AUTO_INCREMENT,
+	    sample_int INT,
+	    sample_varchar VARCHAR(50),
+	    sample_text TEXT,
+	    sample_date DATE,
+	    sample_datetime DATETIME,
+	    sample_float FLOAT,
+	    sample_double DOUBLE,
+	    sample_decimal DECIMAL(10,2),
+	    sample_bool BOOLEAN,
+		sample_json JSON,
+		sample_blob BLOB,
+	    PRIMARY KEY (id)
+		)/
+
+	-- Insert statement 1
+	INSERT INTO DataTypeDemo
+	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
+	VALUES
+	(4, 'Example 1', 'Text for example 1.', '2024-03-01', '2024-03-01 12:00:00', 1.23, 456.789, 100.10, FALSE, '{"name": "John", "age": 30, "city": "New York"}', CAST('Binary data example 1' AS BINARY));
+
+	-- Insert statement 2
+	INSERT INTO DataTypeDemo
+	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
+	VALUES
+	(5, 'Example 2', 'Text for example 2.', '2024-04-10', '2024-04-10 15:30:00', 9.87, 321.654, 200.20, TRUE, '{"product": "Table", "price": 150.75}', CAST('Binary data example 2' AS BINARY));
+
+	-- Insert statement 3
+	INSERT INTO DataTypeDemo
+	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
+	VALUES
+	(6, 'Example 3', 'Text for example 3.', '2024-05-20', '2024-05-20 18:45:00', 6.54, 987.321, 300.30, FALSE, '{"animal": "Dog", "breed": "Labrador"}', CAST('Binary data example 3' AS BINARY));
+
+	*/
+
+}
