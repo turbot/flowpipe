@@ -1,7 +1,7 @@
 FROM mcr.microsoft.com/devcontainers/go:1-1.21-bullseye
 
 RUN apt update \
-    && apt install default-jre default-jdk -y \
+    && apt install default-jre default-jdk postgresql mariadb-server -y \
     && cd /tmp \
     && wget https://dlcdn.apache.org/maven/maven-3/3.9.4/binaries/apache-maven-3.9.4-bin.tar.gz \
     && tar xvfz apache-maven-3.9.4-bin.tar.gz \
