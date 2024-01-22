@@ -50,7 +50,7 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 	if !t.Enabled {
 		statusText = fmt.Sprintf("%s%s%s", left, au.Red("disabled"), right)
 	}
-	output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Name:"), t.Name, statusText)
+	output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Name:"), t.getTypeAndName(), statusText)
 	if t.Title != nil {
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:"), *t.Title)
 	}
@@ -66,7 +66,7 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 		}
 		output += fmt.Sprintf("%s\n", au.Blue("Pipeline:"))
 		for _, pipeline := range t.Pipelines {
-			output += fmt.Sprintf("  %s %s\n", au.Blue(utils.ToTitleCase(pipeline.CaptureGroup)+":"), pipeline.Pipeline)
+			output += fmt.Sprintf("  %s %s\n", au.Blue(utils.ToTitleCase(pipeline.CaptureGroup)+":"), t.getPipelineDisplay(pipeline.Pipeline))
 		}
 		// TODO: Add usage section
 	case schema.TriggerTypeQuery:
@@ -78,13 +78,13 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 		}
 		output += fmt.Sprintf("%s\n", au.Blue("Pipeline:"))
 		for _, pipeline := range t.Pipelines {
-			output += fmt.Sprintf("  %s %s\n", au.Blue(utils.ToTitleCase(pipeline.CaptureGroup)+":"), pipeline.Pipeline)
+			output += fmt.Sprintf("  %s %s\n", au.Blue(utils.ToTitleCase(pipeline.CaptureGroup)+":"), t.getPipelineDisplay(pipeline.Pipeline))
 		}
 	case schema.TriggerTypeSchedule:
 		if t.Schedule != nil {
 			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Schedule:"), *t.Schedule)
 		}
-		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:"), t.Pipelines[0].Pipeline)
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:"), t.getPipelineDisplay(t.Pipelines[0].Pipeline))
 	}
 
 	if len(t.Tags) > 0 {
@@ -103,6 +103,14 @@ func (t FpTrigger) String(_ *sanitize.Sanitizer, opts RenderOptions) string {
 func (t FpTrigger) getTypeAndName() string {
 	shortName := strings.Split(t.Name, ".")[len(strings.Split(t.Name, "."))-1]
 	return fmt.Sprintf("%s.%s", t.Type, shortName)
+}
+
+func (t FpTrigger) getPipelineDisplay(pipeline string) string {
+	rootMod := strings.Split(t.Name, ".")[0]
+	if strings.Split(pipeline, ".")[0] == rootMod {
+		return strings.Split(pipeline, ".")[len(strings.Split(pipeline, "."))-1]
+	}
+	return pipeline
 }
 
 // This type is used by the API to return a list of triggers.
@@ -193,7 +201,7 @@ func (p PrintableTrigger) GetTable() (Table, error) {
 
 		var pipelineText string
 		if len(distinct) == 1 {
-			pipelineText = maps.Keys(distinct)[0]
+			pipelineText = item.getPipelineDisplay(maps.Keys(distinct)[0])
 		} else {
 			pipelineText = fmt.Sprintf("%d pipelines", len(distinct))
 		}

@@ -44,7 +44,7 @@ require (
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
-	github.com/turbot/flowpipe-sdk-go v0.2.0-rc.1
+	github.com/turbot/flowpipe-sdk-go v0.2.0-rc.4
 	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
 	github.com/turbot/steampipe-plugin-code v0.5.1
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
