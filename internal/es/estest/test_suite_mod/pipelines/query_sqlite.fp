@@ -9,6 +9,29 @@ pipeline "sqlite_query" {
   }
 }
 
+pipeline "sqlite_query_path_alternate_b" {
+  step "query" "list" {
+    connection_string = "sqlite://./query_source_clean.db"
+    sql               = "select * from test_one order by id"
+  }
+
+  output "val" {
+    value = step.query.list.rows
+  }
+}
+
+pipeline "sqlite_query_path_alternate_c" {
+  step "query" "list" {
+    connection_string = "sqlite://query_source_cleans.db"
+    sql               = "select * from test_one order by id"
+  }
+
+  output "val" {
+    value = step.query.list.rows
+  }
+}
+
+
 pipeline "sqlite_query_with_timeout" {
   step "query" "list" {
     connection_string = "sqlite:./query_source_clean.db"
