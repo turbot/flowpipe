@@ -15,6 +15,7 @@ type StepQueued struct {
 
 	StepExecutionID string          `json:"step_execution_id"`
 	StepName        string          `json:"step_name"`
+	StepType        string          `json:"step_type"`
 	StepInput       modconfig.Input `json:"input"`
 
 	// for_each controls

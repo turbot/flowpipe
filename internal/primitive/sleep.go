@@ -12,7 +12,7 @@ import (
 
 type Sleep struct{}
 
-var sleepStepSemaphore = make(chan struct{}, 4)
+// var sleepStepSemaphore = make(chan struct{}, 4)
 
 func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error {
 
@@ -43,14 +43,14 @@ func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error 
 
 func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 
-	slog.Info("Getting semaphore")
-	sleepStepSemaphore <- struct{}{}
+	// slog.Info("Getting semaphore")
+	// sleepStepSemaphore <- struct{}{}
 
-	slog.Info("Semaphore acquired")
-	defer func() {
-		slog.Info("Releasing semaphore")
-		<-sleepStepSemaphore
-	}()
+	// slog.Info("Semaphore acquired")
+	// defer func() {
+	// 	slog.Info("Releasing semaphore")
+	// 	<-sleepStepSemaphore
+	// }()
 
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
