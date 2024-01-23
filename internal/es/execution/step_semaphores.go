@@ -43,21 +43,21 @@ func InitGlobalStepSemaphores() {
 func GetStepTypeSemaphore(stepType string) {
 	switch stepType {
 	case "http":
-		slog.Info("Getting semaphore for http")
+		slog.Debug("Getting semaphore for http")
 		globalHttpStepSemaphore <- struct{}{}
-		slog.Info("Semaphore acquired for http")
+		slog.Debug("Semaphore acquired for http")
 	case "query":
-		slog.Info("Getting semaphore for query")
+		slog.Debug("Getting semaphore for query")
 		globalQueryStepSemaphore <- struct{}{}
-		slog.Info("Semaphore acquired for query")
+		slog.Debug("Semaphore acquired for query")
 	case "container":
-		slog.Info("Getting semaphore for container")
+		slog.Debug("Getting semaphore for container")
 		globalContainerStepSemaphore <- struct{}{}
-		slog.Info("Semaphore acquired for container")
+		slog.Debug("Semaphore acquired for container")
 	case "function":
-		slog.Info("Getting semaphore for function")
+		slog.Debug("Getting semaphore for function")
 		globalFunctionStepSemaphore <- struct{}{}
-		slog.Info("Semaphore acquired for function")
+		slog.Debug("Semaphore acquired for function")
 	case "":
 		slog.Warn("Step type is empty")
 	}
@@ -66,21 +66,21 @@ func GetStepTypeSemaphore(stepType string) {
 func ReleaseStepTypeSemaphore(stepTeyp string) {
 	switch stepTeyp {
 	case "http":
-		slog.Info("Releasing semaphore for http")
+		slog.Debug("Releasing semaphore for http")
 		<-globalHttpStepSemaphore
-		slog.Info("Semaphore released for http")
+		slog.Debug("Semaphore released for http")
 	case "query":
-		slog.Info("Releasing semaphore for query")
+		slog.Debug("Releasing semaphore for query")
 		<-globalQueryStepSemaphore
-		slog.Info("Semaphore released for query")
+		slog.Debug("Semaphore released for query")
 	case "container":
-		slog.Info("Releasing semaphore for container")
+		slog.Debug("Releasing semaphore for container")
 		<-globalContainerStepSemaphore
-		slog.Info("Semaphore released for container")
+		slog.Debug("Semaphore released for container")
 	case "function":
-		slog.Info("Releasing semaphore for function")
+		slog.Debug("Releasing semaphore for function")
 		<-globalFunctionStepSemaphore
-		slog.Info("Semaphore released for function")
+		slog.Debug("Semaphore released for function")
 	case "":
 		slog.Warn("Step type is empty")
 	}
