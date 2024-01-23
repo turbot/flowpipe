@@ -21,6 +21,7 @@ type Process struct {
 
 func (p Process) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	keyWidth := 14
 	output := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -28,10 +29,10 @@ func (p Process) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptio
 		return ""
 	}
 
-	output += fmt.Sprintf("%s%s\n", au.Blue("ExecutionID: ").Bold(), p.ID)
-	output += fmt.Sprintf("%s%s\n", au.Blue("Pipeline:    ").Bold(), p.Pipeline)
-	output += fmt.Sprintf("%s%s\n", au.Blue("Status:      ").Bold(), p.Status)
-	output += fmt.Sprintf("%s%s\n", au.Blue("Created:     ").Bold(), p.CreatedAt)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Execution ID:"), p.ID)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Pipeline:"), p.Pipeline)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Status:"), p.Status)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Created:"), p.CreatedAt.Local().Format(time.DateTime))
 	return output
 }
 
@@ -88,7 +89,7 @@ func (p PrintableProcess) GetTable() (printers.Table, error) {
 		cells := []any{
 			item.ID,
 			item.Pipeline,
-			item.CreatedAt,
+			item.CreatedAt.Local().Format(time.DateTime),
 			item.Status,
 		}
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})

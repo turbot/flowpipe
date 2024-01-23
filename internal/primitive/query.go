@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -18,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/db_common"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -27,9 +29,12 @@ const (
 	DriverPostgres = "postgres"
 	DriverMySQL    = "mysql"
 	DriverDuckDB   = "duckdb"
+	DriverSQLite   = "sqlite3"
 )
 
-type Query struct{}
+type Query struct {
+	databaseType string
+}
 
 func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
@@ -76,27 +81,37 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 
 	} else if strings.HasPrefix(dbConnectionString, "mysql://") {
 		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
+
+		e.databaseType = DriverMySQL
 		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
-		duckDBFile := dbConnectionString[7:]
-		if duckDBFile == "" {
-			return nil, perr.BadRequestWithMessage("Invalid duckDB database connection string")
+		duckDBConnectionString := dbConnectionString[7:]
+		if duckDBConnectionString == "" {
+			return nil, perr.BadRequestWithMessage("Invalid DuckDB database connection string")
 		}
-		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), duckDBFile)
+		duckDBConnectionString, err = formatSqlConnectionString(duckDBConnectionString)
+		if err != nil {
+			return nil, err
+		}
 
-		slog.Debug("Opening duckDB database", "file", dbFile)
-		db, err = sql.Open(DriverDuckDB, dbFile)
+		slog.Debug("Opening DuckDB database", "connectionString", duckDBConnectionString)
+		db, err = sql.Open(DriverDuckDB, duckDBConnectionString)
 
 	} else if strings.HasPrefix(dbConnectionString, "sqlite:") {
-		sqlLiteFile := dbConnectionString[7:]
-		if sqlLiteFile == "" {
+		sqliteConnectionString := dbConnectionString[7:]
+		if sqliteConnectionString == "" {
 			return nil, perr.BadRequestWithMessage("Invalid sqlite database connection string")
 		}
-		dbFile := filepath.Join(viper.GetString(constants.ArgModLocation), sqlLiteFile)
+		sqliteConnectionString, err = formatSqlConnectionString(sqliteConnectionString)
+		if err != nil {
+			return nil, err
+		}
 
-		slog.Debug("Opening sqlite database", "file", dbFile)
-		db, err = sql.Open("sqlite3", dbFile)
+		slog.Debug("Opening sqlite database", "connection string", sqliteConnectionString)
+
+		e.databaseType = DriverSQLite
+		db, err = sql.Open("sqlite3", sqliteConnectionString)
 
 	} else {
 		return nil, perr.BadRequestWithMessage("Invalid database connection string")
@@ -108,6 +123,24 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	}
 
 	return db, nil
+}
+
+// Function to append basePath to the file part of the  connection string
+func formatSqlConnectionString(connStr string) (string, error) {
+	parts := strings.SplitN(connStr, "?", 2)
+	if len(parts) == 0 {
+		return "", perr.BadRequestWithMessage(fmt.Sprintf("Invalid connection string: %s", connStr))
+	}
+
+	// Append the base path to the file part
+	formatted := filepath.Join(viper.GetString(constants.ArgModLocation), parts[0])
+
+	// If there are additional parameters, append them back
+	if len(parts) > 1 {
+		formatted += "?" + parts[1]
+	}
+
+	return formatted, nil
 }
 
 func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
@@ -163,7 +196,22 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 
 		rows, err = db.QueryContext(contextWithTimeout, queryString, args...)
 	} else {
+		//
+		// potential for (?) but doesn't seem to make any difference: https://github.com/go-sql-driver/mysql/issues/407
+		//
+		// if e.databaseType == DriverMySQL {
+		// 	stmt, err := db.Prepare(queryString)
+		// 	if err != nil {
+		// 		return nil, perr.InternalWithMessage("Error preparing query: " + err.Error())
+		// 	}
+		// 	defer stmt.Close()
+		// 	rows, err = stmt.Query(args...)
+		// 	if err != nil {
+		// 		return nil, perr.InternalWithMessage("Error executing query: " + err.Error())
+		// 	}
+		// } else {
 		rows, err = db.Query(queryString, args...)
+		// }
 	}
 
 	if err != nil {
@@ -183,23 +231,27 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		for k, encoded := range row {
 			switch ba := encoded.(type) {
 			case []byte:
-				// Check it it's a valid JSON object
-				if isJSON, _ := isJSON(ba); isJSON {
-					var col interface{}
-					err := json.Unmarshal(ba, &col)
-					if err != nil {
-						slog.Error("error unmarshalling jsonb", "column", k, "error", err)
-						return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
+				if e.databaseType == DriverMySQL {
+					row[k] = db_common.TryParseDataType(ba)
+				} else {
+					// Check it it's a valid JSON object
+					if isJSON, _ := db_common.IsJSON(ba); isJSON {
+						var col interface{}
+						err := json.Unmarshal(ba, &col)
+						if err != nil {
+							slog.Error("error unmarshalling jsonb", "column", k, "error", err)
+							return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
+						}
+						row[k] = col
+						continue
 					}
-					row[k] = col
-					continue
-				}
 
-				// Check if it's base64 encoded
-				if decodedData, err := base64.StdEncoding.DecodeString(string(ba)); err == nil {
-					// It's valid base64
-					row[k] = string(decodedData)
-					continue
+					// Check if it's base64 encoded
+					if decodedData, err := base64.StdEncoding.DecodeString(string(ba)); err == nil {
+						// It's valid base64
+						row[k] = string(decodedData)
+						continue
+					}
 				}
 			}
 		}
@@ -223,20 +275,6 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return output, nil
-}
-
-func isJSON(b []byte) (bool, error) {
-	var col interface{}
-	err := json.Unmarshal(b, &col)
-	if err != nil {
-		return false, err
-	}
-
-	// Check if it's a JSON object (map) or array (slice)
-	_, isObject := col.(map[string]interface{})
-	_, isArray := col.([]interface{})
-
-	return isObject || isArray, nil
 }
 
 func mapScan(r *sql.Rows, dest map[string]interface{}) error {

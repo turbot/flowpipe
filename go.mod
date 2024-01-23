@@ -2,8 +2,6 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings
-
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
@@ -44,8 +42,9 @@ require (
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
-	github.com/turbot/flowpipe-sdk-go v0.1.0
-	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
+	github.com/turbot/flowpipe-sdk-go v0.2.0-rc.4
+	github.com/turbot/steampipe-plugin-code v0.5.1
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
 
 require (
@@ -160,6 +159,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgproto3/v2 v2.3.2 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/pgx/v5 v5.4.3 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -219,6 +219,7 @@ require (
 	github.com/turbot/steampipe-cloud-sdk-go v0.6.0 // indirect
 	github.com/turbot/steampipe-plugin-code v0.6.0 // indirect
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.8.0 // indirect
+	github.com/turbot/pipe-fittings v0.2.0-rc.3 // indirect
 	github.com/turbot/terraform-components v0.0.0-20231108031935-358f803c1a8b // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
@@ -242,7 +243,6 @@ require (
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect

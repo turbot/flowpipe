@@ -99,15 +99,22 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		var output *modconfig.Output
 
 		if o.IsServerMode {
-			step := types.NewServerOutputStepExecution(
-				types.NewServerOutputPrefix(cmd.Event.CreatedAt, "pipeline"),
-				cmd.Event.ExecutionID,
-				pipelineDefn.PipelineName,
-				cmd.StepName,
-				stepDefn.GetType(),
-				"started",
-			)
-			o.RenderServerOutput(ctx, step)
+			var feKey *string
+			var li, ri *int
+			if cmd.StepForEach != nil && cmd.StepForEach.ForEachStep {
+				feKey = &cmd.StepForEach.Key
+			}
+			if cmd.StepLoop != nil {
+				li = &cmd.StepLoop.Index
+			}
+			if cmd.StepRetry != nil {
+				i := cmd.StepRetry.Count + 1
+				ri = &i
+			}
+			sp := types.NewServerOutputPrefixWithExecId(cmd.Event.CreatedAt, "pipeline", &cmd.Event.ExecutionID)
+			prefix := types.NewParsedEventPrefix(pipelineDefn.PipelineName, &cmd.StepName, feKey, li, ri, &sp)
+			pe := types.NewParsedEvent(prefix, cmd.Event.ExecutionID, h.HandlerName(), stepDefn.GetType(), "")
+			o.RenderServerOutput(ctx, types.NewParsedEventWithInput(pe, cmd.StepInput, false))
 		}
 
 		// Release the lock so we can have multiple steps running at the same time

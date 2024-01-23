@@ -2,11 +2,14 @@ package types
 
 import (
 	"fmt"
+
 	"github.com/logrusorgru/aurora"
 	kitTypes "github.com/turbot/go-kit/types"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
+
+	"github.com/turbot/go-kit/helpers"
+
 	"strings"
 	"time"
 )
@@ -14,6 +17,7 @@ import (
 type ServerOutputPrefix struct {
 	TimeStamp time.Time
 	Category  string
+	execId    *string
 }
 
 func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
@@ -23,24 +27,30 @@ func NewServerOutputPrefix(ts time.Time, category string) ServerOutputPrefix {
 	}
 }
 
+func NewServerOutputPrefixWithExecId(ts time.Time, category string, execId *string) ServerOutputPrefix {
+	return ServerOutputPrefix{
+		TimeStamp: ts,
+		Category:  category,
+		execId:    execId,
+	}
+}
+
 func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
-	var cat aurora.Value
-	switch o.Category {
-	case "flowpipe":
-		cat = au.Cyan(o.Category)
-	case "mod":
-		cat = au.Green(o.Category)
-	case "pipeline":
-		cat = au.Magenta(o.Category)
-	case "trigger":
-		cat = au.Yellow(o.Category)
-	default:
-		cat = au.Blue(o.Category)
+	timeStamp := au.BrightBlack(o.TimeStamp.Local().Format(time.DateTime))
+
+	if !helpers.IsNil(o.execId) {
+		c := opts.ColorGenerator.GetColorForElement(*o.execId)
+		return au.Sprintf("%s %s ", timeStamp, au.Index(c, *o.execId))
 	}
-	return aurora.Sprintf("%s %s%s%s ", au.BrightBlack(o.TimeStamp.Local().Format(time.DateTime)), left, cat, right)
+
+	if o.Category == "flowpipe" {
+		return au.Sprintf("%s %s%s%s ", timeStamp, left, au.Cyan(o.Category), right)
+	}
+
+	return au.Sprintf("%s ", timeStamp)
 }
 
 type ServerOutputStatusChange struct {
@@ -70,15 +80,15 @@ func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts san
 
 	pre := o.ServerOutputPrefix.String(sanitizer, opts)
 
-	switch o.Status {
+	switch strings.ToLower(o.Status) {
 	case "started":
-		return fmt.Sprintf("%sserver %s\n", pre, au.Green(o.Status))
+		return fmt.Sprintf("%s%s v%s\n", pre, au.Green(o.Status), o.Additional)
 	case "stopped":
-		return fmt.Sprintf("%sserver %s\n", pre, au.Red(o.Status))
+		return fmt.Sprintf("%s%s\n", pre, au.Red(o.Status))
 	case "listening":
-		return fmt.Sprintf("%sserver %s on %s\n", pre, au.Yellow(o.Status), au.Yellow(o.Additional))
+		return fmt.Sprintf("%s%s on %s\n", pre, au.Yellow(o.Status), au.Yellow(o.Additional))
 	default:
-		return fmt.Sprintf("%sserver %s\n", pre, o.Status)
+		return fmt.Sprintf("%s%s %s\n", pre, o.Status, o.Additional)
 	}
 }
 
@@ -105,12 +115,12 @@ func (o ServerOutputLoaded) String(sanitizer *sanitize.Sanitizer, opts sanitize.
 	}
 
 	pre := o.ServerOutputPrefix.String(nil, opts)
-	text := "loaded"
+	text := "Loaded"
 	if o.IsReload {
-		text = "reloaded"
+		text = "Reloaded"
 	}
 
-	return fmt.Sprintf("%s%s mod %s\n", pre, text, au.Green(o.ModName))
+	return fmt.Sprintf("%s%s %s\n", pre, text, au.Green(o.ModName))
 }
 
 type ServerOutput struct {
@@ -172,240 +182,96 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts sanitize.R
 		suffix)
 }
 
-type ServerOutputPipelineExecution struct {
-	ServerOutputPrefix
-	ExecutionID  string
-	PipelineName string
-	Status       string
-	Output       map[string]any
-	Errors       []modconfig.StepError
-}
-
-func NewServerOutputPipelineExecution(prefix ServerOutputPrefix, execId string, name string, status string) *ServerOutputPipelineExecution {
-	return &ServerOutputPipelineExecution{
-		ServerOutputPrefix: prefix,
-		ExecutionID:        execId,
-		PipelineName:       name,
-		Status:             status,
-	}
-}
-
-func (o ServerOutputPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	var lines []string
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
-		return ""
-	}
-
-	c := opts.ColorGenerator.GetColorForElement(o.ExecutionID)
-	left := au.BrightBlack("[")
-	right := au.BrightBlack("]")
-	dot := au.BrightBlack(".")
-
-	pre := fmt.Sprintf("%s%s%s%s%s%s",
-		o.ServerOutputPrefix.String(sanitizer, opts),
-		left,
-		au.Sprintf(au.Index(c, o.PipelineName)),
-		dot,
-		au.Sprintf(au.Index(c, o.ExecutionID)),
-		right,
-	)
-	var status string
-	switch o.Status {
-	case "started":
-		status = au.Cyan(o.Status).String()
-	case "finished":
-		status = au.Green(o.Status).String()
-	case "failed":
-		status = au.Red(o.Status).String()
-	case "canceled":
-		status = au.Blue(o.Status).String()
-	case "queued":
-		status = au.Yellow(o.Status).String()
-	default:
-		status = o.Status
-	}
-	lines = append(lines, fmt.Sprintf("%s pipeline %s\n", pre, status))
-
-	if opts.Verbose {
-		if len(o.Output) > 0 {
-			outputs := sortAndParseMap(o.Output, "output:", " ", au, opts)
-			lines = append(lines, fmt.Sprintf("%s pipeline outputs\n%s\n", pre, outputs))
-		}
-	}
-
-	if len(o.Errors) > 0 {
-		for _, e := range o.Errors {
-			errLine := fmt.Sprintf("error on step %s: %s\n", e.Step, e.Error.Error())
-			lines = append(lines, fmt.Sprintf("%s %s", pre, au.Red(errLine)))
-		}
-	}
-
-	out := strings.Join(lines, "")
-	// trim double new line ending
-	if strings.HasSuffix(out, "\n\n") {
-		out = strings.TrimSuffix(out, "\n")
-	}
-	return out
-}
-
 type ServerOutputTriggerExecution struct {
 	ServerOutputPrefix
-	ExecutionID  string
 	TriggerName  string
 	PipelineName string
 }
 
-func NewServerOutputTriggerExecution(prefix ServerOutputPrefix, execId string, name string, pipeline string) *ServerOutputTriggerExecution {
+func NewServerOutputTriggerExecution(ts time.Time, execId string, name string, pipeline string) *ServerOutputTriggerExecution {
+	prefix := NewServerOutputPrefixWithExecId(ts, "trigger", &execId)
 	return &ServerOutputTriggerExecution{
 		ServerOutputPrefix: prefix,
-		ExecutionID:        execId,
 		TriggerName:        name,
 		PipelineName:       pipeline,
 	}
 }
 
 func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
-		return ""
-	}
-
-	return fmt.Sprintf("%strigger %s fired, executing Pipeline %s (%s)\n", o.ServerOutputPrefix.String(sanitizer, opts), o.TriggerName, o.PipelineName, o.ExecutionID)
-}
-
-type ServerOutputStepExecution struct {
-	ServerOutputPrefix
-	ExecutionID  string
-	PipelineName string
-	StepName     string
-	StepType     string
-	Status       string
-	Output       map[string]any
-	Errors       []modconfig.StepError
-}
-
-func NewServerOutputStepExecution(prefix ServerOutputPrefix, execId string, pipelineName string, stepName string, stepType string, status string) *ServerOutputStepExecution {
-	return &ServerOutputStepExecution{
-		ServerOutputPrefix: prefix,
-		ExecutionID:        execId,
-		PipelineName:       pipelineName,
-		StepName:           stepName,
-		StepType:           stepType,
-		Status:             status,
-	}
-}
-
-func (o ServerOutputStepExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
-	var lines []string
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
-		return ""
-	}
-
-	// put Steps behind verbose flag
-	if !opts.Verbose {
-		return ""
-	}
-
-	c := opts.ColorGenerator.GetColorForElement(o.ExecutionID)
 	left := au.BrightBlack("[")
 	right := au.BrightBlack("]")
-	dot := au.BrightBlack(".")
 
-	pre := fmt.Sprintf("%s%s%s%s%s%s",
-		o.ServerOutputPrefix.String(sanitizer, opts),
-		left,
-		au.Sprintf(au.Index(c, o.PipelineName)),
-		dot,
-		au.Sprintf(au.Index(c, o.ExecutionID)),
-		right,
-	)
-
-	var status string
-	switch o.Status {
-	case "started":
-		status = au.Cyan(o.Status).String()
-	case "finished":
-		status = au.Green(o.Status).String()
-	case "failed":
-		status = au.Red(o.Status).String()
-	case "retrying":
-		status = au.Yellow(o.Status).String()
-	default:
-		status = o.Status
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if o, err = sanitize.SanitizeStruct(sanitizer, o); err != nil {
+		return ""
 	}
+	triggerSplit := strings.Split(o.TriggerName, ".")
+	triggerType := triggerSplit[len(triggerSplit)-2]
+	triggerName := triggerSplit[len(triggerSplit)-1]
+	shortTrigger := fmt.Sprintf("trigger.%s.%s", triggerType, triggerName)
+	triggerColor := opts.ColorGenerator.GetColorForElement(shortTrigger)
 
-	lines = append(lines, fmt.Sprintf("%s %s step %s %s\n", pre, au.Blue(o.StepType), au.BrightBlue(o.StepName), status))
-
-	if len(o.Output) > 0 {
-		outputs := sortAndParseMap(o.Output, "output", " ", au, opts)
-		lines = append(lines, fmt.Sprintf("%s step outputs\n%s\n", pre, outputs))
-	}
-
-	if len(o.Errors) > 0 {
-		for _, e := range o.Errors {
-			errLine := fmt.Sprintf("error on %s step %s: %s\n", o.StepType, o.StepName, e.Error.Error())
-			lines = append(lines, fmt.Sprintf("%s %s", pre, au.Red(errLine)))
-		}
-	}
-
-	out := strings.Join(lines, "")
-	// trim double new line ending
-	if strings.HasSuffix(out, "\n\n") {
-		out = strings.TrimSuffix(out, "\n")
-	}
-	return out
+	shortPipeline := strings.Split(o.PipelineName, ".")[len(strings.Split(o.PipelineName, "."))-1]
+	c := opts.ColorGenerator.GetColorForElement(shortPipeline)
+	return fmt.Sprintf("%s%s%s%s fired, executing %s\n", o.ServerOutputPrefix.String(sanitizer, opts), left, au.Index(triggerColor, shortTrigger), right, au.Index(c, shortPipeline))
 }
 
 type ServerOutputTrigger struct {
 	ServerOutputPrefix
 	Name     string
 	Type     string
+	Enabled  *bool
 	Schedule *string
 	Method   *string
 	Url      *string
 	Sql      *string
 }
 
-func NewServerOutputTrigger(prefix ServerOutputPrefix, n string, t string) *ServerOutputTrigger {
+func NewServerOutputTrigger(prefix ServerOutputPrefix, n string, t string, e *bool) *ServerOutputTrigger {
 	return &ServerOutputTrigger{
 		ServerOutputPrefix: prefix,
 		Name:               n,
 		Type:               t,
+		Enabled:            e,
 	}
 }
 
 func (o ServerOutputTrigger) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
 
 	// deliberately skip sanitizer as want to keep Url
 
 	pre := o.ServerOutputPrefix.String(sanitizer, opts)
+	shortName := strings.Split(o.Name, ".")[len(strings.Split(o.Name, "."))-1]
+	shortTrigger := fmt.Sprintf("trigger.%s.%s", o.Type, shortName)
+	triggerColor := opts.ColorGenerator.GetColorForElement(shortTrigger)
+
+	if !helpers.IsNil(o.Enabled) && !*o.Enabled {
+		return fmt.Sprintf("%s%s%s%s %s\n", pre, left, au.Index(triggerColor, shortTrigger), right, au.Red("Disabled"))
+	}
 	var suffix string
 	switch o.Type {
 	case "http":
 		m := strings.ToUpper(kitTypes.SafeString(o.Method))
 		u := kitTypes.SafeString(o.Url)
 
-		suffix = fmt.Sprintf("%s %s", au.BrightBlack(m), au.Yellow(u))
+		suffix = fmt.Sprintf("HTTP %s %s", au.BrightBlack(m), au.Blue(u))
 	case "schedule", "interval":
 		s := kitTypes.SafeString(o.Schedule)
-		suffix = fmt.Sprintf("%s", au.Yellow(s))
+		suffix = fmt.Sprintf("Schedule: %s", au.Blue(s))
 	case "query":
 		s := kitTypes.SafeString(o.Schedule)
 		q := kitTypes.SafeString(o.Sql)
-		suffix = fmt.Sprintf("schedule %s - query %s", au.Yellow(s), au.Yellow(q))
+		suffix = fmt.Sprintf("Schedule: %s - Query: %s", au.Blue(s), au.Blue(q))
 	default:
 		suffix = "loaded"
 	}
 
-	return fmt.Sprintf("%s%s %s - %s\n", pre, au.BrightBlue(o.Name), o.Type, suffix)
+	return fmt.Sprintf("%s%s%s%s %s %s\n", pre, left, au.Index(triggerColor, shortTrigger), right, au.Green("Enabled"), suffix)
 }
 
 type PrintableServerOutput struct {

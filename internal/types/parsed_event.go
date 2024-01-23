@@ -3,13 +3,14 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
-	"reflect"
-	"strings"
-	"time"
 
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -50,6 +51,8 @@ type ParsedEventPrefix struct {
 	ForEachKey       *string `json:"for_each_key,omitempty"`
 	LoopIndex        *int    `json:"loop_index,omitempty"`
 	RetryIndex       *int    `json:"retry_index,omitempty"`
+
+	prefix *ServerOutputPrefix
 }
 
 func NewPrefix(fullPipelineName string) ParsedEventPrefix {
@@ -57,6 +60,44 @@ func NewPrefix(fullPipelineName string) ParsedEventPrefix {
 		FullPipelineName: fullPipelineName,
 		PipelineName:     strings.Split(fullPipelineName, ".")[len(strings.Split(fullPipelineName, "."))-1],
 	}
+}
+
+func NewPrefixWithServer(fullPipelineName string, serverPrefix ServerOutputPrefix) ParsedEventPrefix {
+	return ParsedEventPrefix{
+		FullPipelineName: fullPipelineName,
+		PipelineName:     strings.Split(fullPipelineName, ".")[len(strings.Split(fullPipelineName, "."))-1],
+		prefix:           &serverPrefix,
+	}
+}
+
+func NewParsedEventPrefix(fullPipelineName string, fullStepName *string, forEachKey *string, loopIndex *int, retryIndex *int, serverPrefix *ServerOutputPrefix) ParsedEventPrefix {
+	prefix := ParsedEventPrefix{
+		FullPipelineName: fullPipelineName,
+		PipelineName:     strings.Split(fullPipelineName, ".")[len(strings.Split(fullPipelineName, "."))-1],
+	}
+
+	if !helpers.IsNil(fullStepName) {
+		prefix.FullStepName = fullStepName
+		prefix.StepName = &strings.Split(*fullStepName, ".")[len(strings.Split(*fullStepName, "."))-1]
+	}
+
+	if !helpers.IsNil(forEachKey) {
+		prefix.ForEachKey = forEachKey
+	}
+
+	if !helpers.IsNil(loopIndex) {
+		prefix.LoopIndex = loopIndex
+	}
+
+	if !helpers.IsNil(retryIndex) {
+		prefix.RetryIndex = retryIndex
+	}
+
+	if !helpers.IsNil(serverPrefix) {
+		prefix.prefix = serverPrefix
+	}
+
+	return prefix
 }
 
 func (p ParsedEventPrefix) getRetryString(au aurora.Aurora) string {
@@ -131,11 +172,19 @@ func (p ParsedEventPrefix) String(sanitizer *sanitize.Sanitizer, opts sanitize.R
 	right := au.BrightBlack("]")
 	sep := au.BrightBlack(".")
 
+	var out string
 	if stepString == "" {
-		return fmt.Sprintf("%s%s%s", left, pipelineString, right)
+		out = fmt.Sprintf("%s%s%s", left, pipelineString, right)
 	} else {
-		return fmt.Sprintf("%s%s%s%s%s%s", left, pipelineString, sep, stepString, retryString, right)
+		out = fmt.Sprintf("%s%s%s%s%s%s", left, pipelineString, sep, stepString, retryString, right)
 	}
+
+	if !helpers.IsNil(p.prefix) {
+		pre := *p.prefix
+		out = fmt.Sprintf("%s%s", pre.String(sanitizer, opts), out)
+	}
+
+	return out
 }
 
 type ParsedEvent struct {
@@ -144,6 +193,16 @@ type ParsedEvent struct {
 	StepType string `json:"step_type"`
 	Message  string `json:"message,omitempty"`
 	execId   string
+}
+
+func NewParsedEvent(prefix ParsedEventPrefix, executionId string, eventType string, stepType string, msg string) ParsedEvent {
+	return ParsedEvent{
+		ParsedEventPrefix: prefix,
+		execId:            executionId,
+		Type:              eventType,
+		StepType:          stepType,
+		Message:           msg,
+	}
 }
 
 func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -164,6 +223,14 @@ type ParsedEventWithInput struct {
 	ParsedEvent
 	Input  map[string]any `json:"args"`
 	isSkip bool
+}
+
+func NewParsedEventWithInput(pe ParsedEvent, input map[string]any, isSkip bool) ParsedEventWithInput {
+	return ParsedEventWithInput{
+		ParsedEvent: pe,
+		Input:       input,
+		isSkip:      isSkip,
+	}
 }
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -217,6 +284,16 @@ type ParsedEventWithOutput struct {
 	StepOutput     map[string]any `json:"step_output"`
 	Duration       *string        `json:"duration,omitempty"`
 	isClosingEvent bool
+}
+
+func NewParsedEventWithOutput(parsedEvent ParsedEvent, output map[string]any, stepOutput map[string]any, duration *string, isClosingEvent bool) ParsedEventWithOutput {
+	return ParsedEventWithOutput{
+		ParsedEvent:    parsedEvent,
+		Output:         output,
+		StepOutput:     stepOutput,
+		Duration:       duration,
+		isClosingEvent: isClosingEvent,
+	}
 }
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -273,6 +350,17 @@ type ParsedErrorEvent struct {
 	Duration        *string               `json:"duration,omitempty"`
 	isClosingEvent  bool
 	retriesComplete bool
+}
+
+func NewParsedErrorEvent(parsedEvent ParsedEvent, errors []modconfig.StepError, output map[string]any, duration *string, isClosingEvent bool, retriesComplete bool) ParsedErrorEvent {
+	return ParsedErrorEvent{
+		ParsedEvent:     parsedEvent,
+		Errors:          errors,
+		Output:          output,
+		Duration:        duration,
+		isClosingEvent:  isClosingEvent,
+		retriesComplete: retriesComplete,
+	}
 }
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {

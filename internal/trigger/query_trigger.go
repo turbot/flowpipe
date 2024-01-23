@@ -79,9 +79,6 @@ func (tr *TriggerRunnerQuery) Run() {
 func (tr *TriggerRunnerQuery) RunOne() error {
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
-	if o.IsServerMode {
-		o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("running query trigger %s", tr.Trigger.Name())))
-	}
 
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
 
@@ -96,25 +93,19 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
 		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error running query trigger", err))
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error running query trigger "+tr.Trigger.Name(), err))
 		}
 		return err
 	}
 
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("no rows returned from query trigger %s", tr.Trigger.Name())))
-		}
 		return nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
 	if !ok {
 		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error converting query rows to []interface{}", err))
-		}
 		return nil
 	}
 
@@ -294,13 +285,13 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])
 	if o.IsServerMode {
-		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
 	}
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
 		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error sending pipeline command", err))
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
 		}
 		return err
 	}
@@ -375,6 +366,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItem
 	slog.Info("updatedItems", "updatedItems", updatedItems)
 
 	// Find deleted items by comparing with the main table
+	//nolint:gosec // TODO: investigate string concat
 	deletedItemsSQL := `select primary_key from query_trigger_captured_row
 						where primary_key not in (select primary_key from ` + triggerName + `_temp_items) and trigger_name = ?`
 
@@ -445,6 +437,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItem
 
 func insertNewItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	// Find new items by comparing with the main table
+	//nolint:gosec // TODO: investigate string concat
 	newItemsSQL := `
         insert into query_trigger_captured_row (trigger_name, primary_key, row_hash, created_at)
         select '` + triggerName + `', primary_key, row_hash, created_at from ` + triggerName + `_temp_items
@@ -474,6 +467,7 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	sourceTable := triggerName + "_temp_items"
 
 	timeNow := time.Now()
+	//nolint:gosec // TODO: investigate string concat
 	updateItemsSQL := `WITH Updated AS (
 		SELECT primary_key
 		FROM query_trigger_captured_row

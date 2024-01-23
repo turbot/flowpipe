@@ -5,6 +5,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -29,6 +31,7 @@ import (
 
 func (api *APIService) WebhookRegisterAPI(router *gin.RouterGroup) {
 	router.POST("/hook/:trigger/:hash", api.runWebhook)
+	router.GET("/hook/:trigger/:hash", api.runWebhook)
 }
 
 func (api *APIService) runWebhook(c *gin.Context) {
@@ -145,13 +148,25 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
 
-	pipelineArgs, diags := t.GetArgs(evalContext)
+	// Get the available methods for the trigger
+	var triggerMethods []string
+	for method := range httpTriggerConfig.Methods {
+		triggerMethods = append(triggerMethods, method)
+	}
+	requestMethod := strings.ToLower(c.Request.Method)
+
+	// Return error if the request method is not allowed
+	if !slices.Contains(triggerMethods, requestMethod) {
+		common.AbortWithError(c, perr.MethodNotAllowed())
+	}
+	triggerMethod := httpTriggerConfig.Methods[requestMethod]
+
+	pipelineArgs, diags := triggerMethod.GetArgs(evalContext)
 	if diags.HasErrors() {
 		common.AbortWithError(c, error_helpers.HclDiagsToError("trigger", diags))
-
 	}
 
-	pipeline := t.GetPipeline()
+	pipeline := triggerMethod.Pipeline
 	pipelineName := pipeline.AsValueMap()["name"].AsString()
 
 	pipelineCmd := &event.PipelineQueue{
@@ -163,8 +178,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 	pipelineCmd.Args = pipelineArgs
 
 	if output.IsServerMode {
-		tr := types.NewServerOutputTriggerExecution(types.NewServerOutputPrefix(time.Now(), "trigger"), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName)
-		output.RenderServerOutput(c, tr)
+		output.RenderServerOutput(c, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName))
 	}
 
 	if err := api.EsService.Send(pipelineCmd); err != nil {
@@ -172,7 +186,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 		return
 	}
 
-	if httpTriggerConfig.ExecutionMode == "synchronous" {
+	if triggerMethod.ExecutionMode == "synchronous" {
 		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
 	}

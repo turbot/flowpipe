@@ -64,73 +64,78 @@ type FpPipeline struct {
 	Steps           []modconfig.PipelineStep   `json:"steps,omitempty"`
 	OutputConfig    []modconfig.PipelineOutput `json:"outputs,omitempty"`
 	Params          []FpPipelineParam          `json:"params,omitempty"`
+	RootMod         string                     `json:"root_mod"`
 }
 
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
+	keyWidth := 9
+	if p.Description != nil {
+		keyWidth = 13
+	}
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
 		return ""
 	}
 
-	if p.Title != nil {
-		output += fmt.Sprintf("%s%s\n", au.Blue("Title:  ").Bold(), *p.Title)
-	}
+	displayName := p.pipelineDisplayName()
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), displayName)
 
-	output += fmt.Sprintf("%s%s", au.Blue("Name:   ").Bold(), p.Name)
+	if p.Title != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:"), *p.Title)
+	}
+	if p.Description != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
+	}
 
 	if len(p.Tags) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Tags:").Bold())
-		isFirstTag := true
+		output += fmt.Sprintf("%s\n", au.Blue("Tags:"))
 		for k, v := range p.Tags {
-			if isFirstTag {
-				output += "  " + k + " = " + v
-				isFirstTag = false
-			} else {
-				output += ", " + k + " = " + v
-			}
+			output += fmt.Sprintf("  %s %s\n", au.Cyan(k+":"), v)
 		}
-	}
-
-	if p.Description != nil {
-		output += fmt.Sprintf("\n\n%s\n", au.Blue("Description:").Bold())
-		output += *p.Description
 	}
 
 	var pArg string
 	if len(p.Params) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Params:").Bold())
-		for _, p := range p.Params {
-			output += fmt.Sprintf("  %s\n", p.String(sanitizer, opts))
-			if !helpers.IsNil(p.Default) || (p.Optional != nil && *p.Optional) {
+		output += fmt.Sprintf("%s\n", au.Blue("Params:"))
+		for _, param := range p.Params {
+			output += param.String(sanitizer, opts)
+
+			// below is to build param string for usage
+			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
 				continue
 			}
-			pArg += " --arg " + p.Name + "=<value>"
+			pArg += " --arg " + param.Name + "=<value>"
 		}
 	}
 
 	if len(p.OutputConfig) > 0 {
-		output += fmt.Sprintf("\n%s\n", au.Blue("Outputs:").Bold())
+		output += fmt.Sprintf("%s\n", au.Blue("Outputs:"))
 		for _, o := range p.OutputConfig {
-			desc := ""
+			output += fmt.Sprintf("  %s\n", au.Cyan(o.Name+":"))
 			if len(o.Description) > 0 {
-				desc = fmt.Sprintf(": %s", o.Description)
+				output += fmt.Sprintf("    %-13s%s\n", au.Blue("Description:"), o.Description)
 			}
-			output += fmt.Sprintf("  %s %s\n", au.Blue(o.Name), desc)
+			output += fmt.Sprintf("    %-13s%s\n", au.Blue("Type:"), "any")
 		}
 	}
 
-	output += fmt.Sprintf("\n%s\n", au.Blue("Usage:").Bold())
-	output += "  flowpipe pipeline run " + p.Name + pArg
-	if !strings.HasSuffix(output, "\n") {
-		output += "\n"
-	}
+	output += fmt.Sprintf("%s\n", au.Blue("Usage:"))
+	output += fmt.Sprintf("  flowpipe pipeline run %s%s\n", displayName, pArg)
 	return output
 }
 
-func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error) {
+func (p FpPipeline) pipelineDisplayName() string {
+	if p.RootMod == p.Mod {
+		return strings.Split(p.Name, ".")[len(strings.Split(p.Name, "."))-1]
+	}
+
+	return p.Name
+}
+
+func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
 	resp := &FpPipeline{
 		Name:          pipeline.Name(),
 		Description:   pipeline.Description,
@@ -140,10 +145,12 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 		Documentation: pipeline.Documentation,
 		Steps:         pipeline.Steps,
 		OutputConfig:  pipeline.OutputConfig,
+
+		RootMod: rootMod,
 	}
 
 	var pipelineParams []FpPipelineParam
-	for _, param := range pipeline.Params {
+	for i, param := range pipeline.Params {
 
 		var paramDefault any
 		if !param.Default.IsNull() {
@@ -157,7 +164,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline) (*FpPipeline, error
 		pipelineParams = append(pipelineParams, FpPipelineParam{
 			Name:        param.Name,
 			Description: utils.ToStringPointer(param.Description),
-			Optional:    &param.Optional,
+			Optional:    &pipeline.Params[i].Optional,
 			Type:        param.Type.FriendlyName(),
 			Default:     paramDefault,
 		})
@@ -184,6 +191,8 @@ func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipelin
 		Steps:        make([]modconfig.PipelineStep, 0, len(apiResp.Steps)),
 		Params:       make([]FpPipelineParam, 0, len(apiResp.Params)),
 		OutputConfig: make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
+
+		RootMod: typehelpers.SafeString(apiResp.RootMod),
 	}
 
 	for _, s := range apiResp.Steps {
@@ -283,22 +292,49 @@ type FpPipelineParam struct {
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+	keyWidth := 10
+	if p.Description != nil && len(*p.Description) > 0 {
+		keyWidth = 13
+	}
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
 		return ""
 	}
 
-	o := ""
+	o := fmt.Sprintf(" %s%s%s", left, au.Red("required"), right)
 	if p.Optional != nil && *p.Optional {
-		o = au.Sprintf(",%s", au.Yellow("Optional"))
+		o = ""
+	}
+	output := fmt.Sprintf("  %s%s%s\n", au.Cyan(p.Name), o, au.Cyan(":"))
+	output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
+	if p.Description != nil && len(*p.Description) > 0 {
+		output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
 
-	d := ""
-	if p.Description != nil && len(*p.Description) > 0 {
-		d = fmt.Sprintf(": %s", *p.Description)
+	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+		if v, ok := defaults[p.Name]; ok {
+			var valueString string
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, aurora.NewAurora(false))
+			} else {
+				s, err := json.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Default:"), valueString)
+		}
 	}
-	return au.Sprintf("%s [%s%s]%s", au.Blue(p.Name), au.Green(p.Type), o, d)
+
+	if strings.HasSuffix(output, "\n\n") {
+		output = strings.TrimSuffix(output, "\n")
+	}
+	return output
 }
 
 type PipelineExecutionResponse map[string]interface{}
@@ -355,8 +391,8 @@ func (p PrintablePipeline) GetTable() (printers.Table, error) {
 		}
 
 		cells := []any{
-			item.Mod,
-			item.Name,
+			strings.Split(item.Mod, ".")[len(strings.Split(item.Mod, "."))-1],
+			item.pipelineDisplayName(),
 			description,
 		}
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})

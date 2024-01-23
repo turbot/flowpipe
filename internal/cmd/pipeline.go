@@ -111,7 +111,7 @@ func listPipelineLocal(cmd *cobra.Command, args []string) (*types.ListPipelineRe
 	}()
 
 	// now list the pipelines
-	return api.ListPipelines()
+	return api.ListPipelines(m.RootMod.Name())
 }
 
 // show
@@ -181,7 +181,7 @@ func getPipelineLocal(ctx context.Context, pipelineName string) (*types.FpPipeli
 	}()
 
 	// try to fetch the pipeline from the cache
-	return api.GetPipeline(pipelineName)
+	return api.GetPipeline(pipelineName, m.RootMod.Name())
 }
 
 // run

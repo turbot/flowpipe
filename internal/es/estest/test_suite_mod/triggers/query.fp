@@ -1,5 +1,7 @@
 trigger "query" "simple" {
-    schedule = "* * * * *"
+    schedule = "15m"
+
+    enabled = false
 
     enabled = false
 
