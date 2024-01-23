@@ -4,8 +4,8 @@
 
 _What's new?_
 
-* Query Trigger. [See more in our documentation](https://flowpipe.io/docs/).
-* Added Query Step's database support for:
+* Query Trigger. [See more in our documentation](https://flowpipe.io/docs/flowpipe-hcl/trigger/query).
+* Added Query Step's database supports for:
     - MySQL
     - SQLite
     - DuckDB
@@ -13,14 +13,24 @@ _What's new?_
 _Enhancements_
 
 * Improved output when running in `server` mode.
-* Added `Source` argument to Container Step in addition to `Image`. [See more in our documentation](https://flowpipe.io/docs/).
+* Improved `Container` and `Function` step build performance.
+* Added `source` argument to Container Step in addition to `image`. [See more in our documentation](https://flowpipe.io/docs/flowpipe-hcl/step/container#arguments).
 * Added `timeout` argument to Pipeline steps.
+* Added `method` block for HTTP Trigger.
+* `pretty` and `plain` mode in CLI commands to show and list resources.
 
 _Bug fixes_
 
 * Implemented a more descriptive error message for server startup failures.
 * Fixed Step Arguments unable to be referenced in the Pipeline definition.
-* Added missing `execution_mode` argument to HTTP Trigger. [#533](https://github.com/turbot/flowpipe/issues/533).
+* Added missing `execution_mode` argument to HTTP Trigger ([#533](https://github.com/turbot/flowpipe/issues/533)).
+* Fixed `args` arguments unable to be updated in the Pipeline Step loop block ([#559](https://github.com/turbot/flowpipe/issues/559)).
+
+## v0.1.1 [2024-01-09]
+
+_Bug fixes_
+
+* Removed inaccurate SQL Query string validation to check for arguments. ([#516](https://github.com/turbot/flowpipe/issues/516))
 
 ## v0.1.0 [2023-12-13]
 
