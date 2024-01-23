@@ -3,8 +3,6 @@ trigger "query" "simple" {
 
     enabled = false
 
-    enabled = false
-
     connection_string = "sqlite:./query_source.db"
 
     sql = "select * from test_one"
