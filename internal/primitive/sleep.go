@@ -13,7 +13,6 @@ import (
 type Sleep struct{}
 
 func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error {
-
 	if input[schema.AttributeTypeDuration] == nil {
 		return perr.BadRequestWithMessage("Sleep input must define a duration")
 	}

@@ -12,6 +12,7 @@ import (
 	slogwatermill "github.com/denisss025/slog-watermill"
 	_ "github.com/garsue/watermillzap"
 	"github.com/turbot/flowpipe/internal/es/command"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/flowpipe/internal/service/es/middleware"
@@ -63,6 +64,8 @@ func (es *ESService) IsRunning() bool {
 func (es *ESService) Start() error {
 	slog.Debug("ES starting")
 	defer slog.Debug("ES started")
+
+	execution.InitGlobalStepSemaphores()
 
 	cqrsMarshaler := cqrs.JSONMarshaler{}
 

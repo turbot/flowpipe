@@ -52,7 +52,11 @@ func rootCommand() *cobra.Command {
 		// Cobra will interpret values passed to a StringSliceFlag as CSV,
 		// where args passed to StringArrayFlag are not parsed and used raw
 		AddPersistentStringArrayFlag(constants.ArgVariable, nil, "Specify the value of a variable").
-		AddPersistentBoolFlag(constants.ArgInput, true, "Enable interactive prompts")
+		AddPersistentBoolFlag(constants.ArgInput, true, "Enable interactive prompts").
+		AddPersistentIntFlag(constants.ArgMaxConcurrencyHttp, 500, "Maximum number of concurrent HTTP step").
+		AddPersistentIntFlag(constants.ArgMaxConcurrencyQuery, 50, "Maximum number of concurrent Query steps").
+		AddPersistentIntFlag(constants.ArgMaxConcurrencyContainer, 25, "Maximum number of concurrent Container steps").
+		AddPersistentIntFlag(constants.ArgMaxConcurrencyFunction, 50, "Maximum number of concurrent Function steps")
 
 	// disable auto completion generation, since we don't want to support
 	// powershell yet - and there's no way to disable powershell in the default generator

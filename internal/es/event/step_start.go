@@ -15,6 +15,7 @@ type StepStart struct {
 	PipelineExecutionID string          `json:"pipeline_execution_id"`
 	StepExecutionID     string          `json:"step_execution_id"`
 	StepName            string          `json:"step_name"`
+	StepType            string          `json:"step_type"`
 	StepInput           modconfig.Input `json:"input"`
 
 	// for_each controls
@@ -68,6 +69,7 @@ func NewStepStartFromStepQueued(e *StepQueued) (*StepStart, error) {
 	cmd.StepExecutionID = e.StepExecutionID
 
 	cmd.StepName = e.StepName
+	cmd.StepType = e.StepType
 	cmd.StepInput = e.StepInput
 	cmd.StepForEach = e.StepForEach
 	cmd.StepLoop = e.StepLoop

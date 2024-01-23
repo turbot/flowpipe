@@ -54,6 +54,8 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			if plannerMutex != nil {
 				plannerMutex.Unlock()
 			}
+
+			execution.ReleaseStepTypeSemaphore(cmd.StepType)
 		}()
 
 		executionID := cmd.Event.ExecutionID
