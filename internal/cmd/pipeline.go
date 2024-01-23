@@ -15,7 +15,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -73,7 +72,7 @@ func listPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := output.GetPrinter[types.FpPipeline](cmd)
+		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
 			return
@@ -147,7 +146,7 @@ func showPipelineFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := output.GetPrinter[types.FpPipeline](cmd)
+		printer, err := printers.GetPrinter[types.FpPipeline](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining printer")
 			return
