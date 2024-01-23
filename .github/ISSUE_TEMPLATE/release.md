@@ -25,6 +25,7 @@ labels: release
 - [ ] Update Flowipe dependency to `flowpipe-go-sdk` to use the relase tag
 - [ ] Update Flowpipe dependency to `pipe-fittings` to use the relase tag
 - [ ] Run release build. Do not tag `flowpipe repo``, the workflow will create the tag
+- [ ] Mark relese as "latest"
 
 ### Post release check & admin
 - [ ] Test Linux install script
