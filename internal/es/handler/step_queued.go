@@ -68,6 +68,7 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 	// when the step start command hanlder tries to acquire the mutex to "finish" the step
 	plannerMutex.Unlock()
 	plannerMutex = nil
+
 	execution.GetStepTypeSemaphore(evt.StepType)
 	execution.GetPipelineExecutionStepSemaphore(evt.PipelineExecutionID, stepDefn)
 

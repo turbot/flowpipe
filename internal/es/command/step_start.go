@@ -56,8 +56,6 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 
 			execution.ReleaseStepTypeSemaphore(cmd.StepType)
-
-			execution.ReleasePipelineExecutionStepSemaphore(cmd.PipelineExecutionID, cmd.StepExecutionID)
 		}()
 
 		executionID := cmd.Event.ExecutionID
@@ -73,6 +71,11 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		}
 
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
+
+		defer func() {
+			execution.ReleasePipelineExecutionStepSemaphore(cmd.PipelineExecutionID, stepDefn)
+		}()
+
 		stepOutput := make(map[string]interface{})
 
 		pe := ex.PipelineExecutions[cmd.PipelineExecutionID]

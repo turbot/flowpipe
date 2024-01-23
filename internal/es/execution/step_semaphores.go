@@ -2,8 +2,10 @@ package execution
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 )
@@ -87,6 +89,10 @@ func ReleaseStepTypeSemaphore(stepTeyp string) {
 	}
 }
 
+func pipelineStepSemaphoreCacheKey(pipelineExecutionID string, stepDefn modconfig.PipelineStep) string {
+	return pipelineExecutionID + ":" + stepDefn.GetFullyQualifiedName()
+}
+
 func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep) {
 	if stepDefn == nil || pipelineExecutionID == "" {
 		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step semaphore")
@@ -96,10 +102,46 @@ func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modc
 	if stepDefn.GetMaxConcurrency() == nil {
 		return
 	}
+
+	cacheKey := pipelineStepSemaphoreCacheKey(pipelineExecutionID, stepDefn)
+	cachedChannel, found := cache.GetCache().Get(cacheKey)
+
+	var semaphore chan struct{}
+	if !found {
+		semaphore = make(chan struct{}, *stepDefn.GetMaxConcurrency())
+		// Effectively forever
+		cache.GetCache().SetWithTTL(cacheKey, semaphore, 10*365*24*time.Hour)
+	}
+
+	if cachedChannel != nil {
+		semaphore = cachedChannel.(chan struct{})
+	}
+
+	slog.Debug("Getting semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+	semaphore <- struct{}{}
+	slog.Debug("Semaphore acquired for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
 }
 
-func ReleasePipelineExecutionStepSemaphore(pipelineExecutionID string, stepExecutionID string) {
-	if stepExecutionID == "" || pipelineExecutionID == "" {
+func ReleasePipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep) {
+	if stepDefn == nil || pipelineExecutionID == "" {
+		slog.Warn("Step definition or pipeline execution ID is nil, unable to release pipeline execution step semaphore")
 		return
 	}
+
+	cacheKey := pipelineStepSemaphoreCacheKey(pipelineExecutionID, stepDefn)
+	cachedChannel, found := cache.GetCache().Get(cacheKey)
+
+	var semaphore chan struct{}
+	if !found {
+		slog.Warn("Semaphore not found for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+		return
+	}
+
+	if cachedChannel != nil {
+		semaphore = cachedChannel.(chan struct{})
+	}
+
+	slog.Debug("Releasing semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+	<-semaphore
+	slog.Debug("Semaphore released for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
 }
