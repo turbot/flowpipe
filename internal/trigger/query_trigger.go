@@ -79,9 +79,6 @@ func (tr *TriggerRunnerQuery) Run() {
 func (tr *TriggerRunnerQuery) RunOne() error {
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
-	if o.IsServerMode {
-		o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("running query trigger %s", tr.Trigger.Name())))
-	}
 
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
 
@@ -96,25 +93,19 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
 		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error running query trigger", err))
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error running query trigger "+tr.Trigger.Name(), err))
 		}
 		return err
 	}
 
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutput(time.Now(), "trigger", fmt.Sprintf("no rows returned from query trigger %s", tr.Trigger.Name())))
-		}
 		return nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
 	if !ok {
 		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error converting query rows to []interface{}", err))
-		}
 		return nil
 	}
 
@@ -300,7 +291,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
 		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "trigger"), "error sending pipeline command", err))
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
 		}
 		return err
 	}
