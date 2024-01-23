@@ -69,6 +69,7 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 	plannerMutex.Unlock()
 	plannerMutex = nil
 	execution.GetStepTypeSemaphore(evt.StepType)
+	execution.GetPipelineExecutionStepSemaphore(evt.PipelineExecutionID, stepDefn)
 
 	plannerMutex = event.GetEventStoreMutex(evt.Event.ExecutionID)
 	plannerMutex.Lock()

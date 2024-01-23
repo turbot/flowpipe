@@ -56,6 +56,8 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 
 			execution.ReleaseStepTypeSemaphore(cmd.StepType)
+
+			execution.ReleasePipelineExecutionStepSemaphore(cmd.PipelineExecutionID, cmd.StepExecutionID)
 		}()
 
 		executionID := cmd.Event.ExecutionID

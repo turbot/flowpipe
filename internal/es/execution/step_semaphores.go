@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 var globalHttpStepSemaphore chan struct{}
@@ -83,5 +84,22 @@ func ReleaseStepTypeSemaphore(stepTeyp string) {
 		slog.Debug("Semaphore released for function")
 	case "":
 		slog.Warn("Step type is empty")
+	}
+}
+
+func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep) {
+	if stepDefn == nil || pipelineExecutionID == "" {
+		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step semaphore")
+		return
+	}
+
+	if stepDefn.GetMaxConcurrency() == nil {
+		return
+	}
+}
+
+func ReleasePipelineExecutionStepSemaphore(pipelineExecutionID string, stepExecutionID string) {
+	if stepExecutionID == "" || pipelineExecutionID == "" {
+		return
 	}
 }
