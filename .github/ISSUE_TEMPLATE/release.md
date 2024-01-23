@@ -30,4 +30,4 @@ labels: release
 - [ ] Test Linux install script
 - [ ] Test Homebrew install
 - [ ] Test Windows install
-- [ ] Release branch merged to `main`
+- [ ] Release branches merged to `main` (all three repos `flowpipe`, `flowpipe-go-sdk`, `pipe-fittings`)
