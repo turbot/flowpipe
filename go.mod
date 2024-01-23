@@ -42,7 +42,8 @@ require (
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
-	github.com/turbot/flowpipe-sdk-go v0.2.0-rc.4
+	github.com/turbot/flowpipe-sdk-go v0.2.0
+	github.com/turbot/pipe-fittings v0.2.0
 	github.com/turbot/steampipe-plugin-code v0.5.1
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
@@ -218,7 +219,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
-	github.com/turbot/pipe-fittings v0.2.0-rc.3 // indirect
 	github.com/turbot/steampipe-plugin-sdk/v5 v5.6.2 // indirect
 	github.com/turbot/terraform-components v0.0.0-20231108031935-358f803c1a8b // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
