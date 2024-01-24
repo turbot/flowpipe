@@ -102,7 +102,12 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 
 	e, err := event.NewStepQueued(event.ForStepQueue(cmd))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+			return nil
+		}
 	}
+
 	return h.EventBus.Publish(ctx, e)
 }

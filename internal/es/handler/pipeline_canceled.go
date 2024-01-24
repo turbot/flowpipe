@@ -46,6 +46,7 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
+	execution.CompletePipelineExecutionStepSemaphore(evt.PipelineExecutionID)
 
 	return nil
 }

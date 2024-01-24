@@ -69,19 +69,27 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 	plannerMutex.Unlock()
 	plannerMutex = nil
 
-	execution.GetStepTypeSemaphore(evt.StepType)
-	execution.GetPipelineExecutionStepSemaphore(evt.PipelineExecutionID, stepDefn)
+	go func() {
+		execution.GetStepTypeSemaphore(evt.StepType)
+		execution.GetPipelineExecutionStepSemaphore(evt.PipelineExecutionID, stepDefn)
 
-	plannerMutex = event.GetEventStoreMutex(evt.Event.ExecutionID)
-	plannerMutex.Lock()
+		plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+		plannerMutex.Lock()
 
-	if err := h.CommandBus.Send(ctx, cmd); err != nil {
-		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(evt, err)))
-		if err != nil {
-			slog.Error("Error publishing event", "error", err)
+		defer func() {
+			if plannerMutex != nil {
+				plannerMutex.Unlock()
+			}
+		}()
+
+		if err := h.CommandBus.Send(ctx, cmd); err != nil {
+			err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(evt, err)))
+			if err != nil {
+				slog.Error("Error publishing event", "error", err)
+			}
+			return
 		}
-		return nil
-	}
+	}()
 
 	return nil
 }
