@@ -13,10 +13,10 @@ labels: release
 
 ### Pipe Fittings
 - [ ] Pipe Fittings Changelog updated with correct version and date
-- [ ] `pipe-fittings` tagged with correct final version
+- [ ] `pipe-fittings` tagged with correct final version (ensure you have a clean branch, otherwise the tag will be created on the wrong commit and difficult to revert)
 
 ### Flowpipe SDK Go
-- [ ] `flowpipe-sdk-go` tagged with correct final version
+- [ ] `flowpipe-sdk-go` tagged with correct final version (ensure you have a clean branch, otherwise the tag will be created on the wrong commit and difficult to revert)
 
 ### Flowpipe
 
