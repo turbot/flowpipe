@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -220,6 +221,16 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	defer rows.Close()
 
 	finish := time.Now().UTC()
+
+	columnsTypes, err := rows.ColumnTypes()
+	if err != nil {
+		return nil, perr.InternalWithMessage("Error getting column types: " + err.Error())
+	}
+	columnTypeMap := map[string]*sql.ColumnType{}
+	for _, columnType := range columnsTypes {
+		columnTypeMap[columnType.Name()] = columnType
+	}
+
 	for rows.Next() {
 		row := make(map[string]interface{})
 		err = mapScan(rows, row)
@@ -228,11 +239,27 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		}
 		// sqlx doesn't handle jsonb columns, so we need to do it manually
 		// https://github.com/jmoiron/sqlx/issues/225
+
+		// TODO: refactor this, add abstraction make it extensible to future database types
 		for k, encoded := range row {
 			switch ba := encoded.(type) {
 			case []byte:
-				if e.databaseType == DriverMySQL {
-					row[k] = db_common.TryParseDataType(ba)
+				if e.databaseType == DriverMySQL { // Check it it's a valid JSON object
+					if isJSON, _ := db_common.IsJSON(ba); isJSON {
+						var col interface{}
+						err := json.Unmarshal(ba, &col)
+						if err != nil {
+							slog.Error("error unmarshalling jsonb", "column", k, "error", err)
+							return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
+						}
+						row[k] = col
+						continue
+					}
+
+					row[k], err = mysqlReadCell(ba, columnTypeMap[k])
+					if err != nil {
+						return nil, perr.InternalWithMessage("Error reading cell: " + err.Error())
+					}
 				} else {
 					// Check it it's a valid JSON object
 					if isJSON, _ := db_common.IsJSON(ba); isJSON {
@@ -275,6 +302,30 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
 	return output, nil
+}
+
+func mysqlReadCell(columnValue any, columnType *sql.ColumnType) (result any, err error) {
+	if columnValue != nil {
+		asStr := string(columnValue.([]byte))
+		switch columnType.DatabaseTypeName() {
+		case "INT", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "YEAR":
+			result, err = strconv.ParseInt(asStr, 10, 64)
+		case "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE":
+			result, err = strconv.ParseFloat(asStr, 64)
+		case "DATE":
+			result, err = time.Parse(time.DateOnly, asStr)
+		case "TIME":
+			result, err = time.Parse(time.TimeOnly, asStr)
+		case "DATETIME", "TIMESTAMP":
+			result, err = time.Parse(time.DateTime, asStr)
+		case "BIT", "BLOB", "BINARY", "VARBINARY":
+			result = columnValue.([]byte)
+		// case "CHAR", "VARCHAR", "TEXT", "ENUM", "SET":
+		default:
+			result = asStr
+		}
+	}
+	return result, err
 }
 
 func mapScan(r *sql.Rows, dest map[string]interface{}) error {

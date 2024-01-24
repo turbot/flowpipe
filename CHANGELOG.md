@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.2.1 [tbd]
+
+_Bug fixes_
+
+* MySQL query processing should be using the built-in `ColumnTypes` method to determine the column types. ([#604](https://github.com/turbot/flowpipe/issues/604))
+
 ## v0.2.0 [2024-01-24]
 
 _What's new?_
