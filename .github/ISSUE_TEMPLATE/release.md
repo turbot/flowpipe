@@ -25,10 +25,12 @@ labels: release
 - [ ] Update Flowipe dependency to `flowpipe-go-sdk` to use the relase tag
 - [ ] Update Flowpipe dependency to `pipe-fittings` to use the relase tag
 - [ ] Run release build. Do not tag `flowpipe repo``, the workflow will create the tag
-- [ ] Mark relese as "latest"
+- [ ] Update Changelog in the Release page (copy and paste from CHANGELOG.md)
+- [ ] Test Linux install script
+- [ ] Test Windows install
+- [ ] Mark release as "latest" (workflow creates pre-release version)
+- [ ] Merge PR in `@turbot/homebrew-tap` repo to update Turbot Homebrew Tap
 
 ### Post release check & admin
-- [ ] Test Linux install script
 - [ ] Test Homebrew install
-- [ ] Test Windows install
 - [ ] Release branches merged to `main` (all three repos `flowpipe`, `flowpipe-go-sdk`, `pipe-fittings`)
