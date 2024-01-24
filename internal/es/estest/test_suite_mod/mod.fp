@@ -18,7 +18,14 @@ mod "test_suite_mod" {
             version = "1.0.0"
             args = {
                 var_depend_a_one = var.var_one
-                var_depend_a_two = var.var_depend_a_two
+
+                # race condition bug I think caused by this commit: https://github.com/turbot/pipe-fittings/commit/7f5fc0de25d6cb3bc4a4d5dff40b038770ddca2e
+                #
+                # Error msg:
+                # failed to resolve dependency mod argument value: "var.var_depend_a_two = var.var_depend_a_two" (mod.test_suite_mod /home/runner/work/flowpipe/flowpipe/flowpipe/internal/es/estest/test_suite_mod/mod.fp:21)
+                #
+                # it's intermittent, thus the race condition suspicion
+                var_depend_a_two = "abc"
             }
         }
     }
