@@ -4,29 +4,16 @@
 
 _What's new?_
 
-* Query Trigger. [See more in our documentation](https://flowpipe.io/docs/flowpipe-hcl/trigger/query).
-* Added Query Step's database supports for:
-    - MySQL
-    - SQLite
-    - DuckDB
-* Added credentials support for the following plugins:
-    - BitBucket
-    - Datadog
-    - Freshdesk
-    - JumpCloud
-    - ServiceNow
-    - Turbot Guardrails
-
-_Enhancements_
-
-* Improved output when running in `server` mode.
-* Improved Container and Function step build performance.
-* Added `source` argument to Container Step in addition to `image`. [See more in our documentation](https://flowpipe.io/docs/flowpipe-hcl/step/container#arguments).
-* Added `timeout` argument to Pipeline steps.
-* Added `method` block for HTTP Trigger.
-* Added `enabled` attribute to Flowpipe Triggers.
-* Improved output for `list` and `show` commands.
-* New intervals (`5m`, `10m`, `15m`, `30m`, `60m`, `1h`, `2h`, `4h`, `6h`, `12h`, `24h`) are now supported for the Schedule and Query Triggers.
+* Query trigger type to watch & event on to database changes. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/trigger/query).
+* HTTP trigger can now handle both GET and POST methods. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/trigger/http).
+* Query steps & triggers now support Postgres, MySQL, SQLite and Postgres.
+* Define container step using a `source` argument for inline image definitions.
+* Add a `timeout` to pipeline steps.
+* Enable or disable triggers using `enabled` attribute.
+* Improved and expanded output for `flowpipe server`.
+* Improved and standardized output for CLI `list` and `show` commands.
+* Expanded intervals available in schedule and query triggers (e.g. `5m`, `10m`, etc).
+* New credential types: BitBucket, Datadog, Freshdesk, JumpCloud, ServiceNow, Turbot Guardrails.
 
 _Bug fixes_
 
