@@ -978,8 +978,8 @@ github.com/tklauser/numcpus v0.3.0 h1:ILuRUQBtssgnxw0XXIjKUC56fgnOrFoQQ/4+DeU2bi
 github.com/tklauser/numcpus v0.3.0/go.mod h1:yFGUr7TUHQRAhyqBcEg0Ge34zDBAsIvJJcyE6boqnA8=
 github.com/tkrajina/go-reflector v0.5.6 h1:hKQ0gyocG7vgMD2M3dRlYN6WBBOmdoOzJ6njQSepKdE=
 github.com/tkrajina/go-reflector v0.5.6/go.mod h1:ECbqLgccecY5kPmPmXg1MrHW585yMcDkVl6IvJe64T4=
-github.com/turbot/flowpipe-sdk-go v0.2.0-rc.4 h1:093ko+HeYpOIb3cTm1/8SGIbngSi80K9mo5Oqa3UJ1w=
-github.com/turbot/flowpipe-sdk-go v0.2.0-rc.4/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
+github.com/turbot/flowpipe-sdk-go v0.2.1 h1:rjr8XbCzdwxb9hm2t46u3NrwJjTXGSyWBNxuoSBaTMk=
+github.com/turbot/flowpipe-sdk-go v0.2.1/go.mod h1:bcANgfiAkvdOvVWOmlm5Ss5ML0oZCdfkhMhNnKT1pZA=
 github.com/turbot/go-kit v0.9.0-rc.3 h1:EXGeXNanalq9tWBXjxE/OKAC3WCASHKFKAH+OrfF6yI=
 github.com/turbot/go-kit v0.9.0-rc.3/go.mod h1:u7tPCxKe2w0V3Ap3JmzVF4eVbzVL0wk5muYOYI83DzA=
 github.com/turbot/steampipe-cloud-sdk-go v0.6.0 h1:ufAxOpKS1uq7eejuE5sfEu1+d7QAd0RBjl8Bn6+mIs8=

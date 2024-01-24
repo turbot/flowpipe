@@ -1,26 +1,33 @@
 # Flowpipe
 
-## v0.2.0 [tbd]
+## v0.2.0 [2024-01-24]
 
 _What's new?_
 
-* Query Trigger. [See more in our documentation](https://flowpipe.io/docs/).
-* Added Query Step's database support for:
-    - MySQL
-    - SQLite
-    - DuckDB
-
-_Enhancements_
-
-* Improved output when running in `server` mode.
-* Added `Source` argument to Container Step in addition to `Image`. [See more in our documentation](https://flowpipe.io/docs/).
-* Added `timeout` argument to Pipeline steps.
+* Query trigger type to watch & event on to database changes. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/trigger/query).
+* HTTP trigger can now handle both GET and POST methods. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/trigger/http).
+* Query steps & triggers now support Postgres, MySQL, SQLite and Postgres.
+* Define container step using a `source` argument for inline image definitions.
+* Add a `timeout` to pipeline steps.
+* Enable or disable triggers using `enabled` attribute.
+* Improved and expanded output for `flowpipe server`.
+* Improved and standardized output for CLI `list` and `show` commands.
+* Expanded intervals available in schedule and query triggers (e.g. `5m`, `10m`, etc).
+* New credential types: BitBucket, Datadog, Freshdesk, JumpCloud, ServiceNow, Turbot Guardrails.
 
 _Bug fixes_
 
 * Implemented a more descriptive error message for server startup failures.
 * Fixed Step Arguments unable to be referenced in the Pipeline definition.
-* Added missing `execution_mode` argument to HTTP Trigger. [#533](https://github.com/turbot/flowpipe/issues/533).
+* Added missing `execution_mode` argument to HTTP Trigger ([#533](https://github.com/turbot/flowpipe/issues/533)).
+* Fixed `args` arguments unable to be updated in the Pipeline Step loop block ([#559](https://github.com/turbot/flowpipe/issues/559)).
+* Fixed an issue in the bootstrap process for identifying the config path.
+
+## v0.1.1 [2024-01-09]
+
+_Bug fixes_
+
+* Removed inaccurate SQL Query string validation to check for arguments. ([#516](https://github.com/turbot/flowpipe/issues/516))
 
 ## v0.1.0 [2023-12-13]
 
