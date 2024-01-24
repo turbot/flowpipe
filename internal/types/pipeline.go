@@ -67,6 +67,21 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
+func (p FpPipeline) GetAsTable() Table {
+	var res = Table{
+		Rows: []TableRow{{}},
+	}
+	AddField("Title", p.Title, &res)
+	AddField("Description", p.Description, &res)
+	AddField("Name", p.Name, &res)
+	AddField("Tags", p.Tags, &res)
+	AddField("Params", p.Params, &res)
+	AddField("Outputs", p.OutputConfig, &res)
+
+	return res
+}
+
+
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
@@ -124,6 +139,11 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 
 	output += fmt.Sprintf("%s\n", au.Blue("Usage:"))
 	output += fmt.Sprintf("  flowpipe pipeline run %s%s\n", displayName, pArg)
+
+	output += "\n\n"
+
+	n, _ := Show(p, opts)
+	output += n
 	return output
 }
 
@@ -289,6 +309,20 @@ type FpPipelineParam struct {
 	Default     any     `json:"default,omitempty"`
 	Type        string  `json:"type"`
 }
+
+func (p FpPipelineParam) GetAsTable() Table {
+	var res = Table{
+		Rows: []TableRow{{}},
+	}
+	AddField("Name", p.Name, &res)
+	AddField("Type", p.Type, &res)
+	AddField("Name", p.Name, &res)
+	AddField("Description", p.Description, &res)
+	AddField("Default", p.Default, &res)
+
+	return res
+}
+
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
