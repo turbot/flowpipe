@@ -1722,4 +1722,39 @@ func TestTriggerQueryWithNull(t *testing.T) {
 		assert.Fail("generated eval context should not be nil")
 		return
 	}
+
+	selfVar := generatedEvalContext.Variables["self"]
+	if selfVar == cty.NilVal {
+		assert.Fail("self variable should not be nil")
+		return
+	}
+
+	selfVarMap := selfVar.AsValueMap()
+	insertedRows := selfVarMap["inserted_rows"]
+	assert.NotEqual(cty.NilVal, insertedRows, "inserted rows should not be nil")
+
+	insertedRowsList := insertedRows.AsValueSlice()
+	assert.Equal(3, len(insertedRowsList), "wrong number of inserted rows")
+	for _, row := range insertedRowsList {
+		rowMap := row.AsValueMap()
+		id := rowMap["id"].AsString()
+		if id == "1" {
+			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
+		} else if id == "2" {
+			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal(cty.NullVal(cty.String), rowMap["registration_date"], "wrong registration date, registration for id 2 should be a nil value")
+			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
+		} else if id == "3" {
+			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
+			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
+			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
+		} else {
+			assert.Fail("wrong id")
+		}
+	}
 }

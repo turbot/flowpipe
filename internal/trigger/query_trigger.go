@@ -94,7 +94,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		schema.AttributeTypeConnectionString: config.ConnectionString,
 	}
 
-	output, err := queryPrimitive.Run(context.Background(), input)
+	output, columnTypes, err := queryPrimitive.RunWithMetadata(context.Background(), input)
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
 		if o.IsServerMode {
@@ -184,7 +184,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		newRows = append(newRows, row.(map[string]interface{}))
 	}
 
-	newRowCtyVals, err := rowsToCtyList(newRows)
+	newRowCtyVals, err := queryPrimitive.QueryReader.RowsToCty(newRows, columnTypes)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
 		return err
@@ -204,7 +204,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		updatedRows = append(updatedRows, row.(map[string]interface{}))
 	}
 
-	updatedRowCtyVals, err := rowsToCtyList(updatedRows)
+	updatedRowCtyVals, err := queryPrimitive.QueryReader.RowsToCty(updatedRows, columnTypes)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
 		return err
