@@ -4,36 +4,9 @@ import (
 	"database/sql"
 	"log/slog"
 	"sync"
-
-	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/zclconf/go-cty/cty"
 )
 
 var queryTriggerLock sync.Mutex
-
-func rowsToCtyList(newRows []map[string]interface{}) ([]cty.Value, error) {
-	var newRowsCty []cty.Value
-	for _, r := range newRows {
-		rowCty, err := rowToCty(r)
-		if err != nil {
-			return nil, err
-		}
-		newRowsCty = append(newRowsCty, rowCty)
-	}
-	return newRowsCty, nil
-}
-
-func rowToCty(row map[string]interface{}) (cty.Value, error) {
-	rowCty := map[string]cty.Value{}
-	for k, v := range row {
-		ctyVal, err := hclhelpers.ConvertInterfaceToCtyValue(v)
-		if err != nil {
-			return cty.NilVal, err
-		}
-		rowCty[k] = ctyVal
-	}
-	return cty.ObjectVal(rowCty), nil
-}
 
 func initializeDB(dbPath string) (*sql.DB, error) {
 

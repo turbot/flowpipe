@@ -3,11 +3,9 @@ pipeline "parent_with_foreach" {
         type = number
         default = 3
     }
-
     step "transform" "names" {
         value = [for i in range(param.times) : "name-${i}"]
     }
-
     step "pipeline" "nested_one" {
         for_each = step.transform.names.value
         pipeline = pipeline.nested_one
@@ -15,12 +13,10 @@ pipeline "parent_with_foreach" {
             name = each.value
         }
     }
-
     output "vals" {
         value = step.pipeline.nested_one
     }
 }
-
 pipeline "nested_one" {
     param "name" {
         type = string
