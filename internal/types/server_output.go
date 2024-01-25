@@ -166,16 +166,11 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts RenderOpti
 		return ""
 	}
 
-	suffix := ""
-	if opts.Verbose {
-		suffix = fmt.Sprintf("\n%s", au.BrightRed(o.Error.Error()))
-	}
-
-	return fmt.Sprintf("%s%s %s%s\n",
+	return fmt.Sprintf("%s%s %s %s\n",
 		o.ServerOutputPrefix.String(sanitizer, opts),
 		au.Red("error"),
-		au.Red(o.Message),
-		suffix)
+		au.Red(o.Message+":"),
+		au.BrightRed(o.Error.Error()))
 }
 
 type ServerOutputTriggerExecution struct {
