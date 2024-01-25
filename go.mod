@@ -2,8 +2,6 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings
-
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
