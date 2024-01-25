@@ -409,6 +409,12 @@ func XTestQueryMariaDB(t *testing.T) {
 	assert.Nil(err)
 	assert.NotNil(output)
 	/**
+	mariadb -u root -pflowpipe
+
+	create database flowpipe_test;
+
+	use flowpipe_test;
+
 	CREATE TABLE DataTypeDemo (
 	    id INT AUTO_INCREMENT,
 	    sample_int INT,
@@ -419,11 +425,7 @@ func XTestQueryMariaDB(t *testing.T) {
 	    sample_float FLOAT,
 	    sample_double DOUBLE,
 	    sample_decimal DECIMAL(10,2),
-	    sample_bool BOOLEAN,
-		sample_json JSON,
-		sample_blob BLOB,
-	    PRIMARY KEY (id)
-		)/
+	    sample_bool BOOLEAN, sample_json JSON, sample_blob BLOB, PRIMARY KEY (id) )
 
 	-- Insert statement 1
 	INSERT INTO DataTypeDemo

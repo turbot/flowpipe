@@ -5,6 +5,7 @@ import (
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
 	"net"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -14,8 +15,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 func serverCmd() *cobra.Command {
@@ -43,6 +42,7 @@ func serverCmd() *cobra.Command {
 	return cmd
 }
 
+// TODO: revisit exit codes
 func startServerFunc() func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
 		ctx := cmd.Context()
@@ -52,16 +52,14 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		if isPortInUse(viper.GetInt(constants.ArgPort)) {
 			errMsg := fmt.Sprintf("the designated port (%d) is already in use", viper.GetInt(constants.ArgPort))
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg)))
-			error_helpers.FailOnError(perr.InternalWithMessage(errMsg))
-			return
+			os.Exit(1)
 		}
 
 		outputMode := viper.GetString(constants.ArgOutput)
 		if outputMode == constants.OutputFormatJSON || outputMode == constants.OutputFormatYAML {
 			errMsg := "server command currently only supports '--output' for 'pretty' or 'plain'"
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg)))
-			error_helpers.FailOnError(perr.BadRequestWithMessage(errMsg))
-			return
+			os.Exit(1)
 		}
 
 		// start manager, passing server config
@@ -71,8 +69,8 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		).Start()
 		if err != nil {
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", err))
+			os.Exit(1)
 		}
-		error_helpers.FailOnError(err)
 
 		// Block until we receive a signal
 		m.InterruptHandler()
@@ -81,7 +79,7 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 
 // Function to check if a port is in use
 func isPortInUse(port int) bool {
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	ln, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", port))
 	if err != nil {
 		return true
 	}
