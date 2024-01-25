@@ -35,6 +35,8 @@ const (
 
 type Query struct {
 	databaseType string
+
+	queryReader QueryReader
 }
 
 func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -80,11 +82,13 @@ func (e *Query) InitializeDB(ctx context.Context, i modconfig.Input) (*sql.DB, e
 	if strings.HasPrefix(dbConnectionString, "postgres://") || strings.HasPrefix(dbConnectionString, "postgresql://") {
 		db, err = sql.Open("postgres", dbConnectionString)
 
-	} else if strings.HasPrefix(dbConnectionString, "mysql://") {
-		trimmedDBConnectionString := strings.TrimPrefix(dbConnectionString, "mysql://")
-
+	} else if strings.HasPrefix(dbConnectionString, "mysql:") {
+		queryReader := &MySQLQueryReader{
+			connectionString: dbConnectionString,
+		}
 		e.databaseType = DriverMySQL
-		db, err = sql.Open(DriverMySQL, trimmedDBConnectionString)
+
+		return queryReader.Initialize()
 
 	} else if strings.HasPrefix(dbConnectionString, "duckdb:") {
 		duckDBConnectionString := dbConnectionString[7:]
@@ -144,15 +148,15 @@ func formatSqlConnectionString(connStr string) (string, error) {
 	return formatted, nil
 }
 
-func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (e *Query) RunWithMetadata(ctx context.Context, input modconfig.Input) (*modconfig.Output, map[string]*sql.ColumnType, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	db, err := e.InitializeDB(ctx, input)
 	if err != nil {
 		slog.Error("Error initializing the database", "error", err)
-		return nil, perr.InternalWithMessage("Error initializing the database: " + err.Error())
+		return nil, nil, perr.InternalWithMessage("Error initializing the database: " + err.Error())
 	}
 	defer db.Close()
 
@@ -216,7 +220,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	}
 
 	if err != nil {
-		return nil, perr.InternalWithMessage("Error executing query: " + err.Error())
+		return nil, nil, perr.InternalWithMessage("Error executing query: " + err.Error())
 	}
 	defer rows.Close()
 
@@ -224,7 +228,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 
 	columnsTypes, err := rows.ColumnTypes()
 	if err != nil {
-		return nil, perr.InternalWithMessage("Error getting column types: " + err.Error())
+		return nil, nil, perr.InternalWithMessage("Error getting column types: " + err.Error())
 	}
 	columnTypeMap := map[string]*sql.ColumnType{}
 	for _, columnType := range columnsTypes {
@@ -235,7 +239,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		row := make(map[string]interface{})
 		err = mapScan(rows, row)
 		if err != nil {
-			return nil, perr.InternalWithMessage("Failed to scan row: " + err.Error())
+			return nil, nil, perr.InternalWithMessage("Failed to scan row: " + err.Error())
 		}
 		// sqlx doesn't handle jsonb columns, so we need to do it manually
 		// https://github.com/jmoiron/sqlx/issues/225
@@ -250,7 +254,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 						err := json.Unmarshal(ba, &col)
 						if err != nil {
 							slog.Error("error unmarshalling jsonb", "column", k, "error", err)
-							return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
+							return nil, nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
 						}
 						row[k] = col
 						continue
@@ -258,7 +262,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 
 					row[k], err = mysqlReadCell(ba, columnTypeMap[k])
 					if err != nil {
-						return nil, perr.InternalWithMessage("Error reading cell: " + err.Error())
+						return nil, nil, perr.InternalWithMessage("Error reading cell: " + err.Error())
 					}
 				} else {
 					// Check it it's a valid JSON object
@@ -267,7 +271,7 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 						err := json.Unmarshal(ba, &col)
 						if err != nil {
 							slog.Error("error unmarshalling jsonb", "column", k, "error", err)
-							return nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
+							return nil, nil, perr.InternalWithMessage("Error unmarshalling jsonb column: " + err.Error())
 						}
 						row[k] = col
 						continue
@@ -288,9 +292,9 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	if err = rows.Err(); err != nil {
 		// Check for context deadline exceeded error
 		if errors.Is(err, context.DeadlineExceeded) {
-			return nil, perr.TimeoutWithMessage("Query execution exceeded timeout")
+			return nil, nil, perr.TimeoutWithMessage("Query execution exceeded timeout")
 		}
-		return nil, perr.InternalWithMessage("Error iterating over query results: " + err.Error())
+		return nil, nil, perr.InternalWithMessage("Error iterating over query results: " + err.Error())
 	}
 
 	output := &modconfig.Output{
@@ -301,7 +305,12 @@ func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	output.Data[schema.AttributeTypeStartedAt] = start
 	output.Data[schema.AttributeTypeFinishedAt] = finish
 
-	return output, nil
+	return output, columnTypeMap, nil
+}
+
+func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+	output, _, err := e.RunWithMetadata(ctx, input)
+	return output, err
 }
 
 func mysqlReadCell(columnValue any, columnType *sql.ColumnType) (result any, err error) {

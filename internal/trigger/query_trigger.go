@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -49,6 +50,10 @@ func hashRow(row map[string]interface{}) string {
 	// Process each key-value pair
 	for _, k := range keys {
 		value := row[k]
+
+		if helpers.IsNil(value) {
+			continue
+		}
 
 		// Check if the value is a slice of bytes (blob data)
 		if reflect.TypeOf(value).Kind() == reflect.Slice {

@@ -1561,3 +1561,165 @@ func TestTriggerQueryBCustomCapture(t *testing.T) {
 	assert.Nil(generatedEvalContext, "generated eval context should be nil, insert capture not defined no pipeline should be executed")
 	assert.Equal(0, len(triggerCommands), "insert capture not defined no pipeline should be executed")
 }
+
+func TestTriggerQueryWithNull(t *testing.T) {
+	ctx := context.Background()
+
+	assert := assert.New(t)
+
+	outputPath := "./test_trigger_query.db"
+	// Check if the directory exists
+	_, err := os.Stat(outputPath)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(outputPath)
+		if err != nil {
+			assert.Fail("Error removing test directory", err)
+			return
+		}
+	}
+
+	flowpipeDb := "./flowpipe.db"
+	// Check if the directory exists
+	_, err = os.Stat(flowpipeDb)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.RemoveAll(flowpipeDb)
+		if err != nil {
+			assert.Fail("Error removing test directory", err)
+			return
+		}
+	}
+
+	db, err := initializeDB(outputPath)
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
+	defer db.Close()
+
+	err = createTestTableA(db, "test_one")
+	if err != nil {
+		assert.Fail("Error creating test table", err)
+		return
+	}
+
+	data := []map[string]interface{}{
+		{
+			"id":                "1",
+			"name":              "John",
+			"age":               30,
+			"registration_date": "2020-01-01",
+			"is_active":         true,
+		},
+		{
+			"id":                "2",
+			"name":              "Jane",
+			"age":               25,
+			"registration_date": nil,
+			"is_active":         false,
+		},
+		{
+			"id":                "3",
+			"name":              "Joe",
+			"age":               40,
+			"registration_date": "2020-03-05",
+			"is_active":         true,
+		},
+	}
+
+	err = populateTestTableA(db, "test_one", data)
+	if err != nil {
+		assert.Fail("Error populating test table", err)
+		return
+	}
+
+	// We just need a name for the pipeline
+	insertPipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("insert_pipe"),
+	}
+	updatePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("update_pipe"),
+	}
+	deletePipelineMap := map[string]cty.Value{
+		"name": cty.StringVal("delete_pipe"),
+	}
+
+	var generatedEvalContext *hcl.EvalContext
+	hclExpressionMock := &util.HclExpressionMock{
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+			generatedEvalContext = evalCtx
+			res := map[string]cty.Value{
+				"from": cty.StringVal("test"),
+			}
+			return cty.ObjectVal(res), nil
+		},
+	}
+
+	trigger := &modconfig.Trigger{
+		HclResourceImpl: modconfig.HclResourceImpl{
+			FullName: "query.test_trigger",
+		},
+		ArgsRaw: hclExpressionMock,
+	}
+
+	// build the captures
+	insertPipelineCty := cty.ObjectVal(insertPipelineMap)
+	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
+	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
+
+	insertCapture := &modconfig.TriggerQueryCapture{
+		Type:     "insert",
+		Pipeline: insertPipelineCty,
+		ArgsRaw:  hclExpressionMock,
+	}
+	updateCapture := &modconfig.TriggerQueryCapture{
+		Type:     "update",
+		Pipeline: updatePipelineCty,
+		ArgsRaw:  hclExpressionMock,
+	}
+	deleteCapture := &modconfig.TriggerQueryCapture{
+		Type:     "delete",
+		Pipeline: deletePipelineCty,
+		ArgsRaw:  hclExpressionMock,
+	}
+
+	trigger.Config = &modconfig.TriggerQuery{
+		ConnectionString: "sqlite:./test_trigger_query.db",
+		Sql:              "select * from test_one",
+		PrimaryKey:       "id",
+		Captures: map[string]*modconfig.TriggerQueryCapture{
+			"insert": insertCapture,
+			"update": updateCapture,
+			"delete": deleteCapture,
+		},
+	}
+
+	var triggerCommands []interface{}
+	commandBusMock := &util.CommandBusMock{
+		SendFunc: func(ctx context.Context, command interface{}) error {
+			triggerCommands = append(triggerCommands, command)
+			return nil
+		},
+	}
+
+	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
+
+	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
+	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
+
+	assert.NotNil(triggerRunner, "trigger runner should not be nil")
+
+	receiveChannel := make(chan error)
+	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+
+	triggerRunner.Run()
+	res := <-receiveChannel
+	assert.Nil(res)
+
+	// The callback to the mocks should have been called by now
+	if generatedEvalContext == nil {
+		assert.Fail("generated eval context should not be nil")
+		return
+	}
+}
