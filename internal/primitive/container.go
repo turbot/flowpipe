@@ -16,8 +16,14 @@ import (
 
 type Container struct{}
 
-var containerCache = map[string]*container.Container{}
-var containerCacheMutex sync.Mutex
+type loadedContainer struct {
+	Name       string
+	Image      string
+	SourcePath string
+}
+
+var loadedContainers = map[string]*loadedContainer{}
+var loadedContainersMutex sync.Mutex
 
 func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
@@ -189,9 +195,23 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		return nil, err
 	}
 
-	c, err := e.getFromCacheOrNew(ctx, input)
+	name := input[schema.LabelName].(string)
+	c, err := container.NewContainer(
+		container.WithContext(context.Background()),
+		container.WithRunContext(ctx),
+		container.WithDockerClient(docker.GlobalDockerClient),
+		container.WithName(name),
+	)
 	if err != nil {
-		return nil, err
+		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
+	}
+
+	if input[schema.AttributeTypeImage] != nil {
+		c.Image = input[schema.AttributeTypeImage].(string)
+	}
+
+	if input[schema.AttributeTypeSource] != nil {
+		c.Source = input[schema.AttributeTypeSource].(string)
 	}
 
 	if input[schema.AttributeTypeCmd] != nil {
@@ -301,6 +321,11 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		c.MemorySwappiness = &memorySwappiness
 	}
 
+	err = e.loadIfNeeded(c, input)
+	if err != nil {
+		return nil, perr.InternalWithMessage("Error loading container config: " + err.Error())
+	}
+
 	// Construct the output
 	output := modconfig.Output{
 		Data: map[string]interface{}{},
@@ -311,7 +336,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		if e, ok := err.(perr.ErrorModel); !ok {
 			output.Errors = []modconfig.StepError{
 				{
-					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
+					Error: perr.InternalWithMessage("Error loading container config: " + err.Error()),
 				},
 			}
 		} else {
@@ -339,51 +364,39 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 	return &output, nil
 }
 
-func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input) (*container.Container, error) {
-	name := input[schema.LabelName].(string)
-	c := containerCache[name]
+func (e *Container) loadIfNeeded(c *container.Container, input modconfig.Input) error {
+	lc := loadedContainers[c.Name]
 
-	// if Dockerfile source path changed ignore cache & rebuild
-	if c != nil && input[schema.AttributeTypeSource] != nil && c.Source != input[schema.AttributeTypeSource].(string) {
-		c = nil
+	// need to reload for source (Dockerfile) path change
+	if lc != nil && input[schema.AttributeTypeSource] != nil && lc.SourcePath != input[schema.AttributeTypeSource].(string) {
+		lc = nil
 	}
 
-	// if image has been changed in input ignore cache and create new reference
-	if c != nil && input[schema.AttributeTypeImage] != nil && c.Image != input[schema.AttributeTypeImage].(string) {
-		c = nil
+	// need to reload if image has been changed
+	if lc != nil && input[schema.AttributeTypeImage] != nil && lc.Image != input[schema.AttributeTypeImage].(string) {
+		lc = nil
 	}
 
-	if c != nil {
-		return c, nil
+	if lc == nil {
+		lc = &loadedContainer{Name: c.Name}
+		loadedContainersMutex.Lock()
+		defer loadedContainersMutex.Unlock()
+
+		if input[schema.AttributeTypeSource] != nil {
+			lc.SourcePath = input[schema.AttributeTypeImage].(string)
+		}
+
+		if input[schema.AttributeTypeImage] != nil {
+			lc.Image = input[schema.AttributeTypeImage].(string)
+		}
+
+		err := c.Load()
+		if err != nil {
+			return perr.InternalWithMessage("failed loading container config: " + err.Error())
+		}
+
+		loadedContainers[c.Name] = lc
 	}
 
-	containerCacheMutex.Lock()
-	defer containerCacheMutex.Unlock()
-
-	c, err := container.NewContainer(
-		container.WithContext(context.Background()),
-		container.WithRunContext(ctx),
-		container.WithDockerClient(docker.GlobalDockerClient),
-		container.WithName(name),
-	)
-	if err != nil {
-		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
-	}
-
-	if input[schema.AttributeTypeImage] != nil {
-		c.Image = input[schema.AttributeTypeImage].(string)
-	}
-
-	if input[schema.AttributeTypeSource] != nil {
-		c.Source = input[schema.AttributeTypeSource].(string)
-	}
-
-	err = c.Load()
-	if err != nil {
-		return nil, perr.InternalWithMessage("failed loading container config: " + err.Error())
-	}
-
-	containerCache[name] = c
-
-	return c, nil
+	return nil
 }
