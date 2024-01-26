@@ -6,6 +6,7 @@ integration "email" "dev_workspace" {
     smtp_host       = "foo bar baz"
     default_subject = "bar foo baz"
     smtp_username   = "baz bar foo"
+    from            = "test@test.com"
 }
 
 // pipeline "input_one" {
