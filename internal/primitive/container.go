@@ -14,12 +14,14 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-type Container struct{}
+type Container struct {
+	FullyQualifiedStepName string
+}
 
 var containerCache = map[string]*container.Container{}
 var containerCacheMutex sync.Mutex
 
-func (e *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (cp *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	// Validate the name attribute
 	if i[schema.LabelName] == nil {
@@ -189,7 +191,7 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 		return nil, err
 	}
 
-	c, err := cp.getFromCacheOrNew(ctx, input)
+	c, err := cp.getFromCacheOrNew(ctx, input, cp.FullyQualifiedStepName)
 	if err != nil {
 		return nil, err
 	}
@@ -341,9 +343,8 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 	return &output, nil
 }
 
-func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input) (*container.Container, error) {
-	name := input[schema.LabelName].(string)
-	c := containerCache[name]
+func (cp *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input, stepFullName string) (*container.Container, error) {
+	c := containerCache[stepFullName]
 
 	// if Dockerfile source path changed ignore cache & rebuild
 	if c != nil && input[schema.AttributeTypeSource] != nil && c.Source != input[schema.AttributeTypeSource].(string) {
@@ -366,7 +367,7 @@ func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input
 		container.WithContext(context.Background()),
 		container.WithRunContext(ctx),
 		container.WithDockerClient(docker.GlobalDockerClient),
-		container.WithName(name),
+		container.WithName(stepFullName),
 	)
 	if err != nil {
 		return nil, perr.InternalWithMessage("Error creating container config with the provided options:" + err.Error())
@@ -385,7 +386,7 @@ func (e *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input
 		return nil, perr.InternalWithMessage("failed loading container config: " + err.Error())
 	}
 
-	containerCache[name] = c
+	containerCache[stepFullName] = c
 
 	return c, nil
 }

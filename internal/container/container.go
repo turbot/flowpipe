@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/pkg/archive"
@@ -69,6 +70,7 @@ type Container struct {
 	runCtx       context.Context
 	dockerClient *docker.DockerClient
 	watcher      *watcher.Watcher
+	runsMutex    sync.Mutex
 }
 
 type ContainerRun struct {
@@ -185,6 +187,8 @@ func (c *Container) Validate() error {
 }
 
 func (c *Container) SetRunStatus(containerID string, newStatus string) error {
+	c.runsMutex.Lock()
+	defer c.runsMutex.Unlock()
 	if c.Runs[containerID] == nil {
 		c.Runs[containerID] = &ContainerRun{
 			ContainerID: containerID,
@@ -393,9 +397,11 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 		return containerID, -1, perr.InternalWithMessage("Error reading container logs: " + err.Error())
 	}
 
+	c.runsMutex.Lock()
 	c.Runs[containerID].Stdout = o.Stdout()
 	c.Runs[containerID].Stderr = o.Stderr()
 	c.Runs[containerID].Lines = o.Lines
+	c.runsMutex.Unlock()
 
 	slog.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Lines, "cmd", cConfig.Cmd)
 
