@@ -29,7 +29,7 @@ func initializeQueryTriggerDB(dbPath, tableName string) (*sql.DB, error) {
 
 	createTableSQL := `create table if not exists query_trigger_captured_row (trigger_name text, primary_key text, row_hash text, created_at text, updated_at text, primary key (trigger_name, primary_key));`
 
-	slog.Info("Creating table", "sql", createTableSQL)
+	slog.Debug("Creating table", "sql", createTableSQL)
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
 		return nil, err

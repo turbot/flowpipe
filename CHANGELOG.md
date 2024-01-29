@@ -5,6 +5,8 @@
 _Bug fixes_
 
 * MySQL query processing should be using the built-in `ColumnTypes` method to determine the column types. ([#604](https://github.com/turbot/flowpipe/issues/604))
+* Fixed crashes in Query Trigger when there's a null cell in its result set. ([#611](https://github.com/turbot/flowpipe/issues/611))
+* Query step binary data should be converted to string.
 
 ## v0.2.0 [2024-01-24]
 

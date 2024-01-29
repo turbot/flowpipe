@@ -1746,7 +1746,7 @@ func TestTriggerQueryWithNull(t *testing.T) {
 		} else if id == "2" {
 			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal(cty.NullVal(cty.String), rowMap["registration_date"], "wrong registration date, registration for id 2 should be a nil value")
+			assert.Equal(cty.NilVal, rowMap["registration_date"], "wrong registration date, registration for id 2 should be a nil value")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "3" {
 			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")

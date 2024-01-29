@@ -19,6 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -94,7 +95,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		schema.AttributeTypeConnectionString: config.ConnectionString,
 	}
 
-	output, columnTypes, err := queryPrimitive.RunWithMetadata(context.Background(), input)
+	output, _, err := queryPrimitive.RunWithMetadata(context.Background(), input)
 	if err != nil {
 		slog.Error("Error running trigger query", "error", err)
 		if o.IsServerMode {
@@ -184,7 +185,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		newRows = append(newRows, row.(map[string]interface{}))
 	}
 
-	newRowCtyVals, err := queryPrimitive.QueryReader.RowsToCty(newRows, columnTypes)
+	newRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(newRows)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
 		return err
@@ -200,19 +201,20 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 			continue
 		}
 
-		slog.Debug("New item rows", "row", row)
+		slog.Debug("Updated item row", "row", row)
 		updatedRows = append(updatedRows, row.(map[string]interface{}))
 	}
 
-	updatedRowCtyVals, err := queryPrimitive.QueryReader.RowsToCty(updatedRows, columnTypes)
+	updatedRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(updatedRows)
 	if err != nil {
-		slog.Error("Error building new rows cty", "error", err)
+		slog.Error("Error building updated rows cty", "error", err)
 		return err
 	}
 
-	deletedKeysCty := []cty.Value{}
-	for _, k := range deletedPrimaryKeys {
-		deletedKeysCty = append(deletedKeysCty, cty.StringVal(k))
+	deletedKeysCty, err := hclhelpers.ConvertInterfaceToCtyValue(deletedPrimaryKeys)
+	if err != nil {
+		slog.Error("Error building deleted rows cty", "error", err)
+		return err
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod)
@@ -224,18 +226,19 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	// Add the new rows to the pipeline args
 	selfVars := map[string]cty.Value{}
 
-	if len(newRowCtyVals) > 0 {
-		selfVars["inserted_rows"] = cty.ListVal(newRowCtyVals)
+	if len(newRows) > 0 {
+		selfVars["inserted_rows"] = newRowCtyVals
 	} else {
 		selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
 	}
-	if len(updatedRowCtyVals) > 0 {
-		selfVars["updated_rows"] = cty.ListVal(updatedRowCtyVals)
+	if len(updatedRows) > 0 {
+		selfVars["updated_rows"] = updatedRowCtyVals
 	} else {
 		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
 	}
-	if len(deletedKeysCty) > 0 {
-		selfVars["deleted_rows"] = cty.ListVal(deletedKeysCty)
+
+	if len(deletedPrimaryKeys) > 0 {
+		selfVars["deleted_rows"] = deletedKeysCty
 	} else {
 		selfVars["deleted_rows"] = cty.ListValEmpty(cty.String)
 	}
@@ -244,9 +247,9 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	varsEvalContext["self"] = cty.ObjectVal(selfVars)
 
 	queryStat := map[string]int{
-		"insert": len(newRowCtyVals),
-		"update": len(updatedRowCtyVals),
-		"delete": len(deletedKeysCty),
+		"insert": len(newRows),
+		"update": len(updatedRows),
+		"delete": len(deletedPrimaryKeys),
 	}
 	for _, capture := range config.Captures {
 		err := runPipeline(capture, tr, evalContext, queryStat)
@@ -368,7 +371,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItem
 		return nil, nil, nil, err
 	}
 
-	slog.Info("updatedItems", "updatedItems", updatedItems)
+	slog.Debug("updatedItems", "updatedItems", updatedItems)
 
 	// Find deleted items by comparing with the main table
 	//nolint:gosec // TODO: investigate string concat
