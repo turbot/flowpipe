@@ -4,11 +4,11 @@
 
 _Bug fixes_
 
-* MySQL query processing should be using the built-in `ColumnTypes` method to determine the column types. ([#604](https://github.com/turbot/flowpipe/issues/604))
-* Fixed crashes in Query Trigger when there's a null cell in its result set. ([#611](https://github.com/turbot/flowpipe/issues/611))
-* Query step binary data should be converted to string.
-* Fixed container caching bug. ([#561](https://github.com/turbot/flowpipe/issues/561))
-* Fixed error message output when port was in-use. ([#603](https://github.com/turbot/flowpipe/issues/603))
+* Map MySQL query results to correct types ([#604](https://github.com/turbot/flowpipe/issues/604)).
+* Handle null values in query trigger results ([#611](https://github.com/turbot/flowpipe/issues/611)).
+* Convert binary data in query results to a string.
+* Docker containers now clear the cache to get correct parameters ([#561](https://github.com/turbot/flowpipe/issues/561)).
+* Improved error message when Flowpipe CLI port is already in use ([#603](https://github.com/turbot/flowpipe/issues/603)).
 
 ## v0.2.0 [2024-01-24]
 
