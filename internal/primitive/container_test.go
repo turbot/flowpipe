@@ -21,7 +21,7 @@ func TestSimpleContainerStep(t *testing.T) {
 	}
 
 	assert := assert.New(t)
-	hr := Container{}
+	hr := Container{FullyQualifiedStepName: "container_test"}
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:             "alpine:3.7",
@@ -119,7 +119,7 @@ func TestContainerStepInvalidMemory(t *testing.T) {
 	}
 
 	assert := assert.New(t)
-	hr := Container{}
+	hr := Container{FullyQualifiedStepName: "container_test_invalid_memory"}
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:   "alpine:3.7",
@@ -143,7 +143,7 @@ func TestContainerStepInvalidCmd(t *testing.T) {
 	ctx := context.Background()
 
 	assert := assert.New(t)
-	hr := Container{}
+	hr := Container{FullyQualifiedStepName: "container_test"}
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:   "alpine:3.7",
@@ -165,7 +165,7 @@ func TestContainerStepInvalidEntrypoint(t *testing.T) {
 	ctx := context.Background()
 
 	assert := assert.New(t)
-	hr := Container{}
+	hr := Container{FullyQualifiedStepName: "container_test"}
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:      "alpine:3.7",
@@ -191,7 +191,7 @@ func TestContainerStepTimeoutString(t *testing.T) {
 	}
 
 	assert := assert.New(t)
-	hr := Container{}
+	hr := Container{FullyQualifiedStepName: "container_test"}
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:             "alpine:3.7",
