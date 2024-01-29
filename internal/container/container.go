@@ -23,12 +23,7 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-type Container struct {
-
-	// Configuration
-	Name            string            `json:"name"`
-	Image           string            `json:"image"`
-	Source          string            `json:"source"`
+type ContainerRunConfig struct {
 	Cmd             []string          `json:"cmd"`
 	Env             map[string]string `json:"env"`
 	EntryPoint      []string          `json:"entrypoint"`
@@ -38,14 +33,30 @@ type Container struct {
 	User            string            `json:"user"`
 	Workdir         string            `json:"workdir"`
 
-	fqueue *fqueue.FunctionQueue
-
 	// Host configuration
 	Memory            *int64 `json:"memory"`
 	MemoryReservation *int64 `json:"memory_reservation"`
 	MemorySwap        *int64 `json:"memory_swap"`
 	MemorySwappiness  *int64 `json:"memory_swappiness"`
 	ReadOnly          *bool  `json:"read_only"`
+}
+
+func (crc *ContainerRunConfig) GetEnv() []string {
+	var env []string
+	for k, v := range crc.Env {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+	return env
+}
+
+type Container struct {
+
+	// Configuration
+	Name   string `json:"name"`
+	Image  string `json:"image"`
+	Source string `json:"source"`
+
+	fqueue *fqueue.FunctionQueue
 
 	// Runtime information
 	CreatedAt   *time.Time               `json:"created_at,omitempty"`
@@ -109,11 +120,8 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 
 	fc := &Container{
 		CreatedAt: &now,
-		Cmd:       []string{},
-		Env:       map[string]string{},
 		Runs:      map[string]*ContainerRun{},
 		// ImageExists: true,
-		EntryPoint: []string{},
 	}
 
 	for _, option := range options {
@@ -129,14 +137,6 @@ func NewContainer(options ...ContainerOption) (*Container, error) {
 	fc.fqueue = fqueue.NewFunctionQueue(fc.Name)
 
 	return fc, nil
-}
-
-func (c *Container) GetEnv() []string {
-	var env []string
-	for k, v := range c.Env {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-	return env
 }
 
 // SetUpdatedAt sets the updated at time.
@@ -194,7 +194,7 @@ func (c *Container) SetRunStatus(containerID string, newStatus string) error {
 	return nil
 }
 
-func (c *Container) Run() (string, int, error) {
+func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 	containerID := ""
 
 	start := time.Now()
@@ -204,7 +204,7 @@ func (c *Container) Run() (string, int, error) {
 		imageExistsStart := time.Now()
 		imageExists, err := c.dockerClient.ImageExists(c.Image)
 
-		slog.Info("image exists check completed", "since", time.Since(imageExistsStart), "image", c.Image)
+		slog.Debug("image exists check completed", "since", time.Since(imageExistsStart), "image", c.Image)
 
 		if err != nil {
 			slog.Error("image exists check error", "error", err)
@@ -214,7 +214,7 @@ func (c *Container) Run() (string, int, error) {
 		if !imageExists {
 			imagePullStart := time.Now()
 			err = c.dockerClient.ImagePull(c.Image)
-			slog.Info("image pull completed", "elapsed", time.Since(imagePullStart), "image", c.Image)
+			slog.Debug("image pull completed", "elapsed", time.Since(imagePullStart), "image", c.Image)
 
 			if err != nil {
 				return containerID, -1, perr.InternalWithMessage("Error pulling image: " + err.Error())
@@ -227,8 +227,8 @@ func (c *Container) Run() (string, int, error) {
 
 	// Enforce a timeout to prevent runaway containers
 	timeout := 60
-	if c.Timeout != nil {
-		timeout = int(*c.Timeout)
+	if cConfig.Timeout != nil {
+		timeout = int(*cConfig.Timeout)
 	}
 
 	// Create a container using the specified image
@@ -238,7 +238,7 @@ func (c *Container) Run() (string, int, error) {
 	}
 	createConfig := container.Config{
 		Image: imageName,
-		Cmd:   c.Cmd,
+		Cmd:   cConfig.Cmd,
 		Labels: map[string]string{
 			// Set on the container since it's not on the image
 			"io.flowpipe.type": "container",
@@ -246,7 +246,7 @@ func (c *Container) Run() (string, int, error) {
 			// Is this standard for containers?
 			"org.opencontainers.container.created": time.Now().Format(time.RFC3339),
 		},
-		Env:         c.GetEnv(),
+		Env:         cConfig.GetEnv(),
 		StopTimeout: &timeout,
 
 		// I'm confused about how this works, and we're seeing a lot of control characters
@@ -286,50 +286,50 @@ func (c *Container) Run() (string, int, error) {
 	}
 
 	// Only override Entrypoint if we pass content to c.EntryPoint
-	if len(c.EntryPoint) != 0 {
-		createConfig.Entrypoint = c.EntryPoint
+	if len(cConfig.EntryPoint) != 0 {
+		createConfig.Entrypoint = cConfig.EntryPoint
 	}
 
-	if c.User != "" {
-		createConfig.User = c.User
+	if cConfig.User != "" {
+		createConfig.User = cConfig.User
 	}
 
-	if c.Workdir != "" {
-		createConfig.WorkingDir = c.Workdir
+	if cConfig.Workdir != "" {
+		createConfig.WorkingDir = cConfig.Workdir
 	}
 
 	// Create the host configuration
 	hostConfig := container.HostConfig{}
 
-	if c.CpuShares != nil {
-		hostConfig.Resources.CPUShares = *c.CpuShares
+	if cConfig.CpuShares != nil {
+		hostConfig.Resources.CPUShares = *cConfig.CpuShares
 	}
 
 	// Defaults to 128MB
 	hostConfig.Resources.Memory = 128 * 1024 * 1024 // in bytes
-	if c.Memory != nil {
-		hostConfig.Resources.Memory = *c.Memory * 1024 * 1024 // in bytes
+	if cConfig.Memory != nil {
+		hostConfig.Resources.Memory = *cConfig.Memory * 1024 * 1024 // in bytes
 	}
 
-	if c.MemoryReservation != nil {
-		hostConfig.Resources.MemoryReservation = *c.MemoryReservation * 1024 * 1024
+	if cConfig.MemoryReservation != nil {
+		hostConfig.Resources.MemoryReservation = *cConfig.MemoryReservation * 1024 * 1024
 	}
 
-	if c.MemorySwap != nil {
-		hostConfig.Resources.MemorySwap = *c.MemorySwap * 1024 * 1024 // in bytes
+	if cConfig.MemorySwap != nil {
+		hostConfig.Resources.MemorySwap = *cConfig.MemorySwap * 1024 * 1024 // in bytes
 	}
 
-	if c.MemorySwappiness != nil {
-		hostConfig.Resources.MemorySwappiness = c.MemorySwappiness
+	if cConfig.MemorySwappiness != nil {
+		hostConfig.Resources.MemorySwappiness = cConfig.MemorySwappiness
 	}
 
-	if c.ReadOnly != nil {
-		hostConfig.ReadonlyRootfs = *c.ReadOnly
+	if cConfig.ReadOnly != nil {
+		hostConfig.ReadonlyRootfs = *cConfig.ReadOnly
 	}
 
 	containerCreateStart := time.Now()
 	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &hostConfig, &network.NetworkingConfig{}, nil, "")
-	slog.Info("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
+	slog.Debug("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, -1, perr.InternalWithMessage("Error creating container: " + err.Error())
 	}
@@ -342,7 +342,7 @@ func (c *Container) Run() (string, int, error) {
 	// Start the container
 	containerStartStart := time.Now()
 	err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, types.ContainerStartOptions{})
-	slog.Info("container start", "elapsed", time.Since(containerStartStart), "image", c.Image, "container", containerResp.ID)
+	slog.Debug("container start", "elapsed", time.Since(containerStartStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, -1, perr.InternalWithMessage("Error starting container: " + err.Error())
 	}
@@ -364,7 +364,7 @@ func (c *Container) Run() (string, int, error) {
 		// Set the status code of the container run
 		exitCode = status.StatusCode
 	}
-	slog.Info("container wait", "elapsed", time.Since(containerWaitStart), "image", c.Image, "container", containerResp.ID)
+	slog.Debug("container wait", "elapsed", time.Since(containerWaitStart), "image", c.Image, "container", containerResp.ID)
 
 	err = c.SetRunStatus(containerID, "finished")
 	if err != nil {
@@ -397,7 +397,7 @@ func (c *Container) Run() (string, int, error) {
 	c.Runs[containerID].Stderr = o.Stderr()
 	c.Runs[containerID].Lines = o.Lines
 
-	slog.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Lines)
+	slog.Info("container logs", "elapsed", time.Since(containerLogsStart), "image", c.Image, "container", containerResp.ID, "combined", c.Runs[containerID].Lines, "cmd", cConfig.Cmd)
 
 	err = c.SetRunStatus(containerID, "logged")
 	if err != nil {
@@ -406,13 +406,13 @@ func (c *Container) Run() (string, int, error) {
 
 	// Remove the container
 
-	if c.RetainArtifacts {
-		slog.Info("retain artifacts", "name", c.Name)
+	if cConfig.RetainArtifacts {
+		slog.Debug("retain artifacts", "name", c.Name)
 	} else {
 		containerRemoveStart := time.Now()
 		err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, types.ContainerRemoveOptions{})
 
-		slog.Info("container remove", "elapsed", time.Since(containerRemoveStart), "image", c.Image, "container", containerResp.ID)
+		slog.Debug("container remove", "elapsed", time.Since(containerRemoveStart), "image", c.Image, "container", containerResp.ID)
 		if err != nil {
 			// TODO - do we have to fail here? Perhaps things like not found can be ignored?
 			return containerID, -1, perr.InternalWithMessage("Error removing container: " + err.Error())
@@ -424,7 +424,7 @@ func (c *Container) Run() (string, int, error) {
 		return containerID, -1, perr.InternalWithMessage("Error setting run status to removed: " + err.Error())
 	}
 
-	slog.Info("container run", "elapsed", time.Since(start), "image", c.Image, "container", containerResp.ID)
+	slog.Debug("container run", "elapsed", time.Since(start), "image", c.Image, "container", containerResp.ID)
 
 	// If the container exited with a non-zero exit code, return an execution error
 	if exitCode != 0 {
@@ -454,7 +454,7 @@ func truncateString(s string, maxLength int) string {
 
 // CleanupArtifacts will clean up all docker artifacts for the given container
 func (c *Container) CleanupArtifacts(keepLatest bool) error {
-	slog.Info("cleanup artifacts", "name", c.Name)
+	slog.Debug("cleanup artifacts", "name", c.Name)
 	return c.dockerClient.CleanupArtifactsForLabel("io.flowpipe.name", c.Name, docker.WithSkipLatest(keepLatest))
 }
 
@@ -482,7 +482,7 @@ func (c *Container) Watch() error {
 			select {
 			case event := <-c.watcher.Event:
 				go func() {
-					slog.Info("container watch event", "event", event)
+					slog.Debug("container watch event", "event", event)
 					if err := c.Build(); err != nil {
 						slog.Error(fmt.Sprintf("failed to build container image %s, got error: %v", c.Name, err), "error", err, "containerName", c.Name)
 					}

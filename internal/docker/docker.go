@@ -21,18 +21,18 @@ var GlobalDockerClient *DockerClient
 var dockerInitializeMutex sync.Mutex
 
 func Initialize(ctx context.Context) error {
-	slog.Info("Initializing Docker client, attempting to lock")
+	slog.Debug("Initializing Docker client, attempting to lock")
 	dockerInitializeMutex.Lock()
 	defer func() {
-		slog.Info("Docker client initialization complete, releasing lock")
+		slog.Debug("Docker client initialization complete, releasing lock")
 		dockerInitializeMutex.Unlock()
 	}()
 
 	if GlobalDockerClient != nil {
-		slog.Info("Docker client already initialized")
+		slog.Debug("Docker client already initialized")
 		return nil
 	}
-	slog.Info("Lock acquired, initializing Docker client")
+	slog.Debug("Lock acquired, initializing Docker client")
 
 	dc, err := New(WithContext(ctx), WithPingTest())
 	if err != nil {

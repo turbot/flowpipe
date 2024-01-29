@@ -184,39 +184,41 @@ func convertMapToStrings(input map[string]interface{}) map[string]string {
 	return result
 }
 
-func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
-	if err := e.ValidateInput(ctx, input); err != nil {
+func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+	if err := cp.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	c, err := e.getFromCacheOrNew(ctx, input)
+	c, err := cp.getFromCacheOrNew(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
+	cConfig := container.ContainerRunConfig{}
+
 	if input[schema.AttributeTypeCmd] != nil {
-		c.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
+		cConfig.Cmd = convertToSliceOfString(input[schema.AttributeTypeCmd].([]interface{}))
 	}
 
 	if input[schema.AttributeTypeEnv] != nil {
-		c.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
+		cConfig.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
 	}
 
 	if input[schema.AttributeTypeEntryPoint] != nil {
-		c.EntryPoint = convertToSliceOfString(input[schema.AttributeTypeEntryPoint].([]interface{}))
+		cConfig.EntryPoint = convertToSliceOfString(input[schema.AttributeTypeEntryPoint].([]interface{}))
 	}
 
 	if input[schema.AttributeTypeUser] != nil {
-		c.User = input[schema.AttributeTypeUser].(string)
+		cConfig.User = input[schema.AttributeTypeUser].(string)
 	}
 
 	if input[schema.AttributeTypeWorkdir] != nil {
-		c.Workdir = input[schema.AttributeTypeWorkdir].(string)
+		cConfig.Workdir = input[schema.AttributeTypeWorkdir].(string)
 	}
 
 	if input[schema.AttributeTypeReadOnly] != nil {
 		readOnly := input[schema.AttributeTypeReadOnly].(bool)
-		c.ReadOnly = &readOnly
+		cConfig.ReadOnly = &readOnly
 	}
 
 	if input[schema.AttributeTypeTimeout] != nil {
@@ -233,7 +235,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 
 		// Convert milliseconds to seconds, and round up to the nearest second
 		timeoutInSeconds := int64(math.Ceil(float64(timeoutInMs) / 1000))
-		c.Timeout = &timeoutInSeconds
+		cConfig.Timeout = &timeoutInSeconds
 	}
 
 	if input[schema.AttributeTypeCpuShares] != nil {
@@ -246,7 +248,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		default:
 			break
 		}
-		c.CpuShares = &cpuShares
+		cConfig.CpuShares = &cpuShares
 	}
 
 	if input[schema.AttributeTypeMemory] != nil {
@@ -259,7 +261,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		default:
 			break
 		}
-		c.Memory = &memory
+		cConfig.Memory = &memory
 	}
 
 	if input[schema.AttributeTypeMemoryReservation] != nil {
@@ -272,7 +274,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		default:
 			break
 		}
-		c.MemoryReservation = &memoryReservation
+		cConfig.MemoryReservation = &memoryReservation
 	}
 
 	if input[schema.AttributeTypeMemorySwap] != nil {
@@ -285,7 +287,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		default:
 			break
 		}
-		c.MemorySwap = &memorySwap
+		cConfig.MemorySwap = &memorySwap
 	}
 
 	if input[schema.AttributeTypeMemorySwappiness] != nil {
@@ -298,7 +300,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		default:
 			break
 		}
-		c.MemorySwappiness = &memorySwappiness
+		cConfig.MemorySwappiness = &memorySwappiness
 	}
 
 	// Construct the output
@@ -306,7 +308,7 @@ func (e *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.
 		Data: map[string]interface{}{},
 	}
 
-	containerID, exitCode, err := c.Run()
+	containerID, exitCode, err := c.Run(cConfig)
 	if err != nil {
 		if e, ok := err.(perr.ErrorModel); !ok {
 			output.Errors = []modconfig.StepError{
