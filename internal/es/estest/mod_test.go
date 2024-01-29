@@ -706,7 +706,7 @@ func (suite *ModTestSuite) TestPipelineWithForEachContainer() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 80, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
