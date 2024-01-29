@@ -445,6 +445,12 @@ func XTestQueryMariaDB(t *testing.T) {
 	VALUES
 	(6, 'Example 3', 'Text for example 3.', '2024-05-20', '2024-05-20 18:45:00', 6.54, 987.321, 300.30, FALSE, '{"animal": "Dog", "breed": "Labrador"}', CAST('Binary data example 3' AS BINARY));
 
+	INSERT INTO DataTypeDemo
+	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
+	VALUES
+	(7, 'Example 4', 'Text for example 4.', '2024-05-20', '2024-05-20 18:45:00', 6.54, 987.321, 300.30, FALSE, '{"animal": "Dog", "breed": "Labrador"}', CAST('Binary data example 4' AS BINARY));
+
+
 	*/
 
 }

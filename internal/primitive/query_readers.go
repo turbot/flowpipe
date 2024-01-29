@@ -17,6 +17,7 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/db_common"
+	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -32,27 +33,29 @@ func NewQueryReader(dbConnectionString string) (QueryReader, error) {
 	var queryReader QueryReader
 	switch parts[0] {
 	case DriverPostgres, DriverPostgresql:
-		queryReader = &QueryReaderImpl{
-			connectionString: dbConnectionString,
-			rowReader:        &RowReaderImpl{},
+		queryReader = &PostgresQueryReader{
+			QueryReaderImpl{
+				connectionString: dbConnectionString,
+				rowReader:        &RowReaderImpl{},
+			},
 		}
 	case DriverDuckDB:
 		queryReader = &FileBasedQueryReader{
-			QueryReaderImpl: QueryReaderImpl{
+			QueryReaderImpl{
 				connectionString: dbConnectionString,
 				rowReader:        &RowReaderImpl{},
 			},
 		}
 	case DriverSQLite, DriverSQLite3:
 		queryReader = &SQLiteQueryReader{
-			QueryReaderImpl: QueryReaderImpl{
+			QueryReaderImpl{
 				connectionString: dbConnectionString,
 				rowReader:        &RowReaderImpl{},
 			},
 		}
 	case DriverMySQL:
 		queryReader = &MySQLQueryReader{
-			QueryReaderImpl: QueryReaderImpl{
+			QueryReaderImpl{
 				connectionString: dbConnectionString,
 				rowReader:        &MySQLRowReader{},
 			},
@@ -145,6 +148,17 @@ func (q *QueryReaderImpl) RowsToCty(rows []map[string]interface{}, columnTypes m
 
 func (q *QueryReaderImpl) GetConnectionString() string {
 	return q.connectionString
+}
+
+type PostgresQueryReader struct {
+	QueryReaderImpl
+}
+
+func (p *PostgresQueryReader) Initialize() error {
+	db, err := sql.Open("postgres", p.connectionString)
+	p.db = db
+
+	return err
 }
 
 type MySQLQueryReader struct {
@@ -305,7 +319,7 @@ func mysqlReadCell(columnValue any, columnType *sql.ColumnType) (result any, err
 	if columnValue != nil {
 		asStr := string(columnValue.([]byte))
 		switch columnType.DatabaseTypeName() {
-		case "INT", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "YEAR", "UNSIGNED MEDIUMINT", "UNSIGNED INT", "UNSIGNED SMALLINT", "UNSIGNED TINYINT":
+		case "INTEGER", "INT", "INT8", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "YEAR", "UNSIGNED MEDIUMINT", "UNSIGNED INT", "UNSIGNED SMALLINT", "UNSIGNED TINYINT":
 			result, err = strconv.ParseInt(asStr, 10, 64)
 		case "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE":
 			result, err = strconv.ParseFloat(asStr, 64)
@@ -315,8 +329,8 @@ func mysqlReadCell(columnValue any, columnType *sql.ColumnType) (result any, err
 			result, err = time.Parse(time.TimeOnly, asStr)
 		case "DATETIME", "TIMESTAMP":
 			result, err = time.Parse(time.DateTime, asStr)
-		case "BIT", "BLOB", "BINARY", "VARBINARY", "MEDIUMBLOB", "TINYBLOB", "JSON", "LONGBLOB":
-			result = columnValue.([]byte)
+		// case "BIT", "BLOB", "BINARY", "VARBINARY", "MEDIUMBLOB", "TINYBLOB", "JSON", "LONGBLOB":
+		// 	result = columnValue.([]byte)
 		// case "CHAR", "VARCHAR", "TEXT", "ENUM", "SET", "GEOMETRY", "NULL"
 		default:
 			result = asStr
@@ -373,6 +387,8 @@ func (r *RowReaderImpl) Read(rows *sql.Rows, columnTypeMap map[string]*sql.Colum
 					row[k] = string(decodedData)
 					continue
 				}
+
+				row[k] = string(ba)
 			}
 		}
 		results = append(results, row)
@@ -403,28 +419,41 @@ func (r *RowReaderImpl) RowToCty(row map[string]interface{}, columnTypes map[str
 		}
 
 		switch strings.ToUpper(columnType.DatabaseTypeName()) {
-		case "INTEGER", "INT", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "YEAR", "UNSIGNED MEDIUMINT", "UNSIGNED INT", "UNSIGNED SMALLINT", "UNSIGNED TINYINT", "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE":
+		case "INTEGER", "INT", "INT8", "TINYINT", "SMALLINT", "MEDIUMINT", "BIGINT", "YEAR", "UNSIGNED MEDIUMINT", "UNSIGNED INT", "UNSIGNED SMALLINT", "UNSIGNED TINYINT", "DECIMAL", "NUMERIC", "FLOAT", "DOUBLE":
 			if helpers.IsNil(v) {
 				rowCty[k] = cty.NullVal(cty.Number)
 				continue
 			}
 
-			ctyType, err := gocty.ImpliedType(v)
-			if err != nil {
-				return cty.NilVal, err
-			}
-
-			val, err := gocty.ToCtyValue(v, ctyType)
+			val, err := gocty.ToCtyValue(v, cty.Number)
 			if err != nil {
 				return cty.NilVal, err
 			}
 			rowCty[k] = val
 
-		case "BIT", "BLOB", "BINARY", "VARBINARY", "MEDIUMBLOB", "TINYBLOB", "JSON", "LONGBLOB":
+		case "JSON", "JSONB":
 			if helpers.IsNil(v) {
 				rowCty[k] = cty.NullVal(cty.EmptyObject)
 				continue
 			}
+
+			val, err := hclhelpers.ConvertInterfaceToCtyValue(v)
+			if err != nil {
+				return cty.NilVal, err
+			}
+			rowCty[k] = val
+
+		// All binary type will be converted to string
+		case "BIT", "BLOB", "BINARY", "VARBINARY", "MEDIUMBLOB", "TINYBLOB", "LONGBLOB":
+			if helpers.IsNil(v) {
+				rowCty[k] = cty.NullVal(cty.String)
+				continue
+			}
+
+			vals := fmt.Sprintf("%v", v)
+			val := cty.StringVal(vals)
+
+			rowCty[k] = val
 
 		case "BOOLEAN":
 			if helpers.IsNil(v) {
