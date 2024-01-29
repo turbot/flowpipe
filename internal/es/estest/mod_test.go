@@ -696,6 +696,34 @@ func (suite *ModTestSuite) TestPipelineWithForEach() {
 	assert.Equal("Hello: sulu", pex.PipelineOutput["val"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"])
 }
 
+func (suite *ModTestSuite) TestPipelineWithForEachContainer() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.parent_with_foreach", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+	assert.Equal(5, len(pex.PipelineOutput["vals"].(map[string]interface{})))
+
+	assert.Equal("name-0\n", pex.PipelineOutput["vals"].(map[string]interface{})["0"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["stdout"])
+	assert.Equal("name-1\n", pex.PipelineOutput["vals"].(map[string]interface{})["1"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["stdout"])
+	assert.Equal("name-2\n", pex.PipelineOutput["vals"].(map[string]interface{})["2"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["stdout"])
+	assert.Equal("name-3\n", pex.PipelineOutput["vals"].(map[string]interface{})["3"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["stdout"])
+	assert.Equal("name-4\n", pex.PipelineOutput["vals"].(map[string]interface{})["4"].(map[string]interface{})["output"].(map[string]interface{})["val"].(map[string]interface{})["stdout"])
+}
+
 func (suite *ModTestSuite) TestPipelineForEachTrippleNested() {
 	assert := assert.New(suite.T())
 	pipelineInput := modconfig.Input{}
