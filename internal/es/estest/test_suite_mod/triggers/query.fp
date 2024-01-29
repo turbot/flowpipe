@@ -3,10 +3,13 @@ trigger "query" "simple" {
 
     enabled = false
 
-    connection_string = "postgres://steampipe:xxxxx@host.docker.internal:9193/steampipe"
+    # connection_string = "postgres://steampipe:xxxxx@host.docker.internal:9193/steampipe"
+    connection_string = "mysql://root:flowpipe@tcp(localhost:3306)/flowpipe_test"
+
 
     # sql = "select concat(path, '-', cast(key_path as text)) as id, * from config.json_key_value order by id limit 10"
-    sql = "select concat(path, '-', cast(key_path as text)) as id, * from config.json_key_value order by id"
+    # sql = "select concat(path, '-', cast(key_path as text)) as id, * from config.json_key_value order by id"
+    sql =  "select * from DataTypeDemo"
 
     primary_key = "id"
 
