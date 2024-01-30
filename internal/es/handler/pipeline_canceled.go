@@ -32,6 +32,12 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
+	_, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_cancelled: Error loading pipeline execution", "error", err)
+		return err
+	}
+
 	ex, err := execution.GetExecution(evt.Event.ExecutionID)
 	if err != nil {
 		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
@@ -47,6 +53,11 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 
 	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
 	execution.CompletePipelineExecutionStepSemaphore(evt.PipelineExecutionID)
+	err = execution.ReleasePipelineSemaphore(pipelineDefn)
+	if err != nil {
+		slog.Error("pipeline_finished: Error releasing pipeline semaphore", "error", err)
+		return nil
+	}
 
 	return nil
 }

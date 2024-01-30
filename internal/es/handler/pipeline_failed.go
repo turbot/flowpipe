@@ -28,17 +28,17 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 	slog.Debug("pipeline_failed handler", "event", evt)
 
-	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
-	if err != nil {
-		slog.Error("pipeline_failed error loading pipeline execution", "error", err)
-		return err
-	}
-
 	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
 	plannerMutex.Lock()
 	defer func() {
 		plannerMutex.Unlock()
 	}()
+
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_failed error loading pipeline execution", "error", err)
+		return err
+	}
 
 	parentStepExecution, err := ex.ParentStepExecution(evt.PipelineExecutionID)
 	if err != nil {
@@ -87,6 +87,10 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
 	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
 	execution.CompletePipelineExecutionStepSemaphore(evt.PipelineExecutionID)
+	err = execution.ReleasePipelineSemaphore(pipelineDefn)
+	if err != nil {
+		slog.Error("pipeline_finished: Error releasing pipeline semaphore", "error", err)
+	}
 
 	return nil
 }

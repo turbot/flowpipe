@@ -73,7 +73,10 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
 		defer func() {
-			execution.ReleasePipelineExecutionStepSemaphore(cmd.PipelineExecutionID, stepDefn)
+			err := execution.ReleasePipelineExecutionStepSemaphore(cmd.PipelineExecutionID, stepDefn)
+			if err != nil {
+				slog.Error("Error releasing pipeline execution step semaphore", "error", err)
+			}
 		}()
 
 		stepOutput := make(map[string]interface{})
