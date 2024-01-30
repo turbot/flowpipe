@@ -53,7 +53,7 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		duration = time.Duration(durationVal) * time.Millisecond // in milliseconds
 	}
 
-	slog.Info("Sleeping for", "duration", duration)
+	slog.Debug("Sleeping for", "duration", duration)
 	start := time.Now().UTC()
 	time.Sleep(duration)
 	finish := time.Now().UTC()

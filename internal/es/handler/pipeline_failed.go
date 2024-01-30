@@ -2,8 +2,9 @@ package handler
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/utils"
 	"log/slog"
+
+	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
@@ -85,6 +86,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
 	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
+	execution.CompletePipelineExecutionStepSemaphore(evt.PipelineExecutionID)
 
 	return nil
 }
