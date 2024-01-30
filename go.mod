@@ -4,6 +4,8 @@ go 1.21.0
 
 replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
+replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go/
+
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
@@ -47,6 +49,7 @@ require (
 	github.com/turbot/flowpipe-sdk-go v0.2.1
 	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	golang.org/x/sync v0.5.0
 )
 
 require (
@@ -246,7 +249,6 @@ require (
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
-	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
