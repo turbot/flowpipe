@@ -34,8 +34,9 @@ labels: release
 
 ### flowpipe.io
 
-- [ ] Raise Changelog update to `flowpipe.io`
-- [ ] Merge Changelog update to `flowpipe.io`
+- [ ] Raise Changelog update to `flowpipe.io` get it reviewed.
+- [ ] Merge Changelog update to `flowpipe.io`. Need to get people who has permission in Vercel to do the last update: Ved, Chandra, John then anyone who has permission to the repo can merge it.
+- [ ] Run the Prod Deploy GitHub Action in `flowpipe.io` to publish the Changelog.
 
 ### Post release check & admin
 
