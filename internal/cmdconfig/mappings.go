@@ -38,10 +38,14 @@ func dirEnvMappings() map[string]cmdconfig.EnvMapping {
 // a map of known environment variables to map to viper keys - these are set as part of LoadGlobalConfig
 func envMappings() map[string]cmdconfig.EnvMapping {
 	return map[string]cmdconfig.EnvMapping{
-		app_specific.EnvConfigPath:  {ConfigVar: []string{constants.ArgConfigPath}, VarType: cmdconfig.EnvVarTypeString},
-		app_specific.EnvModLocation: {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
-		app_specific.EnvMemoryMaxMb: {ConfigVar: []string{constants.ArgMemoryMaxMb}, VarType: cmdconfig.EnvVarTypeInt},
-		app_specific.EnvTelemetry:   {ConfigVar: []string{constants.ArgTelemetry}, VarType: cmdconfig.EnvVarTypeInt},
-		app_specific.EnvUpdateCheck: {ConfigVar: []string{constants.ArgUpdateCheck}, VarType: cmdconfig.EnvVarTypeBool},
+		app_specific.EnvConfigPath:           {ConfigVar: []string{constants.ArgConfigPath}, VarType: cmdconfig.EnvVarTypeString},
+		app_specific.EnvModLocation:          {ConfigVar: []string{constants.ArgModLocation}, VarType: cmdconfig.EnvVarTypeString},
+		app_specific.EnvMemoryMaxMb:          {ConfigVar: []string{constants.ArgMemoryMaxMb}, VarType: cmdconfig.EnvVarTypeInt},
+		app_specific.EnvTelemetry:            {ConfigVar: []string{constants.ArgTelemetry}, VarType: cmdconfig.EnvVarTypeInt},
+		app_specific.EnvUpdateCheck:          {ConfigVar: []string{constants.ArgUpdateCheck}, VarType: cmdconfig.EnvVarTypeBool},
+		"FLOWPIPE_MAX_CONCURRENCY_HTTP":      {ConfigVar: []string{constants.ArgMaxConcurrencyHttp}, VarType: cmdconfig.EnvVarTypeInt},
+		"FLOWPIPE_MAX_CONCURRENCY_QUERY":     {ConfigVar: []string{constants.ArgMaxConcurrencyQuery}, VarType: cmdconfig.EnvVarTypeInt},
+		"FLOWPIPE_MAX_CONCURRENCY_CONTAINER": {ConfigVar: []string{constants.ArgMaxConcurrencyContainer}, VarType: cmdconfig.EnvVarTypeInt},
+		"FLOWPIPE_MAX_CONCURRENCY_FUNCTION":  {ConfigVar: []string{constants.ArgMaxConcurrencyFunction}, VarType: cmdconfig.EnvVarTypeInt},
 	}
 }

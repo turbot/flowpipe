@@ -61,7 +61,6 @@ func ReleasePipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn 
 
 	var sem *semaphore.Weighted
 	if !found {
-		slog.Warn("Semaphore not found for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
 		return nil
 	}
 

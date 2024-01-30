@@ -61,7 +61,6 @@ func ReleasePipelineSemaphore(pipelineDefn *modconfig.Pipeline) error {
 
 	var sem *semaphore.Weighted
 	if !found {
-		slog.Warn("Semaphore not found for pipeline", "pipeline", cacheKey)
 		return nil
 	}
 
