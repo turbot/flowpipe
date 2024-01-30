@@ -53,6 +53,7 @@ release-dry-run:
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/flowpipe \
 		-v `pwd`/../pipe-fittings:/go/src/pipe-fittings \
+		-v `pwd`/../flowpipe-sdk-go:/go/src/flowpipe-sdk-go \
 		-w /go/src/flowpipe \
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
 		--clean --skip=validate --skip=publish
@@ -71,6 +72,7 @@ release:
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-v `pwd`:/go/src/flowpipe \
 		-v `pwd`/../pipe-fittings:/go/src/pipe-fittings \
+		-v `pwd`/../flowpipe-sdk-go:/go/src/flowpipe-sdk-go \
 		-w /go/src/flowpipe \
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
 		release --clean
