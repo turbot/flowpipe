@@ -43,6 +43,7 @@ func envMappings() map[string]cmdconfig.EnvMapping {
 		app_specific.EnvMemoryMaxMb:          {ConfigVar: []string{constants.ArgMemoryMaxMb}, VarType: cmdconfig.EnvVarTypeInt},
 		app_specific.EnvTelemetry:            {ConfigVar: []string{constants.ArgTelemetry}, VarType: cmdconfig.EnvVarTypeInt},
 		app_specific.EnvUpdateCheck:          {ConfigVar: []string{constants.ArgUpdateCheck}, VarType: cmdconfig.EnvVarTypeBool},
+		app_specific.EnvLogLevel:             {ConfigVar: []string{constants.ArgLogLevel}, VarType: cmdconfig.EnvVarTypeString},
 		"FLOWPIPE_MAX_CONCURRENCY_HTTP":      {ConfigVar: []string{constants.ArgMaxConcurrencyHttp}, VarType: cmdconfig.EnvVarTypeInt},
 		"FLOWPIPE_MAX_CONCURRENCY_QUERY":     {ConfigVar: []string{constants.ArgMaxConcurrencyQuery}, VarType: cmdconfig.EnvVarTypeInt},
 		"FLOWPIPE_MAX_CONCURRENCY_CONTAINER": {ConfigVar: []string{constants.ArgMaxConcurrencyContainer}, VarType: cmdconfig.EnvVarTypeInt},

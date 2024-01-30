@@ -23,3 +23,8 @@ credential "slack" "slack_static" {
 credential "gitlab" "gitlab_static" {
     token = "glpat-ksgfhwekty389398hdgkhgkhdgk"
 }
+
+workspace "default" {
+    log_level     = "debug"
+    // max_concurrency_container = 2
+}

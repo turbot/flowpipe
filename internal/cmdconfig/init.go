@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -38,6 +39,9 @@ func initGlobalConfig() *modconfig.FlowpipeConfig {
 	}
 
 	validateConfig()
+
+	// reset log level after reading the workspace config
+	log.SetDefaultLogger()
 
 	return nil
 }

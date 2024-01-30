@@ -1,11 +1,13 @@
 package log
 
 import (
-	"github.com/turbot/pipe-fittings/sanitize"
 	"io"
 	"log/slog"
 	"os"
 	"strings"
+
+	"github.com/spf13/viper"
+	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
@@ -56,9 +58,13 @@ func SetDefaultLogger() {
 }
 
 func getLogLevel() slog.Leveler {
-	levelEnv := os.Getenv(app_specific.EnvLogLevel)
+	logLevel := os.Getenv(app_specific.EnvLogLevel)
 
-	switch strings.ToLower(levelEnv) {
+	if logLevel == "" {
+		logLevel = viper.GetString(constants.ArgLogLevel)
+	}
+
+	switch strings.ToLower(logLevel) {
 	case "trace":
 		return constants.LogLevelTrace
 	case "debug":
