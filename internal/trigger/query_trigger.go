@@ -158,7 +158,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
 
-	db, err := initializeQueryTriggerDB(tr.DatabasePath, safeTriggerName)
+	db, err := initializeDB(tr.DatabasePath)
 	if err != nil {
 		slog.Error("Error initializing db", "error", err)
 		return err

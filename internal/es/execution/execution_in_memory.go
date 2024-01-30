@@ -2,14 +2,18 @@ package execution
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/sanitize"
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/turbot/go-kit/helpers"
 
@@ -125,11 +129,57 @@ func (ex *ExecutionInMemory) SaveToFile() error {
 		}
 	}
 
+	err = ex.SaveToSQLite()
+	if err != nil {
+		return err
+	}
+
 	// This seems a convenient place to expire the execution from the cache
 	err = CompleteExecution(ex.ID)
 	if err != nil {
 		slog.Error("Error completing execution", "error", err)
 		return err
+	}
+
+	return nil
+}
+
+func (ex *ExecutionInMemory) SaveToSQLite() error {
+	modLocation := viper.GetString(constants.ArgModLocation)
+	dbPath := filepath.Join(modLocation, "flowpipe.db")
+
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
+	}
+
+	tx, err := db.Begin()
+	if err != nil {
+		return perr.InternalWithMessage("Error beginning SQLite transaction " + err.Error())
+	}
+
+	for _, event := range ex.Events {
+
+		// Marshall the payloa to JSON
+
+		payloadData, err := json.Marshal(event.Payload)
+		if err != nil {
+			slog.Error("Error marshalling JSON", "error", err)
+			return err
+		}
+
+		sanitizePayloadData := sanitize.Instance.SanitizeString(string(payloadData))
+
+		statement := `INSERT INTO event (execution_id, timestamp, event_type, payload) values (?, ?, ?, ?)`
+		_, err = db.Exec(statement, ex.ID, event.Timestamp, event.EventType, sanitizePayloadData)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return perr.InternalWithMessage("Error committing SQLite transaction " + err.Error())
 	}
 
 	return nil
