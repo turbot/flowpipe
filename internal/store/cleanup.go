@@ -61,3 +61,75 @@ func CleanupRunner() {
 
 	slog.Info("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
 }
+
+// Force cleanup run if we haven't run it more than 1 day
+func ForceCleanup() {
+	slog.Debug("Checking if cleanup must be run")
+
+	sql := `select value from metadata where name = 'last_cleanup'`
+	db, err := OpenFlowpipeDB()
+	if err != nil {
+		slog.Error("error opening flowpipe db", "error", err)
+		return
+	}
+	defer db.Close()
+
+	rows, err := db.Query(sql)
+	if err != nil {
+		slog.Error("error getting last cleanup time", "error", err)
+		return
+	}
+
+	var lastCleanupTime string
+	for rows.Next() {
+		err = rows.Scan(&lastCleanupTime)
+		if err != nil {
+			slog.Error("error getting last cleanup time", "error", err)
+			return
+		}
+	}
+	defer rows.Close()
+
+	runCleanup := false
+	if lastCleanupTime == "" {
+		runCleanup = true
+	} else {
+		lastCleanupTime, err := time.Parse("2006-01-02T15:04:05Z", lastCleanupTime)
+		if err != nil {
+			slog.Error("error parsing last cleanup time", "error", err)
+			runCleanup = true
+		}
+
+		// force run cleanup if we haven't run cleanup for 1 day
+		if time.Now().UTC().Sub(lastCleanupTime) > 24*time.Hour {
+			runCleanup = true
+		}
+	}
+
+	if !runCleanup {
+		slog.Debug("Skipping force cleanup")
+		return
+	}
+
+	slog.Debug("Running force cleanup")
+
+	CleanupRunner()
+	currentTime := time.Now().UTC()
+	currentTimeStringFormat := currentTime.Format("2006-01-02T15:04:05Z")
+
+	if lastCleanupTime != "" {
+		sql = `update metadata set value = ?, updated_at = ? where name = 'last_cleanup'`
+		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
+		if err != nil {
+			slog.Error("error updating last cleanup time", "error", err)
+			return
+		}
+	} else {
+		sql = `insert into metadata (name, value, created_at) values ('last_cleanup', ?, ?)`
+		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
+		if err != nil {
+			slog.Error("error inserting last cleanup time", "error", err)
+			return
+		}
+	}
+}

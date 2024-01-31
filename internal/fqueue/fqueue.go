@@ -7,6 +7,16 @@ import (
 
 type FunctionCall func() error
 
+// FunctionQueue is a queue of function calls (without parameter) that only the head and tail will be executed.
+//
+// For example: we are calling the same function 5 times in rapid sequence: f1, f2, f3, f4, f5.
+//
+// f1 will be executed, f2, f3, f4 are discarded and f5 will be executed after f1 has been completed. All 5 callers will be notified after f5 has been
+// completed.
+//
+// This is a specific use case that we use to build Docker images. If there are multiple goroutines that are trying to build the same image, we only want to build just one image. While
+// building the underlying Dockerfile might have changed, so we need to build one last time for the final request (f5). f2, f3, f4 are discarded as the Dockerfile has changed and those request
+// to build is no longer relevant.
 type FunctionQueue struct {
 	Name             string
 	CallbackChannels []chan error

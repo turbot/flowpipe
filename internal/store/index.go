@@ -63,6 +63,29 @@ func InitializeFlowpipeDB() error {
 		return perr.ExecutionErrorWithMessage("error creating query_trigger_captured_row index")
 	}
 
+	createTableSQL = `
+	create table if not exists metadata (
+		id integer primary key autoincrement,
+		name string,
+		created_at datetime,
+		updated_at datetime,
+		value text
+	);
+	`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		slog.Error("error creating metadata table", "error", err)
+		return perr.InternalWithMessage("error creating metadata table")
+	}
+
+	createIndexSQL = `create unique index if not exists idx_metadata_name on metadata (name);`
+	_, err = db.Exec(createIndexSQL)
+	if err != nil {
+		slog.Error("error creating metadata index", "error", err)
+		return perr.InternalWithMessage("error creating metadata index")
+	}
+
 	return nil
 }
 

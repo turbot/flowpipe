@@ -196,6 +196,9 @@ func (m *Manager) initializeModDirectory() error {
 		return err
 	}
 
+	// Force cleanup if it hasn't run for 1 day
+	store.ForceCleanup()
+
 	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
 
 	return nil

@@ -40,7 +40,7 @@ func copyNewFlowpipeDbCleanFile(cleanSource string) error {
 func TestLoadExecutionFromDB(t *testing.T) {
 	assert := assert.New(t)
 
-	err := copyNewFlowpipeDbCleanFile("flowpipe_clean.db")
+	err := copyNewFlowpipeDbCleanFile("./clean_test_files/flowpipe_clean.db")
 	if err != nil {
 		assert.FailNow(err.Error())
 	}

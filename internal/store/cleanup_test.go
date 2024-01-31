@@ -11,7 +11,7 @@ func TestCleanupDB(t *testing.T) {
 
 	assert := assert.New(t)
 
-	err := copyNewFlowpipeDbCleanFile("flowpipe_clean_2.db")
+	err := copyNewFlowpipeDbCleanFile("./clean_test_files/flowpipe_clean_2.db")
 	if err != nil {
 		assert.FailNow(err.Error())
 	}
