@@ -4,12 +4,14 @@ import (
 	"context"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-co-op/gocron"
 	"github.com/turbot/flowpipe/internal/schedule"
 	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -168,7 +170,6 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 
 	triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
 
-	// try cron expression first
 	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(triggerRunner.Run)
 	if err != nil {
 		cronExpression, err := schedule.IntervalToCronExpression(t.FullName, scheduleString)
@@ -201,5 +202,31 @@ func (s *SchedulerService) Start() error {
 	}
 
 	s.cronScheduler.StartAsync()
+	return nil
+}
+
+func (s SchedulerService) ScheduleCoreServices() error {
+
+	currentTime := time.Now()
+
+	// Add 1 minute to the current time
+	oneMinuteLater := currentTime.Add(time.Minute * 2)
+
+	minute := oneMinuteLater.Minute()
+	scheduleString := strconv.Itoa(minute) + " * * * *"
+
+	tags := []string{
+		"core-services",
+		"flowpipe-db-cleanup",
+	}
+
+	slog.Info("Scheduling flowpipe db cleanup", "schedule", scheduleString, "tags", tags)
+
+	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(store.CleanupRunner)
+	if err != nil {
+		slog.Error("Error scheduling flowpipe db cleanup", "error", err)
+		return perr.InternalWithMessage("error scheduling flowpipe db cleanup")
+	}
+
 	return nil
 }

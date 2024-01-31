@@ -412,6 +412,11 @@ func (m *Manager) startSchedulerService() error {
 		return err
 	}
 
+	err := s.ScheduleCoreServices()
+	if err != nil {
+		return err
+	}
+
 	m.schedulerService = s
 	return nil
 }

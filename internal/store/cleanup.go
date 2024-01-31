@@ -45,3 +45,19 @@ func CleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 	slog.Debug("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
 	return int(rowsAffected), nil
 }
+
+func CleanupRunner() {
+
+	currentTime := time.Now().UTC()
+
+	// TODO: configure this
+	offset := -1 * time.Hour
+
+	rowsAffected, err := CleanupFlowpipeDB(currentTime, offset)
+	if err != nil {
+		slog.Error("error cleaning up flowpipe db", "error", err)
+		return
+	}
+
+	slog.Info("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
+}
