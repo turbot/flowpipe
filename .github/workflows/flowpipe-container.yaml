@@ -16,6 +16,8 @@ env:
   GH_WRITE_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
   # Sets the repository owner.
   REPOSITORY_OWNER: ${{ github.repository_owner }}
+  # Sets the image description.
+  IMAGE_DESCRIPTION: 'Flowpipe is an advanced DevOps engine that automates complex workflows through code-driven steps.'
 
 # Defines the build and release job.
 jobs:
@@ -23,6 +25,10 @@ jobs:
     name: Build and Release
     # The type of runner that the job will run on.
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platforms: [linux/amd64]
+        # platforms: [linux/amd64, linux/arm64]
     steps:
 
       # Checks out the Flowpipe repository code.
@@ -61,12 +67,13 @@ jobs:
           # The Docker build context.
           context: flowpipe/
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platforms }}
           build-args: |
             TARGETVERSION=${{ env.FLOWPIPE_VERSION }}
           tags: |
             ghcr.io/${{ env.REPOSITORY_OWNER }}/flowpipe:${{ steps.generate_docker_tag.outputs.docker_tag }}
             ghcr.io/${{ env.REPOSITORY_OWNER }}/flowpipe:latest
+          outputs: type=image,name=flowpipe,annotation-index.org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
 
       # Outputs the image digest after the build.
       - name: Image digest
