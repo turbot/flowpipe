@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"log/slog"
@@ -18,6 +17,7 @@ import (
 	"github.com/turbot/pipe-fittings/sanitize"
 
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/store"
 
 	"github.com/turbot/pipe-fittings/schema"
 
@@ -179,12 +179,6 @@ func (m *Manager) initializeModDirectory() error {
 		return err
 	}
 
-	eventStoreDir := filepaths.EventStoreDir()
-	err = ensureDir(eventStoreDir)
-	if err != nil {
-		return err
-	}
-
 	internalDir := filepaths.ModInternalDir()
 	err = ensureDir(internalDir)
 	if err != nil {
@@ -197,63 +191,12 @@ func (m *Manager) initializeModDirectory() error {
 		return err
 	}
 
-	err = initializeFlowpipeDB()
+	err = store.InitializeFlowpipeDB()
 	if err != nil {
 		return err
 	}
 
 	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
-
-	return nil
-}
-
-func initializeFlowpipeDB() error {
-	modLocation := viper.GetString(constants.ArgModLocation)
-	dbPath := filepath.Join(modLocation, "flowpipe.db")
-
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-
-	createTableSQL := `
-	create table if not exists event (
-		event_id integer primary key autoincrement,
-		execution_id string,
-		timestamp datetime,
-		event_type text,
-		payload text
-	);
-	`
-
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		slog.Error("error creating event table", "error", err)
-		return perr.InternalWithMessage("error creating event table")
-	}
-
-	crateIndexSQL := `create index if not exists idx_event on event (execution_id);`
-	_, err = db.Exec(crateIndexSQL)
-	if err != nil {
-		slog.Error("error creating event index", "error", err)
-		return perr.InternalWithMessage("error creating event index")
-	}
-
-	createTableSQL = `create table if not exists query_trigger_captured_row (trigger_name text, primary_key text, row_hash text, created_at text, updated_at text, primary key (trigger_name, primary_key));`
-
-	slog.Debug("Creating table", "sql", createTableSQL)
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		slog.Error("error creating query_trigger_captured_row table", "error", err)
-		return perr.InternalWithMessage("error creating query_trigger_captured_row table")
-	}
-
-	crateIndexSQL = `create index if not exists idx_data on query_trigger_captured_row (trigger_name, primary_key);`
-	_, err = db.Exec(crateIndexSQL)
-	if err != nil {
-		slog.Error("error creating query_trigger_captured_row index", "error", err)
-		return perr.ExecutionErrorWithMessage("error creating query_trigger_captured_row index")
-	}
 
 	return nil
 }

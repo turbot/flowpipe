@@ -5,17 +5,14 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/flowpipe/internal/service/api/common"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -84,18 +81,11 @@ func ListProcesses() (*types.ListProcessResponse, error) {
 
 	}
 
-	// Read the log directory to list out all the process that have been executed
-	eventStoreDir := filepaths.EventStoreDir()
-	processLogFiles, err := os.ReadDir(eventStoreDir)
-	if err != nil {
-		return nil, err
-	}
-
 	// Extract the execution IDs from the log file names
-	var executionIDs []string
-	for _, f := range processLogFiles {
-		execID := strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))
-		executionIDs = append(executionIDs, execID)
+	executionIDs, err := store.ListExecutionIDs()
+	if err != nil {
+		slog.Error("Error listing execution IDs", "error", err)
+		return nil, perr.InternalWithMessage("Error listing execution IDs")
 	}
 
 	// Get the log entries using the execution ID and extract the pipeline name
@@ -106,9 +96,14 @@ func ListProcesses() (*types.ListProcessResponse, error) {
 			ExecutionID: execID,
 		}
 
-		ex, err := execution.NewExecution(context.Background(), execution.WithEvent(evt))
+		// TODO .. we need to skip if execution is for a different mod, but how do we know?
+		ex, err := execution.NewExecution(context.Background())
 		if err != nil {
-			// Skip if the execution is for a different mod
+			continue
+		}
+
+		err = ex.LoadProcessDB(evt)
+		if err != nil {
 			continue
 		}
 

@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -235,36 +237,39 @@ func TestTriggerQuery(t *testing.T) {
 
 	assert := assert.New(t)
 
-	outputPath := "./test_trigger_query.db"
-	// Check if the directory exists
-	_, err := os.Stat(outputPath)
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
 	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
+		err = os.Remove(sourceDbFilename)
 		if err != nil {
-			assert.Fail("Error removing test directory", err)
+			assert.Fail("Error removing test db", err)
 			return
 		}
 	}
-
-	flowpipeDb := "./flowpipe.db"
-	// Check if the directory exists
-	_, err = os.Stat(flowpipeDb)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(flowpipeDb)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	db, err := initializeDB(outputPath)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
 	}
 	defer db.Close()
+
+	// delete flowpipe.db
+	flowpipeDbFilename := filepaths.FlowpipeDBFileName()
+
+	_, err = os.Stat(flowpipeDbFilename)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.Remove(flowpipeDbFilename)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = store.InitializeFlowpipeDB()
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
 
 	err = createTestTableA(db, "test_one")
 	if err != nil {
@@ -373,11 +378,6 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
-	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
-
-	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
 	receiveChannel := make(chan error)
 	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
@@ -724,36 +724,40 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	assert := assert.New(t)
 
-	outputPath := "./test_trigger_query.db"
-	// Check if the directory exists
-	_, err := os.Stat(outputPath)
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
 	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
+		err = os.Remove(sourceDbFilename)
 		if err != nil {
-			assert.Fail("Error removing test directory", err)
+			assert.Fail("Error removing test db", err)
 			return
 		}
 	}
 
-	flowpipeDb := "./flowpipe.db"
-	// Check if the directory exists
-	_, err = os.Stat(flowpipeDb)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(flowpipeDb)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	db, err := initializeDB(outputPath)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
 	}
 	defer db.Close()
+
+	// delete flowpipe.db
+	flowpipeDbFilename := filepaths.FlowpipeDBFileName()
+
+	_, err = os.Stat(flowpipeDbFilename)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.Remove(flowpipeDbFilename)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = store.InitializeFlowpipeDB()
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
 
 	err = createTestTableA(db, "test_one")
 	if err != nil {
@@ -861,9 +865,6 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	}
 
 	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
-	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
@@ -1088,36 +1089,40 @@ func TestTriggerQueryB(t *testing.T) {
 
 	assert := assert.New(t)
 
-	outputPath := "./test_trigger_query_b.db"
-	// Check if the directory exists
-	_, err := os.Stat(outputPath)
+	sourceDbFilename := "./test_trigger_query_b.db"
+	_, err := os.Stat(sourceDbFilename)
 	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
+		err = os.Remove(sourceDbFilename)
 		if err != nil {
-			assert.Fail("Error removing test directory", err)
+			assert.Fail("Error removing test db", err)
 			return
 		}
 	}
 
-	flowpipeDb := "./flowpipe.db"
-	// Check if the directory exists
-	_, err = os.Stat(flowpipeDb)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(flowpipeDb)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	db, err := initializeDB(outputPath)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
 	}
 	defer db.Close()
+
+	// delete flowpipe.db
+	flowpipeDbFilename := filepaths.FlowpipeDBFileName()
+
+	_, err = os.Stat(flowpipeDbFilename)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.Remove(flowpipeDbFilename)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = store.InitializeFlowpipeDB()
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
 
 	err = createTestTableB(db, "test_one")
 	if err != nil {
@@ -1236,9 +1241,6 @@ func TestTriggerQueryB(t *testing.T) {
 	}
 
 	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
-	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
@@ -1407,36 +1409,39 @@ func TestTriggerQueryBCustomCapture(t *testing.T) {
 
 	assert := assert.New(t)
 
-	outputPath := "./test_trigger_query_b.db"
-	// Check if the directory exists
-	_, err := os.Stat(outputPath)
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
 	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
+		err = os.Remove(sourceDbFilename)
 		if err != nil {
-			assert.Fail("Error removing test directory", err)
+			assert.Fail("Error removing test db", err)
 			return
 		}
 	}
-
-	flowpipeDb := "./flowpipe.db"
-	// Check if the directory exists
-	_, err = os.Stat(flowpipeDb)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(flowpipeDb)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	db, err := initializeDB(outputPath)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
 	}
 	defer db.Close()
+
+	// delete flowpipe.db
+	flowpipeDbFilename := filepaths.FlowpipeDBFileName()
+
+	_, err = os.Stat(flowpipeDbFilename)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.Remove(flowpipeDbFilename)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = store.InitializeFlowpipeDB()
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
 
 	err = createTestTableB(db, "test_one")
 	if err != nil {
@@ -1546,9 +1551,6 @@ func TestTriggerQueryBCustomCapture(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
 
-	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
-	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
-
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
 	receiveChannel := make(chan error)
@@ -1567,36 +1569,40 @@ func TestTriggerQueryWithNull(t *testing.T) {
 
 	assert := assert.New(t)
 
-	outputPath := "./test_trigger_query.db"
-	// Check if the directory exists
-	_, err := os.Stat(outputPath)
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
 	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
+		err = os.Remove(sourceDbFilename)
 		if err != nil {
-			assert.Fail("Error removing test directory", err)
+			assert.Fail("Error removing test db", err)
 			return
 		}
 	}
 
-	flowpipeDb := "./flowpipe.db"
-	// Check if the directory exists
-	_, err = os.Stat(flowpipeDb)
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.RemoveAll(flowpipeDb)
-		if err != nil {
-			assert.Fail("Error removing test directory", err)
-			return
-		}
-	}
-
-	db, err := initializeDB(outputPath)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
 	}
 	defer db.Close()
+
+	// delete flowpipe.db
+	flowpipeDbFilename := filepaths.FlowpipeDBFileName()
+
+	_, err = os.Stat(flowpipeDbFilename)
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.Remove(flowpipeDbFilename)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = store.InitializeFlowpipeDB()
+	if err != nil {
+		assert.Fail("Error initializing db", err)
+		return
+	}
 
 	err = createTestTableA(db, "test_one")
 	if err != nil {
@@ -1704,9 +1710,6 @@ func TestTriggerQueryWithNull(t *testing.T) {
 	}
 
 	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	triggerRunnerQuery := triggerRunner.(*TriggerRunnerQuery)
-	triggerRunnerQuery.DatabasePath = "./flowpipe.db"
 
 	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 

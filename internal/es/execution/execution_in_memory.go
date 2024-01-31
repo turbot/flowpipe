@@ -2,17 +2,13 @@ package execution
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/turbot/go-kit/helpers"
@@ -23,6 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/store"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
@@ -145,13 +142,11 @@ func (ex *ExecutionInMemory) SaveToFile() error {
 }
 
 func (ex *ExecutionInMemory) SaveToSQLite() error {
-	modLocation := viper.GetString(constants.ArgModLocation)
-	dbPath := filepath.Join(modLocation, "flowpipe.db")
-
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := store.OpenFlowpipeDB()
 	if err != nil {
 		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
 	}
+	defer db.Close()
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -170,7 +165,7 @@ func (ex *ExecutionInMemory) SaveToSQLite() error {
 
 		sanitizePayloadData := sanitize.Instance.SanitizeString(string(payloadData))
 
-		statement := `INSERT INTO event (execution_id, timestamp, event_type, payload) values (?, ?, ?, ?)`
+		statement := `INSERT INTO event (execution_id, created_at, type, data) values (?, ?, ?, ?)`
 		_, err = db.Exec(statement, ex.ID, event.Timestamp, event.EventType, sanitizePayloadData)
 		if err != nil {
 			return err
@@ -516,25 +511,6 @@ func (ex *ExecutionInMemory) ProcessEvents() error {
 	}
 	ex.LastProcessedEventIndex = len(ex.Events)
 
-	return nil
-}
-
-// LoadFromFile loads an execution from a JSON file.
-func (ex *ExecutionInMemory) LoadJSON(fileName string) error {
-	jsonFile, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	// defer the closing of our jsonFile so that we can parse it later on
-	defer jsonFile.Close()
-	byteValue, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(byteValue, &ex)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

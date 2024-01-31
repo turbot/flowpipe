@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
@@ -28,7 +29,6 @@ import (
 
 type TriggerRunnerQuery struct {
 	TriggerRunnerBase
-	DatabasePath string
 }
 
 type queryTriggerMetadata struct {
@@ -158,9 +158,9 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 
 	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
 
-	db, err := initializeDB(tr.DatabasePath)
+	db, err := store.OpenFlowpipeDB()
 	if err != nil {
-		slog.Error("Error initializing db", "error", err)
+		slog.Error("Error opening Flowpipe db", "error", err)
 		return err
 	}
 	defer db.Close()
