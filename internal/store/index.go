@@ -33,8 +33,15 @@ func InitializeFlowpipeDB() error {
 		return perr.InternalWithMessage("error creating event table")
 	}
 
-	crateIndexSQL := `create index if not exists idx_execution_id on event (execution_id);`
-	_, err = db.Exec(crateIndexSQL)
+	createIndexSQL := `create index if not exists idx_event_execution_id on event (execution_id);`
+	_, err = db.Exec(createIndexSQL)
+	if err != nil {
+		slog.Error("error creating event index", "error", err)
+		return perr.InternalWithMessage("error creating event index")
+	}
+
+	createIndexSQL = `create index if not exists idx_event_created_at on event (created_at);`
+	_, err = db.Exec(createIndexSQL)
 	if err != nil {
 		slog.Error("error creating event index", "error", err)
 		return perr.InternalWithMessage("error creating event index")
@@ -49,8 +56,8 @@ func InitializeFlowpipeDB() error {
 		return perr.InternalWithMessage("error creating query_trigger_captured_row table")
 	}
 
-	crateIndexSQL = `create index if not exists idx_data on query_trigger_captured_row (trigger_name, primary_key);`
-	_, err = db.Exec(crateIndexSQL)
+	createIndexSQL = `create index if not exists idx_query_trigger_captured_row_trigger_name_primary_key on query_trigger_captured_row (trigger_name, primary_key);`
+	_, err = db.Exec(createIndexSQL)
 	if err != nil {
 		slog.Error("error creating query_trigger_captured_row index", "error", err)
 		return perr.ExecutionErrorWithMessage("error creating query_trigger_captured_row index")
