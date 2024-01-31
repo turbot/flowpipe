@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -36,7 +37,13 @@ type JSONPayload struct {
 	ExecutionID         string `json:"execution_id"`
 }
 
-func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType, executionID, pipelineExecutionID, stepExecutionID string) {
+type ParsedSlackResponse struct {
+	Prompt   string
+	UserName string
+	Value    any
+}
+
+func (api *APIService) runPipeline(c *gin.Context, inputType primitive.IntegrationType, executionID, pipelineExecutionID, stepExecutionID string) {
 	ex, err := execution.NewExecution(api.ctx)
 	if err != nil {
 		slog.Error("error creating execution", "error", err)
@@ -70,7 +77,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.InputType
 		return
 	}
 
-	if c.Request.Body != nil && inputType == primitive.InputTypeSlack {
+	if c.Request.Body != nil && inputType == primitive.IntegrationTypeSlack {
 		var prompt, userName string
 		var err error
 		bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -267,7 +274,7 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		// return
 	}
 
-	api.runPipeline(c, primitive.InputTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+	api.runPipeline(c, primitive.IntegrationTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
 }
 
 func (api *APIService) runSlackInputPost(c *gin.Context) {
@@ -277,38 +284,116 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 		return
 	}
 
+	// TODO: Figure out if required, removed validation to make testing easier
+	// inputName := inputUri.Input
+	// inputHash := inputUri.Hash
+	//
+	// salt, ok := cache.GetCache().Get("salt")
+	// if !ok {
+	// 	slog.Error("salt not found")
+	// 	common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+	// 	return
+	// }
+	//
+	// hashString := util.CalculateHash(inputName, salt.(string))
+	//
+	// if hashString != inputHash {
+	// 	slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
+	// 	// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
+	// 	// return
+	// }
+
 	inputQuery := types.InputRequestQuery{}
 	if err := c.ShouldBindQuery(&inputQuery); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
-
 	executionMode := "asynchronous"
 	if inputQuery.ExecutionMode != nil {
 		executionMode = *inputQuery.ExecutionMode
 	}
-
 	slog.Info("executionMode", "executionMode", executionMode)
 
-	inputName := inputUri.Input
-	inputHash := inputUri.Hash
-
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		slog.Error("salt not found")
-		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		common.AbortWithError(c, err)
 		return
 	}
 
-	hashString := util.CalculateHash(inputName, salt.(string))
+	decodedBody, err := url.QueryUnescape(string(bodyBytes))
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+	decodedBody = decodedBody[8:] // strip non-json prefix
 
-	if hashString != inputHash {
-		slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
-		// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
-		// return
+	var jsonBody map[string]any
+	err = json.Unmarshal([]byte(decodedBody), &jsonBody)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
-	api.runPipeline(c, primitive.InputTypeSlack, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+	payload, err := decodePayload(jsonBody["callback_id"].(string))
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	slackResponse, err := parseSlackData(jsonBody)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	// respond to slack
+	c.String(http.StatusOK, fmt.Sprintf("%s <@%s> has selected `%v`", slackResponse.Prompt, slackResponse.UserName, slackResponse.Value))
+
+	// restart the pipeline execution
+	var stepOutput *modconfig.Output
+	out := modconfig.Output{
+		Data: map[string]any{
+			"value": slackResponse.Value,
+		},
+	}
+	stepOutput = &out
+	ex, err := execution.GetExecution(payload.ExecutionID)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+	evt := &event.Event{ExecutionID: payload.ExecutionID, CreatedAt: time.Now()}
+
+	pipelineExecution := ex.PipelineExecutions[payload.PipelineExecutionID]
+	if pipelineExecution == nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", payload.PipelineExecutionID)))
+		return
+	}
+
+	stepExecution := pipelineExecution.StepExecutions[payload.StepExecutionID]
+	if stepExecution == nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", payload.StepExecutionID)))
+		return
+	}
+
+	stepFinishedEvent, err := event.NewStepFinished()
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	stepFinishedEvent.Event = evt
+	stepFinishedEvent.PipelineExecutionID = payload.PipelineExecutionID
+	stepFinishedEvent.StepExecutionID = payload.StepExecutionID
+	stepFinishedEvent.StepForEach = stepExecution.StepForEach
+	stepFinishedEvent.StepLoop = stepExecution.StepLoop
+	stepFinishedEvent.StepRetry = stepExecution.StepRetry
+	stepFinishedEvent.StepOutput = map[string]any{}
+	stepFinishedEvent.Output = stepOutput
+	err = api.EsService.Raise(stepFinishedEvent)
+	if err != nil {
+		common.AbortWithError(c, err)
+	}
 }
 
 // Custom function to render HTML with values
@@ -326,4 +411,65 @@ func renderHTMLWithValues(c *gin.Context, templateContent string, data interface
 		c.String(http.StatusInternalServerError, "Failed to execute template")
 		return
 	}
+}
+
+func decodePayload(input string) (JSONPayload, error) {
+	b64decoded, err := base64.StdEncoding.DecodeString(input)
+	if err != nil {
+		return JSONPayload{}, err
+	}
+	var out JSONPayload
+	err = json.Unmarshal(b64decoded, &out)
+	if err != nil {
+		return JSONPayload{}, err
+	}
+
+	return out, nil
+}
+
+func parseSlackData(input map[string]any) (ParsedSlackResponse, error) {
+	var out ParsedSlackResponse
+
+	// prompt
+	if oMsg, ok := input["original_message"].(map[string]any); ok {
+		if attachments, ok := oMsg["attachments"].([]any); ok {
+			for _, attachment := range attachments {
+				out.Prompt = attachment.(map[string]any)["text"].(string)
+				break
+			}
+		}
+	}
+
+	// username
+	if user, ok := input["user"].(map[string]any); ok {
+		out.UserName = user["name"].(string) // TODO: establish if this should be name or id
+	}
+
+	// value
+	var values []string
+	for _, a := range input["actions"].([]any) {
+		action := a.(map[string]any)
+		actionType := action["type"].(string)
+
+		switch actionType {
+		case "button":
+			values = append(values, action["value"].(string))
+		case "select":
+			selectedOptions := action["selected_options"].([]any)
+			for _, selectedOption := range selectedOptions {
+				values = append(values, selectedOption.(map[string]any)["value"].(string))
+			}
+		}
+	}
+
+	switch len(values) {
+	case 0:
+		out.Value = ""
+	case 1:
+		out.Value = values[0]
+	default:
+		out.Value = values
+	}
+
+	return out, nil
 }

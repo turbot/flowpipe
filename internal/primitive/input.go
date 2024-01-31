@@ -5,11 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/slack-go/slack"
+	"github.com/turbot/go-kit/helpers"
 	"regexp"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/slack-go/slack"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
@@ -18,11 +19,11 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-type InputType string
+type IntegrationType string
 
 const (
-	InputTypeSlack InputType = "slack"
-	InputTypeEmail InputType = "email"
+	IntegrationTypeSlack IntegrationType = "slack"
+	IntegrationTypeEmail IntegrationType = "email"
 )
 
 type Input struct {
@@ -36,124 +37,193 @@ type InputIntegration interface {
 	ReceiveMessage() (*modconfig.Output, error)
 }
 
-type InputIntegrationSlack struct {
-	InputIntegrationBase
-}
-
 type InputIntegrationBase struct {
 	ExecutionID         string
 	PipelineExecutionID string
 	StepExecutionID     string
 }
 
-func (ip *InputIntegrationSlack) PostMessage(input modconfig.Input) error {
-	// Set the slack user token provided in the input config
-	userToken := input[schema.AttributeTypeToken].(string)
-	api := slack.New(userToken)
-
-	// Set the slack user token provided in the input config
-	channelID := input[schema.AttributeTypeChannel].(string)
-
-	// Encode the callback_id to pass to the interactive element
-	payload := map[string]interface{}{
-		"pipeline_execution_id": ip.PipelineExecutionID,
-		"step_execution_id":     ip.StepExecutionID,
-		"execution_id":          ip.ExecutionID,
+func NewInputIntegrationBase(input *Input) InputIntegrationBase {
+	return InputIntegrationBase{
+		ExecutionID:         input.ExecutionID,
+		PipelineExecutionID: input.PipelineExecutionID,
+		StepExecutionID:     input.StepExecutionID,
 	}
-	unmarshaledAdditionalInfo, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	encodedText := base64.StdEncoding.EncodeToString(unmarshaledAdditionalInfo)
-
-	// Check if the user has already made a selection
-	userHasMadeSelection := false
-
-	var attachment slack.Attachment
-
-	slackType := input[schema.AttributeTypeSlackType].(string)
-	prompt := input[schema.AttributeTypePrompt].(string)
-
-	// Get the options
-	var options []string
-	if _, ok := input[schema.AttributeTypeOptions].([]string); ok {
-		options = input[schema.AttributeTypeOptions].([]string)
-	}
-	if _, ok := input[schema.AttributeTypeOptions].([]interface{}); ok {
-		for _, v := range input[schema.AttributeTypeOptions].([]interface{}) {
-			options = append(options, v.(string))
-		}
-	}
-
-	// Check for the prompt
-	if slackType == "button" {
-		attachment = slack.Attachment{
-			Text:       prompt,
-			Color:      "#3AA3E3",
-			CallbackID: encodedText,
-		}
-
-		var actions []slack.AttachmentAction
-		for _, opt := range options {
-			actions = append(actions, slack.AttachmentAction{
-				Name:  opt,
-				Text:  opt,
-				Type:  "button",
-				Value: opt,
-			})
-		}
-
-		if len(actions) > 0 {
-			attachment.Actions = actions
-		}
-	} else if slackType == "select" {
-		attachment = slack.Attachment{
-			Text:       prompt,
-			Color:      "#3AA3E3",
-			CallbackID: encodedText,
-		}
-
-		var actions []slack.AttachmentAction
-		var actionOptions []slack.AttachmentActionOption
-		for _, opt := range options {
-			actionOptions = append(actionOptions, slack.AttachmentActionOption{
-				Text:  opt,
-				Value: opt,
-			})
-		}
-
-		if len(actionOptions) > 0 {
-			actions = []slack.AttachmentAction{
-				{
-					Name:    "Choose an option",
-					Text:    "Choose an option",
-					Type:    "select",
-					Options: actionOptions,
-				},
-			}
-			attachment.Actions = actions
-		}
-	}
-
-	// Remove the interactive element if the user has made a selection
-	if userHasMadeSelection {
-		attachment.Actions = nil
-	}
-
-	_, _, err = api.PostMessage(channelID,
-		slack.MsgOptionAttachments(attachment),
-		slack.MsgOptionAsUser(true))
-
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 type JSONPayload struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 	ExecutionID         string `json:"execution_id"`
+}
+
+type InputIntegrationResponseOption struct {
+	Label    *string
+	Value    *string
+	Selected *bool
+}
+
+type InputIntegrationSlack struct {
+	InputIntegrationBase
+	Token         *string
+	SigningSecret *string
+	WebhookUrl    *string
+	Channel       *string
+}
+
+func NewInputIntegrationSlack(base InputIntegrationBase) InputIntegrationSlack {
+	return InputIntegrationSlack{
+		InputIntegrationBase: base,
+	}
+}
+
+// func (ip *InputIntegrationSlack) PostMessage(input modconfig.Input) error {
+// 	// Set the slack user token provided in the input config
+// 	userToken := input[schema.AttributeTypeToken].(string)
+// 	api := slack.New(userToken)
+//
+// 	// Set the slack user token provided in the input config
+// 	channelID := input[schema.AttributeTypeChannel].(string)
+//
+// 	// Encode the callback_id to pass to the interactive element
+// 	payload := map[string]interface{}{
+// 		"pipeline_execution_id": ip.PipelineExecutionID,
+// 		"step_execution_id":     ip.StepExecutionID,
+// 		"execution_id":          ip.ExecutionID,
+// 	}
+// 	unmarshaledAdditionalInfo, err := json.Marshal(payload)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	encodedText := base64.StdEncoding.EncodeToString(unmarshaledAdditionalInfo)
+//
+// 	// Check if the user has already made a selection
+// 	userHasMadeSelection := false
+//
+// 	var attachment slack.Attachment
+//
+// 	slackType := input[schema.AttributeTypeType].(string)
+// 	prompt := input[schema.AttributeTypePrompt].(string)
+//
+// 	// Get the options
+// 	var options []string
+// 	if _, ok := input[schema.AttributeTypeOptions].([]string); ok {
+// 		options = input[schema.AttributeTypeOptions].([]string)
+// 	}
+// 	if _, ok := input[schema.AttributeTypeOptions].([]interface{}); ok {
+// 		for _, v := range input[schema.AttributeTypeOptions].([]interface{}) {
+// 			options = append(options, v.(string))
+// 		}
+// 	}
+//
+// 	// Check for the prompt
+// 	if slackType == "button" {
+// 		attachment = slack.Attachment{
+// 			Text:       prompt,
+// 			Color:      "#3AA3E3",
+// 			CallbackID: encodedText,
+// 		}
+//
+// 		var actions []slack.AttachmentAction
+// 		for _, opt := range options {
+// 			actions = append(actions, slack.AttachmentAction{
+// 				Name:  opt,
+// 				Text:  opt,
+// 				Type:  "button",
+// 				Value: opt,
+// 			})
+// 		}
+//
+// 		if len(actions) > 0 {
+// 			attachment.Actions = actions
+// 		}
+// 	} else if slackType == "select" {
+// 		attachment = slack.Attachment{
+// 			Text:       prompt,
+// 			Color:      "#3AA3E3",
+// 			CallbackID: encodedText,
+// 		}
+//
+// 		var actions []slack.AttachmentAction
+// 		var actionOptions []slack.AttachmentActionOption
+// 		for _, opt := range options {
+// 			actionOptions = append(actionOptions, slack.AttachmentActionOption{
+// 				Text:  opt,
+// 				Value: opt,
+// 			})
+// 		}
+//
+// 		if len(actionOptions) > 0 {
+// 			actions = []slack.AttachmentAction{
+// 				{
+// 					Name:    "Choose an option",
+// 					Text:    "Choose an option",
+// 					Type:    "select",
+// 					Options: actionOptions,
+// 				},
+// 			}
+// 			attachment.Actions = actions
+// 		}
+// 	}
+//
+// 	// Remove the interactive element if the user has made a selection
+// 	if userHasMadeSelection {
+// 		attachment.Actions = nil
+// 	}
+//
+// 	_, _, err = api.PostMessage(channelID,
+// 		slack.MsgOptionAttachments(attachment),
+// 		slack.MsgOptionAsUser(true))
+//
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
+
+func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, options []InputIntegrationResponseOption) error {
+	// payload for callback
+	payload := map[string]any{
+		"execution_id":          ip.ExecutionID,
+		"pipeline_execution_id": ip.PipelineExecutionID,
+		"step_execution_id":     ip.StepExecutionID,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
+
+	// attachment
+	att := slack.Attachment{
+		Text:       prompt,
+		Color:      "#3AA3E3",
+		CallbackID: encodedPayload,
+	}
+	var actions []slack.AttachmentAction
+	switch inputType {
+	case "button":
+		for _, opt := range options {
+			action := slack.AttachmentAction{
+				Name:  *opt.Value,
+				Text:  *opt.Label,
+				Type:  "button",
+				Value: *opt.Value,
+			}
+			actions = append(actions, action)
+		}
+		att.Actions = actions
+	default:
+		return perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
+	}
+
+	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
+		api := slack.New(*ip.Token)
+		_, _, err = api.PostMessage(*ip.Channel, slack.MsgOptionAttachments(att), slack.MsgOptionAsUser(true))
+		return err
+	} else {
+		return perr.InternalWithMessage("not yet implemented")
+	}
 }
 
 func (*InputIntegrationSlack) ReceiveMessage(ctx context.Context, requestBody []byte) (*modconfig.Output, error) {
@@ -205,7 +275,7 @@ type InputIntegrationEmail struct {
 	InputIntegrationBase
 }
 
-func (inputEmail *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i modconfig.Input) error {
+func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i modconfig.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
@@ -343,14 +413,14 @@ func (inputEmail *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx conte
 	return nil
 }
 
-func (i *InputIntegrationEmail) PostMessage(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 
-	input["executionID"] = i.ExecutionID
-	input["pipelineExecutionID"] = i.PipelineExecutionID
-	input["stepExecutionID"] = i.StepExecutionID
+	input["executionID"] = ip.ExecutionID
+	input["pipelineExecutionID"] = ip.PipelineExecutionID
+	input["stepExecutionID"] = ip.StepExecutionID
 
 	// Validate the inputs
-	// if err := i.ValidateInputIntegrationEmail(ctx, input); err != nil {
+	// if err := ip.ValidateInputIntegrationEmail(ctx, input); err != nil {
 	// 	return nil, err
 	// }
 
@@ -374,66 +444,73 @@ func (*InputIntegrationEmail) ReceiveMessage(c *gin.Context) (*modconfig.Output,
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	if i[schema.AttributeTypeType] == nil {
-		return perr.BadRequestWithMessage("Slack input must define a type")
+		return perr.BadRequestWithMessage("Input must define a type")
 	}
 
 	if _, ok := i[schema.AttributeTypeType].(string); !ok {
-		return perr.BadRequestWithMessage("Slack input type must be a string")
+		return perr.BadRequestWithMessage("Input type must be a string")
 	}
-	inputType := i[schema.AttributeTypeType].(string)
 
-	switch inputType {
-	case string(InputTypeSlack):
-		// Validate token
-		if i[schema.AttributeTypeToken] == nil {
-			return perr.BadRequestWithMessage("Slack input must define a token")
-		}
-		if _, ok := i[schema.AttributeTypeToken].(string); !ok {
-			return perr.BadRequestWithMessage("Slack input token must be a string")
-		}
-
-		// Validate channel
-		if i[schema.AttributeTypeChannel] == nil {
-			return perr.BadRequestWithMessage("Slack input must define a channel")
-		}
-		if _, ok := i[schema.AttributeTypeChannel].(string); !ok {
-			return perr.BadRequestWithMessage("Slack input channel must be a string")
-		}
-
-		// Validate the prompt
-		if i[schema.AttributeTypePrompt] == nil {
-			return perr.BadRequestWithMessage("Slack input must define a prompt")
-		}
-		if _, ok := i[schema.AttributeTypePrompt].(string); !ok {
-			return perr.BadRequestWithMessage("Slack input prompt must be a string")
-		}
-
-		// Validate the slack type
-		if i[schema.AttributeTypeSlackType] == nil {
-			return perr.BadRequestWithMessage("Slack input must define a slack type")
-		}
-		if _, ok := i[schema.AttributeTypeSlackType].(string); !ok {
-			return perr.BadRequestWithMessage("Slack input slack type must be a string")
-		}
-
-		// Validate the options
-		var options []string
-		if i[schema.AttributeTypeOptions] == nil {
-			return perr.BadRequestWithMessage("Slack input options must define options")
-		}
-		if _, ok := i[schema.AttributeTypeOptions].([]string); ok {
-			options = i[schema.AttributeTypeOptions].([]string)
-		}
-		if _, ok := i[schema.AttributeTypeOptions].([]interface{}); ok {
-			for _, v := range i[schema.AttributeTypeOptions].([]interface{}) {
-				options = append(options, v.(string))
-			}
-		}
-		if len(options) == 0 {
-			return perr.BadRequestWithMessage("Slack input options must have at least one option")
-		}
-	case string(InputTypeEmail):
+	if i[schema.AttributeTypeNotifies] == nil {
+		return perr.BadRequestWithMessage("Input must define at least one notification")
 	}
+
+	// TODO: validate type is one of button, text, select, multiselect, combo, multicombo
+	// TODO: other validations
+	// inputType := i[schema.AttributeTypeType].(string)
+	//
+	// switch inputType {
+	// case string(IntegrationTypeSlack):
+	// 	// Validate token
+	// 	if i[schema.AttributeTypeToken] == nil {
+	// 		return perr.BadRequestWithMessage("Slack input must define a token")
+	// 	}
+	// 	if _, ok := i[schema.AttributeTypeToken].(string); !ok {
+	// 		return perr.BadRequestWithMessage("Slack input token must be a string")
+	// 	}
+	//
+	// 	// Validate channel
+	// 	if i[schema.AttributeTypeChannel] == nil {
+	// 		return perr.BadRequestWithMessage("Slack input must define a channel")
+	// 	}
+	// 	if _, ok := i[schema.AttributeTypeChannel].(string); !ok {
+	// 		return perr.BadRequestWithMessage("Slack input channel must be a string")
+	// 	}
+	//
+	// 	// Validate the prompt
+	// 	if i[schema.AttributeTypePrompt] == nil {
+	// 		return perr.BadRequestWithMessage("Slack input must define a prompt")
+	// 	}
+	// 	if _, ok := i[schema.AttributeTypePrompt].(string); !ok {
+	// 		return perr.BadRequestWithMessage("Slack input prompt must be a string")
+	// 	}
+	//
+	// 	// Validate the slack type
+	// 	if i[schema.AttributeTypeSlackType] == nil {
+	// 		return perr.BadRequestWithMessage("Slack input must define a slack type")
+	// 	}
+	// 	if _, ok := i[schema.AttributeTypeSlackType].(string); !ok {
+	// 		return perr.BadRequestWithMessage("Slack input slack type must be a string")
+	// 	}
+	//
+	// 	// Validate the options
+	// 	var options []string
+	// 	if i[schema.AttributeTypeOptions] == nil {
+	// 		return perr.BadRequestWithMessage("Slack input options must define options")
+	// 	}
+	// 	if _, ok := i[schema.AttributeTypeOptions].([]string); ok {
+	// 		options = i[schema.AttributeTypeOptions].([]string)
+	// 	}
+	// 	if _, ok := i[schema.AttributeTypeOptions].([]interface{}); ok {
+	// 		for _, v := range i[schema.AttributeTypeOptions].([]interface{}) {
+	// 			options = append(options, v.(string))
+	// 		}
+	// 	}
+	// 	if len(options) == 0 {
+	// 		return perr.BadRequestWithMessage("Slack input options must have at least one option")
+	// 	}
+	// case string(IntegrationTypeEmail):
+	// }
 
 	return nil
 }
@@ -443,36 +520,74 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		return nil, err
 	}
 
-	// This is where the actual work is done to setup the approval stuff in slack
-	inputType := input["type"].(string)
-
-	switch inputType {
-	case string(InputTypeSlack):
-		slack := InputIntegrationSlack{
-			InputIntegrationBase: InputIntegrationBase{
-				ExecutionID:         ip.ExecutionID,
-				PipelineExecutionID: ip.PipelineExecutionID,
-				StepExecutionID:     ip.StepExecutionID,
-			},
-		}
-		err := slack.PostMessage(input)
-		return &modconfig.Output{}, err
-
-	case string(InputTypeEmail):
-		email := InputIntegrationEmail{
-			InputIntegrationBase: InputIntegrationBase{
-				ExecutionID:         ip.ExecutionID,
-				PipelineExecutionID: ip.PipelineExecutionID,
-				StepExecutionID:     ip.StepExecutionID,
-			},
-		}
-		output, err := email.PostMessage(ctx, input)
-		return output, err
+	output := &modconfig.Output{}
+	base := NewInputIntegrationBase(ip)
+	var prompt, inputType string
+	var resOptions []InputIntegrationResponseOption
+	if it, ok := input[schema.AttributeTypeType].(string); ok {
+		inputType = it
 	}
-	return nil, nil
+	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
+		prompt = p
+	}
+
+	for _, o := range input[schema.AttributeTypeOptions].([]any) {
+		opt := o.(map[string]any)
+		option := InputIntegrationResponseOption{}
+		if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
+			option.Label = &l
+		}
+		if v, ok := opt[schema.AttributeTypeValue].(string); ok {
+			option.Value = &v
+			if helpers.IsNil(option.Label) {
+				option.Label = &v
+			}
+		}
+		if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
+			option.Selected = &s
+		}
+		resOptions = append(resOptions, option)
+	}
+
+	for _, n := range input[schema.AttributeTypeNotifies].([]any) {
+		notification := n.(map[string]any)
+		integration := notification["integration"].(map[string]any)
+		integrationType := IntegrationType(integration["type"].(string))
+		switch integrationType {
+		case IntegrationTypeSlack:
+			s := NewInputIntegrationSlack(base)
+			if channel, ok := notification[schema.AttributeTypeChannel].(string); ok {
+				s.Channel = &channel
+			}
+			if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
+				s.Token = &tkn
+			}
+			if ss, ok := integration[schema.AttributeTypeSigningSecret].(string); ok {
+				s.SigningSecret = &ss
+			}
+			if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
+				s.WebhookUrl = &wu
+			}
+			err := s.PostMessage(inputType, prompt, resOptions)
+			if err != nil {
+				return nil, err
+			}
+		case IntegrationTypeEmail:
+			email := InputIntegrationEmail{base}
+			o, err := email.PostMessage(ctx, input)
+			if err != nil {
+				return nil, err
+			}
+			output = o
+		default:
+			return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
+		}
+	}
+
+	return output, nil
 }
 
-func (ip *Input) ProcessOutput(c *gin.Context, inputType InputType, requestBody []byte) (*modconfig.Output, error) {
+func (ip *Input) ProcessOutput(c *gin.Context, inputType IntegrationType, requestBody []byte) (*modconfig.Output, error) {
 
 	// TODO: error handling
 
@@ -480,13 +595,13 @@ func (ip *Input) ProcessOutput(c *gin.Context, inputType InputType, requestBody 
 	var err error
 
 	switch inputType {
-	case InputTypeSlack:
+	case IntegrationTypeSlack:
 		slack := InputIntegrationSlack{}
 		output, err = slack.ReceiveMessage(c, requestBody)
 		if err != nil {
 			return nil, err
 		}
-	case InputTypeEmail:
+	case IntegrationTypeEmail:
 		email := InputIntegrationEmail{}
 		output, err = email.ReceiveMessage(c)
 		if err != nil {
