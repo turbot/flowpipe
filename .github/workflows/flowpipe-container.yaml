@@ -27,8 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        platforms: [linux/amd64]
-        # platforms: [linux/amd64, linux/arm64]
+        platforms: [linux/amd64, linux/arm64]
     steps:
 
       # Checks out the Flowpipe repository code.
