@@ -8,34 +8,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLoadExecutionFromDB(t *testing.T) {
-	assert := assert.New(t)
-
+func copyNewFlowpipeDbCleanFile(cleanSource string) error {
 	// Open the source file
-	sourceFile, err := os.Open("flowpipe_clean.db")
+	sourceFile, err := os.Open(cleanSource)
 	if err != nil {
-		assert.Fail("error opening source file", "error", err)
-		return
+		return err
 	}
 	defer sourceFile.Close()
 
 	// Create the destination file, this will overwrite if file already exists
 	destFile, err := os.Create("flowpipe.db")
 	if err != nil {
-		assert.Fail("error creating destination file", "error", err)
+		return err
 	}
 	defer destFile.Close()
 
 	// Copy the contents
 	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
-		assert.Fail("error copying file", "error", err)
+		return err
 	}
 
 	// Force to flush the file system's in-memory copy of recently written data to disk.
 	err = destFile.Sync()
 	if err != nil {
-		assert.Fail("error syncing file", "error", err)
+		return err
+	}
+	return nil
+}
+
+func TestLoadExecutionFromDB(t *testing.T) {
+	assert := assert.New(t)
+
+	err := copyNewFlowpipeDbCleanFile("flowpipe_clean.db")
+	if err != nil {
+		assert.FailNow(err.Error())
 	}
 
 	excutionIDs, err := ListExecutionIDs()
