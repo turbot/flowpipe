@@ -20,7 +20,7 @@ import (
 // 	}
 
 // 	input := modconfig.Input(map[string]interface{}{
-// 		"type": InputTypeSlack,
+// 		"type": IntegrationTypeSlack,
 // 	})
 
 // 	_, err := hr.Run(ctx, input)
@@ -54,7 +54,7 @@ func XXXTestIntegrationInputSendEmail(t *testing.T) {
 	input := modconfig.Input(map[string]interface{}{
 		// schema.AttributeTypeSenderName: "Karan",
 
-		schema.AttributeTypeType:       InputTypeEmail,
+		schema.AttributeTypeType:       IntegrationTypeEmail,
 		schema.AttributeTypeUsername:   "karan@turbot.com",
 		schema.AttributeTypePassword:   "xxxxxx",
 		schema.AttributeTypeSmtpServer: "smtp.gmail.com",
