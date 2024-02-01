@@ -44,7 +44,7 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		return err
 	}
 
-	err = ex.SaveToFile()
+	err = ex.Save()
 	if err != nil {
 		slog.Error("pipeline_finished: Error saving execution", "error", err)
 		// Should we raise pipeline fail here?

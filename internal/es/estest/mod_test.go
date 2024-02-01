@@ -2227,7 +2227,7 @@ func (suite *ModTestSuite) TestCredentialReference() {
 		return
 	}
 
-	err = ex.LoadProcess(pipelineCmd.Event)
+	err = ex.LoadProcessDB(pipelineCmd.Event)
 	if err != nil {
 		assert.Fail("Error loading process", err)
 		return
@@ -2282,7 +2282,7 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemoryAndFile() {
 		return
 	}
 
-	err = ex.LoadProcess(pipelineCmd.Event)
+	err = ex.LoadProcessDB(pipelineCmd.Event)
 	if err != nil {
 		assert.Fail("Error loading process", err)
 		return
@@ -2369,7 +2369,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 
-	err = ex.LoadProcess(pipelineCmd.Event)
+	err = ex.LoadProcessDB(pipelineCmd.Event)
 	if err != nil {
 		assert.Fail("Error loading process", err)
 		return
@@ -2407,7 +2407,7 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 		return
 	}
 
-	err = ex.LoadProcess(pipelineCmd.Event)
+	err = ex.LoadProcessDB(pipelineCmd.Event)
 	if err != nil {
 		assert.Fail("Error loading process", err)
 		return

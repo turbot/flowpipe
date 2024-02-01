@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/store"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -87,46 +85,8 @@ func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*Exe
 	return ex, defn, nil
 }
 
-func (ex *ExecutionInMemory) SaveToFile() error {
-	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
-
-	stat, _ := os.Stat(eventStoreFilePath)
-	if stat != nil {
-		// Keeping this simple, we don't want to overwrite the file. This may change in the future when we can resume execution.
-		// Right now if Flowpipe stops/crashes there's no way to resume the execution because it's no longer in memory and not
-		// persisted
-		return perr.BadRequestWithMessage("execution file already exists. execution can only be serialised once at termination")
-	}
-
-	// Append the JSON data to a file
-	file, err := os.OpenFile(eventStoreFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return perr.InternalWithMessage("Error opening file " + err.Error())
-	}
-	defer file.Close()
-
-	for _, event := range ex.Events {
-		// Marshal the struct to JSON
-		eventData, err := json.Marshal(event) // No indent, single line
-		if err != nil {
-			slog.Error("Error marshalling JSON", "error", err)
-			return err
-		}
-
-		sanitizedEventData := sanitize.Instance.SanitizeString(string(eventData))
-
-		_, err = file.Write([]byte(sanitizedEventData))
-		if err != nil {
-			return perr.InternalWithMessage("Error writing to file " + err.Error())
-		}
-
-		_, err = file.WriteString("\n")
-		if err != nil {
-			return perr.InternalWithMessage("Error writing to file " + err.Error())
-		}
-	}
-
-	err = ex.SaveToSQLite()
+func (ex *ExecutionInMemory) Save() error {
+	err := ex.saveToSQLite()
 	if err != nil {
 		return err
 	}
@@ -141,7 +101,7 @@ func (ex *ExecutionInMemory) SaveToFile() error {
 	return nil
 }
 
-func (ex *ExecutionInMemory) SaveToSQLite() error {
+func (ex *ExecutionInMemory) saveToSQLite() error {
 	db, err := store.OpenFlowpipeDB()
 	if err != nil {
 		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
