@@ -187,11 +187,6 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 }
 
 func (s *SchedulerService) Start() error {
-
-	if len(s.Triggers) == 0 {
-		return nil
-	}
-
 	s.cronScheduler = gocron.NewScheduler(time.UTC)
 
 	for _, t := range s.Triggers {
