@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"strings"
@@ -141,7 +142,11 @@ func deleteOldJsonlFiles(dir string, olderThan time.Duration) {
 	// Read files in directory
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return
+		}
 		slog.Error("error reading directory", "error", err, "dir", dir)
+		return
 	}
 
 	// Current time
