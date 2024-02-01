@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"html/template"
 	"io"
 	"log/slog"
@@ -243,6 +245,13 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		return
 	}
 
+	// TODO: Figure out if required - comment out for testing until decided
+	err := validateInputHash(inputUri)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
 	inputQuery := types.InputRequestQuery{}
 	if err := c.ShouldBindQuery(&inputQuery); err != nil {
 		common.AbortWithError(c, err)
@@ -256,24 +265,6 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 
 	slog.Info("executionMode", "executionMode", executionMode)
 
-	inputName := inputUri.Input
-	inputHash := inputUri.Hash
-
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		slog.Error("salt not found")
-		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
-		return
-	}
-
-	hashString := util.CalculateHash(inputName, salt.(string))
-
-	if hashString != inputHash {
-		slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
-		// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
-		// return
-	}
-
 	api.runPipeline(c, primitive.IntegrationTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
 }
 
@@ -285,22 +276,10 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 
 	// TODO: Figure out if required, removed validation to make testing easier
-	// inputName := inputUri.Input
-	// inputHash := inputUri.Hash
-	//
-	// salt, ok := cache.GetCache().Get("salt")
-	// if !ok {
-	// 	slog.Error("salt not found")
-	// 	common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+	// err := validateInputHash(inputUri)
+	// if err != nil {
+	// 	common.AbortWithError(c, err)
 	// 	return
-	// }
-	//
-	// hashString := util.CalculateHash(inputName, salt.(string))
-	//
-	// if hashString != inputHash {
-	// 	slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
-	// 	// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
-	// 	// return
 	// }
 
 	inputQuery := types.InputRequestQuery{}
@@ -334,7 +313,14 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 		return
 	}
 
-	payload, err := decodePayload(jsonBody["callback_id"].(string))
+	var encodedPayload string
+	if try, ok := jsonBody["callback_id"].(string); ok {
+		encodedPayload = try
+	} else if !helpers.IsNil(jsonBody["actions"]) {
+		encodedPayload = jsonBody["actions"].([]any)[0].(map[string]any)["action_id"].(string)
+	}
+
+	payload, err := decodePayload(encodedPayload)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -396,6 +382,25 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 }
 
+func validateInputHash(inputUri types.InputRequestUri) error {
+	inputName := inputUri.Input
+	inputHash := inputUri.Hash
+
+	salt, ok := cache.GetCache().Get("salt")
+	if !ok {
+		slog.Error("salt not found")
+		return perr.InternalWithMessage("salt not found")
+	}
+
+	hashString := util.CalculateHash(inputName, salt.(string))
+	if hashString != inputHash {
+		slog.Error("invalid hash", "hash", inputHash, "input_name", inputName, "expected", hashString)
+		return perr.UnauthorizedWithMessage("invalid hash for " + inputName)
+	}
+
+	return nil
+}
+
 // Custom function to render HTML with values
 func renderHTMLWithValues(c *gin.Context, templateContent string, data interface{}) {
 	tmpl, err := template.New("html").Parse(templateContent)
@@ -452,9 +457,9 @@ func parseSlackData(input map[string]any) (ParsedSlackResponse, error) {
 		actionType := action["type"].(string)
 
 		switch actionType {
-		case "button":
+		case constants.InputTypeButton:
 			values = append(values, action["value"].(string))
-		case "select":
+		case constants.InputTypeSelect, "multi_static_select":
 			selectedOptions := action["selected_options"].([]any)
 			for _, selectedOption := range selectedOptions {
 				values = append(values, selectedOption.(map[string]any)["value"].(string))

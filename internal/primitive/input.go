@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"regexp"
 	"strconv"
 
@@ -97,8 +98,11 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 		CallbackID: encodedPayload,
 	}
 	var actions []slack.AttachmentAction
+	var actionOptions []slack.AttachmentActionOption
+	var msg slack.MsgOption
+
 	switch inputType {
-	case "button":
+	case constants.InputTypeButton:
 		for _, opt := range options {
 			action := slack.AttachmentAction{
 				Name:  *opt.Value,
@@ -109,13 +113,46 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 			actions = append(actions, action)
 		}
 		att.Actions = actions
+		msg = slack.MsgOptionAttachments(att)
+	case constants.InputTypeSelect:
+		for _, opt := range options {
+			o := slack.AttachmentActionOption{
+				Text:  *opt.Label,
+				Value: *opt.Value,
+			}
+			actionOptions = append(actionOptions, o)
+		}
+		action := slack.AttachmentAction{
+			Name:    "select",
+			Text:    "Select response",
+			Type:    "select",
+			Options: actionOptions,
+		}
+		actions = append(actions, action)
+		att.Actions = actions
+		msg = slack.MsgOptionAttachments(att)
+	case constants.InputTypeMultiSelect:
+		blockOptions := make([]*slack.OptionBlockObject, len(options))
+		for i, opt := range options {
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject("plain_text", *opt.Label, false, false), nil)
+		}
+		ms := slack.NewOptionsMultiSelectBlockElement(
+			slack.MultiOptTypeStatic,
+			slack.NewTextBlockObject("plain_text", "Select options", false, false),
+			encodedPayload,
+			blockOptions...)
+		block := slack.NewSectionBlock(
+			slack.NewTextBlockObject("plain_text", prompt, false, false),
+			nil,
+			slack.NewAccessory(ms))
+		msg = slack.MsgOptionBlocks(block)
 	default:
 		return perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
 	}
 
 	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
 		api := slack.New(*ip.Token)
-		_, _, err = api.PostMessage(*ip.Channel, slack.MsgOptionAttachments(att), slack.MsgOptionAsUser(true))
+		_, _, err = api.PostMessage(*ip.Channel, msg, slack.MsgOptionAsUser(true))
 		return err
 	} else {
 		return perr.InternalWithMessage("not yet implemented")
