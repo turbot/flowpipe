@@ -2,10 +2,10 @@ package container
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -552,9 +552,12 @@ func (c *Container) buildImage() error {
 			c.GetImageTag(),
 			c.GetImageLatestTag(),
 		},
-		PullParent:     true,
-		SuppressOutput: true,
-		Remove:         true,
+		// TODO - only do this occasionally, e.g. once a day, for faster
+		// performance during development.
+		PullParent: true,
+
+		SuppressOutput: false, // We want to see the output of the build process.
+		Remove:         true,  // Remove the build container after the build is complete.
 		Labels: map[string]string{
 			"io.flowpipe.type":                 "container",
 			"io.flowpipe.name":                 c.Name,
@@ -570,12 +573,38 @@ func (c *Container) buildImage() error {
 	}
 	defer resp.Body.Close()
 
-	_, err = io.Copy(os.Stderr, resp.Body)
-	if err != nil {
-		return err
+	decoder := json.NewDecoder(resp.Body)
+
+	var buildOutput []interface{}
+
+	for {
+		var message struct {
+			Stream      string `json:"stream"`
+			Error       string `json:"error"`
+			ErrorDetail struct {
+				Message string `json:"message"`
+			} `json:"errorDetail"`
+		}
+
+		if err := decoder.Decode(&message); err != nil {
+			if err == io.EOF {
+				break
+			}
+			// Handle other errors (e.g., JSON decoding errors)
+			slog.Error("Error decoding JSON from docker build response", "error", err)
+			return perr.InternalWithMessage("Error decoding JSON from docker build response: " + err.Error())
+		}
+
+		buildOutput = append(buildOutput, message)
+		if message.Error != "" {
+			// Handle the build error
+			slog.Error("Error building image", "error", message.Error, "buildOutput", buildOutput)
+			return perr.InternalWithMessage("Error building image: " + message.Error)
+		}
+
 	}
 
-	slog.Info("Docker image built successfully.", "container", c.Name)
+	slog.Info("Docker image built successfully.", "container", c.Name, "output", buildOutput)
 
 	return nil
 }

@@ -3,6 +3,7 @@ package function
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
@@ -23,7 +24,6 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/runtime"
-	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -566,24 +566,38 @@ func (fn *Function) buildImage() error {
 		fn.SetParentImageLastPulledAt()
 	}
 
-	// TODO: without doing this the first run will always fail, not 100% sure why I think it has something to do with the Docker need some "time"
-	// to make the image available, need to investigate
+	decoder := json.NewDecoder(resp.Body)
 
-	// Output the build progress
-	logLevel := os.Getenv(app_specific.EnvLogLevel)
-	if strings.ToLower(logLevel) == "debug" || strings.ToLower(logLevel) == "trace" {
-		_, err = io.Copy(os.Stderr, resp.Body)
-		if err != nil {
-			return err
+	var buildOutput []interface{}
+
+	for {
+		var message struct {
+			Stream      string `json:"stream"`
+			Error       string `json:"error"`
+			ErrorDetail struct {
+				Message string `json:"message"`
+			} `json:"errorDetail"`
 		}
-	} else {
-		_, err = io.Copy(io.Discard, resp.Body)
-		if err != nil {
-			return err
+
+		if err := decoder.Decode(&message); err != nil {
+			if err == io.EOF {
+				break
+			}
+			// Handle other errors (e.g., JSON decoding errors)
+			slog.Error("Error decoding JSON from docker build response", "error", err)
+			return perr.InternalWithMessage("Error decoding JSON from docker build response: " + err.Error())
 		}
+
+		buildOutput = append(buildOutput, message)
+		if message.Error != "" {
+			// Handle the build error
+			slog.Error("Error building image", "error", message.Error, "buildOutput", buildOutput)
+			return perr.InternalWithMessage("Error building image: " + message.Error)
+		}
+
 	}
 
-	slog.Info("Docker image built successfully.", "functionName", fn.Name)
+	slog.Info("Docker image built successfully.", "functionName", fn.Name, "output", buildOutput)
 	return nil
 }
 
