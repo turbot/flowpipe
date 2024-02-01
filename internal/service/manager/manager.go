@@ -543,7 +543,9 @@ func (m *Manager) renderServerStartOutput() {
 	}
 	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Started", app_specific.AppVersion.String()))
 	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
-	outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "flowpipe"), m.RootMod.Name(), false))
+	if m.RootMod != nil {
+		outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "flowpipe"), m.RootMod.Name(), false))
+	}
 	outputs = append(outputs, renderServerTriggers(m.triggers)...)
 	outputs = append(outputs, types.NewServerOutput(startTime, "flowpipe", "Press Ctrl+C to exit"))
 

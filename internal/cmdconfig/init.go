@@ -1,8 +1,8 @@
 package cmdconfig
 
 import (
-	"fmt"
 	"maps"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -11,6 +11,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 )
 
 func initGlobalConfig() *modconfig.FlowpipeConfig {
@@ -55,7 +56,12 @@ func validateConfig() {
 	}
 	output := viper.GetString(constants.ArgOutput)
 	if _, ok := validOutputFormats[output]; !ok {
-		error_helpers.FailOnError(fmt.Errorf("invalid output format '%s'", output))
+		error_helpers.FailOnError(perr.BadRequestWithMessage("invalid output format " + output))
+	}
+
+	modLocation := viper.GetString(constants.ArgModLocation)
+	if _, err := os.Stat(modLocation); os.IsNotExist(err) {
+		error_helpers.FailOnError(perr.BadRequestWithMessage("invalid mod location " + modLocation))
 	}
 }
 
