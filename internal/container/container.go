@@ -434,6 +434,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 
 	// If the container exited with a non-zero exit code, return an execution error
 	if exitCode != 0 {
+		slog.Error("container run error", "image", c.Image, "container", containerResp.ID, "exitCode", exitCode)
 
 		// Get the Stderr and truncate it to 256 chars
 		stdErr := o.Stderr()

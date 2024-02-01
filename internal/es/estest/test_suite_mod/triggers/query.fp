@@ -1,7 +1,7 @@
 trigger "query" "simple" {
     schedule = "* * * * *"
 
-    enabled = true
+    enabled = false
 
     connection_string = "postgres://steampipe:@host.docker.internal:9193/steampipe"
     # connection_string = "mysql://root:flowpipe@tcp(localhost:3306)/flowpipe_test"
