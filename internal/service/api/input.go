@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"html/template"
 	"io"
 	"log/slog"
@@ -311,7 +313,14 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 		return
 	}
 
-	payload, err := decodePayload(jsonBody["callback_id"].(string))
+	var encodedPayload string
+	if try, ok := jsonBody["callback_id"].(string); ok {
+		encodedPayload = try
+	} else if !helpers.IsNil(jsonBody["actions"]) {
+		encodedPayload = jsonBody["actions"].([]any)[0].(map[string]any)["action_id"].(string)
+	}
+
+	payload, err := decodePayload(encodedPayload)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -448,9 +457,9 @@ func parseSlackData(input map[string]any) (ParsedSlackResponse, error) {
 		actionType := action["type"].(string)
 
 		switch actionType {
-		case "button":
+		case constants.InputTypeButton:
 			values = append(values, action["value"].(string))
-		case "select":
+		case constants.InputTypeSelect, "multi_static_select":
 			selectedOptions := action["selected_options"].([]any)
 			for _, selectedOption := range selectedOptions {
 				values = append(values, selectedOption.(map[string]any)["value"].(string))
