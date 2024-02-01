@@ -115,7 +115,7 @@ func (ex *ExecutionInMemory) saveToSQLite() error {
 
 	for _, event := range ex.Events {
 
-		// Marshall the payloa to JSON
+		// Marshall the payload to JSON
 
 		payloadData, err := json.Marshal(event.Payload)
 		if err != nil {

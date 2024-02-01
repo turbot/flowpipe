@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -22,16 +23,13 @@ func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 
 	timeLimit := currentTime.Add(offset)
 
-	cleanupQuery := `delete from event
-	where execution_id in (
-		select execution_id
-		from event
-		group by execution_id
-		having min(created_at) < ? and max(created_at) < ?)`
+	// TODO: how do we cleanup orphaned pipeline runs? We can filter this to just 'finished', 'cancelled' and 'failed' states
+	// but then the orphan pipeline will never be cleaned. Should we have a hard limit?
+	cleanupQuery := `delete from pipeline_run where updated_at < ?;`
 
-	timeAsString := timeLimit.Format("2006-01-02T15:04:05Z")
+	timeAsString := timeLimit.Format(util.RFC3389WithMS)
 
-	result, err := db.Exec(cleanupQuery, timeAsString, timeAsString)
+	result, err := db.Exec(cleanupQuery, timeAsString)
 	if err != nil {
 		slog.Error("error cleaning up flowpipe db", "error", err)
 		return -1, perr.InternalWithMessage("error cleaning up flowpipe db")
@@ -44,6 +42,43 @@ func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 	}
 
 	slog.Debug("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
+
+	sql := `select value from metadata where name = 'last_cleanup'`
+
+	rows, err := db.Query(sql)
+	if err != nil {
+		slog.Error("error getting last cleanup time", "error", err)
+		return -1, perr.InternalWithMessage("error getting last cleanup time")
+	}
+
+	var lastCleanupTime string
+	for rows.Next() {
+		err = rows.Scan(&lastCleanupTime)
+		if err != nil {
+			slog.Error("error getting last cleanup time", "error", err)
+			return -1, perr.InternalWithMessage("error getting last cleanup time")
+		}
+	}
+	defer rows.Close()
+
+	currentTimeStringFormat := currentTime.Format(util.RFC3389WithMS)
+
+	if lastCleanupTime != "" {
+		sql = `update metadata set value = ?, updated_at = ? where name = 'last_cleanup'`
+		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
+		if err != nil {
+			slog.Error("error updating last cleanup time", "error", err)
+			return -1, perr.InternalWithMessage("error updating last cleanup time")
+		}
+	} else {
+		sql = `insert into metadata (name, value, created_at) values ('last_cleanup', ?, ?)`
+		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
+		if err != nil {
+			slog.Error("error inserting last cleanup time", "error", err)
+			return -1, perr.InternalWithMessage("error inserting last cleanup time")
+		}
+	}
+
 	return int(rowsAffected), nil
 }
 
@@ -52,7 +87,7 @@ func CleanupRunner() {
 	currentTime := time.Now().UTC()
 
 	// TODO: configure this
-	offset := -1 * time.Hour
+	offset := -5 * time.Minute
 
 	rowsAffected, err := cleanupFlowpipeDB(currentTime, offset)
 	if err != nil {
@@ -97,7 +132,7 @@ func ForceCleanup() {
 	if lastCleanupTime == "" {
 		runCleanup = true
 	} else {
-		lastCleanupTime, err := time.Parse("2006-01-02T15:04:05Z", lastCleanupTime)
+		lastCleanupTime, err := time.Parse(util.RFC3389WithMS, lastCleanupTime)
 		if err != nil {
 			slog.Error("error parsing last cleanup time", "error", err)
 			runCleanup = true
@@ -109,6 +144,8 @@ func ForceCleanup() {
 		}
 	}
 
+	runCleanup = true
+
 	if !runCleanup {
 		slog.Debug("Skipping force cleanup")
 		return
@@ -117,24 +154,6 @@ func ForceCleanup() {
 	slog.Debug("Running force cleanup")
 
 	CleanupRunner()
-	currentTime := time.Now().UTC()
-	currentTimeStringFormat := currentTime.Format("2006-01-02T15:04:05Z")
-
-	if lastCleanupTime != "" {
-		sql = `update metadata set value = ?, updated_at = ? where name = 'last_cleanup'`
-		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
-		if err != nil {
-			slog.Error("error updating last cleanup time", "error", err)
-			return
-		}
-	} else {
-		sql = `insert into metadata (name, value, created_at) values ('last_cleanup', ?, ?)`
-		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
-		if err != nil {
-			slog.Error("error inserting last cleanup time", "error", err)
-			return
-		}
-	}
 }
 
 // This function should be removed eventually. SQLite store is out in v0.3.

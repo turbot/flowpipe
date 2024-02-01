@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -252,7 +253,7 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		for _, event := range ex.Events {
 			var ts time.Time
 			if event.Timestamp != "" {
-				ts, err = time.Parse(time.RFC3339, event.Timestamp)
+				ts, err = time.Parse(util.RFC3389WithMS, event.Timestamp)
 				if err != nil {
 					slog.Error("Error parsing timestamp", "timestamp", event.Timestamp, "error", err)
 					common.AbortWithError(c, perr.InternalWithMessage("Error parsing timestamp"))

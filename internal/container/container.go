@@ -21,6 +21,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -248,7 +249,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 			"io.flowpipe.type": "container",
 			"io.flowpipe.name": c.Name,
 			// Is this standard for containers?
-			"org.opencontainers.container.created": time.Now().Format(time.RFC3339),
+			"org.opencontainers.container.created": time.Now().Format(util.RFC3389WithMS),
 		},
 		Env:         cConfig.GetEnv(),
 		StopTimeout: &timeout,
@@ -561,7 +562,7 @@ func (c *Container) buildImage() error {
 		Labels: map[string]string{
 			"io.flowpipe.type":                 "container",
 			"io.flowpipe.name":                 c.Name,
-			"org.opencontainers.image.created": time.Now().Format(time.RFC3339),
+			"org.opencontainers.image.created": time.Now().Format(util.RFC3389WithMS),
 		},
 	}
 

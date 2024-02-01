@@ -6,6 +6,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -24,6 +25,11 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.PipelineCanceled", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineCanceled")
+	}
+
+	err := store.UpdatePipelineState(evt.Event.ExecutionID, "cancelled")
+	if err != nil {
+		slog.Error("pipeline_cancelled: Error updating pipeline state", "error", err)
 	}
 
 	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -55,7 +56,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 
 	snapshot := &Snapshot{
 		SchemaVersion: "20221222",
-		StartTime:     time.Now().UTC().Format(time.RFC3339),
+		StartTime:     time.Now().UTC().Format(util.RFC3389WithMS),
 		Layout: SnapshotLayout{
 			Name:      pe.ID,
 			PanelType: "dashboard",
@@ -318,7 +319,7 @@ func (ex *Execution) Snapshot(pipelineExecutionID string) (*Snapshot, error) {
 	executionPanel.Properties["edges"] = edgeNames
 
 	// Finalize
-	snapshot.EndTime = time.Now().UTC().Format(time.RFC3339)
+	snapshot.EndTime = time.Now().UTC().Format(util.RFC3389WithMS)
 	snapshot.Panels[pe.ID] = dashboardPanel
 	snapshot.Panels["execution_tree"] = executionPanel
 

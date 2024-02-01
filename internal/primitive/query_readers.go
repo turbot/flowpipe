@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/db_common"
@@ -474,7 +475,7 @@ func (r *RowReaderImpl) RowToCty(row map[string]interface{}, columnTypes map[str
 			}
 
 			if t, ok := v.(time.Time); ok {
-				rfc3339Time := t.Format(time.RFC3339)
+				rfc3339Time := t.Format(util.RFC3389WithMS)
 				rowCty[k] = cty.StringVal(rfc3339Time)
 				continue
 			}

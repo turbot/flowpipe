@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -27,6 +28,15 @@ func (h PipelineStarted) Handle(ctx context.Context, ei interface{}) error {
 	if !ok {
 		slog.Error("invalid event type", "expected", "*event.PipelineStarted", "actual", ei)
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelineStarted")
+	}
+
+	err := store.UpdatePipelineState(evt.Event.ExecutionID, "started")
+	if err != nil {
+		err2 := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForPipelineStartedToPipelineFail(evt, err)))
+		if err2 != nil {
+			slog.Error("error publishing event", "error", err2)
+		}
+		return nil
 	}
 
 	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)

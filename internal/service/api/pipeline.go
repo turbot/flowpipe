@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -192,7 +191,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
 		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
-		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(time.RFC3339))
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(util.RFC3389WithMS))
 	}
 
 	c.JSON(http.StatusOK, response)
