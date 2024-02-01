@@ -243,6 +243,13 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		return
 	}
 
+	// TODO: Figure out if required - comment out for testing until decided
+	err := validateInputHash(inputUri)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
 	inputQuery := types.InputRequestQuery{}
 	if err := c.ShouldBindQuery(&inputQuery); err != nil {
 		common.AbortWithError(c, err)
@@ -256,24 +263,6 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 
 	slog.Info("executionMode", "executionMode", executionMode)
 
-	inputName := inputUri.Input
-	inputHash := inputUri.Hash
-
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		slog.Error("salt not found")
-		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
-		return
-	}
-
-	hashString := util.CalculateHash(inputName, salt.(string))
-
-	if hashString != inputHash {
-		slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
-		// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
-		// return
-	}
-
 	api.runPipeline(c, primitive.IntegrationTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
 }
 
@@ -285,22 +274,10 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 
 	// TODO: Figure out if required, removed validation to make testing easier
-	// inputName := inputUri.Input
-	// inputHash := inputUri.Hash
-	//
-	// salt, ok := cache.GetCache().Get("salt")
-	// if !ok {
-	// 	slog.Error("salt not found")
-	// 	common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+	// err := validateInputHash(inputUri)
+	// if err != nil {
+	// 	common.AbortWithError(c, err)
 	// 	return
-	// }
-	//
-	// hashString := util.CalculateHash(inputName, salt.(string))
-	//
-	// if hashString != inputHash {
-	// 	slog.Warn("invalid hash, but we're ignoring it for now ... ", "hash", inputHash, "expected", hashString)
-	// 	// common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for "+inputName))
-	// 	// return
 	// }
 
 	inputQuery := types.InputRequestQuery{}
@@ -394,6 +371,25 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
+}
+
+func validateInputHash(inputUri types.InputRequestUri) error {
+	inputName := inputUri.Input
+	inputHash := inputUri.Hash
+
+	salt, ok := cache.GetCache().Get("salt")
+	if !ok {
+		slog.Error("salt not found")
+		return perr.InternalWithMessage("salt not found")
+	}
+
+	hashString := util.CalculateHash(inputName, salt.(string))
+	if hashString != inputHash {
+		slog.Error("invalid hash", "hash", inputHash, "input_name", inputName, "expected", hashString)
+		return perr.UnauthorizedWithMessage("invalid hash for " + inputName)
+	}
+
+	return nil
 }
 
 // Custom function to render HTML with values

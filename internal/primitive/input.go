@@ -97,6 +97,7 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 		CallbackID: encodedPayload,
 	}
 	var actions []slack.AttachmentAction
+	var actionOptions []slack.AttachmentActionOption
 	switch inputType {
 	case "button":
 		for _, opt := range options {
@@ -108,6 +109,22 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 			}
 			actions = append(actions, action)
 		}
+		att.Actions = actions
+	case "select":
+		for _, opt := range options {
+			o := slack.AttachmentActionOption{
+				Text:  *opt.Label,
+				Value: *opt.Value,
+			}
+			actionOptions = append(actionOptions, o)
+		}
+		action := slack.AttachmentAction{
+			Name:    "select",
+			Text:    "Select response",
+			Type:    "select",
+			Options: actionOptions,
+		}
+		actions = append(actions, action)
 		att.Actions = actions
 	default:
 		return perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
