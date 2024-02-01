@@ -1,14 +1,16 @@
 package store
 
 import (
-	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-func CleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error) {
+func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error) {
 	slog.Debug("Cleaning up flowpipe db")
 	db, err := OpenFlowpipeDB()
 	if err != nil {
@@ -18,8 +20,6 @@ func CleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 	defer db.Close()
 
 	timeLimit := currentTime.Add(offset)
-
-	fmt.Print("timeLimit: ", timeLimit, "\n")
 
 	cleanupQuery := `delete from event
 	where execution_id in (
@@ -53,13 +53,15 @@ func CleanupRunner() {
 	// TODO: configure this
 	offset := -1 * time.Hour
 
-	rowsAffected, err := CleanupFlowpipeDB(currentTime, offset)
+	rowsAffected, err := cleanupFlowpipeDB(currentTime, offset)
 	if err != nil {
 		slog.Error("error cleaning up flowpipe db", "error", err)
 		return
 	}
 
 	slog.Info("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
+
+	deleteOldJsonlFiles(filepaths.EventStoreDir(), offset)
 }
 
 // Force cleanup run if we haven't run it more than 1 day
@@ -132,4 +134,48 @@ func ForceCleanup() {
 			return
 		}
 	}
+}
+
+// This function should be removed eventually. SQLite store is out in v0.3.
+func deleteOldJsonlFiles(dir string, olderThan time.Duration) {
+	// Read files in directory
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		slog.Error("error reading directory", "error", err, "dir", dir)
+	}
+
+	// Current time
+	now := time.Now()
+
+	for _, entry := range entries {
+		// Ignore directories and non-jsonl files
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".jsonl") {
+			continue
+		}
+
+		// Get FileInfo for the file
+		info, err := entry.Info()
+		if err != nil {
+			slog.Error("error getting info for file", "error", err, "file", entry.Name())
+			continue
+		}
+
+		// Calculate the file's age
+		fileAge := now.Sub(info.ModTime())
+
+		// Check if the file is older than the specified duration
+		if fileAge > olderThan {
+			// Construct file path
+			filePath := dir + "/" + entry.Name()
+
+			// Delete the file
+			err := os.Remove(filePath)
+			if err != nil {
+				slog.Error("error deleting file", "error", err, "file", filePath)
+			} else {
+				slog.Debug("Deleted file", "file", filePath)
+			}
+		}
+	}
+
 }

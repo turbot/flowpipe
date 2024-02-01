@@ -29,7 +29,7 @@ func TestCleanupDB(t *testing.T) {
 
 	currentTime := anchorTime.Add(1 * time.Hour)
 
-	rowsAffected, err := CleanupFlowpipeDB(currentTime, offset)
+	rowsAffected, err := cleanupFlowpipeDB(currentTime, offset)
 	if err != nil {
 		assert.FailNow(err.Error())
 	}
