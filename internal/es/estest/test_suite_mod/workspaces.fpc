@@ -25,6 +25,6 @@ credential "gitlab" "gitlab_static" {
 }
 
 workspace "default" {
-    log_level     = "debug"
+    // log_level     = "info"
     // max_concurrency_container = 2
 }

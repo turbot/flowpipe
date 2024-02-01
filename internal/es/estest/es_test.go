@@ -59,14 +59,13 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	viper.GetViper().Set(constants.ArgModLocation, pipelineDirPath)
 
-	// clear the output dir before each test
-	outputPath := filepaths.EventStoreDir()
+	// delete flowpipe.db
+	flowpipeDbFilename := filepaths.FlowpipeDBFileName()
 
-	// Check if the directory exists
-	_, err = os.Stat(outputPath)
+	_, err = os.Stat(flowpipeDbFilename)
 	if !os.IsNotExist(err) {
 		// Remove the directory and its contents
-		err = os.RemoveAll(outputPath)
+		err = os.Remove(flowpipeDbFilename)
 		if err != nil {
 			panic(err)
 		}

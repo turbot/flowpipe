@@ -19,6 +19,8 @@ run-trace:
 
 clean-tmp:
 	rm -rf ./internal/es/estest/test_suite_mod/.flowpipe/store/*
+	rm -f ./internal/es/estest/test_suite_mod/flowpipe.db
+	rm -f flowpipe
 
 clean-dist:
 	rm -rf ./dist/*

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"strconv"
@@ -22,6 +21,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -478,6 +478,78 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	return results
 }
 
+func (ex *Execution) LoadProcessDB(e *event.Event) error {
+	// Attempt to aquire the execution lock if it's not given. If the execution lock is given then we assume the calling
+	// function is responsible for locking & unlocking the event load process.
+	var localLock *sync.Mutex
+	if ex.Lock == nil {
+		localLock = event.GetEventStoreMutex(e.ExecutionID)
+		localLock.Lock()
+		defer func() {
+			if localLock != nil {
+				localLock.Unlock()
+			}
+		}()
+	}
+
+	if e.ExecutionID == "" {
+		return perr.BadRequestWithMessage("event execution ID is empty")
+	}
+
+	if ex.ID == "" {
+		ex.ID = e.ExecutionID
+	}
+
+	if ex.ID != e.ExecutionID {
+		return perr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
+	}
+
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		return err
+	}
+
+	// Prepare query to select all events
+	query := `SELECT type, created_at, data FROM event where execution_id = ? order by id asc`
+	rows, err := db.Query(query, e.ExecutionID)
+	if err != nil {
+		return perr.InternalWithMessage("error querying event table")
+	}
+	defer rows.Close()
+
+	// Iterate through the result set
+	for rows.Next() {
+		var ele types.EventLogEntry
+		var payload string
+		// Scan the row into the Event struct
+		err := rows.Scan(&ele.EventType, &e.CreatedAt, &payload)
+		if err != nil {
+			slog.Error("error scanning event table", "error", err)
+			return perr.InternalWithMessage("error scanning event table")
+		}
+
+		// marshall the payload
+		err = json.Unmarshal([]byte(payload), &ele.Payload)
+		if err != nil {
+			slog.Error("error unmarshalling event payload", "error", err)
+			return perr.InternalWithMessage("error unmarshalling event payload")
+		}
+
+		err = ex.AppendEventLogEntry(ele)
+		if err != nil {
+			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", payload)
+			return err
+		}
+	}
+
+	if rows.Err() != nil {
+		slog.Error("error iterating event table", "error", rows.Err())
+		return perr.InternalWithMessage("error iterating event table")
+	}
+
+	return nil
+}
+
 // LoadProcess loads the event log file (the .jsonl file) continously and update the
 // ex.PipelineExecutions and ex.StepExecutions
 func (ex *Execution) LoadProcess(e *event.Event) error {
@@ -546,25 +618,6 @@ func (ex *Execution) LoadProcess(e *event.Event) error {
 		return err
 	}
 
-	return nil
-}
-
-// LoadFromFile loads an execution from a JSON file.
-func (ex *Execution) LoadJSON(fileName string) error {
-	jsonFile, err := os.Open(fileName)
-	if err != nil {
-		return err
-	}
-	// defer the closing of our jsonFile so that we can parse it later on
-	defer jsonFile.Close()
-	byteValue, err := io.ReadAll(jsonFile)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(byteValue, &ex)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 

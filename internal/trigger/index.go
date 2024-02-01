@@ -3,7 +3,6 @@ package trigger
 import (
 	"context"
 	"log/slog"
-	"path/filepath"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/output"
@@ -13,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
@@ -47,16 +45,12 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 			Fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
 		}
 	case *modconfig.TriggerQuery:
-		dbDir := filepaths.ModDir()
-		dbFile := filepath.Join(dbDir, "flowpipe.db")
-
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:    trigger,
 				commandBus: commandBus,
 				rootMod:    rootMod,
 				Fqueue:     fqueue.NewFunctionQueue(trigger.FullName)},
-			DatabasePath: dbFile,
 		}
 	default:
 		return nil

@@ -5,6 +5,7 @@
 _What's new?_
 
 * Maximum Concurrency control. [Documentation](https://flowpipe.io/docs/).
+* SQLite backing store instead of `.jsonl` files. [Documentation](https://flowpipe.io/docs/).
 
 _Enhancements_
 

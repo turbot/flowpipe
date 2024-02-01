@@ -3,6 +3,7 @@ package filepaths
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -27,6 +28,12 @@ func ModInternalDir() string {
 
 func ModDir() string {
 	return viper.GetString(constants.ArgModLocation)
+}
+
+func FlowpipeDBFileName() string {
+	modLocation := ModDir()
+	dbPath := filepath.Join(modLocation, "flowpipe.db")
+	return dbPath
 }
 
 func EventStoreFilePath(executionId string) string {

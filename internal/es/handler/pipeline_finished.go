@@ -103,7 +103,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		data[schema.BlockTypePipelineOutput] = evt.PipelineOutput
 	}
 
-	err = ex.SaveToFile()
+	err = ex.Save()
 	if err != nil {
 		slog.Error("pipeline_finished: Error saving execution", "error", err)
 		// Should we raise pipeline fail here?

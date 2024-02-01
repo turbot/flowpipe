@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/turbot/pipe-fittings/sanitize"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -15,7 +14,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/turbot/pipe-fittings/sanitize"
+
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/store"
 
 	"github.com/turbot/pipe-fittings/schema"
 
@@ -168,18 +170,11 @@ func ensureDir(dir string) error {
 }
 
 func (m *Manager) initializeModDirectory() error {
-
 	modLocation := viper.GetString(constants.ArgModLocation)
 	slog.Debug("Initializing mod directory", "modLocation", modLocation)
 
 	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
 	err := ensureDir(modFlowpipeDir)
-	if err != nil {
-		return err
-	}
-
-	eventStoreDir := filepaths.EventStoreDir()
-	err = ensureDir(eventStoreDir)
 	if err != nil {
 		return err
 	}
@@ -195,6 +190,14 @@ func (m *Manager) initializeModDirectory() error {
 	if err != nil {
 		return err
 	}
+
+	err = store.InitializeFlowpipeDB()
+	if err != nil {
+		return err
+	}
+
+	// Force cleanup if it hasn't run for 1 day
+	store.ForceCleanup()
 
 	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
 
@@ -409,6 +412,11 @@ func (m *Manager) startSchedulerService() error {
 	s := scheduler.NewSchedulerService(m.ctx, m.ESService, m.triggers)
 	if err := s.Start(); err != nil {
 		slog.Error("error starting scheduler service", "error", err)
+		return err
+	}
+
+	err := s.ScheduleCoreServices()
+	if err != nil {
 		return err
 	}
 
