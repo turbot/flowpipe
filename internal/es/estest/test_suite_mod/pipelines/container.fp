@@ -35,6 +35,7 @@ pipeline "simple_container_step" {
   }
 }
 
+
 pipeline "simple_container_step_with_param" {
 
   param "image" {
