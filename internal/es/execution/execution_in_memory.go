@@ -2,13 +2,12 @@ package execution
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strings"
 	"time"
-
-	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/turbot/go-kit/helpers"
 
@@ -17,12 +16,13 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/pipe-fittings/constants"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
@@ -41,7 +41,7 @@ type ExecutionInMemory struct {
 func GetExecution(executionID string) (*ExecutionInMemory, error) {
 	exCached, found := cache.GetCache().Get(executionID)
 	if !found {
-		slog.Error("Error getting execution from cache", "execution_id", executionID)
+		slog.Debug("Execution not found in cache", "execution_id", executionID)
 		return nil, perr.NotFoundWithMessage("Execution " + executionID + " not found")
 	}
 
@@ -54,7 +54,7 @@ func GetExecution(executionID string) (*ExecutionInMemory, error) {
 	return ex, nil
 }
 
-func CompleteExecution(executionID string) error {
+func completeExecution(executionID string) error {
 	ex, err := GetExecution(executionID)
 	if err != nil && !perr.IsNotFound(err) {
 		slog.Error("Error getting execution from cache", "execution_id", executionID)
@@ -85,56 +85,12 @@ func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*Exe
 	return ex, defn, nil
 }
 
-func (ex *ExecutionInMemory) Save() error {
-	err := ex.saveToSQLite()
-	if err != nil {
-		return err
-	}
-
+func (ex *ExecutionInMemory) EndExecution() error {
 	// This seems a convenient place to expire the execution from the cache
-	err = CompleteExecution(ex.ID)
+	err := completeExecution(ex.ID)
 	if err != nil {
 		slog.Error("Error completing execution", "error", err)
 		return err
-	}
-
-	return nil
-}
-
-func (ex *ExecutionInMemory) saveToSQLite() error {
-	db, err := store.OpenFlowpipeDB()
-	if err != nil {
-		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
-	}
-	defer db.Close()
-
-	tx, err := db.Begin()
-	if err != nil {
-		return perr.InternalWithMessage("Error beginning SQLite transaction " + err.Error())
-	}
-
-	for _, event := range ex.Events {
-
-		// Marshall the payload to JSON
-
-		payloadData, err := json.Marshal(event.Payload)
-		if err != nil {
-			slog.Error("Error marshalling JSON", "error", err)
-			return err
-		}
-
-		sanitizePayloadData := sanitize.Instance.SanitizeString(string(payloadData))
-
-		statement := `INSERT INTO event (execution_id, created_at, type, data) values (?, ?, ?, ?)`
-		_, err = db.Exec(statement, ex.ID, event.Timestamp, event.EventType, sanitizePayloadData)
-		if err != nil {
-			return err
-		}
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return perr.InternalWithMessage("Error committing SQLite transaction " + err.Error())
 	}
 
 	return nil
@@ -609,5 +565,27 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogEntry) e
 		// TODO: should we ignore unknown types or error out?
 	}
 
+	return nil
+}
+
+func SaveEventToSQLite(db *sql.DB, executionID string, event *event.EventLogEntry) error {
+	retentionInSecond := viper.GetInt(constants.ArgProcessRetention)
+	if retentionInSecond == 0 {
+		return nil
+	}
+
+	payloadData, err := json.Marshal(event.Payload)
+	if err != nil {
+		slog.Error("Error marshalling JSON", "error", err)
+		return err
+	}
+
+	sanitizePayloadData := sanitize.Instance.SanitizeString(string(payloadData))
+
+	statement := `INSERT INTO event (execution_id, created_at, type, data) values (?, ?, ?, ?)`
+	_, err = db.Exec(statement, executionID, event.Timestamp, event.EventType, sanitizePayloadData)
+	if err != nil {
+		return err
+	}
 	return nil
 }

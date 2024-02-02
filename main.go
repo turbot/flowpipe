@@ -10,6 +10,7 @@ import (
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
@@ -31,6 +32,7 @@ func main() {
 		}
 	}()
 
+	viper.SetDefault(constants.ArgProcessRetention, 604800) // 7 days
 	viper.SetDefault("main.version", version)
 	viper.SetDefault("main.commit", commit)
 	viper.SetDefault("main.date", date)

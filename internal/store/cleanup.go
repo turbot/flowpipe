@@ -7,8 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -86,8 +88,13 @@ func CleanupRunner() {
 
 	currentTime := time.Now().UTC()
 
-	// TODO: configure this
-	offset := -5 * time.Minute
+	retentionInSecond := viper.GetInt(constants.ArgProcessRetention)
+	if retentionInSecond == -1 {
+		slog.Debug("Skipping cleanup as retention is set to -1")
+		return
+	}
+
+	offset := time.Duration(-1*retentionInSecond) * time.Second
 
 	rowsAffected, err := cleanupFlowpipeDB(currentTime, offset)
 	if err != nil {
@@ -143,8 +150,6 @@ func ForceCleanup() {
 			runCleanup = true
 		}
 	}
-
-	runCleanup = true
 
 	if !runCleanup {
 		slog.Debug("Skipping force cleanup")

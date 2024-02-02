@@ -98,12 +98,7 @@ func ListProcesses() (*types.ListProcessResponse, error) {
 		}
 
 		// TODO .. we need to skip if execution is for a different mod, but how do we know?
-		ex, err := execution.NewExecution(context.Background())
-		if err != nil {
-			continue
-		}
-
-		err = ex.LoadProcessDB(evt)
+		ex, err := execution.NewExecution(context.Background(), execution.WithEvent(evt))
 		if err != nil {
 			continue
 		}
@@ -246,9 +241,9 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		return
 	}
 
+	// Get the one in memory first
 	ex, err := execution.GetExecution(uri.ProcessId)
 	if err == nil && ex != nil {
-
 		var items []types.ProcessEventLog
 		for _, event := range ex.Events {
 			var ts time.Time
@@ -288,9 +283,20 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		return
 	}
 
-	logEntries, err := execution.LoadEventStoreEntries(uri.ProcessId)
+	evt := &event.Event{
+		ExecutionID: uri.ProcessId,
+	}
+
+	exFile, err := execution.NewExecution(c)
 	if err != nil {
 		common.AbortWithError(c, err)
+		return
+	}
+
+	logEntries, err := exFile.LoadProcessDB(evt)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
 	var items []types.ProcessEventLog
@@ -355,12 +361,6 @@ func (api *APIService) getProcessExecution(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 
-	}
-
-	err = exFile.LoadProcess(evt)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
 	}
 
 	c.JSON(http.StatusOK, exFile)

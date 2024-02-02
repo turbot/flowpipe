@@ -2221,15 +2221,9 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 
@@ -2276,15 +2270,9 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemoryAndFile() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 
@@ -2363,15 +2351,9 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 
@@ -2401,15 +2383,9 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err = execution.NewExecution(suite.ctx)
+	ex, err = execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 

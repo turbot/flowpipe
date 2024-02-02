@@ -83,7 +83,7 @@ func (h PipelineFailed) Handle(ctx context.Context, ei interface{}) error {
 		output.RenderServerOutput(ctx, o)
 	}
 
-	err = ex.Save()
+	err = ex.EndExecution()
 	if err != nil {
 		slog.Error("pipeline_finished: Error saving execution", "error", err)
 		// Should we raise pipeline fail here?

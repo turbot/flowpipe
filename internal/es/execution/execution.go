@@ -1,13 +1,10 @@
 package execution
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
@@ -378,7 +374,8 @@ func WithID(id string) ExecutionOption {
 
 func WithEvent(e *event.Event) ExecutionOption {
 	return func(ex *Execution) error {
-		return ex.LoadProcess(e)
+		_, err := ex.LoadProcessDB(e)
+		return err
 	}
 }
 
@@ -478,7 +475,7 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	return results
 }
 
-func (ex *Execution) LoadProcessDB(e *event.Event) error {
+func (ex *Execution) LoadProcessDB(e *event.Event) ([]types.EventLogEntry, error) {
 	// Attempt to aquire the execution lock if it's not given. If the execution lock is given then we assume the calling
 	// function is responsible for locking & unlocking the event load process.
 	var localLock *sync.Mutex
@@ -493,7 +490,7 @@ func (ex *Execution) LoadProcessDB(e *event.Event) error {
 	}
 
 	if e.ExecutionID == "" {
-		return perr.BadRequestWithMessage("event execution ID is empty")
+		return nil, perr.BadRequestWithMessage("event execution ID is empty")
 	}
 
 	if ex.ID == "" {
@@ -501,124 +498,56 @@ func (ex *Execution) LoadProcessDB(e *event.Event) error {
 	}
 
 	if ex.ID != e.ExecutionID {
-		return perr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
+		return nil, perr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
 	}
 
 	db, err := store.OpenFlowpipeDB()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Prepare query to select all events
 	query := `SELECT type, created_at, data FROM event where execution_id = ? order by id asc`
 	rows, err := db.Query(query, e.ExecutionID)
 	if err != nil {
-		return perr.InternalWithMessage("error querying event table")
+		return nil, perr.InternalWithMessage("error querying event table")
 	}
 	defer rows.Close()
 
+	var events []types.EventLogEntry
 	// Iterate through the result set
 	for rows.Next() {
 		var ele types.EventLogEntry
 		var payload string
 		// Scan the row into the Event struct
-		err := rows.Scan(&ele.EventType, &e.CreatedAt, &payload)
+		err := rows.Scan(&ele.EventType, &ele.Timestamp, &payload)
 		if err != nil {
 			slog.Error("error scanning event table", "error", err)
-			return perr.InternalWithMessage("error scanning event table")
+			return nil, perr.InternalWithMessage("error scanning event table")
 		}
 
 		// marshall the payload
 		err = json.Unmarshal([]byte(payload), &ele.Payload)
 		if err != nil {
 			slog.Error("error unmarshalling event payload", "error", err)
-			return perr.InternalWithMessage("error unmarshalling event payload")
+			return nil, perr.InternalWithMessage("error unmarshalling event payload")
 		}
 
 		err = ex.AppendEventLogEntry(ele)
 		if err != nil {
 			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", payload)
-			return err
+			return nil, err
 		}
+
+		events = append(events, ele)
 	}
 
 	if rows.Err() != nil {
 		slog.Error("error iterating event table", "error", rows.Err())
-		return perr.InternalWithMessage("error iterating event table")
+		return nil, perr.InternalWithMessage("error iterating event table")
 	}
 
-	return nil
-}
-
-// LoadProcess loads the event log file (the .jsonl file) continously and update the
-// ex.PipelineExecutions and ex.StepExecutions
-func (ex *Execution) LoadProcess(e *event.Event) error {
-
-	// Attempt to aquire the execution lock if it's not given. If the execution lock is given then we assume the calling
-	// function is responsible for locking & unlocking the event load process.
-	var localLock *sync.Mutex
-	if ex.Lock == nil {
-		localLock = event.GetEventStoreMutex(e.ExecutionID)
-		localLock.Lock()
-		defer func() {
-			if localLock != nil {
-				localLock.Unlock()
-			}
-		}()
-	}
-
-	if e.ExecutionID == "" {
-		return perr.BadRequestWithMessage("event execution ID is empty")
-	}
-
-	if ex.ID == "" {
-		ex.ID = e.ExecutionID
-	}
-
-	if ex.ID != e.ExecutionID {
-		return perr.BadRequestWithMessage("event execution ID (" + e.ExecutionID + ") does not match execution ID (" + ex.ID + ")")
-	}
-
-	// Open the event log
-	eventStoreFilePath := filepaths.EventStoreFilePath(ex.ID)
-
-	f, err := os.Open(eventStoreFilePath)
-	if err != nil {
-		slog.Error("Failed to open log file", "execution", ex.ID, "error", err, "event", e)
-		return err
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Buffer(make([]byte, constants.MaxScanSize), constants.MaxScanSize)
-	for scanner.Scan() {
-
-		ba := scanner.Bytes()
-
-		// Get the run ID from the payload
-		var ele types.EventLogEntry
-		err := json.Unmarshal(ba, &ele)
-		if err != nil {
-			slog.Error("Fail to unmarshall event log entry", "execution", ex.ID, "error", err, "string", string(ba))
-			return perr.InternalWithMessageAndType(perr.ErrorCodeJsonSyntaxError, "Fail to unmarshall event log entry "+err.Error())
-		}
-
-		err = ex.AppendEventLogEntry(ele)
-		if err != nil {
-			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", string(ba))
-			return err
-		}
-
-	}
-
-	if err := scanner.Err(); err != nil {
-		if err.Error() == bufio.ErrTooLong.Error() {
-			return perr.InternalWithMessageAndType(perr.ErrorCodeInternalTokenTooLarge, "Event log entry too large. Max size is "+strconv.Itoa(constants.MaxScanSize))
-		}
-		return err
-	}
-
-	return nil
+	return events, nil
 }
 
 // Events

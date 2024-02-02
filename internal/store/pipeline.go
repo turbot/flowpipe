@@ -4,11 +4,18 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 func StartPipeline(executionID, pipelineName string) error {
+	retentionInSecond := viper.GetInt(constants.ArgProcessRetention)
+	if retentionInSecond == 0 {
+		return nil
+	}
+
 	db, err := OpenFlowpipeDB()
 	if err != nil {
 		return err
@@ -36,6 +43,11 @@ func StartPipeline(executionID, pipelineName string) error {
 }
 
 func UpdatePipelineState(executionID, newState string) error {
+	retentionInSecond := viper.GetInt(constants.ArgProcessRetention)
+	if retentionInSecond == 0 {
+		return nil
+	}
+
 	db, err := OpenFlowpipeDB()
 	if err != nil {
 		return err
