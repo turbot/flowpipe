@@ -31,6 +31,6 @@ pipeline "container_from_source" {
   }
 
   output "lines" {
-    value = step.container.container_test_1.lines[*]
+    value = step.container.container_test_1.lines
   }
 }

@@ -13,6 +13,13 @@ _Bug fixes_
 
 * `log_level` workspace setting is ignored. ([#618](https://github.com/turbot/flowpipe/issues/618))
 
+## v0.2.2 [2024-02-02]
+
+_Bug fixes_
+
+* Build error no longer suppressed in container and function steps ([#625](https://github.com/turbot/flowpipe/issues/625)).
+* Handles complex data types in step output ([#626](https://github.com/turbot/flowpipe/issues/626)).
+
 ## v0.2.1 [2024-01-29]
 
 _Bug fixes_

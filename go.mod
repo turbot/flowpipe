@@ -48,6 +48,7 @@ require (
 	github.com/sagikazarmark/slog-shim v0.1.0
 	github.com/turbot/flowpipe-sdk-go v0.2.1
 	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
+	github.com/turbot/steampipe-plugin-code v0.5.1
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.5.0
 )

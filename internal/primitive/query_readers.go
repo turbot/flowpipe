@@ -493,7 +493,8 @@ func (r *RowReaderImpl) RowToCty(row map[string]interface{}, columnTypes map[str
 				rowCty[k] = cty.NullVal(cty.String)
 				continue
 			}
-			val, err := gocty.ToCtyValue(v, cty.String)
+			stringVal := fmt.Sprintf("%v", v)
+			val, err := gocty.ToCtyValue(stringVal, cty.String)
 			if err != nil {
 				return cty.NilVal, err
 			}
