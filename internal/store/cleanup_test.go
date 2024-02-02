@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/util"
 )
 
 func TestCleanupDB(t *testing.T) {
@@ -19,8 +20,8 @@ func TestCleanupDB(t *testing.T) {
 	// offset := time.Duration(-24*30) * time.Hour
 	offset := -1 * time.Hour
 
-	layout := "2006-01-02T15:04:05Z" // This is the reference layout for ISO 8601 in Go
-	str := "2024-01-31T09:12:00Z"
+	layout := util.RFC3389WithMS
+	str := "2024-02-02T01:59:00.000Z"
 
 	anchorTime, err := time.Parse(layout, str)
 	if err != nil {
@@ -34,5 +35,5 @@ func TestCleanupDB(t *testing.T) {
 		assert.FailNow(err.Error())
 	}
 
-	assert.Equal(10, rowsAffected, "rowsAffected should be 10")
+	assert.Equal(2, rowsAffected, "rowsAffected should be 2")
 }
