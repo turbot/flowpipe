@@ -1,5 +1,12 @@
 # Flowpipe
 
+## v0.2.2 [tbd]
+
+_Bug fixes_
+
+* Silent build error in container and function step ([#625](https://github.com/turbot/flowpipe/issues/625)).
+* Incorrect data type conversion in step output resulting null entries for complex data types ([#626](https://github.com/turbot/flowpipe/issues/626)).
+
 ## v0.2.1 [2024-01-29]
 
 _Bug fixes_
