@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "The version of the Flowpipe DevContainer"
+        description: "Flowpipe DevContainer Version (do not use `v`)"
         required: true
 
 env:

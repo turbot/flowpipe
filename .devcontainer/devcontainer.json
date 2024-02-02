@@ -1,6 +1,6 @@
 {
 	"name": "flowpipe-devcontainer",
-	"image": "ghcr.io/turbot/flowpipe-devcontainer:2.0.0",
+	"image": "ghcr.io/turbot/flowpipe-devcontainer:v2.1.0",
 
 	"containerEnv": {
 		"GOPRIVATE=github.com/": "github.com/turbot/*"
