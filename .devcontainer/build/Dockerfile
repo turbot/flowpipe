@@ -12,7 +12,7 @@ RUN apt update \
 # otherwise the first Go install will be as root and the /go/pkg directory will be owned by root
 USER vscode
 
-RUN go install github.com/swaggo/swag/cmd/swag@v1.8.12 \
+RUN go install github.com/swaggo/swag/cmd/swag@v1.16.3 \
     && go install github.com/goreleaser/goreleaser@v1.18.2 \
     && go install github.com/mailhog/MailHog@v1.0.1 \
     && cd ~ \
