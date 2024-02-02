@@ -50,12 +50,12 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		return
 	}
 
-	err := validateInputHash(inputUri)
-	if err != nil {
-		err = nil // TODO: remove and replace with below error handling when not in dev if we decide to validate hash
-		// common.AbortWithError(c, err)
-		// return
-	}
+	_ = validateInputHash(inputUri)
+	// TODO: uncomment if hash validation required
+	// if err != nil {
+	//   common.AbortWithError(c, err)
+	//   return
+	// }
 
 	inputQuery := types.InputRequestQuery{}
 	if err := c.ShouldBindQuery(&inputQuery); err != nil {
