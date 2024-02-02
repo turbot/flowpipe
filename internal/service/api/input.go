@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"html/template"
@@ -14,13 +16,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -44,85 +43,6 @@ type ParsedSlackResponse struct {
 	Value    any
 }
 
-func (api *APIService) runPipeline(c *gin.Context, inputType primitive.IntegrationType, executionID, pipelineExecutionID, stepExecutionID string) {
-	ex, err := execution.NewExecution(api.ctx)
-	if err != nil {
-		slog.Error("error creating execution", "error", err)
-		common.AbortWithError(c, err)
-		return
-	}
-
-	var stepOutput *modconfig.Output
-
-	evt := &event.Event{
-		ExecutionID: executionID,
-	}
-
-	_, err = ex.LoadProcessDB(evt)
-	if err != nil {
-		slog.Error("error loading process", "error", err)
-		common.AbortWithError(c, err)
-		return
-	}
-
-	// Find the step start for the step execution id
-	pipelineExecution := ex.PipelineExecutions[pipelineExecutionID]
-	if pipelineExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution "+pipelineExecutionID+" not found"))
-		return
-	}
-
-	stepExecution := pipelineExecution.StepExecutions[stepExecutionID]
-	if stepExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("step execution "+stepExecutionID+" not found"))
-		return
-	}
-
-	if pipelineExecution.Status == "finished" {
-		alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
-		if err != nil {
-			slog.Error("error reading the template file", "error", err)
-			common.AbortWithError(c, err)
-			return
-		}
-		renderHTMLWithValues(c, string(alreadyAcknowledgedInputTemplate), gin.H{})
-	} else {
-		input := primitive.Input{}
-		stepOutput, err = input.ProcessOutput(c, inputType, nil)
-		if err != nil {
-			slog.Error("error processing output", "error", err)
-			common.AbortWithError(c, err)
-			return
-		}
-
-		acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
-		if err != nil {
-			slog.Error("error reading the template file", "error", err)
-			common.AbortWithError(c, err)
-			return
-		}
-		renderHTMLWithValues(c, string(acknowledgeInputTemplate), gin.H{"response": stepOutput.Data["value"]})
-	}
-
-	pipelineStepFinishedEvent, err := event.NewStepFinished()
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	pipelineStepFinishedEvent.Event = evt
-	pipelineStepFinishedEvent.PipelineExecutionID = pipelineExecutionID
-	pipelineStepFinishedEvent.StepExecutionID = stepExecutionID
-	pipelineStepFinishedEvent.StepForEach = stepExecution.StepForEach
-	pipelineStepFinishedEvent.StepOutput = map[string]interface{}{}
-	pipelineStepFinishedEvent.Output = stepOutput
-
-	err = api.EsService.Raise(pipelineStepFinishedEvent)
-	if err != nil {
-		common.AbortWithError(c, err)
-	}
-}
-
 func (api *APIService) runInputEmailGet(c *gin.Context) {
 	inputUri := types.InputRequestUri{}
 	if err := c.ShouldBindUri(&inputUri); err != nil {
@@ -130,11 +50,11 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 		return
 	}
 
-	// TODO: Figure out if required - comment out for testing until decided
 	err := validateInputHash(inputUri)
 	if err != nil {
-		common.AbortWithError(c, err)
-		return
+		err = nil // TODO: remove and replace with below error handling when not in dev if we decide to validate hash
+		// common.AbortWithError(c, err)
+		// return
 	}
 
 	inputQuery := types.InputRequestQuery{}
@@ -150,7 +70,34 @@ func (api *APIService) runInputEmailGet(c *gin.Context) {
 
 	slog.Info("executionMode", "executionMode", executionMode)
 
-	api.runPipeline(c, primitive.IntegrationTypeEmail, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+	_, pipeExec, stepExec, err := getExecutions(inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	if pipeExec.Status == "finished" {
+		alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
+		if err != nil {
+			slog.Error("error reading the template file", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
+		renderHTMLWithValues(c, string(alreadyAcknowledgedInputTemplate), gin.H{})
+	} else {
+		acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
+		if err != nil {
+			slog.Error("error reading the template file", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
+		renderHTMLWithValues(c, string(acknowledgeInputTemplate), gin.H{"response": inputQuery.Value})
+	}
+
+	err = finishInputStep(api, inputQuery.ExecutionID, inputQuery.PipelineExecutionID, stepExec, inputQuery.Value)
+	if err != nil {
+		common.AbortWithError(c, err)
+	}
 }
 
 func (api *APIService) runSlackInputPost(c *gin.Context) {
@@ -228,7 +175,13 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 
 	// restart the pipeline execution
-	err = finishInputStep(api, payload.ExecutionID, payload.PipelineExecutionID, payload.StepExecutionID, slackResponse.Value)
+	_, _, stepExec, err := getExecutions(payload.ExecutionID, payload.PipelineExecutionID, payload.StepExecutionID)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	err = finishInputStep(api, payload.ExecutionID, payload.PipelineExecutionID, stepExec, slackResponse.Value)
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
@@ -295,6 +248,13 @@ func parseSlackData(input map[string]any) (ParsedSlackResponse, error) {
 				break
 			}
 		}
+	} else if oMsg, ok := input["message"].(map[string]any); ok {
+		if blocks, ok := oMsg["blocks"].([]any); ok {
+			for _, block := range blocks {
+				out.Prompt = block.(map[string]any)["text"].(map[string]any)["text"].(string)
+				break
+			}
+		}
 	}
 
 	// username
@@ -331,22 +291,27 @@ func parseSlackData(input map[string]any) (ParsedSlackResponse, error) {
 	return out, nil
 }
 
-func finishInputStep(api *APIService, execId string, pipelineId string, stepId string, value any) error {
-	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
+func getExecutions(execId string, pipelineId string, stepId string) (*execution.ExecutionInMemory, *execution.PipelineExecution, *execution.StepExecution, error) {
 	ex, err := execution.GetExecution(execId)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	pipelineExecution := ex.PipelineExecutions[pipelineId]
 	if pipelineExecution == nil {
-		return perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pipelineId))
+		return nil, nil, nil, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pipelineId))
 	}
 
 	stepExecution := pipelineExecution.StepExecutions[stepId]
 	if stepExecution == nil {
-		return perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", stepId))
+		return nil, nil, nil, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", stepId))
 	}
+
+	return ex, pipelineExecution, stepExecution, nil
+}
+
+func finishInputStep(api *APIService, execId string, pipelineId string, stepExecution *execution.StepExecution, value any) error {
+	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
 
 	// TODO: decide if we return an error if step already finished
 
@@ -364,7 +329,7 @@ func finishInputStep(api *APIService, execId string, pipelineId string, stepId s
 
 	stepFinishedEvent.Event = evt
 	stepFinishedEvent.PipelineExecutionID = pipelineId
-	stepFinishedEvent.StepExecutionID = stepId
+	stepFinishedEvent.StepExecutionID = stepExecution.ID
 	stepFinishedEvent.StepForEach = stepExecution.StepForEach
 	stepFinishedEvent.StepLoop = stepExecution.StepLoop
 	stepFinishedEvent.StepRetry = stepExecution.StepRetry

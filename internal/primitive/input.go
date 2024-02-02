@@ -11,9 +11,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
-	"github.com/turbot/flowpipe/internal/service/api/common"
-	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -157,51 +154,6 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 	} else {
 		return perr.InternalWithMessage("not yet implemented")
 	}
-}
-
-func (*InputIntegrationSlack) ReceiveMessage(ctx context.Context, requestBody []byte) (*modconfig.Output, error) {
-	var bodyJSON map[string]interface{}
-
-	err := json.Unmarshal(requestBody, &bodyJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	// Decode the callback_id to extract the execution_id, pipeline_execution_id and step_execution_id
-	rawDecodedText, err := base64.StdEncoding.DecodeString(bodyJSON["callback_id"].(string))
-	if err != nil {
-		return nil, err
-	}
-
-	var decodedText JSONPayload
-	err = json.Unmarshal(rawDecodedText, &decodedText)
-	if err != nil {
-		return nil, err
-	}
-
-	data := map[string]interface{}{
-		"pipeline_execution_id": decodedText.PipelineExecutionID,
-		"step_execution_id":     decodedText.StepExecutionID,
-		"execution_id":          decodedText.ExecutionID,
-	}
-
-	// If the input type isa button, then the value is a string
-	// if the input is multi-select box, then the value is a list
-	var value interface{}
-	if bodyJSON["actions"] != nil {
-		for _, action := range bodyJSON["actions"].([]interface{}) {
-			if action.(map[string]interface{})["type"] == "button" {
-				value = action.(map[string]interface{})["value"]
-			}
-		}
-	}
-	data["value"] = value
-
-	o := modconfig.Output{
-		Data: data,
-	}
-
-	return &o, nil
 }
 
 type InputIntegrationEmail struct {
@@ -360,20 +312,6 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, input modconfi
 	return util.RunSendEmail(ctx, input)
 }
 
-func (*InputIntegrationEmail) ReceiveMessage(c *gin.Context) (*modconfig.Output, error) {
-	inputQuery := types.InputRequestQuery{}
-	if err := c.ShouldBindQuery(&inputQuery); err != nil {
-		common.AbortWithError(c, err)
-		return nil, err
-	}
-
-	output := make(map[string]interface{})
-	output["value"] = inputQuery.Value
-	return &modconfig.Output{
-		Data: output,
-	}, nil
-}
-
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 
 	if i[schema.AttributeTypeType] == nil {
@@ -514,31 +452,6 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 			output = o
 		default:
 			return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
-		}
-	}
-
-	return output, nil
-}
-
-func (ip *Input) ProcessOutput(c *gin.Context, inputType IntegrationType, requestBody []byte) (*modconfig.Output, error) {
-
-	// TODO: error handling
-
-	var output *modconfig.Output
-	var err error
-
-	switch inputType {
-	case IntegrationTypeSlack:
-		slack := InputIntegrationSlack{}
-		output, err = slack.ReceiveMessage(c, requestBody)
-		if err != nil {
-			return nil, err
-		}
-	case IntegrationTypeEmail:
-		email := InputIntegrationEmail{}
-		output, err = email.ReceiveMessage(c)
-		if err != nil {
-			return nil, err
 		}
 	}
 
