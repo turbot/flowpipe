@@ -34,7 +34,12 @@ func (h PipelineQueueHandler) Handle(ctx context.Context, c interface{}) error {
 
 	e, err := event.NewPipelineQueued(event.ForPipelineQueue(cmd))
 	if err != nil {
-		return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineQueueToPipelineFailed(cmd, err)))
+		err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineQueueToPipelineFailed(cmd, err)))
+		if err2 != nil {
+			slog.Error("error publishing event", "error", err2)
+		}
+		return nil
 	}
+
 	return h.EventBus.Publish(ctx, e)
 }

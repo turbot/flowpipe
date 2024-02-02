@@ -59,7 +59,7 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.Integrati
 		ExecutionID: executionID,
 	}
 
-	err = ex.LoadProcess(evt)
+	_, err = ex.LoadProcessDB(evt)
 	if err != nil {
 		slog.Error("error loading process", "error", err)
 		common.AbortWithError(c, err)

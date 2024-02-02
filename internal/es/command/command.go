@@ -9,6 +9,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -48,7 +50,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 
 	logMessage := event.EventLogEntry{
 		Level:     "info",
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Timestamp: time.Now().UTC().Format(util.RFC3389WithMS),
 		Caller:    "command",
 		Message:   "es",
 		EventType: commandEvent.HandlerName(),
@@ -70,6 +72,18 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 	if err != nil {
 		slog.Error("Error adding event to execution", "error", err)
 		return perr.InternalWithMessage("Error adding event to execution")
+	}
+
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
+	}
+	defer db.Close()
+
+	err = execution.SaveEventToSQLite(db, executionID, &logMessage)
+	if err != nil {
+		slog.Error("Error saving event to SQLite", "error", err)
+		return err
 	}
 	return nil
 }

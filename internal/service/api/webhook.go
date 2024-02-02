@@ -1,13 +1,14 @@
 package api
 
 import (
-	"github.com/turbot/pipe-fittings/sanitize"
 	"io"
 	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
@@ -274,7 +275,7 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
 		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
-		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(time.RFC3339))
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(util.RFC3389WithMS))
 	}
 
 	if pex.Status == expectedState {

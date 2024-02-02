@@ -16,14 +16,11 @@ func TestExecutionLoadFromDB(t *testing.T) {
 		ExecutionID: "exec_cmsp5a272ijn3jbg6850",
 	}
 
-	ex, err := NewExecution(ctx)
+	ex, err := NewExecution(ctx, WithEvent(evt))
 	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
+		assert.FailNow("Error creating execution", err)
 	}
 
-	err = ex.LoadProcessDB(evt)
-	assert.Nil(err)
 	assert.Equal(1, len(ex.PipelineExecutions))
 
 	pe := ex.PipelineExecutions["pexec_cmsp5a272ijn3jbg685g"]

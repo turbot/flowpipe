@@ -60,6 +60,7 @@ func (suite *ModTestSuite) SetupSuite() {
 
 	// sets app specific constants defined in pipe-fittings
 	viper.SetDefault("main.version", "0.0.0-test.0")
+	viper.SetDefault(constants.ArgProcessRetention, 604800) // 7 days
 	localcmdconfig.SetAppSpecificConstants()
 
 	// Get the current working directory
@@ -2221,15 +2222,9 @@ func (suite *ModTestSuite) TestCredentialReference() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 
@@ -2276,15 +2271,9 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemoryAndFile() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 
@@ -2363,15 +2352,9 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err := execution.NewExecution(suite.ctx)
+	ex, err := execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 
@@ -2401,15 +2384,9 @@ func (suite *ModTestSuite) TestCredentialWithOptionalParam() {
 	// Now load the execution from file, it should be redacted
 	time.Sleep(50 * time.Millisecond)
 
-	ex, err = execution.NewExecution(suite.ctx)
+	ex, err = execution.NewExecution(suite.ctx, execution.WithEvent(pipelineCmd.Event))
 	if err != nil {
 		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	err = ex.LoadProcessDB(pipelineCmd.Event)
-	if err != nil {
-		assert.Fail("Error loading process", err)
 		return
 	}
 

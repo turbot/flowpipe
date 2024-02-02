@@ -11,6 +11,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/metrics"
+	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -49,9 +51,15 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		return perr.BadRequestWithMessage("event is not a CommandEvent")
 	}
 
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
+	}
+	defer db.Close()
+
 	logMessage := event.EventLogEntry{
 		Level:     "info",
-		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Timestamp: time.Now().UTC().Format(util.RFC3389WithMS),
 		Caller:    "command",
 		Message:   "es",
 		EventType: commandEvent.HandlerName(),
@@ -84,6 +92,13 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		}
 
 		metrics.RunMetricInstance.StartExecution(executionID, pipelineQueueCmd.Name)
+
+		err = store.StartPipeline(executionID, pipelineQueueCmd.Name)
+		if err != nil {
+			slog.Error("Unable to save pipeline in the database", "error", err)
+			return perr.InternalWithMessage("Unable to save pipeline in the database " + err.Error())
+		}
+
 	} else {
 		var err error
 		ex, err = execution.GetExecution(executionID)
@@ -93,10 +108,17 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		}
 	}
 
-	err := ex.AddEvent(logMessage)
+	err = ex.AddEvent(logMessage)
 	if err != nil {
 		slog.Error("Error adding event to execution", "error", err)
 		return err
 	}
+
+	err = execution.SaveEventToSQLite(db, executionID, &logMessage)
+	if err != nil {
+		slog.Error("Error saving event to SQLite", "error", err)
+		return err
+	}
+
 	return nil
 }

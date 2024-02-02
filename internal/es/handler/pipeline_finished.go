@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -34,6 +35,11 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	slog.Debug("pipeline_finished event handler", "executionID", evt.Event.ExecutionID, "pipelineExecutionID", evt.PipelineExecutionID)
+
+	err := store.UpdatePipelineState(evt.Event.ExecutionID, "finished")
+	if err != nil {
+		slog.Error("pipeline_finished: Error updating pipeline state", "error", err)
+	}
 
 	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
 	plannerMutex.Lock()
@@ -103,7 +109,7 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		data[schema.BlockTypePipelineOutput] = evt.PipelineOutput
 	}
 
-	err = ex.Save()
+	err = ex.EndExecution()
 	if err != nil {
 		slog.Error("pipeline_finished: Error saving execution", "error", err)
 		// Should we raise pipeline fail here?

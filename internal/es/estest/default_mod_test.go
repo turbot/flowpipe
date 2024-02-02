@@ -43,6 +43,7 @@ func (suite *DefaultModTestSuite) SetupSuite() {
 
 	// sets app specific constants defined in pipe-fittings
 	viper.SetDefault("main.version", "0.0.0-test.0")
+	viper.SetDefault(constants.ArgProcessRetention, 604800) // 7 days
 	localcmdconfig.SetAppSpecificConstants()
 
 	// Get the current working directory
