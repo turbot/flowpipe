@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -79,144 +78,30 @@ func (api *APIService) runPipeline(c *gin.Context, inputType primitive.Integrati
 		return
 	}
 
-	if c.Request.Body != nil && inputType == primitive.IntegrationTypeSlack {
-		var prompt, userName string
-		var err error
-		bodyBytes, err := io.ReadAll(c.Request.Body)
+	if pipelineExecution.Status == "finished" {
+		alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
 		if err != nil {
+			slog.Error("error reading the template file", "error", err)
 			common.AbortWithError(c, err)
 			return
 		}
-
-		decodedValue, err := url.QueryUnescape(string(bodyBytes))
-		if err != nil {
-			slog.Error("error decoding body", "error", err)
-			os.Exit(1)
-			return
-		}
-
-		decodedValue = decodedValue[8:]
-
-		var bodyJSON map[string]interface{}
-		err = json.Unmarshal([]byte(decodedValue), &bodyJSON)
-		if err != nil {
-			common.AbortWithError(c, err)
-			return
-		}
-
-		// Decode the callback_id to extract the execution_id, pipeline_execution_id and step_execution_id
-		rawDecodedText, err := base64.StdEncoding.DecodeString(bodyJSON["callback_id"].(string))
-		if err != nil {
-			common.AbortWithError(c, err)
-			return
-		}
-
-		var decodedText JSONPayload
-		err = json.Unmarshal(rawDecodedText, &decodedText)
-		if err != nil {
-			common.AbortWithError(c, err)
-			return
-		}
-		// stepOutput, err = input.ProcessOutput(c, inputType, bodyBytes)
-		// if err != nil {
-		// 	common.AbortWithError(c, err)
-		// 	return
-		// }
-
-		pipelineExecutionID = decodedText.PipelineExecutionID
-		stepExecutionID = decodedText.StepExecutionID
-
-		// TODO: Refactor to extract the prompt in a better way
-		if bodyJSON["original_message"] != nil {
-			originMessage := bodyJSON["original_message"].(map[string]interface{})
-			if originMessage != nil {
-				attachments := originMessage["attachments"].([]interface{})
-				for _, attachment := range attachments {
-					prompt = attachment.(map[string]interface{})["text"].(string)
-					break
-				}
-			}
-		}
-
-		if bodyJSON["user"] != nil {
-			userData := bodyJSON["user"].(map[string]interface{})
-			userName = userData["id"].(string)
-		}
-
-		var value interface{}
-		if bodyJSON["actions"] != nil {
-			for _, action := range bodyJSON["actions"].([]interface{}) {
-				if action.(map[string]interface{})["type"] == "button" {
-					value = action.(map[string]interface{})["value"]
-				}
-				if action.(map[string]interface{})["type"] == "select" {
-					/*
-							"actions": [
-						    {
-						      "name": "Choose an option",
-						      "type": "select",
-						      "selected_options": [
-						        {
-						          "value": "Admin"
-						        }
-						      ]
-						    }
-						  ],
-					*/
-					selectedOptions := action.(map[string]interface{})["selected_options"]
-					if selectedOptions != nil {
-						for _, selectedOption := range selectedOptions.([]interface{}) {
-							value = selectedOption.(map[string]interface{})["value"]
-						}
-					}
-				}
-			}
-		}
-
-		output := modconfig.Output{
-			Data: map[string]interface{}{
-				"value": value,
-			},
-		}
-
-		stepOutput = &output
-
-		// stepOutput, err = input.ProcessOutput(api.ctx, inputType, bodyBytes)
-		// if err != nil {
-		// 	slog.Error("error processing output", "error", err)
-		// 	common.AbortWithError(c, err)
-		// 	return
-		// }
-
-		slog.Debug("stepOutput", "stepOutput", &output)
-
-		c.String(http.StatusOK, fmt.Sprintf("%s <@%s> has selected `%v`", prompt, userName, value))
+		renderHTMLWithValues(c, string(alreadyAcknowledgedInputTemplate), gin.H{})
 	} else {
-		if pipelineExecution.Status == "finished" {
-			alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
-			if err != nil {
-				slog.Error("error reading the template file", "error", err)
-				common.AbortWithError(c, err)
-				return
-			}
-			renderHTMLWithValues(c, string(alreadyAcknowledgedInputTemplate), gin.H{})
-		} else {
-			input := primitive.Input{}
-			stepOutput, err = input.ProcessOutput(c, inputType, nil)
-			if err != nil {
-				slog.Error("error processing output", "error", err)
-				common.AbortWithError(c, err)
-				return
-			}
-
-			acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
-			if err != nil {
-				slog.Error("error reading the template file", "error", err)
-				common.AbortWithError(c, err)
-				return
-			}
-			renderHTMLWithValues(c, string(acknowledgeInputTemplate), gin.H{"response": stepOutput.Data["value"]})
+		input := primitive.Input{}
+		stepOutput, err = input.ProcessOutput(c, inputType, nil)
+		if err != nil {
+			slog.Error("error processing output", "error", err)
+			common.AbortWithError(c, err)
+			return
 		}
+
+		acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
+		if err != nil {
+			slog.Error("error reading the template file", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
+		renderHTMLWithValues(c, string(acknowledgeInputTemplate), gin.H{"response": stepOutput.Data["value"]})
 	}
 
 	pipelineStepFinishedEvent, err := event.NewStepFinished()
@@ -314,10 +199,13 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 	}
 
 	var encodedPayload string
+	var slackBlockType bool
 	if try, ok := jsonBody["callback_id"].(string); ok {
 		encodedPayload = try
+		slackBlockType = false
 	} else if !helpers.IsNil(jsonBody["actions"]) {
 		encodedPayload = jsonBody["actions"].([]any)[0].(map[string]any)["action_id"].(string)
+		slackBlockType = true
 	}
 
 	payload, err := decodePayload(encodedPayload)
@@ -334,49 +222,13 @@ func (api *APIService) runSlackInputPost(c *gin.Context) {
 
 	// respond to slack
 	c.String(http.StatusOK, fmt.Sprintf("%s <@%s> has selected `%v`", slackResponse.Prompt, slackResponse.UserName, slackResponse.Value))
+	if slackBlockType {
+		slog.Warn("Slack message not yet updated, therefore may receive future events from it")
+		// TODO: figure out how to determine correct integration to call an update message method on
+	}
 
 	// restart the pipeline execution
-	var stepOutput *modconfig.Output
-	out := modconfig.Output{
-		Data: map[string]any{
-			"value": slackResponse.Value,
-		},
-	}
-	stepOutput = &out
-	ex, err := execution.GetExecution(payload.ExecutionID)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-	evt := &event.Event{ExecutionID: payload.ExecutionID, CreatedAt: time.Now()}
-
-	pipelineExecution := ex.PipelineExecutions[payload.PipelineExecutionID]
-	if pipelineExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", payload.PipelineExecutionID)))
-		return
-	}
-
-	stepExecution := pipelineExecution.StepExecutions[payload.StepExecutionID]
-	if stepExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", payload.StepExecutionID)))
-		return
-	}
-
-	stepFinishedEvent, err := event.NewStepFinished()
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	stepFinishedEvent.Event = evt
-	stepFinishedEvent.PipelineExecutionID = payload.PipelineExecutionID
-	stepFinishedEvent.StepExecutionID = payload.StepExecutionID
-	stepFinishedEvent.StepForEach = stepExecution.StepForEach
-	stepFinishedEvent.StepLoop = stepExecution.StepLoop
-	stepFinishedEvent.StepRetry = stepExecution.StepRetry
-	stepFinishedEvent.StepOutput = map[string]any{}
-	stepFinishedEvent.Output = stepOutput
-	err = api.EsService.Raise(stepFinishedEvent)
+	err = finishInputStep(api, payload.ExecutionID, payload.PipelineExecutionID, payload.StepExecutionID, slackResponse.Value)
 	if err != nil {
 		common.AbortWithError(c, err)
 	}
@@ -477,4 +329,47 @@ func parseSlackData(input map[string]any) (ParsedSlackResponse, error) {
 	}
 
 	return out, nil
+}
+
+func finishInputStep(api *APIService, execId string, pipelineId string, stepId string, value any) error {
+	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
+	ex, err := execution.GetExecution(execId)
+	if err != nil {
+		return err
+	}
+
+	pipelineExecution := ex.PipelineExecutions[pipelineId]
+	if pipelineExecution == nil {
+		return perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pipelineId))
+	}
+
+	stepExecution := pipelineExecution.StepExecutions[stepId]
+	if stepExecution == nil {
+		return perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", stepId))
+	}
+
+	// TODO: decide if we return an error if step already finished
+
+	stepFinishedEvent, err := event.NewStepFinished()
+	if err != nil {
+		return perr.InternalWithMessage("unable to create step finished event")
+	}
+
+	out := modconfig.Output{
+		Data: map[string]any{
+			"value": value,
+		},
+		Status: "finished",
+	}
+
+	stepFinishedEvent.Event = evt
+	stepFinishedEvent.PipelineExecutionID = pipelineId
+	stepFinishedEvent.StepExecutionID = stepId
+	stepFinishedEvent.StepForEach = stepExecution.StepForEach
+	stepFinishedEvent.StepLoop = stepExecution.StepLoop
+	stepFinishedEvent.StepRetry = stepExecution.StepRetry
+	stepFinishedEvent.StepOutput = map[string]any{}
+	stepFinishedEvent.Output = &out
+	err = api.EsService.Raise(stepFinishedEvent)
+	return err
 }
