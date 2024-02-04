@@ -752,7 +752,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 				// Should we add the step errors to PipelineExecution.Errors if the error is ignored?
 				pe.FinishStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 			} else {
-				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID)
+				pe.FailStep(stepDefn.GetFullyQualifiedName(), et.StepForEach.Key, et.StepExecutionID, loopHold, errorHold)
 
 				if !errorHold {
 					// if there's a retry config, don't add that failure to the pipeline failure until the final retry attempt

@@ -368,7 +368,7 @@ func (suite *ModTestSuite) TestForEachOneAndForEachTwo() {
 	assert.Equal(1, len(pex.StepStatus["transform.last"]["0"].StepExecutions))
 }
 
-func (suite *ModTestSuite) XTestLoopWithForEach() {
+func (suite *ModTestSuite) TestLoopWithForEach() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -390,15 +390,15 @@ func (suite *ModTestSuite) XTestLoopWithForEach() {
 
 	// We should have 3 for_each and each for_each has exactly 4 iterations.
 	// check the output, it should not double up on the iteration count
-	assert.Equal(3, len(pex.StepStatus["echo.repeat"]))
-	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["0"].StepExecutions))
-	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["1"].StepExecutions))
-	assert.Equal(4, len(pex.StepStatus["echo.repeat"]["2"].StepExecutions))
+	assert.Equal(3, len(pex.StepStatus["transform.repeat"]))
+	assert.Equal(4, len(pex.StepStatus["transform.repeat"]["0"].StepExecutions))
+	assert.Equal(4, len(pex.StepStatus["transform.repeat"]["1"].StepExecutions))
+	assert.Equal(4, len(pex.StepStatus["transform.repeat"]["2"].StepExecutions))
 
 	// Print out the step status if the step executions is not exactly 4
-	if len(pex.StepStatus["echo.repeat"]["0"].StepExecutions) != 4 ||
-		len(pex.StepStatus["echo.repeat"]["1"].StepExecutions) != 4 ||
-		len(pex.StepStatus["echo.repeat"]["2"].StepExecutions) != 4 {
+	if len(pex.StepStatus["transform.repeat"]["0"].StepExecutions) != 4 ||
+		len(pex.StepStatus["transform.repeat"]["1"].StepExecutions) != 4 ||
+		len(pex.StepStatus["transform.repeat"]["2"].StepExecutions) != 4 {
 		s, err := prettyjson.Marshal(pex.StepStatus["echo.repeat"])
 
 		if err != nil {
@@ -409,20 +409,20 @@ func (suite *ModTestSuite) XTestLoopWithForEach() {
 		fmt.Println(string(s)) //nolint:forbidigo // test
 	}
 
-	assert.Equal("iteration: 0 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("iteration: 1 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[1].Output.Data["text"])
-	assert.Equal("iteration: 2 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[2].Output.Data["text"])
-	assert.Equal("iteration: 3 - oasis", pex.StepStatus["echo.repeat"]["0"].StepExecutions[3].Output.Data["text"])
+	assert.Equal("iteration: 0 - oasis", pex.StepStatus["transform.repeat"]["0"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("iteration: 1 - oasis", pex.StepStatus["transform.repeat"]["0"].StepExecutions[1].Output.Data["value"])
+	assert.Equal("iteration: 2 - oasis", pex.StepStatus["transform.repeat"]["0"].StepExecutions[2].Output.Data["value"])
+	assert.Equal("iteration: 3 - oasis", pex.StepStatus["transform.repeat"]["0"].StepExecutions[3].Output.Data["value"])
 
-	assert.Equal("iteration: 0 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("iteration: 1 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[1].Output.Data["text"])
-	assert.Equal("iteration: 2 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[2].Output.Data["text"])
-	assert.Equal("iteration: 3 - blur", pex.StepStatus["echo.repeat"]["1"].StepExecutions[3].Output.Data["text"])
+	assert.Equal("iteration: 0 - blur", pex.StepStatus["transform.repeat"]["1"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("iteration: 1 - blur", pex.StepStatus["transform.repeat"]["1"].StepExecutions[1].Output.Data["value"])
+	assert.Equal("iteration: 2 - blur", pex.StepStatus["transform.repeat"]["1"].StepExecutions[2].Output.Data["value"])
+	assert.Equal("iteration: 3 - blur", pex.StepStatus["transform.repeat"]["1"].StepExecutions[3].Output.Data["value"])
 
-	assert.Equal("iteration: 0 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[0].Output.Data["text"])
-	assert.Equal("iteration: 1 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[1].Output.Data["text"])
-	assert.Equal("iteration: 2 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[2].Output.Data["text"])
-	assert.Equal("iteration: 3 - radiohead", pex.StepStatus["echo.repeat"]["2"].StepExecutions[3].Output.Data["text"])
+	assert.Equal("iteration: 0 - radiohead", pex.StepStatus["transform.repeat"]["2"].StepExecutions[0].Output.Data["value"])
+	assert.Equal("iteration: 1 - radiohead", pex.StepStatus["transform.repeat"]["2"].StepExecutions[1].Output.Data["value"])
+	assert.Equal("iteration: 2 - radiohead", pex.StepStatus["transform.repeat"]["2"].StepExecutions[2].Output.Data["value"])
+	assert.Equal("iteration: 3 - radiohead", pex.StepStatus["transform.repeat"]["2"].StepExecutions[3].Output.Data["value"])
 }
 
 func (suite *ModTestSuite) TestSimpleLoopWithIndex() {

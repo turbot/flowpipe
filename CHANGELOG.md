@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.2.3 [tbd]
+
+_Bug fixes_
+
+* Step Retry race condition no longer trigger pipeline failure until all retries are exhausted ([#630](https://github.com/turbot/flowpipe/issues/630)).
+
 ## v0.2.2 [2024-02-02]
 
 _Bug fixes_

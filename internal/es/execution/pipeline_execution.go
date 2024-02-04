@@ -453,8 +453,8 @@ func (pe *PipelineExecution) FinishStep(stepFullyQualifiedName, key, seID string
 	pe.StepStatus[stepFullyQualifiedName][key].Finish(seID, loopHold, errorHold)
 }
 
-func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string) {
-	pe.StepStatus[stepFullyQualifiedName][key].Fail(seID)
+func (pe *PipelineExecution) FailStep(stepFullyQualifiedName, key, seID string, loopHold, errorHold bool) {
+	pe.StepStatus[stepFullyQualifiedName][key].Fail(seID, loopHold, errorHold)
 }
 
 // This needs to be a map because if we have a for loop, each loop will have a different step execution id
@@ -579,11 +579,14 @@ func (s *StepStatus) Finish(seID string, loopHold, errorHold bool) {
 	s.Finished[seID] = true
 }
 
-func (s *StepStatus) Fail(seID string) {
+func (s *StepStatus) Fail(seID string, loopHold, errorHold bool) {
 	// Can't fail if the step already finished (safety check)
 	if s.Finished[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
 	}
+
+	s.LoopHold = loopHold
+	s.ErrorHold = errorHold
 
 	s.Initializing = false
 
