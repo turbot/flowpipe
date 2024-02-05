@@ -210,7 +210,46 @@ func (o ServerOutputTriggerExecution) String(sanitizer *sanitize.Sanitizer, opts
 
 	shortPipeline := strings.Split(o.PipelineName, ".")[len(strings.Split(o.PipelineName, "."))-1]
 	c := opts.ColorGenerator.GetColorForElement(shortPipeline)
-	return fmt.Sprintf("%s%s%s%s fired, executing %s\n", o.ServerOutputPrefix.String(sanitizer, opts), left, au.Index(triggerColor, shortTrigger), right, au.Index(c, shortPipeline))
+	return fmt.Sprintf("%s%s%s%s fired, executing %s\n", o.ServerOutputPrefix.String(sanitize.NullSanitizer, opts), left, au.Index(triggerColor, shortTrigger), right, au.Index(c, shortPipeline))
+}
+
+type ServerOutputQueryTriggerRun struct {
+	ServerOutputPrefix
+	TriggerName string
+	Inserted    int
+	Updated     int
+	Deleted     int
+}
+
+func NewServerOutputQueryTriggerRun(name string, inserted int, updated int, deleted int) ServerOutputQueryTriggerRun {
+	prefix := NewServerOutputPrefixWithExecId(time.Now().Local(), "trigger", nil)
+	return ServerOutputQueryTriggerRun{
+		ServerOutputPrefix: prefix,
+		TriggerName:        name,
+		Inserted:           inserted,
+		Updated:            updated,
+		Deleted:            deleted,
+	}
+}
+
+func (o ServerOutputQueryTriggerRun) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+
+	triggerSplit := strings.Split(o.TriggerName, ".")
+	triggerType := triggerSplit[len(triggerSplit)-2]
+	triggerName := triggerSplit[len(triggerSplit)-1]
+	shortTrigger := fmt.Sprintf("trigger.%s.%s", triggerType, triggerName)
+	triggerColor := opts.ColorGenerator.GetColorForElement(shortTrigger)
+
+	return fmt.Sprintf("%s%s%s%s trigger run, obtained %d inserted, %d updated, %d deleted row(s)\n",
+		o.ServerOutputPrefix.String(sanitize.NullSanitizer, opts),
+		left, au.Index(triggerColor, shortTrigger), right,
+		au.Cyan(o.Inserted),
+		au.Cyan(o.Updated),
+		au.Cyan(o.Deleted),
+	)
 }
 
 type ServerOutputTrigger struct {
