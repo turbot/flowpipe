@@ -106,12 +106,18 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), 0, 0, 0))
+		}
 		return nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
 	if !ok {
 		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error converting rows to []interface{} "+tr.Trigger.Name(), err))
+		}
 		return nil
 	}
 
@@ -251,6 +257,9 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 		"update": len(updatedRows),
 		"delete": len(deletedPrimaryKeys),
 	}
+	if o.IsServerMode {
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), len(newRows), len(updatedRows), len(deletedPrimaryKeys)))
+	}
 	for _, capture := range config.Captures {
 		err := runPipeline(capture, tr, evalContext, queryStat)
 		if err != nil {
@@ -293,7 +302,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])
 	if o.IsServerMode {
-		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.PipelineExecutionID, tr.Trigger.Name(), pipelineName))
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, tr.Trigger.Name(), pipelineName))
 	}
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
