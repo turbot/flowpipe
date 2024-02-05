@@ -4,14 +4,22 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/constants"
+	"html/template"
+	"net/mail"
+	"net/smtp"
+	"net/textproto"
 	"regexp"
 	"strconv"
+	"strings"
+	"time"
 
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -158,6 +166,22 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 
 type InputIntegrationEmail struct {
 	InputIntegrationBase
+	Host        *string
+	Port        *int64
+	SecurePort  *int64
+	Tls         *string
+	To          []string
+	From        string
+	Subject     string
+	User        *string
+	Pass        *string
+	ResponseUrl string
+}
+
+func NewInputIntegrationEmail(base InputIntegrationBase) InputIntegrationEmail {
+	return InputIntegrationEmail{
+		InputIntegrationBase: base,
+	}
 }
 
 func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i modconfig.Input) error {
@@ -298,18 +322,69 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+	var err error
+	host := types.SafeString(ip.Host)
+	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
+	auth := smtp.PlainAuth("", types.SafeString(ip.User), types.SafeString(ip.Pass), host)
 
-	input["executionID"] = ip.ExecutionID
-	input["pipelineExecutionID"] = ip.PipelineExecutionID
-	input["stepExecutionID"] = ip.StepExecutionID
+	from := mail.Address{
+		Name:    ip.From,
+		Address: ip.From,
+	}
 
-	// Validate the inputs
-	// if err := ip.ValidateInputIntegrationEmail(ctx, input); err != nil {
-	// 	return nil, err
-	// }
+	header := make(map[string]string)
+	header["From"] = from.String()
+	header["To"] = strings.Join(ip.To, ", ")
+	header["Subject"] = ip.Subject
+	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
+	header["MIME-version"] = "1.0;"
 
-	return util.RunSendEmail(ctx, input)
+	var message string
+	for key, value := range header {
+		message += fmt.Sprintf("%s: %s\r\n", key, value)
+	}
+	templateMessage, err := parseEmailInputTemplate(ip, prompt, options)
+	if err != nil {
+		return nil, err
+	}
+	message += templateMessage
+
+	output := modconfig.Output{
+		Data: map[string]interface{}{},
+	}
+
+	output.Data[schema.AttributeTypeStartedAt] = time.Now().UTC()
+	err = smtp.SendMail(addr, auth, ip.From, ip.To, []byte(message))
+	output.Data[schema.AttributeTypeFinishedAt] = time.Now().UTC()
+	if err != nil {
+		var smtpError *textproto.Error
+		if !errors.As(err, &smtpError) {
+			return nil, perr.InternalWithMessage(fmt.Sprintf("unable to send email: %s", err.Error()))
+		}
+		switch {
+		case smtpError.Code >= 400 && smtpError.Code <= 499:
+			output.Errors = []modconfig.StepError{
+				{
+					Error: perr.BadRequestWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg)),
+				},
+			}
+		case smtpError.Code >= 500 && smtpError.Code <= 599:
+			output.Errors = []modconfig.StepError{
+				{
+					Error: perr.ServiceUnavailableWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg)),
+				},
+			}
+		default:
+			output.Errors = []modconfig.StepError{
+				{
+					Error: perr.InternalWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg)),
+				},
+			}
+		}
+	}
+
+	return &output, nil
 }
 
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -439,13 +514,59 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 			if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
 				s.WebhookUrl = &wu
 			}
+
+			// TODO: Validate?
 			err := s.PostMessage(inputType, prompt, resOptions)
 			if err != nil {
 				return nil, err
 			}
 		case IntegrationTypeEmail:
-			email := InputIntegrationEmail{base}
-			o, err := email.PostMessage(ctx, input)
+			email := NewInputIntegrationEmail(base)
+			if host, ok := integration[schema.AttributeTypeSmtpHost].(string); ok {
+				email.Host = &host
+			}
+			if port, ok := integration[schema.AttributeTypeSmtpPort].(int64); ok {
+				email.Port = &port
+			} else if port, ok := integration[schema.AttributeTypeSmtpPort].(float64); ok {
+				intPort := int64(port)
+				email.Port = &intPort
+			}
+			if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(int64); ok {
+				email.SecurePort = &sPort
+			} else if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(float64); ok {
+				intPort := int64(sPort)
+				email.SecurePort = &intPort
+			}
+			if tls, ok := integration[schema.AttributeTypeSmtpTls].(string); ok {
+				email.Tls = &tls
+			}
+			if from, ok := integration[schema.AttributeTypeFrom].(string); ok {
+				email.From = from
+			}
+			if to, ok := notification[schema.AttributeTypeTo].(string); ok {
+				email.To = append(email.To, to)
+			} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
+				email.To = append(email.To, to)
+			}
+			if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
+				email.Subject = sub
+			} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
+				email.Subject = sub
+			}
+			if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
+				email.User = &u
+			}
+			if p, ok := integration[schema.AttributeTypeSmtpPassword].(string); ok {
+				email.Pass = &p
+			}
+			if resUrl, ok := integration[schema.AttributeTypeResponseUrl].(string); ok {
+				email.ResponseUrl = resUrl
+			} else {
+				email.ResponseUrl = "http://localhost:7103" // TODO: Remove?
+			}
+
+			// TODO: Validate?
+			o, err := email.PostMessage(ctx, prompt, resOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -456,4 +577,45 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	}
 
 	return output, nil
+}
+
+func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOptions []InputIntegrationResponseOption) (string, error) {
+	templateFile, err := templates.HTMLTemplate("approval-template.html")
+	if err != nil {
+		return "", perr.InternalWithMessage("error while reading the email template")
+	}
+	tmpl, err := template.New("email").Parse(string(templateFile))
+	if err != nil {
+		return "", perr.InternalWithMessage("error while parsing the email template")
+	}
+
+	var opts []string
+	for _, opt := range responseOptions {
+		opts = append(opts, *opt.Value)
+	}
+	data := struct {
+		ExecutionID         string
+		PipelineExecutionID string
+		StepExecutionID     string
+		Options             []string
+		ResponseUrl         string
+		Prompt              string
+	}{
+		ExecutionID:         i.ExecutionID,
+		PipelineExecutionID: i.PipelineExecutionID,
+		StepExecutionID:     i.StepExecutionID,
+		Options:             opts,
+		ResponseUrl:         i.ResponseUrl,
+		Prompt:              prompt,
+	}
+
+	var body strings.Builder
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		return "", perr.BadRequestWithMessage("error while executing the email template")
+	}
+
+	tempMessage := body.String()
+
+	return tempMessage, nil
 }
