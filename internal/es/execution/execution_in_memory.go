@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/pipe-fittings/constants"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/credential"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -198,7 +199,7 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 	}
 
 	allCredentials := fpConfig.Credentials
-	relevantCredentials := map[string]modconfig.Credential{}
+	relevantCredentials := map[string]credential.Credential{}
 	dynamicCredsType := map[string]bool{}
 
 	for _, credentialName := range credentialsInContext {

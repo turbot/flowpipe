@@ -20,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/credential"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -142,7 +143,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	}
 
 	allCredentials := fpConfig.Credentials
-	relevantCredentials := map[string]modconfig.Credential{}
+	relevantCredentials := map[string]credential.Credential{}
 	dynamicCredsType := map[string]bool{}
 
 	for _, credentialName := range credentialsInContext {
@@ -180,7 +181,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	return credentialMap, nil
 }
 
-func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]modconfig.Credential) (map[string]cty.Value, error) {
+func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]credential.Credential) (map[string]cty.Value, error) {
 	credentialMap := map[string]cty.Value{}
 
 	cache := cache.GetCache()
@@ -190,7 +191,7 @@ func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[st
 			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
 		}
 
-		var credToUse modconfig.Credential
+		var credToUse credential.Credential
 
 		cachedCred, found := cache.Get(c.GetHclResourceImpl().FullName)
 		if !found {
@@ -207,7 +208,7 @@ func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[st
 			credToUse = newC
 		} else {
 			var ok bool
-			credToUse, ok = cachedCred.(modconfig.Credential)
+			credToUse, ok = cachedCred.(credential.Credential)
 			if !ok {
 				return nil, perr.BadRequestWithMessage("invalid credential type: " + c.Name())
 			}

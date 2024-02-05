@@ -11,11 +11,6 @@ credential "aws" "aws_profile_to_silverwater" {
     profile = "silverwater"
 }
 
-credential "basic" "credentials" {
-    username = "foo"
-    password = "bar"
-}
-
 credential "slack" "slack_static" {
     token = "jgdjslgjdljgldjglsdjl"
 }

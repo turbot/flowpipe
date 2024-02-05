@@ -2476,28 +2476,6 @@ func (suite *ModTestSuite) TestMultipleCredential() {
 	assert.Equal("pk_616_L5H36X3CXXXXXXXWEAZZF0NM5", pex.PipelineOutput["clickup_token_val"])
 }
 
-func (suite *ModTestSuite) TestBasicCredential() {
-	assert := assert.New(suite.T())
-
-	pipelineInput := modconfig.Input{}
-
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.cred_basic", 100*time.Millisecond, pipelineInput)
-
-	if err != nil {
-		assert.Fail("Error creating execution", err)
-		return
-	}
-
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
-	if err != nil {
-		assert.Fail("Error getting pipeline execution", err)
-		return
-	}
-
-	assert.Equal("foo", pex.PipelineOutput["val_username"])
-	assert.Equal("bar", pex.PipelineOutput["val_password"])
-}
-
 func (suite *ModTestSuite) TestBadContainerStep() {
 	assert := assert.New(suite.T())
 

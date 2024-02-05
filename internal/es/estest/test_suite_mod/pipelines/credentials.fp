@@ -36,30 +36,6 @@ pipeline "cred_gcp" {
     }
 }
 
-
-pipeline "cred_basic" {
-    param "cred" {
-        type    = string
-        default = "credentials"
-    }
-
-    step "transform" "basic_username" {
-        value   = credential.basic[param.cred].username
-    }
-
-    step "transform" "basic_password" {
-        value   = credential.basic[param.cred].password
-    }
-
-    output "val_username" {
-        value = step.transform.basic_username.value
-    }
-
-    output "val_password" {
-        value = step.transform.basic_password.value
-    }
-}
-
 pipeline "cred_slack" {
     param "cred" {
         type    = string
