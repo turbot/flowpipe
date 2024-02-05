@@ -25,9 +25,6 @@ jobs:
     name: Build and Release
     # The type of runner that the job will run on.
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        platforms: [linux/amd64, linux/arm64]
     steps:
 
       # Checks out the Flowpipe repository code.
@@ -66,7 +63,7 @@ jobs:
           # The Docker build context.
           context: flowpipe/
           push: true
-          platforms: ${{ matrix.platforms }}
+          platforms: linux/amd64, linux/arm64
           build-args: |
             TARGETVERSION=${{ env.FLOWPIPE_VERSION }}
           tags: |
