@@ -107,7 +107,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	if output.Data["rows"] == nil {
 		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
 		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(time.Now(), "", tr.Trigger.Name(), ""))
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), 0, 0, 0))
 		}
 		return nil
 	}
