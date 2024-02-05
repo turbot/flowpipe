@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -91,14 +92,14 @@ func ListAllTriggers() ([]modconfig.Trigger, error) {
 	return triggers, nil
 }
 
-func GetFlowpipeConfig() (*modconfig.FlowpipeConfig, error) {
+func GetFlowpipeConfig() (*flowpipeconfig.FlowpipeConfig, error) {
 	flowpipeConfigCached, found := cache.GetCache().Get("#flowpipeconfig")
 
 	if !found {
-		return modconfig.NewFlowpipeConfig(), nil
+		return flowpipeconfig.NewFlowpipeConfig(), nil
 	}
 
-	flowpipeConfig, ok := flowpipeConfigCached.(*modconfig.FlowpipeConfig)
+	flowpipeConfig, ok := flowpipeConfigCached.(*flowpipeconfig.FlowpipeConfig)
 	if !ok {
 		return nil, perr.InternalWithMessage("invalid flowpipe config")
 	}

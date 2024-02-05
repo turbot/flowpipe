@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/sanitize"
 
 	localconstants "github.com/turbot/flowpipe/internal/constants"
@@ -40,7 +41,6 @@ import (
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/steampipeconfig"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )
@@ -253,7 +253,7 @@ func (m *Manager) initializeResources() error {
 		configPath, err := cmdconfig.GetConfigPath()
 		error_helpers.FailOnError(err)
 
-		flowpipeConfig, ew := steampipeconfig.LoadFlowpipeConfig(configPath)
+		flowpipeConfig, ew := flowpipeconfig.LoadFlowpipeConfig(configPath)
 		// check for error
 		error_helpers.FailOnError(ew.Error)
 		ew.ShowWarnings()
