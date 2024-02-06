@@ -2,6 +2,8 @@ package handler
 
 import (
 	"context"
+	"log/slog"
+
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
@@ -10,7 +12,6 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
-	"log/slog"
 )
 
 type StepFinished EventHandler
@@ -51,9 +52,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
 
-	// If the pipeline has been canceled or paused, then no planning is required as no
-	// more work should be done.
-	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinishing() || pex.IsFinished() {
+	if pex.IsCanceled() || pex.IsPaused() || pex.IsFinished() {
 		return nil
 	}
 
