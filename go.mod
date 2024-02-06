@@ -42,6 +42,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/denisss025/slog-watermill v0.1.0
 	github.com/go-sql-driver/mysql v1.7.1
+	github.com/google/martian v2.1.0+incompatible
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19

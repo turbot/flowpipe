@@ -67,9 +67,9 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-func (p FpPipeline) GetAsTable() Table {
-	var res = Table{
-		Rows: []TableRow{{}},
+func (p FpPipeline) GetAsTable() printers.Table {
+	var res = printers.Table{
+		Rows: []printers.TableRow{{}},
 	}
 	AddField("Title", p.Title, &res)
 	AddField("Description", p.Description, &res)
@@ -80,7 +80,6 @@ func (p FpPipeline) GetAsTable() Table {
 
 	return res
 }
-
 
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
@@ -310,9 +309,9 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) GetAsTable() Table {
-	var res = Table{
-		Rows: []TableRow{{}},
+func (p FpPipelineParam) GetAsTable() printers.Table {
+	var res = printers.Table{
+		Rows: []printers.TableRow{{}},
 	}
 	AddField("Name", p.Name, &res)
 	AddField("Type", p.Type, &res)
@@ -322,7 +321,6 @@ func (p FpPipelineParam) GetAsTable() Table {
 
 	return res
 }
-
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)

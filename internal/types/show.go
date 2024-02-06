@@ -5,16 +5,18 @@ import (
 	"github.com/google/martian/log"
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"reflect"
 	"strings"
 	"time"
 )
 
 type Showable interface {
-	GetAsTable() Table
+	GetAsTable() printers.Table
 }
 
-func Show(resource Showable, opts RenderOptions) (string, error) {
+func Show(resource Showable, opts sanitize.RenderOptions) (string, error) {
 	data := resource.GetAsTable()
 	au := aurora.NewAurora(opts.ColorEnabled)
 	if len(data.Rows) != 1 {
@@ -80,7 +82,7 @@ func Show(resource Showable, opts RenderOptions) (string, error) {
 	return b.String(), nil
 }
 
-func showSlice(val reflect.Value, opts RenderOptions) (string, error) {
+func showSlice(val reflect.Value, opts sanitize.RenderOptions) (string, error) {
 	var b strings.Builder
 
 	for i := 0; i < val.Len(); i++ {
@@ -147,14 +149,14 @@ func renderField(key string, value any, level int, au aurora.Aurora) string {
 	return ""
 }
 
-func AddField(key string, value any, table *Table) {
+func AddField(key string, value any, table *printers.Table) {
 	if helpers.IsNil(value) {
 		return
 	}
 
 	value = dereferencePointer(value)
 
-	table.Columns = append(table.Columns, TableColumnDefinition{
+	table.Columns = append(table.Columns, printers.TableColumnDefinition{
 		Name: key,
 	})
 	table.Rows[0].Cells = append(table.Rows[0].Cells, value)
