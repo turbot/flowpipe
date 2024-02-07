@@ -67,16 +67,15 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-func (p FpPipeline) GetAsTable() printers.Table {
-	var res = printers.Table{
-		Rows: []printers.TableRow{{}},
-	}
-	AddField("Title", p.Title, &res)
-	AddField("Description", p.Description, &res)
-	AddField("Name", p.Name, &res)
-	AddField("Tags", p.Tags, &res)
-	AddField("Params", p.Params, &res)
-	AddField("Outputs", p.OutputConfig, &res)
+func (p FpPipeline) GetAsTable() *printers.Table {
+	var res = printers.NewTable().WithRow(
+		printers.FieldValue{Name: "Name", Value: p.Name},
+		printers.FieldValue{Name: "Title", Value: p.Title},
+		printers.FieldValue{Name: "Description", Value: p.Description},
+		printers.FieldValue{Name: "Tags", Value: p.Tags},
+		printers.FieldValue{Name: "Params", Value: p.Params},
+		printers.FieldValue{Name: "Outputs", Value: p.OutputConfig},
+		printers.FieldValue{Name: "Usage", Value: p.usage()})
 
 	return res
 }
@@ -141,7 +140,7 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 
 	output += "\n\n"
 
-	n, _ := Show(p, opts)
+	n, _ := printers.Show(p, opts)
 	output += n
 	return output
 }
@@ -152,6 +151,20 @@ func (p FpPipeline) pipelineDisplayName() string {
 	}
 
 	return p.Name
+}
+
+func (p FpPipeline) usage() string {
+	var pArg string
+	if len(p.Params) > 0 {
+		for _, param := range p.Params {
+			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
+				continue
+			}
+			pArg += " --arg " + param.Name + "=<value>"
+		}
+	}
+
+	return fmt.Sprintf("\n  flowpipe pipeline run %s%s\n", p.pipelineDisplayName(), pArg)
 }
 
 func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
@@ -309,17 +322,13 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) GetAsTable() printers.Table {
-	var res = printers.Table{
-		Rows: []printers.TableRow{{}},
-	}
-	AddField("Name", p.Name, &res)
-	AddField("Type", p.Type, &res)
-	AddField("Name", p.Name, &res)
-	AddField("Description", p.Description, &res)
-	AddField("Default", p.Default, &res)
+func (p FpPipelineParam) GetAsTable() *printers.Table {
+	return printers.NewTable().WithRow(
+		printers.FieldValue{Name: "Name", Value: p.Name, RenderKeyValueFunc: p.renderName},
+		printers.FieldValue{Name: "Type", Value: p.Type, Indent: 2},
+		printers.FieldValue{Name: "Description", Value: p.Description, Indent: 2},
+		printers.FieldValue{Name: "Default", Value: p.Default, Indent: 2, RenderValueFunc: p.renderDefault})
 
-	return res
 }
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -369,6 +378,41 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 	return output
 }
 
+func (p FpPipelineParam) renderName(opts sanitize.RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	left := au.BrightBlack("[")
+	right := au.BrightBlack("]")
+
+	var optString string
+	if p.Optional == nil || !*p.Optional {
+		optString = fmt.Sprintf(" %s%s%s:", left, au.Red("required"), right)
+
+	}
+	return fmt.Sprintf("%s%s", au.Cyan(p.Name), optString)
+}
+
+func (p FpPipelineParam) renderDefault(opts sanitize.RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+
+	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+		if v, ok := defaults[p.Name]; ok {
+			var valueString string
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, aurora.NewAurora(false))
+			} else {
+				s, err := json.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
+			}
+			return valueString
+		}
+	}
+	return ""
+}
+
 type PipelineExecutionResponse map[string]interface{}
 
 type CmdPipeline struct {
@@ -414,7 +458,7 @@ func (p PrintablePipeline) GetItems() []FpPipeline {
 	return p.Items
 }
 
-func (p PrintablePipeline) GetTable() (printers.Table, error) {
+func (p PrintablePipeline) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		var description string
@@ -430,7 +474,7 @@ func (p PrintablePipeline) GetTable() (printers.Table, error) {
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
 func (PrintablePipeline) getColumns() (columns []printers.TableColumnDefinition) {
@@ -528,7 +572,7 @@ func (p PrintablePipelineExecution) GetItems() []FpPipelineExecution {
 	return p.Items
 }
 
-func (p PrintablePipelineExecution) GetTable() (printers.Table, error) {
+func (p PrintablePipelineExecution) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		cells := []any{
@@ -538,7 +582,7 @@ func (p PrintablePipelineExecution) GetTable() (printers.Table, error) {
 		}
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
 func (PrintablePipelineExecution) getColumns() (columns []printers.TableColumnDefinition) {

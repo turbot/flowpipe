@@ -658,8 +658,8 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 
 }
 
-func (p *PrintableParsedEvent) GetTable() (printers.Table, error) {
-	return printers.Table{}, nil
+func (p *PrintableParsedEvent) GetTable() (*printers.Table, error) {
+	return printers.NewTable(), nil
 }
 
 type ProcessEventLogs []ProcessEventLog

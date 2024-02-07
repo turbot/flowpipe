@@ -320,6 +320,6 @@ func (p *PrintableServerOutput) GetItems() []sanitize.SanitizedStringer {
 	return p.Items
 }
 
-func (p *PrintableServerOutput) GetTable() (printers.Table, error) {
-	return printers.Table{}, nil
+func (p *PrintableServerOutput) GetTable() (*printers.Table, error) {
+	return printers.NewTable(), nil
 }

@@ -21,8 +21,8 @@ func (p PrintableVariable) GetItems() []Variable {
 	return p.Items
 }
 
-func (p PrintableVariable) GetTable() (printers.Table, error) {
-	return printers.Table{}, nil
+func (p PrintableVariable) GetTable() (*printers.Table, error) {
+	return printers.NewTable(), nil
 	// lp, ok := p.Items.([]flowpipeapiclient.Variable)
 
 	// if !ok {

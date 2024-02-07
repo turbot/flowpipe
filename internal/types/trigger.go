@@ -187,7 +187,7 @@ func NewPrintableTriggerFromSingle(input *FpTrigger) *PrintableTrigger {
 	}
 }
 
-func (p PrintableTrigger) GetTable() (printers.Table, error) {
+func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 
@@ -217,7 +217,7 @@ func (p PrintableTrigger) GetTable() (printers.Table, error) {
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
 func (PrintableTrigger) getColumns() (columns []printers.TableColumnDefinition) {

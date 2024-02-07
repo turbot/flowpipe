@@ -83,7 +83,7 @@ func (p PrintableProcess) GetItems() []Process {
 	return p.Items
 }
 
-func (p PrintableProcess) GetTable() (printers.Table, error) {
+func (p PrintableProcess) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		cells := []any{
@@ -95,7 +95,7 @@ func (p PrintableProcess) GetTable() (printers.Table, error) {
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
 func (PrintableProcess) getColumns() (columns []printers.TableColumnDefinition) {
