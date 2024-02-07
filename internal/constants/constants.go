@@ -21,8 +21,8 @@ integration "webform" "default" {}
 
 const DefaultFlowpipeNotifierContent = `
 notifier "default" {
-  integration "default" {
-    base = integration.webform.default 
+  notify {
+    integration = integration.webform.default  
   }
 }
 `
