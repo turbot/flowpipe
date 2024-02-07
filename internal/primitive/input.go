@@ -28,11 +28,6 @@ import (
 
 type IntegrationType string
 
-const (
-	IntegrationTypeSlack IntegrationType = "slack"
-	IntegrationTypeEmail IntegrationType = "email"
-)
-
 type Input struct {
 	ExecutionID         string
 	PipelineExecutionID string
