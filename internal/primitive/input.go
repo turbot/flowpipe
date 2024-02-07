@@ -6,11 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/slack-go/slack"
-	"github.com/turbot/flowpipe/templates"
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/go-kit/types"
-	"github.com/turbot/pipe-fittings/constants"
 	"html/template"
 	"net/mail"
 	"net/smtp"
@@ -19,6 +14,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/templates"
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -397,10 +398,6 @@ func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 		return perr.BadRequestWithMessage("Input type must be a string")
 	}
 
-	if i[schema.AttributeTypeNotifies] == nil {
-		return perr.BadRequestWithMessage("Input must define at least one notification")
-	}
-
 	// TODO: validate type is one of button, text, select, multiselect, combo, multicombo
 	// TODO: other validations
 	// inputType := i[schema.AttributeTypeType].(string)
@@ -467,116 +464,117 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	}
 
 	output := &modconfig.Output{}
-	base := NewInputIntegrationBase(ip)
-	var prompt, inputType string
-	var resOptions []InputIntegrationResponseOption
-	if it, ok := input[schema.AttributeTypeType].(string); ok {
-		inputType = it
-	}
-	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
-		prompt = p
-	}
-
-	for _, o := range input[schema.AttributeTypeOptions].([]any) {
-		opt := o.(map[string]any)
-		option := InputIntegrationResponseOption{}
-		if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
-			option.Label = &l
-		}
-		if v, ok := opt[schema.AttributeTypeValue].(string); ok {
-			option.Value = &v
-			if helpers.IsNil(option.Label) {
-				option.Label = &v
-			}
-		}
-		if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
-			option.Selected = &s
-		}
-		resOptions = append(resOptions, option)
-	}
-
-	for _, n := range input[schema.AttributeTypeNotifies].([]any) {
-		notification := n.(map[string]any)
-		integration := notification["integration"].(map[string]any)
-		integrationType := IntegrationType(integration["type"].(string))
-		switch integrationType {
-		case IntegrationTypeSlack:
-			s := NewInputIntegrationSlack(base)
-			if channel, ok := notification[schema.AttributeTypeChannel].(string); ok {
-				s.Channel = &channel
-			}
-			if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
-				s.Token = &tkn
-			}
-			if ss, ok := integration[schema.AttributeTypeSigningSecret].(string); ok {
-				s.SigningSecret = &ss
-			}
-			if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
-				s.WebhookUrl = &wu
-			}
-
-			// TODO: Validate?
-			err := s.PostMessage(inputType, prompt, resOptions)
-			if err != nil {
-				return nil, err
-			}
-		case IntegrationTypeEmail:
-			email := NewInputIntegrationEmail(base)
-			if host, ok := integration[schema.AttributeTypeSmtpHost].(string); ok {
-				email.Host = &host
-			}
-			if port, ok := integration[schema.AttributeTypeSmtpPort].(int64); ok {
-				email.Port = &port
-			} else if port, ok := integration[schema.AttributeTypeSmtpPort].(float64); ok {
-				intPort := int64(port)
-				email.Port = &intPort
-			}
-			if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(int64); ok {
-				email.SecurePort = &sPort
-			} else if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(float64); ok {
-				intPort := int64(sPort)
-				email.SecurePort = &intPort
-			}
-			if tls, ok := integration[schema.AttributeTypeSmtpTls].(string); ok {
-				email.Tls = &tls
-			}
-			if from, ok := integration[schema.AttributeTypeFrom].(string); ok {
-				email.From = from
-			}
-			if to, ok := notification[schema.AttributeTypeTo].(string); ok {
-				email.To = append(email.To, to)
-			} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
-				email.To = append(email.To, to)
-			}
-			if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
-				email.Subject = sub
-			} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
-				email.Subject = sub
-			}
-			if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
-				email.User = &u
-			}
-			if p, ok := integration[schema.AttributeTypeSmtpPassword].(string); ok {
-				email.Pass = &p
-			}
-			if resUrl, ok := integration[schema.AttributeTypeResponseUrl].(string); ok {
-				email.ResponseUrl = resUrl
-			} else {
-				email.ResponseUrl = "http://localhost:7103" // TODO: Remove?
-			}
-
-			// TODO: Validate?
-			o, err := email.PostMessage(ctx, prompt, resOptions)
-			if err != nil {
-				return nil, err
-			}
-			output = o
-		default:
-			return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
-		}
-	}
-
 	return output, nil
+	// base := NewInputIntegrationBase(ip)
+	// var prompt, inputType string
+	// var resOptions []InputIntegrationResponseOption
+	// if it, ok := input[schema.AttributeTypeType].(string); ok {
+	// 	inputType = it
+	// }
+	// if p, ok := input[schema.AttributeTypePrompt].(string); ok {
+	// 	prompt = p
+	// }
+
+	// for _, o := range input[schema.AttributeTypeOptions].([]any) {
+	// 	opt := o.(map[string]any)
+	// 	option := InputIntegrationResponseOption{}
+	// 	if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
+	// 		option.Label = &l
+	// 	}
+	// 	if v, ok := opt[schema.AttributeTypeValue].(string); ok {
+	// 		option.Value = &v
+	// 		if helpers.IsNil(option.Label) {
+	// 			option.Label = &v
+	// 		}
+	// 	}
+	// 	if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
+	// 		option.Selected = &s
+	// 	}
+	// 	resOptions = append(resOptions, option)
+	// }
+
+	// for _, n := range input[schema.AttributeTypeNotifies].([]any) {
+	// 	notification := n.(map[string]any)
+	// 	integration := notification["integration"].(map[string]any)
+	// 	integrationType := IntegrationType(integration["type"].(string))
+	// 	switch integrationType {
+	// 	case IntegrationTypeSlack:
+	// 		s := NewInputIntegrationSlack(base)
+	// 		if channel, ok := notification[schema.AttributeTypeChannel].(string); ok {
+	// 			s.Channel = &channel
+	// 		}
+	// 		if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
+	// 			s.Token = &tkn
+	// 		}
+	// 		if ss, ok := integration[schema.AttributeTypeSigningSecret].(string); ok {
+	// 			s.SigningSecret = &ss
+	// 		}
+	// 		if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
+	// 			s.WebhookUrl = &wu
+	// 		}
+
+	// 		// TODO: Validate?
+	// 		err := s.PostMessage(inputType, prompt, resOptions)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 	case IntegrationTypeEmail:
+	// 		email := NewInputIntegrationEmail(base)
+	// 		if host, ok := integration[schema.AttributeTypeSmtpHost].(string); ok {
+	// 			email.Host = &host
+	// 		}
+	// 		if port, ok := integration[schema.AttributeTypeSmtpPort].(int64); ok {
+	// 			email.Port = &port
+	// 		} else if port, ok := integration[schema.AttributeTypeSmtpPort].(float64); ok {
+	// 			intPort := int64(port)
+	// 			email.Port = &intPort
+	// 		}
+	// 		if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(int64); ok {
+	// 			email.SecurePort = &sPort
+	// 		} else if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(float64); ok {
+	// 			intPort := int64(sPort)
+	// 			email.SecurePort = &intPort
+	// 		}
+	// 		if tls, ok := integration[schema.AttributeTypeSmtpTls].(string); ok {
+	// 			email.Tls = &tls
+	// 		}
+	// 		if from, ok := integration[schema.AttributeTypeFrom].(string); ok {
+	// 			email.From = from
+	// 		}
+	// 		if to, ok := notification[schema.AttributeTypeTo].(string); ok {
+	// 			email.To = append(email.To, to)
+	// 		} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
+	// 			email.To = append(email.To, to)
+	// 		}
+	// 		if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
+	// 			email.Subject = sub
+	// 		} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
+	// 			email.Subject = sub
+	// 		}
+	// 		if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
+	// 			email.User = &u
+	// 		}
+	// 		if p, ok := integration[schema.AttributeTypeSmtpPassword].(string); ok {
+	// 			email.Pass = &p
+	// 		}
+	// 		if resUrl, ok := integration[schema.AttributeTypeResponseUrl].(string); ok {
+	// 			email.ResponseUrl = resUrl
+	// 		} else {
+	// 			email.ResponseUrl = "http://localhost:7103" // TODO: Remove?
+	// 		}
+
+	// 		// TODO: Validate?
+	// 		o, err := email.PostMessage(ctx, prompt, resOptions)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		output = o
+	// 	default:
+	// 		return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
+	// 	}
+	// }
+
+	// return output, nil
 }
 
 func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOptions []InputIntegrationResponseOption) (string, error) {
