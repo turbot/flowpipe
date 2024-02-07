@@ -54,7 +54,7 @@ func XXXTestIntegrationInputSendEmail(t *testing.T) {
 	input := modconfig.Input(map[string]interface{}{
 		// schema.AttributeTypeSenderName: "Karan",
 
-		schema.AttributeTypeType:       IntegrationTypeEmail,
+		schema.AttributeTypeType:       schema.IntegrationTypeEmail,
 		schema.AttributeTypeUsername:   "karan@turbot.com",
 		schema.AttributeTypePassword:   "xxxxxx",
 		schema.AttributeTypeSmtpServer: "smtp.gmail.com",
