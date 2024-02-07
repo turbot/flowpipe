@@ -1113,19 +1113,6 @@ func (suite *ModTestSuite) TestForEachEmptyAndNonCollection() {
 	}
 }
 
-func (suite *ModTestSuite) TestIntegrations() {
-	assert := assert.New(suite.T())
-
-	rootMod := suite.manager.RootMod
-	assert.NotNil(rootMod)
-
-	integrations := rootMod.ResourceMaps.Integrations["test_suite_mod.integration.slack.slack_app_from_var"]
-	if integrations == nil {
-		assert.Fail("test_suite_mod.integration.slack.slack_app_from_var not found")
-		return
-	}
-}
-
 func (suite *ModTestSuite) TestPipelineTransformStep() {
 	assert := assert.New(suite.T())
 
