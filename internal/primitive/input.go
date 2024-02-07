@@ -35,7 +35,7 @@ type Input struct {
 }
 
 type InputIntegration interface {
-	PostMessage(modconfig.Input) error
+	PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error)
 	ReceiveMessage() (*modconfig.Output, error)
 }
 
@@ -79,7 +79,7 @@ func NewInputIntegrationSlack(base InputIntegrationBase) InputIntegrationSlack {
 	}
 }
 
-func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, options []InputIntegrationResponseOption) error {
+func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	// payload for callback
 	payload := map[string]any{
 		"execution_id":          ip.ExecutionID,
@@ -88,76 +88,67 @@ func (ip *InputIntegrationSlack) PostMessage(inputType string, prompt string, op
 	}
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	// encodedPayload needs to be passed into block id of first block then we can extract it on receipt of Slacks payload
 	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
-
-	// attachment
-	att := slack.Attachment{
-		Text:       prompt,
-		Color:      "#3AA3E3",
-		CallbackID: encodedPayload,
-	}
-	var actions []slack.AttachmentAction
-	var actionOptions []slack.AttachmentActionOption
 	var msg slack.MsgOption
+	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, prompt, false, false)
 
 	switch inputType {
 	case constants.InputTypeButton:
+		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+		var buttons []slack.BlockElement
 		for _, opt := range options {
-			action := slack.AttachmentAction{
-				Name:  *opt.Value,
-				Text:  *opt.Label,
-				Type:  "button",
-				Value: *opt.Value,
-			}
-			actions = append(actions, action)
+			button := slack.NewButtonBlockElement("", *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
+			buttons = append(buttons, slack.BlockElement(button))
 		}
-		att.Actions = actions
-		msg = slack.MsgOptionAttachments(att)
+		action := slack.NewActionBlock("", buttons...)
+		msg = slack.MsgOptionBlocks(header, action)
 	case constants.InputTypeSelect:
-		for _, opt := range options {
-			o := slack.AttachmentActionOption{
-				Text:  *opt.Label,
-				Value: *opt.Value,
-			}
-			actionOptions = append(actionOptions, o)
+		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+		blockOptions := make([]*slack.OptionBlockObject, len(options))
+		for i, opt := range options {
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
 		}
-		action := slack.AttachmentAction{
-			Name:    "select",
-			Text:    "Select response",
-			Type:    "select",
-			Options: actionOptions,
-		}
-		actions = append(actions, action)
-		att.Actions = actions
-		msg = slack.MsgOptionAttachments(att)
+		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
+		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, inputType, blockOptions...)
+		action := slack.NewActionBlock("action_block", s)
+		msg = slack.MsgOptionBlocks(header, action)
 	case constants.InputTypeMultiSelect:
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
 		for i, opt := range options {
-			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject("plain_text", *opt.Label, false, false), nil)
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
 		}
 		ms := slack.NewOptionsMultiSelectBlockElement(
 			slack.MultiOptTypeStatic,
-			slack.NewTextBlockObject("plain_text", "Select options", false, false),
-			encodedPayload,
+			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false),
+			inputType,
 			blockOptions...)
-		block := slack.NewSectionBlock(
-			slack.NewTextBlockObject("plain_text", prompt, false, false),
-			nil,
-			slack.NewAccessory(ms))
+		block := slack.NewSectionBlock(promptBlock, nil, slack.NewAccessory(ms), slack.SectionBlockOptionBlockID(encodedPayload))
 		msg = slack.MsgOptionBlocks(block)
+	case constants.InputTypeText:
+		textInput := slack.NewPlainTextInputBlockElement(nil, inputType)
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
+		input.DispatchAction = true // required for being able to send event
+		msg = slack.MsgOptionBlocks(input)
 	default:
-		return perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
+		return nil, perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
 	}
 
 	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
+		output := modconfig.Output{}
 		api := slack.New(*ip.Token)
 		_, _, err = api.PostMessage(*ip.Channel, msg, slack.MsgOptionAsUser(true))
-		return err
+		return &output, err
 	} else {
-		return perr.InternalWithMessage("not yet implemented")
+		// TODO: handle "webhook" approach of sending messages
+		return nil, perr.InternalWithMessage("not yet implemented")
 	}
+}
+
+func (ip *InputIntegrationSlack) ReceiveMessage() (*modconfig.Output, error) {
+	return nil, perr.InternalWithMessage("not implemented")
 }
 
 type InputIntegrationEmail struct {
@@ -318,7 +309,7 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	var err error
 	host := types.SafeString(ip.Host)
 	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
@@ -381,6 +372,10 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, prompt string,
 	}
 
 	return &output, nil
+}
+
+func (ip *InputIntegrationEmail) ReceiveMessage() (*modconfig.Output, error) {
+	return nil, perr.InternalWithMessage("not implemented")
 }
 
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
