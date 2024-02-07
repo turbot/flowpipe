@@ -67,7 +67,7 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-func (p FpPipeline) GetAsTable() *printers.Table {
+func (p FpPipeline) GetShowData() *printers.Table {
 	var res = printers.NewTable().WithRow(
 		printers.FieldValue{Name: "Name", Value: p.Name},
 		printers.FieldValue{Name: "Title", Value: p.Title},
@@ -322,7 +322,7 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) GetAsTable() *printers.Table {
+func (p FpPipelineParam) GetShowData() *printers.Table {
 	return printers.NewTable().WithRow(
 		printers.FieldValue{Name: "Name", Value: p.Name, RenderKeyValueFunc: p.renderName},
 		printers.FieldValue{Name: "Type", Value: p.Type, Indent: 2},
