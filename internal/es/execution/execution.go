@@ -151,6 +151,9 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 			relevantCredentials[credentialName] = allCredentials[credentialName]
 		}
 
+		// Why do we bother with these <dynamic> dependencies?
+		// We don't want to resolve every single available in the system, we only want to resolve the ones that are
+		// are used. So this is part of how have an educated guess which credentials to resolve.
 		if strings.Contains(credentialName, "<dynamic>") {
 			parts := strings.Split(credentialName, ".")
 			if len(parts) > 0 {
