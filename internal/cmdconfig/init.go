@@ -95,13 +95,16 @@ func defaultIntegrationNotifierFiles() {
 	notifierFile := filepath.Join(configPath, "notifiers.fpc")
 	if !files.FileExists(internalStateFile) {
 		if !files.FileExists(integrationFile) {
+			//nolint: gosec // this file is safe to be read by all users
 			_ = os.WriteFile(integrationFile, []byte(con.DefaultFlowpipeIntegrationContent), 0755)
 		}
 		if !files.FileExists(notifierFile) {
+			//nolint: gosec // this file is safe to be read by all users
 			_ = os.WriteFile(notifierFile, []byte(con.DefaultFlowpipeNotifierContent), 0755)
 		}
 
 		ts := time.Now().Format(time.RFC3339)
+		//nolint: gosec // this file is safe to be read by all users
 		_ = os.WriteFile(internalStateFile, []byte(ts), 0755)
 	}
 }
