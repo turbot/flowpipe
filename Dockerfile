@@ -1,9 +1,10 @@
 # Use the slim version of Debian Bullseye as the base image
 FROM debian:bullseye-slim
 
-# Label the image with the maintainer's contact information
-# TODO: Confirm the maintainer details with @cody
-LABEL maintainer="Turbot Support <help@turbot.com>"
+LABEL org.opencontainers.image.ref.name=flowpipe
+LABEL org.opencontainers.image.version=${TARGETVERSION}
+LABEL org.opencontainers.image.url="https://flowpipe.io"
+LABEL org.opencontainers.image.authors="Turbot HQ, Inc"
 
 # Define default environment variables to override the flowpipe UID and its GID
 ENV USER_UID=7103
