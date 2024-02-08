@@ -52,6 +52,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/flowpipe:${{ github.event.inputs.version }}
             ghcr.io/${{ github.repository_owner }}/flowpipe:latest
+          outputs: type=image,name=flowpipe,annotation-index.org.opencontainers.image.description="Flowpipe container image ${TARGETVERSION}"
+
 
       # Outputs the image digest after the build.
       - name: Image digest
