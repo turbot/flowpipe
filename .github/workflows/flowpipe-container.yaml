@@ -8,6 +8,9 @@ on:
         description: "Flowpipe version (without 'v')"
         required: true
 
+env:
+  IMAGE_DESCRIPTION: "Flowpipe container image v${{ github.event.inputs.version }}"
+
 # Defines the build and release job.
 jobs:
   build_and_release:
@@ -52,6 +55,8 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/flowpipe:${{ github.event.inputs.version }}
             ghcr.io/${{ github.repository_owner }}/flowpipe:latest
+          outputs: type=image,name=flowpipe,annotation-index.org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+
 
       # Outputs the image digest after the build.
       - name: Image digest
