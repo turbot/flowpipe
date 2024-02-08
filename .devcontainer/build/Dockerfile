@@ -1,5 +1,14 @@
 FROM mcr.microsoft.com/devcontainers/go:1-1.21-bullseye
 
+ENV DEVCONTAINER_VERSION
+
+LABEL org.opencontainers.image.ref.name="flowpipe-devcontainer"
+LABEL org.opencontainers.image.version=${DEVCONTAINER_VERSION}
+LABEL org.opencontainers.image.url="https://flowpipe.io"
+LABEL org.opencontainers.image.authors="Turbot HQ, Inc"
+LABEL org.opencontainers.image.source="https://github.com/turbot/flowpipe"
+LABEL org.opencontainers.image.description="Development container for flowpipe"
+
 RUN apt update \
     && apt install default-jre default-jdk postgresql mariadb-server -y \
     && cd /tmp \

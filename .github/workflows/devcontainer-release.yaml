@@ -40,6 +40,8 @@ jobs:
           context: flowpipe/.devcontainer/build
           push: true
           platforms: linux/arm64,linux/amd64
+          build-args: |
+            DEVCONTAINER_VERSION=${{ github.event.inputs.version }}
           tags: |
             ghcr.io/turbot/flowpipe-devcontainer:${{ github.event.inputs.version }}
             ghcr.io/turbot/flowpipe-devcontainer:latest

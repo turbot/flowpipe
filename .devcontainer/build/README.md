@@ -1,15 +1,6 @@
-Don't push this the devcontainer Docker image to GitHub yet.
+# DevContainer for Flowpipe Development
 
-Build this locally and it will work.
+## Introduction
 
-## Troubleshooting
+This repository contains the configuration for a development container for Flowpipe. See [Development Containers](https://containers.dev/).
 
-https://stackoverflow.com/questions/74707530/docker-buildx-fails-to-show-result-in-image-list
-
-
-```
-# build both images
-docker buildx build --platform linux/arm64,linux/amd64 .
-# load just one platform
-docker buildx build --load --platform linux/amd64 -t my-image-tag .
-```
