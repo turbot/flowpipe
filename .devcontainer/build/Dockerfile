@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/devcontainers/go:1-1.21-bullseye
 
-ENV DEVCONTAINER_VERSION
+ARG DEVCONTAINER_VERSION
 
 LABEL org.opencontainers.image.ref.name="flowpipe-devcontainer"
 LABEL org.opencontainers.image.version=${DEVCONTAINER_VERSION}
