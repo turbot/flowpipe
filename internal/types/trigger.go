@@ -220,27 +220,6 @@ func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintableTrigger) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "The name of the trigger",
-		},
-		{
-			Name:        "ENABLED",
-			Type:        "boolean",
-			Description: "If true, trigger is enabled",
-		},
-		{
-			Name:        "PIPELINE",
-			Type:        "string",
-			Description: "Pipeline associated with trigger",
-		},
-		{
-			Name:        "DESCRIPTION",
-			Type:        "string",
-			Description: "Trigger description",
-		},
-	}
+func (PrintableTrigger) getColumns() (columns []string) {
+	return []string{"NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
 }

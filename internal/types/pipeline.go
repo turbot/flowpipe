@@ -67,9 +67,16 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-func (p FpPipeline) GetShowData() *printers.Table {
-	var res = printers.NewTable().WithRow(
-		printers.FieldValue{Name: "Name", Value: p.Name},
+func (p FpPipeline) GetListData() *printers.TableRow {
+	return printers.NewTableRow(
+		printers.FieldValue{Name: "Name", Value: p.pipelineDisplayName()},
+		printers.FieldValue{Name: "Title", Value: p.Title},
+	)
+}
+
+func (p FpPipeline) GetShowData() *printers.TableRow {
+	return printers.NewTableRow(
+		printers.FieldValue{Name: "Name", Value: p.pipelineDisplayName()},
 		printers.FieldValue{Name: "Title", Value: p.Title},
 		printers.FieldValue{Name: "Description", Value: p.Description},
 		printers.FieldValue{Name: "Tags", Value: p.Tags},
@@ -77,7 +84,6 @@ func (p FpPipeline) GetShowData() *printers.Table {
 		printers.FieldValue{Name: "Outputs", Value: p.OutputConfig},
 		printers.FieldValue{Name: "Usage", Value: p.usage()})
 
-	return res
 }
 
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -138,10 +144,10 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 	output += fmt.Sprintf("%s\n", au.Blue("Usage:"))
 	output += fmt.Sprintf("  flowpipe pipeline run %s%s\n", displayName, pArg)
 
-	output += "\n\n"
-
-	n, _ := printers.Show(p, opts)
-	output += n
+	//output += "\n\n"
+	//
+	//n, _ := printers.Show(p, opts)
+	//output += n
 	return output
 }
 
@@ -322,12 +328,18 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) GetShowData() *printers.Table {
-	return printers.NewTable().WithRow(
+func (p FpPipelineParam) GetShowData() *printers.TableRow {
+	return printers.NewTableRow(
 		printers.FieldValue{Name: "Name", Value: p.Name, RenderKeyValueFunc: p.renderName},
 		printers.FieldValue{Name: "Type", Value: p.Type, Indent: 2},
 		printers.FieldValue{Name: "Description", Value: p.Description, Indent: 2},
 		printers.FieldValue{Name: "Default", Value: p.Default, Indent: 2, RenderValueFunc: p.renderDefault})
+}
+
+func (p FpPipelineParam) GetListData() *printers.TableRow {
+	return printers.NewTableRow(
+		printers.FieldValue{Name: "Name", Value: p.Name},
+		printers.FieldValue{Name: "Type", Value: p.Type})
 
 }
 
@@ -477,24 +489,8 @@ func (p PrintablePipeline) GetTable() (*printers.Table, error) {
 	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipeline) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "MOD",
-			Type:        "string",
-			Description: "Mod name",
-		},
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "Pipeline name",
-		},
-		{
-			Name:        "DESCRIPTION",
-			Type:        "string",
-			Description: "Pipeline description",
-		},
-	}
+func (PrintablePipeline) getColumns() (columns []string) {
+	return []string{"MOD", "NAME", "DESCRIPTION"}
 }
 
 type FpPipelineExecution struct {
@@ -585,22 +581,6 @@ func (p PrintablePipelineExecution) GetTable() (*printers.Table, error) {
 	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipelineExecution) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "EXECUTION ID",
-			Type:        "string",
-			Description: "Execution ID",
-		},
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "Pipeline name",
-		},
-		{
-			Name:        "STATUS",
-			Type:        "string",
-			Description: "Pipeline execution status",
-		},
-	}
+func (PrintablePipelineExecution) getColumns() (columns []string) {
+	return []string{"EXECUTION ID", "NAME", "STATUS"}
 }
