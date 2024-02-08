@@ -1,6 +1,5 @@
 name: Flowpipe - Release
 
-
 on:
   workflow_dispatch:
     inputs:
@@ -19,7 +18,6 @@ on:
         description: Confirm running on main branch
         required: true
         type: boolean
-
 
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
