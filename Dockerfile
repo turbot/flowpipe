@@ -10,7 +10,7 @@ ENV USER_UID=7103
 ENV USER_GID=0
 
 # Define default environment variables to enable debugging logging
-ENV DEBUG_MODE=0
+ENV FLOWPIPE_LOG_LEVEL="off"
 
 # Declare build arguments for version and architecture
 ARG TARGETVERSION
@@ -32,8 +32,10 @@ RUN group_name=$(getent group ${USER_GID} | cut -d: -f1) && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list && \
     apt-get update -y && \
     apt-get install -y docker-ce-cli wget && \
+    mkdir -p /opt/flowpipe && \
     wget -nv https://github.com/turbot/flowpipe/releases/download/${TARGETVERSION}/flowpipe.linux.${TARGETARCH}.tar.gz -O /tmp/flowpipe.linux.${TARGETARCH}.tar.gz && \
-    tar xzf /tmp/flowpipe.linux.${TARGETARCH}.tar.gz -C /usr/local/bin && \
+    tar xzf /tmp/flowpipe.linux.${TARGETARCH}.tar.gz -C /opt/flowpipe && \
+    mv /opt/flowpipe/flowpipe /usr/local/bin/flowpipe && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/flowpipe.linux.${TARGETARCH}.tar.gz
 
