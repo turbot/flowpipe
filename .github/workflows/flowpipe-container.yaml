@@ -4,20 +4,9 @@ name: Container - Build and Release
 on:
   workflow_dispatch:
     inputs:
-      release:
+      version:
         description: "Flowpipe version (without 'v')"
         required: true
-
-# Sets environment variables used across all jobs in this workflow.
-env:
-  # Sets the Flowpipe version to the input release version.
-  FLOWPIPE_VERSION: ${{ github.event.inputs.release }}
-  # Sets the GitHub write token for authorization.
-  GH_WRITE_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-  # Sets the repository owner.
-  REPOSITORY_OWNER: ${{ github.repository_owner }}
-  # Sets the image description.
-  IMAGE_DESCRIPTION: 'Flowpipe is a cloud scripting engine. Automation and workflow to connect your clouds to the people, systems and data that matter.'
 
 # Defines the build and release job.
 jobs:
@@ -46,14 +35,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ env.REPOSITORY_OWNER }}
-          password: ${{ env.GH_WRITE_TOKEN }}
-
-      # Cleans the version input for Docker tagging.
-      - name: Clean Version for Tag
-        id: generate_docker_tag
-        run: |
-          echo "docker_tag=${FLOWPIPE_VERSION#"v"}" >> $GITHUB_OUTPUT
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GH_ACCESS_TOKEN }}
 
       # Builds the Docker image and pushes it to the GitHub Container Registry.
       - name: Build and Push to Container Registry
@@ -65,11 +48,10 @@ jobs:
           push: true
           platforms: linux/amd64, linux/arm64
           build-args: |
-            TARGETVERSION=${{ env.FLOWPIPE_VERSION }}
+            TARGETVERSION=v${{ github.event.inputs.version }}
           tags: |
-            ghcr.io/${{ env.REPOSITORY_OWNER }}/flowpipe:${{ steps.generate_docker_tag.outputs.docker_tag }}
-            ghcr.io/${{ env.REPOSITORY_OWNER }}/flowpipe:latest
-          outputs: type=image,name=flowpipe,annotation-index.org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+            ghcr.io/${{ github.repository_owner }}/flowpipe:${{ github.event.inputs.version }}
+            ghcr.io/${{ github.repository_owner }}/flowpipe:latest
 
       # Outputs the image digest after the build.
       - name: Image digest

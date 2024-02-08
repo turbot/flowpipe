@@ -12,7 +12,7 @@ on:
         - Final
         required: true
       version:
-        description: 'Version'
+        description: "Version (without 'v')"
         required: true
         default: 0.2.0
       confirmMain:
