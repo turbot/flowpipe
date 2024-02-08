@@ -14,15 +14,3 @@ const (
 
 	MaxScanSize = bufio.MaxScanTokenSize * 40
 )
-
-const DefaultFlowpipeIntegrationContent = `
-integration "webform" "default" {}
-`
-
-const DefaultFlowpipeNotifierContent = `
-notifier "default" {
-  notify {
-    integration = integration.webform.default  
-  }
-}
-`
