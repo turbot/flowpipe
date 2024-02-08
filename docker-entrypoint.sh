@@ -1,7 +1,8 @@
 #!/bin/bash
 
 log_if_debug() {
-    if [ "${DEBUG_MODE}" = 1 ]; then
+    # Convert FLOWPIPE_LOG_LEVEL to lowercase and compare
+    if [ "${FLOWPIPE_LOG_LEVEL,,}" = "debug" ]; then
         echo "$@"
     fi
 }
