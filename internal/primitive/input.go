@@ -36,7 +36,6 @@ type Input struct {
 
 type InputIntegration interface {
 	PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error)
-	ReceiveMessage() (*modconfig.Output, error)
 }
 
 type InputIntegrationBase struct {
@@ -145,10 +144,6 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 		// TODO: handle "webhook" approach of sending messages
 		return nil, perr.InternalWithMessage("not yet implemented")
 	}
-}
-
-func (ip *InputIntegrationSlack) ReceiveMessage() (*modconfig.Output, error) {
-	return nil, perr.InternalWithMessage("not implemented")
 }
 
 type InputIntegrationEmail struct {
@@ -372,10 +367,6 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType stri
 	}
 
 	return &output, nil
-}
-
-func (ip *InputIntegrationEmail) ReceiveMessage() (*modconfig.Output, error) {
-	return nil, perr.InternalWithMessage("not implemented")
 }
 
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {

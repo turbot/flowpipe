@@ -35,12 +35,12 @@ type ProcessRequestURI struct {
 }
 
 type WebhookRequestUri struct {
-	Trigger string `json:"trigger" uri:"trigger" binding:"required"`
-	Hash    string `json:"hash" uri:"hash" binding:"required"`
+	Hook string `json:"hook" uri:"hook" binding:"required"`
+	Hash string `json:"hash" uri:"hash" binding:"required"`
 }
 
 type WebhookRequestQuery struct {
-	WaitTime      *int    `json:"wait_time" form:"wait_time" binding:"omitempty"`
+	WaitTime *int `json:"wait_time" form:"wait_time" binding:"omitempty"`
 }
 
 func (c *WebhookRequestQuery) GetWaitTime() int {
