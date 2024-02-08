@@ -3,10 +3,13 @@ package cmdconfig
 import (
 	"maps"
 	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	constant "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -16,6 +19,8 @@ import (
 )
 
 func initGlobalConfig() *flowpipeconfig.FlowpipeConfig {
+	ensureFlowpipeSample()
+
 	// load workspace profile from the configured install dir
 	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
 	error_helpers.FailOnError(err)
@@ -76,4 +81,11 @@ func getConfigDefaults(cmd *cobra.Command) map[string]any {
 		maps.Copy(res, cmdSpecificDefaults)
 	}
 	return res
+}
+
+func ensureFlowpipeSample() {
+	sampleFile := filepath.Join(app_specific.InstallDir, "config", "flowpipe.fpc.sample")
+	sampleFileContent := constant.FlowpipeSampleContent
+	//nolint: gosec // this file is safe to be read by all users
+	_ = os.WriteFile(sampleFile, []byte(sampleFileContent), 0755)
 }

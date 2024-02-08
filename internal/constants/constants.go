@@ -14,3 +14,18 @@ const (
 
 	MaxScanSize = bufio.MaxScanTokenSize * 40
 )
+
+const FlowpipeSampleContent = `
+#
+# For detailed descriptions, see the reference documentation
+# at https://flowpipe.io/docs
+#
+
+# integration "webform" "default" {}
+
+# notifier "default" {
+#   notify {
+#     integration = integration.webform.default  
+#   }
+# }
+`
