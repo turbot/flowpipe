@@ -1,9 +1,14 @@
 package api
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -31,11 +36,50 @@ import (
 )
 
 func (api *APIService) WebhookRegisterAPI(router *gin.RouterGroup) {
-	router.POST("/hook/:trigger/:hash", api.runWebhook)
-	router.GET("/hook/:trigger/:hash", api.runWebhook)
+	router.POST("/hook/:hook/:hash", api.passHookToProcessor)
+	router.GET("/hook/:hook/:hash", api.runTriggerHook)
 }
 
-func (api *APIService) runWebhook(c *gin.Context) {
+type JSONPayload struct {
+	PipelineExecutionID string `json:"pipeline_execution_id"`
+	StepExecutionID     string `json:"step_execution_id"`
+	ExecutionID         string `json:"execution_id"`
+}
+
+type slackResponse struct {
+	ExecutionID         string
+	PipelineExecutionID string
+	StepExecutionID     string
+	User                string
+	Value               any
+	ResponseUrl         string
+}
+
+type slackUpdate struct {
+	Text            string `json:"text"`
+	ReplaceOriginal bool   `json:"replace_original"`
+}
+
+func (api *APIService) passHookToProcessor(c *gin.Context) {
+	webhookUri := types.WebhookRequestUri{}
+	if err := c.ShouldBindUri(&webhookUri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	nameParts := strings.Split(webhookUri.Hook, ".")
+	switch {
+	case len(nameParts) >= 2 && (nameParts[0] == "trigger" || nameParts[1] == "trigger"):
+		api.runTriggerHook(c)
+	case len(nameParts) >= 2 && nameParts[0] == "integration":
+		api.runIntegrationHook(c)
+	default:
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("Not Found %s", webhookUri.Hook)))
+		return
+	}
+}
+
+func (api *APIService) runTriggerHook(c *gin.Context) {
 	webhookUri := types.WebhookRequestUri{}
 	if err := c.ShouldBindUri(&webhookUri); err != nil {
 		common.AbortWithError(c, err)
@@ -50,7 +94,7 @@ func (api *APIService) runWebhook(c *gin.Context) {
 
 	waitRetry := webhookQuery.GetWaitTime()
 
-	webhookTriggerName := webhookUri.Trigger
+	webhookTriggerName := webhookUri.Hook
 	webhookTriggerHash := webhookUri.Hash
 
 	// Get the trigger from the cache
@@ -283,4 +327,201 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	} else {
 		c.JSON(209, response)
 	}
+}
+
+func (api *APIService) runIntegrationHook(c *gin.Context) {
+	webhookUri := types.WebhookRequestUri{}
+	if err := c.ShouldBindUri(&webhookUri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	// TODO: validate correct hash
+
+	// determine integration type: integration.slack.example -> slack
+	nameParts := strings.Split(webhookUri.Hook, ".")
+	integrationType := nameParts[1]
+	// integrationName := nameParts[2]
+
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	switch integrationType {
+	case "slack":
+		resp, err := parseSlackResponse(bodyBytes)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		}
+
+		eventPublished, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, resp.Value)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		} else if !eventPublished { // only event this is false & we don't have error is that we've already processed the step
+			common.AbortWithError(c, perr.InternalWithMessage("already processed"))
+			return
+		}
+
+		// acknowledge to slack
+		c.String(200, "")
+		_ = updateSlackMessage(resp.ResponseUrl, fmt.Sprintf("Thanks <@%s>!", resp.User)) // TODO: do we handle this error since we already ack'd?
+
+	case "webform":
+		// TODO: implement
+		common.AbortWithError(c, perr.InternalWithMessage("not yet implemented"))
+		return
+	default:
+		// TODO: handle more gracefully?
+		common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("Integration type %s is not supported", integrationType)))
+		return
+	}
+}
+
+func (api *APIService) finishInputStep(execId string, pExecId string, sExecId string, value any) (bool, error) {
+	ex, err := execution.GetExecution(execId)
+	if err != nil {
+		return false, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", execId))
+	}
+
+	pipelineExecution := ex.PipelineExecutions[pExecId]
+	if pipelineExecution == nil {
+		return false, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pExecId))
+	}
+
+	stepExecution := pipelineExecution.StepExecutions[sExecId]
+	if stepExecution == nil {
+		return false, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sExecId))
+	}
+
+	if stepExecution.Status == "finished" || pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() {
+		// step already processed
+		return false, nil
+	}
+
+	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
+	stepFinishedEvent, err := event.NewStepFinished()
+	if err != nil {
+		return false, perr.InternalWithMessage("unable to create step finished event: " + err.Error())
+	}
+
+	out := modconfig.Output{
+		Data: map[string]any{
+			"value": value,
+		},
+		Status: "finished",
+	}
+
+	stepFinishedEvent.Event = evt
+	stepFinishedEvent.PipelineExecutionID = pExecId
+	stepFinishedEvent.StepExecutionID = stepExecution.ID
+	stepFinishedEvent.StepForEach = stepExecution.StepForEach
+	stepFinishedEvent.StepLoop = stepExecution.StepLoop
+	stepFinishedEvent.StepRetry = stepExecution.StepRetry
+	stepFinishedEvent.StepOutput = map[string]any{}
+	stepFinishedEvent.Output = &out
+	err = api.EsService.Raise(stepFinishedEvent)
+	if err != nil {
+		return false, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
+	}
+	return true, nil
+}
+
+func decodePayload(input string) (JSONPayload, error) {
+	b64decoded, err := base64.StdEncoding.DecodeString(input)
+	if err != nil {
+		return JSONPayload{}, err
+	}
+	var out JSONPayload
+	err = json.Unmarshal(b64decoded, &out)
+	if err != nil {
+		return JSONPayload{}, err
+	}
+
+	return out, nil
+}
+
+func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
+	var response slackResponse
+	var values []string
+	decodedBody, err := url.QueryUnescape(string(bodyBytes))
+	if err != nil {
+		return response, err
+	}
+	decodedBody = decodedBody[8:] // strip non-json prefix
+
+	var jsonBody map[string]any
+	err = json.Unmarshal([]byte(decodedBody), &jsonBody)
+	if err != nil {
+		return response, err
+	}
+
+	// parse ids - encoded payload should be block_id of first block in message
+	encodedPayload := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)["block_id"].(string)
+	payload, err := decodePayload(encodedPayload)
+	if err != nil {
+		return response, fmt.Errorf("error parsing execution id payload: %s", err.Error())
+	}
+	response.ExecutionID = payload.ExecutionID
+	response.PipelineExecutionID = payload.PipelineExecutionID
+	response.StepExecutionID = payload.StepExecutionID
+
+	// parse user
+	if user, ok := jsonBody["user"].(map[string]any); ok {
+		response.User = user["username"].(string)
+	}
+
+	// response url
+	response.ResponseUrl = jsonBody["response_url"].(string)
+
+	// parse value(s)
+	for _, a := range jsonBody["actions"].([]any) {
+		action := a.(map[string]any)
+		actionType := action["type"].(string)
+
+		switch actionType {
+		case "button", "plain_text_input":
+			values = append(values, action["value"].(string))
+		case "static_select":
+			values = append(values, action["selected_option"].(map[string]any)["value"].(string))
+		case "multi_static_select":
+			selectedOptions := action["selected_options"].([]any)
+			for _, selectedOption := range selectedOptions {
+				values = append(values, selectedOption.(map[string]any)["value"].(string))
+			}
+		}
+	}
+
+	// value can be nil, string or []string
+	switch len(values) {
+	case 0:
+		response.Value = nil
+	case 1:
+		response.Value = values[0]
+	default:
+		response.Value = values
+	}
+
+	return response, nil
+}
+
+func updateSlackMessage(responseUrl string, newMessage string) error {
+	msg := slackUpdate{
+		Text:            newMessage,
+		ReplaceOriginal: true,
+	}
+	jsonMsg, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	//nolint: gosec // variable url is by design
+	_, err = http.Post(responseUrl, "application/json", bytes.NewBuffer(jsonMsg))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
