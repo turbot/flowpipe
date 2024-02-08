@@ -2,8 +2,6 @@ package manager
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"os"
@@ -159,34 +157,24 @@ func (m *Manager) shouldStartScheduler() bool {
 	return m.startup&startScheduler != 0
 }
 
-func ensureDir(dir string) error {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0755)
-		if err != nil {
-			return perr.InternalWithMessage(fmt.Sprintf("error creating directory %s", dir))
-		}
-	}
-	return nil
-}
-
 func (m *Manager) initializeModDirectory() error {
 	modLocation := viper.GetString(constants.ArgModLocation)
 	slog.Debug("Initializing mod directory", "modLocation", modLocation)
 
 	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
-	err := ensureDir(modFlowpipeDir)
+	err := util.EnsureDir(modFlowpipeDir)
 	if err != nil {
 		return err
 	}
 
 	internalDir := filepaths.ModInternalDir()
-	err = ensureDir(internalDir)
+	err = util.EnsureDir(internalDir)
 	if err != nil {
 		return err
 	}
 
 	saltFileFullPath := filepath.Join(internalDir, "salt")
-	salt, err := flowpipeSalt(saltFileFullPath, 32)
+	salt, err := util.CreateFlowpipeSalt(saltFileFullPath, 32)
 	if err != nil {
 		return err
 	}
@@ -202,40 +190,6 @@ func (m *Manager) initializeModDirectory() error {
 	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
 
 	return nil
-}
-
-// Assumes that the dir exists
-//
-// The function creates the salt if it does not exist, or it returns the existing
-// salt if it's already there
-func flowpipeSalt(filename string, length int) (string, error) {
-	// Check if the salt file exists
-	if _, err := os.Stat(filename); err == nil {
-		// If the file exists, read the salt from it
-		saltBytes, err := os.ReadFile(filename)
-		if err != nil {
-			return "", err
-		}
-		return string(saltBytes), nil
-	}
-
-	// If the file does not exist, generate a new salt
-	salt := make([]byte, length)
-	_, err := rand.Read(salt)
-	if err != nil {
-		return "", err
-	}
-
-	// Encode the salt as a hexadecimal string
-	saltHex := hex.EncodeToString(salt)
-
-	// Write the salt to the file
-	err = os.WriteFile(filename, []byte(saltHex), 0600)
-	if err != nil {
-		return "", err
-	}
-
-	return saltHex, nil
 }
 
 // load and cache triggers and pipelines

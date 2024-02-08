@@ -43,3 +43,7 @@ func EventStoreFilePath(executionId string) string {
 func SnapshotFilePath(executionId string) string {
 	return path.Join(EventStoreDir(), fmt.Sprintf("%s.sps", executionId))
 }
+
+func GlobalInternalDir() string {
+	return path.Join(app_specific.InstallDir, "internal")
+}

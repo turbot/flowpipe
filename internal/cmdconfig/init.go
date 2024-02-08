@@ -8,7 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	constant "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
@@ -50,6 +52,11 @@ func initGlobalConfig() *flowpipeconfig.FlowpipeConfig {
 	// reset log level after reading the workspace config
 	log.SetDefaultLogger()
 
+	err = ensureGlobalSalt()
+	if err != nil {
+		error_helpers.FailOnError(err)
+	}
+
 	return nil
 }
 
@@ -88,4 +95,20 @@ func ensureFlowpipeSample() {
 	sampleFileContent := constant.FlowpipeSampleContent
 	//nolint: gosec // this file is safe to be read by all users
 	_ = os.WriteFile(sampleFile, []byte(sampleFileContent), 0755)
+}
+
+func ensureGlobalSalt() error {
+	saltDir := filepaths.GlobalInternalDir()
+	err := util.EnsureDir(saltDir)
+	if err != nil {
+		return err
+	}
+
+	saltFileFullPath := filepath.Join(saltDir, "salt")
+	_, err = util.CreateFlowpipeSalt(saltFileFullPath, 32)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
