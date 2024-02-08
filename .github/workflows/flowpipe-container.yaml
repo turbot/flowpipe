@@ -17,7 +17,7 @@ env:
   # Sets the repository owner.
   REPOSITORY_OWNER: ${{ github.repository_owner }}
   # Sets the image description.
-  IMAGE_DESCRIPTION: 'Flowpipe is a cloud scripting engine. Automation and workflow to connect your clouds to the people, systems and data that matter. Pipelines for DevOps written in HCL.'
+  IMAGE_DESCRIPTION: 'Flowpipe is a cloud scripting engine. Automation and workflow to connect your clouds to the people, systems and data that matter.'
 
 # Defines the build and release job.
 jobs:
