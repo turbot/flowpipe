@@ -7,6 +7,9 @@ LABEL org.opencontainers.image.url="https://flowpipe.io"
 LABEL org.opencontainers.image.authors="Turbot HQ, Inc"
 LABEL org.opencontainers.image.source="https://github.com/turbot/flowpipe"
 
+# Text only description, don't change to use special characters
+LABEL org.opencontainers.image.description="Flowpipe container image"
+
 # Define default environment variables to override the flowpipe UID and its GID
 ENV USER_UID=7103
 ENV USER_GID=0
