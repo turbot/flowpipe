@@ -9,7 +9,7 @@ on:
         required: true
 
 env:
-  IMAGE_DESCRIPTION: "Flowpipe container image ${{ github.event.inputs.version }}"
+  IMAGE_DESCRIPTION: "Flowpipe container image v${{ github.event.inputs.version }}"
 
 # Defines the build and release job.
 jobs:
