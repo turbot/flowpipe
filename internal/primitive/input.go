@@ -137,8 +137,7 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 
 	output := modconfig.Output{}
 	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
-		var msgOption slack.MsgOption
-		msgOption = slack.MsgOptionBlocks(blocks.BlockSet...)
+		var msgOption slack.MsgOption = slack.MsgOptionBlocks(blocks.BlockSet...)
 		api := slack.New(*ip.Token)
 		_, _, err = api.PostMessage(*ip.Channel, msgOption, slack.MsgOptionAsUser(true))
 		return &output, err
