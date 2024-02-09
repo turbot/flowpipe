@@ -91,7 +91,8 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 	}
 	// encodedPayload needs to be passed into block id of first block then we can extract it on receipt of Slacks payload
 	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
-	var msg slack.MsgOption
+	// var msg slack.MsgOption
+	var blocks slack.Blocks
 	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, prompt, false, false)
 
 	switch inputType {
@@ -103,7 +104,8 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 			buttons = append(buttons, slack.BlockElement(button))
 		}
 		action := slack.NewActionBlock("", buttons...)
-		msg = slack.MsgOptionBlocks(header, action)
+		// msg = slack.MsgOptionBlocks(header, action)
+		blocks.BlockSet = append(blocks.BlockSet, header, action)
 	case constants.InputTypeSelect:
 		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
@@ -113,7 +115,8 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
 		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, inputType, blockOptions...)
 		action := slack.NewActionBlock("action_block", s)
-		msg = slack.MsgOptionBlocks(header, action)
+		// msg = slack.MsgOptionBlocks(header, action)
+		blocks.BlockSet = append(blocks.BlockSet, header, action)
 	case constants.InputTypeMultiSelect:
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
 		for i, opt := range options {
@@ -125,24 +128,29 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 			inputType,
 			blockOptions...)
 		block := slack.NewSectionBlock(promptBlock, nil, slack.NewAccessory(ms), slack.SectionBlockOptionBlockID(encodedPayload))
-		msg = slack.MsgOptionBlocks(block)
+		// msg = slack.MsgOptionBlocks(block)
+		blocks.BlockSet = append(blocks.BlockSet, block)
 	case constants.InputTypeText:
 		textInput := slack.NewPlainTextInputBlockElement(nil, inputType)
 		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
 		input.DispatchAction = true // required for being able to send event
-		msg = slack.MsgOptionBlocks(input)
+		// msg = slack.MsgOptionBlocks(input)
+		blocks.BlockSet = append(blocks.BlockSet, input)
 	default:
 		return nil, perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
 	}
 
+	output := modconfig.Output{}
 	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
-		output := modconfig.Output{}
+		var msgOption slack.MsgOption
+		msgOption = slack.MsgOptionBlocks(blocks.BlockSet...)
 		api := slack.New(*ip.Token)
-		_, _, err = api.PostMessage(*ip.Channel, msg, slack.MsgOptionAsUser(true))
+		_, _, err = api.PostMessage(*ip.Channel, msgOption, slack.MsgOptionAsUser(true))
 		return &output, err
 	} else {
-		// TODO: handle "webhook" approach of sending messages
-		return nil, perr.InternalWithMessage("not yet implemented")
+		wMsg := slack.WebhookMessage{Blocks: &blocks}
+		err = slack.PostWebhook(*ip.WebhookUrl, &wMsg)
+		return &output, err
 	}
 }
 
@@ -445,117 +453,80 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	}
 
 	output := &modconfig.Output{}
+
+	base := NewInputIntegrationBase(ip)
+	var prompt, inputType string
+	var resOptions []InputIntegrationResponseOption
+	if it, ok := input[schema.AttributeTypeType].(string); ok {
+		inputType = it
+	}
+	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
+		prompt = p
+	}
+
+	for _, o := range input[schema.AttributeTypeOptions].([]any) {
+		opt := o.(map[string]any)
+		option := InputIntegrationResponseOption{}
+		if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
+			option.Label = &l
+		}
+		if v, ok := opt[schema.AttributeTypeValue].(string); ok {
+			option.Value = &v
+			if helpers.IsNil(option.Label) {
+				option.Label = &v
+			}
+		}
+		if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
+			option.Selected = &s
+		}
+		resOptions = append(resOptions, option)
+	}
+
+	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
+		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
+			for _, n := range notifies {
+				notify := n.(map[string]any)
+				integration := notify["integration"].(map[string]any)
+				integrationType := integration["type"].(string)
+
+				switch integrationType {
+				case schema.IntegrationTypeSlack:
+					s := NewInputIntegrationSlack(base)
+
+					if channel, ok := notify[schema.AttributeTypeChannel].(string); ok {
+						s.Channel = &channel
+					} else if channel, ok := integration[schema.AttributeTypeChannel].(string); ok {
+						s.Channel = &channel
+					}
+					if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
+						s.Token = &tkn
+					}
+					if ss, ok := integration[schema.AttributeTypeSigningSecret].(string); ok {
+						s.SigningSecret = &ss
+					}
+					if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
+						s.WebhookUrl = &wu
+					}
+
+					// TODO: Validate?
+					_, err := s.PostMessage(ctx, inputType, prompt, resOptions)
+					if err != nil {
+						return nil, err
+					}
+				case schema.IntegrationTypeWebform:
+					// TODO: implement
+					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
+				case schema.IntegrationTypeEmail:
+					// TODO: implement
+					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
+				default:
+					return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
+				}
+			}
+		}
+	}
+
 	return output, nil
-	// base := NewInputIntegrationBase(ip)
-	// var prompt, inputType string
-	// var resOptions []InputIntegrationResponseOption
-	// if it, ok := input[schema.AttributeTypeType].(string); ok {
-	// 	inputType = it
-	// }
-	// if p, ok := input[schema.AttributeTypePrompt].(string); ok {
-	// 	prompt = p
-	// }
-
-	// for _, o := range input[schema.AttributeTypeOptions].([]any) {
-	// 	opt := o.(map[string]any)
-	// 	option := InputIntegrationResponseOption{}
-	// 	if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
-	// 		option.Label = &l
-	// 	}
-	// 	if v, ok := opt[schema.AttributeTypeValue].(string); ok {
-	// 		option.Value = &v
-	// 		if helpers.IsNil(option.Label) {
-	// 			option.Label = &v
-	// 		}
-	// 	}
-	// 	if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
-	// 		option.Selected = &s
-	// 	}
-	// 	resOptions = append(resOptions, option)
-	// }
-
-	// for _, n := range input[schema.AttributeTypeNotifies].([]any) {
-	// 	notification := n.(map[string]any)
-	// 	integration := notification["integration"].(map[string]any)
-	// 	integrationType := IntegrationType(integration["type"].(string))
-	// 	switch integrationType {
-	// 	case IntegrationTypeSlack:
-	// 		s := NewInputIntegrationSlack(base)
-	// 		if channel, ok := notification[schema.AttributeTypeChannel].(string); ok {
-	// 			s.Channel = &channel
-	// 		}
-	// 		if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
-	// 			s.Token = &tkn
-	// 		}
-	// 		if ss, ok := integration[schema.AttributeTypeSigningSecret].(string); ok {
-	// 			s.SigningSecret = &ss
-	// 		}
-	// 		if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
-	// 			s.WebhookUrl = &wu
-	// 		}
-
-	// 		// TODO: Validate?
-	// 		err := s.PostMessage(inputType, prompt, resOptions)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 	case IntegrationTypeEmail:
-	// 		email := NewInputIntegrationEmail(base)
-	// 		if host, ok := integration[schema.AttributeTypeSmtpHost].(string); ok {
-	// 			email.Host = &host
-	// 		}
-	// 		if port, ok := integration[schema.AttributeTypeSmtpPort].(int64); ok {
-	// 			email.Port = &port
-	// 		} else if port, ok := integration[schema.AttributeTypeSmtpPort].(float64); ok {
-	// 			intPort := int64(port)
-	// 			email.Port = &intPort
-	// 		}
-	// 		if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(int64); ok {
-	// 			email.SecurePort = &sPort
-	// 		} else if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(float64); ok {
-	// 			intPort := int64(sPort)
-	// 			email.SecurePort = &intPort
-	// 		}
-	// 		if tls, ok := integration[schema.AttributeTypeSmtpTls].(string); ok {
-	// 			email.Tls = &tls
-	// 		}
-	// 		if from, ok := integration[schema.AttributeTypeFrom].(string); ok {
-	// 			email.From = from
-	// 		}
-	// 		if to, ok := notification[schema.AttributeTypeTo].(string); ok {
-	// 			email.To = append(email.To, to)
-	// 		} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
-	// 			email.To = append(email.To, to)
-	// 		}
-	// 		if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
-	// 			email.Subject = sub
-	// 		} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
-	// 			email.Subject = sub
-	// 		}
-	// 		if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
-	// 			email.User = &u
-	// 		}
-	// 		if p, ok := integration[schema.AttributeTypeSmtpPassword].(string); ok {
-	// 			email.Pass = &p
-	// 		}
-	// 		if resUrl, ok := integration[schema.AttributeTypeResponseUrl].(string); ok {
-	// 			email.ResponseUrl = resUrl
-	// 		} else {
-	// 			email.ResponseUrl = "http://localhost:7103" // TODO: Remove?
-	// 		}
-
-	// 		// TODO: Validate?
-	// 		o, err := email.PostMessage(ctx, prompt, resOptions)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		output = o
-	// 	default:
-	// 		return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
-	// 	}
-	// }
-
-	// return output, nil
 }
 
 func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOptions []InputIntegrationResponseOption) (string, error) {
