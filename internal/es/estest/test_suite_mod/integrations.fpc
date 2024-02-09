@@ -1,0 +1,18 @@
+integration "slack" "my_slack_app" {
+  token           = "xoxp-111111"
+
+  # optional - if you want to verify the source
+  signing_secret  = "Q#$$#@#$$#W"
+}
+
+notifier "my_notifier" {
+    notify {
+        integration = integration.webform.default
+        channel = "fake one"
+    }
+
+    notify {
+        integration = integration.webform.default
+        to = ["just some things here"]
+    }
+}

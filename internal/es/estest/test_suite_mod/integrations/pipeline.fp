@@ -1,22 +1,23 @@
-// pipeline "my_pipe" {
+pipeline "integration_pipe_default" {
 
-//   step "input" "my_step" {
+  step "input" "my_step" {
 
-//     notify  {
-//       integration = integration.slack.my_slack_app
-//       channel     = "#bluth-banana"
-//     }
+    notifier = notifier.my_notifier
 
-//     type   = "button"
-//     prompt = "do you want to approve?"
+    type   = "button"
+    prompt = "do you want to approve?"
 
-//     option "Approve" {}
-//     option "Deny" {}
+    option "Approve" {}
+    option "Deny" {}
 
-//   }
+  }
 
-//   step "pipeline" "do_the_thing" {
-//     pipeline = pipeline.something
-//     if       = step.input.my_step.value == "Approve"
-//   }
-// }
+  step "transform" "do_the_thing" {
+    if       = step.input.my_step.value == "Approve"
+    value = "got here"
+  }
+
+  output "val" {
+    value = step.transform.do_the_thing.value
+  }
+}
