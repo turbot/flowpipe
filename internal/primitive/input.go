@@ -91,7 +91,6 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 	}
 	// encodedPayload needs to be passed into block id of first block then we can extract it on receipt of Slacks payload
 	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
-	// var msg slack.MsgOption
 	var blocks slack.Blocks
 	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, prompt, false, false)
 
@@ -104,7 +103,6 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 			buttons = append(buttons, slack.BlockElement(button))
 		}
 		action := slack.NewActionBlock("", buttons...)
-		// msg = slack.MsgOptionBlocks(header, action)
 		blocks.BlockSet = append(blocks.BlockSet, header, action)
 	case constants.InputTypeSelect:
 		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
@@ -115,7 +113,6 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
 		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, inputType, blockOptions...)
 		action := slack.NewActionBlock("action_block", s)
-		// msg = slack.MsgOptionBlocks(header, action)
 		blocks.BlockSet = append(blocks.BlockSet, header, action)
 	case constants.InputTypeMultiSelect:
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
@@ -128,13 +125,11 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 			inputType,
 			blockOptions...)
 		block := slack.NewSectionBlock(promptBlock, nil, slack.NewAccessory(ms), slack.SectionBlockOptionBlockID(encodedPayload))
-		// msg = slack.MsgOptionBlocks(block)
 		blocks.BlockSet = append(blocks.BlockSet, block)
 	case constants.InputTypeText:
 		textInput := slack.NewPlainTextInputBlockElement(nil, inputType)
 		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
 		input.DispatchAction = true // required for being able to send event
-		// msg = slack.MsgOptionBlocks(input)
 		blocks.BlockSet = append(blocks.BlockSet, input)
 	default:
 		return nil, perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", inputType))
