@@ -67,15 +67,15 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-func (p FpPipeline) GetListData() *printers.TableRow {
-	return printers.NewTableRow(
+func (p FpPipeline) GetListData() *printers.ShowData {
+	return printers.NewShowData(
 		printers.FieldValue{Name: "Name", Value: p.pipelineDisplayName()},
 		printers.FieldValue{Name: "Title", Value: p.Title},
 	)
 }
 
-func (p FpPipeline) GetShowData() *printers.TableRow {
-	return printers.NewTableRow(
+func (p FpPipeline) GetShowData() *printers.ShowData {
+	return printers.NewShowData(
 		printers.FieldValue{Name: "Name", Value: p.pipelineDisplayName()},
 		printers.FieldValue{Name: "Title", Value: p.Title},
 		printers.FieldValue{Name: "Description", Value: p.Description},
@@ -328,16 +328,16 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) GetShowData() *printers.TableRow {
-	return printers.NewTableRow(
+func (p FpPipelineParam) GetShowData() *printers.ShowData {
+	return printers.NewShowData(
 		printers.FieldValue{Name: "Name", Value: p.Name, RenderKeyValueFunc: p.renderName},
 		printers.FieldValue{Name: "Type", Value: p.Type, Indent: 2},
 		printers.FieldValue{Name: "Description", Value: p.Description, Indent: 2},
 		printers.FieldValue{Name: "Default", Value: p.Default, Indent: 2, RenderValueFunc: p.renderDefault})
 }
 
-func (p FpPipelineParam) GetListData() *printers.TableRow {
-	return printers.NewTableRow(
+func (p FpPipelineParam) GetListData() *printers.ShowData {
+	return printers.NewShowData(
 		printers.FieldValue{Name: "Name", Value: p.Name},
 		printers.FieldValue{Name: "Type", Value: p.Type})
 
