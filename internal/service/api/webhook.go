@@ -124,8 +124,8 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
+	salt, err := util.GetModSaltOrDefault()
+	if err != nil {
 		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
 		return
 	}
@@ -138,7 +138,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	hashString := util.CalculateHash(webhookTriggerName, salt.(string))
+	hashString := util.CalculateHash(webhookTriggerName, salt)
 
 	if hashString != webhookTriggerHash {
 		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for webhook "+webhookTriggerName))
@@ -336,12 +336,21 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 		return
 	}
 
-	// TODO: validate correct hash
-
 	// determine integration type: integration.slack.example -> slack
 	nameParts := strings.Split(webhookUri.Hook, ".")
 	integrationType := nameParts[1]
-	// integrationName := nameParts[2]
+	integrationName := nameParts[2]
+
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+		return
+	}
+	hashString := util.CalculateHash(webhookUri.Hook, salt)
+	if hashString != webhookUri.Hash {
+		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for integration "+integrationName))
+		return
+	}
 
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {

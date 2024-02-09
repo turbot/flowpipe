@@ -3,8 +3,12 @@ package util
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/filepaths"
 	"log/slog"
 	"os"
+	"path/filepath"
 )
 
 // Assumes that the dir exists
@@ -41,4 +45,30 @@ func CreateFlowpipeSalt(filename string, length int) (string, error) {
 	}
 
 	return saltHex, nil
+}
+
+func GetModSaltOrDefault() (string, error) {
+	c := cache.GetCache()
+	if ms, exists := c.Get("mod_salt"); exists {
+		if modSalt, ok := ms.(string); ok {
+			return modSalt, nil
+		} else {
+			return modSalt, fmt.Errorf("mod specific salt not a string")
+		}
+	}
+
+	return GetGlobalSalt()
+}
+
+func GetGlobalSalt() (string, error) {
+	c := cache.GetCache()
+	if s, exists := c.Get("salt"); exists {
+		if salt, ok := s.(string); ok {
+			return salt, nil
+		} else {
+			return salt, fmt.Errorf("salt not a string")
+		}
+	}
+	globalSaltPath := filepath.Join(filepaths.GlobalInternalDir(), "salt")
+	return CreateFlowpipeSalt(globalSaltPath, 32)
 }

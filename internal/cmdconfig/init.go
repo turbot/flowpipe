@@ -1,9 +1,11 @@
 package cmdconfig
 
 import (
+	"github.com/turbot/flowpipe/internal/cache"
 	"maps"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -105,10 +107,12 @@ func ensureGlobalSalt() error {
 	}
 
 	saltFileFullPath := filepath.Join(saltDir, "salt")
-	_, err = util.CreateFlowpipeSalt(saltFileFullPath, 32)
+	salt, err := util.CreateFlowpipeSalt(saltFileFullPath, 32)
 	if err != nil {
 		return err
 	}
+
+	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
 
 	return nil
 }
