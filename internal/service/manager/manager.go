@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/go-kit/files"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -168,15 +169,16 @@ func (m *Manager) initializeModDirectory() error {
 	}
 
 	internalDir := filepaths.ModInternalDir()
-	err = util.EnsureDir(internalDir)
-	if err != nil {
-		return err
-	}
-
-	saltFileFullPath := filepath.Join(internalDir, "salt")
-	salt, err := util.CreateFlowpipeSalt(saltFileFullPath, 32)
-	if err != nil {
-		return err
+	modSaltPath := filepath.Join(internalDir, "salt")
+	if files.DirectoryExists(internalDir) && files.FileExists(modSaltPath) {
+		saltBytes, err := os.ReadFile(modSaltPath)
+		if err != nil {
+			return err
+		}
+		modSalt := string(saltBytes)
+		if modSalt != "" {
+			cache.GetCache().SetWithTTL("mod_salt", modSalt, 24*7*52*99*time.Hour)
+		}
 	}
 
 	err = store.InitializeFlowpipeDB()
@@ -186,8 +188,6 @@ func (m *Manager) initializeModDirectory() error {
 
 	// Force cleanup if it hasn't run for 1 day
 	store.ForceCleanup()
-
-	cache.GetCache().SetWithTTL("salt", salt, 24*7*52*99*time.Hour)
 
 	return nil
 }
