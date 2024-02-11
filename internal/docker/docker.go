@@ -96,6 +96,9 @@ func New(options ...Option) (*DockerClient, error) {
 	cli, err := client.NewClientWithOpts(
 		client.FromEnv,
 		client.WithAPIVersionNegotiation(),
+		client.WithHostFromEnv(),
+		client.WithVersionFromEnv(),
+		client.WithTLSClientConfigFromEnv(),
 	)
 	if err != nil {
 		return nil, err
