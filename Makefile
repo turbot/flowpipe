@@ -47,6 +47,12 @@ integration-test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
 
+.PHONY: build-ui
+build-ui:
+	cd ui/flowpipe
+	npm install
+	npm run build
+
 .PHONY: release-dry-run
 release-dry-run:
 	@docker run \
