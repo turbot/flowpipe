@@ -102,7 +102,7 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 
 	// return is step is already processed
 	output.Status = sExec.Status
-	if sExec.Status != "started" {
+	if sExec.Status != "starting" && sExec.Status != "started" {
 		c.JSON(http.StatusOK, output)
 		return
 	}
