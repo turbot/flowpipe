@@ -37,19 +37,19 @@ build-open-api:
 beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
 
+.PHONY: build-ui
+build-ui:
+	cd ui/flowpipe && npm install && npm run build
+
 .PHONY: test
-test:
+test: build-ui
 	go clean -testcache
 	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
 
 .PHONY: integration-test
-integration-test:
+integration-test: build-ui
 	go clean -testcache
 	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
-
-.PHONY: build-ui
-build-ui:
-	cd ui/flowpipe && npm install && npm run build
 
 .PHONY: release-dry-run
 release-dry-run: build-ui
