@@ -130,6 +130,10 @@ jobs:
           cd flowpipe
           echo 'GITHUB_TOKEN=${{secrets.GH_ACCESS_TOKEN}}' > .release-env
 
+      - name: Build UI
+        run: make build-ui
+        working-directory: flowpipe
+
       - name: Release publish
         run: |-
           cd flowpipe

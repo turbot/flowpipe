@@ -2,15 +2,18 @@ package api
 
 import (
 	"context"
+	"embed"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 
 	ginlogger "github.com/FabienMht/ginslog/logger"
 	ginrecovery "github.com/FabienMht/ginslog/recovery"
@@ -77,6 +80,10 @@ type APIService struct {
 	router         *gin.Engine
 	ModMetadata    RootModMetadata
 }
+
+//go:embed all:assets
+var assetFs embed.FS
+var contentFS, _ = fs.Sub(assetFs, "assets")
 
 type RootModMetadata struct {
 	IsStale    bool      `json:"is_stale"`
@@ -149,6 +156,8 @@ func (api *APIService) Start() error {
 	//   - stack means whether output the stack info.
 	router.Use(ginrecovery.New(log.FlowpipeLoggerWithLevelAndWriter(slog.LevelDebug, os.Stderr)))
 
+	router.Use(middleware.Serve("/webform", middleware.LocalFile("./", true, contentFS)))
+
 	apiPrefixGroup := router.Group(common.APIPrefix())
 	apiPrefixGroup.Use(common.ValidateAPIVersion)
 
@@ -216,8 +225,6 @@ func (api *APIService) Start() error {
 		method := c.Request.Method
 		if strings.HasPrefix(path, "/api") {
 			c.JSON(http.StatusNotFound, gin.H{"error": perr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
-		} else {
-			c.File("./static/index.html")
 		}
 	})
 

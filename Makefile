@@ -37,6 +37,10 @@ build-open-api:
 beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
 
+.PHONY: build-ui
+build-ui:
+	cd ui/flowpipe && npm install && npm run build
+
 .PHONY: test
 test:
 	go clean -testcache
