@@ -42,17 +42,17 @@ build-ui:
 	cd ui/flowpipe && npm install && npm run build
 
 .PHONY: test
-test: build-ui
+test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
 
 .PHONY: integration-test
-integration-test: build-ui
+integration-test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
 
 .PHONY: release-dry-run
-release-dry-run: build-ui
+release-dry-run:
 	@docker run \
 		--rm \
 		-e CGO_ENABLED=1 \
@@ -66,7 +66,7 @@ release-dry-run: build-ui
 
 
 .PHONY: release
-release: build-ui
+release:
 	@if [ ! -f ".release-env" ]; then \
 		echo ".release-env is required for release";\
 		exit 1;\
