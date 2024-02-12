@@ -49,12 +49,10 @@ integration-test:
 
 .PHONY: build-ui
 build-ui:
-	cd ui/flowpipe
-	npm install
-	npm run build
+	cd ui/flowpipe && npm install && npm run build
 
 .PHONY: release-dry-run
-release-dry-run:
+release-dry-run: build-ui
 	@docker run \
 		--rm \
 		-e CGO_ENABLED=1 \
@@ -68,7 +66,7 @@ release-dry-run:
 
 
 .PHONY: release
-release:
+release: build-ui
 	@if [ ! -f ".release-env" ]; then \
 		echo ".release-env is required for release";\
 		exit 1;\
