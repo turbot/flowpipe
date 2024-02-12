@@ -1,113 +1,138 @@
 package api
 
 import (
+	"encoding/base64"
+	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
-	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/templates"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
-	"html/template"
-	"log/slog"
-	"net/http"
 )
 
 func (api *APIService) InputRegisterAPI(router *gin.RouterGroup) {
-	// router.POST("/input/:input/:hash", api.runInputPost)
-	router.GET("/input/email/:input/:hash", api.runInputEmailGet)
+	router.GET("/input/:id/:hash", api.getInputStepInput)
 }
 
-type ParsedSlackResponse struct {
-	Prompt   string
-	UserName string
-	Value    any
+type inputStepInput struct {
+	ExecutionID         string `json:"execution_id"`
+	PipelineExecutionID string `json:"pipeline_execution_id"`
+	StepExecutionID     string `json:"step_execution_id"`
+	Status              string `json:"status"`
+
+	Prompt    *string                 `json:"prompt,omitempty"`
+	InputType *string                 `json:"input_type,omitempty"`
+	Options   []inputStepInputOptions `json:"options,omitempty"`
 }
 
-func (api *APIService) runInputEmailGet(c *gin.Context) {
-	inputUri := types.InputRequestUri{}
-	if err := c.ShouldBindUri(&inputUri); err != nil {
+type inputStepInputOptions struct {
+	Label    *string `json:"label,omitempty"`
+	Value    *string `json:"value,omitempty"`
+	Selected *bool   `json:"selected,omitempty"`
+}
+
+func (api *APIService) getInputStepInput(c *gin.Context) {
+	var output inputStepInput
+	var uri types.InputIdHash
+	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
-	_ = validateInputHash(inputUri)
-	// TODO: uncomment if hash validation required
-	// if err != nil {
-	//   common.AbortWithError(c, err)
-	//   return
-	// }
-
-	inputQuery := types.InputRequestQuery{}
-	if err := c.ShouldBindQuery(&inputQuery); err != nil {
-		common.AbortWithError(c, err)
+	// verify hash
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+		return
+	}
+	hashString := util.CalculateHash(uri.Id, salt)
+	if hashString != uri.Hash {
+		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
 		return
 	}
 
-	executionMode := "asynchronous"
-	if inputQuery.ExecutionMode != nil {
-		executionMode = *inputQuery.ExecutionMode
-	}
-
-	slog.Info("executionMode", "executionMode", executionMode)
-
-	fired, err := api.finishInputStep(inputQuery.ExecutionID, inputQuery.PipelineExecutionID, inputQuery.StepExecutionID, inputQuery.Value)
+	// parse ids
+	decodedId, err := base64.StdEncoding.DecodeString(uri.Id)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
-
-	if !fired {
-		alreadyAcknowledgedInputTemplate, err := templates.HTMLTemplate("already-acknowledged-input.html")
-		if err != nil {
-			slog.Error("error reading the template file", "error", err)
-			common.AbortWithError(c, err)
-			return
-		}
-		renderHTMLWithValues(c, string(alreadyAcknowledgedInputTemplate), gin.H{})
-	} else {
-		acknowledgeInputTemplate, err := templates.HTMLTemplate("acknowledge-input.html")
-		if err != nil {
-			slog.Error("error reading the template file", "error", err)
-			common.AbortWithError(c, err)
-			return
-		}
-		renderHTMLWithValues(c, string(acknowledgeInputTemplate), gin.H{"response": inputQuery.Value})
+	ids := strings.Split(string(decodedId), ".")
+	if len(ids) != 3 {
+		common.AbortWithError(c, perr.BadRequestWithMessage("unable to parse identifiers provided"))
+		return
 	}
-}
+	output.ExecutionID = ids[0]
+	output.PipelineExecutionID = ids[1]
+	output.StepExecutionID = ids[2]
 
-func validateInputHash(inputUri types.InputRequestUri) error {
-	inputName := inputUri.Input
-	inputHash := inputUri.Hash
-
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
-		slog.Error("salt not found")
-		return perr.InternalWithMessage("salt not found")
-	}
-
-	hashString := util.CalculateHash(inputName, salt.(string))
-	if hashString != inputHash {
-		slog.Error("invalid hash", "hash", inputHash, "input_name", inputName, "expected", hashString)
-		return perr.UnauthorizedWithMessage("invalid hash for " + inputName)
-	}
-
-	return nil
-}
-
-// Custom function to render HTML with values
-func renderHTMLWithValues(c *gin.Context, templateContent string, data interface{}) {
-	tmpl, err := template.New("html").Parse(templateContent)
+	// get step exec
+	exec, err := execution.GetExecution(output.ExecutionID)
 	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to parse template")
+		common.AbortWithError(c, err)
+		return
+	}
+	pExec := exec.PipelineExecutions[output.PipelineExecutionID]
+	if helpers.IsNil(pExec) {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", output.PipelineExecutionID)))
+		return
+	}
+	sExec := pExec.StepExecutions[output.StepExecutionID]
+	if helpers.IsNil(sExec) {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline step execution %s not found", output.StepExecutionID)))
 		return
 	}
 
-	c.Header("Content-Type", "text/html; charset=utf-8")
-	c.Writer.WriteHeader(http.StatusOK)
-
-	if err := tmpl.Execute(c.Writer, data); err != nil {
-		c.String(http.StatusInternalServerError, "Failed to execute template")
+	// verify step is type input
+	sDef, err := exec.StepDefinition(pExec.ID, sExec.ID)
+	if err != nil {
+		common.AbortWithError(c, err)
 		return
 	}
+	if sDef.GetType() != "input" {
+		common.AbortWithError(c, perr.InternalWithMessage(fmt.Sprintf("step %s is not input step type", sExec.ID)))
+		return
+	}
+
+	// return is step is already processed
+	output.Status = sExec.Status
+	if sExec.Status != "starting" && sExec.Status != "started" {
+		c.JSON(http.StatusOK, output)
+		return
+	}
+
+	// build response object
+	if p, ok := sExec.Input[schema.AttributeTypePrompt].(string); ok {
+		output.Prompt = &p
+	}
+	if t, ok := sExec.Input[schema.AttributeTypeType].(string); ok {
+		output.InputType = &t
+	}
+	if !helpers.IsNil(sExec.Input[schema.AttributeTypeOptions]) {
+		for _, o := range sExec.Input[schema.AttributeTypeOptions].([]any) {
+			opt := o.(map[string]any)
+			option := inputStepInputOptions{}
+			if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
+				option.Label = &l
+			}
+			if v, ok := opt[schema.AttributeTypeValue].(string); ok {
+				option.Value = &v
+				if helpers.IsNil(option.Label) {
+					option.Label = &v
+				}
+			}
+			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
+				option.Selected = &s
+			}
+			output.Options = append(output.Options, option)
+		}
+	}
+
+	c.JSON(http.StatusOK, output)
 }
