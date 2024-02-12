@@ -156,7 +156,7 @@ func (api *APIService) Start() error {
 	//   - stack means whether output the stack info.
 	router.Use(ginrecovery.New(log.FlowpipeLoggerWithLevelAndWriter(slog.LevelDebug, os.Stderr)))
 
-	router.Use(middleware.Serve("/", middleware.LocalFile("./", true, contentFS)))
+	router.Use(middleware.Serve("/webform", middleware.LocalFile("./", true, contentFS)))
 
 	apiPrefixGroup := router.Group(common.APIPrefix())
 	apiPrefixGroup.Use(common.ValidateAPIVersion)
