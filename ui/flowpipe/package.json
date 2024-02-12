@@ -13,7 +13,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && cp -r build/* ../../internal/service/api/assets",
+    "build": "react-scripts build && mkdir -p ../../internal/service/api/assets && cp -r build/* ../../internal/service/api/assets",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
