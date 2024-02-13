@@ -69,20 +69,20 @@ type FpPipeline struct {
 
 func (p FpPipeline) GetListData() *printers.ShowData {
 	return printers.NewShowData(
-		printers.FieldValue{Name: "Name", Value: p.pipelineDisplayName()},
-		printers.FieldValue{Name: "Title", Value: p.Title},
+		printers.NewFieldValue("NAME", p.pipelineDisplayName()),
+		printers.NewFieldValue("TITLE", p.Title),
 	)
 }
 
 func (p FpPipeline) GetShowData() *printers.ShowData {
 	return printers.NewShowData(
-		printers.FieldValue{Name: "Name", Value: p.pipelineDisplayName()},
-		printers.FieldValue{Name: "Title", Value: p.Title},
-		printers.FieldValue{Name: "Description", Value: p.Description},
-		printers.FieldValue{Name: "Tags", Value: p.Tags},
-		printers.FieldValue{Name: "Params", Value: p.Params},
-		printers.FieldValue{Name: "Outputs", Value: p.OutputConfig},
-		printers.FieldValue{Name: "Usage", Value: p.usage()})
+		printers.NewFieldValue("Name", p.pipelineDisplayName()),
+		printers.NewFieldValue("Title", p.Title),
+		printers.NewFieldValue("Description", p.Description),
+		printers.NewFieldValue("Tags", p.Tags),
+		printers.NewFieldValue("Params", p.Params),
+		printers.NewFieldValue("Outputs", p.OutputConfig),
+		printers.NewFieldValue("Usage", p.usage()))
 
 }
 
@@ -330,17 +330,16 @@ type FpPipelineParam struct {
 
 func (p FpPipelineParam) GetShowData() *printers.ShowData {
 	return printers.NewShowData(
-		printers.FieldValue{Name: "Name", Value: p.Name, RenderKeyValueFunc: p.renderName},
-		printers.FieldValue{Name: "Type", Value: p.Type, Indent: 2},
-		printers.FieldValue{Name: "Description", Value: p.Description, Indent: 2},
-		printers.FieldValue{Name: "Default", Value: p.Default, Indent: 2, RenderValueFunc: p.renderDefault})
+		printers.NewFieldValue("Name", p.Name, printers.WithListKeyRender(p.renderName)),
+		printers.NewFieldValue("Type", p.Type),
+		printers.NewFieldValue("Description", p.Description),
+		printers.NewFieldValue("Default", p.Default, printers.WithRenderValueFunc(p.renderDefault)))
 }
 
 func (p FpPipelineParam) GetListData() *printers.ShowData {
 	return printers.NewShowData(
-		printers.FieldValue{Name: "Name", Value: p.Name},
-		printers.FieldValue{Name: "Type", Value: p.Type})
-
+		printers.NewFieldValue("Name", p.Name),
+		printers.NewFieldValue("Type", p.Type))
 }
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
