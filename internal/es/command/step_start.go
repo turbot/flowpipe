@@ -160,6 +160,8 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				ExecutionID:         cmd.Event.ExecutionID,
 				PipelineExecutionID: cmd.PipelineExecutionID,
 				StepExecutionID:     cmd.StepExecutionID,
+				PipelineName:        pipelineDefn.PipelineName,
+				StepName:            cmd.StepName,
 			}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/types"
 	"html/template"
 	"net/mail"
 	"net/smtp"
@@ -16,12 +17,12 @@ import (
 	"time"
 
 	"github.com/slack-go/slack"
+	so "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/go-kit/types"
+	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/constants"
-
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -33,6 +34,8 @@ type Input struct {
 	ExecutionID         string
 	PipelineExecutionID string
 	StepExecutionID     string
+	PipelineName        string
+	StepName            string
 }
 
 type InputIntegration interface {
@@ -309,9 +312,9 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 
 func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	var err error
-	host := types.SafeString(ip.Host)
+	host := kitTypes.SafeString(ip.Host)
 	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
-	auth := smtp.PlainAuth("", types.SafeString(ip.User), types.SafeString(ip.Pass), host)
+	auth := smtp.PlainAuth("", kitTypes.SafeString(ip.User), kitTypes.SafeString(ip.Pass), host)
 
 	from := mail.Address{
 		Name:    ip.From,
@@ -447,14 +450,6 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		return nil, err
 	}
 
-	joinedId := fmt.Sprintf("%s.%s.%s", ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
-
-	salt, err := util.GetGlobalSalt()
-	if err != nil {
-		return nil, err
-	}
-	hashString := util.CalculateHash(joinedId, salt)
-
 	output := &modconfig.Output{}
 
 	base := NewInputIntegrationBase(ip)
@@ -484,8 +479,6 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		}
 		resOptions = append(resOptions, option)
 	}
-
-	webformEndpoint := fmt.Sprintf("http://localhost:7103/webform?id=%s&hash=%s", joinedId, hashString)
 
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
@@ -520,18 +513,18 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 					}
 				case schema.IntegrationTypeWebform:
 					// Webform integration we need to display the webform endpoint
-					fmt.Println("Webform endpoint: ", webformEndpoint) //nolint:forbidigo // TODO: implement output
+					_ = ip.renderWebformUrl(ctx) // TODO: implement output
 				case schema.IntegrationTypeEmail:
 					// TODO: implement
 					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
 				default:
 					// Webform integration we need to display the webform endpoint
-					fmt.Println("Webform endpoint: ", webformEndpoint) //nolint:forbidigo // TODO: implement output
+					_ = ip.renderWebformUrl(ctx) // TODO: implement output
 				}
 			}
 		} else {
 			// Webform integration we need to display the webform endpoint
-			fmt.Println("Webform endpoint: ", webformEndpoint) //nolint:forbidigo // TODO: implement output
+			_ = ip.renderWebformUrl(ctx) // TODO: implement output
 		}
 	}
 
@@ -577,4 +570,24 @@ func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOp
 	tempMessage := body.String()
 
 	return tempMessage, nil
+}
+
+func (ip *Input) renderWebformUrl(ctx context.Context) error {
+	joinedId := fmt.Sprintf("%s.%s.%s", ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
+
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		return err
+	}
+	hashString := util.CalculateHash(joinedId, salt)
+
+	url := fmt.Sprintf("http://localhost:7103/webform?id=%s&hash=%s", joinedId, hashString) // TODO: replace base url with actual host/port?
+
+	if so.IsServerMode {
+		sp := types.NewServerOutputPrefixWithExecId(time.Now(), "pipeline", &ip.ExecutionID)
+		pre := types.NewParsedEventPrefix(ip.PipelineName, &ip.StepName, nil, nil, nil, &sp)
+		e := types.NewParsedEvent(pre, ip.ExecutionID, "", "", fmt.Sprintf("WebForm URL: %s", url))
+		so.RenderServerOutput(ctx, e)
+	}
+	return nil
 }
