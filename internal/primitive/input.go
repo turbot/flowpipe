@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
@@ -446,6 +447,15 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		return nil, err
 	}
 
+	joinedId := fmt.Sprintf("%s.%s.%s", ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
+	based64JoinedID := base64.StdEncoding.EncodeToString([]byte(joinedId))
+
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		return nil, err
+	}
+	hashString := util.CalculateHash(based64JoinedID, salt)
+
 	output := &modconfig.Output{}
 
 	base := NewInputIntegrationBase(ip)
@@ -475,6 +485,8 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		}
 		resOptions = append(resOptions, option)
 	}
+
+	webformEndpoint := fmt.Sprintf("http://localhost:7103/webform?id=%s&hash=%s", based64JoinedID, hashString)
 
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
@@ -508,15 +520,19 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 						return nil, err
 					}
 				case schema.IntegrationTypeWebform:
-					// TODO: implement
-					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
+					// Webform integration we need to display the webform endpoint
+					fmt.Println("Webform endpoint: ", webformEndpoint) //nolint:forbidigo // TODO: implement output
 				case schema.IntegrationTypeEmail:
 					// TODO: implement
 					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
 				default:
-					return nil, perr.InternalWithMessage(fmt.Sprintf("Unsupported integration type %s", integrationType))
+					// Webform integration we need to display the webform endpoint
+					fmt.Println("Webform endpoint: ", webformEndpoint) //nolint:forbidigo // TODO: implement output
 				}
 			}
+		} else {
+			// Webform integration we need to display the webform endpoint
+			fmt.Println("Webform endpoint: ", webformEndpoint) //nolint:forbidigo // TODO: implement output
 		}
 	}
 
