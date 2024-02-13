@@ -2,7 +2,7 @@ PACKAGE_NAME          := github.com/turbot/flowpipe
 GOLANG_CROSS_VERSION  ?= v1.21.5
 
 .PHONY: build
-build:
+build: build-ui
 	go build .
 
 run-mod:
