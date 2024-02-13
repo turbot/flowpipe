@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/base64"
 	"fmt"
 	"github.com/turbot/pipe-fittings/schema"
 	"net/http"
@@ -58,12 +57,7 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 	}
 
 	// parse ids
-	decodedId, err := base64.StdEncoding.DecodeString(uri.Id)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-	ids := strings.Split(string(decodedId), ".")
+	ids := strings.Split(uri.Id, ".")
 	if len(ids) != 3 {
 		common.AbortWithError(c, perr.BadRequestWithMessage("unable to parse identifiers provided"))
 		return
