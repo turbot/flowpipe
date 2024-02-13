@@ -67,6 +67,24 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
+//func (p FpPipeline) GetListData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("NAME", p.pipelineDisplayName()),
+//		printers.NewFieldValue("TITLE", p.Title),
+//	)
+//}
+//
+//func (p FpPipeline) GetShowData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("Name", p.pipelineDisplayName()),
+//		printers.NewFieldValue("Title", p.Title),
+//		printers.NewFieldValue("Description", p.Description),
+//		printers.NewFieldValue("Tags", p.Tags),
+//		printers.NewFieldValue("Params", p.Params),
+//		printers.NewFieldValue("Outputs", p.OutputConfig),
+//		printers.NewFieldValue("Usage", p.usage()))
+//}
+
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
@@ -134,6 +152,21 @@ func (p FpPipeline) pipelineDisplayName() string {
 
 	return p.Name
 }
+
+//
+//func (p FpPipeline) usage() string {
+//	var pArg string
+//	if len(p.Params) > 0 {
+//		for _, param := range p.Params {
+//			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
+//				continue
+//			}
+//			pArg += " --arg " + param.Name + "=<value>"
+//		}
+//	}
+//
+//	return fmt.Sprintf("\n  flowpipe pipeline run %s%s\n", p.pipelineDisplayName(), pArg)
+//}
 
 func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
 	resp := &FpPipeline{
@@ -290,6 +323,20 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
+//func (p FpPipelineParam) GetShowData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("Name", p.Name, printers.WithListKeyRender(p.renderName)),
+//		printers.NewFieldValue("Type", p.Type),
+//		printers.NewFieldValue("Description", p.Description),
+//		printers.NewFieldValue("Default", p.Default, printers.WithRenderValueFunc(p.renderDefault)))
+//}
+//
+//func (p FpPipelineParam) GetListData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("Name", p.Name),
+//		printers.NewFieldValue("Type", p.Type))
+//}
+
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
@@ -337,6 +384,42 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 	return output
 }
 
+//
+//func (p FpPipelineParam) renderName(opts sanitize.RenderOptions) string {
+//	au := aurora.NewAurora(opts.ColorEnabled)
+//	left := au.BrightBlack("[")
+//	right := au.BrightBlack("]")
+//
+//	var optString string
+//	if p.Optional == nil || !*p.Optional {
+//		optString = fmt.Sprintf(" %s%s%s:", left, au.Red("required"), right)
+//
+//	}
+//	return fmt.Sprintf("%s%s", au.Cyan(p.Name), optString)
+//}
+//
+//func (p FpPipelineParam) renderDefault(opts sanitize.RenderOptions) string {
+//	au := aurora.NewAurora(opts.ColorEnabled)
+//
+//	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+//		if v, ok := defaults[p.Name]; ok {
+//			var valueString string
+//			if isSimpleType(v) {
+//				valueString = formatSimpleValue(v, aurora.NewAurora(false))
+//			} else {
+//				s, err := json.Marshal(v)
+//				if err != nil {
+//					valueString = au.Sprintf(au.Red("error parsing value"))
+//				} else {
+//					valueString = string(s)
+//				}
+//			}
+//			return valueString
+//		}
+//	}
+//	return ""
+//}
+
 type PipelineExecutionResponse map[string]interface{}
 
 type CmdPipeline struct {
@@ -382,7 +465,7 @@ func (p PrintablePipeline) GetItems() []FpPipeline {
 	return p.Items
 }
 
-func (p PrintablePipeline) GetTable() (printers.Table, error) {
+func (p PrintablePipeline) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		var description string
@@ -398,27 +481,11 @@ func (p PrintablePipeline) GetTable() (printers.Table, error) {
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipeline) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "MOD",
-			Type:        "string",
-			Description: "Mod name",
-		},
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "Pipeline name",
-		},
-		{
-			Name:        "DESCRIPTION",
-			Type:        "string",
-			Description: "Pipeline description",
-		},
-	}
+func (PrintablePipeline) getColumns() (columns []string) {
+	return []string{"MOD", "NAME", "DESCRIPTION"}
 }
 
 type FpPipelineExecution struct {
@@ -496,7 +563,7 @@ func (p PrintablePipelineExecution) GetItems() []FpPipelineExecution {
 	return p.Items
 }
 
-func (p PrintablePipelineExecution) GetTable() (printers.Table, error) {
+func (p PrintablePipelineExecution) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		cells := []any{
@@ -506,25 +573,9 @@ func (p PrintablePipelineExecution) GetTable() (printers.Table, error) {
 		}
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintablePipelineExecution) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "EXECUTION ID",
-			Type:        "string",
-			Description: "Execution ID",
-		},
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "Pipeline name",
-		},
-		{
-			Name:        "STATUS",
-			Type:        "string",
-			Description: "Pipeline execution status",
-		},
-	}
+func (PrintablePipelineExecution) getColumns() (columns []string) {
+	return []string{"EXECUTION ID", "NAME", "STATUS"}
 }

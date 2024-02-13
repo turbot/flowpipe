@@ -83,7 +83,7 @@ func (p PrintableProcess) GetItems() []Process {
 	return p.Items
 }
 
-func (p PrintableProcess) GetTable() (printers.Table, error) {
+func (p PrintableProcess) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 		cells := []any{
@@ -95,32 +95,11 @@ func (p PrintableProcess) GetTable() (printers.Table, error) {
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintableProcess) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "EXECUTION_ID",
-			Type:        "string",
-			Description: "The id of the process execution",
-		},
-		{
-			Name:        "PIPELINE",
-			Type:        "string",
-			Description: "The name of the pipeline",
-		},
-		{
-			Name:        "CREATED_AT",
-			Type:        "string",
-			Description: "The name of the pipeline",
-		},
-		{
-			Name:        "STATUS",
-			Type:        "string",
-			Description: "The status of the process execution",
-		},
-	}
+func (PrintableProcess) getColumns() (columns []string) {
+	return []string{"EXECUTION_ID", "PIPELINE", "CREATED_AT", "STATUS"}
 }
 
 // This type is used by the API to return a list of processs.

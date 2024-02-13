@@ -187,7 +187,7 @@ func NewPrintableTriggerFromSingle(input *FpTrigger) *PrintableTrigger {
 	}
 }
 
-func (p PrintableTrigger) GetTable() (printers.Table, error) {
+func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 	var tableRows []printers.TableRow
 	for _, item := range p.Items {
 
@@ -217,30 +217,9 @@ func (p PrintableTrigger) GetTable() (printers.Table, error) {
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
-	return printers.NewTable(tableRows, p.getColumns()), nil
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
 }
 
-func (PrintableTrigger) getColumns() (columns []printers.TableColumnDefinition) {
-	return []printers.TableColumnDefinition{
-		{
-			Name:        "NAME",
-			Type:        "string",
-			Description: "The name of the trigger",
-		},
-		{
-			Name:        "ENABLED",
-			Type:        "boolean",
-			Description: "If true, trigger is enabled",
-		},
-		{
-			Name:        "PIPELINE",
-			Type:        "string",
-			Description: "Pipeline associated with trigger",
-		},
-		{
-			Name:        "DESCRIPTION",
-			Type:        "string",
-			Description: "Trigger description",
-		},
-	}
+func (PrintableTrigger) getColumns() (columns []string) {
+	return []string{"NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
 }
