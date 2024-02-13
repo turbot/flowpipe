@@ -1,10 +1,13 @@
 # Flowpipe
 
-## v0.2.3 [tbd]
+## v0.2.3 [2024-02-13]
 
 _Bug fixes_
 
 * Step Retry race condition no longer trigger pipeline failure until all retries are exhausted ([#630](https://github.com/turbot/flowpipe/issues/630)).
+* `DOCKER_HOST`, `DOCKER_API_VERSION`, `DOCKER_CERT_PATH`, `DOCKER_TLS_VERIFY` environment variables are now passed to the Docker client ([#651](https://github.com/turbot/flowpipe/issues/651)).
+* Memory swappines should be set if using Podman instead of Docker ([#652](https://github.com/turbot/flowpipe/issues/652)).
+
 
 ## v0.2.2 [2024-02-02]
 
