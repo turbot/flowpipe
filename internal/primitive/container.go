@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -292,17 +294,21 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 		cConfig.MemorySwap = &memorySwap
 	}
 
-	if input[schema.AttributeTypeMemorySwappiness] != nil {
-		var memorySwappiness int64
-		switch ms := input[schema.AttributeTypeMemorySwappiness].(type) {
-		case float64:
-			memorySwappiness = int64(ms)
-		case int64:
-			memorySwappiness = ms
-		default:
-			break
+	// Check if DOCKER_HOST is not set or does not end with "podman.sock"
+	dockerHost, exists := os.LookupEnv("DOCKER_HOST")
+	if !exists || !strings.HasSuffix(dockerHost, "podman.sock") {
+		if input[schema.AttributeTypeMemorySwappiness] != nil {
+			var memorySwappiness int64
+			switch ms := input[schema.AttributeTypeMemorySwappiness].(type) {
+			case float64:
+				memorySwappiness = int64(ms)
+			case int64:
+				memorySwappiness = ms
+			default:
+				break
+			}
+			cConfig.MemorySwappiness = &memorySwappiness
 		}
-		cConfig.MemorySwappiness = &memorySwappiness
 	}
 
 	// Construct the output
