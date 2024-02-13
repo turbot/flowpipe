@@ -448,13 +448,12 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	}
 
 	joinedId := fmt.Sprintf("%s.%s.%s", ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
-	based64JoinedID := base64.StdEncoding.EncodeToString([]byte(joinedId))
 
 	salt, err := util.GetGlobalSalt()
 	if err != nil {
 		return nil, err
 	}
-	hashString := util.CalculateHash(based64JoinedID, salt)
+	hashString := util.CalculateHash(joinedId, salt)
 
 	output := &modconfig.Output{}
 
@@ -486,7 +485,7 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		resOptions = append(resOptions, option)
 	}
 
-	webformEndpoint := fmt.Sprintf("http://localhost:7103/webform?id=%s&hash=%s", based64JoinedID, hashString)
+	webformEndpoint := fmt.Sprintf("http://localhost:7103/webform?id=%s&hash=%s", joinedId, hashString)
 
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
