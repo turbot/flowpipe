@@ -38,7 +38,7 @@ beta-tag-timetamp:
 
 .PHONY: build-ui
 build-ui:
-	cd ui/flowpipe && npm install && npm run build
+	cd ui/input && npm run build
 
 .PHONY: test
 test:
