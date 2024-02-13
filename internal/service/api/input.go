@@ -25,9 +25,10 @@ type inputStepInput struct {
 	StepExecutionID     string `json:"step_execution_id"`
 	Status              string `json:"status"`
 
-	Prompt    *string                 `json:"prompt,omitempty"`
-	InputType *string                 `json:"input_type,omitempty"`
-	Options   []inputStepInputOptions `json:"options,omitempty"`
+	Prompt      *string                 `json:"prompt,omitempty"`
+	InputType   *string                 `json:"input_type,omitempty"`
+	Options     []inputStepInputOptions `json:"options,omitempty"`
+	ResponseURL *string                 `json:"response_url,omitempty"`
 }
 
 type inputStepInputOptions struct {
@@ -127,6 +128,12 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 			output.Options = append(output.Options, option)
 		}
 	}
+
+	// TODO: devise a better approach
+	name := "integration.webform.default"
+	hash := util.CalculateHash(name, salt)
+	rUrl := fmt.Sprintf("http://%s/api/latest/hook/%s/%s", c.Request.Host, name, hash)
+	output.ResponseURL = &rUrl
 
 	c.JSON(http.StatusOK, output)
 }

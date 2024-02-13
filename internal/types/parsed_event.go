@@ -206,11 +206,11 @@ func NewParsedEvent(prefix ParsedEventPrefix, executionId string, eventType stri
 }
 
 func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
-	}
+	//// deliberately shadow the receiver with a sanitized version of the struct
+	//var err error
+	//if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+	//	return ""
+	//}
 
 	out := ""
 	pre := p.ParsedEventPrefix.String(sanitizer, opts)
