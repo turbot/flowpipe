@@ -67,24 +67,23 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-func (p FpPipeline) GetListData() *printers.ShowData {
-	return printers.NewShowData(
-		printers.NewFieldValue("NAME", p.pipelineDisplayName()),
-		printers.NewFieldValue("TITLE", p.Title),
-	)
-}
-
-func (p FpPipeline) GetShowData() *printers.ShowData {
-	return printers.NewShowData(
-		printers.NewFieldValue("Name", p.pipelineDisplayName()),
-		printers.NewFieldValue("Title", p.Title),
-		printers.NewFieldValue("Description", p.Description),
-		printers.NewFieldValue("Tags", p.Tags),
-		printers.NewFieldValue("Params", p.Params),
-		printers.NewFieldValue("Outputs", p.OutputConfig),
-		printers.NewFieldValue("Usage", p.usage()))
-
-}
+//func (p FpPipeline) GetListData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("NAME", p.pipelineDisplayName()),
+//		printers.NewFieldValue("TITLE", p.Title),
+//	)
+//}
+//
+//func (p FpPipeline) GetShowData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("Name", p.pipelineDisplayName()),
+//		printers.NewFieldValue("Title", p.Title),
+//		printers.NewFieldValue("Description", p.Description),
+//		printers.NewFieldValue("Tags", p.Tags),
+//		printers.NewFieldValue("Params", p.Params),
+//		printers.NewFieldValue("Outputs", p.OutputConfig),
+//		printers.NewFieldValue("Usage", p.usage()))
+//}
 
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
@@ -143,11 +142,6 @@ func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 
 	output += fmt.Sprintf("%s\n", au.Blue("Usage:"))
 	output += fmt.Sprintf("  flowpipe pipeline run %s%s\n", displayName, pArg)
-
-	//output += "\n\n"
-	//
-	//n, _ := printers.Show(p, opts)
-	//output += n
 	return output
 }
 
@@ -328,19 +322,19 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-func (p FpPipelineParam) GetShowData() *printers.ShowData {
-	return printers.NewShowData(
-		printers.NewFieldValue("Name", p.Name, printers.WithListKeyRender(p.renderName)),
-		printers.NewFieldValue("Type", p.Type),
-		printers.NewFieldValue("Description", p.Description),
-		printers.NewFieldValue("Default", p.Default, printers.WithRenderValueFunc(p.renderDefault)))
-}
-
-func (p FpPipelineParam) GetListData() *printers.ShowData {
-	return printers.NewShowData(
-		printers.NewFieldValue("Name", p.Name),
-		printers.NewFieldValue("Type", p.Type))
-}
+//func (p FpPipelineParam) GetShowData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("Name", p.Name, printers.WithListKeyRender(p.renderName)),
+//		printers.NewFieldValue("Type", p.Type),
+//		printers.NewFieldValue("Description", p.Description),
+//		printers.NewFieldValue("Default", p.Default, printers.WithRenderValueFunc(p.renderDefault)))
+//}
+//
+//func (p FpPipelineParam) GetListData() *printers.RowData {
+//	return printers.NewRowData(
+//		printers.NewFieldValue("Name", p.Name),
+//		printers.NewFieldValue("Type", p.Type))
+//}
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
