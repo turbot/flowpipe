@@ -153,19 +153,20 @@ func (p FpPipeline) pipelineDisplayName() string {
 	return p.Name
 }
 
-func (p FpPipeline) usage() string {
-	var pArg string
-	if len(p.Params) > 0 {
-		for _, param := range p.Params {
-			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
-				continue
-			}
-			pArg += " --arg " + param.Name + "=<value>"
-		}
-	}
-
-	return fmt.Sprintf("\n  flowpipe pipeline run %s%s\n", p.pipelineDisplayName(), pArg)
-}
+//
+//func (p FpPipeline) usage() string {
+//	var pArg string
+//	if len(p.Params) > 0 {
+//		for _, param := range p.Params {
+//			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
+//				continue
+//			}
+//			pArg += " --arg " + param.Name + "=<value>"
+//		}
+//	}
+//
+//	return fmt.Sprintf("\n  flowpipe pipeline run %s%s\n", p.pipelineDisplayName(), pArg)
+//}
 
 func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
 	resp := &FpPipeline{
@@ -383,40 +384,41 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 	return output
 }
 
-func (p FpPipelineParam) renderName(opts sanitize.RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	left := au.BrightBlack("[")
-	right := au.BrightBlack("]")
-
-	var optString string
-	if p.Optional == nil || !*p.Optional {
-		optString = fmt.Sprintf(" %s%s%s:", left, au.Red("required"), right)
-
-	}
-	return fmt.Sprintf("%s%s", au.Cyan(p.Name), optString)
-}
-
-func (p FpPipelineParam) renderDefault(opts sanitize.RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-
-	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
-		if v, ok := defaults[p.Name]; ok {
-			var valueString string
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, aurora.NewAurora(false))
-			} else {
-				s, err := json.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
-			}
-			return valueString
-		}
-	}
-	return ""
-}
+//
+//func (p FpPipelineParam) renderName(opts sanitize.RenderOptions) string {
+//	au := aurora.NewAurora(opts.ColorEnabled)
+//	left := au.BrightBlack("[")
+//	right := au.BrightBlack("]")
+//
+//	var optString string
+//	if p.Optional == nil || !*p.Optional {
+//		optString = fmt.Sprintf(" %s%s%s:", left, au.Red("required"), right)
+//
+//	}
+//	return fmt.Sprintf("%s%s", au.Cyan(p.Name), optString)
+//}
+//
+//func (p FpPipelineParam) renderDefault(opts sanitize.RenderOptions) string {
+//	au := aurora.NewAurora(opts.ColorEnabled)
+//
+//	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+//		if v, ok := defaults[p.Name]; ok {
+//			var valueString string
+//			if isSimpleType(v) {
+//				valueString = formatSimpleValue(v, aurora.NewAurora(false))
+//			} else {
+//				s, err := json.Marshal(v)
+//				if err != nil {
+//					valueString = au.Sprintf(au.Red("error parsing value"))
+//				} else {
+//					valueString = string(s)
+//				}
+//			}
+//			return valueString
+//		}
+//	}
+//	return ""
+//}
 
 type PipelineExecutionResponse map[string]interface{}
 
