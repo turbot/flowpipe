@@ -15,6 +15,9 @@ flowpipe
 # accidental .flowpipe directory in workspace dir
 .flowpipe
 
+# Flowpipe specific
+generate-open-api.sh
+
 # IDE
 .idea/
 .run
