@@ -22,11 +22,13 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "assets": ["./src/assets/*"],
+      "api/*": ["./src/api/*"],
+      "assets/*": ["./src/assets/*"],
       "components/*":["./src/components/*"],
       "hooks/*":["./src/hooks/*"],
       "lib": ["./src/lib/*"],
       "src/*": ["./src/*"],
+      "types/*": ["./src/types/*"],
       "utils/*": ["./src/utils/*"]
     }
   },

@@ -1,4 +1,4 @@
-pipeline "approval_webform" {
+pipeline "input_webform_button_simple" {
 
   step "input" "my_step" {
     type     = "button"

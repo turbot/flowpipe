@@ -1,17 +1,16 @@
 import Button from "components/forms/Button";
+import FlowpipeLogo from "components/layout/FlowpipeLogo";
+import TextInput from "components/forms/TextInput";
 import { Form, Formik } from "formik";
 import { FormEvent, useState } from "react";
 import { FormikErrors } from "formik/dist/types";
-import { PipelingError } from "src/api/error.ts";
+import { PipelingError } from "api/error.ts";
 import {
   PipelineInput,
   PipelineInputOption,
   PipelineInputResponse,
   PipelineInputType,
-} from "src/types/input.ts";
-import TextInput from "components/forms/TextInput";
-import FlowpipeLogo from "components/layout/FlowpipeLogo";
-// import TextInput from "components/forms/TextInput";
+} from "types/input.ts";
 
 interface FormProps {
   input: PipelineInput;
@@ -31,11 +30,13 @@ interface InputFormValues {
 }
 
 interface InputOptionsProps {
+  errors: FormikErrors<InputFormValues>;
   inputType: PipelineInputType;
   state: InputFormState;
   submitting: boolean;
-  valid: boolean;
   options: PipelineInputOption[];
+  valid: boolean;
+  values: InputFormValues;
   setFieldValue: (
     field: string,
     value: any,
@@ -45,11 +46,13 @@ interface InputOptionsProps {
 }
 
 const InputOptions = ({
+  errors,
   inputType,
   state,
   submitting,
-  valid,
   options,
+  valid,
+  values,
   setFieldValue,
   onSubmit,
 }: InputOptionsProps) => {
@@ -76,7 +79,13 @@ const InputOptions = ({
       return (
         <div className="flex flex-col justify-end space-x-2">
           <div>
-            <TextInput />
+            <TextInput
+              name="values"
+              // @ts-ignore
+              error={!!errors.values ? errors.values : null}
+              value={values.values[0] || ""}
+              onChange={(v) => setFieldValue("values", [v], true)}
+            />
           </div>
           <div className="flex justify-end space-x-2">
             <Button
@@ -101,65 +110,63 @@ const InputForm = ({ input, onSubmit }: FormProps) => {
     error: null,
   });
   return (
-    <>
-      {/*<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />*/}
-      {/*<div className="fixed inset-0 z-10 w-screen overflow-y-auto">*/}
-      <div className="flex flex-col divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow w-screen max-w-xl">
-        <div className="px-4 py-4">
-          <FlowpipeLogo />
-        </div>
-        <div className="px-4 py-5">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">
-            {input.prompt}
-          </h3>
-        </div>
-        <div className="px-4 py-4">
-          <Formik
-            initialValues={initialValues}
-            validate={(values) => {
-              const errors = {};
-              if (!values.values) {
-                errors.values = "Required";
-              }
-              return errors;
-            }}
-            onSubmit={async (values, { setSubmitting }) => {
-              console.log("Submitting...", values.values);
-              setSubmitting(false);
-              const { error } = await onSubmit(input.response_url, {
-                execution_id: input.execution_id,
-                pipeline_execution_id: input.pipeline_execution_id,
-                step_execution_id: input.step_execution_id,
-                values: values.values,
-              });
-              console.log(error);
-            }}
-          >
-            {({ isSubmitting, isValid, setFieldValue, handleSubmit }) => (
-              <Form>
-                {/*<Field type="email" name="email" />*/}
-                {/*<ErrorMessage name="email" component="div" />*/}
-                {/*<Field type="password" name="password" />*/}
-                {/*<ErrorMessage name="password" component="div" />*/}
-                {/*<button type="submit" disabled={isSubmitting}>*/}
-                {/*  Submit*/}
-                {/*</button>*/}
-                <InputOptions
-                  inputType={input.input_type}
-                  setFieldValue={setFieldValue}
-                  state={state}
-                  submitting={isSubmitting}
-                  valid={isValid}
-                  options={input.options}
-                  onSubmit={handleSubmit}
-                />
-              </Form>
-            )}
-          </Formik>
-        </div>
+    <div className="flex flex-col divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow w-screen max-w-xl">
+      <div className="px-4 py-4">
+        <FlowpipeLogo />
       </div>
-      {/*</div>*/}
-    </>
+      <div className="px-4 py-5">
+        <h3 className="text-base font-semibold leading-6 text-gray-900">
+          {input.prompt}
+        </h3>
+      </div>
+      <div className="px-4 py-4">
+        <Formik
+          initialValues={initialValues}
+          validate={(values) => {
+            console.log(values);
+            const errors = {};
+            if (!values.values || !values.values.every((v) => !!v)) {
+              errors.values = `Please ${input.input_type === "text" ? "enter" : "select"} a value.`;
+            }
+            return errors;
+          }}
+          onSubmit={async (values, { setSubmitting }) => {
+            console.log("Submitting...", values.values);
+            setSubmitting(false);
+            const { error } = await onSubmit(input.response_url, {
+              execution_id: input.execution_id,
+              pipeline_execution_id: input.pipeline_execution_id,
+              step_execution_id: input.step_execution_id,
+              values: values.values,
+            });
+            console.log(error);
+          }}
+        >
+          {({
+            errors,
+            isSubmitting,
+            isValid,
+            setFieldValue,
+            handleSubmit,
+            values,
+          }) => (
+            <Form>
+              <InputOptions
+                errors={errors}
+                inputType={input.input_type}
+                setFieldValue={setFieldValue}
+                state={state}
+                submitting={isSubmitting}
+                options={input.options}
+                valid={isValid}
+                values={values}
+                onSubmit={handleSubmit}
+              />
+            </Form>
+          )}
+        </Formik>
+      </div>
+    </div>
   );
 };
 
