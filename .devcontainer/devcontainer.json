@@ -1,6 +1,6 @@
 {
 	"name": "flowpipe-devcontainer",
-	"image": "ghcr.io/turbot/flowpipe-devcontainer:2.4.0",
+	"image": "ghcr.io/turbot/flowpipe-devcontainer:2.5.0",
 
 	"containerEnv": {
 		"GOPRIVATE=github.com/": "github.com/turbot/*"
@@ -32,5 +32,7 @@
 			"GitHub.vscode-github-actions",
 			"HashiCorp.HCL"]
 		}
-	}
+	},
+	
+	"postStartCommand": ".devcontainer/scripts/post-start-command.sh"
 }
