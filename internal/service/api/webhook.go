@@ -46,6 +46,20 @@ type JSONPayload struct {
 	ExecutionID         string `json:"execution_id"`
 }
 
+type webformResponse struct {
+	ExecutionID         string   `json:"execution_id"`
+	PipelineExecutionID string   `json:"pipeline_execution_id"`
+	StepExecutionID     string   `json:"step_execution_id"`
+	Values              []string `json:"values"`
+}
+
+type webformUpdate struct {
+	ExecutionID         string `json:"execution_id"`
+	PipelineExecutionID string `json:"pipeline_execution_id"`
+	StepExecutionID     string `json:"step_execution_id"`
+	Status              string `json:"status"`
+}
+
 type slackResponse struct {
 	ExecutionID         string
 	PipelineExecutionID string
@@ -371,7 +385,7 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 			common.AbortWithError(c, err)
 			return
 		} else if !eventPublished { // only event this is false & we don't have error is that we've already processed the step
-			common.AbortWithError(c, perr.InternalWithMessage("already processed"))
+			common.AbortWithError(c, perr.ConflictWithMessage("already processed"))
 			return
 		}
 
@@ -380,9 +394,30 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 		_ = updateSlackMessage(resp.ResponseUrl, fmt.Sprintf("Thanks <@%s>!", resp.User)) // TODO: do we handle this error since we already ack'd?
 
 	case "webform":
-		// TODO: implement
-		common.AbortWithError(c, perr.InternalWithMessage("not yet implemented"))
-		return
+		resp, err := parseWebformResponse(bodyBytes)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		}
+		var v any
+		switch len(resp.Values) {
+		case 0:
+			v = ""
+		case 1:
+			v = resp.Values[0]
+		default:
+			v = resp.Values
+		}
+
+		eventPublished, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, v)
+		if err != nil {
+			common.AbortWithError(c, err)
+			return
+		} else if !eventPublished { // only event this is false & we don't have error is that we've already processed the step
+			common.AbortWithError(c, perr.ConflictWithMessage("already processed"))
+			return
+		}
+		c.JSON(200, webformUpdateFromResponse(resp, "finished"))
 	default:
 		// TODO: handle more gracefully?
 		common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("Integration type %s is not supported", integrationType)))
@@ -533,4 +568,22 @@ func updateSlackMessage(responseUrl string, newMessage string) error {
 	}
 
 	return nil
+}
+
+func parseWebformResponse(bodyBytes []byte) (webformResponse, error) {
+	var response webformResponse
+	err := json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		return response, err
+	}
+	return response, nil
+}
+
+func webformUpdateFromResponse(response webformResponse, status string) webformUpdate {
+	return webformUpdate{
+		ExecutionID:         response.ExecutionID,
+		PipelineExecutionID: response.PipelineExecutionID,
+		StepExecutionID:     response.StepExecutionID,
+		Status:              status,
+	}
 }
