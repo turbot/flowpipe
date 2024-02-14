@@ -130,6 +130,53 @@ func (suite *DefaultModTestSuite) TestEchoOne() {
 	assert.Equal(1, len(pex.PipelineOutput))
 }
 
+func (suite *DefaultModTestSuite) TestInputStepOptionResolution() {
+	suite.testInputStepOptionResolution("default_mod.pipeline.input_opts_att_resolution")
+	suite.testInputStepOptionResolution("default_mod.pipeline.input_opt_block_resolution")
+}
+
+func (suite *DefaultModTestSuite) testInputStepOptionResolution(pipelineName string) {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	waitTime := 100 * time.Millisecond
+	stepName := "input.input_test"
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, pipelineName, waitTime, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, sex, err := getPipelineExWaitForStepStarted(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, waitTime, 40, "input.input_test")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("started", pex.Status)
+	assert.Equal(3, len(pex.StepExecutions))
+	assert.Equal(stepName, sex.Name)
+
+	if opts, ok := sex.Input["options"].([]any); ok {
+		assert.Equal(2, len(opts))
+		if opt0, ok := opts[0].(map[string]any); ok {
+			assert.Equal("yes", opt0["value"].(string))
+		} else {
+			assert.Fail("Error parsing first option to map[string]any")
+			return
+		}
+		if opt1, ok := opts[1].(map[string]any); ok {
+			assert.Equal("no", opt1["value"].(string))
+		} else {
+			assert.Fail("Error parsing second option to map[string]any")
+			return
+		}
+	} else {
+		assert.Fail("Error obtaining options from step input")
+		return
+	}
+}
+
 func TestDefaultModTestingSuite(t *testing.T) {
 	suite.Run(t, &DefaultModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
