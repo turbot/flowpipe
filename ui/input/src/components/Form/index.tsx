@@ -21,6 +21,7 @@ const InputOptions = ({ input_type, options }: InputOptionsProps) => {
         <div className="flex justify-end space-x-2">
           {options?.map((o) => (
             <Button
+              key={o.value}
               value={o.value}
               label={o.label}
               onClick={(v: string) => {
@@ -54,13 +55,13 @@ const Form = ({ input }: FormProps) => {
     <>
       {/*<div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />*/}
       {/*<div className="fixed inset-0 z-10 w-screen overflow-y-auto">*/}
-      <div className="flex flex-col divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow w-screen max-w-3xl">
-        <div className="px-4 py-5 sm:px-6">
+      <div className="flex flex-col divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow w-screen max-w-xl">
+        <div className="px-4 py-5">
           <h3 className="text-base font-semibold leading-6 text-gray-900">
             {input.prompt}
           </h3>
         </div>
-        <div className="px-4 py-5 sm:p-6">
+        <div className="px-4 py-5">
           <InputOptions input_type={input.input_type} options={input.options} />
         </div>
       </div>

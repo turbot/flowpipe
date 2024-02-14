@@ -14,9 +14,10 @@ export default defineConfig({
     alias: {
       assets: "/src/assets",
       components: "/src/components",
+      hooks: "/src/hooks",
       lib: "/src/lib",
       src: "/src",
-      styles: "/styles",
+      utils: "/src/utils",
     },
   },
 });

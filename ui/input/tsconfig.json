@@ -24,9 +24,10 @@
     "paths": {
       "assets": ["./src/assets/*"],
       "components/*":["./src/components/*"],
+      "hooks/*":["./src/hooks/*"],
       "lib": ["./src/lib/*"],
       "src/*": ["./src/*"],
-      "styles/*": ["./src/styles/*"]
+      "utils/*": ["./src/utils/*"]
     }
   },
   "include": ["src"],
