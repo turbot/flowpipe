@@ -1,7 +1,7 @@
 pipeline "run_me_bottom" {
 
     param "name" {
-        type = "string"
+        type = string
         default = "value bottom"
     }
 
@@ -21,7 +21,7 @@ pipeline "run_me_middle" {
     }
 
     param "name" {
-        type = "string"
+        type = string
         default = "value middle"
     }
 

@@ -1,7 +1,7 @@
 pipeline "run_me" {
 
     param "name" {
-        type = "string"
+        type = string
         default = "value"
     }
 
