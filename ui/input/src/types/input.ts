@@ -4,21 +4,21 @@ export interface PipelineInputOption {
   selected?: boolean;
 }
 
+export type PipelineInputType =
+  | "button"
+  | "text"
+  | "select"
+  | "multiselect"
+  | "combo"
+  | "multicombo";
+
 export interface PipelineInput {
   execution_id: string;
   pipeline_execution_id: string;
   step_execution_id: string;
-  string: string;
+  status: string;
   prompt?: string;
-  input_type:
-    | "button"
-    | "text"
-    | "password"
-    | "textarea"
-    | "select"
-    | "multiselect"
-    | "checkbox"
-    | "radio";
+  input_type: PipelineInputType;
   options: PipelineInputOption[];
   response_url: string;
 }
