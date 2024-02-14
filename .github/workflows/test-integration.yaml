@@ -1,4 +1,5 @@
 name: Test - Integration
+
 on:
   push:
     tags:
@@ -9,11 +10,41 @@ on:
   workflow_dispatch:
   pull_request:
 
-
 jobs:
   golangci:
     name: Integration Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: flowpipe
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: flowpipe-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mariadb:
+        image: mariadb:latest
+        env:
+          MARIADB_USER: flowpipe
+          MARIADB_PASSWORD: password
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: flowpipe-test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Flowpipe repository
         uses: actions/checkout@v3
