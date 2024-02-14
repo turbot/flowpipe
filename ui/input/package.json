@@ -13,6 +13,7 @@
   "dependencies": {
     "@material-symbols/svg-300": "^0.14.7",
     "axios": "^1.6.7",
+    "formik": "^2.4.5",
     "localforage": "^1.10.0",
     "match-sorter": "^6.3.4",
     "react": "^18.2.0",

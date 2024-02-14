@@ -22,3 +22,10 @@ export interface PipelineInput {
   options: PipelineInputOption[];
   response_url: string;
 }
+
+export interface PipelineInputResponse {
+  execution_id: string;
+  pipeline_execution_id: string;
+  step_execution_id: string;
+  values: string[];
+}

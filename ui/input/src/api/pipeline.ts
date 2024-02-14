@@ -1,6 +1,6 @@
 import { API_BASE_PATH, asyncRequest } from "src/api/index.ts";
 import axios from "axios";
-import { PipelineInput } from "src/types/input.ts";
+import { PipelineInput, PipelineInputResponse } from "src/types/input.ts";
 
 export const useInputAPI = (
   id: string | null | undefined,
@@ -17,7 +17,10 @@ export const useInputAPI = (
     };
   };
 
-  const postInput = async (response_url: string, input_result: string) => {
+  const postInput = async (
+    response_url: string,
+    input_result: PipelineInputResponse,
+  ) => {
     const { result, error } = await asyncRequest<PipelineInput>(
       axios.post,
       response_url,

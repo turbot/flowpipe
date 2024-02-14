@@ -1,12 +1,12 @@
+import InputForm from "components/InputForm";
+import { PipelineInput } from "src/types/input.ts";
 import { useEffect, useState } from "react";
 import { useInputAPI } from "src/api/pipeline.ts";
 import { useParams } from "react-router-dom";
-import { PipelineInput } from "src/types/input.ts";
-import Form from "components/Form";
 
 const InputApp = () => {
   const { id, hash } = useParams();
-  const { getInput } = useInputAPI(id, hash);
+  const { getInput, postInput } = useInputAPI(id, hash);
   const [loading, setLoading] = useState<boolean>(true);
   const [input, setInput] = useState<PipelineInput | null>(null);
   // const location = useLocation();
@@ -39,7 +39,7 @@ const InputApp = () => {
   return (
     <div className="mx-auto my-auto">
       {loading && <span className="italic">Loading...</span>}
-      {!loading && <Form input={input} />}
+      {!loading && <InputForm input={input} onSubmit={postInput} />}
     </div>
   );
 };

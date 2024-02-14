@@ -7,12 +7,13 @@ import LogoWordmark from "assets/flowpipe-logo-wordmark.svg?react";
 const FlowpipeLogo = () => {
   return (
     <div className="mr-1 md:mr-4">
-      <div className="block md:hidden w-8">
-        <Logo />
-        {/*{theme.name === ThemeNames.STEAMPIPE_DEFAULT && <Logo />}*/}
-        {/*{theme.name === ThemeNames.STEAMPIPE_DARK && <LogoDarkmode />}*/}
-      </div>
-      <div className="hidden md:block w-48">
+      {/*<div className="block sm:hidden w-8">*/}
+      {/*  <Logo />*/}
+      {/*  /!*{theme.name === ThemeNames.STEAMPIPE_DEFAULT && <Logo />}*!/*/}
+      {/*  /!*{theme.name === ThemeNames.STEAMPIPE_DARK && <LogoDarkmode />}*!/*/}
+      {/*</div>*/}
+      {/*<div className="hidden sm:block w-40">*/}
+      <div className="w-40">
         <LogoWordmark />
         {/*{theme.name === ThemeNames.STEAMPIPE_DEFAULT && <LogoWordmark />}*/}
         {/*{theme.name === ThemeNames.STEAMPIPE_DARK && <LogoWordmarkDarkmode />}*/}
