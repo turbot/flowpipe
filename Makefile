@@ -31,8 +31,7 @@ clean-debug:
 clean: clean-tmp clean-dist clean-debug
 
 build-open-api:
-	rm -rf service/api/docs
-	./generate-open-api.sh
+	rm -rf service/api/docs && cp -f ./scripts/generate-open-api.sh . && ./generate-open-api.sh
 
 beta-tag-timetamp:
 	date -u +%Y%m%d%H%M
