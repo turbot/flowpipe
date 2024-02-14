@@ -2,6 +2,7 @@ package estest
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -113,4 +114,63 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 	}
 
 	return ex, pex, nil
+}
+
+func getPipelineExWaitForStepStarted(suite *FlowpipeTestSuite, evt *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, stepName string) (*execution.ExecutionInMemory, *execution.PipelineExecution, *execution.StepExecution, error) {
+	startedStatuses := []string{"starting", "started", "finished", "failed"}
+	plannerMutex := event.GetEventStoreMutex(evt.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		if plannerMutex != nil {
+			plannerMutex.Unlock()
+		}
+	}()
+
+	ex, err := execution.GetExecution(evt.ExecutionID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	pex := ex.PipelineExecutions[pipelineExecutionID]
+	if pex == nil {
+		return nil, nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+	}
+
+	for _, stEx := range pex.StepExecutions {
+		if stEx.Name == stepName && slices.Contains(startedStatuses, stEx.Status) {
+			return ex, pex, stEx, nil
+		}
+	}
+
+	for i := 0; i < waitRetry; i++ {
+		plannerMutex.Unlock()
+		plannerMutex = nil
+
+		time.Sleep(waitTime)
+
+		plannerMutex = event.GetEventStoreMutex(evt.ExecutionID)
+		plannerMutex.Lock()
+
+		ex, err = execution.GetExecution(evt.ExecutionID)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
+		pex = ex.PipelineExecutions[pipelineExecutionID]
+		if pex == nil {
+			return nil, nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		}
+
+		for _, stEx := range pex.StepExecutions {
+			if stEx.Name == stepName && slices.Contains(startedStatuses, stEx.Status) {
+				return ex, pex, stEx, nil
+			}
+		}
+
+		if pex.Status == "failed" || pex.Status == "finished" {
+			return nil, nil, nil, fmt.Errorf("pipeline execution %s completed but expected step %s didn't start", pipelineExecutionID, stepName)
+		}
+	}
+
+	return nil, nil, nil, fmt.Errorf("pipeline execution %s wait retries completed but expected step %s didn't start", pipelineExecutionID, stepName)
 }
