@@ -47,7 +47,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           # The Docker build context.
-          context: flowpipe/
+          context: flowpipe/docker/
           push: true
           platforms: linux/amd64, linux/arm64
           build-args: |

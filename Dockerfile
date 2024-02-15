@@ -1,12 +1,12 @@
 # Use the slim version of Debian Bullseye as the base image
 FROM debian:bullseye-slim
 
-LABEL org.opencontainers.image.ref.name flowpipe
-LABEL org.opencontainers.image.version ${TARGETVERSION}
-LABEL org.opencontainers.image.url "https://flowpipe.io"
-LABEL org.opencontainers.image.authors "Turbot HQ, Inc"
-LABEL org.opencontainers.image.source "https://github.com/turbot/flowpipe"
-LABEL org.opencontainers.image.description "Flowpipe container image ${TARGETVERSION}"
+LABEL org.opencontainers.image.ref.name flowpipe \
+      org.opencontainers.image.version ${TARGETVERSION} \
+      org.opencontainers.image.url "https://flowpipe.io" \
+      org.opencontainers.image.authors "Turbot HQ, Inc" \
+      org.opencontainers.image.source "https://github.com/turbot/flowpipe" \
+      org.opencontainers.image.description "Flowpipe container image ${TARGETVERSION}"
 
 # Define default environment variables to override the flowpipe UID and its GID
 ENV USER_UID=7103
