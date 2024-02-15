@@ -85,11 +85,6 @@ jobs:
         run: make build-ui
         working-directory: flowpipe
 
-      # Install MailHog for SMTP mail testing
-      - name: Install MailHog
-        run: |
-          go install github.com/mailhog/MailHog@v1.0.1
-
       - name: Run tests
         run: make integration-test
         working-directory: flowpipe
