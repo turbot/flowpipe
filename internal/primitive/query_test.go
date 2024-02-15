@@ -459,7 +459,7 @@ func TestMariaDBQueryListAll(t *testing.T) {
 	ctx := context.Background()
 
 	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
-	err := ApplyDatabaseScript(DriverMySQL, connectionString, "./database_files/populate_data.sql")
+	err := ApplyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
 		t.Fatalf("Error setting up the database: " + err.Error())
 	}
