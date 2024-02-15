@@ -1,7 +1,7 @@
 import useLocalStorage from "hooks/useLocalStorage.ts";
 import useMediaQuery from "hooks/useMediaQuery.ts";
 import { classNames } from "src/utils/style.ts";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
 
 type Theme = {
   name: string;

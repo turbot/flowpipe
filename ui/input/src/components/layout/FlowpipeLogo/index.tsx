@@ -1,5 +1,5 @@
 /// <reference types="vite-plugin-svgr/client" />
-import Logo from "assets/flowpipe-logo.svg?react";
+// import Logo from "assets/flowpipe-logo.svg?react";
 // import LogoDarkmode from "assets/flowpipe-logo-darkmode.svg?react";
 import LogoWordmark from "assets/flowpipe-logo-wordmark.svg?react";
 // import LogoWordmarkDarkmode from "assets/flowpipe-logo-wordmark-darkmode.svg?react";

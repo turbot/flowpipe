@@ -8,4 +8,8 @@ pipeline "input_webform_button_simple" {
     option "Deny" {}
   }
 
+  output "val" {
+    value = step.input.my_step.value
+  }
+
 }

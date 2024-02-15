@@ -1,21 +1,25 @@
-import { API_BASE_PATH, asyncRequest } from "src/api/index.ts";
 import axios from "axios";
+import { API_BASE_PATH, asyncRequest, useFlowpipeSWR } from "src/api/index.ts";
 import { PipelineInput, PipelineInputResponse } from "src/types/input.ts";
 
 export const useInputAPI = (
   id: string | null | undefined,
   hash: string | null | undefined,
 ) => {
-  const getInput = async () => {
-    const { result, error } = await asyncRequest<PipelineInput>(
-      axios.get,
-      `${API_BASE_PATH}/input/${id}/${hash}`,
-    );
-    return {
-      input: result ? result.data : null,
-      error: error ? error : null,
-    };
-  };
+  const { data, loading, error, mutate } = useFlowpipeSWR<PipelineInput>(
+    !!id && !!hash ? `${API_BASE_PATH}/input/${id}/${hash}` : null,
+  );
+
+  // const getInput = async () => {
+  //   const { result, error } = await asyncRequest<PipelineInput>(
+  //     axios.get,
+  //     `${API_BASE_PATH}/input/${id}/${hash}`,
+  //   );
+  //   return {
+  //     input: result ? result.data : null,
+  //     error: error ? error : null,
+  //   };
+  // };
 
   const postInput = async (
     response_url: string,
@@ -27,6 +31,7 @@ export const useInputAPI = (
       input_result,
       //withIfMatchHeaderConfig(pipeline), // TODO: raise RE IfMatch header
     );
+    console.log({ response_url, input_result, result, error });
     return {
       input: result ? result.data : null,
       error: error ? error : null,
@@ -34,7 +39,10 @@ export const useInputAPI = (
   };
 
   return {
-    getInput,
+    input: data,
+    error,
+    loading,
+    reload: mutate,
     postInput,
   };
 };

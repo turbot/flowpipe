@@ -38,7 +38,7 @@ const TextInput = ({ name, label, value, error, onChange }: TextInputProps) => {
         />
         {!!error && (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-            <ErrorIcon className="h-5 w-5 fill-red-500" aria-hidden="true" />
+            <ErrorIcon className="h-5 w-5 fill-red-600" aria-hidden="true" />
           </div>
         )}
       </div>
