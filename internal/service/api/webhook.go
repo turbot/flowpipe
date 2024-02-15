@@ -71,9 +71,9 @@ type slackResponse struct {
 }
 
 func (s slackResponse) ValueAsString() string {
-	switch s.Value.(type) {
+	switch t := s.Value.(type) {
 	case string:
-		return s.Value.(string)
+		return t
 	case []string:
 		return strings.Join(s.Value.([]string), ", ")
 	default:
