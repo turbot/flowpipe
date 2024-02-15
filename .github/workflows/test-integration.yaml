@@ -17,13 +17,11 @@ jobs:
 
     services:
       postgres:
-        image: postgres:latest
+        image: postgres:14.11
         env:
           POSTGRES_USER: flowpipe
           POSTGRES_PASSWORD: password
           POSTGRES_DB: flowpipe-test
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -31,14 +29,12 @@ jobs:
           --health-retries 5
 
       mariadb:
-        image: mariadb:latest
+        image: mariadb:11.2.3
         env:
           MARIADB_USER: flowpipe
           MARIADB_PASSWORD: password
           MARIADB_ROOT_PASSWORD: password
           MARIADB_DATABASE: flowpipe-test
-        ports:
-          - 3306:3306
         options: >- 
           --health-cmd="healthcheck.sh --connect --innodb_initialized" 
           --health-interval=10s 
@@ -75,6 +71,11 @@ jobs:
       - name: Build UI
         run: make build-ui
         working-directory: flowpipe
+
+      # Install MailHog for SMTP mail testing
+      - name: Install MailHog
+        run: |
+          go install github.com/mailhog/MailHog@v1.0.1
 
       - name: Run tests
         run: make integration-test
