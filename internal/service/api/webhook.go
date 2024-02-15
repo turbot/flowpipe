@@ -67,6 +67,18 @@ type slackResponse struct {
 	User                string
 	Value               any
 	ResponseUrl         string
+	Prompt              string
+}
+
+func (s slackResponse) ValueAsString() string {
+	switch s.Value.(type) {
+	case string:
+		return s.Value.(string)
+	case []string:
+		return strings.Join(s.Value.([]string), ", ")
+	default:
+		return fmt.Sprintf("%v", s.Value)
+	}
 }
 
 type slackUpdate struct {
@@ -391,7 +403,8 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 
 		// acknowledge to slack
 		c.String(200, "")
-		_ = updateSlackMessage(resp.ResponseUrl, fmt.Sprintf("Thanks <@%s>!", resp.User)) // TODO: do we handle this error since we already ack'd?
+		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", resp.Prompt, resp.User, resp.ValueAsString())
+		_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
 
 	case "webform":
 		resp, err := parseWebformResponse(bodyBytes)
@@ -503,8 +516,10 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 		return response, err
 	}
 
+	firstBlock := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)
+
 	// parse ids - encoded payload should be block_id of first block in message
-	encodedPayload := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)["block_id"].(string)
+	encodedPayload := firstBlock["block_id"].(string)
 	payload, err := decodePayload(encodedPayload)
 	if err != nil {
 		return response, fmt.Errorf("error parsing execution id payload: %s", err.Error())
@@ -520,6 +535,13 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 
 	// response url
 	response.ResponseUrl = jsonBody["response_url"].(string)
+
+	// parse prompt
+	if textBlock, ok := firstBlock["text"].(map[string]any); ok {
+		response.Prompt = textBlock["text"].(string)
+	} else if labelBlock, ok := firstBlock["label"].(map[string]any); ok {
+		response.Prompt = labelBlock["text"].(string)
+	}
 
 	// parse value(s)
 	for _, a := range jsonBody["actions"].([]any) {
