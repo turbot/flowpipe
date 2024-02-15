@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"os"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -139,6 +141,44 @@ func (e *Query) RunWithMetadata(ctx context.Context, input modconfig.Input) (*mo
 func (e *Query) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	output, _, err := e.RunWithMetadata(ctx, input)
 	return output, err
+}
+
+func ApplyDatabaseScript(driverName, dbConnectionString, scriptPath string) error {
+	if driverName != DriverPostgres && driverName != DriverMySQL {
+		return perr.BadRequestWithMessage("Unsupported database driver: " + driverName)
+	}
+
+	// Connect to the database
+	db, err := sql.Open(driverName, dbConnectionString)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to connect to database: " + err.Error())
+	}
+	defer db.Close()
+
+	// Read the SQL file using os.ReadFile
+	sqlContent, err := os.ReadFile(scriptPath)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to read SQL file: " + err.Error())
+	}
+	sqlScript := string(sqlContent)
+
+	// Split the script into individual statements on semicolon
+	statements := strings.Split(sqlScript, ";")
+
+	for _, statement := range statements {
+		statement = strings.TrimSpace(statement)
+		if statement == "" {
+			continue // Skip empty statements resulting from the split
+		}
+
+		// Directly execute each statement on the database connection
+		_, err = db.Exec(statement)
+		if err != nil {
+			return perr.BadRequestWithMessage("Failed to execute SQL statement: " + statement + "\nError: " + err.Error())
+		}
+	}
+
+	return nil
 }
 
 func mapScan(r *sql.Rows, columns []string, dest map[string]interface{}) error {
