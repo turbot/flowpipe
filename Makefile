@@ -43,12 +43,13 @@ build-ui:
 .PHONY: test
 test:
 	go clean -testcache
-	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
+	RUN_MODE=TEST_ES go test $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
 
 .PHONY: integration-test
 integration-test:
 	go clean -testcache
 	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
+	RUN_MODE=TEST_ES go test ./internal/primitive -timeout 240s -v
 
 .PHONY: release-dry-run
 release-dry-run:
