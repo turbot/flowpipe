@@ -468,7 +468,7 @@ func TestMariaDBQueryListAll(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:./database_files/employee.db",
+		schema.AttributeTypeConnectionString: "mysql://" + connectionString,
 		schema.AttributeTypeSql:              "select * from employee order by id;",
 	})
 
@@ -482,98 +482,94 @@ func TestMariaDBQueryListAll(t *testing.T) {
 			"email":       "john@example.com",
 			"id":          int64(1),
 			"name":        "John",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 		{
 			"email":       "adam@example.com",
 			"id":          int64(2),
 			"name":        "Adam",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 		{
 			"email":       "alice@example.com",
 			"id":          int64(3),
 			"name":        "Alice",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": false}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": false},
 		},
 		{
 			"email":       "bob@example.com",
 			"id":          int64(4),
 			"name":        "Bob",
-			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
 		},
 		{
 			"email":       "alex@example.com",
 			"id":          int64(5),
 			"name":        "Alex",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 		{
 			"email":       "carey@example.com",
 			"id":          int64(6),
 			"name":        "Carey",
-			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
 		},
 		{
 			"email":       "cody@example.com",
 			"id":          int64(7),
 			"name":        "Cody",
-			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
 		},
 		{
 			"email":       "andrew@example.com",
 			"id":          int64(8),
 			"name":        "Andrew",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 		{
 			"email":       "alexandra@example.com",
 			"id":          int64(9),
 			"name":        "Alexandra",
-			"preferences": "{\"theme\": \"light\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
 		},
 		{
 			"email":       "jon@example.com",
 			"id":          int64(10),
 			"name":        "Jon",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 		{
 			"email":       "jennifer@example.com",
 			"id":          int64(11),
 			"name":        "Jennifer",
-			"preferences": "{\"theme\": \"light\", \"notifications\": false}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
 		},
 		{
 			"email":       "alan@example.com",
 			"id":          int64(12),
 			"name":        "Alan",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 		{
 			"email":       "mia@example.com",
 			"id":          int64(13),
 			"name":        "Mia",
-			"preferences": "{\"theme\": \"light\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
 		},
 		{
 			"email":       "aaron@example.com",
 			"id":          int64(14),
 			"name":        "Aaron",
-			"preferences": "{\"theme\": \"light\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
 		},
 		{
 			"email":       "adrian@example.com",
 			"id":          int64(15),
 			"name":        "Adrian",
-			"preferences": "{\"theme\": \"dark\", \"notifications\": true}",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
 		},
 	}
 
 	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
-
-	if ApplyDatabaseScript(DriverMySQL, connectionString, "./database_files/remove_data.sql") != nil {
-		t.Fatalf("Error setting up the database")
-	}
 }
