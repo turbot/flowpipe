@@ -14,32 +14,44 @@ jobs:
     name: Lint and Test
     runs-on: ubuntu-latest
 
-    # NOTE: The following services are commented out because they are not required for linting and testing but may be.
-    # services:
-    #   postgres:
-    #     image: postgres:14.11
-    #     env:
-    #       POSTGRES_USER: flowpipe
-    #       POSTGRES_PASSWORD: password
-    #       POSTGRES_DB: flowpipe-test
-    #     options: >-
-    #       --health-cmd pg_isready
-    #       --health-interval 10s
-    #       --health-timeout 5s
-    #       --health-retries 5
+    services:
+      # Install PostgresSQL for database testing
+      postgres:
+        image: postgres:14.11
+        env:
+          POSTGRES_USER: flowpipe
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: flowpipe-test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-    #   mariadb:
-    #     image: mariadb:11.2.3
-    #     env:
-    #       MARIADB_USER: flowpipe
-    #       MARIADB_PASSWORD: password
-    #       MARIADB_ROOT_PASSWORD: password
-    #       MARIADB_DATABASE: flowpipe-test
-    #     options: >- 
-    #       --health-cmd="healthcheck.sh --connect --innodb_initialized" 
-    #       --health-interval=10s 
-    #       --health-timeout=5s 
-    #       --health-retries=3
+      # Install MariaDB for database testing
+      mariadb:
+        image: mariadb:11.2.3
+        env:
+          MARIADB_USER: flowpipe
+          MARIADB_PASSWORD: password
+          MARIADB_ROOT_PASSWORD: password
+          MARIADB_DATABASE: flowpipe-test
+        ports:
+          - 3306:3306
+        options: >- 
+            --health-cmd="healthcheck.sh --connect --innodb_initialized" 
+            --health-interval=10s 
+            --health-timeout=5s 
+            --health-retries=3
+
+      # Install MailHog for SMTP mail testing
+      mailhog:
+        image: mailhog/mailhog:v1.0.1
+        ports:
+          - 1025:1025
+          - 8025:8025
 
     steps:
       - name: Checkout Flowpipe repository
@@ -50,7 +62,7 @@ jobs:
       - name: Checkout Pipe Fittings Components repository
         uses: actions/checkout@v3
         with:
-          ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
+          # ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
           ref: main
@@ -58,7 +70,7 @@ jobs:
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v3
         with:
-          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          # ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
           ref: main
@@ -80,11 +92,6 @@ jobs:
           version: v1.55.2
           args: --timeout=15m
           working-directory: flowpipe
-
-      # Install MailHog for SMTP mail testing
-      - name: Install MailHog
-        run: |
-          go install github.com/mailhog/MailHog@v1.0.1
 
       - name: Run tests
         run: make test
