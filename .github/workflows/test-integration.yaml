@@ -16,8 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
+      # Install PostgresSQL for database testing
       postgres:
-        image: postgres:latest
+        image: postgres:14.11
         env:
           POSTGRES_USER: flowpipe
           POSTGRES_PASSWORD: password
@@ -30,8 +31,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      # Install MariaDB for database testing
       mariadb:
-        image: mariadb:latest
+        image: mariadb:11.2.3
         env:
           MARIADB_USER: flowpipe
           MARIADB_PASSWORD: password
@@ -40,10 +42,17 @@ jobs:
         ports:
           - 3306:3306
         options: >- 
-          --health-cmd="healthcheck.sh --connect --innodb_initialized" 
-          --health-interval=10s 
-          --health-timeout=5s 
-          --health-retries=3
+            --health-cmd="healthcheck.sh --connect --innodb_initialized" 
+            --health-interval=10s 
+            --health-timeout=5s 
+            --health-retries=3
+
+      # Install MailHog for SMTP mail testing
+      mailhog:
+        image: mailhog/mailhog:v1.0.1
+        ports:
+          - 1025:1025
+          - 8025:8025
 
     steps:
       - name: Checkout Flowpipe repository
