@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/utils"
 	"io"
 	"log/slog"
 	"net/http"
@@ -68,6 +69,7 @@ type slackResponse struct {
 	Value               any
 	ResponseUrl         string
 	Prompt              string
+	isFinished          bool
 }
 
 func (s slackResponse) ValueAsString() string {
@@ -391,6 +393,10 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 			common.AbortWithError(c, err)
 			return
 		}
+		if !resp.isFinished { // acknowledge received event but take no further action
+			c.Status(200)
+			return
+		}
 
 		eventPublished, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, resp.Value)
 		if err != nil {
@@ -398,14 +404,15 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 			return
 		} else if !eventPublished { // only event this is false & we don't have error is that we've already processed the step
 			common.AbortWithError(c, perr.ConflictWithMessage("already processed"))
+			replyMsg := fmt.Sprintf("%s\n<@%s> this was already responded to previously", resp.Prompt, resp.User)
+			_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
+			return
+		} else {
+			c.Status(200)
+			replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", resp.Prompt, resp.User, resp.ValueAsString())
+			_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
 			return
 		}
-
-		// acknowledge to slack
-		c.String(200, "")
-		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", resp.Prompt, resp.User, resp.ValueAsString())
-		_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
-
 	case "webform":
 		resp, err := parseWebformResponse(bodyBytes)
 		if err != nil {
@@ -504,6 +511,7 @@ func decodePayload(input string) (JSONPayload, error) {
 func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	var response slackResponse
 	var values []string
+	var encodedPayload string
 	decodedBody, err := url.QueryUnescape(string(bodyBytes))
 	if err != nil {
 		return response, err
@@ -516,10 +524,59 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 		return response, err
 	}
 
-	firstBlock := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)
+	// determine if finished
+	isFinished := false
+	if actions, ok := jsonBody["actions"].([]any); ok {
+		for _, a := range actions {
+			action := a.(map[string]any)
+			if strings.HasPrefix(action["action_id"].(string), "finished") {
+				isFinished = true
+				break
+			}
+		}
+	}
+	response.isFinished = isFinished
+	if !isFinished {
+		return response, nil
+	}
+
+	// parse state / action -> values
+	if stateValues, ok := jsonBody["state"].(map[string]any)["values"].(map[string]any); ok && len(stateValues) > 0 {
+		for key, value := range stateValues {
+			v := value.(map[string]any)
+			o := v[utils.SortedMapKeys(v)[0]].(map[string]any)
+			switch o["type"].(string) {
+			case "static_select":
+				encodedPayload = key
+				values = append(values, o["selected_option"].(map[string]any)["value"].(string))
+				break
+			case "multi_static_select":
+				encodedPayload = key
+				selectedOptions := o["selected_options"].([]any)
+				for _, selectedOption := range selectedOptions {
+					values = append(values, selectedOption.(map[string]any)["value"].(string))
+				}
+				break
+			case "plain_text_input":
+				encodedPayload = key
+				values = append(values, o["value"].(string))
+				break
+			default:
+				// ignore
+			}
+		}
+	} else { // button response doesn't have state
+		action := jsonBody["actions"].([]any)[0].(map[string]any)
+		actionType := action["type"].(string)
+		if actionType != "button" {
+			return response, fmt.Errorf("error parsing response")
+		}
+		values = append(values, action["value"].(string))
+		firstBlock := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)
+		encodedPayload = firstBlock["block_id"].(string)
+	}
 
 	// parse ids - encoded payload should be block_id of first block in message
-	encodedPayload := firstBlock["block_id"].(string)
 	payload, err := decodePayload(encodedPayload)
 	if err != nil {
 		return response, fmt.Errorf("error parsing execution id payload: %s", err.Error())
@@ -537,28 +594,11 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	response.ResponseUrl = jsonBody["response_url"].(string)
 
 	// parse prompt
-	if textBlock, ok := firstBlock["text"].(map[string]any); ok {
-		response.Prompt = textBlock["text"].(string)
-	} else if labelBlock, ok := firstBlock["label"].(map[string]any); ok {
+	firstBlock := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)
+	if labelBlock, ok := firstBlock["label"].(map[string]any); ok {
 		response.Prompt = labelBlock["text"].(string)
-	}
-
-	// parse value(s)
-	for _, a := range jsonBody["actions"].([]any) {
-		action := a.(map[string]any)
-		actionType := action["type"].(string)
-
-		switch actionType {
-		case "button", "plain_text_input":
-			values = append(values, action["value"].(string))
-		case "static_select":
-			values = append(values, action["selected_option"].(map[string]any)["value"].(string))
-		case "multi_static_select":
-			selectedOptions := action["selected_options"].([]any)
-			for _, selectedOption := range selectedOptions {
-				values = append(values, selectedOption.(map[string]any)["value"].(string))
-			}
-		}
+	} else if textBlock, ok := firstBlock["text"].(map[string]any); ok {
+		response.Prompt = textBlock["text"].(string)
 	}
 
 	// value can be nil, string or []string
