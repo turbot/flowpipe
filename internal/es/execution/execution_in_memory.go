@@ -262,15 +262,22 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext() (map[string]cty.Va
 	return pipelineMap, nil
 }
 
+// TODO: this function is very similar to execution's buildIntegrationMapForEvalContext. Need to refactor
 func (ex *ExecutionInMemory) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
 	integrationMap := map[string]cty.Value{}
 	slackIntegrationMap := map[string]cty.Value{}
 	emailIntegrationMap := map[string]cty.Value{}
 
-	for _, p := range pipelineDefn.GetMod().ResourceMaps.Integrations {
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range fpConfig.Integrations {
 
 		parts := strings.Split(p.Name(), ".")
-		if len(parts) != 4 {
+
+		if len(parts) != 2 {
 			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
 		}
 
@@ -279,14 +286,17 @@ func (ex *ExecutionInMemory) buildIntegrationMapForEvalContext(pipelineDefn *mod
 			return nil, err
 		}
 
-		integrationType := parts[2]
+		integrationType := parts[0]
 
 		switch integrationType {
 		case string(schema.IntegrationTypeSlack):
-			slackIntegrationMap[parts[3]] = pCty
+			slackIntegrationMap[parts[1]] = pCty
 
 		case string(schema.IntegrationTypeEmail):
-			emailIntegrationMap[parts[3]] = pCty
+			emailIntegrationMap[parts[1]] = pCty
+
+		case string(schema.IntegrationTypeWebform):
+			// do nothing
 
 		default:
 			return nil, perr.BadRequestWithMessage("invalid integration type: " + integrationType)

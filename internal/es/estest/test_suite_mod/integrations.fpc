@@ -16,3 +16,10 @@ notifier "my_notifier" {
         to = ["just some things here"]
     }
 }
+
+integration "slack" "my_other_slack_app" {
+  token           = "xoxp-111111"
+
+  # optional - if you want to verify the source
+  signing_secret  = "Q#$$#@#$$#W"
+}

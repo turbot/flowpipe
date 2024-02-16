@@ -54,6 +54,43 @@ func ListAllPipelines() ([]*modconfig.Pipeline, error) {
 	return pipelines, nil
 }
 
+func GetIntegration(name string) (modconfig.Integration, error) {
+
+	integrationCached, found := cache.GetCache().Get(name)
+	if !found {
+		return nil, perr.NotFoundWithMessage("integration definition not found: " + name)
+	}
+
+	integration, ok := integrationCached.(modconfig.Integration)
+	if !ok {
+		return nil, perr.InternalWithMessage("invalid integration")
+	}
+	return integration, nil
+}
+
+func ListAllIntegrations() ([]modconfig.Integration, error) {
+	integrationNamesCached, found := cache.GetCache().Get("#integration.names")
+	if !found {
+		return nil, perr.NotFoundWithMessage("integration names not found")
+	}
+
+	integrationNames, ok := integrationNamesCached.([]string)
+	if !ok {
+		return nil, perr.InternalWithMessage("integration name cached is not a list of string")
+	}
+
+	var integrations []modconfig.Integration
+	for _, name := range integrationNames {
+		integration, err := GetIntegration(name)
+		if err != nil {
+			return nil, err
+		}
+		integrations = append(integrations, integration)
+	}
+
+	return integrations, nil
+}
+
 func GetTrigger(name string) (*modconfig.Trigger, error) {
 	triggerCached, found := cache.GetCache().Get(name)
 	if !found {

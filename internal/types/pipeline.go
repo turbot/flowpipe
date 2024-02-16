@@ -3,10 +3,11 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/printers"
-	"github.com/turbot/pipe-fittings/sanitize"
 	"strings"
 	"time"
+
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/turbot/go-kit/helpers"
 
@@ -208,6 +209,23 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 	resp.FileName = pipeline.FileName
 	resp.StartLineNumber = pipeline.StartLineNumber
 	resp.EndLineNumber = pipeline.EndLineNumber
+
+	return resp, nil
+}
+
+func FpIntegrationFromModIntegration(integration modconfig.Integration, rootMod string) (*FpIntegration, error) {
+	resp := &FpIntegration{
+		Name: integration.Name(),
+		Type: integration.GetIntegrationType(),
+		//Description:   integration.GetDescription(),
+		// Title:         integration.Title,
+		// Documentation: integration.Documentation,
+		RootMod: rootMod,
+	}
+
+	resp.FileName = integration.GetIntegrationImpl().FileName
+	resp.StartLineNumber = integration.GetIntegrationImpl().StartLineNumber
+	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber
 
 	return resp, nil
 }

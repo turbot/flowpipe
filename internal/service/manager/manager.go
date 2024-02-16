@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/go-kit/files"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -13,10 +12,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/turbot/go-kit/files"
+
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/sanitize"
 
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/store"
 
 	"github.com/turbot/pipe-fittings/schema"
@@ -200,7 +202,7 @@ func (m *Manager) initializeResources() error {
 
 	var pipelines map[string]*modconfig.Pipeline
 	var triggers map[string]*modconfig.Trigger
-	var modInfo *modconfig.Mod
+	var mod *modconfig.Mod
 
 	if load_mod.ModFileExists(modLocation, app_specific.ModFileName) {
 		// build the list of possible config path locations
@@ -235,8 +237,7 @@ func (m *Manager) initializeResources() error {
 			}
 		}
 
-		mod := w.Mod
-		modInfo = mod
+		mod = w.Mod
 
 		pipelines = workspace.GetWorkspaceResourcesOfType[*modconfig.Pipeline](w)
 		triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
@@ -253,28 +254,39 @@ func (m *Manager) initializeResources() error {
 	m.triggers = triggers
 
 	var rootModName string
-	if modInfo != nil {
-		rootModName = modInfo.ShortName
-		if modInfo.Require != nil && modInfo.Require.FlowpipeVersionConstraint() != nil {
+	if mod != nil {
+		rootModName = mod.ShortName
+		if mod.Require != nil && mod.Require.FlowpipeVersionConstraint() != nil {
 			flowpipeCliVersion := viper.GetString("main.version")
 			flowpipeSemverVersion := semver.MustParse(flowpipeCliVersion)
-			if !modInfo.Require.FlowpipeVersionConstraint().Check(flowpipeSemverVersion) {
-				return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, rootModName, modInfo.Require.Flowpipe.MinVersionString))
+			if !mod.Require.FlowpipeVersionConstraint().Check(flowpipeSemverVersion) {
+				return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, rootModName, mod.Require.Flowpipe.MinVersionString))
 			}
 		}
 	} else {
 		rootModName = "local"
+		mod = &modconfig.Mod{
+			ResourceMaps: &modconfig.ResourceMaps{
+				Pipelines: pipelines,
+				Triggers:  triggers,
+			},
+		}
 	}
 
 	cache.GetCache().SetWithTTL("#rootmod.name", rootModName, 24*7*52*99*time.Hour)
-	err := m.cachePipelinesAndTriggers(pipelines, triggers)
+	err := m.cacheModData(mod)
+	if err != nil {
+		return err
+	}
+
+	err = m.cacheConfigData()
 	if err != nil {
 		return err
 	}
 
 	slog.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
 
-	m.RootMod = modInfo
+	m.RootMod = mod
 
 	return nil
 }
@@ -301,7 +313,7 @@ func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 		slog.Info("caching pipelines and triggers")
 		serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "flowpipe"), m.RootMod.Name(), true))
 		m.triggers = w.Mod.ResourceMaps.Triggers
-		err = m.cachePipelinesAndTriggers(w.Mod.ResourceMaps.Pipelines, w.Mod.ResourceMaps.Triggers)
+		err = m.cacheModData(w.Mod)
 		if err != nil {
 			slog.Error("error caching pipelines and triggers", "error", err)
 			serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "Failed caching pipelines and triggers", err))
@@ -443,18 +455,29 @@ func (m *Manager) InterruptHandler() {
 	slog.Debug("Manager exited")
 }
 
-func (m *Manager) cachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipeline, triggers map[string]*modconfig.Trigger) error {
-	inMemoryCache := cache.GetCache()
-	var pipelineNames []string
+func (m *Manager) cacheConfigData() error {
 
-	for _, p := range pipelines {
-		pipelineNames = append(pipelineNames, p.Name())
-
-		// TODO: how do we want to do this?
-		inMemoryCache.SetWithTTL(p.Name(), p, 24*7*52*99*time.Hour)
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return err
 	}
 
-	inMemoryCache.SetWithTTL("#pipeline.names", pipelineNames, 24*7*52*99*time.Hour)
+	cacheHclResource("integration", fpConfig.Integrations, true)
+	cacheHclResource("notifier", fpConfig.Notifiers, true)
+
+	// Credential must be resolved at runtime, i.e. reading env var or temp creds
+	cacheHclResource("credential", fpConfig.Credentials, false)
+
+	return nil
+}
+
+func (m *Manager) cacheModData(mod *modconfig.Mod) error {
+
+	cacheHclResource("pipeline", mod.ResourceMaps.Pipelines, true)
+
+	triggers := mod.ResourceMaps.Triggers
+
+	inMemoryCache := cache.GetCache()
 
 	var triggerNames []string
 	for _, trigger := range triggers {
@@ -475,6 +498,22 @@ func (m *Manager) cachePipelinesAndTriggers(pipelines map[string]*modconfig.Pipe
 	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
 
 	return nil
+}
+
+func cacheHclResource[T modconfig.HclResource](resourceType string, items map[string]T, cacheIndividualResource bool) {
+	inMemoryCache := cache.GetCache()
+
+	var names []string
+	for _, item := range items {
+		name := item.Name()
+		names = append(names, name)
+		if cacheIndividualResource {
+			inMemoryCache.SetWithTTL(name, item, 24*7*52*99*time.Hour)
+		}
+	}
+
+	cacheName := fmt.Sprintf("#%s.names", resourceType)
+	inMemoryCache.SetWithTTL(cacheName, names, 24*7*52*99*time.Hour)
 }
 
 func calculateTriggerUrl(trigger *modconfig.Trigger, httpHost string, httpPort int) (string, error) {
