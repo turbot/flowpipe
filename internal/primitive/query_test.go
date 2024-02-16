@@ -573,3 +573,123 @@ func TestMariaDBQueryListAll(t *testing.T) {
 	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
 }
+
+func TestPostgresSQLQueryListAll(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+
+	err := ApplyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeConnectionString: connectionString,
+		schema.AttributeTypeSql:              "select * from employee order by id;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(15, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"email":       "john@example.com",
+			"id":          int64(1),
+			"name":        "John",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"email":       "adam@example.com",
+			"id":          int64(2),
+			"name":        "Adam",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"email":       "alice@example.com",
+			"id":          int64(3),
+			"name":        "Alice",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": false},
+		},
+		{
+			"email":       "bob@example.com",
+			"id":          int64(4),
+			"name":        "Bob",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
+		},
+		{
+			"email":       "alex@example.com",
+			"id":          int64(5),
+			"name":        "Alex",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"email":       "carey@example.com",
+			"id":          int64(6),
+			"name":        "Carey",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
+		},
+		{
+			"email":       "cody@example.com",
+			"id":          int64(7),
+			"name":        "Cody",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
+		},
+		{
+			"email":       "andrew@example.com",
+			"id":          int64(8),
+			"name":        "Andrew",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"email":       "alexandra@example.com",
+			"id":          int64(9),
+			"name":        "Alexandra",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
+		},
+		{
+			"email":       "jon@example.com",
+			"id":          int64(10),
+			"name":        "Jon",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"email":       "jennifer@example.com",
+			"id":          int64(11),
+			"name":        "Jennifer",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
+		},
+		{
+			"email":       "alan@example.com",
+			"id":          int64(12),
+			"name":        "Alan",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"email":       "mia@example.com",
+			"id":          int64(13),
+			"name":        "Mia",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
+		},
+		{
+			"email":       "aaron@example.com",
+			"id":          int64(14),
+			"name":        "Aaron",
+			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
+		},
+		{
+			"email":       "adrian@example.com",
+			"id":          int64(15),
+			"name":        "Adrian",
+			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
