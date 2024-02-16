@@ -102,22 +102,21 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 	case constants.InputTypeButton:
 		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
 		var buttons []slack.BlockElement
-		for _, opt := range options {
-			button := slack.NewButtonBlockElement("", *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
+		for i, opt := range options {
+			button := slack.NewButtonBlockElement(fmt.Sprintf("finished_%d", i), *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
 			buttons = append(buttons, slack.BlockElement(button))
 		}
-		action := slack.NewActionBlock("", buttons...)
+		action := slack.NewActionBlock("action_block", buttons...)
 		blocks.BlockSet = append(blocks.BlockSet, header, action)
 	case constants.InputTypeSelect:
-		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
 		for i, opt := range options {
 			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
 		}
 		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
-		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, inputType, blockOptions...)
-		action := slack.NewActionBlock("action_block", s)
-		blocks.BlockSet = append(blocks.BlockSet, header, action)
+		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, "finished", blockOptions...)
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, s)
+		blocks.BlockSet = append(blocks.BlockSet, input)
 	case constants.InputTypeMultiSelect:
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
 		for i, opt := range options {
@@ -125,13 +124,13 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 		}
 		ms := slack.NewOptionsMultiSelectBlockElement(
 			slack.MultiOptTypeStatic,
-			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false),
-			inputType,
-			blockOptions...)
-		block := slack.NewSectionBlock(promptBlock, nil, slack.NewAccessory(ms), slack.SectionBlockOptionBlockID(encodedPayload))
-		blocks.BlockSet = append(blocks.BlockSet, block)
+			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false), "not_finished", blockOptions...)
+		btn := slack.NewButtonBlockElement("finished", "submit", slack.NewTextBlockObject(slack.PlainTextType, "Submit", false, false))
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, ms)
+		action := slack.NewActionBlock("action_block", btn)
+		blocks.BlockSet = append(blocks.BlockSet, input, action)
 	case constants.InputTypeText:
-		textInput := slack.NewPlainTextInputBlockElement(nil, inputType)
+		textInput := slack.NewPlainTextInputBlockElement(nil, "finished")
 		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
 		input.DispatchAction = true // required for being able to send event
 		blocks.BlockSet = append(blocks.BlockSet, input)
@@ -141,9 +140,9 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 
 	output := modconfig.Output{}
 	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
-		var msgOption slack.MsgOption = slack.MsgOptionBlocks(blocks.BlockSet...)
+		msgOption := slack.MsgOptionBlocks(blocks.BlockSet...)
 		api := slack.New(*ip.Token)
-		_, _, err = api.PostMessage(*ip.Channel, msgOption, slack.MsgOptionAsUser(true))
+		_, _, err = api.PostMessage(*ip.Channel, msgOption, slack.MsgOptionAsUser(false))
 		return &output, err
 	} else {
 		wMsg := slack.WebhookMessage{Blocks: &blocks}
