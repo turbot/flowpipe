@@ -462,22 +462,24 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		prompt = p
 	}
 
-	for _, o := range input[schema.AttributeTypeOptions].([]any) {
-		opt := o.(map[string]any)
-		option := InputIntegrationResponseOption{}
-		if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
-			option.Label = &l
-		}
-		if v, ok := opt[schema.AttributeTypeValue].(string); ok {
-			option.Value = &v
-			if helpers.IsNil(option.Label) {
-				option.Label = &v
+	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
+		for _, o := range options {
+			opt := o.(map[string]any)
+			option := InputIntegrationResponseOption{}
+			if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
+				option.Label = &l
 			}
+			if v, ok := opt[schema.AttributeTypeValue].(string); ok {
+				option.Value = &v
+				if helpers.IsNil(option.Label) {
+					option.Label = &v
+				}
+			}
+			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
+				option.Selected = &s
+			}
+			resOptions = append(resOptions, option)
 		}
-		if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
-			option.Selected = &s
-		}
-		resOptions = append(resOptions, option)
 	}
 
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
