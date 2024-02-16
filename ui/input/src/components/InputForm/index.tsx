@@ -60,7 +60,7 @@ const InputOptions = ({
           {options?.map((o) => (
             <Button
               key={o.value}
-              disabled={submitting}
+              disabled={submitting || formState.status === "responded"}
               type="button"
               onClick={async () => {
                 await setFieldValue("values", [o.value], true);
@@ -92,7 +92,9 @@ const InputOptions = ({
               <SuccessMessage message="Input response sent" />
             )}
             <Button
-              disabled={!valid || submitting}
+              disabled={
+                !valid || submitting || formState.status === "responded"
+              }
               type="submit"
               onClick={onSubmit}
             >
