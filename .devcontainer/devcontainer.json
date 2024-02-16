@@ -9,7 +9,12 @@
 	"mounts": [
 		"source=${localWorkspaceFolder}/../pipe-fittings,target=/workspaces/pipe-fittings,type=bind,consistency=cached",
 		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached",
-		"source=go-build-cache,target=/root/.cache/go-build,type=volume"
+		// This has been added to improve build performace between dev container restarts
+		"source=flowpipe-go-bin-volume,target=/go/bin,type=volume",
+		"source=flowpipe-go-pkg-volume,target=/go/pkg,type=volume",
+		"source=flowpipe-go-build-cache,target=/root/.cache/go-build,type=volume"
+		// Optionally, include the src if developing inside the container
+		// "source=flowpipe-go-src-volume,target=/go/src,type=volume"
 	],
 
 	"features": {
