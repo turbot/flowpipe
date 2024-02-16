@@ -549,18 +549,18 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 			case "static_select":
 				encodedPayload = key
 				values = append(values, o["selected_option"].(map[string]any)["value"].(string))
-				break
+				continue
 			case "multi_static_select":
 				encodedPayload = key
 				selectedOptions := o["selected_options"].([]any)
 				for _, selectedOption := range selectedOptions {
 					values = append(values, selectedOption.(map[string]any)["value"].(string))
 				}
-				break
+				continue
 			case "plain_text_input":
 				encodedPayload = key
 				values = append(values, o["value"].(string))
-				break
+				continue
 			default:
 				// ignore
 			}
