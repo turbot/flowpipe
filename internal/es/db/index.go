@@ -9,26 +9,48 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-// Ristretto backed pipeline datatabase
+func typeName[T any](t T) string {
+	return "item"
+}
+
+func GetCachedItem[T any](name string) (T, error) {
+	var defaultT T // default zero value for type T
+
+	// Special handling for pipeline names
+	if _, ok := any(defaultT).(*modconfig.Pipeline); ok {
+		parts := strings.Split(name, ".")
+		if len(parts) != 3 {
+			name = "local.pipeline." + name
+		}
+	}
+
+	cachedItem, found := cache.GetCache().Get(name)
+	if !found {
+		return defaultT, perr.NotFoundWithMessage(typeName(defaultT) + " definition not found: " + name)
+	}
+
+	item, ok := cachedItem.(T)
+	if !ok {
+		return defaultT, perr.InternalWithMessage("invalid " + typeName(defaultT))
+	}
+
+	return item, nil
+}
+
+func GetNotifier(name string) (modconfig.Notifier, error) {
+	return GetCachedItem[modconfig.Notifier](name)
+}
+
+func GetIntegration(name string) (modconfig.Integration, error) {
+	return GetCachedItem[modconfig.Integration](name)
+}
 
 func GetPipeline(name string) (*modconfig.Pipeline, error) {
+	return GetCachedItem[*modconfig.Pipeline](name)
+}
 
-	// TODO: hack while we're transitioning to mod format
-	parts := strings.Split(name, ".")
-	if len(parts) != 3 {
-		name = "local.pipeline." + name
-	}
-
-	pipelineCached, found := cache.GetCache().Get(name)
-	if !found {
-		return nil, perr.NotFoundWithMessage("pipeline definition not found: " + name)
-	}
-
-	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
-	if !ok {
-		return nil, perr.InternalWithMessage("invalid pipeline")
-	}
-	return pipeline, nil
+func GetTrigger(name string) (*modconfig.Trigger, error) {
+	return GetCachedItem[*modconfig.Trigger](name)
 }
 
 func ListAllPipelines() ([]*modconfig.Pipeline, error) {
@@ -52,20 +74,6 @@ func ListAllPipelines() ([]*modconfig.Pipeline, error) {
 	}
 
 	return pipelines, nil
-}
-
-func GetIntegration(name string) (modconfig.Integration, error) {
-
-	integrationCached, found := cache.GetCache().Get(name)
-	if !found {
-		return nil, perr.NotFoundWithMessage("integration definition not found: " + name)
-	}
-
-	integration, ok := integrationCached.(modconfig.Integration)
-	if !ok {
-		return nil, perr.InternalWithMessage("invalid integration")
-	}
-	return integration, nil
 }
 
 func ListAllIntegrations() ([]modconfig.Integration, error) {
@@ -112,34 +120,6 @@ func ListAllNotifiers() ([]modconfig.Notifier, error) {
 	}
 
 	return notifiers, nil
-}
-
-func GetTrigger(name string) (*modconfig.Trigger, error) {
-	triggerCached, found := cache.GetCache().Get(name)
-	if !found {
-		return nil, perr.NotFoundWithMessage("trigger definition not found: " + name)
-	}
-
-	trigger, ok := triggerCached.(*modconfig.Trigger)
-	if !ok {
-		return nil, perr.InternalWithMessage("invalid trigger")
-	}
-
-	return trigger, nil
-}
-
-func GetNotifier(name string) (modconfig.Notifier, error) {
-	notifierCached, found := cache.GetCache().Get(name)
-	if !found {
-		return nil, perr.NotFoundWithMessage("notifier definition not found: " + name)
-	}
-
-	notifier, ok := notifierCached.(modconfig.Notifier)
-	if !ok {
-		return nil, perr.InternalWithMessage("invalid notifier")
-	}
-
-	return notifier, nil
 }
 
 func ListAllTriggers() ([]modconfig.Trigger, error) {
