@@ -3507,7 +3507,7 @@ func (suite *ModTestSuite) TestTier3PipelinesNotRunnableDirectly() {
 	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
 	assert.Equal("failed", pex.Status)
 	assert.Equal(1, len(pex.Errors))
-	assert.Contains(pex.Errors[0].Error.Error(), "pipeline definition not found: mod_depend_b.pipeline.echo_from_depend_b")
+	assert.Contains(pex.Errors[0].Error.Error(), "definition not found: mod_depend_b.pipeline.echo_from_depend_b")
 }
 
 func (suite *ModTestSuite) TestLoopWithResultArguments() {
