@@ -230,6 +230,22 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration, rootMod 
 	return resp, nil
 }
 
+func FpNotifierFromModNotifier(notifier modconfig.Notifier, rootMod string) (*FpNotifier, error) {
+	resp := &FpNotifier{
+		Name: notifier.Name(),
+		//Description:   notifier.GetDescription(),
+		// Title:         notifier.Title,
+		// Documentation: notifier.Documentation,
+		RootMod: rootMod,
+	}
+
+	resp.FileName = notifier.GetNotifierImpl().FileName
+	resp.StartLineNumber = notifier.GetNotifierImpl().StartLineNumber
+	resp.EndLineNumber = notifier.GetNotifierImpl().EndLineNumber
+
+	return resp, nil
+}
+
 func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipeline, error) {
 	res := &FpPipeline{
 		Name:          typehelpers.SafeString(apiResp.Name),

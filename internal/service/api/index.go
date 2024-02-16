@@ -199,6 +199,7 @@ func (api *APIService) Start() error {
 	api.InputRegisterAPI(apiPrefixGroup)
 	api.ModRegisterAPI(apiPrefixGroup)
 	api.IntegrationRegisterAPI(apiPrefixGroup)
+	api.NotifierRegisterAPI(apiPrefixGroup)
 
 	api.apiPrefixGroup = apiPrefixGroup
 	api.router = router

@@ -91,6 +91,29 @@ func ListAllIntegrations() ([]modconfig.Integration, error) {
 	return integrations, nil
 }
 
+func ListAllNotifiers() ([]modconfig.Notifier, error) {
+	notifierNamesCached, found := cache.GetCache().Get("#notifier.names")
+	if !found {
+		return nil, perr.NotFoundWithMessage("notifier names not found")
+	}
+
+	notifierNames, ok := notifierNamesCached.([]string)
+	if !ok {
+		return nil, perr.InternalWithMessage("invalid notifier names")
+	}
+
+	var notifiers []modconfig.Notifier
+	for _, name := range notifierNames {
+		notifier, err := GetNotifier(name)
+		if err != nil {
+			return nil, err
+		}
+		notifiers = append(notifiers, notifier)
+	}
+
+	return notifiers, nil
+}
+
 func GetTrigger(name string) (*modconfig.Trigger, error) {
 	triggerCached, found := cache.GetCache().Get(name)
 	if !found {
@@ -103,6 +126,20 @@ func GetTrigger(name string) (*modconfig.Trigger, error) {
 	}
 
 	return trigger, nil
+}
+
+func GetNotifier(name string) (modconfig.Notifier, error) {
+	notifierCached, found := cache.GetCache().Get(name)
+	if !found {
+		return nil, perr.NotFoundWithMessage("notifier definition not found: " + name)
+	}
+
+	notifier, ok := notifierCached.(modconfig.Notifier)
+	if !ok {
+		return nil, perr.InternalWithMessage("invalid notifier")
+	}
+
+	return notifier, nil
 }
 
 func ListAllTriggers() ([]modconfig.Trigger, error) {

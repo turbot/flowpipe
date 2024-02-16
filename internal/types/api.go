@@ -20,6 +20,10 @@ type IntegrationRequestURI struct {
 	IntegrationName string `uri:"integration_name" binding:"required" format:"^[a-z_]{0,32}$"`
 }
 
+type NotifierRequestURI struct {
+	NotifierName string `uri:"notifier_name" binding:"required" format:"^[a-z_]{0,32}$"`
+}
+
 type TriggerRequestURI struct {
 	TriggerName string `uri:"trigger_name" binding:"required" format:"^[a-z]{0,32}$"`
 }
