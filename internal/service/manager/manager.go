@@ -13,36 +13,33 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/turbot/go-kit/files"
-
-	"github.com/turbot/pipe-fittings/flowpipeconfig"
-	"github.com/turbot/pipe-fittings/sanitize"
-
-	localconstants "github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/es/db"
-	"github.com/turbot/flowpipe/internal/store"
-
-	"github.com/turbot/pipe-fittings/schema"
-
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/go-kit/files"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )
@@ -205,7 +202,7 @@ func (m *Manager) initializeResources() error {
 	var triggers map[string]*modconfig.Trigger
 	var mod *modconfig.Mod
 
-	if load_mod.ModFileExists(modLocation, app_specific.ModFileName) {
+	if _, exists := parse.ModFileExists(modLocation); exists {
 		// build the list of possible config path locations
 		configPath, err := cmdconfig.GetConfigPath()
 		error_helpers.FailOnError(err)

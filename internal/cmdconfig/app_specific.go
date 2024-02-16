@@ -23,14 +23,14 @@ func SetAppSpecificConstants() {
 	// set all app specific env var keys
 	app_specific.SetAppSpecificEnvVarKeys("FLOWPIPE_")
 
-	app_specific.AutoVariablesExtension = ".auto.fpvars"
+	app_specific.AutoVariablesExtensions = []string{".auto.fpvars"}
 	app_specific.DefaultVarsFileName = "flowpipe.fpvars"
 	app_specific.EnvInputVarPrefix = "FP_VAR_"
 
 	app_specific.ConfigExtension = ".fpc"
 	app_specific.ModDataExtensions = []string{".fp"}
-	app_specific.ModFileName = "mod.fp"
-	app_specific.VariablesExtension = ".fpvars"
+
+	app_specific.VariablesExtensions = []string{".fpvars"}
 	app_specific.WorkspaceIgnoreFile = ".flowpipeignore"
 	app_specific.WorkspaceDataDir = ".flowpipe"
 

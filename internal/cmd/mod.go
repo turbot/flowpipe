@@ -267,7 +267,7 @@ func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath s
 		return nil, fmt.Errorf("mod %s cancelled", cmd.Name())
 	}
 
-	if parse.ModfileExists(workspacePath) {
+	if _, exists := parse.ModFileExists(workspacePath); exists {
 		fmt.Println("Working folder already contains a mod definition file")
 		return nil, nil
 	}
