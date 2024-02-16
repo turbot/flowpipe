@@ -95,12 +95,8 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 		return
 	}
 
-	// return is step is already processed
+	// map status
 	output.Status = sExec.Status
-	if sExec.Status != "starting" && sExec.Status != "started" {
-		c.JSON(http.StatusOK, output)
-		return
-	}
 
 	// build response object
 	if p, ok := sExec.Input[schema.AttributeTypePrompt].(string); ok {
