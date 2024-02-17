@@ -517,12 +517,12 @@ func cacheHclResource[T modconfig.HclResource](resourceType string, items map[st
 }
 
 func calculateTriggerUrl(trigger *modconfig.Trigger, httpHost string, httpPort int) (string, error) {
-	salt, ok := cache.GetCache().Get("salt")
-	if !ok {
+	salt, err := util.GetModSaltOrDefault()
+	if err != nil {
 		return "", perr.InternalWithMessage("salt not found")
 	}
 
-	hashString := util.CalculateHash(trigger.FullName, salt.(string))
+	hashString := util.CalculateHash(trigger.FullName, salt)
 	httpSchema := "http" // TODO: revise if we support HTTPS
 	if httpHost == "" {
 		httpHost = "localhost"
