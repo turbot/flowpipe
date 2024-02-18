@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/utils"
+	"github.com/slack-go/slack"
 	"io"
 	"log/slog"
 	"net/http"
@@ -512,71 +512,62 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	var response slackResponse
 	var values []string
 	var encodedPayload string
+	var in slack.InteractionCallback
+
 	decodedBody, err := url.QueryUnescape(string(bodyBytes))
 	if err != nil {
 		return response, err
 	}
 	decodedBody = decodedBody[8:] // strip non-json prefix
-
-	var jsonBody map[string]any
-	err = json.Unmarshal([]byte(decodedBody), &jsonBody)
+	err = json.Unmarshal([]byte(decodedBody), &in)
 	if err != nil {
 		return response, err
 	}
 
-	// determine if finished
-	isFinished := false
-	if actions, ok := jsonBody["actions"].([]any); ok {
-		for _, a := range actions {
-			action := a.(map[string]any)
-			if strings.HasPrefix(action["action_id"].(string), "finished") {
-				isFinished = true
-				break
-			}
+	response.isFinished = false
+	for _, action := range in.ActionCallback.BlockActions {
+		if strings.HasPrefix(action.ActionID, "finished") {
+			response.isFinished = true
 		}
 	}
-	response.isFinished = isFinished
-	if !isFinished {
+	if !response.isFinished {
 		return response, nil
 	}
 
-	// parse state / action -> values
-	if stateValues, ok := jsonBody["state"].(map[string]any)["values"].(map[string]any); ok && len(stateValues) > 0 {
-		for key, value := range stateValues {
-			v := value.(map[string]any)
-			o := v[utils.SortedMapKeys(v)[0]].(map[string]any)
-			switch o["type"].(string) {
-			case "static_select":
-				encodedPayload = key
-				values = append(values, o["selected_option"].(map[string]any)["value"].(string))
-				continue
-			case "multi_static_select":
-				encodedPayload = key
-				selectedOptions := o["selected_options"].([]any)
-				for _, selectedOption := range selectedOptions {
-					values = append(values, selectedOption.(map[string]any)["value"].(string))
+	response.User = in.User.Name
+	response.ResponseUrl = in.ResponseURL
+
+	firstBlock := in.Message.Blocks.BlockSet[0]
+	switch firstBlock.BlockType() {
+	case slack.MBTSection:
+		fb := firstBlock.(*slack.SectionBlock)
+		response.Prompt = fb.Text.Text
+		encodedPayload = fb.BlockID
+		values = append(values, in.ActionCallback.BlockActions[0].Value)
+	case slack.MBTInput:
+		fb := firstBlock.(*slack.InputBlock)
+		response.Prompt = fb.Label.Text
+		encodedPayload = fb.BlockID
+		for _, vs := range in.BlockActionState.Values {
+			for _, v := range vs {
+				switch v.Type {
+				case "static_select":
+					values = append(values, v.SelectedOption.Value)
+				case "multi_static_select":
+					for _, selected := range v.SelectedOptions {
+						values = append(values, selected.Value)
+					}
+				case "plain_text_input":
+					values = append(values, v.Value)
+				default:
+					// ignore
 				}
-				continue
-			case "plain_text_input":
-				encodedPayload = key
-				values = append(values, o["value"].(string))
-				continue
-			default:
-				// ignore
 			}
 		}
-	} else { // button response doesn't have state
-		action := jsonBody["actions"].([]any)[0].(map[string]any)
-		actionType := action["type"].(string)
-		if actionType != "button" {
-			return response, fmt.Errorf("error parsing response")
-		}
-		values = append(values, action["value"].(string))
-		firstBlock := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)
-		encodedPayload = firstBlock["block_id"].(string)
+	default:
+		return response, perr.BadRequestWithMessage("unexpected payload received from slack")
 	}
 
-	// parse ids - encoded payload should be block_id of first block in message
 	payload, err := decodePayload(encodedPayload)
 	if err != nil {
 		return response, fmt.Errorf("error parsing execution id payload: %s", err.Error())
@@ -584,22 +575,6 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	response.ExecutionID = payload.ExecutionID
 	response.PipelineExecutionID = payload.PipelineExecutionID
 	response.StepExecutionID = payload.StepExecutionID
-
-	// parse user
-	if user, ok := jsonBody["user"].(map[string]any); ok {
-		response.User = user["username"].(string)
-	}
-
-	// response url
-	response.ResponseUrl = jsonBody["response_url"].(string)
-
-	// parse prompt
-	firstBlock := jsonBody["message"].(map[string]any)["blocks"].([]any)[0].(map[string]any)
-	if labelBlock, ok := firstBlock["label"].(map[string]any); ok {
-		response.Prompt = labelBlock["text"].(string)
-	} else if textBlock, ok := firstBlock["text"].(map[string]any); ok {
-		response.Prompt = textBlock["text"].(string)
-	}
 
 	// value can be nil, string or []string
 	switch len(values) {
