@@ -1,6 +1,8 @@
 package types
 
 import (
+	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/printers"
 )
 
@@ -19,6 +21,32 @@ type FpIntegration struct {
 	FileName        string  `json:"file_name,omitempty"`
 	StartLineNumber int     `json:"start_line_number,omitempty"`
 	EndLineNumber   int     `json:"end_line_number,omitempty"`
+}
+
+func ListIntegrationResponseFromAPI(apiResp *flowpipeapiclient.ListIntegrationResponse) *ListIntegrationResponse {
+	if apiResp == nil {
+		return nil
+	}
+
+	var res = &ListIntegrationResponse{
+		NextToken: apiResp.NextToken,
+		Items:     make([]FpIntegration, len(apiResp.Items)),
+	}
+	for i, apiItem := range apiResp.Items {
+		res.Items[i] = FpIntegrationFromAPI(apiItem)
+	}
+	return res
+}
+
+func FpIntegrationFromAPI(apiIntegration flowpipeapiclient.FpIntegration) FpIntegration {
+	res := FpIntegration{
+		Name:          typehelpers.SafeString(apiIntegration.Name),
+		Type:          typehelpers.SafeString(apiIntegration.Type),
+		Description:   apiIntegration.Description,
+		Title:         apiIntegration.Title,
+		Documentation: apiIntegration.Documentation,
+	}
+	return res
 }
 
 func NewPrintableIntegration(resp *ListIntegrationResponse) *PrintableIntegration {

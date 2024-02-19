@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -73,7 +74,6 @@ func listIntegrationLocal(cmd *cobra.Command, args []string) (*types.ListIntegra
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
 	defer func() {
-		// ignore shutdown error?
 		_ = m.Stop()
 	}()
 
@@ -82,7 +82,17 @@ func listIntegrationLocal(cmd *cobra.Command, args []string) (*types.ListIntegra
 }
 
 func listIntegrationRemote(ctx context.Context) (*types.ListIntegrationResponse, error) {
-	return nil, nil
+	limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
+	nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
+
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.IntegrationApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
+	if err != nil {
+		return nil, err
+
+	}
+	// map the API data type into the internal data type
+	return types.ListIntegrationResponseFromAPI(resp), err
 }
 
 // show
