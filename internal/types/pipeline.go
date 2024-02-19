@@ -213,36 +213,6 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 	return resp, nil
 }
 
-func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpIntegration, error) {
-	resp := &FpIntegration{
-		Name: integration.Name(),
-		Type: integration.GetIntegrationType(),
-	}
-
-	if resp.Type == schema.IntegrationTypeWebform {
-		str := "http://placeholder.url.here"
-		resp.Url = &str
-	}
-
-	resp.FileName = integration.GetIntegrationImpl().FileName
-	resp.StartLineNumber = integration.GetIntegrationImpl().StartLineNumber
-	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber
-
-	return resp, nil
-}
-
-func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error) {
-	resp := &FpNotifier{
-		Name: notifier.Name(),
-	}
-
-	resp.FileName = notifier.GetNotifierImpl().FileName
-	resp.StartLineNumber = notifier.GetNotifierImpl().StartLineNumber
-	resp.EndLineNumber = notifier.GetNotifierImpl().EndLineNumber
-
-	return resp, nil
-}
-
 func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipeline, error) {
 	res := &FpPipeline{
 		Name:          typehelpers.SafeString(apiResp.Name),

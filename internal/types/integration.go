@@ -6,8 +6,10 @@ import (
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	typehelpers "github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 // This type is used by the API to return a list of integrations.
@@ -122,4 +124,22 @@ func (p PrintableIntegration) GetTable() (*printers.Table, error) {
 
 func (PrintableIntegration) getColumns() (columns []string) {
 	return []string{"NAME", "TYPE", "DESCRIPTION"}
+}
+
+func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpIntegration, error) {
+	resp := &FpIntegration{
+		Name: integration.Name(),
+		Type: integration.GetIntegrationType(),
+	}
+
+	if resp.Type == schema.IntegrationTypeWebform {
+		str := "http://placeholder.url.here"
+		resp.Url = &str
+	}
+
+	resp.FileName = integration.GetIntegrationImpl().FileName
+	resp.StartLineNumber = integration.GetIntegrationImpl().StartLineNumber
+	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber
+
+	return resp, nil
 }
