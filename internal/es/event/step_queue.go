@@ -2,6 +2,8 @@ package event
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
+	"strings"
 
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -102,8 +104,9 @@ func NewStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconf
 		return nil, perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline planned event: %v", e))
 	}
 
+	extendedInput := extendInputs(cmd, e.StepName, nextStep.Input)
 	cmd.StepName = e.StepName
-	cmd.StepInput = nextStep.Input
+	cmd.StepInput = extendedInput
 	cmd.StepForEach = nextStep.StepForEach
 	cmd.StepLoop = nil
 	cmd.NextStepAction = nextStep.Action
@@ -125,11 +128,41 @@ func StepQueueForPipelinePlanned(e *PipelinePlanned) StepQueueOption {
 
 func StepQueueWithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) StepQueueOption {
 	return func(cmd *StepQueue) error {
+		extendedInput := extendInputs(cmd, name, input)
 		cmd.StepName = name
-		cmd.StepInput = input
+		cmd.StepInput = extendedInput
 		cmd.StepForEach = stepForEach
 		cmd.StepLoop = stepLoop
 		cmd.NextStepAction = nextStepAction
 		return nil
+	}
+}
+
+// TODO: refactor/tidy
+func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modconfig.Input {
+	stepType := strings.Split(stepName, ".")[0]
+	switch stepType {
+	case "input":
+		if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
+			if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
+				for _, n := range notifies {
+					if notify, ok := n.(map[string]any); ok {
+						integration := notify["integration"].(map[string]any)
+						integrationType := integration["type"].(string)
+						switch integrationType {
+						case schema.IntegrationTypeEmail, schema.IntegrationTypeWebform:
+							webformUrl, _ := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+							input["webform_url"] = webformUrl
+							return input
+						default:
+							// slack, teams, etc - do nothing
+						}
+					}
+				}
+			}
+		}
+		return input
+	default:
+		return input
 	}
 }
