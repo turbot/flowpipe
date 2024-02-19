@@ -213,14 +213,10 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 	return resp, nil
 }
 
-func FpIntegrationFromModIntegration(integration modconfig.Integration, rootMod string) (*FpIntegration, error) {
+func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpIntegration, error) {
 	resp := &FpIntegration{
 		Name: integration.Name(),
 		Type: integration.GetIntegrationType(),
-		//Description:   integration.GetDescription(),
-		// Title:         integration.Title,
-		// Documentation: integration.Documentation,
-		RootMod: rootMod,
 	}
 
 	resp.FileName = integration.GetIntegrationImpl().FileName
@@ -230,13 +226,9 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration, rootMod 
 	return resp, nil
 }
 
-func FpNotifierFromModNotifier(notifier modconfig.Notifier, rootMod string) (*FpNotifier, error) {
+func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error) {
 	resp := &FpNotifier{
 		Name: notifier.Name(),
-		//Description:   notifier.GetDescription(),
-		// Title:         notifier.Title,
-		// Documentation: notifier.Documentation,
-		RootMod: rootMod,
 	}
 
 	resp.FileName = notifier.GetNotifierImpl().FileName

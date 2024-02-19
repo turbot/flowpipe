@@ -68,7 +68,8 @@ func rootCommand() *cobra.Command {
 		pipelineCmd(),
 		triggerCmd(),
 		processCmd(),
-		modCmd())
+		modCmd(),
+		integrationCmd())
 
 	return rootCmd
 }

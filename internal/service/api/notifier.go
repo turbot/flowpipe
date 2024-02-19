@@ -57,7 +57,7 @@ func ListNotifiers(rootMod string) (*types.ListNotifierResponse, error) {
 
 	var listNotifierResponseItems []types.FpNotifier
 	for _, notifier := range notifiers {
-		item, err := types.FpNotifierFromModNotifier(notifier, rootMod)
+		item, err := types.FpNotifierFromModNotifier(notifier)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +98,7 @@ func (api *APIService) getNotifier(c *gin.Context) {
 		return
 	}
 
-	item, err := types.FpNotifierFromModNotifier(notifier, api.EsService.RootMod.Name())
+	item, err := types.FpNotifierFromModNotifier(notifier)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return

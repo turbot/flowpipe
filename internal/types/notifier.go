@@ -13,6 +13,4 @@ type FpNotifier struct {
 	FileName        string  `json:"file_name,omitempty"`
 	StartLineNumber int     `json:"start_line_number,omitempty"`
 	EndLineNumber   int     `json:"end_line_number,omitempty"`
-
-	RootMod string `json:"root_mod"`
 }

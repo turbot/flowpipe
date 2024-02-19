@@ -43,7 +43,7 @@ func (api *APIService) listIntegrations(c *gin.Context) {
 
 	slog.Info("received list integrations request", "next_token", nextToken, "limit", limit)
 
-	result, err := ListIntegrations(api.EsService.RootMod.Name())
+	result, err := ListIntegrations()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -51,7 +51,7 @@ func (api *APIService) listIntegrations(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func ListIntegrations(rootMod string) (*types.ListIntegrationResponse, error) {
+func ListIntegrations() (*types.ListIntegrationResponse, error) {
 	integrations, err := db.ListAllIntegrations()
 	if err != nil {
 		return nil, err
@@ -60,7 +60,7 @@ func ListIntegrations(rootMod string) (*types.ListIntegrationResponse, error) {
 	var listIntegrationResponseItems []types.FpIntegration
 
 	for _, integration := range integrations {
-		item, err := types.FpIntegrationFromModIntegration(integration, rootMod)
+		item, err := types.FpIntegrationFromModIntegration(integration)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +108,7 @@ func (api *APIService) getIntegration(c *gin.Context) {
 		return
 	}
 
-	integrationResponse, err := types.FpIntegrationFromModIntegration(integration, api.EsService.RootMod.Name())
+	integrationResponse, err := types.FpIntegrationFromModIntegration(integration)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
