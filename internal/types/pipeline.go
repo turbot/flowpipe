@@ -219,6 +219,11 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpInte
 		Type: integration.GetIntegrationType(),
 	}
 
+	if resp.Type == schema.IntegrationTypeWebform {
+		str := "http://placeholder.url.here"
+		resp.Url = &str
+	}
+
 	resp.FileName = integration.GetIntegrationImpl().FileName
 	resp.StartLineNumber = integration.GetIntegrationImpl().StartLineNumber
 	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber

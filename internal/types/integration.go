@@ -1,9 +1,13 @@
 package types
 
 import (
+	"fmt"
+
+	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 )
 
 // This type is used by the API to return a list of integrations.
@@ -21,6 +25,33 @@ type FpIntegration struct {
 	FileName        string  `json:"file_name,omitempty"`
 	StartLineNumber int     `json:"start_line_number,omitempty"`
 	EndLineNumber   int     `json:"end_line_number,omitempty"`
+	Url             *string `json:"url,omitempty"`
+}
+
+func (f FpIntegration) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	var output string
+	var statusText string
+	// left := au.BrightBlack("[")
+	// right := au.BrightBlack("]")
+	keyWidth := 10
+	if f.Description != nil {
+		keyWidth = 13
+	}
+
+	output += fmt.Sprintf("%-*s%s %s\n", keyWidth, au.Blue("Name:"), f.Name, statusText)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), f.Type)
+	if f.Title != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Title:"), *f.Title)
+	}
+	if f.Description != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *f.Description)
+	}
+	if f.Url != nil {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("URL:"), *f.Url)
+	}
+
+	return output
 }
 
 func ListIntegrationResponseFromAPI(apiResp *flowpipeapiclient.ListIntegrationResponse) *ListIntegrationResponse {

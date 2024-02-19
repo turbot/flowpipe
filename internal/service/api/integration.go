@@ -87,7 +87,7 @@ func ListIntegrations() (*types.ListIntegrationResponse, error) {
 // / ...
 // @Param integration_name path string true "The name of the integration" format(^[a-z_]{0,32}$)
 // / ...
-// @Success 200 {object} types.Integration
+// @Success 200 {object} types.FpIntegration
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -115,4 +115,12 @@ func (api *APIService) getIntegration(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, integrationResponse)
+}
+
+func GetIntegration(name string) (*types.FpIntegration, error) {
+	integration, err := db.GetIntegration(name)
+	if err != nil {
+		return nil, err
+	}
+	return types.FpIntegrationFromModIntegration(integration)
 }

@@ -148,7 +148,7 @@ func getIntegrationRemote(ctx context.Context, name string) (*types.FpIntegratio
 	return &t, nil
 }
 
-func getIntegrationLocal(ctx context.Context, triggerName string) (*types.FpIntegration, error) {
+func getIntegrationLocal(ctx context.Context, integrationName string) (*types.FpIntegration, error) {
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
@@ -157,7 +157,5 @@ func getIntegrationLocal(ctx context.Context, triggerName string) (*types.FpInte
 		_ = m.Stop()
 	}()
 
-	// try to fetch the pipeline from the cache
-	//
-	return nil, err
+	return api.GetIntegration(integrationName)
 }
