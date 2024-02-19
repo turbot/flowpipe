@@ -28,7 +28,6 @@ func processCmd() *cobra.Command {
 	cmd.AddCommand(processTailCmd())
 
 	return cmd
-
 }
 
 // get
