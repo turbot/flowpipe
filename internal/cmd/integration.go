@@ -109,5 +109,55 @@ func integrationShowCmd() *cobra.Command {
 }
 
 func showIntegrationFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	var resp *types.FpIntegration
+	var err error
+	integrationName := args[0]
+	// if a host is set, use it to connect to API server
+	if viper.IsSet(constants.ArgHost) {
+		resp, err = getIntegrationRemote(ctx, integrationName)
+	} else {
+		resp, err = getIntegrationLocal(ctx, integrationName)
+	}
 
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+
+	if resp != nil {
+		printer, err := printers.GetPrinter[types.FpIntegration](cmd)
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
+		}
+		printableResource := types.NewPrintableIntegrationFromSingle(resp)
+		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
+		}
+	}
+}
+
+func getIntegrationRemote(ctx context.Context, name string) (*types.FpIntegration, error) {
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.IntegrationApi.Get(ctx, name).Execute()
+	if err != nil {
+		return nil, err
+	}
+	t := types.FpIntegrationFromAPI(*resp)
+	return &t, nil
+}
+
+func getIntegrationLocal(ctx context.Context, triggerName string) (*types.FpIntegration, error) {
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx).Start()
+	error_helpers.FailOnError(err)
+	defer func() {
+		// TODO ignore shutdown error?
+		_ = m.Stop()
+	}()
+
+	// try to fetch the pipeline from the cache
+	//
+	return nil, err
 }

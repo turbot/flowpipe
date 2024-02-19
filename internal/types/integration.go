@@ -55,6 +55,12 @@ func NewPrintableIntegration(resp *ListIntegrationResponse) *PrintableIntegratio
 	}
 }
 
+func NewPrintableIntegrationFromSingle(input *FpIntegration) *PrintableIntegration {
+	return &PrintableIntegration{
+		Items: []FpIntegration{*input},
+	}
+}
+
 type PrintableIntegration struct {
 	Items []FpIntegration
 }

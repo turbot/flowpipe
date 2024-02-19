@@ -9,6 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// This code is based on a very early version of https://github.com/gin-contrib/static and modified to use embed.FS
+//
+// The later version seems to support embed.FS but I couldn't get it to work properly.
+
 type ServeFileSystem interface {
 	http.FileSystem
 	Exists(prefix string, path string) bool
