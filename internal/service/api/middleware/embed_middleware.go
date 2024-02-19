@@ -16,17 +16,19 @@ type ServeFileSystem interface {
 
 type localFileSystem struct {
 	http.FileSystem
-	fs      fs.FS
-	root    string
-	indexes bool
+	fs            fs.FS
+	root          string
+	indexes       bool
+	indexFileName string
 }
 
-func LocalFile(root string, indexes bool, fs fs.FS) *localFileSystem {
+func LocalFile(root string, indexes bool, indexFileName string, fs fs.FS) *localFileSystem {
 	return &localFileSystem{
-		FileSystem: http.FS(fs),
-		fs:         fs,
-		root:       root,
-		indexes:    indexes,
+		FileSystem:    http.FS(fs),
+		fs:            fs,
+		root:          root,
+		indexes:       indexes,
+		indexFileName: indexFileName,
 	}
 }
 
@@ -42,9 +44,12 @@ func (l *localFileSystem) Exists(prefix string, filepath string) bool {
 		if err != nil {
 			return false
 		}
+
+		// Is the path a directory?
 		if stat.IsDir() {
+			// If the l.indexes option is enabled, we check for an index file. If found return true, otherwise it's a 404
 			if !l.indexes {
-				index := path.Join(name, "index.html")
+				index := path.Join(name, l.indexFileName)
 				_, err := l.fs.Open(index)
 				if err != nil {
 					return false
@@ -63,7 +68,8 @@ func Serve(urlPrefix string, fs ServeFileSystem) gin.HandlerFunc {
 		fileserver = http.StripPrefix(urlPrefix, fileserver)
 	}
 	return func(c *gin.Context) {
-		if fs.Exists(urlPrefix, c.Request.URL.Path) {
+		path := c.Request.URL.Path
+		if fs.Exists(urlPrefix, path) {
 			fileserver.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
 		}

@@ -35,6 +35,6 @@
       "last 1 safari version"
     ]
   },
-  "homepage": "http://localhost:7103/webform",
+  "homepage": "/webform",
   "packageManager": "yarn@4.1.0"
 }
