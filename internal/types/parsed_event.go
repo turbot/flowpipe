@@ -267,6 +267,12 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitiz
 	case "sleep":
 		duration, _ := p.Input["duration"].(string)
 		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(duration))
+	case "input":
+		if webUrl, ok := p.Input["webform_url"].(string); ok {
+			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(webUrl))
+		} else {
+			out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
+		}
 	default:
 		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}

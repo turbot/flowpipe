@@ -15,14 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/types"
-
-	localconstants "github.com/turbot/flowpipe/internal/constants"
-
 	"github.com/slack-go/slack"
-	so "github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/go-kit/helpers"
 	kitTypes "github.com/turbot/go-kit/types"
@@ -517,19 +510,14 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 						return nil, err
 					}
 				case schema.IntegrationTypeWebform:
-					// Webform integration we need to display the webform endpoint
-					_ = ip.renderWebformUrl(ctx) // TODO: implement output
+					// TODO: implement output
 				case schema.IntegrationTypeEmail:
 					// TODO: implement
 					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
 				default:
-					// Webform integration we need to display the webform endpoint
-					_ = ip.renderWebformUrl(ctx) // TODO: implement output
+					// TODO: implement output
 				}
 			}
-		} else {
-			// Webform integration we need to display the webform endpoint
-			_ = ip.renderWebformUrl(ctx) // TODO: implement output
 		}
 	}
 
@@ -575,28 +563,4 @@ func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOp
 	tempMessage := body.String()
 
 	return tempMessage, nil
-}
-
-func (ip *Input) renderWebformUrl(ctx context.Context) error {
-	joinedId := fmt.Sprintf("%s.%s.%s", ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
-
-	salt, err := util.GetGlobalSalt()
-	if err != nil {
-		return err
-	}
-	hashString := util.CalculateHash(joinedId, salt)
-	baseUrl := viper.GetString(constants.ArgBaseUrl)
-	if baseUrl == "" {
-		baseUrl = "http://" + localconstants.DefaultListen + ":" + strconv.Itoa(localconstants.DefaultServerPort)
-	}
-
-	url := fmt.Sprintf("%s/webform/%s/%s", baseUrl, joinedId, hashString)
-
-	if so.IsServerMode {
-		sp := types.NewServerOutputPrefixWithExecId(time.Now(), "pipeline", &ip.ExecutionID)
-		pre := types.NewParsedEventPrefix(ip.PipelineName, &ip.StepName, nil, nil, nil, &sp)
-		e := types.NewParsedEvent(pre, ip.ExecutionID, "", "", fmt.Sprintf("WebForm URL: %s", url))
-		so.RenderServerOutput(ctx, e)
-	}
-	return nil
 }
