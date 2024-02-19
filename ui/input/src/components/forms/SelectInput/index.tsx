@@ -35,8 +35,6 @@ const SelectInput = ({
   value,
   onChange,
 }: SelectInputProps) => {
-  console.log({ options, value });
-
   return (
     <div>
       {label && (
@@ -67,7 +65,6 @@ const SelectInput = ({
         name={name}
         // @ts-ignore
         onChange={(v) => {
-          console.log(v);
           multi
             ? onChange(v.map((newValue) => newValue.value || newValue.label))
             : onChange([v.value || v.label]);

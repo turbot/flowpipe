@@ -86,10 +86,7 @@ const InputOptions = ({
               multi={inputType === "multiselect"}
               options={options}
               value={values.values || []}
-              onChange={(v) => {
-                console.log(v);
-                setFieldValue("values", v, true);
-              }}
+              onChange={(v) => setFieldValue("values", v, true)}
             />
           </div>
           <div className="flex items-center justify-end space-x-2">
@@ -208,14 +205,11 @@ const InputForm = () => {
               )}
               {input.status === "finished" && (
                 <h3 className="text-base font-semibold leading-6 text-gray-900">
-                  This input has already been responded to.
+                  Input has already been responded to.
                 </h3>
               )}
               {input.status === "error" && (
-                <ErrorMessage
-                  withIcon
-                  error="This input is in a failed state."
-                />
+                <ErrorMessage withIcon error="Input is in a failed state." />
               )}
             </>
           )}
@@ -233,7 +227,6 @@ const InputForm = () => {
                   return errors;
                 }}
                 onSubmit={async (values, { setSubmitting }) => {
-                  console.log("Submitting...", values.values);
                   setSubmitting(false);
                   // TODO remove
                   const response_url = new URL(input?.response_url);
