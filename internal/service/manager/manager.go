@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -523,14 +524,20 @@ func calculateTriggerUrl(trigger *modconfig.Trigger, httpHost string, httpPort i
 	}
 
 	hashString := util.CalculateHash(trigger.FullName, salt)
-	httpSchema := "http" // TODO: revise if we support HTTPS
+
 	if httpHost == "" {
 		httpHost = "localhost"
 	}
 	if httpPort == 0 {
 		httpPort = localconstants.DefaultServerPort
 	}
-	return fmt.Sprintf("%s://%s:%d/api/latest/hook/%s/%s", httpSchema, httpHost, httpPort, trigger.FullName, hashString), nil
+
+	baseUrl := viper.GetString(constants.ArgBaseUrl)
+	if baseUrl == "" {
+		baseUrl = "http://" + httpHost + ":" + strconv.Itoa(httpPort)
+	}
+
+	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, trigger.FullName, hashString), nil
 }
 
 func (m *Manager) renderServerStartOutput() {

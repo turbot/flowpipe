@@ -12,7 +12,7 @@ import (
 func SecurityMiddleware(ctx context.Context) gin.HandlerFunc {
 	options := secure.Options{
 		// In development, many options are turned off automatically
-		IsDevelopment: viper.GetString("url.base") == "https://localhost:3000",
+		IsDevelopment: viper.GetString("url.base") == "http://localhost:7103",
 
 		// Redirect HTTP to HTTPS
 		SSLRedirect:          false,

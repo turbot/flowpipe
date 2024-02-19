@@ -25,7 +25,7 @@ const FlowpipeSampleContent = `
 
 # notifier "default" {
 #   notify {
-#     integration = integration.webform.default  
+#     integration = integration.webform.default
 #   }
 # }
 `

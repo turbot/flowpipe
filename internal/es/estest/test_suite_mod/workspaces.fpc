@@ -22,4 +22,5 @@ credential "gitlab" "gitlab_static" {
 workspace "default" {
     // log_level     = "info"
     // max_concurrency_container = 2
+    // base_url = "http://aaa:9999"
 }

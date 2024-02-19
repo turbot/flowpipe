@@ -49,5 +49,6 @@ func envMappings() map[string]cmdconfig.EnvMapping {
 		"FLOWPIPE_MAX_CONCURRENCY_CONTAINER": {ConfigVar: []string{constants.ArgMaxConcurrencyContainer}, VarType: cmdconfig.EnvVarTypeInt},
 		"FLOWPIPE_MAX_CONCURRENCY_FUNCTION":  {ConfigVar: []string{constants.ArgMaxConcurrencyFunction}, VarType: cmdconfig.EnvVarTypeInt},
 		"FLOWPIPE_PROCESS_RETENTION":         {ConfigVar: []string{constants.ArgProcessRetention}, VarType: cmdconfig.EnvVarTypeInt},
+		"FLOWPIPE_BASE_URL":                  {ConfigVar: []string{constants.ArgBaseUrl}, VarType: cmdconfig.EnvVarTypeString},
 	}
 }

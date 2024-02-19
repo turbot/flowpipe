@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/types"
 	"html/template"
 	"net/mail"
 	"net/smtp"
@@ -15,6 +14,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/types"
+
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 
 	"github.com/slack-go/slack"
 	so "github.com/turbot/flowpipe/internal/output"
@@ -581,8 +585,12 @@ func (ip *Input) renderWebformUrl(ctx context.Context) error {
 		return err
 	}
 	hashString := util.CalculateHash(joinedId, salt)
+	baseUrl := viper.GetString(constants.ArgBaseUrl)
+	if baseUrl == "" {
+		baseUrl = "http://" + localconstants.DefaultListen + ":" + strconv.Itoa(localconstants.DefaultServerPort)
+	}
 
-	url := fmt.Sprintf("http://localhost:7103/webform?id=%s&hash=%s", joinedId, hashString) // TODO: replace base url with actual host/port?
+	url := fmt.Sprintf("%s/webform/%s/%s", baseUrl, joinedId, hashString)
 
 	if so.IsServerMode {
 		sp := types.NewServerOutputPrefixWithExecId(time.Now(), "pipeline", &ip.ExecutionID)

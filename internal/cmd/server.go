@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
 	"net"
 	"os"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,6 +37,7 @@ func serverCmd() *cobra.Command {
 		OnCmd(cmd).
 		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
 		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "Listen address port.").
+		AddStringFlag(constants.ArgBaseUrl, "", "Base URL for the webhook triggers and webform input (http://localhost:7103).").
 		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server").
 		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output")
 
