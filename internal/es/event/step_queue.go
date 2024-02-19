@@ -160,6 +160,10 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 					}
 				}
 			}
+		} else {
+			webformUrl, _ := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+			input["webform_url"] = webformUrl
+			return input
 		}
 		return input
 	default:
