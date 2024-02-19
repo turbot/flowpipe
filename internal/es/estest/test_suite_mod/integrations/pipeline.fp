@@ -5,7 +5,7 @@ pipeline "integration_pipe_default" {
     notifier = notifier.my_notifier
 
     type   = "button"
-    prompt = "do you want to approve?"
+    prompt = "Do you want to approve?"
 
     option "Approve" {}
     option "Deny" {}

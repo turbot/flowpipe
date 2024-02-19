@@ -35,5 +35,5 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 		return "", err
 	}
 	hash := CalculateHash(joinId, salt)
-	return filepath.Join(baseUrl, "webform", joinId, hash), nil
+	return filepath.Join(baseUrl, "webform", "input", joinId, hash), nil
 }

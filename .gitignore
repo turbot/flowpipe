@@ -51,3 +51,6 @@ tmp/
 
 # release process token (example taken from goreleaser-cross)
 .release-env
+
+# UI build
+node_modules
