@@ -518,8 +518,6 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 					// TODO: implement output
 				}
 			}
-		} else {
-			// TODO: implement output
 		}
 	}
 
