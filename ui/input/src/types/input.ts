@@ -11,13 +11,7 @@ export type PipelineInputStatus =
   | "finished"
   | "error";
 
-export type PipelineInputType =
-  | "button"
-  | "text"
-  | "select"
-  | "multiselect"
-  | "combo"
-  | "multicombo";
+export type PipelineInputType = "button" | "text" | "select" | "multiselect";
 
 export interface PipelineInput {
   execution_id: string;

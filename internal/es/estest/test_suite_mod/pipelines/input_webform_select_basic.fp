@@ -6,9 +6,13 @@ pipeline "input_webform_select_basic" {
 
     option "us-east-1" {}
     option "us-east-2" {}
-    option "us-west-2" {}
+    option "us-west-1" {}
     option "us-west-2" {}
 
+  }
+
+  output "val" {
+    value = step.input.select_region.value
   }
 
 }

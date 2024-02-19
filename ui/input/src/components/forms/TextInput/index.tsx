@@ -2,6 +2,7 @@ import ErrorIcon from "@material-symbols/svg-300/rounded/error.svg?react";
 import { classNames } from "utils/style.ts";
 
 interface TextInputProps {
+  disabled: boolean;
   name: string;
   label?: string;
   value: string;
@@ -9,7 +10,14 @@ interface TextInputProps {
   onChange: (value: string) => void;
 }
 
-const TextInput = ({ name, label, value, error, onChange }: TextInputProps) => {
+const TextInput = ({
+  disabled,
+  name,
+  label,
+  value,
+  error,
+  onChange,
+}: TextInputProps) => {
   return (
     <div>
       {label && (
@@ -34,7 +42,7 @@ const TextInput = ({ name, label, value, error, onChange }: TextInputProps) => {
           aria-invalid={!!error ? "true" : "false"}
           aria-describedby={`${name}-error`}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={disabled ? undefined : (e) => onChange(e.target.value)}
         />
         {!!error && (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">

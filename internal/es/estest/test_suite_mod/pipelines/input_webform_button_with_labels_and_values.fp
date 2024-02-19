@@ -15,4 +15,8 @@ pipeline "input_webform_button_with_labels_and_values" {
     }
   }
 
+  output "val" {
+    value = step.input.my_step.value
+  }
+
 }

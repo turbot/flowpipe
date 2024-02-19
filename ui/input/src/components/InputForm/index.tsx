@@ -4,12 +4,13 @@ import FlowpipeLogo from "components/layout/FlowpipeLogo";
 import SuccessMessage from "components/layout/SuccessMessage";
 import TextInput from "components/forms/TextInput";
 import { Form, Formik } from "formik";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { FormikErrors } from "formik/dist/types";
 import { PipelingError } from "api/error.ts";
 import { PipelineInputOption, PipelineInputType } from "types/input.ts";
 import { useInputAPI } from "api/pipeline.ts";
 import { useParams } from "react-router-dom";
+import SelectInput from "components/forms/SelectInput";
 
 interface InputFormState {
   status: "pending" | "responded" | "error";
@@ -72,12 +73,51 @@ const InputOptions = ({
           ))}
         </div>
       );
+    case "select":
+    case "multiselect":
+      return (
+        <div className="flex flex-col justify-end space-x-2 space-y-3">
+          <div>
+            <SelectInput
+              name="values"
+              disabled={submitting || formState.status === "responded"}
+              // @ts-ignore
+              error={!!errors.values ? errors.values : null}
+              multi={inputType === "multiselect"}
+              options={options}
+              value={values.values || []}
+              onChange={(v) => {
+                console.log(v);
+                setFieldValue("values", v, true);
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-end space-x-2">
+            {formState.status === "error" && formState.error && (
+              <ErrorMessage error={formState.error} />
+            )}
+            {formState.status === "responded" && (
+              <SuccessMessage message="Input response sent" />
+            )}
+            <Button
+              disabled={
+                !valid || submitting || formState.status === "responded"
+              }
+              type="submit"
+              onClick={onSubmit}
+            >
+              Submit
+            </Button>
+          </div>
+        </div>
+      );
     case "text":
       return (
         <div className="flex flex-col justify-end space-x-2">
           <div>
             <TextInput
               name="values"
+              disabled={submitting || formState.status === "responded"}
               // @ts-ignore
               error={!!errors.values ? errors.values : null}
               value={values.values[0] || ""}
@@ -104,14 +144,32 @@ const InputOptions = ({
         </div>
       );
     default:
-      return null;
+      return (
+        <ErrorMessage
+          as="string"
+          error={`Unsupported input type ${inputType}`}
+        />
+      );
   }
 };
 
 const InputForm = () => {
   const { id, hash } = useParams();
   const { input, error, loading, postInput } = useInputAPI(id, hash);
-  const initialValues: InputFormValues = { values: [] };
+  const initialValues = useMemo<InputFormValues>(() => {
+    if (
+      !input ||
+      !input.options ||
+      (input.input_type !== "select" && input.input_type !== "multiselect")
+    ) {
+      return { values: [] };
+    }
+    return {
+      values: input.options
+        .filter((o) => o.selected)
+        .map((o) => o.value || o.label),
+    };
+  }, [input]);
   const [state, setState] = useState<InputFormState>({
     status: "pending",
     error: null,
@@ -192,6 +250,7 @@ const InputForm = () => {
                     // await reload();
                   }
                 }}
+                enableReinitialize
               >
                 {({
                   errors,
