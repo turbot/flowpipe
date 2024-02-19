@@ -8,13 +8,16 @@ import { SWRConfig } from "swr";
 import { ThemeProvider } from "components/layout/ThemeProvider";
 import "styles/index.css";
 
-const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <AppWrapper />,
-    children: [{ path: "input/:id/:hash", element: <InputForm /> }],
-  },
-]);
+const router = createBrowserRouter(
+  [
+    {
+      path: "/",
+      element: <AppWrapper />,
+      children: [{ path: "input/:id/:hash", element: <InputForm /> }],
+    },
+  ],
+  { basename: "/webform" },
+);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

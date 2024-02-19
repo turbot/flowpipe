@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build --base=/webform && rm -rf ../../internal/service/api/assets>null && mkdir -p ../../internal/service/api/assets && cp -r dist/* ../../internal/service/api/assets && rm null",
+    "build": "tsc && vite build && rm -rf ../../internal/service/api/assets>null && mkdir -p ../../internal/service/api/assets && cp -r dist/* ../../internal/service/api/assets && rm null",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "prettify": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
