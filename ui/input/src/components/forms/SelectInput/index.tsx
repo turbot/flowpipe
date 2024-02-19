@@ -21,7 +21,7 @@ type SelectInputProps = {
 //   }
 // };
 //
-const findOptions = (options, multi, value) => {
+const findOptions = (options, value) => {
   return options.filter((option) =>
     option.value ? value.indexOf(option.value.toString()) >= 0 : false,
   );
@@ -74,8 +74,9 @@ const SelectInput = ({
         }}
         options={options}
         placeholder={multi ? "Select one or more values" : "Select a value"}
+        // @ts-ignore
         styles={styles}
-        value={findOptions(options, multi, value)}
+        value={findOptions(options, value)}
       />
     </div>
   );

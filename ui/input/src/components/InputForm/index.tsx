@@ -162,9 +162,7 @@ const InputForm = () => {
       return { values: [] };
     }
     return {
-      values: input.options
-        .filter((o) => o.selected)
-        .map((o) => o.value || o.label),
+      values: input.options.filter((o) => o.selected).map((o) => o.value),
     };
   }, [input]);
   const [state, setState] = useState<InputFormState>({
