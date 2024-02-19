@@ -6,7 +6,7 @@ interface SiteWrapperProps {
 
 const SiteWrapper = ({ children }: SiteWrapperProps) => {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between bg-gray-200">
+    <main className="flex min-h-screen flex-col items-center justify-between bg-background">
       {children}
     </main>
   );

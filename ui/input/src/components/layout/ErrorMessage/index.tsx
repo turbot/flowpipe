@@ -23,9 +23,9 @@ const ErrorMessage = ({
   return (
     <span className={classNames(withIcon ? "flex space-x-1 items-center" : "")}>
       {withIcon ? (
-        <ErrorIcon className="inline-block h-5 w-5 fill-red-600" />
+        <ErrorIcon className="inline-block h-5 w-5 fill-alert" />
       ) : null}
-      <span className={classNames("text-red-600 break-word", className)}>
+      <span className={classNames("text-alert break-word", className)}>
         {prefix ? `${prefix}: ` : ""}
         {as === "string"
           ? error

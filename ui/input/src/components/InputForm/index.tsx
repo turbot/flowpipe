@@ -189,7 +189,7 @@ const InputForm = () => {
 
   return (
     <div className="mx-auto my-auto">
-      <div className="flex flex-col divide-y divide-gray-200 overflow-hidden rounded-lg bg-white shadow w-screen md:min-w-xl max-w-xl">
+      <div className="flex flex-col divide-y divide-modal-divide overflow-hidden rounded-lg bg-modal shadow w-screen md:min-w-xl max-w-xl">
         <div className="px-4 py-4">
           <FlowpipeLogo />
         </div>
@@ -199,12 +199,12 @@ const InputForm = () => {
           {input && (
             <>
               {(input.status === "starting" || input.status === "started") && (
-                <h3 className="text-base font-semibold leading-6 text-gray-900">
+                <h3 className="text-base font-semibold leading-6 text-foreground">
                   {input.prompt}
                 </h3>
               )}
               {input.status === "finished" && (
-                <h3 className="text-base font-semibold leading-6 text-gray-900">
+                <h3 className="text-base font-semibold leading-6 text-foreground">
                   Input has already been responded to.
                 </h3>
               )}

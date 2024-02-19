@@ -7,7 +7,7 @@ const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();
   return (
     <button
-      className={classNames("flex items-center h-5 w-5 text-gray-500")}
+      className={classNames("flex items-center h-5 w-5")}
       onClick={() =>
         setTheme(
           theme.name === ThemeNames.PIPELING_DEFAULT
@@ -17,9 +17,15 @@ const ThemeToggle = () => {
       }
     >
       {theme.name === ThemeNames.PIPELING_DARK ? (
-        <LightMode title="Switch to light theme" />
+        <LightMode
+          className="fill-foreground-light"
+          title="Switch to light theme"
+        />
       ) : (
-        <DarkMode title="Switch to dark theme" />
+        <DarkMode
+          className="fill-foreground-light"
+          title="Switch to dark theme"
+        />
       )}
     </button>
   );

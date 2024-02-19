@@ -6,7 +6,7 @@ import { API_FETCHER } from "src/api";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { SWRConfig } from "swr";
 import { ThemeProvider } from "components/layout/ThemeProvider";
-import "./index.css";
+import "styles/index.css";
 
 const router = createBrowserRouter([
   {

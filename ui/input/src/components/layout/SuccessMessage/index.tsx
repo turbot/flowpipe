@@ -15,9 +15,9 @@ const SuccessMessage = ({
   return (
     <span className={classNames(withIcon ? "flex space-x-1 items-center" : "")}>
       {withIcon ? (
-        <SuccessIcon className="inline-block h-5 w-5 fill-green-700" />
+        <SuccessIcon className="inline-block h-5 w-5 fill-ok" />
       ) : null}
-      <span className={classNames("text-green-600 break-word", className)}>
+      <span className={classNames("text-ok break-word", className)}>
         {message}
       </span>
     </span>

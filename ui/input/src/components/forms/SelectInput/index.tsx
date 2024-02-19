@@ -1,5 +1,6 @@
 import Select from "react-select";
 import { PipelineInputOption } from "types/input.ts";
+import useSelectInputStyles from "components/forms/SelectInput/useSelectInputStyles.ts";
 
 type SelectInputProps = {
   disabled: boolean;
@@ -35,6 +36,8 @@ const SelectInput = ({
   value,
   onChange,
 }: SelectInputProps) => {
+  const styles = useSelectInputStyles();
+
   return (
     <div>
       {label && (
@@ -71,7 +74,7 @@ const SelectInput = ({
         }}
         options={options}
         placeholder={multi ? "Select one or more values" : "Select a value"}
-        // styles={styles}
+        styles={styles}
         value={findOptions(options, multi, value)}
       />
     </div>

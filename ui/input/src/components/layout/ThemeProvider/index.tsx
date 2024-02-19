@@ -1,7 +1,7 @@
 import useLocalStorage from "hooks/useLocalStorage.ts";
 import useMediaQuery from "hooks/useMediaQuery.ts";
 import { classNames } from "src/utils/style.ts";
-import { createContext, useContext } from "react";
+import { createContext, Ref, useContext, useState } from "react";
 
 type Theme = {
   name: string;
@@ -11,7 +11,9 @@ type Theme = {
 type IThemeContext = {
   localStorageTheme: string | null;
   theme: Theme;
+  wrapperRef: Ref<null>;
   setTheme(theme: string): void;
+  setWrapperRef(element: any): void;
 };
 
 const ThemeContext = createContext<IThemeContext | undefined>(undefined);
@@ -44,6 +46,8 @@ const ThemeProvider = ({ children }) => {
   const [localStorageTheme, setLocalStorageTheme] =
     useLocalStorage("steampipe.ui.theme");
   const prefersDarkTheme = useMediaQuery("(prefers-color-scheme: dark)");
+  const [wrapperRef, setWrapperRef] = useState(null);
+  const doSetWrapperRef = (element) => setWrapperRef(() => element);
 
   let theme;
 
@@ -64,7 +68,9 @@ const ThemeProvider = ({ children }) => {
       value={{
         localStorageTheme,
         theme,
+        wrapperRef,
         setTheme: setLocalStorageTheme,
+        setWrapperRef: doSetWrapperRef,
       }}
     >
       {children}
@@ -73,9 +79,10 @@ const ThemeProvider = ({ children }) => {
 };
 
 const FullHeightThemeWrapper = ({ children }) => {
-  const { theme } = useTheme();
+  const { theme, setWrapperRef } = useTheme();
   return (
     <div
+      ref={setWrapperRef}
       className={classNames(
         `min-h-screen flex flex-col theme-${theme.name} bg-background print:bg-white print:theme-steampipe-default text-foreground print:text-black`,
       )}

@@ -19,8 +19,8 @@ const Button = ({
       type={type}
       disabled={disabled}
       className={classNames(
-        "rounded-md bg-indigo-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600",
-        "disabled:bg-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed",
+        "rounded-md bg-info px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-info",
+        "disabled:bg-opacity-50 disabled:cursor-not-allowed",
       )}
       onClick={disabled ? undefined : onClick}
     >
