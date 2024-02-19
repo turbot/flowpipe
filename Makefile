@@ -38,7 +38,7 @@ beta-tag-timetamp:
 
 .PHONY: build-ui
 build-ui:
-	cd ui/input && npm run build
+	cd ui/input && yarn install && yarn build
 
 .PHONY: test
 test:
