@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/util"
 	"html/template"
 	"net/mail"
 	"net/smtp"
@@ -150,16 +151,16 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 
 type InputIntegrationEmail struct {
 	InputIntegrationBase
-	Host        *string
-	Port        *int64
-	SecurePort  *int64
-	Tls         *string
-	To          []string
-	From        string
-	Subject     string
-	User        *string
-	Pass        *string
-	ResponseUrl string
+	Host       *string
+	Port       *int64
+	SecurePort *int64
+	Tls        *string
+	To         []string
+	From       string
+	Subject    string
+	User       *string
+	Pass       *string
+	FormUrl    string
 }
 
 func NewInputIntegrationEmail(base InputIntegrationBase) InputIntegrationEmail {
@@ -306,7 +307,7 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType string, prompt string, _ []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	var err error
 	host := kitTypes.SafeString(ip.Host)
 	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
@@ -328,7 +329,7 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType stri
 	for key, value := range header {
 		message += fmt.Sprintf("%s: %s\r\n", key, value)
 	}
-	templateMessage, err := parseEmailInputTemplate(ip, prompt, options)
+	templateMessage, err := parseEmailInputTemplate(ip, prompt)
 	if err != nil {
 		return nil, err
 	}
@@ -512,10 +513,64 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 				case schema.IntegrationTypeWebform:
 					// TODO: implement output
 				case schema.IntegrationTypeEmail:
-					// TODO: implement
-					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
+					e := NewInputIntegrationEmail(base)
+					url, err := util.GetWebformUrl(ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
+					if err != nil {
+						return nil, err
+					}
+					e.FormUrl = url
+
+					if host, ok := integration[schema.AttributeTypeSmtpHost].(string); ok {
+						e.Host = &host
+					}
+					if port, ok := integration[schema.AttributeTypeSmtpPort].(int64); ok {
+						e.Port = &port
+					} else if port, ok := integration[schema.AttributeTypeSmtpPort].(float64); ok {
+						intPort := int64(port)
+						e.Port = &intPort
+					}
+					if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(int64); ok {
+						e.SecurePort = &sPort
+					} else if sPort, ok := integration[schema.AttributeTypeSmtpsPort].(float64); ok {
+						intPort := int64(sPort)
+						e.SecurePort = &intPort
+					}
+					if tls, ok := integration[schema.AttributeTypeSmtpTls].(string); ok {
+						e.Tls = &tls
+					}
+					if from, ok := integration[schema.AttributeTypeFrom].(string); ok {
+						e.From = from
+					}
+					if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range to {
+							e.To = append(e.To, t.(string))
+						}
+					} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
+						e.To = append(e.To, to)
+					}
+					if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
+						e.Subject = sub
+					} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
+						e.Subject = sub
+					}
+					if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
+						e.User = &u
+					}
+					if p, ok := integration[schema.AttributeTypeSmtpPassword].(string); ok {
+						e.Pass = &p
+					}
+
+					// TODO: Validate?
+					out, err := e.PostMessage(ctx, inputType, prompt, resOptions)
+					if err != nil {
+						return nil, err
+					}
+					if out != nil {
+						output = out
+					}
+
 				default:
-					// TODO: implement output
+					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
 				}
 			}
 		}
@@ -524,8 +579,8 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	return output, nil
 }
 
-func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOptions []InputIntegrationResponseOption) (string, error) {
-	templateFile, err := templates.HTMLTemplate("approval-template.html")
+func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string) (string, error) {
+	templateFile, err := templates.HTMLTemplate("link-to-webform.html")
 	if err != nil {
 		return "", perr.InternalWithMessage("error while reading the email template")
 	}
@@ -534,24 +589,12 @@ func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, responseOp
 		return "", perr.InternalWithMessage("error while parsing the email template")
 	}
 
-	var opts []string
-	for _, opt := range responseOptions {
-		opts = append(opts, *opt.Value)
-	}
 	data := struct {
-		ExecutionID         string
-		PipelineExecutionID string
-		StepExecutionID     string
-		Options             []string
-		ResponseUrl         string
-		Prompt              string
+		FormUrl string
+		Prompt  string
 	}{
-		ExecutionID:         i.ExecutionID,
-		PipelineExecutionID: i.PipelineExecutionID,
-		StepExecutionID:     i.StepExecutionID,
-		Options:             opts,
-		ResponseUrl:         i.ResponseUrl,
-		Prompt:              prompt,
+		FormUrl: i.FormUrl,
+		Prompt:  prompt,
 	}
 
 	var body strings.Builder
