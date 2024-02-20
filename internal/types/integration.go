@@ -19,15 +19,16 @@ type ListIntegrationResponse struct {
 }
 
 type FpIntegration struct {
-	Name            string  `json:"name"`
-	Type            string  `json:"type"`
-	Description     *string `json:"description,omitempty"`
-	Title           *string `json:"title,omitempty"`
-	Documentation   *string `json:"documentation,omitempty"`
-	FileName        string  `json:"file_name,omitempty"`
-	StartLineNumber int     `json:"start_line_number,omitempty"`
-	EndLineNumber   int     `json:"end_line_number,omitempty"`
-	Url             *string `json:"url,omitempty"`
+	Name            string            `json:"name"`
+	Type            string            `json:"type"`
+	Description     *string           `json:"description,omitempty"`
+	Title           *string           `json:"title,omitempty"`
+	Documentation   *string           `json:"documentation,omitempty"`
+	Tags            map[string]string `json:"tags,omitempty"`
+	FileName        string            `json:"file_name,omitempty"`
+	StartLineNumber int               `json:"start_line_number,omitempty"`
+	EndLineNumber   int               `json:"end_line_number,omitempty"`
+	Url             *string           `json:"url,omitempty"`
 }
 
 func (f FpIntegration) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -51,6 +52,12 @@ func (f FpIntegration) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions
 	}
 	if f.Url != nil {
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("URL:"), *f.Url)
+	}
+	if len(f.Tags) > 0 {
+		output += fmt.Sprintf("%s\n", au.Blue("Tags:"))
+		for k, v := range f.Tags {
+			output += fmt.Sprintf("  %s %s\n", au.Cyan(k+":"), v)
+		}
 	}
 
 	return output
@@ -78,8 +85,25 @@ func FpIntegrationFromAPI(apiIntegration flowpipeapiclient.FpIntegration) FpInte
 		Description:   apiIntegration.Description,
 		Title:         apiIntegration.Title,
 		Documentation: apiIntegration.Documentation,
+		Tags:          *apiIntegration.Tags,
 	}
 	return res
+}
+
+func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpIntegration, error) {
+	resp := &FpIntegration{
+		Name:        integration.Name(),
+		Type:        integration.GetIntegrationType(),
+		Url:         integration.GetIntegrationImpl().Url,
+		Description: integration.GetHclResourceImpl().Description,
+		Tags:        integration.GetTags(),
+	}
+
+	resp.FileName = integration.GetIntegrationImpl().FileName
+	resp.StartLineNumber = integration.GetIntegrationImpl().StartLineNumber
+	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber
+
+	return resp, nil
 }
 
 func NewPrintableIntegration(resp *ListIntegrationResponse) *PrintableIntegration {
@@ -128,18 +152,4 @@ func (p PrintableIntegration) GetTable() (*printers.Table, error) {
 
 func (PrintableIntegration) getColumns() (columns []string) {
 	return []string{"NAME", "TYPE", "DESCRIPTION", "URL"}
-}
-
-func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpIntegration, error) {
-	resp := &FpIntegration{
-		Name: integration.Name(),
-		Type: integration.GetIntegrationType(),
-		Url:  integration.GetIntegrationImpl().Url,
-	}
-
-	resp.FileName = integration.GetIntegrationImpl().FileName
-	resp.StartLineNumber = integration.GetIntegrationImpl().StartLineNumber
-	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber
-
-	return resp, nil
 }
