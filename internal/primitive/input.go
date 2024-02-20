@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/util"
 	"html/template"
 	"net/mail"
 	"net/smtp"
@@ -514,11 +513,9 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 					// TODO: implement output
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
-					url, err := util.GetWebformUrl(ip.ExecutionID, ip.PipelineExecutionID, ip.StepExecutionID)
-					if err != nil {
-						return nil, err
+					if formUrl, ok := input["webform_url"].(string); ok {
+						e.FormUrl = formUrl
 					}
-					e.FormUrl = url
 
 					if host, ok := integration[schema.AttributeTypeSmtpHost].(string); ok {
 						e.Host = &host
@@ -548,7 +545,7 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 					} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
 						e.To = append(e.To, to)
 					}
-					if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
+					if sub, ok := notify[schema.AttributeTypeSubject].(string); ok {
 						e.Subject = sub
 					} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
 						e.Subject = sub
