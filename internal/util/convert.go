@@ -10,3 +10,11 @@ func BigFloatToInt64(input *big.Float) int64 {
 	result := intValue.Int64()
 	return result
 }
+
+func SafeDeref[T any](ptr *T) T {
+	if ptr != nil {
+		return *ptr
+	}
+	var zeroVal T
+	return zeroVal
+}

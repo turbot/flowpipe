@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/slack-go/slack"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/slack-go/slack"
 
 	"github.com/turbot/pipe-fittings/sanitize"
 
@@ -387,7 +388,7 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 	}
 
 	switch integrationType {
-	case "slack":
+	case schema.IntegrationTypeSlack:
 		resp, err := parseSlackResponse(bodyBytes)
 		if err != nil {
 			common.AbortWithError(c, err)
@@ -413,7 +414,7 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 			_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
 			return
 		}
-	case "webform":
+	case schema.IntegrationTypeWebform:
 		resp, err := parseWebformResponse(bodyBytes)
 		if err != nil {
 			common.AbortWithError(c, err)

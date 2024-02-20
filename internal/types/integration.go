@@ -5,11 +5,11 @@ import (
 
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/util"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
-	"github.com/turbot/pipe-fittings/schema"
 )
 
 // This type is used by the API to return a list of integrations.
@@ -111,11 +111,15 @@ func (p PrintableIntegration) GetTable() (*printers.Table, error) {
 			description = *item.Description
 		}
 
+		url := util.SafeDeref(item.Url)
+
 		cells := []any{
 			item.Name,
 			item.Type,
 			description,
+			url,
 		}
+
 		tableRows = append(tableRows, printers.TableRow{Cells: cells})
 	}
 
@@ -123,18 +127,14 @@ func (p PrintableIntegration) GetTable() (*printers.Table, error) {
 }
 
 func (PrintableIntegration) getColumns() (columns []string) {
-	return []string{"NAME", "TYPE", "DESCRIPTION"}
+	return []string{"NAME", "TYPE", "DESCRIPTION", "URL"}
 }
 
 func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpIntegration, error) {
 	resp := &FpIntegration{
 		Name: integration.Name(),
 		Type: integration.GetIntegrationType(),
-	}
-
-	if resp.Type == schema.IntegrationTypeWebform {
-		str := "http://placeholder.url.here"
-		resp.Url = &str
+		Url:  integration.GetIntegrationImpl().Url,
 	}
 
 	resp.FileName = integration.GetIntegrationImpl().FileName

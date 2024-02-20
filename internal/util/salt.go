@@ -4,11 +4,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/cache"
-	"github.com/turbot/flowpipe/internal/filepaths"
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/filepaths"
 )
 
 // Assumes that the dir exists
@@ -47,6 +48,16 @@ func CreateFlowpipeSalt(filename string, length int) (string, error) {
 	return saltHex, nil
 }
 
+// Global vs Mod salt behaviour:
+//
+// - We should only create the salt *automatically* in the "global" location: `~/.flowpipe/internal/salt `
+// - A user may create a "mod salt" file in the mod manually (`./.flowpipe/internal/salt`)
+//
+// - If there is a mod salt, it is used for triggers, otherwise use the global salt. *Integrations* always use the global salt
+// - this implies that:
+//   - any new installs will only have global salt (unless a user manually creates one)
+//   - existing installs work and continue to use the same salt as they currently do (unless the user manually deletes the salt)
+//   - the user may decide to use their own custom per-mod salt, but this is an advanced operation
 func GetModSaltOrDefault() (string, error) {
 	c := cache.GetCache()
 	if ms, exists := c.Get("mod_salt"); exists {

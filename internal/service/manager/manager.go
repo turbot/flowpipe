@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -16,7 +15,6 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
-	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/filepaths"
@@ -460,51 +458,87 @@ func (m *Manager) cacheConfigData() error {
 		return err
 	}
 
-	cacheHclResource("integration", fpConfig.Integrations, true)
-	cacheHclResource("notifier", fpConfig.Notifiers, true)
+	err = cacheHclResource("integration", fpConfig.Integrations, true, integrationUrlProcessor)
+	if err != nil {
+		return err
+	}
+
+	err = cacheHclResource("notifier", fpConfig.Notifiers, true, nil)
+	if err != nil {
+		return err
+	}
 
 	// Credential must be resolved at runtime, i.e. reading env var or temp creds
-	cacheHclResource("credential", fpConfig.Credentials, false)
+	err = cacheHclResource("credential", fpConfig.Credentials, false, nil)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 
-	cacheHclResource("pipeline", mod.ResourceMaps.Pipelines, true)
+	err := cacheHclResource("pipeline", mod.ResourceMaps.Pipelines, true, nil)
+	if err != nil {
+		return err
+	}
 
 	triggers := mod.ResourceMaps.Triggers
-
-	inMemoryCache := cache.GetCache()
-
-	var triggerNames []string
-	for _, trigger := range triggers {
-		triggerNames = append(triggerNames, trigger.Name())
-
-		// if it's a webhook trigger, calculate the URL
-		_, ok := trigger.Config.(*modconfig.TriggerHttp)
-		if ok && !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
-			triggerUrl, err := calculateTriggerUrl(trigger, m.HTTPAddress, m.HTTPPort)
-			if err != nil {
-				return err
-			}
-			trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
-		}
-
-		inMemoryCache.SetWithTTL(trigger.Name(), trigger, 24*7*52*99*time.Hour)
+	err = cacheHclResource("trigger", triggers, true, triggerUrlProcessor)
+	if err != nil {
+		return err
 	}
-	inMemoryCache.SetWithTTL("#trigger.names", triggerNames, 24*7*52*99*time.Hour)
 
 	return nil
 }
 
-func cacheHclResource[T modconfig.HclResource](resourceType string, items map[string]T, cacheIndividualResource bool) {
+func triggerUrlProcessor(trigger *modconfig.Trigger) error {
+	_, ok := trigger.Config.(*modconfig.TriggerHttp)
+	if ok && !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
+		triggerUrl, err := calculateTriggerUrl(trigger)
+		if err != nil {
+			slog.Error("error calculating trigger url", "error", err)
+			return err
+		}
+		trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
+	}
+
+	return nil
+}
+
+func integrationUrlProcessor(integration modconfig.Integration) error {
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		slog.Error("salt not found", err)
+		return err
+	}
+
+	switch integration.GetIntegrationType() {
+	case schema.IntegrationTypeWebform, schema.IntegrationTypeSlack:
+		hashString := util.CalculateHash(integration.GetHclResourceImpl().FullName, salt)
+
+		integrationUrl := fmt.Sprintf("%s/hook/%s/%s", util.GetBaseUrl(), integration.GetHclResourceImpl().FullName, hashString)
+		integration.SetUrl(integrationUrl)
+	}
+	return nil
+}
+
+func cacheHclResource[T modconfig.HclResource](resourceType string, items map[string]T, cacheIndividualResource bool, individualProcessor func(T) error) error {
 	inMemoryCache := cache.GetCache()
 
 	var names []string
 	for _, item := range items {
 		name := item.Name()
 		names = append(names, name)
+
+		if individualProcessor != nil {
+			err := individualProcessor(item)
+			if err != nil {
+				return err
+			}
+		}
+
 		if cacheIndividualResource {
 			inMemoryCache.SetWithTTL(name, item, 24*7*52*99*time.Hour)
 		}
@@ -512,27 +546,17 @@ func cacheHclResource[T modconfig.HclResource](resourceType string, items map[st
 
 	cacheName := fmt.Sprintf("#%s.names", resourceType)
 	inMemoryCache.SetWithTTL(cacheName, names, 24*7*52*99*time.Hour)
+	return nil
 }
 
-func calculateTriggerUrl(trigger *modconfig.Trigger, httpHost string, httpPort int) (string, error) {
+func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
 	salt, err := util.GetModSaltOrDefault()
 	if err != nil {
 		return "", perr.InternalWithMessage("salt not found")
 	}
 
 	hashString := util.CalculateHash(trigger.FullName, salt)
-
-	if httpHost == "" {
-		httpHost = "localhost"
-	}
-	if httpPort == 0 {
-		httpPort = localconstants.DefaultServerPort
-	}
-
-	baseUrl := viper.GetString(constants.ArgBaseUrl)
-	if baseUrl == "" {
-		baseUrl = "http://" + httpHost + ":" + strconv.Itoa(httpPort)
-	}
+	baseUrl := util.GetBaseUrl()
 
 	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, trigger.FullName, hashString), nil
 }
