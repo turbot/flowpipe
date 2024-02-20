@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -85,7 +86,11 @@ func FpIntegrationFromAPI(apiIntegration flowpipeapiclient.FpIntegration) FpInte
 		Description:   apiIntegration.Description,
 		Title:         apiIntegration.Title,
 		Documentation: apiIntegration.Documentation,
-		Tags:          *apiIntegration.Tags,
+	}
+	if !helpers.IsNil(apiIntegration.Tags) {
+		res.Tags = *apiIntegration.Tags
+	} else {
+		res.Tags = make(map[string]string)
 	}
 	return res
 }

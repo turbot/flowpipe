@@ -139,7 +139,12 @@ func FpNotifierFromAPI(apiResp flowpipeapiclient.FpNotifier) FpNotifier {
 	var res = FpNotifier{
 		Name:        *apiResp.Name,
 		Description: apiResp.Description,
-		Tags:        *apiResp.Tags,
+	}
+
+	if !helpers.IsNil(apiResp.Tags) {
+		res.Tags = *apiResp.Tags
+	} else {
+		res.Tags = make(map[string]string)
 	}
 
 	for _, n := range apiResp.Notifies {
