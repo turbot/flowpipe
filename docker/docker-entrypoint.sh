@@ -16,19 +16,22 @@ check_and_change_ownership() {
 
     # Check if the volume is mounted
     if mount | grep -q "on $mount_path type"; then
-        log_if_debug "Volume is mounted at $mount_path."
+        log_if_debug "Checking if the volume at $mount_path is owned by root:root..."
 
         # Check if the volume is empty and owned by root
-        # if [ -z "$(ls -A $mount_path)" ] && [ $(stat -c "%U:%G" $mount_path) = "root:root" ]; then
-        if [ $(stat -c "%U:%G" $mount_path) = "root:root" ]; then
-            # log_if_debug "Volume at $mount_path is empty and owned by root."
-            log_if_debug "Volume at $mount_path is owned by root."
+        mount_ownership=$(stat -c "%u:%g" $mount_path)
+
+        if [ "$mount_ownership" == "0:0" ]; then
+            log_if_debug "Volume at $mount_path is owned by root:root."
 
             # Change the owner of the volume to USER_UID:USER_GID
             chown "$USER_UID:$USER_GID" $mount_path
             log_if_debug "Changed ownership of the volume at $mount_path to $USER_UID:$USER_GID."
-        else
-            log_if_debug "Volume at $mount_path is not owned by root:root. Skipping ownership change."
+        elif [ "$mount_ownership" != "$USER_UID:$USER_GID" ]; then
+            echo "WARNING: Directory $mount_path has ownership of $mount_ownership and does not match the UID/GID $USER_UID:$USER_GID of the flowpipe user."
+            echo "         Resolve by either overriding the environment variables USER_UID and USER_GID."
+            echo "         Or by changing the ownership of the directory."
+            echo "         Ownership $mount_ownership of $mount_path will not be modified."
         fi
     else
         log_if_debug "No volume is mounted at $mount_path. Skipping."
@@ -41,6 +44,10 @@ log_if_debug "Setting up default UID and GID if not provided..."
 DEFAULT_UID=7103
 DEFAULT_GID=0
 
+# Check current ownership of /workspace
+workspace_uid=$(stat -c '%u' /workspace)
+workspace_gid=$(stat -c '%g' /workspace)
+
 log_if_debug "Using USER_UID=$USER_UID and USER_GID=$USER_GID."
 
 # Check if /var/run/docker.sock exists
@@ -52,7 +59,7 @@ else
     DOCKER_SOCK_GID=""
 fi
 
-log_if_debug "Checking if the current UID/GID is different from the provided or default USER_UID/USER_GID..."
+log_if_debug "Checking if the current user's UID/GID is different from the default UID/GID..."
 
 # Check if the current UID/GID is different from the provided or default USER_UID/USER_GID
 if [ "$(id -u flowpipe)" != "$USER_UID" ] || [ "$(id -g flowpipe)" != "$USER_GID" ]; then
@@ -74,6 +81,14 @@ if [ "$(id -u flowpipe)" != "$USER_UID" ] || [ "$(id -g flowpipe)" != "$USER_GID
         usermod -u $USER_UID flowpipe
     fi
 
+    # Compare current ownership with desired (USER_UID and USER_GID) and change if necessary
+    if [ "$workspace_uid" -eq "$DEFAULT_UID" ] && [ "$workspace_gid" -eq "$DEFAULT_GID" ]; then
+        log_if_debug "Ownership of /workspace is the default UID/GID. Changing..."
+        chown "$USER_UID:$USER_GID" /workspace
+        workspace_uid=$USER_UID
+        workspace_gid=$USER_GID
+    fi
+
     # If /var/run/docker.sock exists and DOCKER_SOCK_GID is different from USER_GID, set up the dockerhost group
     if [ ! -z "$DOCKER_SOCK_GID" ] && [ "$DOCKER_SOCK_GID" != "$USER_GID" ]; then
         log_if_debug "Setting up dockerhost group for /var/run/docker.sock..."
@@ -91,18 +106,7 @@ if [ "$(id -u flowpipe)" != "$USER_UID" ] || [ "$(id -g flowpipe)" != "$USER_GID
         fi
     fi
 else
-    log_if_debug "Current UID/GID is the same as the provided or default USER_UID/USER_GID. Skipping user and group ID updates."
-fi
-
-log_if_debug "Ensuring /workspace directory exists and is owned by the flowpipe user and group..."
-
-# Ensure /workspace directory exists and is owned by the flowpipe user and group
-if [ ! -d "/workspace" ]; then
-    log_if_debug "Creating /workspace directory."
-    mkdir -p /workspace
-    chown $USER_UID:$USER_GID /workspace
-else
-    log_if_debug "Directory /workspace already exists."
+    log_if_debug "Current UID/GID is the same as the provided or default UID/GID. Skipping user and group ID updates."
 fi
 
 cd /workspace
@@ -121,16 +125,8 @@ while IFS= read -r line; do
     mount_device=$(echo "$line" | awk '{print $1}')
     mount_path=$(echo "$line" | awk '{print $3}')
 
-    # Skip if the mount path starts with /etc
-    if [[ $mount_path == /etc* ]]; then
-        log_if_debug "Skipping $mount_path as it's under /etc"
-        continue
-    fi
-
-    # Only proceed if the mount device is one of the devices associated with /etc or its subdirectories
-    # These are directories that are mounted as type Volume otherwise they are type Bound.
-    if [[ ! $ignore_devices =~ $mount_device ]]; then
-        log_if_debug "Skipping $mount_path as its device $mount_device is not associated with /etc"
+    if [ -f "$mount_path" ]; then
+        log_if_debug "Skipping $mount_path as it's a file"
         continue
     fi
 

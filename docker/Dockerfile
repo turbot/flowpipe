@@ -8,17 +8,21 @@ LABEL org.opencontainers.image.ref.name flowpipe \
       org.opencontainers.image.source "https://github.com/turbot/flowpipe" \
       org.opencontainers.image.description "Flowpipe container image ${TARGETVERSION}"
 
-# Text only description, don't change to use special characters
-LABEL org.opencontainers.image.description="Flowpipe container image"
+# Set environment variables
+# USER_UID: Override the flowpipe UID (default: 7103)
+# USER_GID: Override the flowpipe GID (default: 0)
+# FLOWPIPE_LOG_LEVEL: Set logging level (default: "off")
+# FLOWPIPE_UPDATE_CHECK: Disable auto-update checks (default: false)
+# FLOWPIPE_TELEMETRY: Disable telemetry (default: none)
+ENV USER_UID=7103 \
+    USER_GID=0 \
+    FLOWPIPE_LOG_LEVEL="off" \
+    FLOWPIPE_UPDATE_CHECK=false \
+    FLOWPIPE_TELEMETRY=none
 
-# Define default environment variables to override the flowpipe UID and its GID
-ENV USER_UID=7103
-ENV USER_GID=0
-
-# Define default environment variables to enable debugging logging
-ENV FLOWPIPE_LOG_LEVEL="off"
-
-# Declare build arguments for version and architecture
+# Declare build arguments
+# TARGETVERSION: Specify the version to target
+# TARGETARCH: Specify the architecture to target
 ARG TARGETVERSION
 ARG TARGETARCH
 
@@ -45,12 +49,13 @@ RUN group_name=$(getent group ${USER_GID} | cut -d: -f1) && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/flowpipe.linux.${TARGETARCH}.tar.gz
 
+# Creates the workspace directory with the correct ownership
+USER flowpipe
+WORKDIR /workspace
+USER root
+
 # Expose port 7103 for flowpipe
 EXPOSE 7103
-
-# Set environment variables to disable auto-update and telemetry for flowpipe
-ENV FLOWPIPE_UPDATE_CHECK=false
-ENV FLOWPIPE_TELEMETRY=none
 
 # Copy the entrypoint script into the image
 COPY docker-entrypoint.sh /usr/local/bin
