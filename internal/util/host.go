@@ -2,11 +2,10 @@ package util
 
 import (
 	"fmt"
-	"path/filepath"
-
 	"github.com/spf13/viper"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/pipe-fittings/constants"
+	"net/url"
 )
 
 func GetHost() string {
@@ -44,5 +43,5 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 		return "", err
 	}
 	hash := CalculateHash(joinId, salt)
-	return filepath.Join(baseUrl, "webform", "input", joinId, hash), nil
+	return url.JoinPath(baseUrl, "webform", "input", joinId, hash)
 }
