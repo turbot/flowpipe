@@ -20,17 +20,12 @@ func GetHost() string {
 func GetBaseUrl() string {
 	baseUrl := viper.GetString(constants.ArgBaseUrl)
 	if baseUrl == "" {
-		host := viper.GetString(constants.ArgListen)
-		// when running in CLI mode, the default ArgListen is not bound to Viper (because it's part of the server command, not the root command)
-		if host == "" {
-			host = localconstants.DefaultListen
-		}
 		port := viper.GetInt(constants.ArgPort)
 		if port == 0 {
 			port = localconstants.DefaultServerPort
 		}
 
-		return fmt.Sprintf("http://%s:%d", host, port)
+		return fmt.Sprintf("http://localhost:%d", port)
 	}
 	return baseUrl
 }
