@@ -41,7 +41,7 @@ func (api *APIService) listNotifiers(c *gin.Context) {
 
 	slog.Info("received list notifiers request", "next_token", nextToken, "limit", limit)
 
-	result, err := ListNotifiers(api.EsService.RootMod.Name())
+	result, err := ListNotifiers()
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -49,7 +49,7 @@ func (api *APIService) listNotifiers(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func ListNotifiers(rootMod string) (*types.ListNotifierResponse, error) {
+func ListNotifiers() (*types.ListNotifierResponse, error) {
 	notifiers, err := db.ListAllNotifiers()
 	if err != nil {
 		return nil, err
@@ -105,4 +105,12 @@ func (api *APIService) getNotifier(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, item)
+}
+
+func GetNotifier(name string) (*types.FpNotifier, error) {
+	notifier, err := db.GetNotifier(name)
+	if err != nil {
+		return nil, err
+	}
+	return types.FpNotifierFromModNotifier(notifier)
 }

@@ -6,15 +6,17 @@ integration "slack" "my_slack_app" {
 }
 
 notifier "my_notifier" {
-    notify {
-        integration = integration.webform.default
-        channel = "fake one"
-    }
+  description = "my notifier with 2 notifies"
 
-    notify {
-        integration = integration.webform.default
-        to = ["just some things here"]
-    }
+  notify {
+      integration = integration.webform.default
+      channel = "fake one"
+  }
+
+  notify {
+      integration = integration.webform.default
+      to = ["just some things here"]
+  }
 }
 
 integration "slack" "my_other_slack_app" {

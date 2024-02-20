@@ -69,7 +69,8 @@ func rootCommand() *cobra.Command {
 		triggerCmd(),
 		processCmd(),
 		modCmd(),
-		integrationCmd())
+		integrationCmd(),
+		notifierCmd())
 
 	return rootCmd
 }

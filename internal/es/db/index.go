@@ -1,16 +1,22 @@
 package db
 
 import (
+	"reflect"
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 func typeName[T any](t T) string {
-	return "item"
+	if !helpers.IsNil(t) {
+		return reflect.TypeOf(t).String()
+	}
+
+	return "unknown"
 }
 
 func GetCachedItem[T any](name string) (T, error) {

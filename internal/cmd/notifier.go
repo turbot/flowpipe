@@ -14,40 +14,40 @@ import (
 	"github.com/turbot/pipe-fittings/printers"
 )
 
-func integrationCmd() *cobra.Command {
+func notifierCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "integration",
-		Short: "Integration commands",
+		Use:   "notifier",
+		Short: "Notifier commands",
 	}
 
-	cmd.AddCommand(integrationListCmd())
-	cmd.AddCommand(integrationShowCmd())
+	cmd.AddCommand(notifierListCmd())
+	cmd.AddCommand(notifierShowCmd())
 
 	return cmd
 }
 
 // list
-func integrationListCmd() *cobra.Command {
+func notifierListCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "list",
 		Args:  cobra.NoArgs,
-		Run:   listIntegrationFunc,
-		Short: "List integrations from the current mod",
-		Long:  `List integrations from the current mod.`,
+		Run:   listNotifierFunc,
+		Short: "List notifier from the current mod",
+		Long:  `List notifier from the current mod.`,
 	}
 
 	return cmd
 }
 
-func listIntegrationFunc(cmd *cobra.Command, args []string) {
+func listNotifierFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp *types.ListIntegrationResponse
+	var resp *types.ListNotifierResponse
 	var err error
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
-		resp, err = listIntegrationRemote(ctx)
+		resp, err = listNotifierRemote(ctx)
 	} else {
-		resp, err = listIntegrationLocal(cmd, args)
+		resp, err = listNotifierLocal(cmd, args)
 	}
 	if err != nil {
 		error_helpers.ShowErrorWithMessage(ctx, err, "Error listing triggers transforming")
@@ -55,11 +55,11 @@ func listIntegrationFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := printers.GetPrinter[types.FpIntegration](cmd)
+		printer, err := printers.GetPrinter[types.FpNotifier](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
 		}
-		printableResource := types.NewPrintableIntegration(resp)
+		printableResource := types.NewPrintableNotifier(resp)
 
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
@@ -68,7 +68,7 @@ func listIntegrationFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func listIntegrationLocal(cmd *cobra.Command, args []string) (*types.ListIntegrationResponse, error) {
+func listNotifierLocal(cmd *cobra.Command, args []string) (*types.ListNotifierResponse, error) {
 	ctx := cmd.Context()
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
@@ -77,46 +77,46 @@ func listIntegrationLocal(cmd *cobra.Command, args []string) (*types.ListIntegra
 		_ = m.Stop()
 	}()
 
-	return api.ListIntegrations()
+	return api.ListNotifiers()
 }
 
-func listIntegrationRemote(ctx context.Context) (*types.ListIntegrationResponse, error) {
+func listNotifierRemote(ctx context.Context) (*types.ListNotifierResponse, error) {
 	limit := int32(25) // int32 | The max number of items to fetch per page of data, subject to a min and max of 1 and 100 respectively. If not specified will default to 25. (optional) (default to 25)
 	nextToken := ""    // string | When list results are truncated, next_token will be returned, which is a cursor to fetch the next page of data. Pass next_token to the subsequent list request to fetch the next page of data. (optional)
 
 	apiClient := common.GetApiClient()
-	resp, _, err := apiClient.IntegrationApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
+	resp, _, err := apiClient.NotifierApi.List(ctx).Limit(limit).NextToken(nextToken).Execute()
 	if err != nil {
 		return nil, err
 
 	}
 	// map the API data type into the internal data type
-	return types.ListIntegrationResponseFromAPI(resp), err
+	return types.ListNotifierResponseFromAPI(resp), err
 }
 
 // show
-func integrationShowCmd() *cobra.Command {
+func notifierShowCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "show",
 		Args:  cobra.ExactArgs(1),
-		Run:   showIntegrationFunc,
-		Short: "Show integration from the current mod",
-		Long:  `Show integration from the current mod.`,
+		Run:   showNotifierFunc,
+		Short: "Show notifier from the current mod",
+		Long:  `Show notifier from the current mod.`,
 	}
 
 	return cmd
 }
 
-func showIntegrationFunc(cmd *cobra.Command, args []string) {
+func showNotifierFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp *types.FpIntegration
+	var resp *types.FpNotifier
 	var err error
-	integrationName := args[0]
+	notifierName := args[0]
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
-		resp, err = getIntegrationRemote(ctx, integrationName)
+		resp, err = getNotifierRemote(ctx, notifierName)
 	} else {
-		resp, err = getIntegrationLocal(ctx, integrationName)
+		resp, err = getNotifierLocal(ctx, notifierName)
 	}
 
 	if err != nil {
@@ -125,11 +125,11 @@ func showIntegrationFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := printers.GetPrinter[types.FpIntegration](cmd)
+		printer, err := printers.GetPrinter[types.FpNotifier](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
 		}
-		printableResource := types.NewPrintableIntegrationFromSingle(resp)
+		printableResource := types.NewPrintableNotifierFromSingle(resp)
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
@@ -137,17 +137,17 @@ func showIntegrationFunc(cmd *cobra.Command, args []string) {
 	}
 }
 
-func getIntegrationRemote(ctx context.Context, name string) (*types.FpIntegration, error) {
+func getNotifierRemote(ctx context.Context, name string) (*types.FpNotifier, error) {
 	apiClient := common.GetApiClient()
-	resp, _, err := apiClient.IntegrationApi.Get(ctx, name).Execute()
+	resp, _, err := apiClient.NotifierApi.Get(ctx, name).Execute()
 	if err != nil {
 		return nil, err
 	}
-	t := types.FpIntegrationFromAPI(*resp)
+	t := types.FpNotifierFromAPI(*resp)
 	return &t, nil
 }
 
-func getIntegrationLocal(ctx context.Context, integrationName string) (*types.FpIntegration, error) {
+func getNotifierLocal(ctx context.Context, notifierName string) (*types.FpNotifier, error) {
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
@@ -156,5 +156,5 @@ func getIntegrationLocal(ctx context.Context, integrationName string) (*types.Fp
 		_ = m.Stop()
 	}()
 
-	return api.GetIntegration(integrationName)
+	return api.GetNotifier(notifierName)
 }

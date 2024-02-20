@@ -1,6 +1,10 @@
 package types
 
-import "github.com/turbot/pipe-fittings/modconfig"
+import (
+	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/printers"
+)
 
 type ListNotifierResponse struct {
 	Items     []FpNotifier `json:"items"`
@@ -19,7 +23,8 @@ type FpNotifier struct {
 
 func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error) {
 	resp := &FpNotifier{
-		Name: notifier.Name(),
+		Name:        notifier.Name(),
+		Description: notifier.GetHclResourceImpl().Description,
 	}
 
 	resp.FileName = notifier.GetNotifierImpl().FileName
@@ -27,4 +32,72 @@ func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error)
 	resp.EndLineNumber = notifier.GetNotifierImpl().EndLineNumber
 
 	return resp, nil
+}
+
+func FpNotifierFromAPI(apiResp flowpipeapiclient.FpNotifier) FpNotifier {
+	var res = FpNotifier{
+		Name:        *apiResp.Name,
+		Description: apiResp.Description,
+	}
+
+	return res
+}
+
+func ListNotifierResponseFromAPI(apiResp *flowpipeapiclient.ListNotifierResponse) *ListNotifierResponse {
+	if apiResp == nil {
+		return nil
+	}
+
+	var res = &ListNotifierResponse{
+		NextToken: apiResp.NextToken,
+		Items:     make([]FpNotifier, len(apiResp.Items)),
+	}
+	for i, apiItem := range apiResp.Items {
+		res.Items[i] = FpNotifierFromAPI(apiItem)
+	}
+	return res
+}
+
+func NewPrintableNotifier(resp *ListNotifierResponse) *PrintableNotifier {
+	return &PrintableNotifier{
+		Items: resp.Items,
+	}
+}
+
+func NewPrintableNotifierFromSingle(input *FpNotifier) *PrintableNotifier {
+	return &PrintableNotifier{
+		Items: []FpNotifier{*input},
+	}
+}
+
+type PrintableNotifier struct {
+	Items []FpNotifier
+}
+
+func (p PrintableNotifier) GetItems() []FpNotifier {
+	return p.Items
+}
+
+func (p PrintableNotifier) GetTable() (*printers.Table, error) {
+	var tableRows []printers.TableRow
+	for _, item := range p.Items {
+
+		var description string
+		if item.Description != nil {
+			description = *item.Description
+		}
+
+		cells := []any{
+			item.Name,
+			description,
+		}
+
+		tableRows = append(tableRows, printers.TableRow{Cells: cells})
+	}
+
+	return printers.NewTable().WithData(tableRows, p.getColumns()), nil
+}
+
+func (PrintableNotifier) getColumns() (columns []string) {
+	return []string{"NAME", "DESCRIPTION"}
 }
