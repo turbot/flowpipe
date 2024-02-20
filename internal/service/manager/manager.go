@@ -526,9 +526,10 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 
 	switch integration.GetIntegrationType() {
 	case schema.IntegrationTypeWebform, schema.IntegrationTypeSlack:
-		hashString := util.CalculateHash(integration.GetHclResourceImpl().FullName, salt)
+		integrationName := fmt.Sprintf("integration.%s", integration.GetHclResourceImpl().FullName)
+		hashString := util.CalculateHash(integrationName, salt)
 
-		integrationUrl := fmt.Sprintf("%s/hook/integration.%s/%s", util.GetBaseUrl(), integration.GetHclResourceImpl().FullName, hashString)
+		integrationUrl := fmt.Sprintf("%s/hook/%s/%s", util.GetBaseUrl(), integrationName, hashString)
 		integration.SetUrl(integrationUrl)
 	}
 	return nil
