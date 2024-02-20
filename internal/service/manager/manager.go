@@ -494,8 +494,13 @@ func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 }
 
 func triggerUrlProcessor(trigger *modconfig.Trigger) error {
+	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
+		// don't calculate trigger url in test mode, there's no global salt and it's not needed
+		return nil
+	}
+
 	_, ok := trigger.Config.(*modconfig.TriggerHttp)
-	if ok && !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
+	if ok {
 		triggerUrl, err := calculateTriggerUrl(trigger)
 		if err != nil {
 			slog.Error("error calculating trigger url", "error", err)
@@ -508,6 +513,11 @@ func triggerUrlProcessor(trigger *modconfig.Trigger) error {
 }
 
 func integrationUrlProcessor(integration modconfig.Integration) error {
+	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
+		// don't calculate trigger url in test mode, there's no global salt and it's not needed
+		return nil
+	}
+
 	salt, err := util.GetGlobalSalt()
 	if err != nil {
 		slog.Error("salt not found", err)
