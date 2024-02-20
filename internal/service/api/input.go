@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/turbot/pipe-fittings/schema"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -128,7 +129,8 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 	// TODO: devise a better approach
 	name := "integration.webform.default"
 	hash := util.CalculateHash(name, salt)
-	rUrl := fmt.Sprintf("http://%s/api/latest/hook/%s/%s", c.Request.Host, name, hash)
+	rUrl, _ := url.JoinPath(util.GetBaseUrl(), "api", "latest", "hook", name, hash)
+	// rUrl := fmt.Sprintf("http://%s/api/latest/hook/%s/%s", c.Request.Host, name, hash)
 	output.ResponseURL = &rUrl
 
 	c.JSON(http.StatusOK, output)
