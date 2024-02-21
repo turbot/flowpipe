@@ -12,6 +12,12 @@ log_if_debug "Running docker entrypoint script..."
 # Function to check and change ownership of a mounted volume
 check_and_change_ownership() {
     local mount_path=$1
+
+    if [ "$mount_path" = "/workspace" ]; then
+        log_if_debug "Skipping /workspace as it's the workspace directory"
+        return
+    fi
+
     log_if_debug "Checking the ownership of the volume mounted at $mount_path..."
 
     # Check if the volume is mounted
@@ -43,6 +49,29 @@ log_if_debug "Setting up default UID and GID if not provided..."
 # Default UID and GID for flowpipe user if not provided
 DEFAULT_UID=7103
 DEFAULT_GID=0
+
+log_if_debug "Checking and changing ownership of mounted volumes if necessary..."
+
+# Find all unique devices associated with mounts within /etc or its subdirectories
+readarray -t etc_devices < <(mount | grep ' on /etc' | awk '{print $1}' | sort -u)
+
+# Convert array to a string for easy checking
+ignore_devices=$(IFS="|"; echo "${etc_devices[*]}")
+
+# Obtain mount points from the mount command and loop through them
+while IFS= read -r line; do
+    mount_device=$(echo "$line" | awk '{print $1}')
+    mount_path=$(echo "$line" | awk '{print $3}')
+
+    if [ -f "$mount_path" ]; then
+        log_if_debug "Skipping $mount_path as it's a file"
+        continue
+    fi
+
+    # This is mounted under a different partition mount point
+    # We skip all mounts that are under the same device as /etc or its subdirectories.
+    check_and_change_ownership "$mount_path"
+done < <(mount | grep '^/dev')
 
 # Check current ownership of /workspace
 workspace_uid=$(stat -c '%u' /workspace)
@@ -103,7 +132,7 @@ if [ "$(id -u flowpipe)" != "$USER_UID" ] || [ "$(id -g flowpipe)" != "$USER_GID
         if ! id -nG flowpipe | grep -qw dockerhost; then
             log_if_debug "Adding flowpipe user to the dockerhost group."
             usermod -aG dockerhost flowpipe
-        fi
+        fimount_path
     fi
 else
     log_if_debug "Current UID/GID is the same as the provided or default UID/GID. Skipping user and group ID updates."
@@ -111,29 +140,6 @@ fi
 
 cd /workspace
 log_if_debug "Changed directory to /workspace."
-
-log_if_debug "Checking and changing ownership of mounted volumes if necessary..."
-
-# Find all unique devices associated with mounts within /etc or its subdirectories
-readarray -t etc_devices < <(mount | grep ' on /etc' | awk '{print $1}' | sort -u)
-
-# Convert array to a string for easy checking
-ignore_devices=$(IFS="|"; echo "${etc_devices[*]}")
-
-# Obtain mount points from the mount command and loop through them
-while IFS= read -r line; do
-    mount_device=$(echo "$line" | awk '{print $1}')
-    mount_path=$(echo "$line" | awk '{print $3}')
-
-    if [ -f "$mount_path" ]; then
-        log_if_debug "Skipping $mount_path as it's a file"
-        continue
-    fi
-
-    # This is mounted under a different partition mount point
-    # We skip all mounts that are under the same device as /etc or its subdirectories.
-    check_and_change_ownership "$mount_path"
-done < <(mount | grep '^/dev')
 
 log_if_debug "Evaluating the initial argument to determine if it's the 'flowpipe' command. If not, 'flowpipe' will be prepended to ensure the flowpipe CLI is executed."
 # if first arg is anything other than `flowpipe`, assume we want to run flowpipe
