@@ -57,13 +57,7 @@ func (h PipelineCanceled) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
-	execution.CompletePipelineExecutionStepSemaphore(evt.PipelineExecutionID)
-	err = execution.ReleasePipelineSemaphore(pipelineDefn)
-	if err != nil {
-		slog.Error("pipeline_finished: Error releasing pipeline semaphore", "error", err)
-		return nil
-	}
+	pipelineCompletionHandler(evt.Event.ExecutionID, evt.PipelineExecutionID, pipelineDefn, ex.PipelineExecutions[evt.PipelineExecutionID].StepExecutions)
 
 	return nil
 }

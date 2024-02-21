@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -36,6 +37,8 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 			plannerMutex.Unlock()
 		}
 	}()
+
+	db.MapStepExecutionID(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
 
 	if cmd.StepRetry != nil {
 		ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(cmd.Event.ExecutionID, cmd.PipelineExecutionID)

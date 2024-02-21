@@ -11,6 +11,11 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
+//
+// TODO: we seem to cache resources AND cache the Mod and FlowpipeConfig object in memory. This is a duplicate, I think we should drop the cache
+// TODO: and use the cached FlowpipeConfig and Mod struct
+//
+
 func typeName[T any](t T) string {
 	if !helpers.IsNil(t) {
 		return reflect.TypeOf(t).String()

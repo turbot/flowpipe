@@ -2,12 +2,14 @@ package api
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/schema"
 	"net/http"
 	"net/url"
 	"strings"
 
+	"github.com/turbot/pipe-fittings/schema"
+
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
@@ -40,7 +42,7 @@ type inputStepInputOptions struct {
 
 func (api *APIService) getInputStepInput(c *gin.Context) {
 	var output inputStepInput
-	var uri types.InputIdHash
+	var uri types.InputIDHash
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -52,21 +54,32 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
 		return
 	}
-	hashString := util.CalculateHash(uri.Id, salt)
+	hashString := util.CalculateHash(uri.ID, salt)
 	if hashString != uri.Hash {
 		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
 		return
 	}
 
-	// parse ids
-	ids := strings.Split(uri.Id, ".")
-	if len(ids) != 3 {
-		common.AbortWithError(c, perr.BadRequestWithMessage("unable to parse identifiers provided"))
-		return
+	if len(uri.ID) == 8 {
+		executionID, pipelineExecutionID, stepExecutionID, ok := db.ResolveShortStepExecutionID(uri.ID)
+		if !ok {
+			common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", uri.ID)))
+			return
+		}
+		output.ExecutionID = executionID
+		output.PipelineExecutionID = pipelineExecutionID
+		output.StepExecutionID = stepExecutionID
+	} else {
+		// parse ids
+		ids := strings.Split(uri.ID, ".")
+		if len(ids) != 3 {
+			common.AbortWithError(c, perr.BadRequestWithMessage("unable to parse identifiers provided"))
+			return
+		}
+		output.ExecutionID = ids[0]
+		output.PipelineExecutionID = ids[1]
+		output.StepExecutionID = ids[2]
 	}
-	output.ExecutionID = ids[0]
-	output.PipelineExecutionID = ids[1]
-	output.StepExecutionID = ids[2]
 
 	// get step exec
 	exec, err := execution.GetExecution(output.ExecutionID)

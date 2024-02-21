@@ -2,10 +2,12 @@ package util
 
 import (
 	"fmt"
+	"net/url"
+
 	"github.com/spf13/viper"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/pipe-fittings/constants"
-	"net/url"
 )
 
 func GetHost() string {
@@ -32,11 +34,12 @@ func GetBaseUrl() string {
 
 func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error) {
 	baseUrl := GetBaseUrl()
-	joinId := fmt.Sprintf("%s.%s.%s", execId, pExecId, sExecId)
+	last8 := db.MapStepExecutionID(execId, pExecId, sExecId)
+
 	salt, err := GetGlobalSalt()
 	if err != nil {
 		return "", err
 	}
-	hash := CalculateHash(joinId, salt)
-	return url.JoinPath(baseUrl, "webform", "input", joinId, hash)
+	hash := CalculateHash(last8, salt)
+	return url.JoinPath(baseUrl, "webform", "input", last8, hash)
 }

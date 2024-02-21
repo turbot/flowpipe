@@ -41,7 +41,7 @@ func joinPost(c *gin.Context) {
 
 	/*
 		jr := &command.JoinRequest{
-			Id:      req.ID,
+			Id:      req.Id,
 			Address: req.Addr,
 			Voter:   req.Voter,
 		}
