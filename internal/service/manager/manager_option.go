@@ -16,7 +16,7 @@ func WithServerConfig(addr string, port int) ManagerOption {
 		//		"local" -> "localhost"
 		//      "network" -> "" , i.e. listen on all addresses
 		switch addr {
-		case "local":
+		case "local", "localhost":
 			// listen on local host
 			m.HTTPAddress = "localhost"
 		case "network":

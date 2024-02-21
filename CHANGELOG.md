@@ -12,6 +12,7 @@ _Enhancements_
 _Bug fixes_
 
 * `log_level` workspace setting is ignored. ([#618](https://github.com/turbot/flowpipe/issues/618))
+* Default "listen" flag should be network, not localhost ([#694](https://github.com/turbot/flowpipe/issues/694))
 
 ## v0.2.3 [2024-02-13]
 

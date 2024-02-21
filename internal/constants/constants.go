@@ -6,7 +6,7 @@ import (
 
 const (
 	DefaultServerPort         = 7103
-	DefaultListen             = "localhost"
+	DefaultListen             = "network"
 	DefaultExecutionMode      = ExecutionModeAsynchronous
 	DefaultWaitRetry          = 60
 	ExecutionModeSynchronous  = "synchronous"

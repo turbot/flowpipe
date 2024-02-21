@@ -37,7 +37,7 @@ func serverCmd() *cobra.Command {
 		OnCmd(cmd).
 		AddIntFlag(constants.ArgPort, localconstants.DefaultServerPort, "Server port.").
 		AddStringFlag(constants.ArgListen, localconstants.DefaultListen, "Listen address port.").
-		AddStringFlag(constants.ArgBaseUrl, "", "Base URL for the webhook triggers and webform input (http://localhost:7103).").
+		AddStringFlag(constants.ArgBaseUrl, "http://localhost:7103", "Base URL for the webhook triggers and webform input (http://localhost:7103).").
 		AddBoolFlag(constants.ArgWatch, true, "Watch mod files for changes when running Flowpipe server").
 		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output")
 
