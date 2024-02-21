@@ -4,15 +4,20 @@
 
 _What's new?_
 
+* Human workflows. [Documentation](https://flowpipe.io/docs/).
 * Maximum Concurrency control. [Documentation](https://flowpipe.io/docs/).
 * SQLite backing store instead of `.jsonl` files. [Documentation](https://flowpipe.io/docs/).
-
-_Enhancements_
+* Query steps & triggers now support DuckDB.
+* Importing Steampipe connection config as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/).
 
 _Bug fixes_
 
-* `log_level` workspace setting is ignored. ([#618](https://github.com/turbot/flowpipe/issues/618))
-* Default "listen" flag should be network, not localhost ([#694](https://github.com/turbot/flowpipe/issues/694))
+* `log_level` workspace setting is now respected ([#618](https://github.com/turbot/flowpipe/issues/618)).
+* Default `listen` flag should be network, not localhost ([#694](https://github.com/turbot/flowpipe/issues/694))
+* Triggers attributes are now validated ([#225](https://github.com/turbot/pipe-fittings/issues/255)).
+* Pipeline output attributes are now validated ([#239](https://github.com/turbot/pipe-fittings/issues/239)).
+* Pipeline param default value data type is now validated against the specified type ([#262](https://github.com/turbot/pipe-fittings/issues/262)).
+* Removed titles when merging multiple error messages ([#263](https://github.com/turbot/pipe-fittings/issues/263)).
 
 ## v0.2.3 [2024-02-13]
 
