@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fqueue"
@@ -92,7 +93,13 @@ func (tr *TriggerRunnerBase) Run() {
 		return
 	}
 
-	pipelineArgs, diags := tr.Trigger.GetArgs(evalContext)
+	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
+	if err != nil {
+		slog.Error("Error getting latest trigger", "trigger", tr.Trigger.Name(), "error", err)
+		return
+	}
+
+	pipelineArgs, diags := latestTrigger.GetArgs(evalContext)
 
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
