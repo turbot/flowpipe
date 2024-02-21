@@ -132,7 +132,7 @@ if [ "$(id -u flowpipe)" != "$USER_UID" ] || [ "$(id -g flowpipe)" != "$USER_GID
         if ! id -nG flowpipe | grep -qw dockerhost; then
             log_if_debug "Adding flowpipe user to the dockerhost group."
             usermod -aG dockerhost flowpipe
-        fimount_path
+        fi
     fi
 else
     log_if_debug "Current UID/GID is the same as the provided or default UID/GID. Skipping user and group ID updates."
