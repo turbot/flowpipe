@@ -41,10 +41,10 @@ jobs:
           MARIADB_DATABASE: flowpipe-test
         ports:
           - 3306:3306
-        options: >- 
-            --health-cmd="healthcheck.sh --connect --innodb_initialized" 
-            --health-interval=10s 
-            --health-timeout=5s 
+        options: >-
+            --health-cmd="healthcheck.sh --connect --innodb_initialized"
+            --health-interval=10s
+            --health-timeout=5s
             --health-retries=3
 
       # Install MailHog for SMTP mail testing
@@ -56,12 +56,12 @@ jobs:
 
     steps:
       - name: Checkout Flowpipe repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: flowpipe
 
       - name: Checkout Pipe Fittings Components repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
@@ -69,7 +69,7 @@ jobs:
           ref: main
 
       - name: Checkout Flowpipe SDK Go repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go

@@ -8,7 +8,8 @@
 
 	"mounts": [
 		"source=${localWorkspaceFolder}/../pipe-fittings,target=/workspaces/pipe-fittings,type=bind,consistency=cached",
-		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached"
+		"source=${localWorkspaceFolder}/../flowpipe-sdk-go,target=/workspaces/flowpipe-sdk-go,type=bind,consistency=cached",
+		"source=go-build-cache,target=/root/.cache/go-build,type=volume"
 	],
 
 	"features": {
@@ -33,6 +34,6 @@
 			"HashiCorp.HCL"]
 		}
 	},
-	
+
 	"postStartCommand": ".devcontainer/scripts/post-start-command.sh"
 }

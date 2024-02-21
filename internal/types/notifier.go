@@ -2,11 +2,9 @@ package types
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
@@ -19,15 +17,13 @@ type ListNotifierResponse struct {
 }
 
 type FpNotifier struct {
-	Name            string            `json:"name"`
-	Description     *string           `json:"description,omitempty"`
-	Title           *string           `json:"title,omitempty"`
-	Documentation   *string           `json:"documentation,omitempty"`
-	Tags            map[string]string `json:"tags,omitempty"`
-	Notifies        []FpNotify        `json:"notifies,omitempty"`
-	FileName        string            `json:"file_name,omitempty"`
-	StartLineNumber int               `json:"start_line_number,omitempty"`
-	EndLineNumber   int               `json:"end_line_number,omitempty"`
+	Name            string     `json:"name"`
+	Description     *string    `json:"description,omitempty"`
+	Title           *string    `json:"title,omitempty"`
+	Notifies        []FpNotify `json:"notifies,omitempty"`
+	FileName        string     `json:"file_name,omitempty"`
+	StartLineNumber int        `json:"start_line_number,omitempty"`
+	EndLineNumber   int        `json:"end_line_number,omitempty"`
 }
 
 type FpNotify struct {
@@ -61,44 +57,45 @@ func (p FpNotifier) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) s
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
 
-	if len(p.Tags) > 0 {
-		output += fmt.Sprintf("%s\n", au.Blue("Tags:"))
-		for k, v := range p.Tags {
-			output += fmt.Sprintf("  %s %s\n", au.Cyan(k+":"), v)
-		}
-	}
-
 	if len(p.Notifies) > 0 {
 		output += fmt.Sprintf("%s\n", au.Blue("Notifies:"))
 
-		for i, n := range p.Notifies {
-			output += fmt.Sprintf("  %s %s\n", au.Blue("Notify"), strconv.Itoa(i+1))
-
-			if n.Integration != nil && util.SafeDeref(n.Integration) != "" {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Integration:"), *n.Integration)
-			}
+		for _, n := range p.Notifies {
+			// Integration can't be null, it's mandatory field in the schema
+			output += fmt.Sprintf("%4s- %s %s\n", "", au.Cyan("Integration:"), *n.Integration)
 			if n.Title != nil {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Title:"), *n.Title)
+				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Title:"), *n.Title)
 			}
 			if n.Description != nil {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Description:"), *n.Description)
+				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Description:"), *n.Description)
 			}
 			if n.Subject != nil {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Subject:"), *n.Subject)
+				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Subject:"), *n.Subject)
 			}
 			if len(n.To) > 0 {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("To:"), n.To)
+				output += fmt.Sprintf("%6s%s\n", "", au.Cyan("To:"))
+				output = printItems(output, n.To, 8)
 			}
 			if len(n.Cc) > 0 {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Cc:"), n.Cc)
+				output += fmt.Sprintf("%6s%s\n", "", au.Cyan("Cc:"))
+				output = printItems(output, n.Cc, 8)
 			}
 			if len(n.Bcc) > 0 {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Bcc:"), n.Bcc)
+				output += fmt.Sprintf("%6s%s\n", "", au.Cyan("Bcc:"))
+				output = printItems(output, n.Bcc, 8)
 			}
 			if n.Channel != nil {
-				output += fmt.Sprintf("      %s %s\n", au.Cyan("Channel:"), *n.Channel)
+				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Channel:"), *n.Channel)
 			}
 		}
+	}
+
+	return output
+}
+
+func printItems(output string, items []string, baseLeftPad int) string {
+	for _, item := range items {
+		output += fmt.Sprintf("%*s- %s\n", baseLeftPad, "", item)
 	}
 
 	return output
@@ -108,7 +105,6 @@ func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error)
 	resp := &FpNotifier{
 		Name:        notifier.Name(),
 		Description: notifier.GetHclResourceImpl().Description,
-		Tags:        notifier.GetTags(),
 	}
 
 	resp.FileName = notifier.GetNotifierImpl().FileName
@@ -127,6 +123,9 @@ func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error)
 		}
 		if !helpers.IsNil(notify.Integration) {
 			fpNotify.Integration = &notify.Integration.GetHclResourceImpl().FullName
+		} else {
+			defaultIntegration := "webform.default"
+			fpNotify.Integration = &defaultIntegration
 		}
 
 		resp.Notifies = append(resp.Notifies, fpNotify)
@@ -139,12 +138,6 @@ func FpNotifierFromAPI(apiResp flowpipeapiclient.FpNotifier) FpNotifier {
 	var res = FpNotifier{
 		Name:        *apiResp.Name,
 		Description: apiResp.Description,
-	}
-
-	if !helpers.IsNil(apiResp.Tags) {
-		res.Tags = *apiResp.Tags
-	} else {
-		res.Tags = make(map[string]string)
 	}
 
 	for _, n := range apiResp.Notifies {

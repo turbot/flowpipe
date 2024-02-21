@@ -21,7 +21,7 @@ jobs:
 
       # Checks out the Flowpipe repository code.
       - name: Checkout Flowpipe repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: flowpipe  # Directory path under $GITHUB_WORKSPACE to place the repository.
 

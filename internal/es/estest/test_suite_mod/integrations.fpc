@@ -5,17 +5,23 @@ integration "slack" "my_slack_app" {
   signing_secret  = "Q#$$#@#$$#W"
 }
 
+integration "email" "email_integration_1" {
+
+}
+
 notifier "my_notifier" {
   description = "my notifier with 2 notifies"
 
   notify {
       integration = integration.webform.default
       channel = "fake one"
+      subject = "bar"
   }
 
   notify {
       integration = integration.webform.default
-      to = ["just some things here"]
+      to = ["a", "b", "c"]
+      channel = "foo"
   }
 }
 
@@ -24,4 +30,21 @@ integration "slack" "my_other_slack_app" {
 
   # optional - if you want to verify the source
   signing_secret  = "Q#$$#@#$$#W"
+}
+
+notifier "slack_notify" {
+  description = "slack notifer with some notifies"
+
+  notify {
+      integration = integration.slack.my_other_slack_app
+      channel = "fake one"
+      subject = "bar"
+  }
+
+  notify {
+      integration = integration.email.email_integration_1
+      to = ["billie", "bob", "joe"]
+      cc = ["angus", "brian", "charlie", "dave"]
+      bcc = ["eddie", "frank", "george", "harry"]
+  }
 }
