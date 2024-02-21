@@ -529,7 +529,7 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		integrationName := fmt.Sprintf("integration.%s", integration.GetHclResourceImpl().FullName)
 		hashString := util.CalculateHash(integrationName, salt)
 
-		integrationUrl := fmt.Sprintf("%s/hook/%s/%s", util.GetBaseUrl(), integrationName, hashString)
+		integrationUrl := fmt.Sprintf("%s/api/latest/hook/%s/%s", util.GetBaseUrl(), integrationName, hashString)
 		integration.SetUrl(integrationUrl)
 	}
 	return nil

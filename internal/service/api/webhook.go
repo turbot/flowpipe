@@ -39,7 +39,7 @@ import (
 
 func (api *APIService) WebhookRegisterAPI(router *gin.RouterGroup) {
 	router.POST("/hook/:hook/:hash", api.passHookToProcessor)
-	router.GET("/hook/:hook/:hash", api.runTriggerHook)
+	router.GET("/hook/:hook/:hash", api.passHookToProcessor)
 }
 
 type JSONPayload struct {
@@ -101,6 +101,10 @@ func (api *APIService) passHookToProcessor(c *gin.Context) {
 	case len(nameParts) >= 2 && (nameParts[0] == "trigger" || nameParts[1] == "trigger"):
 		api.runTriggerHook(c)
 	case len(nameParts) >= 2 && nameParts[0] == "integration":
+		if c.Request.Method != http.MethodPost {
+			common.AbortWithError(c, perr.MethodNotAllowed())
+			return
+		}
 		api.runIntegrationHook(c)
 	default:
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("Not Found %s", webhookUri.Hook)))
