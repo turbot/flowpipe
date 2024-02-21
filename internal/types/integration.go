@@ -76,6 +76,7 @@ func FpIntegrationFromAPI(apiIntegration flowpipeapiclient.FpIntegration) FpInte
 		Type:        typehelpers.SafeString(apiIntegration.Type),
 		Description: apiIntegration.Description,
 		Title:       apiIntegration.Title,
+		Url:         apiIntegration.Url,
 	}
 	return res
 }
