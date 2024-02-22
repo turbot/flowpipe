@@ -161,7 +161,9 @@ func GetFlowpipeConfig() (*flowpipeconfig.FlowpipeConfig, error) {
 	flowpipeConfigCached, found := cache.GetCache().Get("#flowpipeconfig")
 
 	if !found {
-		return flowpipeconfig.NewFlowpipeConfig(), nil
+		// TODO: if we return an error all our "non mod based test" fail
+		// return nil, perr.BadRequestWithMessage("flowpipe config not found")
+		return &flowpipeconfig.FlowpipeConfig{}, nil
 	}
 
 	flowpipeConfig, ok := flowpipeConfigCached.(*flowpipeconfig.FlowpipeConfig)

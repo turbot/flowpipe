@@ -216,6 +216,20 @@ func (m *Manager) initializeResources() error {
 			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
+		err = m.cacheConfigData()
+		if err != nil {
+			return err
+		}
+
+		if m.shouldStartAPI() {
+			err := flowpipeConfig.SetupWatcher(context.TODO(), func(c context.Context, e error) {
+
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
 			m.ctx,
 			modLocation,
@@ -271,11 +285,6 @@ func (m *Manager) initializeResources() error {
 
 	cache.GetCache().SetWithTTL("#rootmod.name", rootModName, 24*7*52*99*time.Hour)
 	err := m.cacheModData(mod)
-	if err != nil {
-		return err
-	}
-
-	err = m.cacheConfigData()
 	if err != nil {
 		return err
 	}
