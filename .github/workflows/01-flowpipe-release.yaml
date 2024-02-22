@@ -140,11 +140,12 @@ jobs:
       # automatically.
       #
       # For now I'm going to remove the yarn.lock post UI build.
-      - name: Clean UI artfiacts
+      - name: Clean UI artifacts
         working-directory: flowpipe
         run: |
           git status
-          rm -rf ui/input/yarn.lock
+          git restore ui/input/yarn.lock
+          git status
 
       - name: Release publish
         run: |-
