@@ -206,14 +206,14 @@ func NewParsedEvent(prefix ParsedEventPrefix, executionId string, eventType stri
 }
 
 func (p ParsedEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	//// deliberately shadow the receiver with a sanitized version of the struct
-	//var err error
-	//if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-	//	return ""
-	//}
-
+	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
+
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return out
+	}
 
 	out += fmt.Sprintf("%s %s\n", pre, p.Message)
 	return out
@@ -235,14 +235,14 @@ func NewParsedEventWithInput(pe ParsedEvent, input map[string]any, isSkip bool) 
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
+	out := ""
+
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
+		return out
 	}
-
-	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	if p.isSkip {
 		return fmt.Sprintf("%s %s\n", pre, au.BrightBlack("Skipped"))
@@ -304,14 +304,13 @@ func NewParsedEventWithOutput(parsedEvent ParsedEvent, output map[string]any, st
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
+	out := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
+		return out
 	}
-
-	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 
 	// attributes
 	if opts.Verbose && len(p.Output) > 0 {
@@ -371,14 +370,15 @@ func NewParsedErrorEvent(parsedEvent ParsedEvent, errors []modconfig.StepError, 
 
 func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
+	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
+	out := ""
+
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return ""
+		return out
 	}
 
-	out := ""
-	pre := p.ParsedEventPrefix.String(sanitizer, opts)
 	duration := ""
 	if p.Duration != nil {
 		duration = *p.Duration
