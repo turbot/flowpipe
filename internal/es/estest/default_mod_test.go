@@ -3,12 +3,14 @@ package estest
 // Basic imports
 import (
 	"context"
+	"fmt"
 	"os"
 	"path"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -153,6 +155,16 @@ func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 	assert.NotNil(stepExecution)
 	assert.Equal("starting", stepExecution.Status)
 	assert.True(strings.HasPrefix(stepExecution.Input["webform_url"].(string), "http://localhost:7103/webform/input/"), "webform_url should start with http://localhost:7103/webform/input/ but "+stepExecution.Input["webform_url"].(string))
+
+	s, err := prettyjson.Marshal(stepExecution.Input)
+
+	if err != nil {
+		assert.Fail("Error marshalling pipeline output", err)
+		return
+	}
+
+	fmt.Println(string(s)) //nolint:forbidigo // test
+
 }
 
 func (suite *DefaultModTestSuite) TestInputStepOptionResolution() {
