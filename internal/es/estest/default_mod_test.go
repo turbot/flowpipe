@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,6 +129,31 @@ func (suite *DefaultModTestSuite) TestEchoOne() {
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
 	assert.Equal(1, len(pex.PipelineOutput))
+}
+
+func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.integration_pipe_default_with_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+	waitTime := 100 * time.Millisecond
+
+	_, _, stepExecution, err := getPipelineExWaitForStepStarted(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, waitTime, 40, "input.my_step")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.NotNil(stepExecution)
+	assert.Equal("starting", stepExecution.Status)
+	assert.True(strings.HasPrefix(stepExecution.Input["webform_url"].(string), "http://localhost:7103/webform/input/"))
+
 }
 
 func (suite *DefaultModTestSuite) TestInputStepOptionResolution() {

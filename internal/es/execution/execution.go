@@ -91,12 +91,19 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
-	integrationMap, err := ex.buildIntegrationMapForEvalContext(pipelineDefn)
+	integrationMap, err := buildIntegrationMapForEvalContext()
 	if err != nil {
 		return nil, err
 	}
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+
+	notifierMap, err := buildNotifierMapForEvalContext()
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
 
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
@@ -266,57 +273,6 @@ func (ex *Execution) buildPipelineMapForEvalContext() (map[string]cty.Value, err
 	}
 
 	return pipelineMap, nil
-}
-
-func (ex *Execution) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
-	integrationMap := map[string]cty.Value{}
-	slackIntegrationMap := map[string]cty.Value{}
-	emailIntegrationMap := map[string]cty.Value{}
-
-	fpConfig, err := db.GetFlowpipeConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range fpConfig.Integrations {
-
-		parts := strings.Split(p.Name(), ".")
-		if len(parts) != 2 {
-			return nil, perr.BadRequestWithMessage("invalid integration name: " + p.Name())
-		}
-
-		pCty, err := p.CtyValue()
-		if err != nil {
-			return nil, err
-		}
-
-		integrationType := parts[0]
-
-		switch integrationType {
-		case string(schema.IntegrationTypeSlack):
-			slackIntegrationMap[parts[1]] = pCty
-
-		case string(schema.IntegrationTypeEmail):
-			emailIntegrationMap[parts[1]] = pCty
-
-		case string(schema.IntegrationTypeWebform):
-			// do nothing
-
-		default:
-			return nil, perr.BadRequestWithMessage("invalid integration type: " + integrationType)
-		}
-	}
-
-	if len(slackIntegrationMap) > 0 {
-		integrationMap[schema.IntegrationTypeSlack] = cty.ObjectVal(slackIntegrationMap)
-	}
-
-	if len(emailIntegrationMap) > 0 {
-		integrationMap[schema.IntegrationTypeEmail] = cty.ObjectVal(emailIntegrationMap)
-	}
-
-	return integrationMap, nil
-
 }
 
 // ExecutionStepOutputs is a map for all the step execution. It's stored in this format:

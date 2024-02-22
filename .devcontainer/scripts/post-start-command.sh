@@ -7,7 +7,7 @@ BASE_FOLDER=.devcontainer/scripts
 if ! sudo service mariadb status > /dev/null; then
     echo "Starting service MariaDB..."
     sudo service mariadb start
-    
+
     echo "Running initial setup for MariaDB"
     source $BASE_FOLDER/initialize-mariadb.sh
 else

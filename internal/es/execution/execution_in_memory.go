@@ -148,12 +148,19 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 	evalContext.Variables[schema.BlockTypePipeline] = cty.ObjectVal(pipelineMap)
 
-	integrationMap, err := ex.buildIntegrationMapForEvalContext(pipelineDefn)
+	integrationMap, err := buildIntegrationMapForEvalContext()
 	if err != nil {
 		return nil, err
 	}
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
+
+	notifierMap, err := buildNotifierMapForEvalContext()
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
 
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
@@ -262,8 +269,7 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext() (map[string]cty.Va
 	return pipelineMap, nil
 }
 
-// TODO: this function is very similar to execution's buildIntegrationMapForEvalContext. Need to refactor
-func (ex *ExecutionInMemory) buildIntegrationMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 	integrationMap := map[string]cty.Value{}
 	slackIntegrationMap := map[string]cty.Value{}
 	emailIntegrationMap := map[string]cty.Value{}
@@ -313,6 +319,25 @@ func (ex *ExecutionInMemory) buildIntegrationMapForEvalContext(pipelineDefn *mod
 
 	return integrationMap, nil
 
+}
+
+func buildNotifierMapForEvalContext() (map[string]cty.Value, error) {
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	varValueNotifierMap := make(map[string]cty.Value)
+
+	for k, i := range fpConfig.Notifiers {
+		var err error
+		varValueNotifierMap[k], err = i.CtyValue()
+		if err != nil {
+			slog.Warn("failed to convert notifier to cty value", "notifier", i.Name(), "error", err)
+		}
+	}
+
+	return varValueNotifierMap, nil
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
