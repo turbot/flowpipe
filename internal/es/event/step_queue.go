@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/turbot/pipe-fittings/schema"
@@ -157,8 +158,12 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 						integrationType := integration["type"].(string)
 						switch integrationType {
 						case schema.IntegrationTypeEmail, schema.IntegrationTypeWebform:
-							webformUrl, _ := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
-							input["webform_url"] = webformUrl
+							webformUrl, err := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+							if err != nil {
+								slog.Error("Failed to get webform URL", "error", err)
+							} else {
+								input["webform_url"] = webformUrl
+							}
 							return input
 						default:
 							// slack, teams, etc - do nothing
@@ -166,8 +171,12 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 					}
 				}
 			} else {
-				webformUrl, _ := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
-				input["webform_url"] = webformUrl
+				webformUrl, err := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+				if err != nil {
+					slog.Error("Failed to get webform URL", "error", err)
+				} else {
+					input["webform_url"] = webformUrl
+				}
 				return input
 			}
 		}
