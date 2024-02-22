@@ -216,6 +216,15 @@ func (m *Manager) initializeResources() error {
 			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
+		if m.shouldStartAPI() {
+			err := flowpipeConfig.SetupWatcher(context.TODO(), func(c context.Context, e error) {
+
+			})
+			if err != nil {
+				return err
+			}
+		}
+
 		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
 			m.ctx,
 			modLocation,
