@@ -38,12 +38,43 @@ type FpNotify struct {
 	To          []string `json:"to,omitempty"`
 }
 
+func (n FpNotify) printItem(opts sanitize.RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+
+	// Integration can't be null, it's mandatory field in the schema
+	output := fmt.Sprintf("%2s- %s %s\n", "", au.Cyan("Integration:"), *n.Integration)
+	if n.Title != nil {
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Title:"), *n.Title)
+	}
+	if n.Description != nil {
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Description:"), *n.Description)
+	}
+	if n.Subject != nil {
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Subject:"), *n.Subject)
+	}
+	if n.Channel != nil {
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Channel:"), *n.Channel)
+	}
+	if len(n.To) > 0 {
+		output += fmt.Sprintf("%4s%s\n", "", au.Cyan("To:"))
+		output += printItems(n.To, 6)
+	}
+	if len(n.Cc) > 0 {
+		output += fmt.Sprintf("%4s%s\n", "", au.Cyan("Cc:"))
+		output += printItems(n.Cc, 6)
+	}
+	if len(n.Bcc) > 0 {
+		output += fmt.Sprintf("%4s%s\n", "", au.Cyan("Bcc:"))
+		output += printItems(n.Bcc, 6)
+	}
+	return output
+}
+
 func (p FpNotifier) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	var output string
 	var statusText string
-	// left := au.BrightBlack("[")
-	// right := au.BrightBlack("]")
+
 	keyWidth := 10
 	if p.Description != nil {
 		keyWidth = 13
@@ -61,39 +92,15 @@ func (p FpNotifier) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions) s
 		output += fmt.Sprintf("%s\n", au.Blue("Notifies:"))
 
 		for _, n := range p.Notifies {
-			// Integration can't be null, it's mandatory field in the schema
-			output += fmt.Sprintf("%4s- %s %s\n", "", au.Cyan("Integration:"), *n.Integration)
-			if n.Title != nil {
-				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Title:"), *n.Title)
-			}
-			if n.Description != nil {
-				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Description:"), *n.Description)
-			}
-			if n.Subject != nil {
-				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Subject:"), *n.Subject)
-			}
-			if len(n.To) > 0 {
-				output += fmt.Sprintf("%6s%s\n", "", au.Cyan("To:"))
-				output = printItems(output, n.To, 8)
-			}
-			if len(n.Cc) > 0 {
-				output += fmt.Sprintf("%6s%s\n", "", au.Cyan("Cc:"))
-				output = printItems(output, n.Cc, 8)
-			}
-			if len(n.Bcc) > 0 {
-				output += fmt.Sprintf("%6s%s\n", "", au.Cyan("Bcc:"))
-				output = printItems(output, n.Bcc, 8)
-			}
-			if n.Channel != nil {
-				output += fmt.Sprintf("%6s%s %s\n", "", au.Cyan("Channel:"), *n.Channel)
-			}
+			output += n.printItem(opts)
 		}
 	}
 
 	return output
 }
 
-func printItems(output string, items []string, baseLeftPad int) string {
+func printItems(items []string, baseLeftPad int) string {
+	output := ""
 	for _, item := range items {
 		output += fmt.Sprintf("%*s- %s\n", baseLeftPad, "", item)
 	}
