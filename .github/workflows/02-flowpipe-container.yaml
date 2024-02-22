@@ -1,4 +1,4 @@
-name: 01 Flowpipe - Container Build and Release
+name: "02 Flowpipe: Container Build and Release"
 
 # Triggers the workflow manually with an input for release version.
 on:

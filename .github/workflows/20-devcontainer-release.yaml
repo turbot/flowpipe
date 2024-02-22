@@ -1,4 +1,4 @@
-name: 20 DevContainer - Build and Release
+name: "20 DevContainer: Build and Release"
 
 on:
   workflow_dispatch:

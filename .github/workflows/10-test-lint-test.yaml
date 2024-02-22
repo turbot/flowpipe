@@ -1,4 +1,4 @@
-name: 10 Test - Lint and Test
+name: "10 Test: Lint and Test"
 on:
   push:
     tags:
