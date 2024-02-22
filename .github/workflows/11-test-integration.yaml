@@ -1,4 +1,5 @@
-name: Test - Lint and Test
+name: 11 Test - Integration
+
 on:
   push:
     tags:
@@ -11,7 +12,7 @@ on:
 
 jobs:
   golangci:
-    name: Lint and Test
+    name: Integration Test
     runs-on: ubuntu-latest
 
     services:
@@ -75,24 +76,15 @@ jobs:
           path: flowpipe-sdk-go
           ref: main
 
-      # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.21"
+          go-version: '1.21'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
 
       - name: Build UI
         run: make build-ui
         working-directory: flowpipe
 
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-
-        with:
-          version: v1.55.2
-          args: --timeout=15m
-          working-directory: flowpipe
-
       - name: Run tests
-        run: make test
+        run: make integration-test
         working-directory: flowpipe

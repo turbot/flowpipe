@@ -1,4 +1,4 @@
-name: Flowpipe - Release
+name: 01 Flowpipe - Release
 
 on:
   workflow_dispatch:
