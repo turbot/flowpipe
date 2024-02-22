@@ -1,4 +1,4 @@
-name: "11 Test: Integration"
+name: "11 - Test: Integration"
 
 on:
   push:

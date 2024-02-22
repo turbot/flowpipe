@@ -1,4 +1,4 @@
-name: "01 Flowpipe: Release"
+name: "01 - Flowpipe: Release"
 
 on:
   workflow_dispatch:
@@ -133,6 +133,18 @@ jobs:
       - name: Build UI
         run: make build-ui
         working-directory: flowpipe
+
+      # The ui build often changes the yarn.lock file, this causes issue with GoReleaser that needs a clean git status
+      # I'm hesitant to use the shortcut of --skip-validate or doing a localbuild (skip publish/snapshot) and uploading the
+      # binary ourselves. The other alternative is to commit the yarn.lock file post UI build which I'm not keen on either doing it
+      # automatically.
+      #
+      # For now I'm going to remove the yarn.lock post UI build.
+      - name: Clean UI artfiacts
+        working-directory: flowpipe
+        run: |
+          git status
+          rm -rf ui/input/yarn.lock
 
       - name: Release publish
         run: |-
