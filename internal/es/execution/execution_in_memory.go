@@ -205,6 +205,35 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalCo
 	return evalContext, nil
 }
 
+func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+	stepDefns := pipelineDefn.Steps
+
+	allCredentialsDependsOn := []string{}
+	for _, stepDefn := range stepDefns {
+		allCredentialsDependsOn = append(allCredentialsDependsOn, stepDefn.GetCredentialDependsOn()...)
+	}
+
+	pipelineOutputs := pipelineDefn.OutputConfig
+	for _, output := range pipelineOutputs {
+		allCredentialsDependsOn = append(allCredentialsDependsOn, output.CredentialDependsOn...)
+	}
+
+	params := map[string]cty.Value{}
+	if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
+		params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
+	}
+
+	credentialMap, err := ex.buildCredentialMapForEvalContext(allCredentialsDependsOn, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override what we have
+	evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
+
+	return evalContext, nil
+}
+
 func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {

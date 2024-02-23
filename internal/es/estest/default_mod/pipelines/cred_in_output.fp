@@ -9,12 +9,10 @@ pipeline "cred_in_step_output" {
     output "val" {
         value = step.transform.test.output.val.access_key
     }
+}
 
-    // step "transform" "cred" {
-    //     value = credential.aws.example
-    // }
-
-    // output "val" {
-    //     value = step.transform.cred.value
-    // }
+pipeline "cred_in_output" {
+    output "val" {
+        value = credential.aws.example.access_key
+    }
 }

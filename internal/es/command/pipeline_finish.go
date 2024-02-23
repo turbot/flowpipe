@@ -63,6 +63,15 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 			}
 		}
 
+		evalContext, err = ex.AddCredentialsToEvalContextFromPipeline(evalContext, pipelineDefn)
+		if err != nil {
+			slog.Error("Error adding credentials to eval context while calculating output in pipeline_finish", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForPipelineFinishToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				slog.Error("Error publishing PipelineFailed event", "error", err2)
+			}
+		}
+
 		for _, output := range pipelineDefn.OutputConfig {
 			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
