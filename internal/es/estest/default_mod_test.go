@@ -177,6 +177,53 @@ func (suite *DefaultModTestSuite) TestCredInOutput() {
 	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val"])
 }
 
+func (suite *DefaultModTestSuite) TestDynamicCredResolution() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.dynamic_cred", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val"])
+}
+
+func (suite *DefaultModTestSuite) TestDynamicCredResolutionNested() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.dynamic_cred_parent", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("sso_key", pex.PipelineOutput["val_0"])
+	assert.Equal("dundermifflin_key", pex.PipelineOutput["val_1"])
+}
+
 func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 	assert := assert.New(suite.T())
 
