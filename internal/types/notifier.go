@@ -42,29 +42,29 @@ func (n FpNotify) printItem(opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 
 	// Integration can't be null, it's mandatory field in the schema
-	output := fmt.Sprintf("%2s- %s %s\n", "", au.Cyan("Integration:"), *n.Integration)
+	output := fmt.Sprintf("%2s%s\n", "", au.Cyan(*n.Integration))
 	if n.Title != nil {
-		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Title:"), *n.Title)
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Blue("Title:"), *n.Title)
 	}
 	if n.Description != nil {
-		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Description:"), *n.Description)
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Blue("Description:"), *n.Description)
 	}
 	if n.Subject != nil {
-		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Subject:"), *n.Subject)
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Blue("Subject:"), *n.Subject)
 	}
 	if n.Channel != nil {
-		output += fmt.Sprintf("%4s%s %s\n", "", au.Cyan("Channel:"), *n.Channel)
+		output += fmt.Sprintf("%4s%s %s\n", "", au.Blue("Channel:"), *n.Channel)
 	}
 	if len(n.To) > 0 {
-		output += fmt.Sprintf("%4s%s\n", "", au.Cyan("To:"))
+		output += fmt.Sprintf("%4s%s\n", "", au.Blue("To:"))
 		output += printItems(n.To, 6)
 	}
 	if len(n.Cc) > 0 {
-		output += fmt.Sprintf("%4s%s\n", "", au.Cyan("Cc:"))
+		output += fmt.Sprintf("%4s%s\n", "", au.Blue("Cc:"))
 		output += printItems(n.Cc, 6)
 	}
 	if len(n.Bcc) > 0 {
-		output += fmt.Sprintf("%4s%s\n", "", au.Cyan("Bcc:"))
+		output += fmt.Sprintf("%4s%s\n", "", au.Blue("Bcc:"))
 		output += printItems(n.Bcc, 6)
 	}
 	return output
