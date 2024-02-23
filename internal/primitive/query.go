@@ -31,8 +31,8 @@ type Query struct {
 
 func (e *Query) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
-	if i[schema.AttributeTypeConnectionString] == nil {
-		return perr.BadRequestWithMessage("Query input must define connection_string")
+	if i[schema.AttributeTypeDatabase] == nil {
+		return perr.BadRequestWithMessage("Query input must define database")
 	}
 
 	if i[schema.AttributeTypeSql] == nil {
@@ -88,7 +88,7 @@ func (e *Query) RunWithMetadata(ctx context.Context, input modconfig.Input) (*mo
 		}
 	}
 
-	queryReader, err := NewQueryReader(input[schema.AttributeTypeConnectionString].(string))
+	queryReader, err := NewQueryReader(input[schema.AttributeTypeDatabase].(string))
 	if err != nil {
 		slog.Error("Error initializing the database", "error", err)
 		return nil, nil, perr.InternalWithMessage("Error initializing the database: " + err.Error())

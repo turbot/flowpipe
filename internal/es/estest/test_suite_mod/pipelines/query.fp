@@ -6,8 +6,8 @@ pipeline "list_issues_using_query" {
   }
 
   step "query" "list_issues" {
-    connection_string = "postgres://steampipe@host.docker.internal:9193/steampipe"
-    sql               = "select number,url,title,body from github.github_issue where repository_full_name ='turbot/steampipe' limit 10"
+    database = "postgres://steampipe@host.docker.internal:9193/steampipe"
+    sql      = "select number,url,title,body from github.github_issue where repository_full_name ='turbot/steampipe' limit 10"
   }
 
   output "val" {
@@ -23,8 +23,8 @@ pipeline "list_issues_using_query_param" {
   }
 
   step "query" "list_issues" {
-    connection_string = "postgres://steampipe@host.docker.internal:9193/steampipe"
-    sql               = "select number,url,title,body from github.github_issue where repository_full_name ='${param.github_repo_full_name}' limit 10"
+    database = "postgres://steampipe@host.docker.internal:9193/steampipe"
+    sql      = "select number,url,title,body from github.github_issue where repository_full_name ='${param.github_repo_full_name}' limit 10"
   }
 
   output "val" {

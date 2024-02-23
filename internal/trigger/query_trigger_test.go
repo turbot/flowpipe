@@ -359,9 +359,9 @@ func TestTriggerQuery(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		ConnectionString: "sqlite:./test_trigger_query.db",
-		Sql:              "select * from test_one",
-		PrimaryKey:       "id",
+		Database:   "sqlite:./test_trigger_query.db",
+		Sql:        "select * from test_one",
+		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
@@ -847,8 +847,8 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		ConnectionString: "sqlite:./test_trigger_query.db",
-		Sql:              "select * from test_one",
+		Database: "sqlite:./test_trigger_query.db",
+		Sql:      "select * from test_one",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
@@ -1222,9 +1222,9 @@ func TestTriggerQueryB(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		ConnectionString: "sqlite:./test_trigger_query_b.db",
-		Sql:              "select * from test_one",
-		PrimaryKey:       "id",
+		Database:   "sqlite:./test_trigger_query_b.db",
+		Sql:        "select * from test_one",
+		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
@@ -1532,9 +1532,9 @@ func TestTriggerQueryBCustomCapture(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		ConnectionString: "sqlite:./test_trigger_query_b.db",
-		Sql:              "select * from test_one",
-		PrimaryKey:       "id",
+		Database:   "sqlite:./test_trigger_query_b.db",
+		Sql:        "select * from test_one",
+		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -1691,9 +1691,9 @@ func TestTriggerQueryWithNull(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		ConnectionString: "sqlite:./test_trigger_query.db",
-		Sql:              "select * from test_one",
-		PrimaryKey:       "id",
+		Database:   "sqlite:./test_trigger_query.db",
+		Sql:        "select * from test_one",
+		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
