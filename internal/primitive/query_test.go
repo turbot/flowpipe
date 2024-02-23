@@ -17,8 +17,8 @@ func TestQueryListAll(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:./database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from employee order by id;",
+		schema.AttributeTypeDatabase: "sqlite:./database_files/employee.db",
+		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -130,9 +130,9 @@ func TestQueryWithArgs(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from employee where id = $1;",
-		schema.AttributeTypeArgs:             []interface{}{10},
+		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:      "select * from employee where id = $1;",
+		schema.AttributeTypeArgs:     []interface{}{10},
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -160,9 +160,9 @@ func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "SELECT * from employee where name like $1;",
-		schema.AttributeTypeArgs:             []interface{}{"Jo%"},
+		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:      "SELECT * from employee where name like $1;",
+		schema.AttributeTypeArgs:     []interface{}{"Jo%"},
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -196,8 +196,8 @@ func TestQueryTableNotFound(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from user;",
+		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:      "select * from user;",
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -212,8 +212,8 @@ func TestQueryNoRows(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from department;",
+		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:      "select * from department;",
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -228,8 +228,8 @@ func TestQueryBadQueryStatement(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "SELECT * employee;",
+		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:      "SELECT * employee;",
 	})
 
 	_, err := hr.Run(ctx, input)
@@ -244,7 +244,7 @@ func TestQueryWithMissingAttributeSql(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "this is a connection string",
+		schema.AttributeTypeDatabase: "this is a connection string",
 	})
 
 	_, err := hr.Run(ctx, input)
@@ -262,8 +262,8 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "this is a connection string",
-		"sql1":                               "select * from employee;",
+		schema.AttributeTypeDatabase: "this is a connection string",
+		"sql1":                       "select * from employee;",
 	})
 
 	_, err := hr.Run(ctx, input)
@@ -281,7 +281,7 @@ func TestQueryWithTimestamp(t *testing.T) {
 	queryPrimitive := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "this is a connection string",
+		schema.AttributeTypeDatabase: "this is a connection string",
 
 		// This query string used to cause issue because we were trying to detect args in the query string, i.e. $1, ? or :name (Oracle)
 		// In retrospect, we believe it's difficult to cover all possible cases especially with complex SQL. So, we decided to remove the
@@ -308,7 +308,7 @@ func TestQueryMissingConnectionString(t *testing.T) {
 	assert.NotNil(err)
 
 	fpErr := err.(perr.ErrorModel)
-	assert.Equal("Query input must define connection_string", fpErr.Detail)
+	assert.Equal("Query input must define database", fpErr.Detail)
 	assert.Equal(400, fpErr.Status)
 }
 
@@ -319,8 +319,8 @@ func TestQueryDuckDB(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "duckdb:./database_files/new_database.duckdb",
-		schema.AttributeTypeSql:              "select * from employee order by id;",
+		schema.AttributeTypeDatabase: "duckdb:./database_files/new_database.duckdb",
+		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -352,8 +352,8 @@ func TestQuerySQLiteDB(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "sqlite:database_files/employee.db",
-		schema.AttributeTypeSql:              "select * from employee order by id;",
+		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
+		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -385,8 +385,8 @@ func TestQueryInvalidDatabase(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "abcd",
-		schema.AttributeTypeSql:              "select * from employee order by id;",
+		schema.AttributeTypeDatabase: "abcd",
+		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
 
 	_, err := hr.Run(ctx, input)
@@ -401,8 +401,8 @@ func XTestQueryMariaDB(t *testing.T) {
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeConnectionString: "mysql://root:flowpipe@tcp(localhost:3306)/flowpipe_test",
-		schema.AttributeTypeSql:              "select * from DataTypeDemo;",
+		schema.AttributeTypeDatabase: "mysql://root:flowpipe@tcp(localhost:3306)/flowpipe_test",
+		schema.AttributeTypeSql:      "select * from DataTypeDemo;",
 	})
 
 	output, err := hr.Run(ctx, input)

@@ -91,8 +91,8 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	queryPrimitive := primitive.Query{}
 
 	input := modconfig.Input{
-		schema.AttributeTypeSql:              config.Sql,
-		schema.AttributeTypeConnectionString: config.ConnectionString,
+		schema.AttributeTypeSql:      config.Sql,
+		schema.AttributeTypeDatabase: config.Database,
 	}
 
 	output, _, err := queryPrimitive.RunWithMetadata(context.Background(), input)
