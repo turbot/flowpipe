@@ -131,6 +131,29 @@ func (suite *DefaultModTestSuite) TestEchoOne() {
 	assert.Equal(1, len(pex.PipelineOutput))
 }
 
+func (suite *DefaultModTestSuite) TestCredInOutput() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.cred_in_step_output", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val"])
+}
+
 func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 	assert := assert.New(suite.T())
 

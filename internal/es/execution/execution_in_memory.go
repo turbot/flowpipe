@@ -180,6 +180,12 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 // This function mutates evalContext
 func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+
+	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. Credentials need to be resolved, and some (AWS) resolution
+	// can be expensive, i.e. getting session token. So we try to "guess" which credentials are required. It's not perfect, especially when the credentials
+	// need to be resolved at runtime. This is because we don't know what the value would be until we run the step.
+	//
+	// If you look at the following function (buildCredentialMapForEvalContext) it tries to guess the credentials that it may need to resolve
 	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
 		params := map[string]cty.Value{}
 
@@ -224,6 +230,7 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 
 	if len(dynamicCredsType) > 0 {
 		for _, v := range params {
+			// Determine if the credential "may" be needed based on the param value.
 			if v.Type() == cty.String && !v.IsNull() {
 				potentialCredName := v.AsString()
 				for _, c := range allCredentials {
