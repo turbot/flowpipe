@@ -1,6 +1,10 @@
 import axios from "axios";
-import { API_BASE_PATH, asyncRequest, useFlowpipeSWR } from "src/api/index.ts";
-import { PipelineInput, PipelineInputResponse } from "src/types/input.ts";
+import {
+  API_BASE_PATH,
+  asyncRequest,
+  useFlowpipeSWR,
+} from "@flowpipe/api/index";
+import { PipelineInput, PipelineInputResponse } from "@flowpipe/types/input";
 
 export const useInputAPI = (
   id: string | null | undefined,

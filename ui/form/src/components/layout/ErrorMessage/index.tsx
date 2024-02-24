@@ -1,6 +1,6 @@
 import ErrorIcon from "@material-symbols/svg-300/rounded/error-fill.svg?react";
-import { classNames } from "utils/style";
-import { PipelingError } from "api/error";
+import { classNames } from "@flowpipe/utils/style";
+import { PipelingError } from "@flowpipe/api/error";
 
 type ErrorMessageProps = {
   as?: "error" | "string";

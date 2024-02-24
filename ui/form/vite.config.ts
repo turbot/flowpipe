@@ -13,15 +13,7 @@ export default defineConfig({
   plugins: [svgr(), react()],
   resolve: {
     alias: {
-      api: "/src/api",
-      assets: "/src/assets",
-      components: "/src/components",
-      hooks: "/src/hooks",
-      lib: "/src/lib",
-      src: "/src",
-      styles: "/src/styles",
-      types: "/src/types",
-      utils: "/src/utils",
+      "@flowpipe": "/src",
     },
   },
 });

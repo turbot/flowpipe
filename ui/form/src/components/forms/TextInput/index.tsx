@@ -1,6 +1,9 @@
 import ErrorIcon from "@material-symbols/svg-300/rounded/error.svg?react";
-import { classNames } from "utils/style.ts";
-import { ThemeNames, useTheme } from "components/layout/ThemeProvider";
+import { classNames } from "@flowpipe/utils/style";
+import {
+  ThemeNames,
+  useTheme,
+} from "@flowpipe/components/layout/ThemeProvider";
 
 interface TextInputProps {
   disabled: boolean;

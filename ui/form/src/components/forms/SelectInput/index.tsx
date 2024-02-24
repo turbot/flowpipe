@@ -1,6 +1,6 @@
 import Select from "react-select";
-import { PipelineInputOption } from "types/input.ts";
-import useSelectInputStyles from "components/forms/SelectInput/useSelectInputStyles.ts";
+import { PipelineInputOption } from "@flowpipe/types/input";
+import useSelectInputStyles from "@flowpipe/components/forms/SelectInput/useSelectInputStyles";
 
 type SelectInputProps = {
   disabled: boolean;

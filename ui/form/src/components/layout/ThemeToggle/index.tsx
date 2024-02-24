@@ -1,7 +1,10 @@
 import LightMode from "@material-symbols/svg-300/rounded/light_mode-fill.svg?react";
 import DarkMode from "@material-symbols/svg-300/rounded/dark_mode-fill.svg?react";
-import { classNames } from "utils/style";
-import { ThemeNames, useTheme } from "components/layout/ThemeProvider";
+import { classNames } from "@flowpipe/utils/style";
+import {
+  ThemeNames,
+  useTheme,
+} from "@flowpipe/components/layout/ThemeProvider";
 
 const ThemeToggle = () => {
   const { theme, setTheme } = useTheme();

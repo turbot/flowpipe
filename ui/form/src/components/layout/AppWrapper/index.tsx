@@ -1,6 +1,6 @@
-import Header from "components/layout/Header";
-import SiteWrapper from "components/layout/SiteWrapper";
-import { FullHeightThemeWrapper } from "components/layout/ThemeProvider";
+import Header from "@flowpipe/components/layout/Header";
+import SiteWrapper from "@flowpipe/components/layout/SiteWrapper";
+import { FullHeightThemeWrapper } from "@flowpipe/components/layout/ThemeProvider";
 import { Outlet } from "react-router-dom";
 
 const AppWrapper = () => {

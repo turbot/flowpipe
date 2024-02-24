@@ -1,12 +1,12 @@
-import AppWrapper from "components/layout/AppWrapper";
-import InputForm from "components/InputForm";
+import AppWrapper from "@flowpipe/components/layout/AppWrapper";
+import InputForm from "@flowpipe/components/InputForm";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { API_FETCHER } from "src/api";
+import { API_FETCHER } from "@flowpipe/api";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { SWRConfig } from "swr";
-import { ThemeProvider } from "components/layout/ThemeProvider";
-import "styles/index.css";
+import { ThemeProvider } from "@flowpipe/components/layout/ThemeProvider";
+import "@flowpipe/styles/index.css";
 
 const router = createBrowserRouter(
   [

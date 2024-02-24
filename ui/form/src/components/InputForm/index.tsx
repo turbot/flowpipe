@@ -1,16 +1,16 @@
-import Button from "components/forms/Button";
-import ErrorMessage from "components/layout/ErrorMessage";
-import FlowpipeLogo from "components/layout/FlowpipeLogo";
-import SuccessMessage from "components/layout/SuccessMessage";
-import TextInput from "components/forms/TextInput";
+import Button from "@flowpipe/components/forms/Button";
+import ErrorMessage from "@flowpipe/components/layout/ErrorMessage";
+import FlowpipeLogo from "@flowpipe/components/layout/FlowpipeLogo";
+import SuccessMessage from "@flowpipe/components/layout/SuccessMessage";
+import TextInput from "@flowpipe/components/forms/TextInput";
 import { Form, Formik } from "formik";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { FormikErrors } from "formik/dist/types";
-import { PipelingError } from "api/error.ts";
-import { PipelineInputOption, PipelineInputType } from "types/input.ts";
-import { useInputAPI } from "api/pipeline.ts";
+import { PipelingError } from "@flowpipe/api/error";
+import { PipelineInputOption, PipelineInputType } from "@flowpipe/types/input";
+import { useInputAPI } from "@flowpipe/api/pipeline";
 import { useParams } from "react-router-dom";
-import SelectInput from "components/forms/SelectInput";
+import SelectInput from "@flowpipe/components/forms/SelectInput";
 
 interface InputFormState {
   status: "pending" | "responded" | "error";

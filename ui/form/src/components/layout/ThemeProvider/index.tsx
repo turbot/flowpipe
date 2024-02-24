@@ -1,6 +1,6 @@
-import useLocalStorage from "hooks/useLocalStorage.ts";
-import useMediaQuery from "hooks/useMediaQuery.ts";
-import { classNames } from "src/utils/style.ts";
+import useLocalStorage from "@flowpipe/hooks/useLocalStorage";
+import useMediaQuery from "@flowpipe/hooks/useMediaQuery";
+import { classNames } from "@flowpipe/utils/style";
 import { createContext, Ref, useContext, useState } from "react";
 
 type Theme = {

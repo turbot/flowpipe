@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useTheme } from "components/layout/ThemeProvider";
+import { useTheme } from "@flowpipe/components/layout/ThemeProvider";
 
 const useSelectInputStyles = () => {
   const [, setRandomVal] = useState(0);

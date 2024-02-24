@@ -1,7 +1,10 @@
 /// <reference types="vite-plugin-svgr/client" />
-import LogoWordmark from "assets/flowpipe-logo-wordmark.svg?react";
-import LogoWordmarkDarkmode from "assets/flowpipe-logo-wordmark-darkmode.svg?react";
-import { ThemeNames, useTheme } from "components/layout/ThemeProvider";
+import LogoWordmark from "@flowpipe/assets/flowpipe-logo-wordmark.svg?react";
+import LogoWordmarkDarkmode from "@flowpipe/assets/flowpipe-logo-wordmark-darkmode.svg?react";
+import {
+  ThemeNames,
+  useTheme,
+} from "@flowpipe/components/layout/ThemeProvider";
 
 const FlowpipeLogo = () => {
   const { theme } = useTheme();

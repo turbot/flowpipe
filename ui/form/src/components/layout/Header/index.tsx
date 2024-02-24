@@ -1,4 +1,4 @@
-import ThemeToggle from "components/layout/ThemeToggle";
+import ThemeToggle from "@flowpipe/components/layout/ThemeToggle";
 
 const Header = () => {
   return (

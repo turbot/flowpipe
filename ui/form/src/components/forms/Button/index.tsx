@@ -1,4 +1,4 @@
-import { classNames } from "utils/style.ts";
+import { classNames } from "@flowpipe/utils/style";
 import { ReactNode } from "react";
 
 interface ButtonProps {

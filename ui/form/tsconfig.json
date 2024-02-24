@@ -22,15 +22,7 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "api/*": ["./src/api/*"],
-      "assets/*": ["./src/assets/*"],
-      "components/*":["./src/components/*"],
-      "hooks/*":["./src/hooks/*"],
-      "lib": ["./src/lib/*"],
-      "src/*": ["./src/*"],
-      "styles/*": ["./src/styles/*"],
-      "types/*": ["./src/types/*"],
-      "utils/*": ["./src/utils/*"]
+      "@flowpipe/*": ["./src/*"],
     }
   },
   "include": ["src"],

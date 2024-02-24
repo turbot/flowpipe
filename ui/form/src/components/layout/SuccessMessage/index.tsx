@@ -1,5 +1,5 @@
 import SuccessIcon from "@material-symbols/svg-300/rounded/check_circle-fill.svg?react";
-import { classNames } from "utils/style";
+import { classNames } from "@flowpipe/utils/style";
 
 type ErrorMessageProps = {
   className?: string;
