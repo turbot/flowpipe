@@ -13,10 +13,10 @@ const router = createBrowserRouter(
     {
       path: "/",
       element: <AppWrapper />,
-      children: [{ path: "input/:id/:hash", element: <InputForm /> }],
+      children: [{ path: ":id/:hash", element: <InputForm /> }],
     },
   ],
-  { basename: "/webform" },
+  { basename: "/form" },
 );
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

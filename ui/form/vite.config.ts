@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: "/webform",
+  base: "/form",
   server: {
     proxy: {
       "/api": "http://localhost:7103",
