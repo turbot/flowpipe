@@ -56,6 +56,12 @@ const useSelectInputStyles = () => {
         color: foreground,
       };
     },
+    placeholder: (provided) => {
+      return {
+        ...provided,
+        color: foreground,
+      };
+    },
     singleValue: (provided) => {
       return {
         ...provided,
