@@ -62,6 +62,7 @@ const InputOptions = ({
             <Button
               key={o.value}
               disabled={submitting || formState.status === "responded"}
+              style="primary"
               type="button"
               onClick={async () => {
                 await setFieldValue("values", [o.value], true);
@@ -100,6 +101,7 @@ const InputOptions = ({
               disabled={
                 !valid || submitting || formState.status === "responded"
               }
+              style="primary"
               type="submit"
               onClick={onSubmit}
             >
@@ -132,6 +134,7 @@ const InputOptions = ({
               disabled={
                 !valid || submitting || formState.status === "responded"
               }
+              style="primary"
               type="submit"
               onClick={onSubmit}
             >
@@ -194,14 +197,14 @@ const InputForm = () => {
           {input && (
             <>
               {(input.status === "starting" || input.status === "started") && (
-                <h3 className="text-base font-semibold leading-6 text-foreground">
+                <span className="font-semibold leading-6 text-foreground">
                   {input.prompt}
-                </h3>
+                </span>
               )}
               {input.status === "finished" && (
-                <h3 className="text-base font-semibold leading-6 text-foreground">
+                <span className="font-semibold leading-6 text-foreground">
                   Input has already been responded to.
-                </h3>
+                </span>
               )}
               {input.status === "error" && (
                 <ErrorMessage withIcon error="Input is in a failed state." />
