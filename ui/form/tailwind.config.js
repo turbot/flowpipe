@@ -6,7 +6,7 @@ export default {
     extend: {
       colors: {
         background: "var(--color-background)",
-        foreground: "rgb(var(--color-foreground) / <alpha-value>)",
+        foreground: "var(--color-foreground)",
         "foreground-light": "var(--color-foreground-light)",
         "flowpipe-blue": "rgb(var(--color-flowpipe-blue) / <alpha-value>)",
         "flowpipe-blue-dark":

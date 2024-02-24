@@ -4,7 +4,7 @@
 
 .theme-pipeling-default {
     --color-background: theme("colors.gray.200");
-    --color-foreground: 34 34 34 /* #222 */;
+    --color-foreground: #222;
     --color-foreground-light: theme("colors.gray.400");
     --color-modal: theme("colors.white");
     --color-modal-divide: theme("colors.gray.200");
@@ -17,7 +17,7 @@
 
 .theme-pipeling-dark {
     --color-background: theme("colors.gray.800");
-    --color-foreground: 229 231 235 /* #e5e7eb */;
+    --color-foreground: #e5e7eb;
     --color-foreground-light: theme("colors.gray.400");
     --color-modal: theme("colors.gray.600");
     --color-modal-divide: theme("colors.gray.800");
