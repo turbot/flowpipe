@@ -536,7 +536,11 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 	switch integration.GetIntegrationType() {
 	case schema.IntegrationTypeWebform, schema.IntegrationTypeSlack:
 		integrationName := fmt.Sprintf("integration.%s", integration.GetHclResourceImpl().FullName)
-		hashString := util.CalculateHash(integrationName, salt)
+		hashString, err := util.CalculateHash(integrationName, salt)
+		if err != nil {
+			slog.Error("error computing hash", err)
+			return err
+		}
 
 		integrationUrl := fmt.Sprintf("%s/api/latest/hook/%s/%s", util.GetBaseUrl(), integrationName, hashString)
 		integration.SetUrl(integrationUrl)
@@ -575,7 +579,10 @@ func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
 		return "", perr.InternalWithMessage("salt not found")
 	}
 
-	hashString := util.CalculateHash(trigger.FullName, salt)
+	hashString, err := util.CalculateHash(trigger.FullName, salt)
+	if err != nil {
+		return "", perr.InternalWithMessage("error calculating hash")
+	}
 	baseUrl := util.GetBaseUrl()
 
 	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, trigger.FullName, hashString), nil

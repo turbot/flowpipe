@@ -54,7 +54,11 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
 		return
 	}
-	hashString := util.CalculateHash(uri.ID, salt)
+	hashString, err := util.CalculateHash(uri.ID, salt)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
+		return
+	}
 	if hashString != uri.Hash {
 		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
 		return
@@ -141,9 +145,12 @@ func (api *APIService) getInputStepInput(c *gin.Context) {
 
 	// TODO: devise a better approach
 	name := "integration.webform.default"
-	hash := util.CalculateHash(name, salt)
+	hash, err := util.CalculateHash(name, salt)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
+		return
+	}
 	rUrl, _ := url.JoinPath(util.GetBaseUrl(), "api", "latest", "hook", name, hash)
-	// rUrl := fmt.Sprintf("http://%s/api/latest/hook/%s/%s", c.Request.Host, name, hash)
 	output.ResponseURL = &rUrl
 
 	c.JSON(http.StatusOK, output)
