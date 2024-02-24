@@ -51,7 +51,7 @@ const InputOptions = ({
   switch (inputType) {
     case "button":
       return (
-        <div className="flex items-center space-x-2 justify-end">
+        <div className="flex flex-wrap items-center space-x-2 space-y-2 justify-end">
           {formState.status === "error" && formState.error && (
             <ErrorMessage error={formState.error} />
           )}
