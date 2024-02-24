@@ -10,7 +10,7 @@ const FlowpipeLogo = () => {
   const { theme } = useTheme();
   return (
     <div className="mr-1 md:mr-4">
-      <div className="w-40">
+      <div className="w-28">
         {theme.name === ThemeNames.PIPELING_DEFAULT && <LogoWordmark />}
         {theme.name === ThemeNames.PIPELING_DARK && <LogoWordmarkDarkmode />}
       </div>

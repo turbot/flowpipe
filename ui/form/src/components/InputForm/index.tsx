@@ -188,9 +188,6 @@ const InputForm = () => {
   return (
     <div className="mx-auto my-auto">
       <div className="flex flex-col divide-y divide-modal-divide overflow-hidden rounded-lg bg-modal shadow w-screen md:min-w-xl max-w-xl">
-        <div className="px-4 py-4">
-          <FlowpipeLogo />
-        </div>
         <div className="px-4 py-5">
           {error && <ErrorMessage withIcon error={error} />}
           {loading && "Loading..."}
@@ -270,6 +267,9 @@ const InputForm = () => {
             )}
           </div>
         )}
+      </div>
+      <div className="ml-4 mt-4">
+        <FlowpipeLogo />
       </div>
     </div>
   );
