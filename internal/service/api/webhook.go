@@ -171,7 +171,11 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	hashString := util.CalculateHash(webhookTriggerName, salt)
+	hashString, err := util.CalculateHash(webhookTriggerName, salt)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("error validating hash"))
+		return
+	}
 
 	if hashString != webhookTriggerHash {
 		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for webhook "+webhookTriggerName))
@@ -379,7 +383,11 @@ func (api *APIService) runIntegrationHook(c *gin.Context) {
 		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
 		return
 	}
-	hashString := util.CalculateHash(webhookUri.Hook, salt)
+	hashString, err := util.CalculateHash(webhookUri.Hook, salt)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("error validating hash"))
+		return
+	}
 	if hashString != webhookUri.Hash {
 		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash for integration "+integrationName))
 		return

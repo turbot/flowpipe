@@ -48,6 +48,9 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 	if err != nil {
 		return "", err
 	}
-	hash := CalculateHash(last8, salt)
+	hash, err := CalculateHash(last8, salt)
+	if err != nil {
+		return "", err
+	}
 	return url.JoinPath(baseUrl, "webform", "input", last8, hash)
 }
