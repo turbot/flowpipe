@@ -156,7 +156,7 @@ func (api *APIService) Start() error {
 	//   - stack means whether output the stack info.
 	router.Use(ginrecovery.New(log.FlowpipeLoggerWithLevelAndWriter(slog.LevelDebug, os.Stderr)))
 
-	router.Use(middleware.Serve("/webform", middleware.LocalFile("./", true, "index.html", contentFS)))
+	router.Use(middleware.Serve("/form", middleware.LocalFile("./", true, "index.html", contentFS)))
 	// router.Use(static.Serve("/webform", static.EmbedFolder(assetFs, "assets")))
 
 	apiPrefixGroup := router.Group(common.APIPrefix())
@@ -228,7 +228,7 @@ func (api *APIService) Start() error {
 		method := c.Request.Method
 		if strings.HasPrefix(path, "/api") {
 			c.JSON(http.StatusNotFound, gin.H{"error": perr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
-		} else if strings.HasPrefix(path, "/webform") {
+		} else if strings.HasPrefix(path, "/form") {
 			// One would think that the redirection is c.FileFromFS("index.html", http.FS(contentFS))
 			// however this creates an infinite loop of redirections.
 			//
