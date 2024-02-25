@@ -1,0 +1,4 @@
+integration "slack" "my_default_slack_app" {
+  token           = "xoxp-222223"
+  signing_secret  = "Q#$$#@#$$#W"
+}

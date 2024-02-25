@@ -6,6 +6,15 @@ pipeline "simple_param" {
     }
 
     step "transform" "name" {
-        value = "echo ${param.name}"
+        value = "echo 6 ${param.name}"
+    }
+
+    step "transform" "name_2" {
+        value = "echo 6 ${param.name}"
+    }
+
+
+    output "val" {
+        value = step.transform.name.value
     }
 }

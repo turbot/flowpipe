@@ -194,7 +194,8 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]credential.Credential) (map[string]cty.Value, error) {
 	credentialMap := map[string]cty.Value{}
 
-	cache := cache.GetCache()
+	cache := cache.GetCredentialCache()
+
 	for _, c := range allCredentials {
 		parts := strings.Split(c.Name(), ".")
 		if len(parts) != 2 {
@@ -212,6 +213,14 @@ func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[st
 				return nil, err
 			}
 
+			// this cache is meant for credentials that need to be resolved, i.e. AWS with temp creds
+			// however this can cause issue if user specified non-temp creds for AWS. This is because we will be caching the static creds, i.e. access_key
+			// and if the underlying value was changed, Flowpipe will correctly reload the static creds but then it will fail here
+			// when we get the **old** static creds from the cache!
+			//
+			// We can't let the credentials "decide" if ttl > 0 because it can change from static -> temp creds and vice versa
+			//
+			// The only way to solve this issue is to wipe the credential cache when Flowpipe config is updated.
 			if newC.GetTtl() > 0 {
 				cache.SetWithTTL(c.GetHclResourceImpl().FullName, newC, time.Duration(newC.GetTtl())*time.Second)
 			}
