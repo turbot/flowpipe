@@ -271,7 +271,7 @@ const InputForm = () => {
           </div>
         )}
       </div>
-      <div className="ml-4 mt-4">
+      <div className="flex ml-4 mt-4 justify-end">
         <FlowpipeLogo />
       </div>
     </div>
