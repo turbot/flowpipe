@@ -19,6 +19,7 @@ _Bug fixes_
 * Pipeline param default value data type is now validated against the specified type ([#262](https://github.com/turbot/pipe-fittings/issues/262)).
 * Removed titles when merging multiple error messages ([#263](https://github.com/turbot/pipe-fittings/issues/263)).
 * Scheduled triggers should be refreshed when the mod file has changed.
+* Runtime resolution of credentials.
 
 ## v0.2.3 [2024-02-13]
 

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -158,7 +159,7 @@ func ListAllTriggers() ([]modconfig.Trigger, error) {
 }
 
 func GetFlowpipeConfig() (*flowpipeconfig.FlowpipeConfig, error) {
-	flowpipeConfigCached, found := cache.GetCache().Get("#flowpipeconfig")
+	flowpipeConfigCached, found := cache.GetCache().Get(constants.FlowpipeConfigCacheKey)
 
 	if !found {
 		// TODO: if we return an error all our "non mod based test" fail

@@ -9,12 +9,13 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
+	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/filepaths"
@@ -56,7 +57,8 @@ const (
 type Manager struct {
 	ctx context.Context
 
-	RootMod *modconfig.Mod
+	RootMod   *modconfig.Mod
+	workspace *workspace.Workspace
 
 	// Services
 	ESService        *es.ESService
@@ -73,14 +75,19 @@ type Manager struct {
 	Status    string
 	StartedAt *time.Time
 	StoppedAt *time.Time
+
+	fpConfigLoadLock *sync.Mutex
+	rootModLoadLock  *sync.Mutex
 }
 
 // NewManager creates a new Manager.
 func NewManager(ctx context.Context, opts ...ManagerOption) *Manager {
 	// Defaults
 	m := &Manager{
-		ctx:    ctx,
-		Status: "initialized",
+		ctx:              ctx,
+		Status:           "initialized",
+		fpConfigLoadLock: &sync.Mutex{},
+		rootModLoadLock:  &sync.Mutex{},
 	}
 	// Set options
 	for _, opt := range opts {
@@ -196,9 +203,9 @@ func (m *Manager) initializeResources() error {
 	modLocation := viper.GetString(constants.ArgModLocation)
 	slog.Info("Starting Flowpipe", "modLocation", modLocation)
 
-	var pipelines map[string]*modconfig.Pipeline
-	var triggers map[string]*modconfig.Trigger
 	var mod *modconfig.Mod
+
+	var rootModName string
 
 	if _, exists := parse.ModFileExists(modLocation); exists {
 		// build the list of possible config path locations
@@ -213,7 +220,7 @@ func (m *Manager) initializeResources() error {
 		// Add the "Credentials" in the context
 		// effectively forever .. we don't want to expire the config
 		if flowpipeConfig != nil {
-			cache.GetCache().SetWithTTL("#flowpipeconfig", flowpipeConfig, 24*7*52*99*time.Hour)
+			cache.GetCache().SetWithTTL(fpconstants.FlowpipeConfigCacheKey, flowpipeConfig, 24*7*52*99*time.Hour)
 		}
 
 		err = m.cacheConfigData()
@@ -222,58 +229,29 @@ func (m *Manager) initializeResources() error {
 		}
 
 		if m.shouldStartAPI() {
+			flowpipeConfig.OnFileWatcherEvent = m.flowpipeConfigUpdated
 			err := flowpipeConfig.SetupWatcher(context.TODO(), func(c context.Context, e error) {
-
+				slog.Error("error watching flowpipe config", "error", e)
 			})
+
 			if err != nil {
 				return err
 			}
 		}
 
-		w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
-			m.ctx,
-			modLocation,
-			workspace.WithCredentials(flowpipeConfig.Credentials),
-			workspace.WithIntegrations(flowpipeConfig.Integrations),
-			workspace.WithNotifiers(flowpipeConfig.Notifiers))
-		if errorAndWarning.Error != nil {
-			return errorAndWarning.Error
+		err = m.loadMod()
+		if err != nil {
+			return err
 		}
-
-		// if we are running in server mode, setup the file watcher
-		if m.shouldStartAPI() {
-			if err := m.setupWatcher(w); err != nil {
-				return err
-			}
-		}
-
-		mod = w.Mod
-
-		pipelines = workspace.GetWorkspaceResourcesOfType[*modconfig.Pipeline](w)
-		triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
 
 	} else {
 		// there is no mod, just load pipelines and triggers from the directory
 		var err error
-		pipelines, triggers, err = load_mod.LoadPipelines(m.ctx, modLocation)
+		pipelines, triggers, err := load_mod.LoadPipelines(m.ctx, modLocation)
 		if err != nil {
 			return err
 		}
-	}
 
-	m.triggers = triggers
-
-	var rootModName string
-	if mod != nil {
-		rootModName = mod.ShortName
-		if mod.Require != nil && mod.Require.FlowpipeVersionConstraint() != nil {
-			flowpipeCliVersion := viper.GetString("main.version")
-			flowpipeSemverVersion := semver.MustParse(flowpipeCliVersion)
-			if !mod.Require.FlowpipeVersionConstraint().Check(flowpipeSemverVersion) {
-				return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, rootModName, mod.Require.Flowpipe.MinVersionString))
-			}
-		}
-	} else {
 		rootModName = "local"
 		mod = &modconfig.Mod{
 			ResourceMaps: &modconfig.ResourceMaps{
@@ -281,73 +259,19 @@ func (m *Manager) initializeResources() error {
 				Triggers:  triggers,
 			},
 		}
-	}
 
-	cache.GetCache().SetWithTTL("#rootmod.name", rootModName, 24*7*52*99*time.Hour)
-	err := m.cacheModData(mod)
-	if err != nil {
-		return err
-	}
+		m.triggers = triggers
+		m.RootMod = mod
 
-	slog.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers), "rootMod", rootModName)
-
-	m.RootMod = mod
-
-	return nil
-}
-
-func (m *Manager) setupWatcher(w *workspace.Workspace) error {
-	if !viper.GetBool(constants.ArgWatch) {
-		return nil
-	}
-
-	err := w.SetupWatcher(m.ctx, func(c context.Context, e error) {
-		slog.Error("error watching workspace", "error", e)
-		if output.IsServerMode {
-			output.RenderServerOutput(c, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), fmt.Sprintf("Failed watching workspace for mod %s", w.Mod.Name()), e))
-		}
-		m.apiService.ModMetadata.IsStale = true
-	})
-
-	if err != nil {
-		return err
-	}
-
-	w.SetOnFileWatcherEventMessages(func() {
-		var serverOutput []sanitize.SanitizedStringer
-		slog.Info("caching pipelines and triggers")
-		serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "flowpipe"), m.RootMod.Name(), true))
-		m.triggers = w.Mod.ResourceMaps.Triggers
-		err = m.cacheModData(w.Mod)
+		cache.GetCache().SetWithTTL("#rootmod.name", rootModName, 24*7*52*99*time.Hour)
+		err = m.cacheModData(mod)
 		if err != nil {
-			slog.Error("error caching pipelines and triggers", "error", err)
-			serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "Failed caching pipelines and triggers", err))
-		} else {
-			slog.Info("cached pipelines and triggers")
-			serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "flowpipe", "Cached pipelines and triggers"))
-			m.apiService.ModMetadata.IsStale = false
-			m.apiService.ModMetadata.LastLoaded = time.Now()
+			return err
 		}
 
-		// Reload scheduled triggers
-		slog.Info("rescheduling triggers")
-		if m.schedulerService != nil {
-			m.schedulerService.Triggers = w.Mod.ResourceMaps.Triggers
-			err := m.schedulerService.RescheduleTriggers()
-			if err != nil {
-				slog.Error("error rescheduling triggers", "error", err)
-				serverOutput = append(serverOutput, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "Failed rescheduling triggers", err))
-			} else {
-				slog.Info("rescheduled triggers")
-				serverOutput = append(serverOutput, types.NewServerOutput(time.Now(), "flowpipe", "Rescheduled triggers"))
-				serverOutput = append(serverOutput, renderServerTriggers(m.triggers)...)
-			}
-		}
+		slog.Info("Pipelines and triggers loaded", "pipelines", len(pipelines), "triggers", len(triggers))
+	}
 
-		if output.IsServerMode {
-			output.RenderServerOutput(m.ctx, serverOutput...)
-		}
-	})
 	return nil
 }
 
@@ -548,6 +472,8 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 	return nil
 }
 
+// TODO: rethink this approach. The cache is not deleted if the resource is removed. We also cache FlowpipeConfig in memory so this function is redundant
+// TODO: except where we calculate the server side attribute such as URL
 func cacheHclResource[T modconfig.HclResource](resourceType string, items map[string]T, cacheIndividualResource bool, individualProcessor func(T) error) error {
 	inMemoryCache := cache.GetCache()
 
