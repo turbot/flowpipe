@@ -197,7 +197,7 @@ func (api *APIService) Start() error {
 	api.ProcessRegisterAPI(apiPrefixGroup)
 	api.DocsRegisterAPI(apiPrefixGroup)
 	api.WebhookRegisterAPI(apiPrefixGroup)
-	api.InputRegisterAPI(apiPrefixGroup)
+	api.FormRegisterAPI(apiPrefixGroup)
 	api.ModRegisterAPI(apiPrefixGroup)
 	api.IntegrationRegisterAPI(apiPrefixGroup)
 	api.NotifierRegisterAPI(apiPrefixGroup)
@@ -228,7 +228,7 @@ func (api *APIService) Start() error {
 		method := c.Request.Method
 		if strings.HasPrefix(path, "/api") {
 			c.JSON(http.StatusNotFound, gin.H{"error": perr.NotFoundWithMessage(fmt.Sprintf("API Not Found: %s %s.", method, path))})
-		} else if strings.HasPrefix(path, "/webform") {
+		} else if strings.HasPrefix(path, "/form") {
 			// One would think that the redirection is c.FileFromFS("index.html", http.FS(contentFS))
 			// however this creates an infinite loop of redirections.
 			//

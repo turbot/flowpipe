@@ -38,7 +38,7 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 
 	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
 		// in test env there's no global salt
-		return "http://localhost:7103/webform/input/" + sExecId + "/abcdefg", nil
+		return "http://localhost:7103/form/" + sExecId + "/abcdefg", nil
 	}
 
 	baseUrl := GetBaseUrl()
@@ -52,5 +52,5 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 	if err != nil {
 		return "", err
 	}
-	return url.JoinPath(baseUrl, "webform", "input", last8, hash)
+	return url.JoinPath(baseUrl, "form", last8, hash)
 }
