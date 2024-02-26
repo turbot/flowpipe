@@ -1,6 +1,8 @@
 pipeline "input_webform_button_multiple" {
 
   step "input" "my_step" {
+    notifier = notifier.default
+
     type     = "button"
     prompt   = "Do you want to approve?"
 
