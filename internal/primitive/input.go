@@ -204,6 +204,7 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 					e := NewInputIntegrationEmail(base)
 					icm := &InputIntegrationEmailInputStepMessageCreator{
 						InputIntegrationEmail: &e,
+						Prompt:                &prompt,
 					}
 
 					e.MessageCreator = icm
@@ -306,7 +307,8 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 type InputIntegrationEmailInputStepMessageCreator struct {
 	*InputIntegrationEmail
 
-	Prompt *string
+	Prompt    *string
+	InputType *string
 }
 
 func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, error) {
@@ -324,7 +326,8 @@ func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, erro
 	}
 
 	prompt := kitTypes.SafeString(icm.Prompt)
-	templateMessage, err := parseEmailInputTemplate(icm.InputIntegrationEmail, prompt)
+	inputType := kitTypes.SafeString(icm.InputType)
+	templateMessage, err := parseEmailInputTemplate(icm.InputIntegrationEmail, prompt, inputType)
 	if err != nil {
 		return "", err
 	}
@@ -334,22 +337,29 @@ func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, erro
 
 }
 
-func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string) (string, error) {
-	templateFile, err := templates.HTMLTemplate("link-to-webform.html")
+func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, inputType string) (string, error) {
+	templateFileName := "input-form-link.html"
+	var data any
+	switch inputType {
+	case "todo-button":
+	// TODO: Insert button template
+	default:
+		templateFileName = "input-form-link.html"
+		data = struct {
+			FormUrl string
+			Prompt  string
+		}{
+			FormUrl: i.FormUrl,
+			Prompt:  prompt,
+		}
+	}
+	templateFile, err := templates.HTMLTemplate(templateFileName)
 	if err != nil {
 		return "", perr.InternalWithMessage("error while reading the email template")
 	}
 	tmpl, err := template.New("email").Parse(string(templateFile))
 	if err != nil {
 		return "", perr.InternalWithMessage("error while parsing the email template")
-	}
-
-	data := struct {
-		FormUrl string
-		Prompt  string
-	}{
-		FormUrl: i.FormUrl,
-		Prompt:  prompt,
 	}
 
 	var body strings.Builder
