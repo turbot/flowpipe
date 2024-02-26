@@ -10,19 +10,19 @@ import (
 
 func MapStepExecutionID(executionID, pipelineExecutionID, stepExecutionID string) string {
 
-	// get the last 8 chars of stepExecutionID
-	last8 := stepExecutionID[len(stepExecutionID)-8:]
+	// get stepExecutionID without sexec_ prefix
+	key := strings.TrimPrefix(stepExecutionID, "sexec_")
 
 	fullID := fmt.Sprintf("%s.%s.%s", executionID, pipelineExecutionID, stepExecutionID)
 
 	// effectively forever
-	cache.GetCache().SetWithTTL(last8, fullID, 10*365*24*time.Hour)
+	cache.GetCache().SetWithTTL(key, fullID, 10*365*24*time.Hour)
 
-	return last8
+	return key
 }
 
-func ResolveShortStepExecutionID(last8 string) (executionID string, pipelineExecutionID string, stepExecutionID string, found bool) {
-	fullID, found := cache.GetCache().Get(last8)
+func ResolveShortStepExecutionID(key string) (executionID string, pipelineExecutionID string, stepExecutionID string, found bool) {
+	fullID, found := cache.GetCache().Get(key)
 	if !found {
 		return "", "", "", false
 	}
@@ -37,6 +37,6 @@ func ResolveShortStepExecutionID(last8 string) (executionID string, pipelineExec
 }
 
 func RemoveStepExecutionIDMap(stepExecutionID string) {
-	last8 := stepExecutionID[len(stepExecutionID)-8:]
-	cache.GetCache().Delete(last8)
+	key := strings.TrimPrefix(stepExecutionID, "sexec_")
+	cache.GetCache().Delete(key)
 }

@@ -65,7 +65,7 @@ const useSelectInputStyles = () => {
     singleValue: (provided) => {
       return {
         ...provided,
-        backgroundColor: background,
+        backgroundColor: backgroundModal,
         color: foreground,
       };
     },

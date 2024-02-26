@@ -4,7 +4,7 @@ export interface PipelineInputOption {
   selected?: boolean;
 }
 
-export type PipelineInputStatus =
+export type PipelineFormStatus =
   | "pending"
   | "starting"
   | "started"
@@ -13,20 +13,24 @@ export type PipelineInputStatus =
 
 export type PipelineInputType = "button" | "text" | "select" | "multiselect";
 
-export interface PipelineInput {
-  execution_id: string;
-  pipeline_execution_id: string;
-  step_execution_id: string;
-  status: PipelineInputStatus;
+export interface PipelineFormInput {
   prompt?: string;
   input_type: PipelineInputType;
   options: PipelineInputOption[];
-  response_url: string;
 }
 
-export interface PipelineInputResponse {
+export interface PipelineFormInputs {
+  [input_name: string]: PipelineFormInput;
+}
+
+export interface PipelineForm {
   execution_id: string;
   pipeline_execution_id: string;
   step_execution_id: string;
-  values: string[];
+  status: PipelineFormStatus;
+  inputs: PipelineFormInputs;
+}
+
+export interface InputFormValues {
+  [input_name: string]: string | string[];
 }

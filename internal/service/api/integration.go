@@ -14,6 +14,9 @@ import (
 func (api *APIService) IntegrationRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/integration", api.listIntegrations)
 	router.GET("/integration/:integration_name", api.getIntegration)
+
+	// integration specific handlers
+	router.POST("/integration/slack/:id/:hash", api.slackPostHandler)
 }
 
 // @Summary List integrations

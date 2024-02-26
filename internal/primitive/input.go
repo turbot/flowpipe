@@ -3,8 +3,12 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"html/template"
+	"strings"
 
+	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/go-kit/helpers"
+	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -130,11 +134,7 @@ func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	return nil
 }
 
-func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
-	if err := ip.ValidateInput(ctx, input); err != nil {
-		return nil, err
-	}
-
+func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	output := &modconfig.Output{}
 
 	base := NewInputIntegrationBase(ip)
@@ -202,6 +202,12 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 					// TODO: implement output
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
+					icm := &InputIntegrationEmailInputStepMessageCreator{
+						InputIntegrationEmail: e,
+					}
+
+					e.MessageCreator = icm
+
 					if formUrl, ok := input["webform_url"].(string); ok {
 						e.FormUrl = formUrl
 					}
@@ -227,16 +233,40 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 					if from, ok := integration[schema.AttributeTypeFrom].(string); ok {
 						e.From = from
 					}
+
 					if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
 						for _, t := range to {
 							e.To = append(e.To, t.(string))
 						}
-					} else if to, ok := integration[schema.AttributeTypeDefaultRecipient].(string); ok {
-						e.To = append(e.To, to)
+					} else if to, ok := integration[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range to {
+							e.To = append(e.To, t.(string))
+						}
 					}
+
+					if cc, ok := notify[schema.AttributeTypeCc].([]any); ok {
+						for _, c := range cc {
+							e.Cc = append(e.Cc, c.(string))
+						}
+					} else if cc, ok := integration[schema.AttributeTypeCc].([]any); ok {
+						for _, c := range cc {
+							e.Cc = append(e.Cc, c.(string))
+						}
+					}
+
+					if bcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
+						for _, b := range bcc {
+							e.Bcc = append(e.Bcc, b.(string))
+						}
+					} else if bcc, ok := integration[schema.AttributeTypeBcc].([]any); ok {
+						for _, b := range bcc {
+							e.Bcc = append(e.Bcc, b.(string))
+						}
+					}
+
 					if sub, ok := notify[schema.AttributeTypeSubject].(string); ok {
 						e.Subject = sub
-					} else if sub, ok := integration[schema.AttributeTypeDefaultSubject].(string); ok {
+					} else if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
 						e.Subject = sub
 					}
 					if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
@@ -263,4 +293,72 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 	}
 
 	return output, nil
+}
+
+func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+	if err := ip.ValidateInput(ctx, input); err != nil {
+		return nil, err
+	}
+
+	return ip.execute(ctx, input)
+}
+
+type InputIntegrationEmailInputStepMessageCreator struct {
+	InputIntegrationEmail
+
+	Prompt *string
+}
+
+func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, error) {
+
+	header := make(map[string]string)
+	header["From"] = icm.InputIntegrationEmail.From
+	header["To"] = strings.Join(icm.InputIntegrationEmail.To, ", ")
+	header["Subject"] = icm.InputIntegrationEmail.Subject
+	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
+	header["MIME-version"] = "1.0;"
+
+	var message string
+	for key, value := range header {
+		message += fmt.Sprintf("%s: %s\r\n", key, value)
+	}
+
+	prompt := kitTypes.SafeString(icm.Prompt)
+	templateMessage, err := parseEmailInputTemplate(&icm.InputIntegrationEmail, prompt)
+	if err != nil {
+		return "", err
+	}
+	message += templateMessage
+
+	return message, nil
+
+}
+
+func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string) (string, error) {
+	templateFile, err := templates.HTMLTemplate("link-to-webform.html")
+	if err != nil {
+		return "", perr.InternalWithMessage("error while reading the email template")
+	}
+	tmpl, err := template.New("email").Parse(string(templateFile))
+	if err != nil {
+		return "", perr.InternalWithMessage("error while parsing the email template")
+	}
+
+	data := struct {
+		FormUrl string
+		Prompt  string
+	}{
+		FormUrl: i.FormUrl,
+		Prompt:  prompt,
+	}
+
+	var body strings.Builder
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		return "", perr.BadRequestWithMessage("error while executing the email template")
+	}
+
+	tempMessage := body.String()
+
+	return tempMessage, nil
 }
