@@ -10,3 +10,5 @@ default_mod/.flowpipe/store
 default_mod/.flowpipe/internal
 
 flowpipe.db
+
+private_mod

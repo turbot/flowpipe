@@ -4,16 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/mail"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
 	"strconv"
-	"strings"
-	"text/template"
 	"time"
 
-	"github.com/turbot/flowpipe/templates"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -21,18 +17,26 @@ import (
 	kitTypes "github.com/turbot/go-kit/types"
 )
 
+type InputIntegrationEmailMessage interface {
+	Message() (string, error)
+}
+
 type InputIntegrationEmail struct {
 	InputIntegrationBase
-	Host       *string
-	Port       *int64
-	SecurePort *int64
-	Tls        *string
-	To         []string
-	From       string
-	Subject    string
-	User       *string
-	Pass       *string
-	FormUrl    string
+
+	MessageCreator InputIntegrationEmailMessage
+	Host           *string
+	Port           *int64
+	SecurePort     *int64
+	Tls            *string
+	To             []string
+	Cc             []string
+	Bcc            []string
+	From           string
+	Subject        string
+	User           *string
+	Pass           *string
+	FormUrl        string
 }
 
 func NewInputIntegrationEmail(base InputIntegrationBase) InputIntegrationEmail {
@@ -185,30 +189,18 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType stri
 	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
 	auth := smtp.PlainAuth("", kitTypes.SafeString(ip.User), kitTypes.SafeString(ip.Pass), host)
 
-	from := mail.Address{
-		Name:    ip.From,
-		Address: ip.From,
-	}
-
-	header := make(map[string]string)
-	header["From"] = from.String()
-	header["To"] = strings.Join(ip.To, ", ")
-	header["Subject"] = ip.Subject
-	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
-	header["MIME-version"] = "1.0;"
-
-	var message string
-	for key, value := range header {
-		message += fmt.Sprintf("%s: %s\r\n", key, value)
-	}
-	templateMessage, err := parseEmailInputTemplate(ip, prompt)
-	if err != nil {
-		return nil, err
-	}
-	message += templateMessage
+	// from := mail.Address{
+	// 	Name:    ip.From,
+	// 	Address: ip.From,
+	// }
 
 	output := modconfig.Output{
 		Data: map[string]interface{}{},
+	}
+
+	message, err := ip.MessageCreator.Message()
+	if err != nil {
+		return nil, err
 	}
 
 	output.Data[schema.AttributeTypeStartedAt] = time.Now().UTC()
@@ -242,33 +234,4 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType stri
 	}
 
 	return &output, nil
-}
-
-func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string) (string, error) {
-	templateFile, err := templates.HTMLTemplate("link-to-webform.html")
-	if err != nil {
-		return "", perr.InternalWithMessage("error while reading the email template")
-	}
-	tmpl, err := template.New("email").Parse(string(templateFile))
-	if err != nil {
-		return "", perr.InternalWithMessage("error while parsing the email template")
-	}
-
-	data := struct {
-		FormUrl string
-		Prompt  string
-	}{
-		FormUrl: i.FormUrl,
-		Prompt:  prompt,
-	}
-
-	var body strings.Builder
-	err = tmpl.Execute(&body, data)
-	if err != nil {
-		return "", perr.BadRequestWithMessage("error while executing the email template")
-	}
-
-	tempMessage := body.String()
-
-	return tempMessage, nil
 }

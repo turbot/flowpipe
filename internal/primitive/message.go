@@ -21,5 +21,10 @@ func (mp *Message) ValidateInput(ctx context.Context, input modconfig.Input) err
 }
 
 func (mp *Message) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
-	return nil, nil
+	err := mp.ValidateInput(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+
+	return mp.Input.execute(ctx, input)
 }
