@@ -1,6 +1,8 @@
 pipeline "input_webform_multiselect_basic" {
 
   step "input" "select_regions" {
+    notifier = notifier.default
+
     type     = "multiselect"
     prompt   = "Select regions:"
 
