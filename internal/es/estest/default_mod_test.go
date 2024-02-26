@@ -245,7 +245,7 @@ func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 
 	assert.NotNil(stepExecution)
 	assert.Equal("starting", stepExecution.Status)
-	assert.True(strings.HasPrefix(stepExecution.Input["webform_url"].(string), "http://localhost:7103/webform/input/"), "webform_url should start with http://localhost:7103/webform/input/ but "+stepExecution.Input["webform_url"].(string))
+	assert.True(strings.HasPrefix(stepExecution.Input["webform_url"].(string), "http://localhost:7103/form"), "webform_url should start with http://localhost:7103/form but "+stepExecution.Input["webform_url"].(string))
 }
 
 func (suite *DefaultModTestSuite) TestInputStepOptionResolution() {
