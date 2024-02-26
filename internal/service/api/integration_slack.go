@@ -88,10 +88,6 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 		return
 	}
 
-	// TODO: Get StepExecution & Obtain Input
-	// TODO: Extract `Labels` for the chosen values
-	// TODO: Return the Labels instead of Values when overwriting the Slack Message
-
 	eventPublished, stepExec, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, resp.Value)
 	if err != nil {
 		common.AbortWithError(c, err)
