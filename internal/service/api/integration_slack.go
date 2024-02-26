@@ -250,16 +250,16 @@ func parseLabelsFromValues(input modconfig.Input, values any) (string, error) {
 		}
 	}
 
-	switch values.(type) {
+	switch t := values.(type) {
 	case string:
-		v := values.(string)
+		v := t
 		if label, ok := valueKeyLabels[v]; ok {
 			return label, nil
 		}
 		return v, nil
 	case []string:
 		var out []string
-		vs := values.([]string)
+		vs := t
 		for _, v := range vs {
 			if label, ok := valueKeyLabels[v]; ok {
 				out = append(out, label)
