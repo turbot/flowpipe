@@ -4,14 +4,14 @@ import {
   asyncRequest,
   useFlowpipeSWR,
 } from "@flowpipe/api/index";
-import { PipelineInput, PipelineInputResponse } from "@flowpipe/types/input";
+import { InputFormValues, PipelineForm } from "@flowpipe/types/input";
 
-export const useInputAPI = (
+export const useFormAPI = (
   id: string | null | undefined,
   hash: string | null | undefined,
 ) => {
-  const { data, loading, error, mutate } = useFlowpipeSWR<PipelineInput>(
-    !!id && !!hash ? `${API_BASE_PATH}/input/${id}/${hash}` : null,
+  const { data, loading, error, mutate } = useFlowpipeSWR<PipelineForm>(
+    !!id && !!hash ? `${API_BASE_PATH}/form/${id}/${hash}` : null,
   );
 
   // const getInput = async () => {
@@ -25,28 +25,24 @@ export const useInputAPI = (
   //   };
   // };
 
-  const postInput = async (
-    response_url: string,
-    input_result: PipelineInputResponse,
-  ) => {
-    const { result, error } = await asyncRequest<PipelineInput>(
+  const postForm = async (form_result: InputFormValues) => {
+    const { result, error } = await asyncRequest<PipelineForm>(
       axios.post,
-      response_url,
-      input_result,
+      `${API_BASE_PATH}/form/${id}/${hash}/submit`,
+      form_result,
       //withIfMatchHeaderConfig(pipeline), // TODO: raise RE IfMatch header
     );
-    console.log({ response_url, input_result, result, error });
     return {
-      input: result ? result.data : null,
+      form: result ? result.data : null,
       error: error ? error : null,
     };
   };
 
   return {
-    input: data,
+    form: data,
     error,
     loading,
     reload: mutate,
-    postInput,
+    postForm,
   };
 };

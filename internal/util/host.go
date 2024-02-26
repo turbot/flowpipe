@@ -42,15 +42,15 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 	}
 
 	baseUrl := GetBaseUrl()
-	last8 := db.MapStepExecutionID(execId, pExecId, sExecId)
+	key := db.MapStepExecutionID(execId, pExecId, sExecId)
 
 	salt, err := GetGlobalSalt()
 	if err != nil {
 		return "", err
 	}
-	hash, err := CalculateHash(last8, salt)
+	hash, err := CalculateHash(key, salt)
 	if err != nil {
 		return "", err
 	}
-	return url.JoinPath(baseUrl, "form", last8, hash)
+	return url.JoinPath(baseUrl, "form", key, hash)
 }

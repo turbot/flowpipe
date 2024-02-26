@@ -197,7 +197,7 @@ func (api *APIService) Start() error {
 	api.ProcessRegisterAPI(apiPrefixGroup)
 	api.DocsRegisterAPI(apiPrefixGroup)
 	api.WebhookRegisterAPI(apiPrefixGroup)
-	api.InputRegisterAPI(apiPrefixGroup)
+	api.FormRegisterAPI(apiPrefixGroup)
 	api.ModRegisterAPI(apiPrefixGroup)
 	api.IntegrationRegisterAPI(apiPrefixGroup)
 	api.NotifierRegisterAPI(apiPrefixGroup)

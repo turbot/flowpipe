@@ -10,14 +10,16 @@ pipeline "input_webform_multiselect_with_labels_and_default_selection" {
       label     = "N. Virginia"
       selected  = true
     }
+
     option "us-east-2" {
       label     = "Ohio"
       selected  = true
     }
 
-    option "us-west-2" {
+    option "us-west-1" {
       label     = "N. California"
     }
+
     option "us-west-2" {
       label     = "Oregon"
     }
