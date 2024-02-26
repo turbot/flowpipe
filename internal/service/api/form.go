@@ -122,26 +122,14 @@ func (api *APIService) postFormData(c *gin.Context) {
 		return
 	}
 
-	if len(uri.ID) == 8 {
-		e, p, s, ok := db.ResolveShortStepExecutionID(uri.ID)
-		if !ok {
-			common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution for %s not found", uri.ID)))
-			return
-		}
-		execID = e
-		pexecID = p
-		sexecID = s
-	} else {
-		// TODO: Do we still require this code branch, should always use short ID
-		ids := strings.Split(uri.ID, ".")
-		if len(ids) != 3 {
-			common.AbortWithError(c, perr.BadRequestWithMessage("unable to parse identifiers provided"))
-			return
-		}
-		execID = ids[0]
-		pexecID = ids[1]
-		sexecID = ids[2]
+	e, p, s, ok := db.ResolveShortStepExecutionID(uri.ID)
+	if !ok {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution for %s not found", uri.ID)))
+		return
 	}
+	execID = e
+	pexecID = p
+	sexecID = s
 
 	ex, err := execution.GetExecution(execID)
 	if err != nil {
@@ -231,24 +219,13 @@ func webFormDataFromId(id string) (webFormData, error) {
 	var output webFormData
 	output.Inputs = make(map[string]webFormDataInput)
 
-	if len(id) == 8 {
-		executionID, pipelineExecutionID, stepExecutionID, ok := db.ResolveShortStepExecutionID(id)
-		if !ok {
-			return output, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", id))
-		}
-		output.ExecutionID = executionID
-		output.PipelineExecutionID = pipelineExecutionID
-		output.StepExecutionID = stepExecutionID
-	} else {
-		// TODO: Do we still require this code branch, should always use short ID
-		ids := strings.Split(id, ".")
-		if len(ids) != 3 {
-			return output, perr.BadRequestWithMessage("unable to parse identifiers provided")
-		}
-		output.ExecutionID = ids[0]
-		output.PipelineExecutionID = ids[1]
-		output.StepExecutionID = ids[2]
+	executionID, pipelineExecutionID, stepExecutionID, ok := db.ResolveShortStepExecutionID(id)
+	if !ok {
+		return output, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", id))
 	}
+	output.ExecutionID = executionID
+	output.PipelineExecutionID = pipelineExecutionID
+	output.StepExecutionID = stepExecutionID
 
 	return output, nil
 }
