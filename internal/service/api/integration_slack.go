@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	"io"
 	"net/http"
 	"net/url"
@@ -87,7 +88,11 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 		return
 	}
 
-	eventPublished, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, resp.Value)
+	// TODO: Get StepExecution & Obtain Input
+	// TODO: Extract `Labels` for the chosen values
+	// TODO: Return the Labels instead of Values when overwriting the Slack Message
+
+	eventPublished, stepExec, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, resp.Value)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -98,7 +103,13 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 		return
 	} else {
 		c.Status(200)
-		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", resp.Prompt, resp.User, resp.ValueAsString())
+		labels, err := parseLabelsFromValues(stepExec.Input, resp.Value)
+		if err != nil {
+			replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", fmt.Sprintf("*%s*", resp.Prompt), resp.User, resp.ValueAsString())
+			_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
+			return
+		}
+		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", fmt.Sprintf("*%s*", resp.Prompt), resp.User, labels)
 		_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
 		return
 	}
@@ -217,31 +228,75 @@ func decodePayload(input string) (JSONPayload, error) {
 	return out, nil
 }
 
-func (api *APIService) finishInputStep(execId string, pExecId string, sExecId string, value any) (bool, error) {
+func parseLabelsFromValues(input modconfig.Input, values any) (string, error) {
+	valueKeyLabels := make(map[string]string)
+
+	if input[schema.AttributeTypeType] == "text" {
+		return values.(string), nil
+	}
+
+	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
+		for _, o := range options {
+			option := o.(map[string]any)
+			if v, ok := option[schema.AttributeTypeValue].(string); ok {
+				valueKeyLabels[v] = v // default to using value as labels are optional
+				if l, ok := option[schema.AttributeTypeLabel].(string); ok {
+					valueKeyLabels[v] = l // overwrite with separate label
+				}
+			} else {
+				return "", fmt.Errorf("input contained option without value")
+			}
+		}
+	}
+
+	switch values.(type) {
+	case string:
+		v := values.(string)
+		if label, ok := valueKeyLabels[v]; ok {
+			return label, nil
+		}
+		return v, nil
+	case []string:
+		var out []string
+		vs := values.([]string)
+		for _, v := range vs {
+			if label, ok := valueKeyLabels[v]; ok {
+				out = append(out, label)
+			} else {
+				out = append(out, v)
+			}
+		}
+		return strings.Join(out, ", "), nil
+	default:
+		return "", fmt.Errorf("unsupported value type")
+	}
+}
+
+func (api *APIService) finishInputStep(execId string, pExecId string, sExecId string, value any) (bool, *execution.StepExecution, error) {
 	ex, err := execution.GetExecution(execId)
 	if err != nil {
-		return false, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", execId))
+		return false, nil, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", execId))
 	}
 
 	pipelineExecution := ex.PipelineExecutions[pExecId]
 	if pipelineExecution == nil {
-		return false, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pExecId))
+		return false, nil, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pExecId))
 	}
 
 	stepExecution := pipelineExecution.StepExecutions[sExecId]
 	if stepExecution == nil {
-		return false, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sExecId))
+		return false, nil, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sExecId))
 	}
 
 	if stepExecution.Status == "finished" || pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() {
 		// step already processed
-		return false, nil
+		return false, stepExecution, nil
 	}
 
 	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
 	stepFinishedEvent, err := event.NewStepFinished()
 	if err != nil {
-		return false, perr.InternalWithMessage("unable to create step finished event: " + err.Error())
+		return false, nil, perr.InternalWithMessage("unable to create step finished event: " + err.Error())
 	}
 
 	out := modconfig.Output{
@@ -261,7 +316,7 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 	stepFinishedEvent.Output = &out
 	err = api.EsService.Raise(stepFinishedEvent)
 	if err != nil {
-		return false, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
+		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
 	}
-	return true, nil
+	return true, stepExecution, nil
 }

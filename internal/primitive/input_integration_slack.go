@@ -42,10 +42,11 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, inputType stri
 	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
 	var blocks slack.Blocks
 	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, prompt, false, false)
+	boldPromptBlock := slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*%s*", prompt), false, false)
 
 	switch inputType {
 	case constants.InputTypeButton:
-		header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+		header := slack.NewSectionBlock(boldPromptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
 		var buttons []slack.BlockElement
 		for i, opt := range options {
 			button := slack.NewButtonBlockElement(fmt.Sprintf("finished_%d", i), *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
