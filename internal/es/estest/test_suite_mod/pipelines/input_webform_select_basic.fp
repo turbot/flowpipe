@@ -1,6 +1,8 @@
 pipeline "input_webform_select_basic" {
 
   step "input" "select_region" {
+    notifier = notifier.default
+
     type     = "select"
     prompt   = "Select a region:"
 

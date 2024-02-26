@@ -65,7 +65,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: main
+          ref: v0.3.x
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v4
@@ -73,7 +73,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: main
+          ref: v0.3.x
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
