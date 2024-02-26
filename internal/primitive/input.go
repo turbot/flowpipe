@@ -203,7 +203,7 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
 					icm := &InputIntegrationEmailInputStepMessageCreator{
-						InputIntegrationEmail: e,
+						InputIntegrationEmail: &e,
 					}
 
 					e.MessageCreator = icm
@@ -304,7 +304,7 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 }
 
 type InputIntegrationEmailInputStepMessageCreator struct {
-	InputIntegrationEmail
+	*InputIntegrationEmail
 
 	Prompt *string
 }
@@ -324,7 +324,7 @@ func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, erro
 	}
 
 	prompt := kitTypes.SafeString(icm.Prompt)
-	templateMessage, err := parseEmailInputTemplate(&icm.InputIntegrationEmail, prompt)
+	templateMessage, err := parseEmailInputTemplate(icm.InputIntegrationEmail, prompt)
 	if err != nil {
 		return "", err
 	}
