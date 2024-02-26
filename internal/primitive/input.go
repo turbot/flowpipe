@@ -205,6 +205,7 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 					icm := &InputIntegrationEmailInputStepMessageCreator{
 						InputIntegrationEmail: &e,
 						Prompt:                &prompt,
+						InputType:             &inputType,
 					}
 
 					e.MessageCreator = icm
