@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -294,53 +293,4 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	} else {
 		c.JSON(209, response)
 	}
-}
-
-func (api *APIService) finishInputStep(execId string, pExecId string, sExecId string, value any) (bool, error) {
-	ex, err := execution.GetExecution(execId)
-	if err != nil {
-		return false, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", execId))
-	}
-
-	pipelineExecution := ex.PipelineExecutions[pExecId]
-	if pipelineExecution == nil {
-		return false, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pExecId))
-	}
-
-	stepExecution := pipelineExecution.StepExecutions[sExecId]
-	if stepExecution == nil {
-		return false, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sExecId))
-	}
-
-	if stepExecution.Status == "finished" || pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() {
-		// step already processed
-		return false, nil
-	}
-
-	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
-	stepFinishedEvent, err := event.NewStepFinished()
-	if err != nil {
-		return false, perr.InternalWithMessage("unable to create step finished event: " + err.Error())
-	}
-
-	out := modconfig.Output{
-		Data: map[string]any{
-			"value": value,
-		},
-		Status: "finished",
-	}
-
-	stepFinishedEvent.Event = evt
-	stepFinishedEvent.PipelineExecutionID = pExecId
-	stepFinishedEvent.StepExecutionID = stepExecution.ID
-	stepFinishedEvent.StepForEach = stepExecution.StepForEach
-	stepFinishedEvent.StepLoop = stepExecution.StepLoop
-	stepFinishedEvent.StepRetry = stepExecution.StepRetry
-	stepFinishedEvent.StepOutput = map[string]any{}
-	stepFinishedEvent.Output = &out
-	err = api.EsService.Raise(stepFinishedEvent)
-	if err != nil {
-		return false, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
-	}
-	return true, nil
 }

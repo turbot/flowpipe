@@ -13,7 +13,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -93,7 +92,6 @@ func (api *APIService) getFormData(c *gin.Context) {
 	}
 
 	output.Status = sExec.Status
-	output.ResponseURL, _ = url.JoinPath(util.GetBaseUrl(), c.Request.URL.Path, "submit")
 
 	c.JSON(200, output)
 }
@@ -199,7 +197,6 @@ type webFormData struct {
 	PipelineExecutionID string                      `json:"pipeline_execution_id"`
 	StepExecutionID     string                      `json:"step_execution_id"`
 	Status              string                      `json:"status"`
-	ResponseURL         string                      `json:"response_url"`
 	Inputs              map[string]webFormDataInput `json:"inputs"`
 }
 
