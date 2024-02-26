@@ -100,12 +100,17 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 	} else {
 		c.Status(200)
 		labels, err := parseLabelsFromValues(stepExec.Input, resp.Value)
+		prompt := resp.Prompt
+		if !strings.HasPrefix(prompt, "*") {
+			prompt = fmt.Sprintf("*%s*", resp.Prompt)
+		}
+
 		if err != nil {
-			replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", fmt.Sprintf("*%s*", resp.Prompt), resp.User, resp.ValueAsString())
+			replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", prompt, resp.User, resp.ValueAsString())
 			_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
 			return
 		}
-		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", fmt.Sprintf("*%s*", resp.Prompt), resp.User, labels)
+		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", prompt, resp.User, labels)
 		_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
 		return
 	}
