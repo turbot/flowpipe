@@ -59,6 +59,7 @@ type InputIntegrationResponseOption struct {
 	Label    *string
 	Value    *string
 	Selected *bool
+	Style    *string
 }
 
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -154,6 +155,9 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
 				option.Selected = &s
 			}
+			if s, ok := opt[schema.AttributeTypeStyle].(string); ok {
+				option.Style = &s
+			}
 			resOptions = append(resOptions, option)
 		}
 	}
@@ -185,15 +189,6 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 					}
 
 					// TODO: Validate, make it generic
-					// var inputType, prompt string
-					// if it, ok := input[schema.AttributeTypeType].(string); ok {
-					// 	inputType = it
-					// }
-
-					// if p, ok := input[schema.AttributeTypePrompt].(string); ok {
-					// 	prompt = p
-					// }
-
 					_, err := s.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err
