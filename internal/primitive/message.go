@@ -2,12 +2,13 @@ package primitive
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -47,7 +48,26 @@ type MessageStepMessageCreator struct {
 }
 
 func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
-	return slack.Blocks{}, perr.InternalWithMessage("Slack message not yet implemented for email input")
+	var blocks slack.Blocks
+
+	// payload for callback
+	payload := map[string]any{
+		"execution_id":          ip.ExecutionID,
+		"pipeline_execution_id": ip.PipelineExecutionID,
+		"step_execution_id":     ip.StepExecutionID,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return blocks, err
+	}
+	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
+
+	boldPromptBlock := slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*%s*", icm.Body), false, false)
+
+	header := slack.NewSectionBlock(boldPromptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+	blocks.BlockSet = append(blocks.BlockSet, header)
+
+	return blocks, nil
 }
 
 func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (string, error) {
