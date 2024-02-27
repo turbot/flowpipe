@@ -1,0 +1,70 @@
+
+<div style="overflow:hidden;max-width:800px;margin:auto;">
+    <font size="-1">
+        <div dir="ltr">
+            <div
+                    style="
+                    color: rgb(26, 27, 33);
+                    font-family: Inter, -apple-system, 'system-ui', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+                    font-size: 16px;
+                    margin-bottom: 20px;
+                    width:inherit;
+                "
+            >
+                <div style="margin-bottom: 20px;">
+                    <br />
+                    <div>
+                        <img src="https://flowpipe.io/images/flowpipe_email_logo.png" alt="Flowpipe Logo" height="40" />
+                    </div>
+                </div>
+                <div style="line-height:26px;margin-bottom:12px;text-align:initial;word-break:break-word">
+                    {{ $prompt := .Prompt }}
+                    {{ $formUrl := .FormUrl }}
+                    <p>Do we need some pre-prompt text?</p>
+                    <h2 style="font-size:1em;">{{ $prompt }}</h2>
+
+                    <div name="header" style="font-size: 14px; line-height: 16px; margin-bottom: 25px; margin-top: 25px; padding-top: 0px; text-align: center;">
+                        <figure style="display: inline-block; margin: 0 auto; width: 100%;">
+                            <table border="0" cellspacing="0" cellpadding="0" style="margin: 0px auto; width: 100%;">
+                                <tbody>
+                                <tr>
+                                    <td style="text-align: center;"></td>
+                                    <td align="left" width="220" style="text-align: center;">
+                                        <div style="background-color: #036; border: none; color: white; font-weight: normal; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; margin: 4px 2px; border-radius: 4px;">
+                                            <a href="{{ $formUrl }}" style="color: inherit; text-decoration: inherit;" target="_blank">Submit Response</a>
+                                        </div>
+                                    </td>
+                                    <td style="text-align: center;"></td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </figure>
+                    </div>
+                </div>
+            </div>
+            <div
+                    style="
+                    font-family: Inter, -apple-system, 'system-ui', 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+                    box-sizing: border-box;
+                    border-style: solid;
+                    border-color: rgb(235, 238, 242);
+                    margin-top: 32px;
+                    margin-bottom: 32px;
+                    display: inline-block;
+                    border-radius: 6px;
+                    border-width: 1px;
+                    padding: 0 16px;
+                    color: rgb(90, 95, 104);
+                    width:inherit;
+                "
+            >
+                <p style="font-size: 14px;">
+                    Do we need footer text?
+                </p>
+                <p style="font-size: x-small;">
+                    Do we want any ids here or anything?
+                </p>
+            </div>
+        </div>
+    </font>
+</div>
