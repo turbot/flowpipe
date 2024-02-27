@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/flowpipe/templates"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -344,21 +344,17 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, opt
 	switch icm.InputType {
 	case "button":
 		stepName := icm.StepName
-		url, err := util.GetWebformApiUrl(iim.StepExecutionID)
-		if err != nil {
-			return "", err
-		}
 		templateFileName = "input-form-buttons.html"
 		data = struct {
 			Prompt   string
 			Options  []InputIntegrationResponseOption
 			StepName string
-			ApiUrl   string
+			FormUrl  string
 		}{
 			Prompt:   icm.Prompt,
 			Options:  options,
 			StepName: stepName,
-			ApiUrl:   url,
+			FormUrl:  iim.FormUrl,
 		}
 	default:
 		data = struct {
@@ -384,6 +380,19 @@ func parseEmailInputTemplate(templateFileName string, data any) (string, error) 
 	funcs := template.FuncMap{
 		"mod": func(a, b int) int { return a % b },
 		"sub": func(a, b int) int { return a - b },
+		"getColor": func(s *string) string {
+			if s != nil {
+				switch *s {
+				case "ok":
+					return "#198038"
+				case "alert":
+					return "#da1e28"
+				default:
+					return "#036"
+				}
+			}
+			return "#036"
+		},
 	}
 	templateFile, err := templates.HTMLTemplate(templateFileName)
 	if err != nil {
