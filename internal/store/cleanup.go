@@ -45,7 +45,7 @@ func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 
 	slog.Debug("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
 
-	sql := `select value from metadata where name = 'last_cleanup'`
+	sql := `select value from internal where name = 'last_cleanup'`
 
 	rows, err := db.Query(sql)
 	if err != nil {
@@ -66,14 +66,14 @@ func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 	currentTimeStringFormat := currentTime.Format(util.RFC3389WithMS)
 
 	if lastCleanupTime != "" {
-		sql = `update metadata set value = ?, updated_at = ? where name = 'last_cleanup'`
+		sql = `update internal set value = ?, updated_at = ? where name = 'last_cleanup'`
 		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
 		if err != nil {
 			slog.Error("error updating last cleanup time", "error", err)
 			return -1, perr.InternalWithMessage("error updating last cleanup time")
 		}
 	} else {
-		sql = `insert into metadata (name, value, created_at) values ('last_cleanup', ?, ?)`
+		sql = `insert into internal (name, value, created_at) values ('last_cleanup', ?, ?)`
 		_, err = db.Exec(sql, currentTimeStringFormat, currentTimeStringFormat)
 		if err != nil {
 			slog.Error("error inserting last cleanup time", "error", err)
@@ -111,7 +111,7 @@ func CleanupRunner() {
 func ForceCleanup() {
 	slog.Debug("Checking if cleanup must be run")
 
-	sql := `select value from metadata where name = 'last_cleanup'`
+	sql := `select value from internal where name = 'last_cleanup'`
 	db, err := OpenFlowpipeDB()
 	if err != nil {
 		slog.Error("error opening flowpipe db", "error", err)
