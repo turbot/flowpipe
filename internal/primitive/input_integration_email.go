@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/go-kit/helpers"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
@@ -277,6 +277,14 @@ func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, opti
 		var buttons []slack.BlockElement
 		for i, opt := range options {
 			button := slack.NewButtonBlockElement(fmt.Sprintf("finished_%d", i), *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
+			if !helpers.IsNil(opt.Style) {
+				switch *opt.Style {
+				case constants.InputStyleOk:
+					button.Style = slack.StylePrimary
+				case constants.InputStyleAlert:
+					button.Style = slack.StyleDanger
+				}
+			}
 			buttons = append(buttons, slack.BlockElement(button))
 		}
 		action := slack.NewActionBlock("action_block", buttons...)
