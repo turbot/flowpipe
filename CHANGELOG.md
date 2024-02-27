@@ -6,9 +6,10 @@ _What's new?_
 
 * Human workflows. [Documentation](https://flowpipe.io/docs/).
 * Maximum Concurrency control. [Documentation](https://flowpipe.io/docs/).
-* SQLite backing store instead of `.jsonl` files. [Documentation](https://flowpipe.io/docs/).
-* Query steps & triggers now support DuckDB.
 * Importing Steampipe connection config as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/).
+* Message step to send messages using the integrations. [Documentation](https://flowpipe.io/docs/).
+* SQLite backing store instead of `.jsonl` files.
+* Query steps & triggers support DuckDB.
 
 _Bug fixes_
 
@@ -18,7 +19,7 @@ _Bug fixes_
 * Pipeline output attributes are now validated ([#239](https://github.com/turbot/pipe-fittings/issues/239)).
 * Pipeline param default value data type is now validated against the specified type ([#262](https://github.com/turbot/pipe-fittings/issues/262)).
 * Removed titles when merging multiple error messages ([#263](https://github.com/turbot/pipe-fittings/issues/263)).
-* Scheduled triggers should be refreshed when the mod file has changed.
+* Scheduled triggers are now refreshed when mod files have changed.
 * Runtime resolution of credentials.
 
 ## v0.2.3 [2024-02-13]

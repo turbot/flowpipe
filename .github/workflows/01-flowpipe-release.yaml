@@ -144,7 +144,7 @@ jobs:
         working-directory: flowpipe
         run: |
           git status
-          git restore ui/input/yarn.lock
+          git restore ui/form/yarn.lock
           git status
 
       - name: Release publish

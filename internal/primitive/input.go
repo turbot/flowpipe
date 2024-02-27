@@ -202,6 +202,8 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 					// TODO: implement output
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
+
+					// TODO: This is a circular struct reference.
 					icm := &InputIntegrationEmailInputStepMessageCreator{
 						InputIntegrationEmail: &e,
 						Prompt:                &prompt,
