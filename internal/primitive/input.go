@@ -3,12 +3,9 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"html/template"
-	"strings"
 
-	"github.com/turbot/flowpipe/templates"
+	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
-	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -134,18 +131,12 @@ func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	return nil
 }
 
-func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageCreator) (*modconfig.Output, error) {
 	output := &modconfig.Output{}
 
 	base := NewInputIntegrationBase(ip)
-	var prompt, inputType string
+
 	var resOptions []InputIntegrationResponseOption
-	if it, ok := input[schema.AttributeTypeType].(string); ok {
-		inputType = it
-	}
-	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
-		prompt = p
-	}
 
 	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
 		for _, o := range options {
@@ -193,8 +184,17 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 						s.WebhookUrl = &wu
 					}
 
-					// TODO: Validate?
-					_, err := s.PostMessage(ctx, inputType, prompt, resOptions)
+					// TODO: Validate, make it generic
+					// var inputType, prompt string
+					// if it, ok := input[schema.AttributeTypeType].(string); ok {
+					// 	inputType = it
+					// }
+
+					// if p, ok := input[schema.AttributeTypePrompt].(string); ok {
+					// 	prompt = p
+					// }
+
+					_, err := s.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err
 					}
@@ -202,15 +202,6 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 					// TODO: implement output
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
-
-					// TODO: This is a circular struct reference.
-					icm := &InputIntegrationEmailInputStepMessageCreator{
-						InputIntegrationEmail: &e,
-						Prompt:                &prompt,
-						InputType:             &inputType,
-					}
-
-					e.MessageCreator = icm
 
 					if formUrl, ok := input["webform_url"].(string); ok {
 						e.FormUrl = formUrl
@@ -268,11 +259,14 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 						}
 					}
 
-					if sub, ok := notify[schema.AttributeTypeSubject].(string); ok {
+					if sub, ok := input[schema.AttributeTypeSubject].(string); ok {
+						e.Subject = sub
+					} else if sub, ok := notify[schema.AttributeTypeSubject].(string); ok {
 						e.Subject = sub
 					} else if sub, ok := integration[schema.AttributeTypeSubject].(string); ok {
 						e.Subject = sub
 					}
+
 					if u, ok := integration[schema.AttributeTypeSmtpUsername].(string); ok {
 						e.User = &u
 					}
@@ -281,7 +275,7 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input) (*modconfig
 					}
 
 					// TODO: Validate?
-					out, err := e.PostMessage(ctx, inputType, prompt, resOptions)
+					out, err := e.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err
 					}
@@ -304,74 +298,22 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		return nil, err
 	}
 
-	return ip.execute(ctx, input)
+	var inputType, prompt string
+	if it, ok := input[schema.AttributeTypeType].(string); ok {
+		inputType = it
+	}
+
+	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
+		prompt = p
+	}
+
+	return ip.execute(ctx, input, &InputStepMessageCreator{
+		Prompt:    prompt,
+		InputType: inputType,
+	})
 }
 
-type InputIntegrationEmailInputStepMessageCreator struct {
-	*InputIntegrationEmail
-
-	Prompt    *string
-	InputType *string
-}
-
-func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, error) {
-
-	header := make(map[string]string)
-	header["From"] = icm.InputIntegrationEmail.From
-	header["To"] = strings.Join(icm.InputIntegrationEmail.To, ", ")
-	header["Subject"] = icm.InputIntegrationEmail.Subject
-	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
-	header["MIME-version"] = "1.0;"
-
-	var message string
-	for key, value := range header {
-		message += fmt.Sprintf("%s: %s\r\n", key, value)
-	}
-
-	prompt := kitTypes.SafeString(icm.Prompt)
-	inputType := kitTypes.SafeString(icm.InputType)
-	templateMessage, err := parseEmailInputTemplate(icm.InputIntegrationEmail, prompt, inputType)
-	if err != nil {
-		return "", err
-	}
-	message += templateMessage
-
-	return message, nil
-
-}
-
-func parseEmailInputTemplate(i *InputIntegrationEmail, prompt string, inputType string) (string, error) {
-	templateFileName := "input-form-link.html"
-	var data any
-	switch inputType {
-	case "todo-button":
-	// TODO: Insert button template
-	default:
-		templateFileName = "input-form-link.html"
-		data = struct {
-			FormUrl string
-			Prompt  string
-		}{
-			FormUrl: i.FormUrl,
-			Prompt:  prompt,
-		}
-	}
-	templateFile, err := templates.HTMLTemplate(templateFileName)
-	if err != nil {
-		return "", perr.InternalWithMessage("error while reading the email template")
-	}
-	tmpl, err := template.New("email").Parse(string(templateFile))
-	if err != nil {
-		return "", perr.InternalWithMessage("error while parsing the email template")
-	}
-
-	var body strings.Builder
-	err = tmpl.Execute(&body, data)
-	if err != nil {
-		return "", perr.BadRequestWithMessage("error while executing the email template")
-	}
-
-	tempMessage := body.String()
-
-	return tempMessage, nil
+type MessageCreator interface {
+	EmailMessage(*InputIntegrationEmail) (string, error)
+	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
 }

@@ -2,14 +2,21 @@ package primitive
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
 	"strconv"
+	"strings"
+	"text/template"
 	"time"
 
+	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/templates"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -24,19 +31,18 @@ type InputIntegrationEmailMessage interface {
 type InputIntegrationEmail struct {
 	InputIntegrationBase
 
-	MessageCreator InputIntegrationEmailMessage
-	Host           *string
-	Port           *int64
-	SecurePort     *int64
-	Tls            *string
-	To             []string
-	Cc             []string
-	Bcc            []string
-	From           string
-	Subject        string
-	User           *string
-	Pass           *string
-	FormUrl        string
+	Host       *string
+	Port       *int64
+	SecurePort *int64
+	Tls        *string
+	To         []string
+	Cc         []string
+	Bcc        []string
+	From       string
+	Subject    string
+	User       *string
+	Pass       *string
+	FormUrl    string
 }
 
 func NewInputIntegrationEmail(base InputIntegrationBase) InputIntegrationEmail {
@@ -183,28 +189,31 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType string, prompt string, _ []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, _ []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	var err error
 	host := kitTypes.SafeString(ip.Host)
 	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
 	auth := smtp.PlainAuth("", kitTypes.SafeString(ip.User), kitTypes.SafeString(ip.Pass), host)
 
-	// from := mail.Address{
-	// 	Name:    ip.From,
-	// 	Address: ip.From,
-	// }
-
 	output := modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 
-	message, err := ip.MessageCreator.Message()
+	message, err := mc.EmailMessage(ip)
 	if err != nil {
-		return nil, err
+		return nil, perr.InternalWithMessage(fmt.Sprintf("unable to create email message: %s", err.Error()))
+	}
+
+	recipients := ip.To
+	if len(ip.Cc) > 0 {
+		recipients = append(recipients, ip.Cc...)
+	}
+	if len(ip.Bcc) > 0 {
+		recipients = append(recipients, ip.Bcc...)
 	}
 
 	output.Data[schema.AttributeTypeStartedAt] = time.Now().UTC()
-	err = smtp.SendMail(addr, auth, ip.From, ip.To, []byte(message))
+	err = smtp.SendMail(addr, auth, ip.From, recipients, []byte(message))
 	output.Data[schema.AttributeTypeFinishedAt] = time.Now().UTC()
 	if err != nil {
 		var smtpError *textproto.Error
@@ -234,4 +243,134 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType stri
 	}
 
 	return &output, nil
+}
+
+type InputStepMessageCreator struct {
+	Prompt    string
+	InputType string
+}
+
+func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
+	var blocks slack.Blocks
+
+	// payload for callback
+	payload := map[string]any{
+		"execution_id":          ip.ExecutionID,
+		"pipeline_execution_id": ip.PipelineExecutionID,
+		"step_execution_id":     ip.StepExecutionID,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return blocks, err
+	}
+	// encodedPayload needs to be passed into block id of first block then we can extract it on receipt of Slacks payload
+	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
+
+	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, icm.Prompt, false, false)
+	boldPromptBlock := slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*%s*", icm.Prompt), false, false)
+
+	switch icm.InputType {
+	case constants.InputTypeButton:
+		header := slack.NewSectionBlock(boldPromptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+		var buttons []slack.BlockElement
+		for i, opt := range options {
+			button := slack.NewButtonBlockElement(fmt.Sprintf("finished_%d", i), *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
+			buttons = append(buttons, slack.BlockElement(button))
+		}
+		action := slack.NewActionBlock("action_block", buttons...)
+		blocks.BlockSet = append(blocks.BlockSet, header, action)
+	case constants.InputTypeSelect:
+		blockOptions := make([]*slack.OptionBlockObject, len(options))
+		for i, opt := range options {
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
+		}
+		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
+		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, "finished", blockOptions...)
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, s)
+		blocks.BlockSet = append(blocks.BlockSet, input)
+	case constants.InputTypeMultiSelect:
+		blockOptions := make([]*slack.OptionBlockObject, len(options))
+		for i, opt := range options {
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
+		}
+		ms := slack.NewOptionsMultiSelectBlockElement(
+			slack.MultiOptTypeStatic,
+			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false), "not_finished", blockOptions...)
+		btn := slack.NewButtonBlockElement("finished", "submit", slack.NewTextBlockObject(slack.PlainTextType, "Submit", false, false))
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, ms)
+		action := slack.NewActionBlock("action_block", btn)
+		blocks.BlockSet = append(blocks.BlockSet, input, action)
+	case constants.InputTypeText:
+		textInput := slack.NewPlainTextInputBlockElement(nil, "finished")
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
+		input.DispatchAction = true // required for being able to send event
+		blocks.BlockSet = append(blocks.BlockSet, input)
+	default:
+		return blocks, perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", icm.InputType))
+	}
+
+	return blocks, nil
+}
+
+func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (string, error) {
+
+	header := make(map[string]string)
+	header["From"] = iim.From
+	header["To"] = strings.Join(iim.To, ", ")
+	if len(iim.Cc) > 0 {
+		header["Cc"] = strings.Join(iim.Cc, ", ")
+	}
+	header["Subject"] = iim.Subject
+	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
+	header["MIME-version"] = "1.0;"
+
+	var message string
+	for key, value := range header {
+		message += fmt.Sprintf("%s: %s\r\n", key, value)
+	}
+
+	var data any
+	switch icm.InputType {
+	case "todo-button":
+	// TODO: Insert button template
+	default:
+		data = struct {
+			FormUrl string
+			Prompt  string
+		}{
+			FormUrl: iim.FormUrl,
+			Prompt:  icm.Prompt,
+		}
+	}
+
+	templateMessage, err := parseEmailInputTemplate("input-form-link.html", data)
+	if err != nil {
+		return "", err
+	}
+	message += templateMessage
+
+	return message, nil
+
+}
+
+func parseEmailInputTemplate(templateFileName string, data any) (string, error) {
+
+	templateFile, err := templates.HTMLTemplate(templateFileName)
+	if err != nil {
+		return "", perr.InternalWithMessage("error while reading the email template")
+	}
+	tmpl, err := template.New("email").Parse(string(templateFile))
+	if err != nil {
+		return "", perr.InternalWithMessage("error while parsing the email template")
+	}
+
+	var body strings.Builder
+	err = tmpl.Execute(&body, data)
+	if err != nil {
+		return "", perr.BadRequestWithMessage("error while executing the email template")
+	}
+
+	tempMessage := body.String()
+
+	return tempMessage, nil
 }

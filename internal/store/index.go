@@ -92,7 +92,7 @@ func InitializeFlowpipeDB() error {
 	}
 
 	createTableSQL = `
-	create table if not exists metadata (
+	create table if not exists internal (
 		id integer primary key autoincrement,
 		name string,
 		created_at datetime,
@@ -103,15 +103,15 @@ func InitializeFlowpipeDB() error {
 
 	_, err = db.Exec(createTableSQL)
 	if err != nil {
-		slog.Error("error creating metadata table", "error", err)
-		return perr.InternalWithMessage("error creating metadata table")
+		slog.Error("error creating internal table", "error", err)
+		return perr.InternalWithMessage("error creating internal table")
 	}
 
-	createIndexSQL = `create unique index if not exists idx_metadata_name on metadata (name);`
+	createIndexSQL = `create unique index if not exists idx_internal_name on internal (name);`
 	_, err = db.Exec(createIndexSQL)
 	if err != nil {
-		slog.Error("error creating metadata index", "error", err)
-		return perr.InternalWithMessage("error creating metadata index")
+		slog.Error("error creating internal index", "error", err)
+		return perr.InternalWithMessage("error creating internal index")
 	}
 
 	return nil
