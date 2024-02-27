@@ -66,5 +66,5 @@ func GetWebformApiUrl(stepExecutionID string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return url.JoinPath(baseUrl, "api", "latest", "form", id, hash)
+	return url.JoinPath(baseUrl, "api", "latest", "form", id, hash, "submit")
 }

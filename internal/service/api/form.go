@@ -21,6 +21,8 @@ func (api *APIService) FormRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/form/:id/:hash", api.getFormData)          // used by UI to get data to populate form
 	router.POST("/form/:id/:hash/submit", api.postFormData) // used by UI, cURL, etc for form response
 
+	// TODO: Verify this is correct for email approach
+	router.GET("/form/:id/:hash/submit", api.emailFormData)
 }
 
 func (api *APIService) getFormData(c *gin.Context) {
@@ -181,9 +183,81 @@ func (api *APIService) postFormData(c *gin.Context) {
 		common.AbortWithError(c, perr.InternalWithMessage(fmt.Sprintf("step type %s is not supported", stepType)))
 		return
 	}
+}
+
+func (api *APIService) emailFormData(c *gin.Context) {
+	var uri types.InputIDHash
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	queryParams := c.Request.URL.Query()
+	if len(queryParams) == 0 {
+		common.AbortWithError(c, perr.BadRequestWithMessage("response not submitted"))
+		return
+	}
+
+	// verify hash
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
+		return
+	}
+	hashString, err := util.CalculateHash(uri.ID, salt)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
+		return
+	}
+	if hashString != uri.Hash {
+		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
+		return
+	}
+
+	exID, pexID, sexID, ok := db.ResolveShortStepExecutionID(uri.ID)
+	if !ok {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step %s not found or already completed", uri.ID)))
+		return
+	}
+
+	ex, err := execution.GetExecution(exID)
+	if err != nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", exID)))
+		return
+	}
+
+	pipelineExecution := ex.PipelineExecutions[pexID]
+	if pipelineExecution == nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pexID)))
+		return
+	}
+
+	stepExecution := pipelineExecution.StepExecutions[sexID]
+	if stepExecution == nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sexID)))
+		return
+	}
+
+	if pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() || stepExecution.Status == "finished" {
+		common.AbortWithError(c, perr.ConflictWithMessage(fmt.Sprintf("step %s has already been processed or is no longer required due to pipeline completion", sexID)))
+	}
+
+	stepFullName := stepExecution.Name
+	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
+	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 	switch stepType {
 	case "input":
-
+		if queryParams.Has(stepName) {
+			err := api.finishInputStepFromWebForm(exID, pexID, stepExecution, queryParams.Get(stepName))
+			if err != nil {
+				common.AbortWithError(c, err)
+				return
+			}
+			c.Status(200)
+		} else {
+			common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("missing expected key %s", stepName)))
+			return
+		}
 	case "form":
 		// TODO: implement
 		common.AbortWithError(c, perr.InternalWithMessage("form is not yet implemented"))
