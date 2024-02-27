@@ -54,3 +54,17 @@ func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error
 	}
 	return url.JoinPath(baseUrl, "form", key, hash)
 }
+
+func GetWebformApiUrl(stepExecutionID string) (string, error) {
+	baseUrl := GetBaseUrl()
+	id := strings.TrimPrefix(stepExecutionID, "sexec_")
+	salt, err := GetGlobalSalt()
+	if err != nil {
+		return "", err
+	}
+	hash, err := CalculateHash(id, salt)
+	if err != nil {
+		return "", err
+	}
+	return url.JoinPath(baseUrl, "api", "latest", "form", id, hash)
+}
