@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/slack-go/slack"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -44,8 +46,8 @@ type MessageStepMessageCreator struct {
 	Body string
 }
 
-func (icm *MessageStepMessageCreator) SlackMessage() string {
-	return ""
+func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
+	return slack.Blocks{}, perr.InternalWithMessage("Slack message not yet implemented for email input")
 }
 
 func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (string, error) {

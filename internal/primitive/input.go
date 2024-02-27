@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -184,16 +185,16 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 					}
 
 					// TODO: Validate, make it generic
-					var inputType, prompt string
-					if it, ok := input[schema.AttributeTypeType].(string); ok {
-						inputType = it
-					}
+					// var inputType, prompt string
+					// if it, ok := input[schema.AttributeTypeType].(string); ok {
+					// 	inputType = it
+					// }
 
-					if p, ok := input[schema.AttributeTypePrompt].(string); ok {
-						prompt = p
-					}
+					// if p, ok := input[schema.AttributeTypePrompt].(string); ok {
+					// 	prompt = p
+					// }
 
-					_, err := s.PostMessage(ctx, inputType, prompt, resOptions)
+					_, err := s.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err
 					}
@@ -314,5 +315,5 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 
 type MessageCreator interface {
 	EmailMessage(*InputIntegrationEmail) (string, error)
-	SlackMessage() string
+	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
 }
