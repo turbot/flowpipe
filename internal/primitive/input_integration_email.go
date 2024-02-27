@@ -203,8 +203,16 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, inputType stri
 		return nil, err
 	}
 
+	recips := ip.To
+	if len(ip.Cc) > 0 {
+		recips = append(recips, ip.Cc...)
+	}
+	if len(ip.Bcc) > 0 {
+		recips = append(recips, ip.Bcc...)
+	}
+
 	output.Data[schema.AttributeTypeStartedAt] = time.Now().UTC()
-	err = smtp.SendMail(addr, auth, ip.From, ip.To, []byte(message))
+	err = smtp.SendMail(addr, auth, ip.From, recips, []byte(message))
 	output.Data[schema.AttributeTypeFinishedAt] = time.Now().UTC()
 	if err != nil {
 		var smtpError *textproto.Error
