@@ -200,8 +200,16 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 		return nil, perr.InternalWithMessage(fmt.Sprintf("unable to create email message: %s", err.Error()))
 	}
 
+	recipients := ip.To
+	if len(ip.Cc) > 0 {
+		recipients = append(recipients, ip.Cc...)
+	}
+	if len(ip.Bcc) > 0 {
+		recipients = append(recipients, ip.Bcc...)
+	}
+
 	output.Data[schema.AttributeTypeStartedAt] = time.Now().UTC()
-	err = smtp.SendMail(addr, auth, ip.From, ip.To, []byte(message))
+	err = smtp.SendMail(addr, auth, ip.From, recipients, []byte(message))
 	output.Data[schema.AttributeTypeFinishedAt] = time.Now().UTC()
 	if err != nil {
 		var smtpError *textproto.Error
@@ -247,6 +255,9 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (st
 	header := make(map[string]string)
 	header["From"] = iim.From
 	header["To"] = strings.Join(iim.To, ", ")
+	if len(iim.Cc) > 0 {
+		header["Cc"] = strings.Join(iim.Cc, ", ")
+	}
 	header["Subject"] = iim.Subject
 	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
 	header["MIME-version"] = "1.0;"
