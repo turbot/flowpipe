@@ -69,15 +69,9 @@ func (api *APIService) getFormData(c *gin.Context) {
 		return
 	}
 
-	sDef, err := exec.StepDefinition(pExec.ID, sExec.ID)
-	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage(fmt.Sprintf("unable to ascertain step definition for step %s", sExec.ID)))
-		return
-	}
-
-	stepType := sDef.GetType()
 	stepFullName := sExec.Name
 	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
+	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 
 	switch stepType {
 	case "input":
@@ -97,7 +91,6 @@ func (api *APIService) getFormData(c *gin.Context) {
 }
 
 func (api *APIService) postFormData(c *gin.Context) {
-	var execID, pexecID, sexecID string
 	var uri types.InputIDHash
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
@@ -120,35 +113,32 @@ func (api *APIService) postFormData(c *gin.Context) {
 		return
 	}
 
-	e, p, s, ok := db.ResolveShortStepExecutionID(uri.ID)
-	if !ok {
-		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution for %s not found", uri.ID)))
-		return
-	}
-	execID = e
-	pexecID = p
-	sexecID = s
-
-	ex, err := execution.GetExecution(execID)
+	output, err := webFormDataFromId(uri.ID)
 	if err != nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", execID)))
+		common.AbortWithError(c, err) // will be perr type
 		return
 	}
 
-	pipelineExecution := ex.PipelineExecutions[pexecID]
+	ex, err := execution.GetExecution(output.ExecutionID)
+	if err != nil {
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", output.ExecutionID)))
+		return
+	}
+
+	pipelineExecution := ex.PipelineExecutions[output.PipelineExecutionID]
 	if pipelineExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pexecID)))
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", output.PipelineExecutionID)))
 		return
 	}
 
-	stepExecution := pipelineExecution.StepExecutions[sexecID]
+	stepExecution := pipelineExecution.StepExecutions[output.StepExecutionID]
 	if stepExecution == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sexecID)))
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
 		return
 	}
 
 	if pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() || stepExecution.Status == "finished" {
-		common.AbortWithError(c, perr.ConflictWithMessage(fmt.Sprintf("step %s has already been processed or is no longer required due to pipeline completion", sexecID)))
+		common.AbortWithError(c, perr.ConflictWithMessage(fmt.Sprintf("step %s has already been processed or is no longer required due to pipeline completion", output.StepExecutionID)))
 	}
 
 	var parsedBody map[string]any
@@ -165,22 +155,35 @@ func (api *APIService) postFormData(c *gin.Context) {
 		}
 	}
 
-	stepType := strings.Split(stepExecution.Name, ".")[len(strings.Split(stepExecution.Name, "."))-2]
 	stepFullName := stepExecution.Name
 	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
+	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 	switch stepType {
 	case "input":
+		output.Inputs[stepName] = webFormDataInputFromInputStep(stepExecution.Input)
 		if parsedBody[stepName] != nil {
-			err := api.finishInputStepFromWebForm(execID, pexecID, stepExecution, parsedBody[stepName])
+			err := api.finishInputStepFromWebForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, parsedBody[stepName])
 			if err != nil {
 				common.AbortWithError(c, err)
 				return
 			}
-			c.Status(200) // TODO: Return JSON payload
+			output.Status = "finished"
+			c.JSON(200, output)
 		} else {
 			common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("missing expected key %s", stepName)))
 			return
 		}
+	case "form":
+		// TODO: implement
+		common.AbortWithError(c, perr.InternalWithMessage("form is not yet implemented"))
+		return
+	default:
+		common.AbortWithError(c, perr.InternalWithMessage(fmt.Sprintf("step type %s is not supported", stepType)))
+		return
+	}
+	switch stepType {
+	case "input":
+
 	case "form":
 		// TODO: implement
 		common.AbortWithError(c, perr.InternalWithMessage("form is not yet implemented"))
@@ -218,7 +221,7 @@ func webFormDataFromId(id string) (webFormData, error) {
 
 	executionID, pipelineExecutionID, stepExecutionID, ok := db.ResolveShortStepExecutionID(id)
 	if !ok {
-		return output, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", id))
+		return output, perr.NotFoundWithMessage(fmt.Sprintf("unable to find step for id %s - id may be incorrect or step may already be completed.", id))
 	}
 	output.ExecutionID = executionID
 	output.PipelineExecutionID = pipelineExecutionID
