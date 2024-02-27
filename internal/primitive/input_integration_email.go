@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/flowpipe/templates"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -190,7 +190,7 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, _ []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	var err error
 	host := kitTypes.SafeString(ip.Host)
 	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
@@ -200,7 +200,7 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 		Data: map[string]interface{}{},
 	}
 
-	message, err := mc.EmailMessage(ip)
+	message, err := mc.EmailMessage(ip, options)
 	if err != nil {
 		return nil, perr.InternalWithMessage(fmt.Sprintf("unable to create email message: %s", err.Error()))
 	}
@@ -249,6 +249,7 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 type InputStepMessageCreator struct {
 	Prompt    string
 	InputType string
+	StepName  string
 }
 
 func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
@@ -321,7 +322,7 @@ func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, opti
 	return blocks, nil
 }
 
-func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (string, error) {
+func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, options []InputIntegrationResponseOption) (string, error) {
 
 	header := make(map[string]string)
 	header["From"] = iim.From
@@ -339,9 +340,22 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (st
 	}
 
 	var data any
+	templateFileName := "input-form-link.html"
 	switch icm.InputType {
-	case "todo-button":
-	// TODO: Insert button template
+	case "button":
+		stepName := icm.StepName
+		templateFileName = "input-form-buttons.html"
+		data = struct {
+			Prompt   string
+			Options  []InputIntegrationResponseOption
+			StepName string
+			FormUrl  string
+		}{
+			Prompt:   icm.Prompt,
+			Options:  options,
+			StepName: stepName,
+			FormUrl:  iim.FormUrl,
+		}
 	default:
 		data = struct {
 			FormUrl string
@@ -352,7 +366,7 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (st
 		}
 	}
 
-	templateMessage, err := parseEmailInputTemplate("input-form-link.html", data)
+	templateMessage, err := parseEmailInputTemplate(templateFileName, data)
 	if err != nil {
 		return "", err
 	}
@@ -363,12 +377,28 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (st
 }
 
 func parseEmailInputTemplate(templateFileName string, data any) (string, error) {
-
+	funcs := template.FuncMap{
+		"mod": func(a, b int) int { return a % b },
+		"sub": func(a, b int) int { return a - b },
+		"getColor": func(s *string) string {
+			if s != nil {
+				switch *s {
+				case "ok":
+					return "#198038"
+				case "alert":
+					return "#da1e28"
+				default:
+					return "#036"
+				}
+			}
+			return "#036"
+		},
+	}
 	templateFile, err := templates.HTMLTemplate(templateFileName)
 	if err != nil {
 		return "", perr.InternalWithMessage("error while reading the email template")
 	}
-	tmpl, err := template.New("email").Parse(string(templateFile))
+	tmpl, err := template.New("email").Funcs(funcs).Parse(string(templateFile))
 	if err != nil {
 		return "", perr.InternalWithMessage("error while parsing the email template")
 	}

@@ -20,7 +20,6 @@ import (
 func (api *APIService) FormRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/form/:id/:hash", api.getFormData)          // used by UI to get data to populate form
 	router.POST("/form/:id/:hash/submit", api.postFormData) // used by UI, cURL, etc for form response
-
 }
 
 func (api *APIService) getFormData(c *gin.Context) {
@@ -173,17 +172,6 @@ func (api *APIService) postFormData(c *gin.Context) {
 			common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("missing expected key %s", stepName)))
 			return
 		}
-	case "form":
-		// TODO: implement
-		common.AbortWithError(c, perr.InternalWithMessage("form is not yet implemented"))
-		return
-	default:
-		common.AbortWithError(c, perr.InternalWithMessage(fmt.Sprintf("step type %s is not supported", stepType)))
-		return
-	}
-	switch stepType {
-	case "input":
-
 	case "form":
 		// TODO: implement
 		common.AbortWithError(c, perr.InternalWithMessage("form is not yet implemented"))

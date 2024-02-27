@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
@@ -302,13 +303,16 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		prompt = p
 	}
 
+	stepName := strings.Split(ip.StepName, ".")[len(strings.Split(ip.StepName, "."))-1]
+
 	return ip.execute(ctx, input, &InputStepMessageCreator{
 		Prompt:    prompt,
 		InputType: inputType,
+		StepName:  stepName,
 	})
 }
 
 type MessageCreator interface {
-	EmailMessage(*InputIntegrationEmail) (string, error)
+	EmailMessage(*InputIntegrationEmail, []InputIntegrationResponseOption) (string, error)
 	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
 }

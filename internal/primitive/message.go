@@ -70,7 +70,7 @@ func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, op
 	return blocks, nil
 }
 
-func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail) (string, error) {
+func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, _ []InputIntegrationResponseOption) (string, error) {
 
 	header := make(map[string]string)
 	header["From"] = iim.From
