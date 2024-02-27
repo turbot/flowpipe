@@ -168,6 +168,9 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		case schema.BlockTypePipelineStepInput:
 			p := primitive.NewInputPrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
+		case schema.BlockTypePipelineStepMessage:
+			p := primitive.NewMessagePrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
+			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		default:
 			slog.Error("Unknown step type", "type", stepDefn.GetType())
 
