@@ -319,6 +319,9 @@ func (icm *InputIntegrationEmailInputStepMessageCreator) Message() (string, erro
 	header := make(map[string]string)
 	header["From"] = icm.InputIntegrationEmail.From
 	header["To"] = strings.Join(icm.InputIntegrationEmail.To, ", ")
+	if len(icm.InputIntegrationEmail.Cc) > 0 {
+		header["Cc"] = strings.Join(icm.InputIntegrationEmail.Cc, ", ")
+	}
 	header["Subject"] = icm.InputIntegrationEmail.Subject
 	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
 	header["MIME-version"] = "1.0;"
