@@ -9,11 +9,11 @@ import {
 const FlowpipeLogo = () => {
   const { theme } = useTheme();
   return (
-    <div className="mr-1 md:mr-4">
-      <div className="w-24">
+    <div className="w-24">
+      <a href="https://flowpipe.io" target="_blank" rel="noopener noreferrer">
         {theme.name === ThemeNames.PIPELING_DEFAULT && <LogoWordmark />}
         {theme.name === ThemeNames.PIPELING_DARK && <LogoWordmarkDarkmode />}
-      </div>
+      </a>
     </div>
   );
 };
