@@ -146,6 +146,7 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	response.ResponseUrl = in.ResponseURL
 
 	firstBlock := in.Message.Blocks.BlockSet[0]
+	isMultiSelect := false
 	switch firstBlock.BlockType() {
 	case slack.MBTSection:
 		fb := firstBlock.(*slack.SectionBlock)
@@ -162,6 +163,7 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 				case "static_select":
 					values = append(values, v.SelectedOption.Value)
 				case "multi_static_select":
+					isMultiSelect = true
 					for _, selected := range v.SelectedOptions {
 						values = append(values, selected.Value)
 					}
@@ -185,13 +187,10 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	response.StepExecutionID = payload.StepExecutionID
 
 	// value can be nil, string or []string
-	switch len(values) {
-	case 0:
-		response.Value = nil
-	case 1:
-		response.Value = values[0]
-	default:
+	if isMultiSelect {
 		response.Value = values
+	} else {
+		response.Value = values[0]
 	}
 
 	return response, nil
