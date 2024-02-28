@@ -499,18 +499,17 @@ func cacheHclResource[T modconfig.HclResource](resourceType string, items map[st
 }
 
 func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
+	shortName := strings.TrimPrefix(trigger.UnqualifiedName, "trigger.")
 	salt, err := util.GetModSaltOrDefault()
 	if err != nil {
 		return "", perr.InternalWithMessage("salt not found")
 	}
-
-	hashString, err := util.CalculateHash(trigger.FullName, salt)
+	hashString, err := util.CalculateHash(shortName, salt)
 	if err != nil {
 		return "", perr.InternalWithMessage("error calculating hash")
 	}
 	baseUrl := util.GetBaseUrl()
-
-	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, trigger.FullName, hashString), nil
+	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, shortName, hashString), nil
 }
 
 func (m *Manager) renderServerStartOutput() {

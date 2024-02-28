@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -60,7 +61,8 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	webhookTriggerHash := webhookUri.Hash
 
 	// Get the trigger from the cache
-	triggerCached, found := cache.GetCache().Get(webhookTriggerName)
+	triggerFullName := fmt.Sprintf("%s.trigger.http.%s", api.EsService.RootMod.ModName, webhookTriggerName)
+	triggerCached, found := cache.GetCache().Get(triggerFullName)
 	if !found {
 		common.AbortWithError(c, perr.NotFoundWithMessage("trigger not found"))
 		return
