@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/turbot/pipe-fittings/schema"
-
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -150,35 +148,11 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 	stepType := strings.Split(stepName, ".")[0]
 	switch stepType {
 	case "input":
-		if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
-			if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
-				for _, n := range notifies {
-					if notify, ok := n.(map[string]any); ok {
-						integration := notify["integration"].(map[string]any)
-						integrationType := integration["type"].(string)
-						switch integrationType {
-						case schema.IntegrationTypeEmail, schema.IntegrationTypeHttp:
-							formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
-							if err != nil {
-								slog.Error("Failed to get http form URL", "error", err)
-							} else {
-								input["form_url"] = formUrl
-							}
-							return input
-						default:
-							// slack, teams, etc - do nothing
-						}
-					}
-				}
-			} else {
-				formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
-				if err != nil {
-					slog.Error("Failed to get http form URL", "error", err)
-				} else {
-					input["form_url"] = formUrl
-				}
-				return input
-			}
+		formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+		if err != nil {
+			slog.Error("Failed to get http form URL", "error", err)
+		} else {
+			input["form_url"] = formUrl
 		}
 		return input
 	default:
