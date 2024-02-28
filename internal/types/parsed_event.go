@@ -273,6 +273,13 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitiz
 		} else {
 			out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 		}
+	case "message":
+		if text, ok := p.Input["text"].(string); ok {
+			if len(text) > 50 {
+				text = text[:50] + "…"
+			}
+			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(text))
+		}
 	default:
 		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}
