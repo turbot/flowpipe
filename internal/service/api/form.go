@@ -45,7 +45,7 @@ func (api *APIService) getFormData(c *gin.Context) {
 		return
 	}
 
-	output, err := webFormDataFromId(uri.ID)
+	output, err := httpFormDataFromId(uri.ID)
 	if err != nil {
 		common.AbortWithError(c, err) // will be perr type
 		return
@@ -74,7 +74,7 @@ func (api *APIService) getFormData(c *gin.Context) {
 
 	switch stepType {
 	case "input":
-		output.Inputs[stepName] = webFormDataInputFromInputStep(sExec.Input)
+		output.Inputs[stepName] = httpFormDataInputFromInputStep(sExec.Input)
 	case "form":
 		// TODO: implement
 		common.AbortWithError(c, perr.InternalWithMessage("form is not yet implemented"))
@@ -112,7 +112,7 @@ func (api *APIService) postFormData(c *gin.Context) {
 		return
 	}
 
-	output, err := webFormDataFromId(uri.ID)
+	output, err := httpFormDataFromId(uri.ID)
 	if err != nil {
 		common.AbortWithError(c, err) // will be perr type
 		return
@@ -159,9 +159,9 @@ func (api *APIService) postFormData(c *gin.Context) {
 	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 	switch stepType {
 	case "input":
-		output.Inputs[stepName] = webFormDataInputFromInputStep(stepExecution.Input)
+		output.Inputs[stepName] = httpFormDataInputFromInputStep(stepExecution.Input)
 		if parsedBody[stepName] != nil {
-			err := api.finishInputStepFromWebForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, parsedBody[stepName])
+			err := api.finishInputStepFromForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, parsedBody[stepName])
 			if err != nil {
 				common.AbortWithError(c, err)
 				return
@@ -183,29 +183,29 @@ func (api *APIService) postFormData(c *gin.Context) {
 }
 
 // TODO: consider struct naming / relocation to types?
-type webFormData struct {
-	ExecutionID         string                      `json:"execution_id"`
-	PipelineExecutionID string                      `json:"pipeline_execution_id"`
-	StepExecutionID     string                      `json:"step_execution_id"`
-	Status              string                      `json:"status"`
-	Inputs              map[string]webFormDataInput `json:"inputs"`
+type httpFormData struct {
+	ExecutionID         string                       `json:"execution_id"`
+	PipelineExecutionID string                       `json:"pipeline_execution_id"`
+	StepExecutionID     string                       `json:"step_execution_id"`
+	Status              string                       `json:"status"`
+	Inputs              map[string]httpFormDataInput `json:"inputs"`
 }
 
-type webFormDataInput struct {
-	Prompt    *string                   `json:"prompt,omitempty"`
-	InputType *string                   `json:"input_type,omitempty"`
-	Options   []webFormDataInputOptions `json:"options,omitempty"`
+type httpFormDataInput struct {
+	Prompt    *string                    `json:"prompt,omitempty"`
+	InputType *string                    `json:"input_type,omitempty"`
+	Options   []httpFormDataInputOptions `json:"options,omitempty"`
 }
 
-type webFormDataInputOptions struct {
+type httpFormDataInputOptions struct {
 	Label    *string `json:"label,omitempty"`
 	Value    *string `json:"value,omitempty"`
 	Selected *bool   `json:"selected,omitempty"`
 }
 
-func webFormDataFromId(id string) (webFormData, error) {
-	var output webFormData
-	output.Inputs = make(map[string]webFormDataInput)
+func httpFormDataFromId(id string) (httpFormData, error) {
+	var output httpFormData
+	output.Inputs = make(map[string]httpFormDataInput)
 
 	executionID, pipelineExecutionID, stepExecutionID, ok := db.ResolveShortStepExecutionID(id)
 	if !ok {
@@ -218,8 +218,8 @@ func webFormDataFromId(id string) (webFormData, error) {
 	return output, nil
 }
 
-func webFormDataInputFromInputStep(input modconfig.Input) webFormDataInput {
-	var output webFormDataInput
+func httpFormDataInputFromInputStep(input modconfig.Input) httpFormDataInput {
+	var output httpFormDataInput
 
 	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
 		output.Prompt = &p
@@ -230,7 +230,7 @@ func webFormDataInputFromInputStep(input modconfig.Input) webFormDataInput {
 	if !helpers.IsNil(input[schema.AttributeTypeOptions]) {
 		for _, o := range input[schema.AttributeTypeOptions].([]any) {
 			opt := o.(map[string]any)
-			option := webFormDataInputOptions{}
+			option := httpFormDataInputOptions{}
 			if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
 				option.Label = &l
 			}
@@ -250,7 +250,7 @@ func webFormDataInputFromInputStep(input modconfig.Input) webFormDataInput {
 	return output
 }
 
-func (api *APIService) finishInputStepFromWebForm(execID, pexecID string, sexec *execution.StepExecution, value any) error {
+func (api *APIService) finishInputStepFromForm(execID, pexecID string, sexec *execution.StepExecution, value any) error {
 	evt := &event.Event{ExecutionID: execID, CreatedAt: time.Now()}
 	stepFinishedEvent, err := event.NewStepFinished()
 	if err != nil {

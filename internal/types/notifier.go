@@ -131,7 +131,7 @@ func FpNotifierFromModNotifier(notifier modconfig.Notifier) (*FpNotifier, error)
 		if !helpers.IsNil(notify.Integration) {
 			fpNotify.Integration = &notify.Integration.GetHclResourceImpl().FullName
 		} else {
-			defaultIntegration := "webform.default"
+			defaultIntegration := "http.default"
 			fpNotify.Integration = &defaultIntegration
 		}
 
