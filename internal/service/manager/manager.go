@@ -467,16 +467,6 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		}
 		integrationUrl := fmt.Sprintf("%s/api/latest/integration/slack/%s/%s", util.GetBaseUrl(), integrationName, hashString)
 		integration.SetUrl(integrationUrl)
-	case schema.IntegrationTypeHttp:
-		integrationName := fmt.Sprintf("integration.%s", integration.GetHclResourceImpl().FullName)
-		hashString, err := util.CalculateHash(integrationName, salt)
-		if err != nil {
-			slog.Error("error computing hash", err)
-			return err
-		}
-		// TODO: review this... incorrect... can we pre-generate this now the step last8 is included?
-		integrationUrl := fmt.Sprintf("%s/api/latest/hook/%s/%s", util.GetBaseUrl(), integrationName, hashString)
-		integration.SetUrl(integrationUrl)
 	}
 	return nil
 }
