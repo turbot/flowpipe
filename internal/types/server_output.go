@@ -56,16 +56,30 @@ func (o ServerOutputPrefix) String(_ *sanitize.Sanitizer, opts sanitize.RenderOp
 type ServerOutputStatusChange struct {
 	ServerOutputPrefix
 	Status     string
-	Additional string
+	Content    string
+	Additional int
 }
 
-func NewServerOutputStatusChange(ts time.Time, status string, additional string) ServerOutputStatusChange {
+func NewServerOutputStatusChange(ts time.Time, status string, content string) ServerOutputStatusChange {
 	return ServerOutputStatusChange{
 		ServerOutputPrefix: ServerOutputPrefix{
 			TimeStamp: ts,
 			Category:  "flowpipe",
 		},
 		Status:     status,
+		Content:    content,
+		Additional: -1,
+	}
+}
+
+func NewServerOutputStatusChangeWithAdditional(ts time.Time, status string, content string, additional int) ServerOutputStatusChange {
+	return ServerOutputStatusChange{
+		ServerOutputPrefix: ServerOutputPrefix{
+			TimeStamp: ts,
+			Category:  "flowpipe",
+		},
+		Status:     status,
+		Content:    content,
 		Additional: additional,
 	}
 }
@@ -82,13 +96,17 @@ func (o ServerOutputStatusChange) String(sanitizer *sanitize.Sanitizer, opts san
 
 	switch strings.ToLower(o.Status) {
 	case "started":
-		return fmt.Sprintf("%s%s v%s\n", pre, au.Green(o.Status), o.Additional)
+		return fmt.Sprintf("%s%s v%s\n", pre, au.Green(o.Status), o.Content)
 	case "stopped":
 		return fmt.Sprintf("%s%s\n", pre, au.Red(o.Status))
 	case "listening":
-		return fmt.Sprintf("%s%s on %s\n", pre, au.Yellow(o.Status), au.Yellow(o.Additional))
+		i := "all network interfaces"
+		if o.Content != "" {
+			i = o.Content
+		}
+		return fmt.Sprintf("%s%s on %s, port %d\n", pre, au.Yellow(o.Status), au.Yellow(i), au.Cyan(o.Additional))
 	default:
-		return fmt.Sprintf("%s%s %s\n", pre, o.Status, o.Additional)
+		return fmt.Sprintf("%s%s %s\n", pre, o.Status, o.Content)
 	}
 }
 

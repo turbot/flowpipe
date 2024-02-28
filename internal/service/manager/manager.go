@@ -520,7 +520,7 @@ func (m *Manager) renderServerStartOutput() {
 		startTime = *m.StartedAt
 	}
 	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Started", app_specific.AppVersion.String()))
-	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
+	outputs = append(outputs, types.NewServerOutputStatusChangeWithAdditional(startTime, "Listening", m.HTTPAddress, m.HTTPPort))
 	if m.RootMod != nil {
 		outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "flowpipe"), m.RootMod.Name(), false))
 	}
