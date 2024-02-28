@@ -767,7 +767,7 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 
 func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOptions) (string, *[]string) {
 	au := aurora.NewAurora(opts.ColorEnabled)
-	formUrl, _ := input["form_url"].(string)
+	formUrl, hasFormUrl := input["form_url"].(string)
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 			switch len(notifies) {
@@ -808,7 +808,6 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 					}
 				case "slack":
 					channel := ""
-					additionalLines := []string{fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl))}
 					if sChannel, ok := input[schema.AttributeTypeChannel].(string); ok {
 						channel = sChannel
 					} else if nChannel, ok := notify[schema.AttributeTypeChannel].(string); ok {
@@ -816,12 +815,15 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 					} else if iChannel, ok := integration[schema.AttributeTypeChannel].(string); ok {
 						channel = iChannel
 					}
-					return fmt.Sprintf("slack to %s", au.BrightBlack(channel)), &additionalLines
+					return fmt.Sprintf("slack to %s", au.BrightBlack(channel)), nil
 				}
 
 			default: // multiple notifies
 				var notifyTypes []string
-				additionalLines := []string{fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl))}
+				var additionalLines []string
+				if hasFormUrl {
+					additionalLines = append(additionalLines, fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl)))
+				}
 
 				for i, n := range notifies {
 					notify := n.(map[string]any)
