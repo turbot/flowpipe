@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -452,7 +453,6 @@ func XTestQueryMariaDB(t *testing.T) {
 
 
 	*/
-
 }
 
 func TestMariaDBQueryListAll(t *testing.T) {
@@ -474,99 +474,107 @@ func TestMariaDBQueryListAll(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(15, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+	assert.Equal(3, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
-	// Expected output from the query
 	expectedResult := []map[string]interface{}{
 		{
-			"email":       "john@example.com",
-			"id":          int64(1),
-			"name":        "John",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+			"id":                      int64(1),
+			"name":                    "John",
+			"email":                   "john@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(50000),
+			"birth_date":              time.Date(1980, time.January, 1, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2020, time.January, 1, 8, 30, 0, 0, time.UTC),
+			"part_time":               int64(1),
+			"biography":               "John has been a part of our company for over a decade...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.January, 1, 12, 0, 0, 0, time.UTC),
+			"vacation_days":           int64(10),
+			"contract_length":         int64(12),
+			"employee_number":         int64(100001),
+			"working_hours":           time.Date(0, time.January, 1, 9, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(3000),
+			"employee_code":           "EMP00001",
+			"health_status":           "good",
+			"security_level":          int64(3),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/john",
+			"personal_website":        "https://johnsblog.com",
+			"notes":                   "John has consistently performed well.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00\xaa\xf1\xd2Mb\x80R\xc0^K\xc8\a=[D@",
+			"department_id":           int64(1),
+			"fingerprint":             nil,
+			"schedule":                nil, // NOTE: The schedule appears to be nil in the provided structure
+			"last_performance_review": int64(2023),
+			"nationality":             "USA",
+			"languages":               map[string]interface{}{"English": "fluent", "Spanish": "intermediate"},
+			"hire_date_year":          int64(2020),
 		},
 		{
-			"email":       "adam@example.com",
-			"id":          int64(2),
-			"name":        "Adam",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+			"id":                      int64(2),
+			"name":                    "Adam",
+			"email":                   "adam@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(52000),
+			"birth_date":              time.Date(1982, time.May, 12, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2020, time.March, 15, 9, 0, 0, 0, time.UTC),
+			"part_time":               int64(0),
+			"biography":               "Adam is a recent addition to the team...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.February, 2, 14, 30, 0, 0, time.UTC),
+			"vacation_days":           int64(15),
+			"contract_length":         int64(24),
+			"employee_number":         int64(100002),
+			"working_hours":           time.Date(0, time.January, 1, 10, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(2500),
+			"employee_code":           "EMP00002",
+			"health_status":           "excellent",
+			"security_level":          int64(4),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/adam",
+			"personal_website":        "https://adamportfolio.com",
+			"notes":                   "Adam brings fresh perspectives.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00\xa0\x1a/\xdd$\x06\x10\xc0w-!\x1f\xf4l)@",
+			"department_id":           int64(2),
+			"fingerprint":             nil,
+			"schedule":                nil, // NOTE: The schedule appears to be nil in the provided structure
+			"last_performance_review": int64(2023),
+			"nationality":             "CAN",
+			"languages":               map[string]interface{}{"French": "fluent", "English": "fluent"},
+			"hire_date_year":          int64(2020),
 		},
 		{
-			"email":       "alice@example.com",
-			"id":          int64(3),
-			"name":        "Alice",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": false},
-		},
-		{
-			"email":       "bob@example.com",
-			"id":          int64(4),
-			"name":        "Bob",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "alex@example.com",
-			"id":          int64(5),
-			"name":        "Alex",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "carey@example.com",
-			"id":          int64(6),
-			"name":        "Carey",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "cody@example.com",
-			"id":          int64(7),
-			"name":        "Cody",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "andrew@example.com",
-			"id":          int64(8),
-			"name":        "Andrew",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "alexandra@example.com",
-			"id":          int64(9),
-			"name":        "Alexandra",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
-		},
-		{
-			"email":       "jon@example.com",
-			"id":          int64(10),
-			"name":        "Jon",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "jennifer@example.com",
-			"id":          int64(11),
-			"name":        "Jennifer",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "alan@example.com",
-			"id":          int64(12),
-			"name":        "Alan",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "mia@example.com",
-			"id":          int64(13),
-			"name":        "Mia",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
-		},
-		{
-			"email":       "aaron@example.com",
-			"id":          int64(14),
-			"name":        "Aaron",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
-		},
-		{
-			"email":       "adrian@example.com",
-			"id":          int64(15),
-			"name":        "Adrian",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+			"id":                      int64(16),
+			"name":                    "Diana",
+			"email":                   "diana@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(55000),
+			"birth_date":              time.Date(1990, time.April, 5, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2021, time.April, 15, 9, 30, 0, 0, time.UTC),
+			"part_time":               int64(0),
+			"biography":               "Diana is known for her attention to detail...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2024, time.January, 20, 10, 0, 0, 0, time.UTC),
+			"vacation_days":           int64(20),
+			"contract_length":         int64(36),
+			"employee_number":         int64(100016),
+			"working_hours":           time.Date(0, time.January, 1, 8, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(4500),
+			"employee_code":           "EMP00016",
+			"health_status":           "excellent",
+			"security_level":          int64(5),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/diana",
+			"personal_website":        "https://dianasportfolio.com",
+			"notes":                   "Diana has led several successful projects.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00P\x8d\x97n\x12\x03,@\xaf%䃞-T\xc0",
+			"department_id":           int64(3),
+			"fingerprint":             nil,
+			"schedule":                nil, // Assuming 'schedule' is not set for Diana, thus nil
+			"last_performance_review": int64(2024),
+			"nationality":             "GBR",
+			"languages":               map[string]interface{}{"English": "fluent", "French": "basic"},
+			"hire_date_year":          int64(2021),
 		},
 	}
 
@@ -594,99 +602,112 @@ func TestPostgresSQLQueryListAll(t *testing.T) {
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.Equal(15, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+	assert.Equal(3, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
-	// Expected output from the query
+	location, err := time.LoadLocation("Etc/UTC")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	expectedResult := []map[string]interface{}{
 		{
-			"email":       "john@example.com",
-			"id":          int64(1),
-			"name":        "John",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+			"id":                      int64(1),
+			"name":                    "John",
+			"email":                   "john@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "50000.00",
+			"birth_date":              time.Date(1980, time.January, 1, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"hire_datetime":           time.Date(2020, time.January, 1, 6, 30, 0, 0, location),
+			"part_time":               true,
+			"biography":               "John has been a part of our company for over a decade...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.January, 1, 12, 0, 0, 0, time.FixedZone("", 0)),
+			"vacation_days":           int64(10),
+			"contract_length":         int64(12),
+			"employee_number":         int64(100001),
+			"office_location":         nil,
+			"working_hours":           "08:00:00",
+			"yearly_bonus":            float64(3000),
+			"employee_code":           "EMP00001  ",
+			"health_status":           "good",
+			"security_level":          int64(3),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/john",
+			"personal_website":        "https://johnsblog.com",
+			"notes":                   "John has consistently performed well.",
+			"department_id":           int64(1),
+			"fingerprint":             nil,
+			"schedule":                `{morning,afternoon}`,
+			"last_performance_review": time.Date(2023, time.January, 1, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "USA",
+			"languages":               map[string]interface{}{"English": "fluent", "Spanish": "intermediate"},
+			"hire_date_year":          int64(2020),
 		},
 		{
-			"email":       "adam@example.com",
-			"id":          int64(2),
-			"name":        "Adam",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+			"id":                      int64(2),
+			"name":                    "Adam",
+			"email":                   "adam@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "52000.00",
+			"birth_date":              time.Date(1982, time.May, 12, 0, 0, 0, 0, time.FixedZone("", 0)), // NOTE: birth_date value is suspect
+			"hire_datetime":           time.Date(2020, time.March, 15, 9, 0, 0, 0, location),
+			"part_time":               false,
+			"biography":               "Adam is a recent addition to the team...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.February, 2, 14, 30, 0, 0, time.FixedZone("", 0)), // NOTE: last_login value is suspect
+			"vacation_days":           int64(15),
+			"contract_length":         int64(24),
+			"employee_number":         int64(100002),
+			"office_location":         nil,
+			"working_hours":           "09:00:00",
+			"yearly_bonus":            float64(2500),
+			"employee_code":           "EMP00002  ",
+			"health_status":           "excellent",
+			"security_level":          int64(4),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/adam",
+			"personal_website":        "https://adamportfolio.com",
+			"notes":                   "Adam brings fresh perspectives.",
+			"department_id":           int64(2),
+			"fingerprint":             nil,               // Assuming bytea returns nil when not set
+			"schedule":                `{morning,night}`, // Assuming your data layer converts PG arrays to Go slices
+			"last_performance_review": time.Date(2023, time.February, 2, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "CAN",
+			"languages":               map[string]interface{}{"French": "fluent", "English": "fluent"},
+			"hire_date_year":          int64(2020),
 		},
 		{
-			"email":       "alice@example.com",
-			"id":          int64(3),
-			"name":        "Alice",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": false},
-		},
-		{
-			"email":       "bob@example.com",
-			"id":          int64(4),
-			"name":        "Bob",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "alex@example.com",
-			"id":          int64(5),
-			"name":        "Alex",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "carey@example.com",
-			"id":          int64(6),
-			"name":        "Carey",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "cody@example.com",
-			"id":          int64(7),
-			"name":        "Cody",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "andrew@example.com",
-			"id":          int64(8),
-			"name":        "Andrew",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "alexandra@example.com",
-			"id":          int64(9),
-			"name":        "Alexandra",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
-		},
-		{
-			"email":       "jon@example.com",
-			"id":          int64(10),
-			"name":        "Jon",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "jennifer@example.com",
-			"id":          int64(11),
-			"name":        "Jennifer",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": false},
-		},
-		{
-			"email":       "alan@example.com",
-			"id":          int64(12),
-			"name":        "Alan",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
-		},
-		{
-			"email":       "mia@example.com",
-			"id":          int64(13),
-			"name":        "Mia",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
-		},
-		{
-			"email":       "aaron@example.com",
-			"id":          int64(14),
-			"name":        "Aaron",
-			"preferences": map[string]interface{}{"theme": "light", "notifications": true},
-		},
-		{
-			"email":       "adrian@example.com",
-			"id":          int64(15),
-			"name":        "Adrian",
-			"preferences": map[string]interface{}{"theme": "dark", "notifications": true},
+			"id":                      int64(3),
+			"name":                    "Diana",
+			"email":                   "diana@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "55000.00",
+			"birth_date":              time.Date(1990, time.April, 5, 0, 0, 0, 0, time.FixedZone("", 0)), // NOTE: birth_date value is suspect
+			"hire_datetime":           time.Date(2021, time.April, 15, 9, 30, 0, 0, location),
+			"part_time":               false,
+			"biography":               "Diana is known for her attention to detail...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2024, time.January, 20, 10, 0, 0, 0, time.FixedZone("", 0)), // NOTE: last_login value is suspect
+			"vacation_days":           int64(20),
+			"contract_length":         int64(36),
+			"employee_number":         int64(100016),
+			"office_location":         nil,
+			"working_hours":           "08:00:00",
+			"yearly_bonus":            float64(4500),
+			"employee_code":           "EMP00016  ",
+			"health_status":           "excellent",
+			"security_level":          int64(5),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/diana",
+			"personal_website":        "https://dianasportfolio.com",
+			"notes":                   "Diana has led several successful projects.",
+			"department_id":           int64(3),
+			"fingerprint":             nil,                 // Assuming bytea returns nil when not set
+			"schedule":                `{afternoon,night}`, // Assuming your data layer converts PG arrays to Go slices
+			"last_performance_review": time.Date(2024, time.January, 20, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "GBR",
+			"languages":               map[string]interface{}{"English": "fluent", "French": "basic"},
+			"hire_date_year":          int64(2021),
 		},
 	}
 
