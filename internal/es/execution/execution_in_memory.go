@@ -337,7 +337,7 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 		case string(schema.IntegrationTypeEmail):
 			emailIntegrationMap[parts[1]] = pCty
 
-		case string(schema.IntegrationTypeWebform):
+		case string(schema.IntegrationTypeHttp):
 			// do nothing
 
 		default:

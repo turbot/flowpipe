@@ -34,7 +34,7 @@ func GetBaseUrl() string {
 	return baseUrl
 }
 
-func GetWebformUrl(execId string, pExecId string, sExecId string) (string, error) {
+func GetHttpFormUrl(execId string, pExecId string, sExecId string) (string, error) {
 
 	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
 		// in test env there's no global salt

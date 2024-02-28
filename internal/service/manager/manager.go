@@ -467,16 +467,6 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		}
 		integrationUrl := fmt.Sprintf("%s/api/latest/integration/slack/%s/%s", util.GetBaseUrl(), integrationName, hashString)
 		integration.SetUrl(integrationUrl)
-	case schema.IntegrationTypeWebform:
-		integrationName := fmt.Sprintf("integration.%s", integration.GetHclResourceImpl().FullName)
-		hashString, err := util.CalculateHash(integrationName, salt)
-		if err != nil {
-			slog.Error("error computing hash", err)
-			return err
-		}
-		// TODO: review this... incorrect... can we pre-generate this now the step last8 is included?
-		integrationUrl := fmt.Sprintf("%s/api/latest/hook/%s/%s", util.GetBaseUrl(), integrationName, hashString)
-		integration.SetUrl(integrationUrl)
 	}
 	return nil
 }
@@ -509,18 +499,17 @@ func cacheHclResource[T modconfig.HclResource](resourceType string, items map[st
 }
 
 func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
+	shortName := strings.TrimPrefix(trigger.UnqualifiedName, "trigger.")
 	salt, err := util.GetModSaltOrDefault()
 	if err != nil {
 		return "", perr.InternalWithMessage("salt not found")
 	}
-
-	hashString, err := util.CalculateHash(trigger.FullName, salt)
+	hashString, err := util.CalculateHash(shortName, salt)
 	if err != nil {
 		return "", perr.InternalWithMessage("error calculating hash")
 	}
 	baseUrl := util.GetBaseUrl()
-
-	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, trigger.FullName, hashString), nil
+	return fmt.Sprintf("%s/api/latest/hook/%s/%s", baseUrl, shortName, hashString), nil
 }
 
 func (m *Manager) renderServerStartOutput() {
@@ -530,7 +519,7 @@ func (m *Manager) renderServerStartOutput() {
 		startTime = *m.StartedAt
 	}
 	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Started", app_specific.AppVersion.String()))
-	outputs = append(outputs, types.NewServerOutputStatusChange(startTime, "Listening", fmt.Sprintf("%s:%d", m.HTTPAddress, m.HTTPPort)))
+	outputs = append(outputs, types.NewServerOutputStatusChangeWithAdditional(startTime, "Listening", m.HTTPAddress, m.HTTPPort))
 	if m.RootMod != nil {
 		outputs = append(outputs, types.NewServerOutputLoaded(types.NewServerOutputPrefix(startTime, "flowpipe"), m.RootMod.Name(), false))
 	}

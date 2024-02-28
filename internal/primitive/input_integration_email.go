@@ -384,9 +384,9 @@ func parseEmailInputTemplate(templateFileName string, data any) (string, error) 
 			if s != nil {
 				switch *s {
 				case "ok":
-					return "#198038"
+					return "#379634"
 				case "alert":
-					return "#da1e28"
+					return "#b32128"
 				default:
 					return "#036"
 				}

@@ -2,10 +2,9 @@ package event
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
 	"log/slog"
 	"strings"
-
-	"github.com/turbot/pipe-fittings/schema"
 
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -157,12 +156,12 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 						integration := notify["integration"].(map[string]any)
 						integrationType := integration["type"].(string)
 						switch integrationType {
-						case schema.IntegrationTypeEmail, schema.IntegrationTypeWebform:
-							webformUrl, err := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+						case schema.IntegrationTypeEmail, schema.IntegrationTypeHttp:
+							formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
 							if err != nil {
-								slog.Error("Failed to get webform URL", "error", err)
+								slog.Error("Failed to get http form URL", "error", err)
 							} else {
-								input["webform_url"] = webformUrl
+								input["form_url"] = formUrl
 							}
 							return input
 						default:
@@ -171,11 +170,11 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 					}
 				}
 			} else {
-				webformUrl, err := util.GetWebformUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
+				formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
 				if err != nil {
-					slog.Error("Failed to get webform URL", "error", err)
+					slog.Error("Failed to get http form URL", "error", err)
 				} else {
-					input["webform_url"] = webformUrl
+					input["form_url"] = formUrl
 				}
 				return input
 			}
