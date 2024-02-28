@@ -174,11 +174,15 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 				case schema.IntegrationTypeSlack:
 					s := NewInputIntegrationSlack(base)
 
-					if channel, ok := notify[schema.AttributeTypeChannel].(string); ok {
+					// Three ways to set the channel, in order of precedence
+					if channel, ok := input[schema.AttributeTypeChannel].(string); ok {
+						s.Channel = &channel
+					} else if channel, ok := notify[schema.AttributeTypeChannel].(string); ok {
 						s.Channel = &channel
 					} else if channel, ok := integration[schema.AttributeTypeChannel].(string); ok {
 						s.Channel = &channel
 					}
+
 					if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
 						s.Token = &tkn
 					}
@@ -225,7 +229,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						e.From = from
 					}
 
-					if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
+					if to, ok := input[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range to {
+							e.To = append(e.To, t.(string))
+						}
+					} else if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
 						for _, t := range to {
 							e.To = append(e.To, t.(string))
 						}
@@ -235,7 +243,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						}
 					}
 
-					if cc, ok := notify[schema.AttributeTypeCc].([]any); ok {
+					if cc, ok := input[schema.AttributeTypeCc].([]any); ok {
+						for _, c := range cc {
+							e.Cc = append(e.Cc, c.(string))
+						}
+					} else if cc, ok := notify[schema.AttributeTypeCc].([]any); ok {
 						for _, c := range cc {
 							e.Cc = append(e.Cc, c.(string))
 						}
@@ -245,7 +257,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						}
 					}
 
-					if bcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
+					if bcc, ok := input[schema.AttributeTypeBcc].([]any); ok {
+						for _, b := range bcc {
+							e.Bcc = append(e.Bcc, b.(string))
+						}
+					} else if bcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
 						for _, b := range bcc {
 							e.Bcc = append(e.Bcc, b.(string))
 						}
