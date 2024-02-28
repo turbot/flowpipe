@@ -279,6 +279,8 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitiz
 				text = text[:50] + "…"
 			}
 			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(text))
+		} else {
+			out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 		}
 	default:
 		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
