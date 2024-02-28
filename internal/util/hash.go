@@ -5,5 +5,5 @@ import (
 )
 
 func CalculateHash(s, salt string) (string, error) {
-	return utils.Base36Hash(s+salt, 16)
+	return utils.Base36Hash(s+salt, 13)
 }
