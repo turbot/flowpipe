@@ -32,19 +32,19 @@ func (mp *Message) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		return nil, err
 	}
 
-	var body string
+	var text string
 
-	if b, ok := input[schema.AttributeTypeBody].(string); ok {
-		body = b
+	if b, ok := input[schema.AttributeTypeText].(string); ok {
+		text = b
 	}
 
 	return mp.Input.execute(ctx, input, &MessageStepMessageCreator{
-		Body: body,
+		Text: text,
 	})
 }
 
 type MessageStepMessageCreator struct {
-	Body string
+	Text string
 }
 
 func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
@@ -62,9 +62,9 @@ func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, op
 	}
 	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
 
-	boldPromptBlock := slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*%s*", icm.Body), false, false)
+	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, icm.Text, false, false)
 
-	header := slack.NewSectionBlock(boldPromptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+	header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
 	blocks.BlockSet = append(blocks.BlockSet, header)
 
 	return blocks, nil
@@ -87,7 +87,7 @@ func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, _
 	data := struct {
 		Prompt string
 	}{
-		Prompt: icm.Body,
+		Prompt: icm.Text,
 	}
 
 	templateMessage, err := parseEmailInputTemplate("message-basic.html", data)
