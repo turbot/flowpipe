@@ -198,12 +198,12 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 					if err != nil {
 						return nil, err
 					}
-				case schema.IntegrationTypeWebform:
+				case schema.IntegrationTypeHttp:
 					// TODO: implement output
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
 
-					if formUrl, ok := input["webform_url"].(string); ok {
+					if formUrl, ok := input["form_url"].(string); ok {
 						e.FormUrl = formUrl
 					}
 

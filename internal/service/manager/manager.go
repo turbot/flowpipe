@@ -467,7 +467,7 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		}
 		integrationUrl := fmt.Sprintf("%s/api/latest/integration/slack/%s/%s", util.GetBaseUrl(), integrationName, hashString)
 		integration.SetUrl(integrationUrl)
-	case schema.IntegrationTypeWebform:
+	case schema.IntegrationTypeHttp:
 		integrationName := fmt.Sprintf("integration.%s", integration.GetHclResourceImpl().FullName)
 		hashString, err := util.CalculateHash(integrationName, salt)
 		if err != nil {

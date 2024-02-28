@@ -21,11 +21,11 @@ const FlowpipeSampleContent = `
 # at https://flowpipe.io/docs
 #
 
-# integration "webform" "default" {}
+# integration "http" "default" {}
 
 # notifier "default" {
 #   notify {
-#     integration = integration.webform.default
+#     integration = integration.http.default
 #   }
 # }
 `

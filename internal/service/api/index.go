@@ -157,7 +157,6 @@ func (api *APIService) Start() error {
 	router.Use(ginrecovery.New(log.FlowpipeLoggerWithLevelAndWriter(slog.LevelDebug, os.Stderr)))
 
 	router.Use(middleware.Serve("/form", middleware.LocalFile("./", true, "index.html", contentFS)))
-	// router.Use(static.Serve("/webform", static.EmbedFolder(assetFs, "assets")))
 
 	apiPrefixGroup := router.Group(common.APIPrefix())
 	apiPrefixGroup.Use(common.ValidateAPIVersion)

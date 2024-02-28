@@ -13,13 +13,13 @@ notifier "my_notifier" {
   description = "my notifier with 2 notifies"
 
   notify {
-      integration = integration.webform.default
+      integration = integration.http.default
       channel = "fake one"
       subject = "bar"
   }
 
   notify {
-      integration = integration.webform.default
+      integration = integration.http.default
       to = ["a", "b", "c"]
       channel = "foo"
   }
