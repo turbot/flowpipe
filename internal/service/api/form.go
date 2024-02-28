@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -160,8 +161,18 @@ func (api *APIService) postFormData(c *gin.Context) {
 	switch stepType {
 	case "input":
 		output.Inputs[stepName] = httpFormDataInputFromInputStep(stepExecution.Input)
+
 		if parsedBody[stepName] != nil {
-			err := api.finishInputStepFromForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, parsedBody[stepName])
+			val := parsedBody[stepName]
+			if i, ok := output.Inputs[stepName]; ok {
+				switch *i.InputType {
+				case constants.InputTypeMultiSelect:
+					if v, ok := val.(string); ok {
+						val = []string{v}
+					}
+				}
+			}
+			err := api.finishInputStepFromForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, val)
 			if err != nil {
 				common.AbortWithError(c, err)
 				return
