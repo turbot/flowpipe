@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
@@ -59,6 +60,7 @@ type InputIntegrationResponseOption struct {
 	Label    *string
 	Value    *string
 	Selected *bool
+	Style    *string
 }
 
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
@@ -154,6 +156,9 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
 				option.Selected = &s
 			}
+			if s, ok := opt[schema.AttributeTypeStyle].(string); ok {
+				option.Style = &s
+			}
 			resOptions = append(resOptions, option)
 		}
 	}
@@ -169,11 +174,15 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 				case schema.IntegrationTypeSlack:
 					s := NewInputIntegrationSlack(base)
 
-					if channel, ok := notify[schema.AttributeTypeChannel].(string); ok {
+					// Three ways to set the channel, in order of precedence
+					if channel, ok := input[schema.AttributeTypeChannel].(string); ok {
+						s.Channel = &channel
+					} else if channel, ok := notify[schema.AttributeTypeChannel].(string); ok {
 						s.Channel = &channel
 					} else if channel, ok := integration[schema.AttributeTypeChannel].(string); ok {
 						s.Channel = &channel
 					}
+
 					if tkn, ok := integration[schema.AttributeTypeToken].(string); ok {
 						s.Token = &tkn
 					}
@@ -185,15 +194,6 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 					}
 
 					// TODO: Validate, make it generic
-					// var inputType, prompt string
-					// if it, ok := input[schema.AttributeTypeType].(string); ok {
-					// 	inputType = it
-					// }
-
-					// if p, ok := input[schema.AttributeTypePrompt].(string); ok {
-					// 	prompt = p
-					// }
-
 					_, err := s.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err
@@ -229,7 +229,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						e.From = from
 					}
 
-					if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
+					if to, ok := input[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range to {
+							e.To = append(e.To, t.(string))
+						}
+					} else if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
 						for _, t := range to {
 							e.To = append(e.To, t.(string))
 						}
@@ -239,7 +243,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						}
 					}
 
-					if cc, ok := notify[schema.AttributeTypeCc].([]any); ok {
+					if cc, ok := input[schema.AttributeTypeCc].([]any); ok {
+						for _, c := range cc {
+							e.Cc = append(e.Cc, c.(string))
+						}
+					} else if cc, ok := notify[schema.AttributeTypeCc].([]any); ok {
 						for _, c := range cc {
 							e.Cc = append(e.Cc, c.(string))
 						}
@@ -249,7 +257,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						}
 					}
 
-					if bcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
+					if bcc, ok := input[schema.AttributeTypeBcc].([]any); ok {
+						for _, b := range bcc {
+							e.Bcc = append(e.Bcc, b.(string))
+						}
+					} else if bcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
 						for _, b := range bcc {
 							e.Bcc = append(e.Bcc, b.(string))
 						}
@@ -307,13 +319,16 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 		prompt = p
 	}
 
+	stepName := strings.Split(ip.StepName, ".")[len(strings.Split(ip.StepName, "."))-1]
+
 	return ip.execute(ctx, input, &InputStepMessageCreator{
 		Prompt:    prompt,
 		InputType: inputType,
+		StepName:  stepName,
 	})
 }
 
 type MessageCreator interface {
-	EmailMessage(*InputIntegrationEmail) (string, error)
+	EmailMessage(*InputIntegrationEmail, []InputIntegrationResponseOption) (string, error)
 	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
 }

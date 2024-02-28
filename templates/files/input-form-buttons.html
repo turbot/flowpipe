@@ -15,20 +15,24 @@
                     <br />
                     <div>
                         <a href="https://flowpipe.io" target="_blank" rel="noopener noreferrer">
-                        <img src="https://flowpipe.io/images/flowpipe_email_logo.png" alt="Flowpipe Logo" height="40" />
+                            <img src="https://flowpipe.io/images/flowpipe_email_logo.png" alt="Flowpipe Logo" height="40" />
                         </a>
                     </div>
                 </div>
                 <div style="line-height:26px;margin-bottom:12px;text-align:initial;word-break:break-word">
-                    {{ $prompt := .Prompt }}
-                    {{ $formUrl := .FormUrl }}
-                    <h2 style="font-size:1em;">{{ $prompt }}</h2>
+                    {{$prompt := .Prompt}}
+                    {{$formUrl := .FormUrl}}
+                    {{$stepName := .StepName}}
+                    <h2 style="font-size:1em;">{{$prompt}}</h2>
 
                     <div name="header" style="font-size: 14px; line-height: 16px; margin-bottom: 25px; margin-top: 25px; padding-top: 0px;">
                         <figure style="display: inline-block; margin: 0 auto; width: 100%;">
-                            <div style="background-color: #036; border: none; color: white; font-weight: normal; padding: 10px 20px; text-align: left; text-decoration: none; display: inline-block; margin: 4px 2px; border-radius: 4px;">
-                                <a href="{{ $formUrl }}" style="color: inherit; text-decoration: inherit;" target="_blank">Fill out form &rarr;</a>
+                            {{range $i, $option := .Options}}
+                            {{$color := getColor $option.Style}}
+                            <div style="background-color: {{$color}}; border: none; color: white; font-weight: normal; padding: 10px 20px; text-align: left; text-decoration: none; display: inline-block; margin: 4px 2px; border-radius: 4px;">
+                                <a href="{{$formUrl}}/submit?{{$stepName}}={{$option.Value}}" style="color: inherit; text-decoration: inherit;" target="_blank">{{$option.Label}}</a>
                             </div>
+                            {{end}}
                         </figure>
                     </div>
                 </div>

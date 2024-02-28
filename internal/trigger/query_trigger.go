@@ -131,6 +131,9 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 			primaryKey := r[config.PrimaryKey]
 			if primaryKey == nil {
 				slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
+				if o.IsServerMode {
+					o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), fmt.Sprintf("primary key %s not found in query row from query trigger %s", config.PrimaryKey, tr.Trigger.Name()), err))
+				}
 				return perr.InternalWithMessage("Primary key not found in row")
 			}
 			pkString, ok := primaryKey.(string)
