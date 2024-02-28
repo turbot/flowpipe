@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/schema"
 	"reflect"
 	"strings"
 	"time"
@@ -268,20 +269,20 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitiz
 		duration, _ := p.Input["duration"].(string)
 		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(duration))
 	case "input":
-		if webUrl, ok := p.Input["form_url"].(string); ok {
-			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(webUrl))
-		} else {
-			out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
+		summary, additional := parseInputStepNotifierToLines(p.Input, opts)
+		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, summary)
+		if opts.Verbose && !helpers.IsNil(additional) {
+			for _, line := range *additional {
+				out += fmt.Sprintf("%s %s\n", pre, line)
+			}
 		}
 	case "message":
-		if text, ok := p.Input["text"].(string); ok {
-			if len(text) > 50 {
-				text = text[:50] + "…"
-			}
-			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(text))
-		} else {
-			out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
+		text, _ := p.Input["text"].(string)
+		if len(text) > 50 {
+			text = text[:50] + "…"
 		}
+		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(text))
+
 	default:
 		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}
@@ -762,4 +763,168 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 		}
 	}
 	return out
+}
+
+func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOptions) (string, *[]string) {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	formUrl, _ := input["form_url"].(string)
+	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
+		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
+			switch len(notifies) {
+			case 0:
+				return formUrl, nil
+			case 1: // single notify, give summary
+				notify := notifies[0].(map[string]any)
+				integration := notify["integration"].(map[string]any)
+				integrationType := integration["type"].(string)
+				switch integrationType {
+				case "http":
+					return formUrl, nil
+				case "email":
+					var to []string
+					additionalLines := []string{fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl))}
+					if sTo, ok := input[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range sTo {
+							to = append(to, t.(string))
+						}
+					} else if nTo, ok := notify[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range nTo {
+							to = append(to, t.(string))
+						}
+					} else if iTo, ok := integration[schema.AttributeTypeTo].([]any); ok {
+						for _, t := range iTo {
+							to = append(to, t.(string))
+						}
+					}
+
+					switch len(to) {
+					case 0:
+						return fmt.Sprintf("email to %s", au.BrightBlack("cc/bcc only")), &additionalLines
+					case 1:
+						return fmt.Sprintf("email to %s", au.BrightBlack(to[0])), &additionalLines
+					default:
+						remainder := len(to) - 1
+						return fmt.Sprintf("email to %s", au.BrightBlack(fmt.Sprintf("%s + %d others", to[0], remainder))), &additionalLines
+					}
+				case "slack":
+					channel := ""
+					additionalLines := []string{fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl))}
+					if sChannel, ok := input[schema.AttributeTypeChannel].(string); ok {
+						channel = sChannel
+					} else if nChannel, ok := notify[schema.AttributeTypeChannel].(string); ok {
+						channel = nChannel
+					} else if iChannel, ok := integration[schema.AttributeTypeChannel].(string); ok {
+						channel = iChannel
+					}
+					return fmt.Sprintf("slack to %s", au.BrightBlack(channel)), &additionalLines
+				}
+
+			default: // multiple notifies
+				var notifyTypes []string
+				additionalLines := []string{fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl))}
+
+				for i, n := range notifies {
+					notify := n.(map[string]any)
+					integration := notify["integration"].(map[string]any)
+					integrationType := integration["type"].(string)
+					notifyTypes = append(notifyTypes, integrationType)
+					var prefix string
+					if i == 0 {
+						prefix = fmt.Sprintf("Notified via %s", au.BrightBlack(integrationType))
+					} else {
+						prefix = fmt.Sprintf("Notified #%d via %s", i+1, au.BrightBlack(integrationType))
+					}
+					switch integrationType {
+					case "email":
+						var to []string
+						if sTo, ok := input[schema.AttributeTypeTo].([]any); ok {
+							for _, t := range sTo {
+								to = append(to, t.(string))
+							}
+						} else if nTo, ok := notify[schema.AttributeTypeTo].([]any); ok {
+							for _, t := range nTo {
+								to = append(to, t.(string))
+							}
+						} else if iTo, ok := integration[schema.AttributeTypeTo].([]any); ok {
+							for _, t := range iTo {
+								to = append(to, t.(string))
+							}
+						}
+						switch len(to) {
+						case 0:
+						case 1, 2, 3:
+							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s", prefix, au.BrightBlack(strings.Join(to, ", "))))
+						default:
+							r := len(to) - 3
+							f3 := to[0:3]
+							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s %s", prefix, au.BrightBlack(strings.Join(f3, ", ")), au.BrightBlack(fmt.Sprintf("+ %d others", r))))
+						}
+
+						var cc []string
+						if sCc, ok := input[schema.AttributeTypeCc].([]any); ok {
+							for _, t := range sCc {
+								cc = append(cc, t.(string))
+							}
+						} else if nCc, ok := notify[schema.AttributeTypeCc].([]any); ok {
+							for _, t := range nCc {
+								cc = append(cc, t.(string))
+							}
+						} else if iCc, ok := integration[schema.AttributeTypeCc].([]any); ok {
+							for _, t := range iCc {
+								cc = append(cc, t.(string))
+							}
+						}
+						switch len(cc) {
+						case 0:
+						case 1, 2, 3:
+							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s", prefix, au.BrightBlack(strings.Join(cc, ", "))))
+						default:
+							r := len(cc) - 3
+							f3 := cc[0:3]
+							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s %s", prefix, au.BrightBlack(strings.Join(f3, ", ")), au.BrightBlack(fmt.Sprintf("+ %d others", r))))
+						}
+
+						var bcc []string
+						if sBcc, ok := input[schema.AttributeTypeBcc].([]any); ok {
+							for _, t := range sBcc {
+								bcc = append(bcc, t.(string))
+							}
+						} else if nBcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
+							for _, t := range nBcc {
+								bcc = append(bcc, t.(string))
+							}
+						} else if iBcc, ok := integration[schema.AttributeTypeBcc].([]any); ok {
+							for _, t := range iBcc {
+								bcc = append(bcc, t.(string))
+							}
+						}
+						switch len(bcc) {
+						case 0:
+						case 1, 2, 3:
+							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s", prefix, au.BrightBlack(strings.Join(bcc, ", "))))
+						default:
+							r := len(bcc) - 3
+							f3 := bcc[0:3]
+							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s %s", prefix, au.BrightBlack(strings.Join(f3, ", ")), au.BrightBlack(fmt.Sprintf("+ %d others", r))))
+						}
+					case "http":
+						additionalLines = append(additionalLines, prefix)
+					case "slack":
+						var channel string
+						if sChannel, ok := input[schema.AttributeTypeChannel].(string); ok {
+							channel = sChannel
+						} else if nChannel, ok := notify[schema.AttributeTypeChannel].(string); ok {
+							channel = nChannel
+						} else if iChannel, ok := integration[schema.AttributeTypeChannel].(string); ok {
+							channel = iChannel
+						}
+						additionalLines = append(additionalLines, fmt.Sprintf("%s channel %s", prefix, au.BrightBlack(channel)))
+					}
+				}
+
+				return fmt.Sprintf("Notified via %s", au.BrightBlack(strings.Join(notifyTypes, ", "))), &additionalLines
+			}
+		}
+	}
+	return formUrl, nil
 }
