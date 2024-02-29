@@ -529,6 +529,84 @@ func (suite *ModTestSuite) TestSimpleNestedPipeline() {
 	assert.Equal("two: hello from the middle world", pex.PipelineOutput["val_two"])
 }
 
+func (suite *ModTestSuite) TestDynamicParamNested() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.top_dynamic", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("A", pex.PipelineOutput["val_a"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+	assert.Equal("B", pex.PipelineOutput["val_b"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+
+	// run it again with param this time
+	pipelineInput = modconfig.Input{
+		"pipe": "middle_dynamic_c",
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.top_dynamic", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("A", pex.PipelineOutput["val_a"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+
+	// Now it should be running middle_dynamic_c pipeline
+	assert.Equal("C", pex.PipelineOutput["val_b"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+}
+
+func (suite *ModTestSuite) TestDynamicParamNestedStepRef() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.top_dynamic_step_ref", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	if pex.Status != "finished" {
+		assert.Fail("Pipeline execution not finished")
+		return
+	}
+
+	assert.Equal("C", pex.PipelineOutput["val"].(map[string]interface{})["output"].(map[string]interface{})["val"])
+}
+
 func (suite *ModTestSuite) TestSimpleNestedPipelineWithOutputClash() {
 	assert := assert.New(suite.T())
 

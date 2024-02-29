@@ -21,6 +21,7 @@ _Bug fixes_
 * Removed titles when merging multiple error messages ([#263](https://github.com/turbot/pipe-fittings/issues/263)).
 * Scheduled triggers are now refreshed when mod files have changed.
 * Runtime resolution of credentials.
+* Runtime resolution of pipeline reference. ([#732](https://github.com/turbot/flowpipe/issues/732)).
 
 ## v0.2.3 [2024-02-13]
 

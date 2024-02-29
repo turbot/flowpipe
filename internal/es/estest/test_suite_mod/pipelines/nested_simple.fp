@@ -4,7 +4,6 @@ pipeline "nested_simple_top" {
         pipeline = pipeline.nested_simple_middle
     }
 
-
     output "val" {
         value = step.pipeline.middle.output.val
     }

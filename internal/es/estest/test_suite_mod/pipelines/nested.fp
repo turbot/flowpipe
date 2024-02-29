@@ -70,7 +70,6 @@ pipeline "middle" {
 
 pipeline "bottom" {
 
-
     step "transform" "echo" {
         value = jsonencode({
             jerry = "garcia"
