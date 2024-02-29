@@ -5,7 +5,7 @@ interface ButtonProps {
   children: ReactNode;
   disabled?: boolean;
   size?: "sm" | "md" | "lg";
-  style?: "primary";
+  style?: "default" | "ok" | "alert";
   type?: "button" | "submit";
   onClick: () => void;
 }
@@ -14,7 +14,7 @@ const Button = ({
   children,
   disabled = false,
   size = "lg",
-  style = "primary",
+  style = "default",
   type = "button",
   onClick,
 }: ButtonProps) => {
@@ -28,7 +28,12 @@ const Button = ({
         size === "sm" ? "px-2 py-1 text-xs" : null,
         size === "md" ? "px-2.5 py-1.5 text-sm" : null,
         size === "lg" ? "px-3.5 py-2.5 text-sm" : null,
-        style === "primary" ? "bg-flowpipe-blue-dark text-white" : null,
+        style === "ok" ? "bg-ok text-white" : null,
+        style === "alert" ? "bg-alert text-white" : null,
+        // Default style
+        style !== "ok" && style !== "alert"
+          ? "bg-flowpipe-blue-dark text-white"
+          : null,
       )}
       onClick={disabled ? undefined : onClick}
     >

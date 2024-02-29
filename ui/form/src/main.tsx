@@ -13,7 +13,10 @@ const router = createBrowserRouter(
     {
       path: "/",
       element: <AppWrapper />,
-      children: [{ path: ":id/:hash", element: <InputForm /> }],
+      children: [
+        { path: ":id/:hash", element: <InputForm /> },
+        { path: ":id/:hash/submit", element: <InputForm autoSubmit /> },
+      ],
     },
   ],
   { basename: "/form" },
