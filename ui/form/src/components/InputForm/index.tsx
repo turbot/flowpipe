@@ -5,21 +5,55 @@ import SelectInput from "@flowpipe/components/forms/SelectInput";
 import SuccessMessage from "@flowpipe/components/layout/SuccessMessage";
 import TextInput from "@flowpipe/components/forms/TextInput";
 import { Form, Formik, FormikTouched } from "formik";
-import { FormEvent, Fragment, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { FormikErrors } from "formik/dist/types";
 import {
   InputFormValues,
+  PipelineForm,
   PipelineFormStatus,
   PipelineInputOption,
   PipelineInputType,
 } from "@flowpipe/types/input";
 import { PipelingError } from "@flowpipe/api/error";
 import { useFormAPI } from "@flowpipe/api/pipeline";
-import { useParams } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
+
+interface InputFormProps {
+  autoSubmit?: boolean;
+}
 
 interface InputFormState {
   status: "pending" | "responded" | "error";
   error?: PipelingError | string | null;
+}
+
+interface InputFormInnerProps {
+  autoSubmit: boolean;
+  form: PipelineForm;
+  formState: InputFormState;
+  errors: FormikErrors<InputFormValues>;
+  submitting: boolean;
+  valid: boolean;
+  touched: FormikTouched<InputFormValues>;
+  values: InputFormValues;
+  setFieldTouched: (
+    field: string,
+    isTouched?: boolean | undefined,
+    shouldValidate?: boolean | undefined,
+  ) => Promise<void | FormikErrors<InputFormValues>>;
+  setFieldValue: (
+    field: string,
+    value: any,
+    shouldValidate?: boolean,
+  ) => Promise<void | FormikErrors<InputFormValues>>;
+  submit: (e?: FormEvent<HTMLFormElement> | undefined) => void;
 }
 
 interface InputOptionsProps {
@@ -45,6 +79,7 @@ interface InputOptionsProps {
 
 interface SubmitOptionsProps {
   name: string;
+  autoSubmit: boolean;
   formState: InputFormState;
   inputType: PipelineInputType;
   submitting: boolean;
@@ -59,19 +94,20 @@ interface SubmitOptionsProps {
   onSubmit: (e?: FormEvent<HTMLFormElement>) => void;
 }
 
-const InputPrompt = ({
-  formStatus,
-  prompt,
-}: {
+interface InputPromptProps {
   formStatus: PipelineFormStatus;
   prompt: string | undefined;
-}) => {
+}
+
+const Message = ({ children }) => (
+  <span className="font-semibold leading-6 text-foreground">{children}</span>
+);
+
+const InputPrompt = ({ formStatus, prompt }: InputPromptProps) => {
   if (formStatus !== "starting" && formStatus !== "started") {
     return null;
   }
-  return (
-    <span className="font-semibold leading-6 text-foreground">{prompt}</span>
-  );
+  return <Message>{prompt}</Message>;
 };
 
 const InputOptions = ({
@@ -145,6 +181,7 @@ const InputOptions = ({
 
 const SubmitOptions = ({
   name,
+  autoSubmit,
   formState,
   inputType,
   submitting,
@@ -153,85 +190,190 @@ const SubmitOptions = ({
   setFieldValue,
   onSubmit,
 }: SubmitOptionsProps) => {
-  switch (inputType) {
-    case "button":
-      return (
-        <div className="flex flex-wrap items-center gap-2 justify-end">
-          {formState.status === "error" && formState.error && (
-            <ErrorMessage error={formState.error} />
-          )}
-          {formState.status === "responded" && (
-            <SuccessMessage message="Input response sent" />
-          )}
-          {options?.map((o) => (
-            <Button
-              key={o.value}
-              disabled={submitting || formState.status === "responded"}
-              style="primary"
-              type="button"
-              onClick={async () => {
-                await setFieldValue(name, o.value, true);
-                onSubmit();
-              }}
-            >
-              {o.label || o.value}
-            </Button>
-          ))}
-        </div>
-      );
-    case "select":
-    case "multiselect":
-    case "text":
-      return (
-        <div className="flex items-center justify-end space-x-2">
-          {formState.status === "error" && formState.error && (
-            <ErrorMessage error={formState.error} />
-          )}
-          {formState.status === "responded" && (
-            <SuccessMessage message="Input response sent" />
-          )}
-          <Button
-            disabled={!valid || submitting || formState.status === "responded"}
-            style="primary"
-            type="submit"
-            onClick={onSubmit}
-          >
-            Submit
-          </Button>
-        </div>
-      );
-    default:
-      return (
-        <ErrorMessage
-          as="string"
-          error={`Unsupported input type ${inputType}`}
-        />
-      );
+  if (autoSubmit) {
+    return (
+      <>
+        {!valid && (
+          <ErrorMessage as="string" error="Invalid form values" withIcon />
+        )}
+        {valid && formState.status === "pending" && (
+          <Message>Submitting response...</Message>
+        )}
+        {valid && formState.status === "error" && formState.error && (
+          <ErrorMessage error={formState.error} />
+        )}
+        {valid && formState.status === "responded" && (
+          <SuccessMessage message="Input response sent" />
+        )}
+      </>
+    );
   }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 justify-end">
+      {formState.status === "error" && formState.error && (
+        <ErrorMessage error={formState.error} />
+      )}
+      {formState.status === "responded" && (
+        <SuccessMessage message="Input response sent" />
+      )}
+      {inputType === "button" &&
+        options?.map((o) => (
+          <Button
+            key={o.value}
+            disabled={submitting || formState.status === "responded"}
+            style="primary"
+            type="button"
+            onClick={async () => {
+              await setFieldValue(name, o.value, true);
+              onSubmit();
+            }}
+          >
+            {o.label || o.value}
+          </Button>
+        ))}
+      {(inputType === "select" ||
+        inputType === "multiselect" ||
+        inputType === "text") && (
+        <Button
+          disabled={!valid || submitting || formState.status === "responded"}
+          style="primary"
+          type="submit"
+          onClick={onSubmit}
+        >
+          Submit
+        </Button>
+      )}
+      {inputType !== "button" &&
+        inputType !== "select" &&
+        inputType !== "multiselect" &&
+        inputType !== "text" && (
+          <ErrorMessage
+            as="string"
+            error={`Unsupported input type ${inputType}`}
+          />
+        )}
+    </div>
+  );
 };
 
-const InputForm = () => {
+const InputFormInner = ({
+  autoSubmit = false,
+  errors,
+  form,
+  formState,
+  touched,
+  values,
+  submitting,
+  valid,
+  setFieldTouched,
+  setFieldValue,
+  submit,
+}: InputFormInnerProps) => {
+  const submittedRef = useRef<boolean>(false);
+  useEffect(() => {
+    const doSumit = async () => {
+      await submit();
+    };
+    if (
+      !autoSubmit ||
+      !valid ||
+      submitting ||
+      submittedRef.current ||
+      !!formState.error ||
+      formState.status === "responded"
+    ) {
+      return;
+    }
+    submittedRef.current = true;
+    doSumit();
+  }, [autoSubmit, formState, submitting, valid]);
+
+  return (
+    <Form className="divide-y divide-modal-divide">
+      {!autoSubmit && form.status === "finished" && (
+        <div className="px-4 py-4">
+          <span className="font-semibold leading-6 text-foreground">
+            Input has already been responded to.
+          </span>
+        </div>
+      )}
+      {form.status === "error" && (
+        <div className="px-4 py-4">
+          <ErrorMessage withIcon error="Input is in a failed state." />
+        </div>
+      )}
+      {Object.entries(form.inputs).map(([input_name, input]) => (
+        <Fragment key={input_name}>
+          {!autoSubmit && (
+            <div className="px-4 py-4 space-y-2">
+              <InputPrompt prompt={input.prompt} formStatus={form.status} />
+              <InputOptions
+                name={input_name}
+                formState={formState}
+                errors={errors}
+                inputType={input.input_type}
+                setFieldTouched={setFieldTouched}
+                setFieldValue={setFieldValue}
+                submitting={submitting}
+                touched={touched}
+                options={input.options}
+                values={values}
+              />
+            </div>
+          )}
+          <div className="px-4 py-4">
+            <SubmitOptions
+              name={input_name}
+              autoSubmit={autoSubmit}
+              formState={formState}
+              inputType={input.input_type}
+              setFieldValue={setFieldValue}
+              submitting={submitting}
+              options={input.options}
+              valid={valid}
+              values={values}
+              onSubmit={submit}
+            />
+          </div>
+        </Fragment>
+      ))}
+    </Form>
+  );
+};
+
+const InputForm = ({ autoSubmit = false }: InputFormProps) => {
   const { id, hash } = useParams();
+  const { search } = useLocation();
   const { form, error, loading, postForm } = useFormAPI(id, hash);
   const initialValues = useMemo<InputFormValues>(() => {
     if (!form || !form.inputs) {
       return {};
     }
     const initial = {};
+    const formValues = new URLSearchParams(search);
     for (const [input_name, input] of Object.entries(form.inputs)) {
-      if (input.input_type === "multiselect") {
+      if (input.input_type === "multiselect" && formValues.has(input_name)) {
+        const rawValues = formValues.get(input_name);
+        // @ts-ignore this isn't null as the formValues.has check is truthy
+        initial[input_name] = rawValues.split(",");
+      } else if (input.input_type === "multiselect") {
         initial[input_name] = input.options
           .filter((o) => o.selected)
           .map((o) => o.value);
+      } else if (input.input_type === "select" && formValues.has(input_name)) {
+        initial[input_name] = formValues.get(input_name);
       } else if (input.input_type === "select") {
         initial[input_name] =
           input.options.find((o) => o.selected)?.value || "";
+      } else if (formValues.has(input_name)) {
+        initial[input_name] = formValues.get(input_name);
       } else {
         initial[input_name] = "";
       }
     }
     return initial;
-  }, [form]);
+  }, [form, search]);
   const [state, setState] = useState<InputFormState>({
     status: "pending",
     error: null,
@@ -277,7 +419,6 @@ const InputForm = () => {
               return errors;
             }}
             onSubmit={async (values, { setSubmitting }) => {
-              setSubmitting(false);
               const { error } = await postForm(values);
               if (error) {
                 setState({ status: "error", error });
@@ -285,6 +426,7 @@ const InputForm = () => {
                 setState({ status: "responded", error: null });
                 // await reload();
               }
+              setSubmitting(false);
             }}
             enableReinitialize
             validateOnMount
@@ -298,53 +440,23 @@ const InputForm = () => {
               handleSubmit,
               touched,
               values,
-            }) => (
-              <Form className="divide-y divide-modal-divide">
-                {form.status === "finished" && (
-                  <span className="font-semibold leading-6 text-foreground">
-                    Input has already been responded to.
-                  </span>
-                )}
-                {form.status === "error" && (
-                  <ErrorMessage withIcon error="Input is in a failed state." />
-                )}
-                {Object.entries(form.inputs).map(([input_name, input]) => (
-                  <Fragment key={input_name}>
-                    <div className="px-4 py-4 space-y-2">
-                      <InputPrompt
-                        prompt={input.prompt}
-                        formStatus={form.status}
-                      />
-                      <InputOptions
-                        name={input_name}
-                        formState={state}
-                        errors={errors}
-                        inputType={input.input_type}
-                        setFieldTouched={setFieldTouched}
-                        setFieldValue={setFieldValue}
-                        submitting={isSubmitting}
-                        touched={touched}
-                        options={input.options}
-                        values={values}
-                      />
-                    </div>
-                    <div className="px-4 py-4">
-                      <SubmitOptions
-                        name={input_name}
-                        formState={state}
-                        inputType={input.input_type}
-                        setFieldValue={setFieldValue}
-                        submitting={isSubmitting}
-                        options={input.options}
-                        valid={isValid}
-                        values={values}
-                        onSubmit={handleSubmit}
-                      />
-                    </div>
-                  </Fragment>
-                ))}
-              </Form>
-            )}
+            }) => {
+              return (
+                <InputFormInner
+                  autoSubmit={autoSubmit}
+                  form={form}
+                  formState={state}
+                  valid={isValid}
+                  submitting={isSubmitting}
+                  values={values}
+                  errors={errors}
+                  touched={touched}
+                  setFieldValue={setFieldValue}
+                  setFieldTouched={setFieldTouched}
+                  submit={handleSubmit}
+                />
+              );
+            }}
           </Formik>
         )}
       </div>
