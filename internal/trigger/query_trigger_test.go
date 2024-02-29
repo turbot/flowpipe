@@ -21,217 +21,6 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-func createTestTableA(db *sql.DB, tableName string) error {
-
-	createTableSQL := `create table if not exists ` + tableName + ` (id text primary key, name text, age integer, registration_date date, is_active boolean);`
-
-	slog.Info("Creating table", "sql", createTableSQL)
-	_, err := db.Exec(createTableSQL)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func populateTestTableA(db *sql.DB, tableName string, data []map[string]interface{}) error {
-	// Start a transaction
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active) VALUES (?, ?, ?, ?, ?)`) //nolint:gosec // should be safe to use
-	if err != nil {
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-			return err
-		}
-		return err
-	}
-	defer tempStmt.Close()
-
-	// Insert all items into the temporary table
-	for _, item := range data {
-		_, err = tempStmt.Exec(item["id"], item["name"], item["age"], item["registration_date"], item["is_active"])
-		if err != nil {
-			err2 := tx.Rollback()
-			if err2 != nil {
-				slog.Error("Error rolling back transaction", "error", err2)
-				return err
-			}
-			return err
-		}
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		slog.Error("Error committing transaction", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-func updateTestTableA(db *sql.DB, tableName string, data map[string]interface{}) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ? WHERE id = ?`) //nolint:gosec // should be safe to use
-	if err != nil {
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-		}
-		return err
-	}
-	defer tempStmt.Close()
-
-	_, err = tempStmt.Exec(data["name"], data["age"], data["registration_date"], data["is_active"], data["id"])
-	if err != nil {
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-		}
-		return err
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		slog.Error("Error committing transaction", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
-	// Start a transaction
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	// Prepare statement for inserting into the temporary table
-	placeholders := strings.Join(strings.Split(strings.Repeat("?", len(idsToDelete)), ""), ",")
-
-	tempStmt, err := tx.Prepare(fmt.Sprintf("DELETE FROM %s WHERE id in (%s)", tableName, placeholders))
-	if err != nil {
-		return err
-	}
-	defer tempStmt.Close()
-
-	_, err = tempStmt.Exec(idsToDelete...)
-	if err != nil {
-		return err
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		slog.Error("Error committing transaction", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-func createTestTableB(db *sql.DB, tableName string) error {
-	createTableSQL := `CREATE TABLE IF NOT EXISTS ` + tableName + ` (
-		id INTEGER PRIMARY KEY,  -- Changed to INTEGER and is the primary key
-		name TEXT,
-		age INTEGER,
-		registration_date DATE,
-		is_active BOOLEAN,
-		blob_data BLOB       -- for storing BLOB data
-	);`
-
-	_, err := db.Exec(createTableSQL)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func populateTestTableB(db *sql.DB, tableName string, data []map[string]interface{}) error {
-	// Start a transaction
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active, blob_data) VALUES (?, ?, ?, ?, ?, ?)`) //nolint:gosec // should be safe to use
-	if err != nil {
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-			return err
-		}
-		return err
-	}
-	defer tempStmt.Close()
-
-	// Insert all items into the temporary table
-	for _, item := range data {
-		_, err = tempStmt.Exec(item["id"], item["name"], item["age"], item["registration_date"], item["is_active"], item["blob_data"])
-		if err != nil {
-			err2 := tx.Rollback()
-			if err2 != nil {
-				slog.Error("Error rolling back transaction", "error", err2)
-				return err
-			}
-			return err
-		}
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		slog.Error("Error committing transaction", "error", err)
-		return err
-	}
-
-	return nil
-}
-
-func updateTestTableB(db *sql.DB, tableName string, data map[string]interface{}) error {
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-
-	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ?, blob_data = ? WHERE id = ?`) //nolint:gosec // should be safe to use
-	if err != nil {
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-		}
-		return err
-	}
-	defer tempStmt.Close()
-
-	_, err = tempStmt.Exec(data["name"], data["age"], data["registration_date"], data["is_active"], data["blob_data"], data["id"])
-	if err != nil {
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-		}
-		return err
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		slog.Error("Error committing transaction", "error", err)
-		return err
-	}
-
-	return nil
-}
-
 func TestTriggerQuery(t *testing.T) {
 	ctx := context.Background()
 
@@ -1760,4 +1549,215 @@ func TestTriggerQueryWithNull(t *testing.T) {
 			assert.Fail("wrong id")
 		}
 	}
+}
+
+func createTestTableA(db *sql.DB, tableName string) error {
+
+	createTableSQL := `create table if not exists ` + tableName + ` (id text primary key, name text, age integer, registration_date date, is_active boolean);`
+
+	slog.Info("Creating table", "sql", createTableSQL)
+	_, err := db.Exec(createTableSQL)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func populateTestTableA(db *sql.DB, tableName string, data []map[string]interface{}) error {
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Prepare statement for inserting into the temporary table
+	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active) VALUES (?, ?, ?, ?, ?)`) //nolint:gosec // should be safe to use
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+			return err
+		}
+		return err
+	}
+	defer tempStmt.Close()
+
+	// Insert all items into the temporary table
+	for _, item := range data {
+		_, err = tempStmt.Exec(item["id"], item["name"], item["age"], item["registration_date"], item["is_active"])
+		if err != nil {
+			err2 := tx.Rollback()
+			if err2 != nil {
+				slog.Error("Error rolling back transaction", "error", err2)
+				return err
+			}
+			return err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func updateTestTableA(db *sql.DB, tableName string, data map[string]interface{}) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ? WHERE id = ?`) //nolint:gosec // should be safe to use
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return err
+	}
+	defer tempStmt.Close()
+
+	_, err = tempStmt.Exec(data["name"], data["age"], data["registration_date"], data["is_active"], data["id"])
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Prepare statement for inserting into the temporary table
+	placeholders := strings.Join(strings.Split(strings.Repeat("?", len(idsToDelete)), ""), ",")
+
+	tempStmt, err := tx.Prepare(fmt.Sprintf("DELETE FROM %s WHERE id in (%s)", tableName, placeholders))
+	if err != nil {
+		return err
+	}
+	defer tempStmt.Close()
+
+	_, err = tempStmt.Exec(idsToDelete...)
+	if err != nil {
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func createTestTableB(db *sql.DB, tableName string) error {
+	createTableSQL := `CREATE TABLE IF NOT EXISTS ` + tableName + ` (
+		id INTEGER PRIMARY KEY,  -- Changed to INTEGER and is the primary key
+		name TEXT,
+		age INTEGER,
+		registration_date DATE,
+		is_active BOOLEAN,
+		blob_data BLOB       -- for storing BLOB data
+	);`
+
+	_, err := db.Exec(createTableSQL)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func populateTestTableB(db *sql.DB, tableName string, data []map[string]interface{}) error {
+	// Start a transaction
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	// Prepare statement for inserting into the temporary table
+	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active, blob_data) VALUES (?, ?, ?, ?, ?, ?)`) //nolint:gosec // should be safe to use
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+			return err
+		}
+		return err
+	}
+	defer tempStmt.Close()
+
+	// Insert all items into the temporary table
+	for _, item := range data {
+		_, err = tempStmt.Exec(item["id"], item["name"], item["age"], item["registration_date"], item["is_active"], item["blob_data"])
+		if err != nil {
+			err2 := tx.Rollback()
+			if err2 != nil {
+				slog.Error("Error rolling back transaction", "error", err2)
+				return err
+			}
+			return err
+		}
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
+
+	return nil
+}
+
+func updateTestTableB(db *sql.DB, tableName string, data map[string]interface{}) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ?, blob_data = ? WHERE id = ?`) //nolint:gosec // should be safe to use
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return err
+	}
+	defer tempStmt.Close()
+
+	_, err = tempStmt.Exec(data["name"], data["age"], data["registration_date"], data["is_active"], data["blob_data"], data["id"])
+	if err != nil {
+		err2 := tx.Rollback()
+		if err2 != nil {
+			slog.Error("Error rolling back transaction", "error", err2)
+		}
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("Error committing transaction", "error", err)
+		return err
+	}
+
+	return nil
 }
