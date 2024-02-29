@@ -14,6 +14,7 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	"slices"
 	"strings"
 	"time"
 )
@@ -165,6 +166,14 @@ func (api *APIService) postFormData(c *gin.Context) {
 
 		if parsedBody[stepName] != nil {
 			val := parsedBody[stepName]
+			var allowedValues []string
+			for _, o := range output.Inputs[stepName].Options {
+				allowedValues = append(allowedValues, *o.Value)
+			}
+			if !httpFormDataValidateResponse(val, allowedValues) {
+				common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("submitted value %v contains invalid option value(s).", val)))
+				return
+			}
 			if i, ok := output.Inputs[stepName]; ok {
 				switch *i.InputType {
 				case constants.InputTypeMultiSelect:
@@ -264,6 +273,22 @@ func httpFormDataInputFromInputStep(input modconfig.Input) httpFormDataInput {
 	}
 
 	return output
+}
+
+func httpFormDataValidateResponse(val any, allowedOptions []string) bool {
+	switch v := val.(type) {
+	case string:
+		return slices.Contains(allowedOptions, v)
+	case []string:
+		for _, x := range v {
+			if !slices.Contains(allowedOptions, x) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }
 
 func (api *APIService) finishInputStepFromForm(execID, pexecID string, sexec *execution.StepExecution, value any) error {
