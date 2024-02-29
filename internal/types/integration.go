@@ -61,6 +61,7 @@ func (f FpIntegration) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions
 		keyWidth = 15
 	}
 
+	// Name is shown with type prefix as that is how it will be used since we can have; slack.bob, email.bob, etc
 	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), f.Name)
 	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), f.Type)
 	if f.Title != nil {
@@ -89,22 +90,22 @@ func (f FpIntegration) String(_ *sanitize.Sanitizer, opts sanitize.RenderOptions
 		}
 	case "email":
 		if f.SmtpHost != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Smtp Host:"), *f.SmtpHost)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("SMTP Host:"), *f.SmtpHost)
 		}
 		if f.SmtpPort != nil {
-			output += fmt.Sprintf("%-*s%d\n", keyWidth, au.Blue("Smtp Port:"), *f.SmtpPort)
+			output += fmt.Sprintf("%-*s%d\n", keyWidth, au.Blue("SMTP Port:"), *f.SmtpPort)
 		}
 		if f.SmtpsPort != nil {
-			output += fmt.Sprintf("%-*s%d\n", keyWidth, au.Blue("Smtps Port:"), *f.SmtpsPort)
+			output += fmt.Sprintf("%-*s%d\n", keyWidth, au.Blue("SMTPS Port:"), *f.SmtpsPort)
 		}
 		if f.SmtpTls != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Smtp TLS:"), *f.SmtpTls)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("SMTP TLS:"), *f.SmtpTls)
 		}
 		if f.SmtpUsername != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Smtp Username:"), *f.SmtpUsername)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("SMTP Username:"), *f.SmtpUsername)
 		}
 		if f.SmtpPassword != nil {
-			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Smtp Password:"), *f.SmtpPassword)
+			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("SMTP Password:"), *f.SmtpPassword)
 		}
 		if f.From != nil {
 			output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("From:"), *f.From)
