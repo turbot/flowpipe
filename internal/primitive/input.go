@@ -199,7 +199,7 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						return nil, err
 					}
 				case schema.IntegrationTypeHttp:
-					// TODO: implement output
+					// No output needs to be rendered here for HTTP step. The console output is rendered by the Event printer, it does the right thing there too.
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
 
