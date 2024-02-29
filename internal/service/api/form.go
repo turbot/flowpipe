@@ -166,13 +166,16 @@ func (api *APIService) postFormData(c *gin.Context) {
 
 		if parsedBody[stepName] != nil {
 			val := parsedBody[stepName]
-			var allowedValues []string
-			for _, o := range output.Inputs[stepName].Options {
-				allowedValues = append(allowedValues, *o.Value)
-			}
-			if !httpFormDataValidateResponse(val, allowedValues) {
-				common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("submitted value %v contains invalid option value(s).", val)))
-				return
+			inputType := *output.Inputs[stepName].InputType
+			if inputType != constants.InputTypeText {
+				var allowedValues []string
+				for _, o := range output.Inputs[stepName].Options {
+					allowedValues = append(allowedValues, *o.Value)
+				}
+				if !httpFormDataValidateResponse(val, allowedValues) {
+					common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("submitted value %v contains invalid option value(s).", val)))
+					return
+				}
 			}
 			if i, ok := output.Inputs[stepName]; ok {
 				switch *i.InputType {
