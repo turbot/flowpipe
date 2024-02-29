@@ -2,6 +2,8 @@ package command
 
 import (
 	"context"
+	"os"
+	"strings"
 	"sync"
 
 	"log/slog"
@@ -77,8 +79,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// from the status of each execution.
 	for _, stepDefn := range pipelineDefn.Steps {
 
-		if stepDefn.GetType() == schema.BlockTypePipelineStepInput && !o.IsServerMode {
-			err := perr.BadRequestWithMessage("pipeline step input must be run in server mode")
+		if !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") && stepDefn.GetType() == schema.BlockTypePipelineStepInput && !o.IsServerMode {
+			err := perr.ServiceUnavailableWithMessage("input step requires flowpipe server to be running")
 			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
 		}
 
@@ -146,8 +148,11 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			Action:   modconfig.NextStepActionStart,
 		}
 
-		// Check if there's a for_each, if there isn't calculate the input
-		// if there is a for_each, don't calculate the input, it's the job of step_for_each_plan to calculate the input
+		// Check if there's a for_each.
+		//
+		// If for_each does not exist: calculate the input
+		// if for_each exists:  don't calculate the input, it's the job of step_for_each_plan to calculate the input
+		//
 		stepForEach := stepDefn.GetForEach()
 		if helpers.IsNil(stepForEach) {
 			var nextStepAction modconfig.NextStepAction
