@@ -139,6 +139,7 @@ func (api *APIService) postFormData(c *gin.Context) {
 
 	if pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() || stepExecution.Status == "finished" {
 		common.AbortWithError(c, perr.ConflictWithMessage(fmt.Sprintf("step %s has already been processed or is no longer required due to pipeline completion", output.StepExecutionID)))
+		return
 	}
 
 	var parsedBody map[string]any
