@@ -6,7 +6,7 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-func flowpipeMetadataOutput(startedAt, finshedAt time.Time) map[string]interface{} {
+func FlowpipeMetadataOutput(startedAt, finshedAt time.Time) map[string]interface{} {
 
 	output := map[string]interface{}{
 		schema.AttributeTypeStartedAt:  startedAt,

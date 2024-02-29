@@ -192,7 +192,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	output.Data[schema.AttributeTypeStatusCode] = resp.StatusCode
 	output.Data[schema.AttributeTypeResponseHeaders] = headers
 
-	output.Data[schema.AttributeTypeFlowpipe] = flowpipeMetadataOutput(start, finish)
+	output.Data[schema.AttributeTypeFlowpipe] = FlowpipeMetadataOutput(start, finish)
 
 	var bodyString string
 
