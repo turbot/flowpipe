@@ -2,6 +2,7 @@ export interface PipelineInputOption {
   label?: string;
   value: string;
   selected?: boolean;
+  style?: "default" | "ok" | "alert";
 }
 
 export type PipelineFormStatus =

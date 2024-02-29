@@ -222,7 +222,7 @@ const SubmitOptions = ({
           <Button
             key={o.value}
             disabled={submitting || formState.status === "responded"}
-            style="primary"
+            style={!!o.style ? o.style : "default"}
             type="button"
             onClick={async () => {
               await setFieldValue(name, o.value, true);
@@ -237,7 +237,6 @@ const SubmitOptions = ({
         inputType === "text") && (
         <Button
           disabled={!valid || submitting || formState.status === "responded"}
-          style="primary"
           type="submit"
           onClick={onSubmit}
         >
