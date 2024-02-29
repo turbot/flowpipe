@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"log/slog"
+	"os"
 
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/pipe-fittings/perr"
@@ -10,7 +11,41 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+func moveFlowpipeDbFromModDirToFlowpipeModDir() error {
+
+	sourcePath := filepaths.LegacyFlowpipeDBFileName()
+	destPath := filepaths.FlowpipeDBFileName()
+
+	// Check if flowpipe.db exists in Mod Dir
+	if _, err := os.Stat(sourcePath); os.IsNotExist(err) {
+		return nil
+	}
+
+	// Check if flowpipe.db already exists in Mod's .flowpipe dir
+	if _, err := os.Stat(destPath); err == nil {
+		// flowpipe.db already exists in ModFlowpipeDir, aborting
+		return perr.InternalWithMessage("flowpipe.db already exists in the mod's .flowpipe directory, aborting.")
+	} else if !os.IsNotExist(err) {
+		// An error other than "not exists", propagate it
+		return err
+	}
+
+	// Move flowpipe.db
+	err := os.Rename(sourcePath, destPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func InitializeFlowpipeDB() error {
+
+	err := moveFlowpipeDbFromModDirToFlowpipeModDir()
+	if err != nil {
+		return err
+	}
+
 	db, err := OpenFlowpipeDB()
 	if err != nil {
 		return err
