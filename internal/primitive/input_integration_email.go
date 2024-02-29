@@ -330,9 +330,20 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, opt
 	if len(iim.Cc) > 0 {
 		header["Cc"] = strings.Join(iim.Cc, ", ")
 	}
-	header["Subject"] = iim.Subject
+
 	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
 	header["MIME-version"] = "1.0;"
+
+	subject := iim.Subject
+
+	if subject == "" {
+		subject = icm.Prompt
+		if len(subject) > 50 {
+			subject = subject[:50] + "..."
+		}
+	}
+
+	header["Subject"] = subject
 
 	var message string
 	for key, value := range header {

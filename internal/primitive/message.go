@@ -75,9 +75,20 @@ func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, _
 	header := make(map[string]string)
 	header["From"] = iim.From
 	header["To"] = strings.Join(iim.To, ", ")
-	header["Subject"] = iim.Subject
+
 	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
 	header["MIME-version"] = "1.0;"
+
+	subject := iim.Subject
+
+	if subject == "" {
+		subject = icm.Text
+		if len(subject) > 50 {
+			subject = subject[:50] + "..."
+		}
+	}
+
+	header["Subject"] = subject
 
 	var message string
 	for key, value := range header {
