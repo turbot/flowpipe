@@ -56,6 +56,11 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 		return
 	}
 
+	// support for omitting the type in the url
+	if !strings.HasPrefix(uri.ID, "slack.") {
+		uri.ID = fmt.Sprintf("slack.%s", uri.ID)
+	}
+
 	// verify hash
 	salt, err := util.GetGlobalSalt()
 	if err != nil {
