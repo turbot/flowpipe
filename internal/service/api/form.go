@@ -213,6 +213,7 @@ type httpFormDataInputOptions struct {
 	Label    *string `json:"label,omitempty"`
 	Value    *string `json:"value,omitempty"`
 	Selected *bool   `json:"selected,omitempty"`
+	Style    *string `json:"style,omitempty"`
 }
 
 func httpFormDataFromId(id string) (httpFormData, error) {
@@ -254,6 +255,9 @@ func httpFormDataInputFromInputStep(input modconfig.Input) httpFormDataInput {
 			}
 			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
 				option.Selected = &s
+			}
+			if s, ok := opt[schema.AttributeTypeStyle].(string); ok {
+				option.Style = &s
 			}
 			output.Options = append(output.Options, option)
 		}
