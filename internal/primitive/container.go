@@ -193,6 +193,8 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 		return nil, err
 	}
 
+	start := time.Now().UTC()
+
 	c, err := cp.getFromCacheOrNew(ctx, input, cp.FullyQualifiedStepName)
 	if err != nil {
 		return nil, err
@@ -335,15 +337,18 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 	} else {
 		output.Status = "finished"
 	}
+	finish := time.Now().UTC()
 
-	output.Data["container_id"] = containerID
-	output.Data["exit_code"] = exitCode
+	output.Data[schema.AttributeTypeContainerId] = containerID
+	output.Data[schema.AttributeTypeExitCode] = exitCode
+
+	output.Data[schema.AttributeTypeFlowpipe] = flowpipeMetadataOutput(start, finish)
 
 	// If there are any error while creating the container, then the containerID will be empty
 	if c.Runs[containerID] != nil {
-		output.Data["stdout"] = c.Runs[containerID].Stdout
-		output.Data["stderr"] = c.Runs[containerID].Stderr
-		output.Data["lines"] = c.Runs[containerID].Lines
+		output.Data[schema.AttributeTypeStdout] = c.Runs[containerID].Stdout
+		output.Data[schema.AttributeTypeStderr] = c.Runs[containerID].Stderr
+		output.Data[schema.AttributeTypeLines] = c.Runs[containerID].Lines
 	}
 
 	return &output, nil

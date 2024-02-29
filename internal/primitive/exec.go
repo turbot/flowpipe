@@ -97,8 +97,7 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 	o.Data["exit_code"] = exitCode
 	o.Data["stdout_lines"] = stdoutLines
 	o.Data["stderr_lines"] = stderrLines
-	o.Data[schema.AttributeTypeStartedAt] = start
-	o.Data[schema.AttributeTypeFinishedAt] = finish
+	o.Data[schema.AttributeTypeFlowpipe] = flowpipeMetadataOutput(start, finish)
 
 	return &o, nil
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 func TestSleepOK(t *testing.T) {
@@ -21,8 +22,9 @@ func TestSleepOK(t *testing.T) {
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
 
-	startTime := output.Get("started_at").(time.Time)
-	finishTime := output.Get("finished_at").(time.Time)
+	flowpipeMetadata := output.Data[schema.AttributeTypeFlowpipe].(map[string]interface{})
+	startTime := flowpipeMetadata[schema.AttributeTypeStartedAt].(time.Time)
+	finishTime := flowpipeMetadata[schema.AttributeTypeFinishedAt].(time.Time)
 	diff := finishTime.Sub(startTime)
 	assert.Equal(float64(1), math.Floor(diff.Seconds()), "output does not match the provided duration")
 }
