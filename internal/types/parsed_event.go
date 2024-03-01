@@ -630,7 +630,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					prefix.RetryIndex = &i
 
 				}
-
+				e.Output.Data["flowpipe"] = e.Output.Flowpipe
 				switch e.Output.Status {
 				case "finished":
 					parsed := ParsedEventWithOutput{
