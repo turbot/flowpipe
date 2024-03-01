@@ -315,7 +315,7 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		}
 	}
 
-	output.Data[schema.AttributeTypeFlowpipe] = FlowpipeMetadataOutput(start, finish)
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	return &output, nil
 }

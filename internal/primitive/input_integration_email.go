@@ -218,7 +218,7 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 	err = smtp.SendMail(addr, auth, ip.From, recipients, []byte(message))
 	finish := time.Now().UTC()
 
-	output.Data[schema.AttributeTypeFlowpipe] = FlowpipeMetadataOutput(start, finish)
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	if err != nil {
 		var smtpError *textproto.Error

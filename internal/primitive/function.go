@@ -173,7 +173,7 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		},
 	}
 
-	output.Data[schema.AttributeTypeFlowpipe] = FlowpipeMetadataOutput(start, finish)
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	return &output, nil
 }

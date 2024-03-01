@@ -342,7 +342,7 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 	output.Data[schema.AttributeTypeContainerId] = containerID
 	output.Data[schema.AttributeTypeExitCode] = exitCode
 
-	output.Data[schema.AttributeTypeFlowpipe] = FlowpipeMetadataOutput(start, finish)
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	// If there are any error while creating the container, then the containerID will be empty
 	if c.Runs[containerID] != nil {

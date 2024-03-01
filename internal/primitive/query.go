@@ -130,7 +130,7 @@ func (e *Query) RunWithMetadata(ctx context.Context, input modconfig.Input) (*mo
 	}
 
 	output.Data[schema.AttributeTypeRows] = results
-	output.Data[schema.AttributeTypeFlowpipe] = FlowpipeMetadataOutput(start, finish)
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	return output, md, nil
 }
