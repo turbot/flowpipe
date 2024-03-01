@@ -6,7 +6,8 @@ integration "slack" "my_slack_app" {
 }
 
 integration "email" "email_integration_1" {
-
+  from      = "fake one"
+  smtp_host = "test"
 }
 
 notifier "my_notifier" {
