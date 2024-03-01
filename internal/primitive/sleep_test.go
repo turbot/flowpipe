@@ -39,7 +39,7 @@ func TestSleepWithDurationInNumber(t *testing.T) {
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
 
-	flowpipeMetadata := output.Data[schema.AttributeTypeFlowpipe].(map[string]interface{})
+	flowpipeMetadata := output.Flowpipe
 	startTime := flowpipeMetadata[schema.AttributeTypeStartedAt].(time.Time)
 	finishTime := flowpipeMetadata[schema.AttributeTypeFinishedAt].(time.Time)
 
