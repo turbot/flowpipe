@@ -146,11 +146,20 @@ func (api *APIService) postFormData(c *gin.Context) {
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
 		return
 	}
+	if !httpFormValidateNotifiers(stepExecution) {
+		// if not a valid notifier for this endpoint return NotFound
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
+		return
+	}
 
 	if pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() || stepExecution.Status == "finished" {
 		common.AbortWithError(c, perr.ConflictWithMessage(fmt.Sprintf("step %s has already been processed or is no longer required due to pipeline completion", output.StepExecutionID)))
 		return
 	}
+
+	stepFullName := stepExecution.Name
+	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
+	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 
 	var parsedBody map[string]any
 	switch c.ContentType() {
@@ -166,9 +175,6 @@ func (api *APIService) postFormData(c *gin.Context) {
 		}
 	}
 
-	stepFullName := stepExecution.Name
-	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
-	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 	switch stepType {
 	case "input":
 		output.Inputs[stepName] = httpFormDataInputFromInputStep(stepExecution.Input)
@@ -301,6 +307,26 @@ func httpFormDataValidateResponse(val any, allowedOptions []string) bool {
 	default:
 		return false
 	}
+}
+
+func httpFormValidateNotifiers(sexec *execution.StepExecution) bool {
+	validNotifiers := []string{"http", "email"}
+	input := sexec.Input
+	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
+		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
+			for _, n := range notifies {
+				if notify, ok := n.(map[string]any); ok {
+					if integration, ok := notify["integration"].(map[string]any); ok {
+						integrationType := integration["type"].(string)
+						if slices.Contains(validNotifiers, integrationType) {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (api *APIService) finishInputStepFromForm(execID, pexecID string, sexec *execution.StepExecution, value any) error {
