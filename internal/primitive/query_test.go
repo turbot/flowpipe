@@ -2,6 +2,9 @@ package primitive
 
 import (
 	"context"
+	"database/sql"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -459,7 +462,7 @@ func TestMariaDBQueryListAll(t *testing.T) {
 	ctx := context.Background()
 
 	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
-	err := ApplyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
 		t.Fatalf("Error setting up the database: " + err.Error())
 	}
@@ -587,7 +590,7 @@ func TestPostgresSQLQueryListAll(t *testing.T) {
 
 	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
 
-	err := ApplyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
 		t.Fatalf("Error setting up the database: " + err.Error())
 	}
@@ -713,4 +716,42 @@ func TestPostgresSQLQueryListAll(t *testing.T) {
 
 	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
 	assert.Equal(expectedResult, expectedRow)
+}
+
+func applyDatabaseScript(driverName, dbConnectionString, scriptPath string) error {
+	if driverName != DriverPostgres && driverName != DriverMySQL {
+		return perr.BadRequestWithMessage("Unsupported database driver: " + driverName)
+	}
+
+	// Connect to the database
+	db, err := sql.Open(driverName, dbConnectionString)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to connect to database: " + err.Error())
+	}
+	defer db.Close()
+
+	// Read the SQL file using os.ReadFile
+	sqlContent, err := os.ReadFile(scriptPath)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to read SQL file: " + err.Error())
+	}
+	sqlScript := string(sqlContent)
+
+	// Split the script into individual statements on semicolon
+	statements := strings.Split(sqlScript, ";")
+
+	for _, statement := range statements {
+		statement = strings.TrimSpace(statement)
+		if statement == "" {
+			continue // Skip empty statements resulting from the split
+		}
+
+		// Directly execute each statement on the database connection
+		_, err = db.Exec(statement)
+		if err != nil {
+			return perr.BadRequestWithMessage("Failed to execute SQL statement: " + statement + "\nError: " + err.Error())
+		}
+	}
+
+	return nil
 }

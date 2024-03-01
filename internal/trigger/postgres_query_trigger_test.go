@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -1393,7 +1394,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		return
 	}
 
-	err = createTestTableA(db, "test_one")
+	err = createPostgresSqlTestTableA(db, "test_one")
 	if err != nil {
 		assert.Fail("Error creating test table", err)
 		return
@@ -1423,7 +1424,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		},
 	}
 
-	err = populateTestTableA(db, "test_one", data)
+	err = populatePostgresSqlTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -1555,6 +1556,9 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 func createPostgresSqlTestTableA(db *sql.DB, tableName string) error {
 
 	createTableSQL := `create table if not exists ` + tableName + ` (id text primary key, name text, age integer, registration_date date, is_active boolean);`
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+	ApplyContentToDatabase(DriverPostgres, connectionString, createTableSQL)
 
 	slog.Info("Creating table", "sql", createTableSQL)
 	_, err := db.Exec(createTableSQL)
@@ -1758,6 +1762,37 @@ func updatePostgresSqlTestTableB(db *sql.DB, tableName string, data map[string]i
 	if err := tx.Commit(); err != nil {
 		slog.Error("Error committing transaction", "error", err)
 		return err
+	}
+
+	return nil
+}
+
+func applyContentToDatabase(driverName, dbConnectionString, content string) error {
+	if driverName != DriverPostgres && driverName != DriverMySQL {
+		return perr.BadRequestWithMessage("Unsupported database driver: " + driverName)
+	}
+
+	// Connect to the database
+	db, err := sql.Open(driverName, dbConnectionString)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to connect to database: " + err.Error())
+	}
+	defer db.Close()
+
+	// Split the script into individual statements on semicolon
+	statements := strings.Split(content, ";")
+
+	for _, statement := range statements {
+		statement = strings.TrimSpace(statement)
+		if statement == "" {
+			continue // Skip empty statements resulting from the split
+		}
+
+		// Directly execute each statement on the database connection
+		_, err = db.Exec(statement)
+		if err != nil {
+			return perr.BadRequestWithMessage("Failed to execute SQL statement: " + statement + "\nError: " + err.Error())
+		}
 	}
 
 	return nil
