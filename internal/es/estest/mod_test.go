@@ -2355,7 +2355,7 @@ func (suite *ModTestSuite) TestCredentialRedactionFromMemoryAndFile() {
 	assert.Equal("two", pex.PipelineOutput["val"].(map[string]interface{})["one"])
 }
 
-func (suite *ModTestSuite) TestExcudeSHARedaction() {
+func (suite *ModTestSuite) TestExcludeSHARedaction() {
 	assert := assert.New(suite.T())
 
 	pipelineInput := modconfig.Input{}
@@ -3785,6 +3785,85 @@ func (suite *ModTestSuite) TestPipelineStepLoopWithArgsLiteral() {
 	// Iteration 3
 	output = pex.StepStatus["pipeline.repeat_pipeline_loop_test"]["0"].StepExecutions[3].Output.Data["output"].(map[string]interface{})
 	assert.Equal("Hello world! loop index 1", output["greet_world"].(string))
+}
+
+// Input Step Validation Tests
+func (suite *ModTestSuite) TestInputWithNoOptionsButtonType() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_with_no_options_button_type", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "Input type 'button' requires options, no options were defined")
+}
+
+func (suite *ModTestSuite) TestInputWithNoOptionsTextType() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_with_no_options_text_type", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("started", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+}
+
+func (suite *ModTestSuite) TestInputWithSlackNotifierNoChannelToken() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_with_slack_notifier_no_channel_set", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "slack notifications require a channel when using token auth, channel was not set")
+}
+
+// TODO: This actually calls slack... figure out a mocked approach or not test success path?
+func (suite *ModTestSuite) XTestInputWithSlackNotifierNoChannelWebhook() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_with_slack_notifier_no_channel_set_wh", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	// assert.Equal(1, len(pex.Errors))
+	// assert.Contains(pex.Errors[0].Error.Error(), "slack server error: 404 Not Found")
+}
+
+func (suite *ModTestSuite) TestInputWithEmailNotifierNoRecipients() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.input_with_email_notifier_no_recipients", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
 }
 
 func TestModTestingSuite(t *testing.T) {

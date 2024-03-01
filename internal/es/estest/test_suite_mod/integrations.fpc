@@ -49,3 +49,44 @@ notifier "slack_notify" {
       bcc = ["eddie", "frank", "george", "harry"]
   }
 }
+
+integration "email" "bare_minimum" {
+  smtp_host = "mail.example.com"
+  from      = "turbie@turbot.com"
+}
+
+integration "slack" "bare_minimum_token" {
+  token = "xoxp-12345"
+}
+
+integration "slack" "bare_minimum_webhook" {
+  webhook_url = "https://hooks.slack.com/services/T00X0X00XX0/B00XX0XX0XX/sXXxXxxXxXXx0XxXx0XX0x0x"
+}
+
+notifier "bare_minimum_email" {
+  notify {
+    integration = integration.email.bare_minimum
+  }
+}
+
+notifier "bare_minimum_slack" {
+  notify {
+    integration = integration.slack.bare_minimum_token
+  }
+}
+
+notifier "bare_minimum_slack_wh" {
+  notify {
+    integration = integration.slack.bare_minimum_webhook
+  }
+}
+
+notifier "bare_minimum_email_and_slack" {
+  notify {
+    integration = integration.email.bare_minimum
+  }
+
+  notify {
+    integration = integration.slack.bare_minimum_token
+  }
+}
