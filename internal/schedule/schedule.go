@@ -64,7 +64,7 @@ func IntervalToCronExpression(id, interval string) (string, error) {
 		}
 
 		return fmt.Sprintf("%d %d * * %d", minuteCron, hourCron, dayCron), nil
-	case "daily":
+	case "daily", "24h":
 		hourCron, err := generateHourCron(id)
 		if err != nil {
 			return "", err
