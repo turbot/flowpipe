@@ -2,7 +2,11 @@ package primitive
 
 import (
 	"context"
+	"database/sql"
+	"os"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -394,63 +398,709 @@ func TestQueryInvalidDatabase(t *testing.T) {
 	assert.Contains(err.Error(), "Bad Request: Invalid database connection string")
 }
 
-func XTestQueryMariaDB(t *testing.T) {
+func TestPostgresSqlQueryListAll(t *testing.T) {
 	ctx := context.Background()
+
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
 
 	assert := assert.New(t)
 	hr := Query{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeDatabase: "mysql://root:flowpipe@tcp(localhost:3306)/flowpipe_test",
-		schema.AttributeTypeSql:      "select * from DataTypeDemo;",
+		schema.AttributeTypeDatabase: connectionString,
+		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
-	assert.NotNil(output)
-	/**
-	mariadb -u root -pflowpipe
+	assert.Equal(3, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
-	create database flowpipe_test;
+	location, err := time.LoadLocation("Etc/UTC")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	use flowpipe_test;
+	expectedResult := []map[string]interface{}{
+		{
+			"id":                      int64(1),
+			"name":                    "John",
+			"email":                   "john@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "50000.00",
+			"birth_date":              time.Date(1980, time.January, 1, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"hire_datetime":           time.Date(2020, time.January, 1, 8, 30, 0, 0, location),
+			"part_time":               true,
+			"biography":               "John has been a part of our company for over a decade...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.January, 1, 12, 0, 0, 0, time.FixedZone("", 0)),
+			"vacation_days":           int64(10),
+			"contract_length":         int64(12),
+			"employee_number":         int64(100001),
+			"office_location":         nil,
+			"working_hours":           "08:00:00",
+			"yearly_bonus":            float64(3000),
+			"employee_code":           "EMP00001  ",
+			"health_status":           "good",
+			"security_level":          int64(3),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/john",
+			"personal_website":        "https://johnsblog.com",
+			"notes":                   "John has consistently performed well.",
+			"department_id":           int64(1),
+			"fingerprint":             nil,
+			"schedule":                `{morning,afternoon}`,
+			"last_performance_review": time.Date(2023, time.January, 1, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "USA",
+			"languages":               map[string]interface{}{"English": "fluent", "Spanish": "intermediate"},
+			"hire_date_year":          int64(2020),
+			"info":                    map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+		{
+			"id":                      int64(2),
+			"name":                    "Adam",
+			"email":                   "adam@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "52000.00",
+			"birth_date":              time.Date(1982, time.May, 12, 0, 0, 0, 0, time.FixedZone("", 0)), // NOTE: birth_date value is suspect
+			"hire_datetime":           time.Date(2020, time.March, 15, 9, 0, 0, 0, location),
+			"part_time":               false,
+			"biography":               "Adam is a recent addition to the team...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.February, 2, 14, 30, 0, 0, time.FixedZone("", 0)), // NOTE: last_login value is suspect
+			"vacation_days":           int64(15),
+			"contract_length":         int64(24),
+			"employee_number":         int64(100002),
+			"office_location":         nil,
+			"working_hours":           "09:00:00",
+			"yearly_bonus":            float64(2500),
+			"employee_code":           "EMP00002  ",
+			"health_status":           "excellent",
+			"security_level":          int64(4),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/adam",
+			"personal_website":        "https://adamportfolio.com",
+			"notes":                   "Adam brings fresh perspectives.",
+			"department_id":           int64(2),
+			"fingerprint":             nil,               // Assuming bytea returns nil when not set
+			"schedule":                `{morning,night}`, // Assuming your data layer converts PG arrays to Go slices
+			"last_performance_review": time.Date(2023, time.February, 2, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "CAN",
+			"languages":               map[string]interface{}{"French": "fluent", "English": "fluent"},
+			"hire_date_year":          int64(2020),
+			"info":                    map[string]interface{}{"theme": "light", "notifications": true},
+		},
+		{
+			"id":                      int64(3),
+			"name":                    "Diana",
+			"email":                   "diana@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "55000.00",
+			"birth_date":              time.Date(1990, time.April, 5, 0, 0, 0, 0, time.FixedZone("", 0)), // NOTE: birth_date value is suspect
+			"hire_datetime":           time.Date(2021, time.April, 15, 9, 30, 0, 0, location),
+			"part_time":               false,
+			"biography":               "Diana is known for her attention to detail...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2024, time.January, 20, 10, 0, 0, 0, time.FixedZone("", 0)), // NOTE: last_login value is suspect
+			"vacation_days":           int64(20),
+			"contract_length":         int64(36),
+			"employee_number":         int64(100016),
+			"office_location":         nil,
+			"working_hours":           "08:00:00",
+			"yearly_bonus":            float64(4500),
+			"employee_code":           "EMP00016  ",
+			"health_status":           "excellent",
+			"security_level":          int64(5),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/diana",
+			"personal_website":        "https://dianasportfolio.com",
+			"notes":                   "Diana has led several successful projects.",
+			"department_id":           int64(3),
+			"fingerprint":             nil,                 // Assuming bytea returns nil when not set
+			"schedule":                `{afternoon,night}`, // Assuming your data layer converts PG arrays to Go slices
+			"last_performance_review": time.Date(2024, time.January, 20, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "GBR",
+			"languages":               map[string]interface{}{"English": "fluent", "French": "basic"},
+			"hire_date_year":          int64(2021),
+			"info":                    map[string]interface{}{"theme": "dark", "notifications": false},
+		},
+	}
 
-	CREATE TABLE DataTypeDemo (
-	    id INT AUTO_INCREMENT,
-	    sample_int INT,
-	    sample_varchar VARCHAR(50),
-	    sample_text TEXT,
-	    sample_date DATE,
-	    sample_datetime DATETIME,
-	    sample_float FLOAT,
-	    sample_double DOUBLE,
-	    sample_decimal DECIMAL(10,2),
-	    sample_bool BOOLEAN, sample_json JSON, sample_blob BLOB, PRIMARY KEY (id) )
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
 
-	-- Insert statement 1
-	INSERT INTO DataTypeDemo
-	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
-	VALUES
-	(4, 'Example 1', 'Text for example 1.', '2024-03-01', '2024-03-01 12:00:00', 1.23, 456.789, 100.10, FALSE, '{"name": "John", "age": 30, "city": "New York"}', CAST('Binary data example 1' AS BINARY));
+func TestPostgresSqlQueryWithArgs(t *testing.T) {
+	ctx := context.Background()
 
-	-- Insert statement 2
-	INSERT INTO DataTypeDemo
-	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
-	VALUES
-	(5, 'Example 2', 'Text for example 2.', '2024-04-10', '2024-04-10 15:30:00', 9.87, 321.654, 200.20, TRUE, '{"product": "Table", "price": 150.75}', CAST('Binary data example 2' AS BINARY));
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
 
-	-- Insert statement 3
-	INSERT INTO DataTypeDemo
-	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
-	VALUES
-	(6, 'Example 3', 'Text for example 3.', '2024-05-20', '2024-05-20 18:45:00', 6.54, 987.321, 300.30, FALSE, '{"animal": "Dog", "breed": "Labrador"}', CAST('Binary data example 3' AS BINARY));
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
 
-	INSERT INTO DataTypeDemo
-	(sample_int, sample_varchar, sample_text, sample_date, sample_datetime, sample_float, sample_double, sample_decimal, sample_bool, sample_json, sample_blob)
-	VALUES
-	(7, 'Example 4', 'Text for example 4.', '2024-05-20', '2024-05-20 18:45:00', 6.54, 987.321, 300.30, FALSE, '{"animal": "Dog", "breed": "Labrador"}', CAST('Binary data example 4' AS BINARY));
+	assert := assert.New(t)
+	hr := Query{}
 
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: connectionString,
+		schema.AttributeTypeSql:      "select * from employee where id = $1;",
+		schema.AttributeTypeArgs:     []interface{}{1},
+	})
 
-	*/
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(1, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
 
+	location, err := time.LoadLocation("Etc/UTC")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"id":                      int64(1),
+			"name":                    "John",
+			"email":                   "john@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "50000.00",
+			"birth_date":              time.Date(1980, time.January, 1, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"hire_datetime":           time.Date(2020, time.January, 1, 8, 30, 0, 0, location),
+			"part_time":               true,
+			"biography":               "John has been a part of our company for over a decade...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.January, 1, 12, 0, 0, 0, time.FixedZone("", 0)),
+			"vacation_days":           int64(10),
+			"contract_length":         int64(12),
+			"employee_number":         int64(100001),
+			"office_location":         nil,
+			"working_hours":           "08:00:00",
+			"yearly_bonus":            float64(3000),
+			"employee_code":           "EMP00001  ",
+			"health_status":           "good",
+			"security_level":          int64(3),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/john",
+			"personal_website":        "https://johnsblog.com",
+			"notes":                   "John has consistently performed well.",
+			"department_id":           int64(1),
+			"fingerprint":             nil,
+			"schedule":                `{morning,afternoon}`,
+			"last_performance_review": time.Date(2023, time.January, 1, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "USA",
+			"languages":               map[string]interface{}{"English": "fluent", "Spanish": "intermediate"},
+			"hire_date_year":          int64(2020),
+			"info":                    map[string]interface{}{"theme": "dark", "notifications": true},
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestPostgresSqlQueryWithArgsContainsRegexExpression(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: connectionString,
+		schema.AttributeTypeSql:      "SELECT * from employee where name like $1;",
+		schema.AttributeTypeArgs:     []interface{}{"A%"},
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(1, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	location, err := time.LoadLocation("Etc/UTC")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"id":                      int64(2),
+			"name":                    "Adam",
+			"email":                   "adam@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  "52000.00",
+			"birth_date":              time.Date(1982, time.May, 12, 0, 0, 0, 0, time.FixedZone("", 0)), // NOTE: birth_date value is suspect
+			"hire_datetime":           time.Date(2020, time.March, 15, 9, 0, 0, 0, location),
+			"part_time":               false,
+			"biography":               "Adam is a recent addition to the team...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.February, 2, 14, 30, 0, 0, time.FixedZone("", 0)), // NOTE: last_login value is suspect
+			"vacation_days":           int64(15),
+			"contract_length":         int64(24),
+			"employee_number":         int64(100002),
+			"office_location":         nil,
+			"working_hours":           "09:00:00",
+			"yearly_bonus":            float64(2500),
+			"employee_code":           "EMP00002  ",
+			"health_status":           "excellent",
+			"security_level":          int64(4),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/adam",
+			"personal_website":        "https://adamportfolio.com",
+			"notes":                   "Adam brings fresh perspectives.",
+			"department_id":           int64(2),
+			"fingerprint":             nil,               // Assuming bytea returns nil when not set
+			"schedule":                `{morning,night}`, // Assuming your data layer converts PG arrays to Go slices
+			"last_performance_review": time.Date(2023, time.February, 2, 0, 0, 0, 0, time.FixedZone("", 0)),
+			"nationality":             "CAN",
+			"languages":               map[string]interface{}{"French": "fluent", "English": "fluent"},
+			"hire_date_year":          int64(2020),
+			"info":                    map[string]interface{}{"theme": "light", "notifications": true},
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestPostgresSqlQueryTableNotFound(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: connectionString,
+		schema.AttributeTypeSql:      "select * from notable;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.NotNil(err)                                      // Expect an error since the table does not exist
+	assert.Equal(nil, output.Get(schema.AttributeTypeRows)) // Expect no rows to be returned
+}
+
+func TestPostgresSqlQueryNoRows(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: connectionString,
+		schema.AttributeTypeSql:      "select * from department;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(0, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+}
+
+func TestPostgresSqlQueryBadQueryStatement(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+
+	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: connectionString,
+		schema.AttributeTypeSql:      "SELECT * employee;",
+	})
+
+	_, err = hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "syntax error")
+}
+
+func TestMariaDbQueryListAll(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: "mysql://" + connectionString,
+		schema.AttributeTypeSql:      "select * from employee order by id;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(3, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	expectedResult := []map[string]interface{}{
+		{
+			"id":                      int64(1),
+			"name":                    "John",
+			"email":                   "john@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(50000),
+			"birth_date":              time.Date(1980, time.January, 1, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2020, time.January, 1, 8, 30, 0, 0, time.UTC),
+			"part_time":               int64(1),
+			"biography":               "John has been a part of our company for over a decade...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.January, 1, 12, 0, 0, 0, time.UTC),
+			"vacation_days":           int64(10),
+			"contract_length":         int64(12),
+			"employee_number":         int64(100001),
+			"working_hours":           time.Date(0, time.January, 1, 9, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(3000),
+			"employee_code":           "EMP00001",
+			"health_status":           "good",
+			"security_level":          int64(3),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/john",
+			"personal_website":        "https://johnsblog.com",
+			"notes":                   "John has consistently performed well.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00\xaa\xf1\xd2Mb\x80R\xc0^K\xc8\a=[D@",
+			"department_id":           int64(1),
+			"fingerprint":             nil,
+			"schedule":                nil, // NOTE: The schedule appears to be nil in the provided structure
+			"last_performance_review": int64(2023),
+			"nationality":             "USA",
+			"languages":               map[string]interface{}{"English": "fluent", "Spanish": "intermediate"},
+			"hire_date_year":          int64(2020),
+		},
+		{
+			"id":                      int64(2),
+			"name":                    "Adam",
+			"email":                   "adam@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(52000),
+			"birth_date":              time.Date(1982, time.May, 12, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2020, time.March, 15, 9, 0, 0, 0, time.UTC),
+			"part_time":               int64(0),
+			"biography":               "Adam is a recent addition to the team...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.February, 2, 14, 30, 0, 0, time.UTC),
+			"vacation_days":           int64(15),
+			"contract_length":         int64(24),
+			"employee_number":         int64(100002),
+			"working_hours":           time.Date(0, time.January, 1, 10, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(2500),
+			"employee_code":           "EMP00002",
+			"health_status":           "excellent",
+			"security_level":          int64(4),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/adam",
+			"personal_website":        "https://adamportfolio.com",
+			"notes":                   "Adam brings fresh perspectives.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00\xa0\x1a/\xdd$\x06\x10\xc0w-!\x1f\xf4l)@",
+			"department_id":           int64(2),
+			"fingerprint":             nil,
+			"schedule":                nil, // NOTE: The schedule appears to be nil in the provided structure
+			"last_performance_review": int64(2023),
+			"nationality":             "CAN",
+			"languages":               map[string]interface{}{"French": "fluent", "English": "fluent"},
+			"hire_date_year":          int64(2020),
+		},
+		{
+			"id":                      int64(16),
+			"name":                    "Diana",
+			"email":                   "diana@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(55000),
+			"birth_date":              time.Date(1990, time.April, 5, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2021, time.April, 15, 9, 30, 0, 0, time.UTC),
+			"part_time":               int64(0),
+			"biography":               "Diana is known for her attention to detail...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2024, time.January, 20, 10, 0, 0, 0, time.UTC),
+			"vacation_days":           int64(20),
+			"contract_length":         int64(36),
+			"employee_number":         int64(100016),
+			"working_hours":           time.Date(0, time.January, 1, 8, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(4500),
+			"employee_code":           "EMP00016",
+			"health_status":           "excellent",
+			"security_level":          int64(5),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/diana",
+			"personal_website":        "https://dianasportfolio.com",
+			"notes":                   "Diana has led several successful projects.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00P\x8d\x97n\x12\x03,@\xaf%䃞-T\xc0",
+			"department_id":           int64(3),
+			"fingerprint":             nil,
+			"schedule":                nil, // Assuming 'schedule' is not set for Diana, thus nil
+			"last_performance_review": int64(2024),
+			"nationality":             "GBR",
+			"languages":               map[string]interface{}{"English": "fluent", "French": "basic"},
+			"hire_date_year":          int64(2021),
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestMariaDbQueryWithArgs(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: "mysql://" + connectionString,
+		schema.AttributeTypeSql:      "select * from employee where id = ?;",
+		schema.AttributeTypeArgs:     []interface{}{1},
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(1, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"id":                      int64(1),
+			"name":                    "John",
+			"email":                   "john@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(50000),
+			"birth_date":              time.Date(1980, time.January, 1, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2020, time.January, 1, 8, 30, 0, 0, time.UTC),
+			"part_time":               int64(1),
+			"biography":               "John has been a part of our company for over a decade...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.January, 1, 12, 0, 0, 0, time.UTC),
+			"vacation_days":           int64(10),
+			"contract_length":         int64(12),
+			"employee_number":         int64(100001),
+			"working_hours":           time.Date(0, time.January, 1, 9, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(3000),
+			"employee_code":           "EMP00001",
+			"health_status":           "good",
+			"security_level":          int64(3),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/john",
+			"personal_website":        "https://johnsblog.com",
+			"notes":                   "John has consistently performed well.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00\xaa\xf1\xd2Mb\x80R\xc0^K\xc8\a=[D@",
+			"department_id":           int64(1),
+			"fingerprint":             nil,
+			"schedule":                nil, // NOTE: The schedule appears to be nil in the provided structure
+			"last_performance_review": int64(2023),
+			"nationality":             "USA",
+			"languages":               map[string]interface{}{"English": "fluent", "Spanish": "intermediate"},
+			"hire_date_year":          int64(2020),
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestMariaDbQueryWithArgsContainsRegexExpression(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: "mysql://" + connectionString,
+		schema.AttributeTypeSql:      "SELECT * from employee where name like ?;",
+		schema.AttributeTypeArgs:     []interface{}{"A%"},
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(1, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+
+	// Expected output from the query
+	expectedResult := []map[string]interface{}{
+		{
+			"id":                      int64(2),
+			"name":                    "Adam",
+			"email":                   "adam@example.com",
+			"preferences":             map[string]interface{}{"theme": "dark", "notifications": true},
+			"salary":                  float64(52000),
+			"birth_date":              time.Date(1982, time.May, 12, 0, 0, 0, 0, time.UTC),
+			"hire_datetime":           time.Date(2020, time.March, 15, 9, 0, 0, 0, time.UTC),
+			"part_time":               int64(0),
+			"biography":               "Adam is a recent addition to the team...",
+			"profile_picture":         nil,
+			"last_login":              time.Date(2023, time.February, 2, 14, 30, 0, 0, time.UTC),
+			"vacation_days":           int64(15),
+			"contract_length":         int64(24),
+			"employee_number":         int64(100002),
+			"working_hours":           time.Date(0, time.January, 1, 10, 0, 0, 0, time.UTC), // Zero year for time.Time denotes a Time-of-Day value
+			"yearly_bonus":            float64(2500),
+			"employee_code":           "EMP00002",
+			"health_status":           "excellent",
+			"security_level":          int64(4),
+			"resume":                  nil,
+			"linkedin_url":            "https://linkedin.com/in/adam",
+			"personal_website":        "https://adamportfolio.com",
+			"notes":                   "Adam brings fresh perspectives.",
+			"office_location":         "\x00\x00\x00\x00\x01\x01\x00\x00\x00\xa0\x1a/\xdd$\x06\x10\xc0w-!\x1f\xf4l)@",
+			"department_id":           int64(2),
+			"fingerprint":             nil,
+			"schedule":                nil, // NOTE: The schedule appears to be nil in the provided structure
+			"last_performance_review": int64(2023),
+			"nationality":             "CAN",
+			"languages":               map[string]interface{}{"French": "fluent", "English": "fluent"},
+			"hire_date_year":          int64(2020),
+		},
+	}
+
+	expectedRow := output.Get(schema.AttributeTypeRows).([]map[string]interface{})
+	assert.Equal(expectedResult, expectedRow)
+}
+
+func TestMariaDbQueryTableNotFound(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: "mysql://" + connectionString,
+		schema.AttributeTypeSql:      "select * from notable;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.NotNil(err)                                      // Expect an error since the table does not exist
+	assert.Equal(nil, output.Get(schema.AttributeTypeRows)) // Expect no rows to be returned
+}
+
+func TestMariaDbQueryNoRows(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: "mysql://" + connectionString,
+		schema.AttributeTypeSql:      "select * from department;",
+	})
+
+	output, err := hr.Run(ctx, input)
+	assert.Nil(err)
+	assert.Equal(0, len(output.Get(schema.AttributeTypeRows).([]map[string]interface{})))
+}
+
+func TestMariaDbQueryBadQueryStatement(t *testing.T) {
+	ctx := context.Background()
+
+	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
+
+	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
+	if err != nil {
+		t.Fatalf("Error setting up the database: " + err.Error())
+	}
+
+	assert := assert.New(t)
+	hr := Query{}
+
+	input := modconfig.Input(map[string]interface{}{
+		schema.AttributeTypeDatabase: "mysql://" + connectionString,
+		schema.AttributeTypeSql:      "SELECT * employee;",
+	})
+
+	_, err = hr.Run(ctx, input)
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "Internal Error: Error executing query: Internal Error: Error preparing query: Error 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'employee' at line 1")
+}
+
+func applyDatabaseScript(driverName, dbConnectionString, scriptPath string) error {
+	if driverName != DriverPostgres && driverName != DriverMySQL {
+		return perr.BadRequestWithMessage("Unsupported database driver: " + driverName)
+	}
+
+	// Connect to the database
+	db, err := sql.Open(driverName, dbConnectionString)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to connect to database: " + err.Error())
+	}
+	defer db.Close()
+
+	// Read the SQL file using os.ReadFile
+	sqlContent, err := os.ReadFile(scriptPath)
+	if err != nil {
+		return perr.BadRequestWithMessage("Failed to read SQL file: " + err.Error())
+	}
+	sqlScript := string(sqlContent)
+
+	// Split the script into individual statements on semicolon
+	statements := strings.Split(sqlScript, ";")
+
+	for _, statement := range statements {
+		statement = strings.TrimSpace(statement)
+		if statement == "" {
+			continue // Skip empty statements resulting from the split
+		}
+
+		// Directly execute each statement on the database connection
+		_, err = db.Exec(statement)
+		if err != nil {
+			return perr.BadRequestWithMessage("Failed to execute SQL statement: " + statement + "\nError: " + err.Error())
+		}
+	}
+
+	return nil
 }
