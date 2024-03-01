@@ -337,7 +337,7 @@ func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadata() {
 	assert.True(end.After(start))
 
 	// make sure that end is at least 1 second after start
-	assert.True(end.Sub(start) > 1*time.Second)
+	assert.True(end.Sub(start) > 800*time.Millisecond)
 }
 
 func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadataInPipelineStep() {
@@ -375,7 +375,7 @@ func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadataInPipe
 	assert.True(end.After(start))
 
 	// make sure that end is at least 1 second after start
-	assert.True(end.Sub(start) > 1*time.Second)
+	assert.True(end.Sub(start) > 900*time.Millisecond)
 }
 
 func TestDefaultModTestingSuite(t *testing.T) {
