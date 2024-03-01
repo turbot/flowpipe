@@ -2,6 +2,10 @@ package api
 
 import (
 	"fmt"
+	"slices"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -14,9 +18,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"slices"
-	"strings"
-	"time"
 )
 
 func (api *APIService) FormRegisterAPI(router *gin.RouterGroup) {
@@ -119,6 +120,14 @@ func (api *APIService) postFormData(c *gin.Context) {
 		common.AbortWithError(c, err) // will be perr type
 		return
 	}
+
+	plannerMutex := event.GetEventStoreMutex(output.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		if plannerMutex != nil {
+			plannerMutex.Unlock()
+		}
+	}()
 
 	ex, err := execution.GetExecution(output.ExecutionID)
 	if err != nil {
