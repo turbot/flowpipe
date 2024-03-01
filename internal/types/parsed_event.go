@@ -630,6 +630,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					prefix.RetryIndex = &i
 
 				}
+				if helpers.IsNil(e.Output.Data) {
+					e.Output.Data = modconfig.OutputData{}
+				}
 				e.Output.Data["flowpipe"] = e.Output.Flowpipe
 				switch e.Output.Status {
 				case "finished":
