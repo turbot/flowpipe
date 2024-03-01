@@ -1346,8 +1346,7 @@ func (suite *ModTestSuite) TestStepSleep() {
 	}
 	assert.Equal(1, len(pex.StepStatus["sleep.sleep_test"]))
 
-	outputData := pex.StepStatus["sleep.sleep_test"]["0"].StepExecutions[0].Output.Data
-	flowpipeMd := outputData[schema.AttributeTypeFlowpipe].(map[string]interface{})
+	flowpipeMd := pex.StepStatus["sleep.sleep_test"]["0"].StepExecutions[0].Output.Flowpipe
 	startTime := flowpipeMd[schema.AttributeTypeStartedAt].(time.Time)
 	finishTime := flowpipeMd[schema.AttributeTypeFinishedAt].(time.Time)
 	diff := finishTime.Sub(startTime)

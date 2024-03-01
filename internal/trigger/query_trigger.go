@@ -24,6 +24,7 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	putils "github.com/turbot/pipe-fittings/utils"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -354,7 +355,7 @@ func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItem
 
 	// Insert all items into the temporary table
 	for _, item := range controlItems {
-		_, err = tempStmt.Exec(item.PrimaryKey, item.RowHash, timeNow.UTC().Format(util.RFC3389WithMS))
+		_, err = tempStmt.Exec(item.PrimaryKey, item.RowHash, timeNow.UTC().Format(putils.RFC3339WithMS))
 		if err != nil {
 			err2 := tx.Rollback()
 			if err2 != nil {
@@ -508,7 +509,7 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	RETURNING primary_key;
 	`
 
-	rows, err := tx.Query(updateItemsSQL, timeNow.UTC().Format(util.RFC3389WithMS))
+	rows, err := tx.Query(updateItemsSQL, timeNow.UTC().Format(putils.RFC3339WithMS))
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/util"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func TestCleanupDB(t *testing.T) {
@@ -20,7 +20,7 @@ func TestCleanupDB(t *testing.T) {
 	// offset := time.Duration(-24*30) * time.Hour
 	offset := -1 * time.Hour
 
-	layout := util.RFC3389WithMS
+	layout := putils.RFC3339WithMS
 	str := "2024-02-02T01:59:00.000Z"
 
 	anchorTime, err := time.Parse(layout, str)

@@ -21,8 +21,9 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
+
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type ContainerRunConfig struct {
@@ -249,7 +250,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 			"io.flowpipe.type": "container",
 			"io.flowpipe.name": c.Name,
 			// Is this standard for containers?
-			"org.opencontainers.container.created": time.Now().Format(util.RFC3389WithMS),
+			"org.opencontainers.container.created": time.Now().Format(putils.RFC3339WithMS),
 		},
 		Env:         cConfig.GetEnv(),
 		StopTimeout: &timeout,
@@ -562,7 +563,7 @@ func (c *Container) buildImage() error {
 		Labels: map[string]string{
 			"io.flowpipe.type":                 "container",
 			"io.flowpipe.name":                 c.Name,
-			"org.opencontainers.image.created": time.Now().Format(util.RFC3389WithMS),
+			"org.opencontainers.image.created": time.Now().Format(putils.RFC3339WithMS),
 		},
 	}
 

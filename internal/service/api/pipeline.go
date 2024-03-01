@@ -19,6 +19,7 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
@@ -191,7 +192,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
 		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
-		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(util.RFC3389WithMS))
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
 
 	c.JSON(http.StatusOK, response)

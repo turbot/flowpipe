@@ -28,6 +28,7 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
+	putils "github.com/turbot/pipe-fittings/utils"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -287,7 +288,7 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
 		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
-		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(util.RFC3389WithMS))
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
 
 	if pex.Status == expectedState {

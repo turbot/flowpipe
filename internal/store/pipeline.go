@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func StartPipeline(executionID, pipelineName string) error {
@@ -32,7 +32,7 @@ func StartPipeline(executionID, pipelineName string) error {
 
 	// Execute the statement
 	currentTime := time.Now().UTC()
-	currentTimeString := currentTime.Format(util.RFC3389WithMS)
+	currentTimeString := currentTime.Format(putils.RFC3339WithMS)
 	_, err = stmt.Exec(executionID, pipelineName, "queued", currentTimeString, currentTimeString)
 	if err != nil {
 		slog.Error("error executing statement", "error", err)
@@ -64,7 +64,7 @@ func UpdatePipelineState(executionID, newState string) error {
 
 	// Execute the update statement
 	currentTime := time.Now().UTC()
-	currentTimeString := currentTime.Format(util.RFC3389WithMS)
+	currentTimeString := currentTime.Format(putils.RFC3339WithMS)
 	_, err = stmt.Exec(newState, currentTimeString, executionID)
 	if err != nil {
 		slog.Error("error executing update statement", "error", err)

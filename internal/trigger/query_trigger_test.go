@@ -410,17 +410,17 @@ func TestTriggerQuery(t *testing.T) {
 		if id == "1" {
 			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-01-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "2" {
 			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-02-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-02-20T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "3" {
 			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-03-05T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -511,12 +511,12 @@ func TestTriggerQuery(t *testing.T) {
 		if id == "4" {
 			assert.Equal("Jack", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(35), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-04-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-04-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "5" {
 			assert.Equal("Jill", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-05-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-05-20T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -581,7 +581,7 @@ func TestTriggerQuery(t *testing.T) {
 		if id == "1" {
 			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(35), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-01-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -899,17 +899,17 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		if id == "1" {
 			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-01-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "2" {
 			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-02-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-02-20T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "3" {
 			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-03-05T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -1001,12 +1001,12 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		if id == "4" {
 			assert.Equal("Jack", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(35), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-04-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-04-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "5" {
 			assert.Equal("Jill", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-05-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-05-20T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -1060,7 +1060,7 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		if id == "1" {
 			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(35), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-01-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -1286,17 +1286,17 @@ func TestTriggerQueryB(t *testing.T) {
 		if idFloat == 1 {
 			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-01-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else if idFloat == 2 {
 			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-02-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-02-20T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 		} else if idFloat == 3 {
 			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-03-05T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")
@@ -1393,7 +1393,7 @@ func TestTriggerQueryB(t *testing.T) {
 		if idFloat == 2 {
 			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(25), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-02-20T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-02-20T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(false, rowMap["is_active"].True(), "wrong is_active")
 
 			// Comparing blobData with otherSlice
@@ -1744,7 +1744,7 @@ func TestTriggerQueryWithNull(t *testing.T) {
 		if id == "1" {
 			assert.Equal("John", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(30), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-01-01T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-01-01T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else if id == "2" {
 			assert.Equal("Jane", rowMap["name"].AsString(), "wrong name")
@@ -1754,7 +1754,7 @@ func TestTriggerQueryWithNull(t *testing.T) {
 		} else if id == "3" {
 			assert.Equal("Joe", rowMap["name"].AsString(), "wrong name")
 			assert.Equal(int64(40), util.BigFloatToInt64(rowMap["age"].AsBigFloat()), "wrong age")
-			assert.Equal("2020-03-05T00:00:00Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
+			assert.Equal("2020-03-05T00:00:00.000Z", rowMap["registration_date"].AsString(), "wrong registration date, registration date is converted to RFC3339 format during cty conversion")
 			assert.Equal(true, rowMap["is_active"].True(), "wrong is_active")
 		} else {
 			assert.Fail("wrong id")

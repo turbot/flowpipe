@@ -9,9 +9,9 @@ import (
 
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/filepaths"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error) {
@@ -29,7 +29,7 @@ func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 	// but then the orphan pipeline will never be cleaned. Should we have a hard limit?
 	cleanupQuery := `delete from pipeline_run where updated_at < ?;`
 
-	timeAsString := timeLimit.Format(util.RFC3389WithMS)
+	timeAsString := timeLimit.Format(putils.RFC3339WithMS)
 
 	result, err := db.Exec(cleanupQuery, timeAsString)
 	if err != nil {
@@ -63,7 +63,7 @@ func cleanupFlowpipeDB(currentTime time.Time, offset time.Duration) (int, error)
 	}
 	defer rows.Close()
 
-	currentTimeStringFormat := currentTime.Format(util.RFC3389WithMS)
+	currentTimeStringFormat := currentTime.Format(putils.RFC3339WithMS)
 
 	if lastCleanupTime != "" {
 		sql = `update internal set value = ?, updated_at = ? where name = 'last_cleanup'`
@@ -139,7 +139,7 @@ func ForceCleanup() {
 	if lastCleanupTime == "" {
 		runCleanup = true
 	} else {
-		lastCleanupTime, err := time.Parse(util.RFC3389WithMS, lastCleanupTime)
+		lastCleanupTime, err := time.Parse(putils.RFC3339WithMS, lastCleanupTime)
 		if err != nil {
 			slog.Error("error parsing last cleanup time", "error", err)
 			runCleanup = true

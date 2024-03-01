@@ -24,9 +24,9 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/runtime"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type Function struct {
@@ -333,7 +333,7 @@ func (fn *Function) Start(imageName string) (string, error) {
 		},
 		Labels: map[string]string{
 			// TODO - Is this standard for containers?
-			"org.opencontainers.container.created": time.Now().Format(util.RFC3389WithMS),
+			"org.opencontainers.container.created": time.Now().Format(putils.RFC3339WithMS),
 		},
 		Env: fn.GetEnv(),
 	}
@@ -550,7 +550,7 @@ func (fn *Function) buildImage() error {
 			"io.flowpipe.type":                 "function",
 			"io.flowpipe.runtime":              fn.Runtime,
 			"io.flowpipe.name":                 fn.Name,
-			"org.opencontainers.image.created": time.Now().Format(util.RFC3389WithMS),
+			"org.opencontainers.image.created": time.Now().Format(putils.RFC3339WithMS),
 		},
 	}
 
