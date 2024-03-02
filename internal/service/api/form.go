@@ -2,6 +2,10 @@ package api
 
 import (
 	"fmt"
+	"slices"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -14,8 +18,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"strings"
-	"time"
 )
 
 func (api *APIService) FormRegisterAPI(router *gin.RouterGroup) {
@@ -119,6 +121,14 @@ func (api *APIService) postFormData(c *gin.Context) {
 		return
 	}
 
+	plannerMutex := event.GetEventStoreMutex(output.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		if plannerMutex != nil {
+			plannerMutex.Unlock()
+		}
+	}()
+
 	ex, err := execution.GetExecution(output.ExecutionID)
 	if err != nil {
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", output.ExecutionID)))
@@ -136,10 +146,20 @@ func (api *APIService) postFormData(c *gin.Context) {
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
 		return
 	}
+	if !httpFormValidateNotifiers(stepExecution) {
+		// if not a valid notifier for this endpoint return NotFound
+		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
+		return
+	}
 
 	if pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() || stepExecution.Status == "finished" {
 		common.AbortWithError(c, perr.ConflictWithMessage(fmt.Sprintf("step %s has already been processed or is no longer required due to pipeline completion", output.StepExecutionID)))
+		return
 	}
+
+	stepFullName := stepExecution.Name
+	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
+	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 
 	var parsedBody map[string]any
 	switch c.ContentType() {
@@ -155,15 +175,23 @@ func (api *APIService) postFormData(c *gin.Context) {
 		}
 	}
 
-	stepFullName := stepExecution.Name
-	stepName := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-1]
-	stepType := strings.Split(stepFullName, ".")[len(strings.Split(stepFullName, "."))-2]
 	switch stepType {
 	case "input":
 		output.Inputs[stepName] = httpFormDataInputFromInputStep(stepExecution.Input)
 
 		if parsedBody[stepName] != nil {
 			val := parsedBody[stepName]
+			inputType := *output.Inputs[stepName].InputType
+			if inputType != constants.InputTypeText {
+				var allowedValues []string
+				for _, o := range output.Inputs[stepName].Options {
+					allowedValues = append(allowedValues, *o.Value)
+				}
+				if !httpFormDataValidateResponse(val, allowedValues) {
+					common.AbortWithError(c, perr.BadRequestWithMessage(fmt.Sprintf("submitted value %v contains invalid option value(s).", val)))
+					return
+				}
+			}
 			if i, ok := output.Inputs[stepName]; ok {
 				switch *i.InputType {
 				case constants.InputTypeMultiSelect:
@@ -212,6 +240,7 @@ type httpFormDataInputOptions struct {
 	Label    *string `json:"label,omitempty"`
 	Value    *string `json:"value,omitempty"`
 	Selected *bool   `json:"selected,omitempty"`
+	Style    *string `json:"style,omitempty"`
 }
 
 func httpFormDataFromId(id string) (httpFormData, error) {
@@ -254,11 +283,50 @@ func httpFormDataInputFromInputStep(input modconfig.Input) httpFormDataInput {
 			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
 				option.Selected = &s
 			}
+			if s, ok := opt[schema.AttributeTypeStyle].(string); ok {
+				option.Style = &s
+			}
 			output.Options = append(output.Options, option)
 		}
 	}
 
 	return output
+}
+
+func httpFormDataValidateResponse(val any, allowedOptions []string) bool {
+	switch v := val.(type) {
+	case string:
+		return slices.Contains(allowedOptions, v)
+	case []string:
+		for _, x := range v {
+			if !slices.Contains(allowedOptions, x) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
+func httpFormValidateNotifiers(sexec *execution.StepExecution) bool {
+	validNotifiers := []string{"http", "email"}
+	input := sexec.Input
+	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
+		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
+			for _, n := range notifies {
+				if notify, ok := n.(map[string]any); ok {
+					if integration, ok := notify["integration"].(map[string]any); ok {
+						integrationType := integration["type"].(string)
+						if slices.Contains(validNotifiers, integrationType) {
+							return true
+						}
+					}
+				}
+			}
+		}
+	}
+	return false
 }
 
 func (api *APIService) finishInputStepFromForm(execID, pexecID string, sexec *execution.StepExecution, value any) error {

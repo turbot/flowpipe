@@ -5,6 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/slack-go/slack"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -15,11 +21,6 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
-	"time"
 )
 
 type slackResponse struct {
@@ -54,6 +55,11 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+
+	// support for omitting the type in the url
+	if !strings.HasPrefix(uri.ID, "slack.") {
+		uri.ID = fmt.Sprintf("slack.%s", uri.ID)
 	}
 
 	// verify hash
@@ -273,6 +279,15 @@ func parseLabelsFromValues(input modconfig.Input, values any) (string, error) {
 }
 
 func (api *APIService) finishInputStep(execId string, pExecId string, sExecId string, value any) (bool, *execution.StepExecution, error) {
+
+	plannerMutex := event.GetEventStoreMutex(execId)
+	plannerMutex.Lock()
+	defer func() {
+		if plannerMutex != nil {
+			plannerMutex.Unlock()
+		}
+	}()
+
 	ex, err := execution.GetExecution(execId)
 	if err != nil {
 		return false, nil, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", execId))

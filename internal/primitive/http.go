@@ -191,8 +191,8 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	output.Data[schema.AttributeTypeStatus] = resp.Status
 	output.Data[schema.AttributeTypeStatusCode] = resp.StatusCode
 	output.Data[schema.AttributeTypeResponseHeaders] = headers
-	output.Data[schema.AttributeTypeStartedAt] = start
-	output.Data[schema.AttributeTypeFinishedAt] = finish
+
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	var bodyString string
 

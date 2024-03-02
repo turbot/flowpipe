@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/constants"
 	"strings"
 
 	"github.com/slack-go/slack"
@@ -64,71 +65,111 @@ type InputIntegrationResponseOption struct {
 }
 
 func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
-
+	// validate type
 	if i[schema.AttributeTypeType] == nil {
 		return perr.BadRequestWithMessage("Input must define a type")
 	}
-
-	if _, ok := i[schema.AttributeTypeType].(string); !ok {
+	inputType, inputTypeIsString := i[schema.AttributeTypeType].(string)
+	if !inputTypeIsString {
 		return perr.BadRequestWithMessage("Input type must be a string")
 	}
+	if !constants.IsValidInputType(inputType) {
+		return perr.BadRequestWithMessage(fmt.Sprintf("Input type '%s' is not supported", inputType))
+	}
 
-	// TODO: validate type is one of button, text, select, multiselect, combo, multicombo
-	// TODO: other validations
-	// inputType := i[schema.AttributeTypeType].(string)
-	//
-	// switch inputType {
-	// case string(IntegrationTypeSlack):
-	// 	// Validate token
-	// 	if i[schema.AttributeTypeToken] == nil {
-	// 		return perr.BadRequestWithMessage("Slack input must define a token")
-	// 	}
-	// 	if _, ok := i[schema.AttributeTypeToken].(string); !ok {
-	// 		return perr.BadRequestWithMessage("Slack input token must be a string")
-	// 	}
-	//
-	// 	// Validate channel
-	// 	if i[schema.AttributeTypeChannel] == nil {
-	// 		return perr.BadRequestWithMessage("Slack input must define a channel")
-	// 	}
-	// 	if _, ok := i[schema.AttributeTypeChannel].(string); !ok {
-	// 		return perr.BadRequestWithMessage("Slack input channel must be a string")
-	// 	}
-	//
-	// 	// Validate the prompt
-	// 	if i[schema.AttributeTypePrompt] == nil {
-	// 		return perr.BadRequestWithMessage("Slack input must define a prompt")
-	// 	}
-	// 	if _, ok := i[schema.AttributeTypePrompt].(string); !ok {
-	// 		return perr.BadRequestWithMessage("Slack input prompt must be a string")
-	// 	}
-	//
-	// 	// Validate the slack type
-	// 	if i[schema.AttributeTypeSlackType] == nil {
-	// 		return perr.BadRequestWithMessage("Slack input must define a slack type")
-	// 	}
-	// 	if _, ok := i[schema.AttributeTypeSlackType].(string); !ok {
-	// 		return perr.BadRequestWithMessage("Slack input slack type must be a string")
-	// 	}
-	//
-	// 	// Validate the options
-	// 	var options []string
-	// 	if i[schema.AttributeTypeOptions] == nil {
-	// 		return perr.BadRequestWithMessage("Slack input options must define options")
-	// 	}
-	// 	if _, ok := i[schema.AttributeTypeOptions].([]string); ok {
-	// 		options = i[schema.AttributeTypeOptions].([]string)
-	// 	}
-	// 	if _, ok := i[schema.AttributeTypeOptions].([]interface{}); ok {
-	// 		for _, v := range i[schema.AttributeTypeOptions].([]interface{}) {
-	// 			options = append(options, v.(string))
-	// 		}
-	// 	}
-	// 	if len(options) == 0 {
-	// 		return perr.BadRequestWithMessage("Slack input options must have at least one option")
-	// 	}
-	// case string(IntegrationTypeEmail):
-	// }
+	// validate options
+	switch inputType {
+	case constants.InputTypeText:
+		// text type doesn't require options, but don't fail if we have them, just ignore
+	default:
+		// ensure has at least 1 option
+		options, hasOpts := i[schema.AttributeTypeOptions].([]any)
+		if !hasOpts || len(options) == 0 {
+			return perr.BadRequestWithMessage(fmt.Sprintf("Input type '%s' requires options, no options were defined", inputType))
+		}
+
+		// ensure all options have a value
+		for i, o := range options {
+			option := o.(map[string]any)
+			if helpers.IsNil(option[schema.AttributeTypeValue]) {
+				return perr.BadRequestWithMessage(fmt.Sprintf("option %d has no value specified", i))
+			}
+		}
+	}
+
+	// validate notifier
+	notifier := i[schema.AttributeTypeNotifier].(map[string]any)
+	notifies := notifier[schema.AttributeTypeNotifies].([]any)
+	for _, n := range notifies {
+		notify := n.(map[string]any)
+		integration := notify["integration"].(map[string]any)
+		integrationType := integration["type"].(string)
+
+		switch integrationType {
+		case schema.IntegrationTypeHttp:
+			// no additional validations required
+		case schema.IntegrationTypeSlack:
+			// if using token, we need to specify channel, webhook_url approach has a bound channel
+			if integration[schema.AttributeTypeToken] != nil {
+				if _, stepChannel := i[schema.AttributeTypeChannel].(string); !stepChannel {
+					if _, notifyChannel := notify[schema.AttributeTypeChannel].(string); !notifyChannel {
+						if _, integrationChannel := integration[schema.AttributeTypeChannel].(string); !integrationChannel {
+							return perr.BadRequestWithMessage("slack notifications require a channel when using token auth, channel was not set")
+						}
+					}
+				}
+			}
+		case schema.IntegrationTypeEmail:
+			// ensure we have recipients, these can be to, cc or bcc but as optional at each layer need to ensure we have a target
+			var recipients []string
+
+			if to, ok := i[schema.AttributeTypeTo].([]any); ok {
+				for _, t := range to {
+					recipients = append(recipients, t.(string))
+				}
+			} else if to, ok := notify[schema.AttributeTypeTo].([]any); ok {
+				for _, t := range to {
+					recipients = append(recipients, t.(string))
+				}
+			} else if to, ok := integration[schema.AttributeTypeTo].([]any); ok {
+				for _, t := range to {
+					recipients = append(recipients, t.(string))
+				}
+			}
+
+			if cc, ok := i[schema.AttributeTypeCc].([]any); ok {
+				for _, c := range cc {
+					recipients = append(recipients, c.(string))
+				}
+			} else if cc, ok := notify[schema.AttributeTypeCc].([]any); ok {
+				for _, c := range cc {
+					recipients = append(recipients, c.(string))
+				}
+			} else if cc, ok := integration[schema.AttributeTypeCc].([]any); ok {
+				for _, c := range cc {
+					recipients = append(recipients, c.(string))
+				}
+			}
+
+			if bcc, ok := i[schema.AttributeTypeBcc].([]any); ok {
+				for _, b := range bcc {
+					recipients = append(recipients, b.(string))
+				}
+			} else if bcc, ok := notify[schema.AttributeTypeBcc].([]any); ok {
+				for _, b := range bcc {
+					recipients = append(recipients, b.(string))
+				}
+			} else if bcc, ok := integration[schema.AttributeTypeBcc].([]any); ok {
+				for _, b := range bcc {
+					recipients = append(recipients, b.(string))
+				}
+			}
+
+			if len(recipients) == 0 {
+				return perr.BadRequestWithMessage("email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
+			}
+		}
+	}
 
 	return nil
 }
@@ -193,13 +234,12 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						s.WebhookUrl = &wu
 					}
 
-					// TODO: Validate, make it generic
 					_, err := s.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err
 					}
 				case schema.IntegrationTypeHttp:
-					// TODO: implement output
+					// No output needs to be rendered here for HTTP step. The console output is rendered by the Event printer, it does the right thing there too.
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
 
@@ -286,7 +326,6 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						e.Pass = &p
 					}
 
-					// TODO: Validate?
 					out, err := e.PostMessage(ctx, mc, resOptions)
 					if err != nil {
 						return nil, err

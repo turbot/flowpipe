@@ -10,8 +10,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/store"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type CommandHandler struct {
@@ -50,7 +50,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 
 	logMessage := event.EventLogEntry{
 		Level:     "info",
-		Timestamp: time.Now().UTC().Format(util.RFC3389WithMS),
+		Timestamp: time.Now().UTC().Format(putils.RFC3339WithMS),
 		Caller:    "command",
 		Message:   "es",
 		EventType: commandEvent.HandlerName(),

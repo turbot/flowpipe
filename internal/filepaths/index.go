@@ -19,19 +19,31 @@ func EventStoreDir() string {
 }
 
 func ModInternalDir() string {
-	modLocation := viper.GetString(constants.ArgModLocation)
-	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
+	modFlowpipeDir := ModFlowpipeDir()
 	modInternalDir := path.Join(modFlowpipeDir, "internal")
 
 	return modInternalDir
+}
+
+func ModFlowpipeDir() string {
+	modLocation := viper.GetString(constants.ArgModLocation)
+	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
+
+	return modFlowpipeDir
 }
 
 func ModDir() string {
 	return viper.GetString(constants.ArgModLocation)
 }
 
-func FlowpipeDBFileName() string {
+func LegacyFlowpipeDBFileName() string {
 	modLocation := ModDir()
+	dbPath := filepath.Join(modLocation, "flowpipe.db")
+	return dbPath
+}
+
+func FlowpipeDBFileName() string {
+	modLocation := ModFlowpipeDir()
 	dbPath := filepath.Join(modLocation, "flowpipe.db")
 	return dbPath
 }

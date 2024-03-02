@@ -62,8 +62,7 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		Data: map[string]interface{}{},
 	}
 
-	output.Data[schema.AttributeTypeStartedAt] = start
-	output.Data[schema.AttributeTypeFinishedAt] = finish
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
 	return output, nil
 }

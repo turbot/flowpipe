@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/smtp"
 	"net/textproto"
 	"regexp"
@@ -213,9 +214,12 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 		recipients = append(recipients, ip.Bcc...)
 	}
 
-	output.Data[schema.AttributeTypeStartedAt] = time.Now().UTC()
+	start := time.Now().UTC()
 	err = smtp.SendMail(addr, auth, ip.From, recipients, []byte(message))
-	output.Data[schema.AttributeTypeFinishedAt] = time.Now().UTC()
+	finish := time.Now().UTC()
+
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
+
 	if err != nil {
 		var smtpError *textproto.Error
 		if !errors.As(err, &smtpError) {
@@ -330,9 +334,20 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, opt
 	if len(iim.Cc) > 0 {
 		header["Cc"] = strings.Join(iim.Cc, ", ")
 	}
-	header["Subject"] = iim.Subject
+
 	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
 	header["MIME-version"] = "1.0;"
+
+	subject := iim.Subject
+
+	if subject == "" {
+		subject = icm.Prompt
+		if len(subject) > 50 {
+			subject = subject[:50] + "..."
+		}
+	}
+
+	header["Subject"] = subject
 
 	var message string
 	for key, value := range header {
@@ -400,12 +415,14 @@ func parseEmailInputTemplate(templateFileName string, data any) (string, error) 
 	}
 	tmpl, err := template.New("email").Funcs(funcs).Parse(string(templateFile))
 	if err != nil {
-		return "", perr.InternalWithMessage("error while parsing the email template")
+		slog.Error("error while parsing the email template", "error", err)
+		return "", err
 	}
 
 	var body strings.Builder
 	err = tmpl.Execute(&body, data)
 	if err != nil {
+		slog.Error("error while executing the email template", "error", err)
 		return "", perr.BadRequestWithMessage("error while executing the email template")
 	}
 

@@ -19,6 +19,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type DefaultModTestSuite struct {
@@ -293,6 +294,88 @@ func (suite *DefaultModTestSuite) testInputStepOptionResolution(pipelineName str
 		assert.Fail("Error obtaining options from step input")
 		return
 	}
+}
+
+func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadata() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// has reference to the built in flowpipe attribute
+	//
+	// step "transform" "check_start" {
+	//     value = step.sleep.sleep.flowpipe.started_at
+	// }
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.sleep_with_flowpipe_attributes", 1*time.Second, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	start, err := time.Parse(putils.RFC3339WithMS, pex.PipelineOutput["val_start"].(string))
+	if err != nil {
+		assert.Fail("Error parsing start time", err)
+		return
+	}
+
+	end, err := time.Parse(putils.RFC3339WithMS, pex.PipelineOutput["val_end"].(string))
+	if err != nil {
+		assert.Fail("Error parsing end time", err)
+		return
+	}
+
+	// make sure that end is after start
+	assert.True(end.After(start))
+
+	// make sure that end is at least 1 second after start
+	assert.True(end.Sub(start) > 800*time.Millisecond)
+}
+
+func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadataInPipelineStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_of_nested", 1*time.Second, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	start, err := time.Parse(putils.RFC3339WithMS, pex.PipelineOutput["val_start"].(string))
+	if err != nil {
+		assert.Fail("Error parsing start time", err)
+		return
+	}
+
+	end, err := time.Parse(putils.RFC3339WithMS, pex.PipelineOutput["val_end"].(string))
+	if err != nil {
+		assert.Fail("Error parsing end time", err)
+		return
+	}
+
+	// make sure that end is after start
+	assert.True(end.After(start))
+
+	// make sure that end is at least 1 second after start
+	assert.True(end.Sub(start) > 900*time.Millisecond)
 }
 
 func TestDefaultModTestingSuite(t *testing.T) {

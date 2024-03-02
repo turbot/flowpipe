@@ -55,6 +55,8 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 
 	newEnvs := map[string]string{}
 
+	start := time.Now().UTC()
+
 	// This must be set outside the function schema
 	if input[schema.AttributeTypeEnv] != nil {
 		newEnvs = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
@@ -131,6 +133,8 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		fn.Event = input[schema.AttributeTypeEvent].(map[string]interface{})
 	}
 
+	finish := time.Now().UTC()
+
 	body := "{}"
 	if len(fn.Event) > 0 {
 		// Convert event body to JSON String
@@ -162,12 +166,14 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		return nil, perr.InternalWithMessage("Function returned an error: " + resultsJson["errorMessage"].(string))
 	}
 
-	o := modconfig.Output{
+	output := modconfig.Output{
 		Data: map[string]interface{}{
-			"result":      resultsJson,
-			"status_code": statusCode,
+			schema.AttributeTypeResult:     resultsJson,
+			schema.AttributeTypeStatusCode: statusCode,
 		},
 	}
 
-	return &o, nil
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
+
+	return &output, nil
 }

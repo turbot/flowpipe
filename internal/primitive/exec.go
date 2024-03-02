@@ -10,7 +10,6 @@ import (
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/schema"
 )
 
 type Exec struct{}
@@ -90,15 +89,14 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 	}
 	finish := time.Now().UTC()
 
-	o := modconfig.Output{
+	output := modconfig.Output{
 		Data: map[string]interface{}{},
 	}
 
-	o.Data["exit_code"] = exitCode
-	o.Data["stdout_lines"] = stdoutLines
-	o.Data["stderr_lines"] = stderrLines
-	o.Data[schema.AttributeTypeStartedAt] = start
-	o.Data[schema.AttributeTypeFinishedAt] = finish
+	output.Data["exit_code"] = exitCode
+	output.Data["stdout_lines"] = stdoutLines
+	output.Data["stderr_lines"] = stderrLines
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
 
-	return &o, nil
+	return &output, nil
 }

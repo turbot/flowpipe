@@ -42,7 +42,7 @@ func (n FpNotify) printItem(opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 
 	// Integration can't be null, it's mandatory field in the schema
-	output := fmt.Sprintf("%2s%s\n", "", au.Cyan(*n.Integration))
+	output := fmt.Sprintf("%2s%s\n", "", au.Cyan(*n.Integration+":"))
 	if n.Title != nil {
 		output += fmt.Sprintf("%4s%s %s\n", "", au.Blue("Title:"), *n.Title)
 	}
@@ -60,11 +60,11 @@ func (n FpNotify) printItem(opts sanitize.RenderOptions) string {
 		output += printItems(n.To, 6)
 	}
 	if len(n.Cc) > 0 {
-		output += fmt.Sprintf("%4s%s\n", "", au.Blue("Cc:"))
+		output += fmt.Sprintf("%4s%s\n", "", au.Blue("CC:"))
 		output += printItems(n.Cc, 6)
 	}
 	if len(n.Bcc) > 0 {
-		output += fmt.Sprintf("%4s%s\n", "", au.Blue("Bcc:"))
+		output += fmt.Sprintf("%4s%s\n", "", au.Blue("BCC:"))
 		output += printItems(n.Bcc, 6)
 	}
 	return output

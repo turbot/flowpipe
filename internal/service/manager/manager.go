@@ -465,7 +465,8 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 			slog.Error("error computing hash", err)
 			return err
 		}
-		integrationUrl := fmt.Sprintf("%s/api/latest/integration/slack/%s/%s", util.GetBaseUrl(), integrationName, hashString)
+		shortName := strings.TrimPrefix(integrationName, "slack.")
+		integrationUrl := fmt.Sprintf("%s/api/latest/integration/slack/%s/%s", util.GetBaseUrl(), shortName, hashString)
 		integration.SetUrl(integrationUrl)
 	}
 	return nil

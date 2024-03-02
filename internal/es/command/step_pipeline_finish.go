@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"time"
 
 	"log/slog"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -64,6 +66,8 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 
 	stepOutput := make(map[string]interface{})
+
+	cmd.Output.Flowpipe = primitive.FlowpipeMetadataOutput(pex.StartTime, time.Now().UTC())
 
 	if cmd.Output.Status == constants.StateFailed {
 		errorConfig, diags := stepDefn.GetErrorConfig(evalContext, true)

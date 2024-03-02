@@ -3,10 +3,11 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/schema"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/turbot/pipe-fittings/schema"
 
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/color"
@@ -629,7 +630,10 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					prefix.RetryIndex = &i
 
 				}
-
+				if helpers.IsNil(e.Output.Data) {
+					e.Output.Data = modconfig.OutputData{}
+				}
+				e.Output.Data["flowpipe"] = e.Output.Flowpipe
 				switch e.Output.Status {
 				case "finished":
 					parsed := ParsedEventWithOutput{
@@ -741,6 +745,13 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 	out := ""
 	sortedKeys := utils.SortedMapKeys(input)
 	for _, key := range sortedKeys {
+
+		// Nasty .. but form_url is a special case where we "extend the input" (see extendInput function). It need to be removed
+		// because it's not a real input to the step.
+		if key == "form_url" {
+			continue
+		}
+
 		v := input[key]
 		if v == nil {
 			v = ""
