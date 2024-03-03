@@ -12,3 +12,4 @@ default_mod/.flowpipe/internal
 flowpipe.db
 
 private_mod
+single_pipeline
