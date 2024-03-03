@@ -4,12 +4,21 @@
 
 _What's new?_
 
-* Human workflows. [Documentation](https://flowpipe.io/docs/).
-* Maximum Concurrency control. [Documentation](https://flowpipe.io/docs/).
-* Importing Steampipe connection config as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/).
-* Message step to send messages using the integrations. [Documentation](https://flowpipe.io/docs/).
-* SQLite backing store instead of `.jsonl` files.
+* Human workflows. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
+* Maximum concurrency control in [pipelines](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments) and [steps](https://flowpipe.io/docs/flowpipe-hcl/step#common-step-arguments).
+* Import Steampipe connections as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/credential_import).
+* Message step to send messages using integrations resources. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
+* Using containers with Flowpipe. [Documentation](https://flowpipe.io/docs/run/containers).
+* New credential types: `alicloud`, ...
+* Shorter hash for HTTP triggers.
 * Query steps & triggers support DuckDB.
+* Flowpipe attribute in all step that contains started_at and finished_at timestamps.
+* Moved `flowpipe.db` from the root of the mod directory to the `.flowpipe` directory in the mod directory.
+* Renamed `connection_string` in query step and query trigger to `database`.
+
+_Deprecation_
+
+* Email step. Please use the new Message step instead.
 
 _Bug fixes_
 
@@ -19,9 +28,10 @@ _Bug fixes_
 * Pipeline output attributes are now validated ([#239](https://github.com/turbot/pipe-fittings/issues/239)).
 * Pipeline param default value data type is now validated against the specified type ([#262](https://github.com/turbot/pipe-fittings/issues/262)).
 * Removed titles when merging multiple error messages ([#263](https://github.com/turbot/pipe-fittings/issues/263)).
-* Scheduled triggers are now refreshed when mod files have changed.
-* Runtime resolution of credentials.
-* Runtime resolution of pipeline reference. ([#732](https://github.com/turbot/flowpipe/issues/732)).
+* Scheduled triggers are now re-scheduled when mod files have changed.
+* Runtime resolution of pipeline reference and credentials are now working correctly. ([#732](https://github.com/turbot/flowpipe/issues/732)).
+* Various file watcher related bugs that either crashes the file watcher or causes it to miss changes.
+
 
 ## v0.2.3 [2024-02-13]
 
