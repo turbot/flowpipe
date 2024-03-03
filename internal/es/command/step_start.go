@@ -639,8 +639,10 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 
 	stepRetry.Count = stepRetry.Count + 1
 
+	maxAttempts, _, _, _ := retryConfig.ResolveSettings()
+
 	// Max attempts include the first attempt (before the retry), so we need to reduce it by 1
-	if stepRetry.Count > (retryConfig.MaxAttempts - 1) {
+	if stepRetry.Count > (maxAttempts - 1) {
 		// we have exhausted all retries, we need to fail the pipeline
 		return nil, hcl.Diagnostics{}
 	}
