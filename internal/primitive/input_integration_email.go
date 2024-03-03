@@ -194,7 +194,32 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	var err error
 	host := kitTypes.SafeString(ip.Host)
-	addr := fmt.Sprintf("%s:%d", host, *ip.SecurePort) // TODO: Establish approach for using correct port/secure-port
+	tls := kitTypes.SafeString(ip.Tls)
+	var port int64
+	switch tls {
+	case "off":
+		if !helpers.IsNil(*ip.Port) {
+			port = *ip.Port
+		} else {
+			port = 25 // default
+		}
+	case "required":
+		if !helpers.IsNil(*ip.SecurePort) {
+			port = *ip.SecurePort
+		} else {
+			port = 587 // default
+		}
+	default: // auto/unset
+		if !helpers.IsNil(*ip.SecurePort) {
+			port = *ip.SecurePort
+		} else if !helpers.IsNil(*ip.Port) {
+			port = *ip.Port
+		} else {
+			port = 587
+		}
+	}
+
+	addr := fmt.Sprintf("%s:%d", host, port)
 	auth := smtp.PlainAuth("", kitTypes.SafeString(ip.User), kitTypes.SafeString(ip.Pass), host)
 
 	output := modconfig.Output{

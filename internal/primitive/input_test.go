@@ -2,90 +2,367 @@ package primitive
 
 import (
 	"context"
+	"errors"
+	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/schema"
 )
 
-// func TestInputStep(t *testing.T) {
-// 	ctx := context.Background()
-//
-// 	assert := assert.New(t)
-// 	hr := Input{
-// 		ExecutionID:         "exec_cknkhj5gdurd7349d4v0",
-// 		StepExecutionID:     "sexec_cknkhj5gdurd7349d510",
-// 		PipelineExecutionID: "pexec_cknkhj5gdurd7349d4vg",
-// 	}
+// Validations
 
-// 	input := modconfig.Input(map[string]interface{}{
-// 		"type": IntegrationTypeSlack,
-// 	})
-
-// 	_, err := hr.Run(ctx, input)
-// 	assert.Nil(err)
-// 	// assert.Equal("200 OK", output.Get("status"))
-// 	// assert.Equal(200, output.Get("status_code"))
-// 	// assert.Equal("text/html; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-// 	// assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
-// }
-
-// func TestIntegrationInputEmailMain(m *testing.M) {
-// 	// Start MailHog before running tests
-// 	startMailHog()
-// 	time.Sleep(2 * time.Second) // Wait for the server to be ready
-
-// 	// Run tests
-// 	code := m.Run()
-
-// 	// Stop MailHog after tests are completed
-// 	stopMailHog()
-
-// 	// Exit with the test code
-// 	os.Exit(code)
-// }
-
-func XXXTestIntegrationInputSendEmail(t *testing.T) {
+func TestInputWithoutOptionsAndButtonType(t *testing.T) {
 	assert := assert.New(t)
-	hr := Input{}
+	ctx := context.Background()
 
-	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
-		// schema.AttributeTypeSenderName: "Karan",
-
-		schema.AttributeTypeType:       schema.IntegrationTypeEmail,
-		schema.AttributeTypeUsername:   "karan@turbot.com",
-		schema.AttributeTypePassword:   "xxxxxx",
-		schema.AttributeTypeSmtpServer: "smtp.gmail.com",
-
-		// schema.AttributeTypePort:    int64(587),
-		// schema.AttributeTypeTo:      []string{"karan@turbot.com"},
-		// schema.AttributeTypeSubject: "Flowpipe mail test",
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []map[string]any{
+				{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType: schema.IntegrationTypeHttp,
+					},
+				},
+			},
+		},
 	})
 
-	_, err := hr.Run(context.Background(), input)
-	// No errors
+	err := step.ValidateInput(ctx, input)
+	assert.NotNil(err)
+	var fpErr perr.ErrorModel
+	errors.As(err, &fpErr)
+	assert.Contains(fpErr.Detail, "Input type 'button' requires options, no options were defined")
+}
+
+func TestInputWithoutOptionsAndTextType(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeText,
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType: schema.IntegrationTypeHttp,
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
 	assert.Nil(err)
+}
 
-	// // Get the captured email data from the SMTP server (e.g., MailHog)
-	// capturedEmails, err := captureEmailsFromSMTP(input[schema.AttributeTypeFrom].(string))
-	// if err != nil {
-	// 	assert.Fail("error listing captured emails from Mailhog: ", err.Error())
-	// }
+func TestInputWithSlackNotifierUsingTokenNoChannelSet(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
 
-	// // Check if the captured email is as expected
-	// if len(capturedEmails) != 1 {
-	// 	assert.Fail("Expected 1 email, but got %d", len(capturedEmails))
-	// }
-	// capturedEmail := capturedEmails[0]
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:  schema.IntegrationTypeSlack,
+						schema.AttributeTypeToken: "xoxb-f4k3-t0k3n",
+					},
+				},
+			},
+		},
+	})
 
-	// // Validate sender's information
-	// assert.Contains(capturedEmail.Content.Headers.From[0], "test.send.email@example.com")
+	err := step.ValidateInput(ctx, input)
+	assert.NotNil(err)
+	var fpErr perr.ErrorModel
+	errors.As(err, &fpErr)
+	assert.Contains(fpErr.Detail, "slack notifications require a channel when using token auth, channel was not set")
+}
 
-	// // Validate recipients
-	// assert.Equal([]string{"recipient1@example.com, recipient2@example.com"}, capturedEmail.Content.Headers.To)
+func TestInputWithSlackNotifierUsingTokenChannelSetOnStep(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
 
-	// // Validate email body
-	// assert.Contains(capturedEmail.Content.Body, "This is a test email sent from Golang.")
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt:  "Test Prompt",
+		schema.AttributeTypeType:    constants.InputTypeButton,
+		schema.AttributeTypeChannel: "#step",
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:  schema.IntegrationTypeSlack,
+						schema.AttributeTypeToken: "xoxb-f4k3-t0k3n",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
+}
+
+func TestInputWithSlackNotifierUsingTokenChannelSetOnNotifier(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeChannel: "#notify",
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:  schema.IntegrationTypeSlack,
+						schema.AttributeTypeToken: "xoxb-f4k3-t0k3n",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
+}
+
+func TestInputWithSlackNotifierUsingTokenChannelSetOnIntegration(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:    schema.IntegrationTypeSlack,
+						schema.AttributeTypeToken:   "xoxb-f4k3-t0k3n",
+						schema.AttributeTypeChannel: "#integration",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
+}
+
+func TestInputWithSlackNotifierUsingWebHookChannelNotSet(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:       schema.IntegrationTypeSlack,
+						schema.AttributeTypeWebhookUrl: "https://fake-website.com/slack/webhook/url",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
+}
+
+func TestInputWithEmailNotifierNoRecipients(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:     schema.IntegrationTypeEmail,
+						schema.AttributeTypeSmtpHost: "smtp.email.com",
+						schema.AttributeTypeFrom:     "example@email.com",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.NotNil(err)
+	var fpErr perr.ErrorModel
+	errors.As(err, &fpErr)
+	assert.Contains(fpErr.Detail, "email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
+}
+
+func TestInputWithEmailNotifierRecipientsOnStep(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeTo: []any{"bob@example.com", "other@example.com"},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:     schema.IntegrationTypeEmail,
+						schema.AttributeTypeSmtpHost: "smtp.email.com",
+						schema.AttributeTypeFrom:     "example@email.com",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
+}
+
+func TestInputWithEmailNotifierRecipientsOnNotifier(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeCc: []any{"bob@example.com", "other@example.com"},
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:     schema.IntegrationTypeEmail,
+						schema.AttributeTypeSmtpHost: "smtp.email.com",
+						schema.AttributeTypeFrom:     "example@email.com",
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
+}
+
+func TestInputWithEmailNotifierRecipientsOnIntegration(t *testing.T) {
+	assert := assert.New(t)
+	ctx := context.Background()
+
+	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
+	input := modconfig.Input(map[string]any{
+		schema.AttributeTypePrompt: "Test Prompt",
+		schema.AttributeTypeType:   constants.InputTypeButton,
+		schema.AttributeTypeOptions: []any{
+			map[string]any{
+				schema.AttributeTypeValue: "a",
+			},
+			map[string]any{
+				schema.AttributeTypeValue: "b",
+			},
+		},
+		schema.AttributeTypeNotifier: map[string]any{
+			schema.AttributeTypeNotifies: []any{
+				map[string]any{
+					schema.AttributeTypeIntegration: map[string]any{
+						schema.AttributeTypeType:     schema.IntegrationTypeEmail,
+						schema.AttributeTypeSmtpHost: "smtp.email.com",
+						schema.AttributeTypeFrom:     "example@email.com",
+						schema.AttributeTypeTo:       []any{"bob@example.com", "other@example.com"},
+					},
+				},
+			},
+		},
+	})
+
+	err := step.ValidateInput(ctx, input)
+	assert.Nil(err)
 }
