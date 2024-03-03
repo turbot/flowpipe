@@ -1,4 +1,5 @@
 #!/bin/bash
+set -Eeo pipefail
 
 log_if_debug() {
     # Convert FLOWPIPE_LOG_LEVEL to lowercase and compare
