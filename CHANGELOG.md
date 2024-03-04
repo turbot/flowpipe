@@ -9,7 +9,7 @@ _What's new?_
 * Import Steampipe connections as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/credential_import).
 * Message step to send messages using integrations resources. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
 * Using containers with Flowpipe. [Documentation](https://flowpipe.io/docs/run/containers).
-* New credential types: `alicloud`, ...
+* New credential types: `alicloud`, `mastodon`.
 * Shorter hash for HTTP triggers.
 * Query steps & triggers support DuckDB.
 * Flowpipe attribute in all step that contains started_at and finished_at timestamps.
@@ -31,7 +31,6 @@ _Bug fixes_
 * Scheduled triggers are now re-scheduled when mod files have changed.
 * Runtime resolution of pipeline reference and credentials are now working correctly. ([#732](https://github.com/turbot/flowpipe/issues/732)).
 * Various file watcher related bugs that either crashes the file watcher or causes it to miss changes.
-
 
 ## v0.2.3 [2024-02-13]
 
