@@ -1,36 +1,37 @@
 # Flowpipe
 
-## v0.3.0 [tbd]
+## v0.3.0 [2024-05-05] Human workflow, Slack and email messaging, Import Steampipe credentials, Concurrency controls.
 
 _What's new?_
 
-* Human workflows. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
-* Maximum concurrency control in [pipelines](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments) and [steps](https://flowpipe.io/docs/flowpipe-hcl/step#common-step-arguments).
+* Workflow - message step for easy notifications. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/message).
+* Workflow - input step for buttons, text and other data. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
+* Workflow - simple, reusable integration and notifier configuration for HTTP, Slack and Email. [Documentation](TODO)
 * Import Steampipe connections as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/credential_import).
-* Message step to send messages using integrations resources. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
-* Using containers with Flowpipe. [Documentation](https://flowpipe.io/docs/run/containers).
-* New credential types: `alicloud`, `mastodon`.
-* Shorter hash for HTTP triggers.
-* Query steps & triggers support DuckDB.
-* Flowpipe attribute in all step that contains started_at and finished_at timestamps.
-* Moved `flowpipe.db` from the root of the mod directory to the `.flowpipe` directory in the mod directory.
-* Renamed `connection_string` in query step and query trigger to `database`.
+* Run flowpipe in a container. [Documentation](TODO - https://flowpipe.io/docs/run/containers).
+* Manage concurrency of [pipelines](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments) and [steps](https://flowpipe.io/docs/flowpipe-hcl/step#common-step-arguments).
+* New credential types: `alicloud` and `mastodon`.
+* Shorter hash for HTTP triggers for simpler URLs.
+* DuckDB support in query step & trigger.
+* Step metadata, like `started_at` and `finished_at` added under a `flowpipe` attribute.
+* Moved `flowpipe.db` into the mod-level `.flowpipe` directory.
+* `connection_string` in query step and trigger renamed to `database`.
 
 _Deprecation_
 
-* Email step. Please use the new Message step instead.
+* Email step. Please use the new message step instead.
 
 _Bug fixes_
 
 * `log_level` workspace setting is now respected ([#618](https://github.com/turbot/flowpipe/issues/618)).
 * Default `listen` flag should be network, not localhost ([#694](https://github.com/turbot/flowpipe/issues/694))
-* Triggers attributes are now validated ([#225](https://github.com/turbot/pipe-fittings/issues/255)).
+* Trigger attributes are now validated ([#225](https://github.com/turbot/pipe-fittings/issues/255)).
 * Pipeline output attributes are now validated ([#239](https://github.com/turbot/pipe-fittings/issues/239)).
 * Pipeline param default value data type is now validated against the specified type ([#262](https://github.com/turbot/pipe-fittings/issues/262)).
 * Removed titles when merging multiple error messages ([#263](https://github.com/turbot/pipe-fittings/issues/263)).
-* Scheduled triggers are now re-scheduled when mod files have changed.
 * Runtime resolution of pipeline reference and credentials are now working correctly. ([#732](https://github.com/turbot/flowpipe/issues/732)).
-* Various file watcher related bugs that either crashes the file watcher or causes it to miss changes.
+* Scheduled triggers are now re-scheduled when mod files have changed.
+* File watcher reliability improvements.
 
 ## v0.2.3 [2024-02-13]
 
