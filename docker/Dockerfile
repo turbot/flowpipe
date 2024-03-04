@@ -26,14 +26,24 @@ ENV USER_UID=7103 \
 ARG TARGETVERSION \
     TARGETARCH
 
-# Install gosu to enable a smooth switch from the root user to a non-root user in the Docker container.
-# Add a non-root user 'flowpipe' for security purposes,
-# avoid running the container as root, update the package list,
-# install necessary packages for adding Docker's repository, add Docker’s official GPG key,
-# set up the Docker stable repository, update the package list again,
-# install 'wget' for downloading flowpipe, 'docker-ce-cli' for docker commands,
-# download the release as specified in TARGETVERSION and TARGETARCH,
-# extract it, move it to the appropriate directory, and then clean up.
+# This RUN command performs several operations essential for setting up the container:
+# 1. Determines the group name based on USER_GID and creates a system user 'flowpipe' with specified UID and no login shell. This user is for running flowpipe processes.
+# 2. Updates the package lists to ensure we have access to the latest versions of packages and their dependencies.
+# 3. Installs necessary packages for the setup:
+#    - apt-transport-https: Allows the use of repositories accessed via the HTTPS protocol.
+#    - ca-certificates: Ensures that SSL/TLS certificates can be verified.
+#    - curl: Used for transferring data with URLs.
+#    - gnupg: Provides encryption services and key management.
+#    - lsb-release: Provides information about the Linux distribution.
+#    - gosu: A simple tool used to step down from root and execute commands as the flowpipe user.
+#    - wget: A network downloader.
+# 4. Downloads and adds the Docker repository GPG key to ensure software authenticity.
+# 5. Adds the Docker repository to apt sources list, enabling installation of Docker packages.
+# 6. Performs another apt-get update to recognize the newly added Docker repository.
+# 7. Installs the Docker CLI to enable container management within the container.
+# 8. Creates a directory for flowpipe and downloads the flowpipe binary package.
+# 9. Extracts the flowpipe package to /opt/flowpipe and moves the flowpipe executable to /usr/local/bin for easy execution.
+# 10. Cleans up the apt cache and removes temporary files to reduce the image size.
 # Note: Directory: `/opt/flowpipe` is where the contents of the tar file are extracted.
 # Note: Directory: `/usr/local/bin` is where the flowpipe binary is moved to.
 # Note: Packages apt-transport-https, ca-certificates, curl, gnupg, lsb-release, docker-ce-cli are required for Docker
