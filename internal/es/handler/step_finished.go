@@ -100,7 +100,9 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		if evt.Output.Data == nil {
 			evt.Output.Data = make(map[string]any)
 		}
-		evt.Output.Data["flowpipe"] = evt.Output.Flowpipe
+		if evt.Output.Flowpipe != nil && len(evt.Output.Flowpipe) > 0 {
+			evt.Output.Data["flowpipe"] = evt.Output.Flowpipe
+		}
 		switch evt.Output.Status {
 		case "finished":
 			output.RenderServerOutput(ctx, types.NewParsedEventWithOutput(pe, evt.Output.Data, evt.StepOutput, &duration, false))
