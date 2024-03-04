@@ -16,7 +16,7 @@ import (
 	"time"
 
 	"github.com/slack-go/slack"
-	"github.com/turbot/flowpipe/templates"
+	"github.com/turbot/flowpipe/internal/templates"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
