@@ -185,8 +185,6 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageCreator) (*modconfig.Output, error) {
 	output := &modconfig.Output{}
 
-	base := NewInputIntegrationBase(ip)
-
 	var resOptions []InputIntegrationResponseOption
 
 	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
@@ -212,6 +210,48 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 		}
 	}
 
+	extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)
+
+	switch {
+	case !extNotifySent && len(nErrors) == 0: // only http integrations
+		return output, nil
+	case extNotifySent && len(nErrors) == 0: // all notifications sent
+		return output, nil
+	case extNotifySent && len(nErrors) > 0: // some external notifications sent, some failed...
+		// TODO: How do we inform user of the failed notifiers... we don't have a warn mechanism over remote?
+		// attempt 1: put them in step errors - this will fail the step.
+		//for _, ne := range nErrors {
+		//	se := modconfig.StepError{Error: ne.(perr.ErrorModel)}
+		//	output.Errors = append(output.Errors, se)
+		//}
+		// attempt 2: add to output.Data["notifier_errors"]
+		//var detail string
+		//for _, ne := range nErrors {
+		//	e := ne.(perr.ErrorModel)
+		//	detail += fmt.Sprintf("%s\n", e.Detail)
+		//}
+		//if output.Data == nil {
+		//	output.Data = make(map[string]any)
+		//}
+		//output.Data["notifier_errors"] = detail
+
+		return output, nil
+	case !extNotifySent && len(nErrors) > 0: // all external notifications failed
+		var detail string
+		for _, ne := range nErrors {
+			e := ne.(perr.ErrorModel)
+			detail += fmt.Sprintf("%s\n", e.Detail)
+		}
+		return nil, perr.InternalWithMessage(fmt.Sprintf("all %d notifications failed:\n%s", len(nErrors), detail))
+	}
+
+	return output, nil
+}
+
+func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, mc MessageCreator, opts []InputIntegrationResponseOption) (bool, []error) {
+	base := NewInputIntegrationBase(ip)
+	externalNotificationSent := false
+	var notificationErrors []error
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 			for _, n := range notifies {
@@ -242,9 +282,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						s.WebhookUrl = &wu
 					}
 
-					_, err := s.PostMessage(ctx, mc, resOptions)
+					_, err := s.PostMessage(ctx, mc, opts)
 					if err != nil {
-						return nil, err
+						notificationErrors = append(notificationErrors, err)
+					} else {
+						externalNotificationSent = true
 					}
 				case schema.IntegrationTypeHttp:
 					// No output needs to be rendered here for HTTP step. The console output is rendered by the Event printer, it does the right thing there too.
@@ -334,22 +376,17 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						e.Pass = &p
 					}
 
-					out, err := e.PostMessage(ctx, mc, resOptions)
+					_, err := e.PostMessage(ctx, mc, opts)
 					if err != nil {
-						return nil, err
+						notificationErrors = append(notificationErrors, err)
+					} else {
+						externalNotificationSent = true
 					}
-					if out != nil {
-						output = out
-					}
-
-				default:
-					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
 				}
 			}
 		}
 	}
-
-	return output, nil
+	return externalNotificationSent, notificationErrors
 }
 
 func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
