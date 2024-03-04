@@ -2,8 +2,6 @@ package primitive
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -23,7 +21,7 @@ func NewMessagePrimitive(executionId, pipelineExecutionId, stepExecutionId, pipe
 }
 
 func (mp *Message) ValidateInput(ctx context.Context, input modconfig.Input) error {
-	return nil
+	return mp.Input.validateInputNotifier(input)
 }
 
 func (mp *Message) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
@@ -50,21 +48,9 @@ type MessageStepMessageCreator struct {
 func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
 	var blocks slack.Blocks
 
-	// payload for callback
-	payload := map[string]any{
-		"execution_id":          ip.ExecutionID,
-		"pipeline_execution_id": ip.PipelineExecutionID,
-		"step_execution_id":     ip.StepExecutionID,
-	}
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return blocks, err
-	}
-	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
-
 	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, icm.Text, false, false)
 
-	header := slack.NewSectionBlock(promptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+	header := slack.NewSectionBlock(promptBlock, nil, nil)
 	blocks.BlockSet = append(blocks.BlockSet, header)
 
 	return blocks, nil

@@ -97,7 +97,15 @@ func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 		}
 	}
 
-	// validate notifier
+	err := ip.validateInputNotifier(i)
+	if err != nil {
+		return err // will already be perr
+	}
+
+	return nil
+}
+
+func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 	notifier := i[schema.AttributeTypeNotifier].(map[string]any)
 	notifies := notifier[schema.AttributeTypeNotifies].([]any)
 	for _, n := range notifies {
