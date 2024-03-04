@@ -213,28 +213,12 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 	extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)
 
 	switch {
-	case !extNotifySent && len(nErrors) == 0: // only http integrations
+	case !extNotifySent && len(nErrors) == 0: // no integrations or only http integrations
 		return output, nil
 	case extNotifySent && len(nErrors) == 0: // all notifications sent
 		return output, nil
 	case extNotifySent && len(nErrors) > 0: // some external notifications sent, some failed...
 		// TODO: How do we inform user of the failed notifiers... we don't have a warn mechanism over remote?
-		// attempt 1: put them in step errors - this will fail the step.
-		//for _, ne := range nErrors {
-		//	se := modconfig.StepError{Error: ne.(perr.ErrorModel)}
-		//	output.Errors = append(output.Errors, se)
-		//}
-		// attempt 2: add to output.Data["notifier_errors"]
-		//var detail string
-		//for _, ne := range nErrors {
-		//	e := ne.(perr.ErrorModel)
-		//	detail += fmt.Sprintf("%s\n", e.Detail)
-		//}
-		//if output.Data == nil {
-		//	output.Data = make(map[string]any)
-		//}
-		//output.Data["notifier_errors"] = detail
-
 		return output, nil
 	case !extNotifySent && len(nErrors) > 0: // all external notifications failed
 		var detail string
