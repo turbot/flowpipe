@@ -1,3 +1,4 @@
+# early Flowpipe bug that used to create ~ directory in the root directory of the repo
 ~
 
 # VS Code debug binary
@@ -15,7 +16,7 @@ flowpipe
 # accidental .flowpipe directory in workspace dir
 .flowpipe
 
-# Flowpipe specific
+# Flowpipe specific, this file is copied to the root directory when building Open Api documentation, this file should be ignored
 generate-open-api.sh
 
 # IDE
@@ -39,9 +40,6 @@ __debug_bin
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
 # Dist directory is created by goreleaser
 dist/
 
@@ -54,3 +52,6 @@ tmp/
 
 # UI build
 node_modules
+
+# Bug in testcases can often drop flowpipe.db in the root directory of the repo
+flowpipe.db
