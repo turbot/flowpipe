@@ -15,14 +15,10 @@ notifier "my_notifier" {
 
   notify {
       integration = integration.http.default
-      channel = "fake one"
-      subject = "bar"
   }
 
   notify {
       integration = integration.http.default
-      to = ["a", "b", "c"]
-      channel = "foo"
   }
 }
 
@@ -39,7 +35,6 @@ notifier "slack_notify" {
   notify {
       integration = integration.slack.my_other_slack_app
       channel = "fake one"
-      subject = "bar"
   }
 
   notify {
