@@ -3,8 +3,11 @@ package primitive
 import (
 	"context"
 	"fmt"
+	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
 	"strings"
+	"time"
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
@@ -218,7 +221,13 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 	case extNotifySent && len(nErrors) == 0: // all notifications sent
 		return output, nil
 	case extNotifySent && len(nErrors) > 0: // some external notifications sent, some failed...
-		// TODO: How do we inform user of the failed notifiers... we don't have a warn mechanism over remote?
+		// TODO: Figure out how to get this into the pipeline run output
+		if o.IsServerMode {
+			sp := types.NewServerOutputPrefixWithExecId(time.Now().UTC(), "pipeline", &ip.ExecutionID)
+			for _, ne := range nErrors {
+				o.RenderServerOutput(ctx, types.NewServerOutputError(sp, "unable to send notification", ne))
+			}
+		}
 		return output, nil
 	case !extNotifySent && len(nErrors) > 0: // all external notifications failed
 		var detail string
