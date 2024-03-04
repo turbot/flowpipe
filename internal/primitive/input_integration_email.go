@@ -198,21 +198,21 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 	var port int64
 	switch tls {
 	case "off":
-		if !helpers.IsNil(*ip.Port) {
+		if ip.Port != nil {
 			port = *ip.Port
 		} else {
 			port = 25 // default
 		}
 	case "required":
-		if !helpers.IsNil(*ip.SecurePort) {
+		if ip.SecurePort != nil {
 			port = *ip.SecurePort
 		} else {
 			port = 587 // default
 		}
-	default: // auto/unset
-		if !helpers.IsNil(*ip.SecurePort) {
+	default: // default is auto, this should also be used if unset, defaults to port 587
+		if ip.SecurePort != nil {
 			port = *ip.SecurePort
-		} else if !helpers.IsNil(*ip.Port) {
+		} else if ip.Port != nil {
 			port = *ip.Port
 		} else {
 			port = 587
