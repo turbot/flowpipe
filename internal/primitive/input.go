@@ -3,8 +3,11 @@ package primitive
 import (
 	"context"
 	"fmt"
+	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
 	"strings"
+	"time"
 
 	"github.com/slack-go/slack"
 	"github.com/turbot/go-kit/helpers"
@@ -185,8 +188,6 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageCreator) (*modconfig.Output, error) {
 	output := &modconfig.Output{}
 
-	base := NewInputIntegrationBase(ip)
-
 	var resOptions []InputIntegrationResponseOption
 
 	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
@@ -212,6 +213,38 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 		}
 	}
 
+	extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)
+
+	switch {
+	case !extNotifySent && len(nErrors) == 0: // no integrations or only http integrations
+		return output, nil
+	case extNotifySent && len(nErrors) == 0: // all notifications sent
+		return output, nil
+	case extNotifySent && len(nErrors) > 0: // some external notifications sent, some failed...
+		// TODO: Figure out how to get this into the pipeline run output
+		if o.IsServerMode {
+			sp := types.NewServerOutputPrefixWithExecId(time.Now().UTC(), "pipeline", &ip.ExecutionID)
+			for _, ne := range nErrors {
+				o.RenderServerOutput(ctx, types.NewServerOutputError(sp, "unable to send notification", ne))
+			}
+		}
+		return output, nil
+	case !extNotifySent && len(nErrors) > 0: // all external notifications failed
+		var detail string
+		for _, ne := range nErrors {
+			e := ne.(perr.ErrorModel)
+			detail += fmt.Sprintf("%s\n", e.Detail)
+		}
+		return nil, perr.InternalWithMessage(fmt.Sprintf("all %d notifications failed:\n%s", len(nErrors), detail))
+	}
+
+	return output, nil
+}
+
+func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, mc MessageCreator, opts []InputIntegrationResponseOption) (bool, []error) {
+	base := NewInputIntegrationBase(ip)
+	externalNotificationSent := false
+	var notificationErrors []error
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 			for _, n := range notifies {
@@ -242,9 +275,11 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						s.WebhookUrl = &wu
 					}
 
-					_, err := s.PostMessage(ctx, mc, resOptions)
+					_, err := s.PostMessage(ctx, mc, opts)
 					if err != nil {
-						return nil, err
+						notificationErrors = append(notificationErrors, err)
+					} else {
+						externalNotificationSent = true
 					}
 				case schema.IntegrationTypeHttp:
 					// No output needs to be rendered here for HTTP step. The console output is rendered by the Event printer, it does the right thing there too.
@@ -334,22 +369,17 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 						e.Pass = &p
 					}
 
-					out, err := e.PostMessage(ctx, mc, resOptions)
+					_, err := e.PostMessage(ctx, mc, opts)
 					if err != nil {
-						return nil, err
+						notificationErrors = append(notificationErrors, err)
+					} else {
+						externalNotificationSent = true
 					}
-					if out != nil {
-						output = out
-					}
-
-				default:
-					return nil, perr.InternalWithMessage(fmt.Sprintf("integration type %s not yet implemented", integrationType))
 				}
 			}
 		}
 	}
-
-	return output, nil
+	return externalNotificationSent, notificationErrors
 }
 
 func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {

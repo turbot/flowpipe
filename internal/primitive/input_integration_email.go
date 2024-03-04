@@ -252,23 +252,11 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 		}
 		switch {
 		case smtpError.Code >= 400 && smtpError.Code <= 499:
-			output.Errors = []modconfig.StepError{
-				{
-					Error: perr.BadRequestWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg)),
-				},
-			}
+			return &output, perr.BadRequestWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg))
 		case smtpError.Code >= 500 && smtpError.Code <= 599:
-			output.Errors = []modconfig.StepError{
-				{
-					Error: perr.ServiceUnavailableWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg)),
-				},
-			}
+			return &output, perr.ServiceUnavailableWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg))
 		default:
-			output.Errors = []modconfig.StepError{
-				{
-					Error: perr.InternalWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg)),
-				},
-			}
+			return &output, perr.InternalWithMessage(fmt.Sprintf("unable to send email: %d %s", smtpError.Code, smtpError.Msg))
 		}
 	}
 
