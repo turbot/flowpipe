@@ -164,9 +164,11 @@ func (api *APIService) postFormData(c *gin.Context) {
 	var parsedBody map[string]any
 	switch c.ContentType() {
 	case "application/x-www-form-urlencoded":
-		// TODO: implement form encoded support for obtain body content
-		common.AbortWithError(c, perr.InternalWithMessage("form-encoding not yet implemented"))
-		return
+		err = c.Bind(&parsedBody)
+		if err != nil {
+			common.AbortWithError(c, perr.InternalWithMessage("error parsing body content"))
+			return
+		}
 	default:
 		err = c.BindJSON(&parsedBody)
 		if err != nil {
