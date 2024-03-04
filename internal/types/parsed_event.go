@@ -633,7 +633,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				if helpers.IsNil(e.Output.Data) {
 					e.Output.Data = modconfig.OutputData{}
 				}
-				e.Output.Data["flowpipe"] = e.Output.Flowpipe
+				if e.Output.Flowpipe != nil {
+					e.Output.Data["flowpipe"] = e.Output.Flowpipe
+				}
 				switch e.Output.Status {
 				case "finished":
 					parsed := ParsedEventWithOutput{
