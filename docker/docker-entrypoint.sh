@@ -157,3 +157,4 @@ fi
 log_if_debug "Final command configuration set. Proceeding to execute the 'flowpipe' CLI with the provided arguments."
 # Now, execute the command provided to the docker run
 exec gosu flowpipe "$@"
+
