@@ -9,12 +9,12 @@ LABEL org.opencontainers.image.ref.name flowpipe \
       org.opencontainers.image.description "Flowpipe container image ${TARGETVERSION}"
 
 # Set environment variables
-# USER_UID: Override the flowpipe UID (default: )
+# USER_UID: Override the flowpipe UID (default: 7103)
 # USER_GID: Override the flowpipe GID (default: 0)
 # FLOWPIPE_LOG_LEVEL: Set logging level (default: "off")
 # FLOWPIPE_UPDATE_CHECK: Disable auto-update checks (default: false)
 # FLOWPIPE_TELEMETRY: Disable telemetry (default: none)
-ENV USER_UID=9033 \
+ENV USER_UID=7103 \
     USER_GID=0 \
     FLOWPIPE_LOG_LEVEL="off" \
     FLOWPIPE_UPDATE_CHECK=false \
