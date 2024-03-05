@@ -69,8 +69,6 @@ archives:
   - id: homebrew
     format: tar.gz
     name_template: "{{ .ProjectName }}.{{ .Os }}.{{ .Arch }}"
-    files:
-      - none*
 
 checksum:
   name_template: 'checksums.txt'
