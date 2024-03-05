@@ -97,7 +97,12 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		prefix := types.NewParsedEventPrefix(pipelineDefn.PipelineName, &stepName, feKey, li, ri, &sp)
 		pe := types.NewParsedEvent(prefix, evt.Event.ExecutionID, h.HandlerName(), stepDefn.GetType(), "")
 		duration := utils.HumanizeDuration(evt.Event.CreatedAt.Sub(stepExecution.StartTime))
-		evt.Output.Data["flowpipe"] = evt.Output.Flowpipe
+		if evt.Output.Data == nil {
+			evt.Output.Data = make(map[string]any)
+		}
+		if evt.Output.Flowpipe != nil && len(evt.Output.Flowpipe) > 0 {
+			evt.Output.Data["flowpipe"] = evt.Output.Flowpipe
+		}
 		switch evt.Output.Status {
 		case "finished":
 			output.RenderServerOutput(ctx, types.NewParsedEventWithOutput(pe, evt.Output.Data, evt.StepOutput, &duration, false))

@@ -188,11 +188,18 @@ func (o ServerOutputError) String(sanitizer *sanitize.Sanitizer, opts sanitize.R
 		return ""
 	}
 
+	var errorMessage string
+	if o.Error != nil {
+		errorMessage = o.Error.Error()
+	} else {
+		errorMessage = "unknown error"
+	}
+
 	return fmt.Sprintf("%s%s %s %s\n",
 		o.ServerOutputPrefix.String(sanitizer, opts),
 		au.Red("error"),
 		au.Red(o.Message+":"),
-		au.BrightRed(o.Error.Error()))
+		au.BrightRed(errorMessage))
 }
 
 type ServerOutputTriggerExecution struct {

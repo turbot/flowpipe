@@ -279,11 +279,16 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitiz
 		}
 	case "message":
 		text, _ := p.Input["text"].(string)
-		if len(text) > 50 {
-			text = text[:50] + "…"
+		displayText := text
+		if len(displayText) > 50 {
+			displayText = displayText[:50] + "…"
 		}
-		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(text))
-
+		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(displayText))
+		if !opts.Verbose { // arg will be shown in verbose mode anyway, no need for extra parsing
+			if stepNotifierHasHttp(p.Input) {
+				out += fmt.Sprintf("%s %s %s = %s\n", pre, "Arg", au.Blue("text"), formatSimpleValue(text, au))
+			}
+		}
 	default:
 		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
 	}
@@ -633,7 +638,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 				if helpers.IsNil(e.Output.Data) {
 					e.Output.Data = modconfig.OutputData{}
 				}
-				e.Output.Data["flowpipe"] = e.Output.Flowpipe
+				if e.Output.Flowpipe != nil {
+					e.Output.Data["flowpipe"] = e.Output.Flowpipe
+				}
 				switch e.Output.Status {
 				case "finished":
 					parsed := ParsedEventWithOutput{
@@ -940,4 +947,20 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 		}
 	}
 	return formUrl, nil
+}
+
+func stepNotifierHasHttp(input modconfig.Input) bool {
+	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
+		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
+			for _, n := range notifies {
+				notify := n.(map[string]any)
+				integration := notify["integration"].(map[string]any)
+				integrationType := integration["type"].(string)
+				if integrationType == schema.IntegrationTypeHttp {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
