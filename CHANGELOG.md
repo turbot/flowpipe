@@ -1,6 +1,6 @@
 # Flowpipe
 
-## v0.3.0 [2024-05-05] Human workflow, Slack and email messaging, Import Steampipe credentials, Concurrency controls.
+## v0.3.0 [2024-03-05] Human workflow, Slack and email messaging, Import Steampipe credentials, Concurrency controls.
 
 _What's new?_
 
