@@ -796,9 +796,9 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 				integration := notify["integration"].(map[string]any)
 				integrationType := integration["type"].(string)
 				switch integrationType {
-				case "http":
+				case schema.IntegrationTypeHttp:
 					return formUrl, nil
-				case "email":
+				case schema.IntegrationTypeEmail:
 					var to []string
 					additionalLines := []string{fmt.Sprintf("Form URL: %s", au.BrightBlack(formUrl))}
 					if sTo, ok := input[schema.AttributeTypeTo].([]any); ok {
@@ -824,7 +824,7 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 						remainder := len(to) - 1
 						return fmt.Sprintf("email to %s", au.BrightBlack(fmt.Sprintf("%s + %d others", to[0], remainder))), &additionalLines
 					}
-				case "slack":
+				case schema.IntegrationTypeSlack:
 					channel := ""
 					if sChannel, ok := input[schema.AttributeTypeChannel].(string); ok {
 						channel = sChannel
@@ -834,6 +834,9 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 						channel = iChannel
 					}
 					return fmt.Sprintf("slack to %s", au.BrightBlack(channel)), nil
+				case schema.IntegrationTypeTeams:
+					// TODO: confirm what we should render out here
+					return fmt.Sprintf("teams via %s", au.BrightBlack("webhook")), nil
 				}
 
 			default: // multiple notifies
@@ -855,7 +858,7 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 						prefix = fmt.Sprintf("Notified #%d via %s", i+1, au.BrightBlack(integrationType))
 					}
 					switch integrationType {
-					case "email":
+					case schema.IntegrationTypeEmail:
 						var to []string
 						if sTo, ok := input[schema.AttributeTypeTo].([]any); ok {
 							for _, t := range sTo {
@@ -927,9 +930,9 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 							f3 := bcc[0:3]
 							additionalLines = append(additionalLines, fmt.Sprintf("%s to %s %s", prefix, au.BrightBlack(strings.Join(f3, ", ")), au.BrightBlack(fmt.Sprintf("+ %d others", r))))
 						}
-					case "http":
+					case schema.IntegrationTypeHttp:
 						additionalLines = append(additionalLines, prefix)
-					case "slack":
+					case schema.IntegrationTypeSlack:
 						var channel string
 						if sChannel, ok := input[schema.AttributeTypeChannel].(string); ok {
 							channel = sChannel
@@ -939,6 +942,9 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 							channel = iChannel
 						}
 						additionalLines = append(additionalLines, fmt.Sprintf("%s channel %s", prefix, au.BrightBlack(channel)))
+					case schema.IntegrationTypeTeams:
+						// TODO: confirm what we should render out here
+						additionalLines = append(additionalLines, fmt.Sprintf("%s via %s", prefix, au.BrightBlack("webhook")))
 					}
 				}
 

@@ -96,3 +96,8 @@ func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, _
 	return message, nil
 
 }
+
+func (icm *MessageStepMessageCreator) TeamsMessage(iit *InputIntegrationTeams, _ []InputIntegrationResponseOption) (any, error) {
+	// TODO: #TeamsIntegrationImplementation
+	return nil, fmt.Errorf("not implemented TeamsMessage on MessageStepMessageCreator - %s", iit.StepExecutionID)
+}

@@ -309,6 +309,7 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 	integrationMap := map[string]cty.Value{}
 	slackIntegrationMap := map[string]cty.Value{}
 	emailIntegrationMap := map[string]cty.Value{}
+	teamsIntegrationMap := map[string]cty.Value{}
 
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
@@ -331,13 +332,13 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 		integrationType := parts[0]
 
 		switch integrationType {
-		case string(schema.IntegrationTypeSlack):
+		case schema.IntegrationTypeSlack:
 			slackIntegrationMap[parts[1]] = pCty
-
-		case string(schema.IntegrationTypeEmail):
+		case schema.IntegrationTypeEmail:
 			emailIntegrationMap[parts[1]] = pCty
-
-		case string(schema.IntegrationTypeHttp):
+		case schema.IntegrationTypeTeams:
+			teamsIntegrationMap[parts[1]] = pCty
+		case schema.IntegrationTypeHttp:
 			// do nothing
 
 		default:
@@ -351,6 +352,10 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 
 	if len(emailIntegrationMap) > 0 {
 		integrationMap[schema.IntegrationTypeEmail] = cty.ObjectVal(emailIntegrationMap)
+	}
+
+	if len(teamsIntegrationMap) > 0 {
+		integrationMap[schema.IntegrationTypeTeams] = cty.ObjectVal(teamsIntegrationMap)
 	}
 
 	return integrationMap, nil

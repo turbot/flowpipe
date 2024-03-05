@@ -10,6 +10,7 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 // This type is used by the API to return a list of integrations.
@@ -31,8 +32,10 @@ type FpIntegration struct {
 	// slack
 	Token         *string `json:"token,omitempty"`
 	SigningSecret *string `json:"signing_secret,omitempty"`
-	WebhookUrl    *string `json:"webhook_url,omitempty"`
 	Channel       *string `json:"channel,omitempty"`
+
+	// slack & teams
+	WebhookUrl *string `json:"webhook_url,omitempty"`
 
 	// email
 	SmtpHost     *string  `json:"smtp_host,omitempty"`
@@ -187,26 +190,26 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpInte
 	resp.EndLineNumber = integration.GetIntegrationImpl().EndLineNumber
 	redactedValue := sanitize.RedactedStr
 	switch integration.GetIntegrationType() {
-	case "slack":
+	case schema.IntegrationTypeSlack:
 		slack := integration.(*modconfig.SlackIntegration)
 		resp.Channel = slack.Channel
-		if !helpers.IsNil(slack.Token) {
+		if slack.Token != nil {
 			resp.Token = &redactedValue
 		}
-		if !helpers.IsNil(slack.WebhookUrl) {
+		if slack.WebhookUrl != nil {
 			resp.WebhookUrl = &redactedValue
 		}
-		if !helpers.IsNil(slack.SigningSecret) {
+		if slack.SigningSecret != nil {
 			resp.SigningSecret = &redactedValue
 		}
-	case "email":
+	case schema.IntegrationTypeEmail:
 		email := integration.(*modconfig.EmailIntegration)
 		resp.SmtpHost = email.SmtpHost
 		resp.SmtpPort = email.SmtpPort
 		resp.SmtpsPort = email.SmtpsPort
 		resp.SmtpTls = email.SmtpTls
 		resp.SmtpUsername = email.SmtpUsername
-		if !helpers.IsNil(email.SmtpPassword) {
+		if email.SmtpPassword != nil {
 			resp.SmtpPassword = &redactedValue
 		}
 		resp.From = email.From
@@ -214,6 +217,11 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpInte
 		resp.Cc = email.Cc
 		resp.Bcc = email.Bcc
 		resp.Subject = email.Subject
+	case schema.IntegrationTypeTeams:
+		teams := integration.(*modconfig.TeamsIntegration)
+		if teams.WebhookUrl != nil {
+			resp.WebhookUrl = &redactedValue
+		}
 	}
 
 	return resp, nil

@@ -375,6 +375,18 @@ func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, m
 					} else {
 						externalNotificationSent = true
 					}
+
+				case schema.IntegrationTypeTeams:
+					t := NewInputIntegrationTeams(base)
+					if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
+						t.WebhookUrl = &wu
+					}
+					_, err := t.PostMessage(ctx, mc, opts)
+					if err != nil {
+						notificationErrors = append(notificationErrors, err)
+					} else {
+						externalNotificationSent = true
+					}
 				}
 			}
 		}
