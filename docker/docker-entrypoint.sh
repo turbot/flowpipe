@@ -1,4 +1,5 @@
 #!/bin/bash
+
 # The `set -Eeo pipefail` option controls the behavior of the script on errors:
 # - `set -E` ensures that any ERR traps are inherited by shell functions, command substitutions, and commands executed in subshells.
 # - `set -e` exits the script immediately if any command within the script or a subshell returns a non-zero status (indicating failure).
