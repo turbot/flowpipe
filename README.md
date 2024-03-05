@@ -1,4 +1,4 @@
-<img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark.svg">
+<a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark.svg"></a>
 
 <p>
 
