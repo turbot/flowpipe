@@ -198,7 +198,7 @@ jobs:
 
   update_pr_for_versioning:
     name: Update PR
-    if: ${{ github.event.inputs.environment == 'Final' }}
+    if: ${{ github.event.inputs.environment == 'Final (RC and final release)' }}
     needs: [create_pr_in_homebrew]
     runs-on: ubuntu-latest
     steps:
