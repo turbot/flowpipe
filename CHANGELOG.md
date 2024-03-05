@@ -6,9 +6,9 @@ _What's new?_
 
 * Workflow - message step for easy notifications. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/message).
 * Workflow - input step for buttons, text and other data. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
-* Workflow - simple, reusable integration and notifier configuration for HTTP, Slack and Email. [Documentation](TODO)
+* Workflow - simple, reusable integration and notifier configuration for HTTP, Slack and Email. [Documentation](https://flowpipe.io/docs/reference/config-files/integrations)
 * Import Steampipe connections as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/credential_import).
-* Run flowpipe in a container. [Documentation](TODO - https://flowpipe.io/docs/run/containers).
+* Run flowpipe in a container. [Documentation](https://flowpipe.io/docs/run/containers).
 * Manage concurrency of [pipelines](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments) and [steps](https://flowpipe.io/docs/flowpipe-hcl/step#common-step-arguments).
 * New credential types: `alicloud` and `mastodon`.
 * Shorter hash for HTTP triggers for simpler URLs.
