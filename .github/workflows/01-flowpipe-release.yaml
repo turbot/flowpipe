@@ -7,8 +7,8 @@ on:
         type: choice
         description: 'Select Release Type'
         options:
-        - Development
-        - Final
+        - Development (beta)
+        - Final (RC and final release)
         required: true
       version:
         description: "Version (without 'v')"
@@ -105,7 +105,7 @@ jobs:
       - name: Calculate version
         id: calculate_version
         run: |
-          if [ "${{ github.event.inputs.environment }}" = "Development" ]; then
+          if [ "${{ github.event.inputs.environment }}" = "Development (beta)" ]; then
             echo "VERSION=v${{ github.event.inputs.version }}-beta.$(date +'%Y%m%d%H%M')" >> $GITHUB_ENV
           else
             echo "VERSION=v${{ github.event.inputs.version }}" >> $GITHUB_ENV

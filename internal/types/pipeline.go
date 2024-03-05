@@ -273,6 +273,8 @@ func pipelineStepFromApiResponse(apiStep map[string]any) (modconfig.PipelineStep
 		step = &modconfig.PipelineStepContainer{}
 	case schema.BlockTypePipelineStepInput:
 		step = &modconfig.PipelineStepInput{}
+	case schema.BlockTypePipelineStepMessage:
+		step = &modconfig.PipelineStepMessage{}
 	default:
 		// Handle unknown step type
 		return nil, perr.BadRequestWithMessage(fmt.Sprintf("unknown step type: %s", stepType))

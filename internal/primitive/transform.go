@@ -4,6 +4,7 @@ package primitive
 
 import (
 	"context"
+	"time"
 
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
@@ -16,14 +17,20 @@ func (e *Transform) ValidateInput(ctx context.Context, i modconfig.Input) error 
 }
 
 func (e *Transform) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+	start := time.Now().UTC()
+
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	o := modconfig.Output{
+	output := modconfig.Output{
 		Data: map[string]interface{}{},
 	}
-	o.Data[schema.AttributeTypeValue] = input[schema.AttributeTypeValue]
 
-	return &o, nil
+	output.Data[schema.AttributeTypeValue] = input[schema.AttributeTypeValue]
+	finish := time.Now().UTC()
+
+	output.Flowpipe = FlowpipeMetadataOutput(start, finish)
+
+	return &output, nil
 }
