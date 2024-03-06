@@ -299,9 +299,9 @@ func httpFormDataValidateResponse(val any, allowedOptions []string) bool {
 	switch v := val.(type) {
 	case string:
 		return slices.Contains(allowedOptions, v)
-	case []string:
+	case []any:
 		for _, x := range v {
-			if !slices.Contains(allowedOptions, x) {
+			if !slices.Contains(allowedOptions, x.(string)) {
 				return false
 			}
 		}
