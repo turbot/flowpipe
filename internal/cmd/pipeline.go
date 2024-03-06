@@ -202,7 +202,7 @@ func pipelineRunCmd() *cobra.Command {
 	return cmd
 }
 
-// func used to poll event logs
+// func used to poll event store
 type pollEventLogFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)
 
 func runPipelineFunc(cmd *cobra.Command, args []string) {
@@ -542,7 +542,7 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 		return false, last, nil, err
 	}
 
-	// check we have new event logs to parse
+	// check we have new events to parse
 	if len(logs.Items)-1 > last {
 		for index, item := range logs.Items {
 			if index > last {
@@ -558,7 +558,6 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 
 				last = index
 
-				// check to see if event logs complete
 				if item.EventType != nil && (*item.EventType == event.HandlerPipelineFinished || *item.EventType == event.HandlerPipelineFailed) {
 					payload := make(map[string]any)
 					if err := json.Unmarshal([]byte(*item.Payload), &payload); err != nil {
@@ -610,7 +609,6 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 			Payload:   string(jsonData),
 		})
 
-		// check to see if event logs complete
 		if item.EventType == event.HandlerPipelineFinished || item.EventType == event.HandlerPipelineFailed {
 			payload := make(map[string]any)
 			if err := json.Unmarshal(jsonData, &payload); err != nil {
