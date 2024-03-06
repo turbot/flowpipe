@@ -180,6 +180,13 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 			if len(recipients) == 0 {
 				return perr.BadRequestWithMessage("email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
 			}
+		case schema.IntegrationTypeTeams:
+			// limited to 4 actions, therefore if we have more than 4 options for the button type we couldn't render this
+			if options, ok := i[schema.AttributeTypeOptions].([]any); ok {
+				if len(options) > 4 && i[schema.AttributeTypeType].(string) == constants.InputTypeButton {
+					return perr.BadRequestWithMessage(fmt.Sprintf("teams notifications are limited to 4 actions, meaning a maximum of 4 buttons, unable to send as %d options are set", len(options)))
+				}
+			}
 		}
 	}
 
@@ -566,6 +573,83 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, opt
 }
 
 func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, options []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
-	// TODO: #TeamsIntegrationImplementation
-	return nil, fmt.Errorf("Implement")
+	msgCard := messagecard.NewMessageCard()
+
+	// TODO: #TeamsIntegrationImplementation figure out how to get integration url here...
+	responseUrl := "https://light-urgently-liger.ngrok-free.app/api/latest/integration/teams/test/0gbwwnkub6nas"
+
+	msgCard.Title = icm.Prompt
+	msgCard.Summary = icm.Prompt
+
+	pa, err := messagecard.NewPotentialAction(messagecard.PotentialActionActionCardType, ip.StepExecutionID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch icm.InputType {
+	case constants.InputTypeButton:
+		for _, option := range options {
+			pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
+				Type: messagecard.PotentialActionHTTPPostType,
+				Name: *option.Label,
+				PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
+					Body:    ip.buildReturnPayload(*option.Value, icm.Prompt),
+					Target:  responseUrl,
+					Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
+				},
+			})
+		}
+	case constants.InputTypeText:
+		pa.Inputs = append(pa.Inputs, messagecard.PotentialActionActionCardInput{
+			ID:         "options",
+			Type:       messagecard.PotentialActionActionCardInputTextInputType,
+			IsRequired: true,
+			PotentialActionActionCardInputTextInput: messagecard.PotentialActionActionCardInputTextInput{
+				IsMultiline: false,
+			}})
+		pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
+			Type: messagecard.PotentialActionHTTPPostType,
+			Name: "Submit",
+			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
+				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
+				Target:  responseUrl,
+				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
+			},
+		})
+	case constants.InputTypeSelect, constants.InputTypeMultiSelect:
+		isMulti := icm.InputType == constants.InputTypeMultiSelect
+		var choices []struct {
+			Display string `json:"display,omitempty" yaml:"display,omitempty"`
+			Value   string `json:"value,omitempty" yaml:"value,omitempty"`
+		}
+		for _, option := range options {
+			choices = append(choices, struct {
+				Display string `json:"display,omitempty" yaml:"display,omitempty"`
+				Value   string `json:"value,omitempty" yaml:"value,omitempty"`
+			}{
+				Display: *option.Label,
+				Value:   *option.Value,
+			})
+		}
+		pa.Inputs = append(pa.Inputs, messagecard.PotentialActionActionCardInput{
+			ID:         "options",
+			Type:       messagecard.PotentialActionActionCardInputMultichoiceInputType,
+			IsRequired: true,
+			PotentialActionActionCardInputMultichoiceInput: messagecard.PotentialActionActionCardInputMultichoiceInput{
+				IsMultiSelect: isMulti,
+				Choices:       choices,
+			}})
+		pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
+			Type: messagecard.PotentialActionHTTPPostType,
+			Name: "Submit",
+			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
+				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
+				Target:  responseUrl,
+				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
+			},
+		})
+	}
+
+	msgCard.PotentialActions = append(msgCard.PotentialActions, pa)
+	return msgCard, nil
 }
