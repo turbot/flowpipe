@@ -512,7 +512,7 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]types.EventLogEntry, error
 
 		err = ex.AppendEventLogEntry(ele)
 		if err != nil {
-			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "string", payload)
+			slog.Error("Fail to append event entry to execution", "execution", ex.ID, "error", err, "string", payload)
 			return nil, err
 		}
 

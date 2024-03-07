@@ -7,6 +7,7 @@ on:
         type: choice
         description: 'Select Release Type'
         options:
+        # to change the values in this option, we also need to update the condition test below in at least 3 location. Search for github.event.inputs.environment
         - Development (beta)
         - Final (RC and final release)
         required: true

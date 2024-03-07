@@ -9,7 +9,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 )
 
-// This middleware writes the command and event to the jsonl event log file
+// This middleware writes the command and event to the jsonl event store file
 func EventMiddleware(ctx context.Context) message.HandlerMiddleware {
 	return func(h message.HandlerFunc) message.HandlerFunc {
 		return func(msg *message.Message) ([]*message.Message, error) {

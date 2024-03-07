@@ -30,7 +30,7 @@ type FpEventBusImpl struct {
 
 // Publish sends event to the event bus.
 func (c FpEventBusImpl) Publish(ctx context.Context, event interface{}) error {
-	// Unfortunately we need to save the event log *before* we sernd this command to Watermill. This mean we have to figure out what the
+	// Unfortunately we need to save the event *before* we sernd this command to Watermill. This mean we have to figure out what the
 	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
 	//
 	err := LogEventMessage(ctx, event, nil)

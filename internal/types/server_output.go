@@ -172,11 +172,11 @@ type ServerOutputError struct {
 	Error   error
 }
 
-func NewServerOutputError(serverOutputPrefix ServerOutputPrefix, message string, error error) *ServerOutputError {
+func NewServerOutputError(serverOutputPrefix ServerOutputPrefix, message string, err error) *ServerOutputError {
 	return &ServerOutputError{
 		ServerOutputPrefix: serverOutputPrefix,
 		Message:            message,
-		Error:              error,
+		Error:              err,
 	}
 }
 
