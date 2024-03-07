@@ -5,6 +5,7 @@
 _Bug fixes_
 
 * Multi-select option in input step now works. ([#776](https://github.com/turbot/flowpipe/issues/776))
+* Input step white space changes will not trigger mod reload. ([#297](https://github.com/turbot/pipe-fittings/issues/297))
 
 ## v0.3.0 [2024-03-05] Human workflow, Slack and email messaging, Import Steampipe credentials, Concurrency controls.
 
