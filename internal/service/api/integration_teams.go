@@ -79,8 +79,11 @@ func (api *APIService) teamsPostHandler(c *gin.Context) {
 			text = "Response was previously received"
 		}
 	} else {
-		// TODO: #TeamsIntegrationImplementation swap values for labels, as per Slack
-		text = fmt.Sprintf("Response received: %s", resp.Value)
+		values, err := parseLabelsFromValues(stepExec.Input, value)
+		if err != nil {
+			values = fmt.Sprintf("%v", value)
+		}
+		text = fmt.Sprintf("Response received: %s", values)
 	}
 
 	c.Header("CARD-UPDATE-IN-BODY", "true")
