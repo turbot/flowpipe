@@ -4,8 +4,8 @@
 
 _Bug fixes_
 
-* Multi-select option in input step now works. ([#776](https://github.com/turbot/flowpipe/issues/776))
-* Input step white space changes will not trigger mod reload. ([#297](https://github.com/turbot/pipe-fittings/issues/297))
+* Multi-select option in input step now works. ([#776](https://github.com/turbot/flowpipe/issues/776)).
+* Input step white space changes will not trigger mod reload. ([#297](https://github.com/turbot/pipe-fittings/issues/297)).
 
 ## v0.3.0 [2024-03-05] Human workflow, Slack and email messaging, Import Steampipe credentials, Concurrency controls.
 
@@ -13,7 +13,7 @@ _What's new?_
 
 * Workflow - message step for easy notifications. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/message).
 * Workflow - input step for buttons, text and other data. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
-* Workflow - simple, reusable integration and notifier configuration for HTTP, Slack and Email. [Documentation](https://flowpipe.io/docs/reference/config-files/integration)
+* Workflow - simple, reusable integration and notifier configuration for HTTP, Slack and Email. [Documentation](https://flowpipe.io/docs/reference/config-files/integration).
 * Import Steampipe connections as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/credential_import).
 * Run flowpipe in a container. [Documentation](https://flowpipe.io/docs/run/containers).
 * Manage concurrency of [pipelines](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments) and [steps](https://flowpipe.io/docs/flowpipe-hcl/step#common-step-arguments).
@@ -31,7 +31,7 @@ _Deprecation_
 _Bug fixes_
 
 * `log_level` workspace setting is now respected ([#618](https://github.com/turbot/flowpipe/issues/618)).
-* Default `listen` flag should be network, not localhost ([#694](https://github.com/turbot/flowpipe/issues/694))
+* Default `listen` flag should be network, not localhost ([#694](https://github.com/turbot/flowpipe/issues/694)).
 * Trigger attributes are now validated ([#225](https://github.com/turbot/pipe-fittings/issues/255)).
 * Pipeline output attributes are now validated ([#239](https://github.com/turbot/pipe-fittings/issues/239)).
 * Pipeline param default value data type is now validated against the specified type ([#262](https://github.com/turbot/pipe-fittings/issues/262)).
