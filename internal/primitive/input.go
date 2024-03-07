@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"strings"
 	"time"
 
@@ -385,7 +386,8 @@ func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, m
 					}
 
 				case schema.IntegrationTypeTeams:
-					t := NewInputIntegrationTeams(base)
+					integrationName := integration["integration_name"].(string)
+					t := NewInputIntegrationTeams(base, integrationName)
 					if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
 						t.WebhookUrl = &wu
 					}
@@ -575,8 +577,12 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, opt
 func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, options []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
 	msgCard := messagecard.NewMessageCard()
 
+	i, err := db.GetIntegration(ip.IntegrationName)
+	if err != nil {
+		return nil, err
+	}
 	// TODO: #TeamsIntegrationImplementation figure out how to get integration url here...
-	responseUrl := "https://light-urgently-liger.ngrok-free.app/api/latest/integration/teams/test/0gbwwnkub6nas"
+	responseUrl := i.GetIntegrationImpl().Url
 
 	msgCard.Title = icm.Prompt
 	msgCard.Summary = icm.Prompt
@@ -594,7 +600,7 @@ func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, opti
 				Name: *option.Label,
 				PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
 					Body:    ip.buildReturnPayload(*option.Value, icm.Prompt),
-					Target:  responseUrl,
+					Target:  *responseUrl,
 					Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 				},
 			})
@@ -612,7 +618,7 @@ func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, opti
 			Name: "Submit",
 			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
 				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
-				Target:  responseUrl,
+				Target:  *responseUrl,
 				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 			},
 		})
@@ -644,7 +650,7 @@ func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, opti
 			Name: "Submit",
 			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
 				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
-				Target:  responseUrl,
+				Target:  *responseUrl,
 				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 			},
 		})

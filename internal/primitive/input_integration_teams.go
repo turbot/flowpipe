@@ -9,11 +9,12 @@ import (
 
 type InputIntegrationTeams struct {
 	InputIntegrationBase
-	WebhookUrl *string
+	IntegrationName string
+	WebhookUrl      *string
 }
 
-func NewInputIntegrationTeams(base InputIntegrationBase) InputIntegrationTeams {
-	return InputIntegrationTeams{InputIntegrationBase: base}
+func NewInputIntegrationTeams(base InputIntegrationBase, name string) InputIntegrationTeams {
+	return InputIntegrationTeams{InputIntegrationBase: base, IntegrationName: name}
 }
 
 func (ip *InputIntegrationTeams) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
