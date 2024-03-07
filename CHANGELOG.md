@@ -4,7 +4,7 @@
 
 _Bug fixes_
 
-* Multi select option in input step now works correctly. ([#776](https://github.com/turbot/flowpipe/issues/776))
+* Multi-select option in input step now works. ([#776](https://github.com/turbot/flowpipe/issues/776))
 
 ## v0.3.0 [2024-03-05] Human workflow, Slack and email messaging, Import Steampipe credentials, Concurrency controls.
 
