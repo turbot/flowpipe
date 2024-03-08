@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	mst "github.com/atc0005/go-teams-notify/v2"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
@@ -34,14 +35,24 @@ func (ip *InputIntegrationMsTeams) PostMessage(_ context.Context, mc MessageCrea
 	return &output, err
 }
 
-func (ip *InputIntegrationMsTeams) buildReturnPayload(valueString string, prompt string) string {
+func (ip *InputIntegrationMsTeams) buildReturnPayload(valueString string, prompt string) (string, error) {
+	salt, err := util.GetGlobalSalt()
+	if err != nil {
+		return "", err
+	}
+	hash, err := util.CalculateHash(ip.StepExecutionID, salt)
+	if err != nil {
+		return "", err
+	}
+
 	response := map[string]any{
 		"value":                 valueString,
 		"execution_id":          ip.ExecutionID,
 		"pipeline_execution_id": ip.PipelineExecutionID,
 		"step_execution_id":     ip.StepExecutionID,
 		"prompt":                prompt,
+		"step_execution_token":  hash,
 	}
 	jsonData, _ := json.Marshal(response)
-	return string(jsonData)
+	return string(jsonData), nil
 }

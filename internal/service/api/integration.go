@@ -16,8 +16,8 @@ func (api *APIService) IntegrationRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/integration/:integration_name", api.getIntegration)
 
 	// integration specific handlers
-	router.POST("/integration/slack/:id/:hash", api.slackPostHandler)   // Slack
-	router.POST("/integration/msteams/:id/:hash", api.teamsPostHandler) // MsTeams
+	router.POST("/integration/slack/:id/:hash", api.slackPostHandler)     // Slack
+	router.POST("/integration/msteams/:id/:hash", api.msTeamsPostHandler) // MsTeams
 }
 
 // @Summary List integrations
