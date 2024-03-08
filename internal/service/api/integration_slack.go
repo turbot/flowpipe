@@ -5,9 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -278,6 +281,41 @@ func parseLabelsFromValues(input modconfig.Input, values any) (string, error) {
 	}
 }
 
+func validValues(values any, stepInput modconfig.Input) bool {
+	inputType := stepInput[schema.AttributeTypeType].(string)
+	if inputType == constants.InputTypeText {
+		return true
+	}
+	var allowed []string
+	if !helpers.IsNil(stepInput[schema.AttributeTypeOptions]) {
+		for _, o := range stepInput[schema.AttributeTypeOptions].([]any) {
+			option := o.(map[string]any)
+			allowed = append(allowed, option[schema.AttributeTypeValue].(string))
+		}
+	}
+
+	switch v := values.(type) {
+	case string:
+		return slices.Contains(allowed, v)
+	case []string:
+		for _, x := range v {
+			if !slices.Contains(allowed, x) {
+				return false
+			}
+		}
+		return true
+	case []any:
+		for _, x := range v {
+			if !slices.Contains(allowed, x.(string)) {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
+}
+
 func (api *APIService) finishInputStep(execId string, pExecId string, sExecId string, value any) (bool, *execution.StepExecution, error) {
 
 	plannerMutex := event.GetEventStoreMutex(execId)
@@ -306,6 +344,10 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 	if stepExecution.Status == "finished" || pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() {
 		// step already processed
 		return false, stepExecution, nil
+	}
+
+	if !validValues(value, stepExecution.Input) {
+		return false, nil, perr.BadRequestWithMessage("invalid values")
 	}
 
 	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
