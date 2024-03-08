@@ -7,17 +7,17 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 )
 
-type InputIntegrationTeams struct {
+type InputIntegrationMsTeams struct {
 	InputIntegrationBase
 	IntegrationName string
 	WebhookUrl      *string
 }
 
-func NewInputIntegrationTeams(base InputIntegrationBase, name string) InputIntegrationTeams {
-	return InputIntegrationTeams{InputIntegrationBase: base, IntegrationName: name}
+func NewInputIntegrationMsTeams(base InputIntegrationBase, name string) InputIntegrationMsTeams {
+	return InputIntegrationMsTeams{InputIntegrationBase: base, IntegrationName: name}
 }
 
-func (ip *InputIntegrationTeams) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationMsTeams) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
 	output := modconfig.Output{}
 	teams := mst.NewTeamsClient()
 	err := teams.ValidateWebhook(*ip.WebhookUrl)
@@ -25,7 +25,7 @@ func (ip *InputIntegrationTeams) PostMessage(_ context.Context, mc MessageCreato
 		return nil, err
 	}
 
-	msgCard, err := mc.TeamsMessage(ip, options)
+	msgCard, err := mc.MsTeamsMessage(ip, options)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (ip *InputIntegrationTeams) PostMessage(_ context.Context, mc MessageCreato
 	return &output, err
 }
 
-func (ip *InputIntegrationTeams) buildReturnPayload(valueString string, prompt string) string {
+func (ip *InputIntegrationMsTeams) buildReturnPayload(valueString string, prompt string) string {
 	response := map[string]any{
 		"value":                 valueString,
 		"execution_id":          ip.ExecutionID,

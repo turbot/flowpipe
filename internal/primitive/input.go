@@ -182,11 +182,11 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 			if len(recipients) == 0 {
 				return perr.BadRequestWithMessage("email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
 			}
-		case schema.IntegrationTypeTeams:
+		case schema.IntegrationTypeMsTeams:
 			// limited to 4 actions, therefore if we have more than 4 options for the button type we couldn't render this
 			if options, ok := i[schema.AttributeTypeOptions].([]any); ok {
 				if len(options) > 4 && i[schema.AttributeTypeType].(string) == constants.InputTypeButton {
-					return perr.BadRequestWithMessage(fmt.Sprintf("teams notifications are limited to 4 actions, meaning a maximum of 4 buttons, unable to send as %d options are set", len(options)))
+					return perr.BadRequestWithMessage(fmt.Sprintf("msteams notifications are limited to 4 actions, meaning a maximum of 4 buttons, unable to send as %d options are set", len(options)))
 				}
 			}
 		}
@@ -386,9 +386,9 @@ func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, m
 						externalNotificationSent = true
 					}
 
-				case schema.IntegrationTypeTeams:
+				case schema.IntegrationTypeMsTeams:
 					integrationName := integration["integration_name"].(string)
-					t := NewInputIntegrationTeams(base, integrationName)
+					t := NewInputIntegrationMsTeams(base, integrationName)
 					if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
 						t.WebhookUrl = &wu
 					}
@@ -431,7 +431,7 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 type MessageCreator interface {
 	EmailMessage(*InputIntegrationEmail, []InputIntegrationResponseOption) (string, error)
 	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
-	TeamsMessage(*InputIntegrationTeams, []InputIntegrationResponseOption) (*messagecard.MessageCard, error)
+	MsTeamsMessage(*InputIntegrationMsTeams, []InputIntegrationResponseOption) (*messagecard.MessageCard, error)
 }
 
 type InputStepMessageCreator struct {
@@ -575,7 +575,7 @@ func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, opt
 
 }
 
-func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, options []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
+func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, options []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
 	msgCard := messagecard.NewMessageCard()
 
 	// get response url from cached integration

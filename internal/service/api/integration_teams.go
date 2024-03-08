@@ -29,8 +29,8 @@ func (api *APIService) teamsPostHandler(c *gin.Context) {
 	}
 
 	// support for omitting the type in the url
-	if !strings.HasPrefix(uri.ID, "teams.") {
-		uri.ID = fmt.Sprintf("teams.%s", uri.ID)
+	if !strings.HasPrefix(uri.ID, "msteams.") {
+		uri.ID = fmt.Sprintf("msteams.%s", uri.ID)
 	}
 
 	// verify hash

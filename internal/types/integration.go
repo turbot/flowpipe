@@ -34,7 +34,7 @@ type FpIntegration struct {
 	SigningSecret *string `json:"signing_secret,omitempty"`
 	Channel       *string `json:"channel,omitempty"`
 
-	// slack & teams
+	// slack & msteams
 	WebhookUrl *string `json:"webhook_url,omitempty"`
 
 	// email
@@ -217,8 +217,8 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpInte
 		resp.Cc = email.Cc
 		resp.Bcc = email.Bcc
 		resp.Subject = email.Subject
-	case schema.IntegrationTypeTeams:
-		teams := integration.(*modconfig.TeamsIntegration)
+	case schema.IntegrationTypeMsTeams:
+		teams := integration.(*modconfig.MsTeamsIntegration)
 		if teams.WebhookUrl != nil {
 			resp.WebhookUrl = &redactedValue
 		}

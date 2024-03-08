@@ -834,9 +834,8 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 						channel = iChannel
 					}
 					return fmt.Sprintf("slack to %s", au.BrightBlack(channel)), nil
-				case schema.IntegrationTypeTeams:
-					// TODO: confirm what we should render out here
-					return fmt.Sprintf("teams via %s", au.BrightBlack("webhook")), nil
+				case schema.IntegrationTypeMsTeams:
+					return fmt.Sprintf("msteams via %s", au.BrightBlack("webhook")), nil
 				}
 
 			default: // multiple notifies
@@ -942,8 +941,7 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 							channel = iChannel
 						}
 						additionalLines = append(additionalLines, fmt.Sprintf("%s channel %s", prefix, au.BrightBlack(channel)))
-					case schema.IntegrationTypeTeams:
-						// TODO: confirm what we should render out here
+					case schema.IntegrationTypeMsTeams:
 						additionalLines = append(additionalLines, fmt.Sprintf("%s via %s", prefix, au.BrightBlack("webhook")))
 					}
 				}

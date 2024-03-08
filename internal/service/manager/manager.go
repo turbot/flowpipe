@@ -468,15 +468,15 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		shortName := strings.TrimPrefix(integrationName, "slack.")
 		integrationUrl := fmt.Sprintf("%s/api/latest/integration/slack/%s/%s", util.GetBaseUrl(), shortName, hashString)
 		integration.SetUrl(integrationUrl)
-	case schema.IntegrationTypeTeams:
+	case schema.IntegrationTypeMsTeams:
 		integrationName := integration.GetHclResourceImpl().FullName
 		hashString, err := util.CalculateHash(integrationName, salt)
 		if err != nil {
 			slog.Error("error computing hash", err)
 			return err
 		}
-		shortName := strings.TrimPrefix(integrationName, "teams.")
-		integrationUrl := fmt.Sprintf("%s/api/latest/integration/teams/%s/%s", util.GetBaseUrl(), shortName, hashString)
+		shortName := strings.TrimPrefix(integrationName, "msteams.")
+		integrationUrl := fmt.Sprintf("%s/api/latest/integration/msteams/%s/%s", util.GetBaseUrl(), shortName, hashString)
 		integration.SetUrl(integrationUrl)
 	}
 	return nil

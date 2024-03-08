@@ -98,7 +98,7 @@ func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, _
 
 }
 
-func (icm *MessageStepMessageCreator) TeamsMessage(iit *InputIntegrationTeams, _ []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
+func (icm *MessageStepMessageCreator) MsTeamsMessage(iit *InputIntegrationMsTeams, _ []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
 	msgCard := messagecard.NewMessageCard()
 	if len(icm.Text) > 25 {
 		msgCard.Summary = icm.Text[:25] + "..."

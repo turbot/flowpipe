@@ -336,7 +336,7 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 			slackIntegrationMap[parts[1]] = pCty
 		case schema.IntegrationTypeEmail:
 			emailIntegrationMap[parts[1]] = pCty
-		case schema.IntegrationTypeTeams:
+		case schema.IntegrationTypeMsTeams:
 			teamsIntegrationMap[parts[1]] = pCty
 		case schema.IntegrationTypeHttp:
 			// do nothing
@@ -355,7 +355,7 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 	}
 
 	if len(teamsIntegrationMap) > 0 {
-		integrationMap[schema.IntegrationTypeTeams] = cty.ObjectVal(teamsIntegrationMap)
+		integrationMap[schema.IntegrationTypeMsTeams] = cty.ObjectVal(teamsIntegrationMap)
 	}
 
 	return integrationMap, nil
