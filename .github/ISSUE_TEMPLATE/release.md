@@ -20,6 +20,11 @@ labels: release
 
 - [ ] `flowpipe-sdk-go` tagged with correct final version (ensure you have a clean branch, otherwise the tag will be created on the wrong commit and difficult to revert)
 
+### Pre-build checks
+
+- [ ] All test pass in `flowpipe` and `pipe-fittings`
+- [ ] Update check is working
+
 ### Flowpipe
 
 - [ ] Flowpipe Changelog updated and reviewed

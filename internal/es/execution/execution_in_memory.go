@@ -498,7 +498,7 @@ func (ex *ExecutionInMemory) ProcessEvents() error {
 		event := ex.Events[i]
 		err := ex.AppendEventLogEntry(event)
 		if err != nil {
-			slog.Error("Fail to append event log entry to execution", "execution", ex.ID, "error", err, "event", event)
+			slog.Error("Fail to append event entry to execution", "execution", ex.ID, "error", err, "event", event)
 			return err
 		}
 	}

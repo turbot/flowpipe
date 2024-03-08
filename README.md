@@ -1,16 +1,12 @@
-
- <img width="67%" src="https://flowpipe-io-git-main-turbot.vercel.app/images/flowpipe_wordmark.svg">
-
+<a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark.svg"></a>
 
 <p>
 
 [![libraries](https://img.shields.io/badge/mods-62-blue)](https://hub.flowpipe.io) &nbsp;
-[![pipelines](https://img.shields.io/badge/pipelines-510-blue)](https://hub-flowpipe-io-git-main-turbot.vercel.app/mods) &nbsp;
+[![pipelines](https://img.shields.io/badge/pipelines-510-blue)](https://hub.flowpipe.io/mods) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme)
 
-
-[Flowpipe](https://flowpipe-io.vercel.app) is a cloud scripting engine. It provides automation and workflow to connect your clouds
-to the people, systems and data that matter.
+[Flowpipe](https://flowpipe.io): Workflow for DevOps. Automation and workflow to connect your clouds to the people, systems and data that matter.
 
 **Connect people and tools**. Connect your cloud data to people and systems using email, chat & APIs. Workflow steps can even run containers, custom functions, and more.
 
