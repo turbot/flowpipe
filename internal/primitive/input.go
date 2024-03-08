@@ -183,12 +183,7 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 				return perr.BadRequestWithMessage("email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
 			}
 		case schema.IntegrationTypeMsTeams:
-			// limited to 4 actions, therefore if we have more than 4 options for the button type we couldn't render this
-			if options, ok := i[schema.AttributeTypeOptions].([]any); ok {
-				if len(options) > 4 && i[schema.AttributeTypeType].(string) == constants.InputTypeButton {
-					return perr.BadRequestWithMessage(fmt.Sprintf("msteams notifications are limited to 4 actions, meaning a maximum of 4 buttons, unable to send as %d options are set", len(options)))
-				}
-			}
+			// no additional validations required now as >4 options on button should render as select instead of error
 		}
 	}
 
@@ -596,8 +591,8 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 		return nil, err
 	}
 
-	switch icm.InputType {
-	case constants.InputTypeButton:
+	switch {
+	case icm.InputType == constants.InputTypeButton && len(options) <= 4:
 		for _, option := range options {
 			pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
 				Type: messagecard.PotentialActionHTTPPostType,
@@ -609,7 +604,7 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 				},
 			})
 		}
-	case constants.InputTypeText:
+	case icm.InputType == constants.InputTypeText:
 		pa.Inputs = append(pa.Inputs, messagecard.PotentialActionActionCardInput{
 			ID:         "options",
 			Type:       messagecard.PotentialActionActionCardInputTextInputType,
@@ -626,7 +621,9 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 			},
 		})
-	case constants.InputTypeSelect, constants.InputTypeMultiSelect:
+	case icm.InputType == constants.InputTypeSelect,
+		icm.InputType == constants.InputTypeMultiSelect,
+		icm.InputType == constants.InputTypeButton && len(options) > 4:
 		isMulti := icm.InputType == constants.InputTypeMultiSelect
 		var choices []struct {
 			Display string `json:"display,omitempty" yaml:"display,omitempty"`
