@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/atc0005/go-teams-notify/v2/messagecard"
 	"github.com/slack-go/slack"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
@@ -95,4 +96,16 @@ func (icm *MessageStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, _
 
 	return message, nil
 
+}
+
+func (icm *MessageStepMessageCreator) MsTeamsMessage(iit *InputIntegrationMsTeams, _ []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
+	msgCard := messagecard.NewMessageCard()
+	if len(icm.Text) > 25 {
+		msgCard.Summary = icm.Text[:25] + "..."
+	} else {
+		msgCard.Summary = icm.Text
+	}
+
+	msgCard.Text = icm.Text
+	return msgCard, nil
 }

@@ -2,21 +2,24 @@ package primitive
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	o "github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/constants"
 	"strings"
 	"time"
 
+	"github.com/atc0005/go-teams-notify/v2/messagecard"
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/internal/es/db"
+	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
+	kitTypes "github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
-
-type IntegrationType string
 
 type Input struct {
 	ExecutionID         string
@@ -178,6 +181,13 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 
 			if len(recipients) == 0 {
 				return perr.BadRequestWithMessage("email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
+			}
+		case schema.IntegrationTypeMsTeams:
+			// limited to 4 actions, therefore if we have more than 4 options for the button type we couldn't render this
+			if options, ok := i[schema.AttributeTypeOptions].([]any); ok {
+				if len(options) > 4 && i[schema.AttributeTypeType].(string) == constants.InputTypeButton {
+					return perr.BadRequestWithMessage(fmt.Sprintf("msteams notifications are limited to 4 actions, meaning a maximum of 4 buttons, unable to send as %d options are set", len(options)))
+				}
 			}
 		}
 	}
@@ -375,6 +385,19 @@ func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, m
 					} else {
 						externalNotificationSent = true
 					}
+
+				case schema.IntegrationTypeMsTeams:
+					integrationName := integration["integration_name"].(string)
+					t := NewInputIntegrationMsTeams(base, integrationName)
+					if wu, ok := integration[schema.AttributeTypeWebhookUrl].(string); ok {
+						t.WebhookUrl = &wu
+					}
+					_, err := t.PostMessage(ctx, mc, opts)
+					if err != nil {
+						notificationErrors = append(notificationErrors, err)
+					} else {
+						externalNotificationSent = true
+					}
 				}
 			}
 		}
@@ -408,4 +431,236 @@ func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Out
 type MessageCreator interface {
 	EmailMessage(*InputIntegrationEmail, []InputIntegrationResponseOption) (string, error)
 	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
+	MsTeamsMessage(*InputIntegrationMsTeams, []InputIntegrationResponseOption) (*messagecard.MessageCard, error)
+}
+
+type InputStepMessageCreator struct {
+	Prompt    string
+	InputType string
+	StepName  string
+}
+
+func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
+	var blocks slack.Blocks
+
+	// payload for callback
+	payload := map[string]any{
+		"execution_id":          ip.ExecutionID,
+		"pipeline_execution_id": ip.PipelineExecutionID,
+		"step_execution_id":     ip.StepExecutionID,
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		return blocks, err
+	}
+	// encodedPayload needs to be passed into block id of first block then we can extract it on receipt of Slacks payload
+	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
+
+	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, icm.Prompt, false, false)
+	boldPromptBlock := slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*%s*", icm.Prompt), false, false)
+
+	switch icm.InputType {
+	case constants.InputTypeButton:
+		header := slack.NewSectionBlock(boldPromptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
+		var buttons []slack.BlockElement
+		for i, opt := range options {
+			button := slack.NewButtonBlockElement(fmt.Sprintf("finished_%d", i), *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
+			if !helpers.IsNil(opt.Style) {
+				switch *opt.Style {
+				case constants.InputStyleOk:
+					button.Style = slack.StylePrimary
+				case constants.InputStyleAlert:
+					button.Style = slack.StyleDanger
+				}
+			}
+			buttons = append(buttons, slack.BlockElement(button))
+		}
+		action := slack.NewActionBlock("action_block", buttons...)
+		blocks.BlockSet = append(blocks.BlockSet, header, action)
+	case constants.InputTypeSelect:
+		blockOptions := make([]*slack.OptionBlockObject, len(options))
+		for i, opt := range options {
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
+		}
+		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
+		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, "finished", blockOptions...)
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, s)
+		blocks.BlockSet = append(blocks.BlockSet, input)
+	case constants.InputTypeMultiSelect:
+		blockOptions := make([]*slack.OptionBlockObject, len(options))
+		for i, opt := range options {
+			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
+		}
+		ms := slack.NewOptionsMultiSelectBlockElement(
+			slack.MultiOptTypeStatic,
+			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false), "not_finished", blockOptions...)
+		btn := slack.NewButtonBlockElement("finished", "submit", slack.NewTextBlockObject(slack.PlainTextType, "Submit", false, false))
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, ms)
+		action := slack.NewActionBlock("action_block", btn)
+		blocks.BlockSet = append(blocks.BlockSet, input, action)
+	case constants.InputTypeText:
+		textInput := slack.NewPlainTextInputBlockElement(nil, "finished")
+		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
+		input.DispatchAction = true // required for being able to send event
+		blocks.BlockSet = append(blocks.BlockSet, input)
+	default:
+		return blocks, perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", icm.InputType))
+	}
+
+	return blocks, nil
+}
+
+func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, options []InputIntegrationResponseOption) (string, error) {
+
+	header := make(map[string]string)
+	header["From"] = iim.From
+	header["To"] = strings.Join(iim.To, ", ")
+	if len(iim.Cc) > 0 {
+		header["Cc"] = strings.Join(iim.Cc, ", ")
+	}
+
+	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
+	header["MIME-version"] = "1.0;"
+
+	subject := iim.Subject
+
+	if subject == "" {
+		subject = icm.Prompt
+		if len(subject) > 50 {
+			subject = subject[:50] + "..."
+		}
+	}
+
+	header["Subject"] = subject
+
+	var message string
+	for key, value := range header {
+		message += fmt.Sprintf("%s: %s\r\n", key, value)
+	}
+
+	var data any
+	templateFileName := "input-form-link.html"
+	switch icm.InputType {
+	case "button":
+		stepName := icm.StepName
+		templateFileName = "input-form-buttons.html"
+		data = struct {
+			Prompt   string
+			Options  []InputIntegrationResponseOption
+			StepName string
+			FormUrl  string
+		}{
+			Prompt:   icm.Prompt,
+			Options:  options,
+			StepName: stepName,
+			FormUrl:  iim.FormUrl,
+		}
+	default:
+		data = struct {
+			FormUrl string
+			Prompt  string
+		}{
+			FormUrl: iim.FormUrl,
+			Prompt:  icm.Prompt,
+		}
+	}
+
+	templateMessage, err := parseEmailInputTemplate(templateFileName, data)
+	if err != nil {
+		return "", err
+	}
+	message += templateMessage
+
+	return message, nil
+
+}
+
+func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, options []InputIntegrationResponseOption) (*messagecard.MessageCard, error) {
+	msgCard := messagecard.NewMessageCard()
+
+	// get response url from cached integration
+	i, err := db.GetIntegration(ip.IntegrationName)
+	if err != nil {
+		return nil, err
+	}
+	responseUrl := kitTypes.SafeString(i.GetIntegrationImpl().Url)
+	if responseUrl == "" {
+		return nil, perr.InternalWithMessage("response url not found for integration " + ip.IntegrationName)
+	}
+
+	msgCard.Title = icm.Prompt
+	msgCard.Summary = icm.Prompt
+
+	pa, err := messagecard.NewPotentialAction(messagecard.PotentialActionActionCardType, ip.StepExecutionID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch icm.InputType {
+	case constants.InputTypeButton:
+		for _, option := range options {
+			pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
+				Type: messagecard.PotentialActionHTTPPostType,
+				Name: *option.Label,
+				PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
+					Body:    ip.buildReturnPayload(*option.Value, icm.Prompt),
+					Target:  responseUrl,
+					Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
+				},
+			})
+		}
+	case constants.InputTypeText:
+		pa.Inputs = append(pa.Inputs, messagecard.PotentialActionActionCardInput{
+			ID:         "options",
+			Type:       messagecard.PotentialActionActionCardInputTextInputType,
+			IsRequired: true,
+			PotentialActionActionCardInputTextInput: messagecard.PotentialActionActionCardInputTextInput{
+				IsMultiline: false,
+			}})
+		pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
+			Type: messagecard.PotentialActionHTTPPostType,
+			Name: "Submit",
+			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
+				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
+				Target:  responseUrl,
+				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
+			},
+		})
+	case constants.InputTypeSelect, constants.InputTypeMultiSelect:
+		isMulti := icm.InputType == constants.InputTypeMultiSelect
+		var choices []struct {
+			Display string `json:"display,omitempty" yaml:"display,omitempty"`
+			Value   string `json:"value,omitempty" yaml:"value,omitempty"`
+		}
+		for _, option := range options {
+			choices = append(choices, struct {
+				Display string `json:"display,omitempty" yaml:"display,omitempty"`
+				Value   string `json:"value,omitempty" yaml:"value,omitempty"`
+			}{
+				Display: *option.Label,
+				Value:   *option.Value,
+			})
+		}
+		pa.Inputs = append(pa.Inputs, messagecard.PotentialActionActionCardInput{
+			ID:         "options",
+			Type:       messagecard.PotentialActionActionCardInputMultichoiceInputType,
+			IsRequired: true,
+			PotentialActionActionCardInputMultichoiceInput: messagecard.PotentialActionActionCardInputMultichoiceInput{
+				IsMultiSelect: isMulti,
+				Choices:       choices,
+				Style:         "expanded",
+			}})
+		pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
+			Type: messagecard.PotentialActionHTTPPostType,
+			Name: "Submit",
+			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
+				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
+				Target:  responseUrl,
+				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
+			},
+		})
+	}
+
+	msgCard.PotentialActions = append(msgCard.PotentialActions, pa)
+	return msgCard, nil
 }

@@ -2,7 +2,6 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-
 replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
 require (
@@ -39,6 +38,7 @@ require (
 require (
 	github.com/FabienMht/ginslog v0.0.1
 	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/atc0005/go-teams-notify/v2 v2.10.0
 	github.com/denisss025/slog-watermill v0.1.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible

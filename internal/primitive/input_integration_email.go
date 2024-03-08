@@ -2,8 +2,6 @@ package primitive
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,10 +13,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/slack-go/slack"
 	"github.com/turbot/flowpipe/internal/templates"
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -261,147 +256,6 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 	}
 
 	return &output, nil
-}
-
-type InputStepMessageCreator struct {
-	Prompt    string
-	InputType string
-	StepName  string
-}
-
-func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
-	var blocks slack.Blocks
-
-	// payload for callback
-	payload := map[string]any{
-		"execution_id":          ip.ExecutionID,
-		"pipeline_execution_id": ip.PipelineExecutionID,
-		"step_execution_id":     ip.StepExecutionID,
-	}
-	jsonPayload, err := json.Marshal(payload)
-	if err != nil {
-		return blocks, err
-	}
-	// encodedPayload needs to be passed into block id of first block then we can extract it on receipt of Slacks payload
-	encodedPayload := base64.StdEncoding.EncodeToString(jsonPayload)
-
-	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, icm.Prompt, false, false)
-	boldPromptBlock := slack.NewTextBlockObject(slack.MarkdownType, fmt.Sprintf("*%s*", icm.Prompt), false, false)
-
-	switch icm.InputType {
-	case constants.InputTypeButton:
-		header := slack.NewSectionBlock(boldPromptBlock, nil, nil, slack.SectionBlockOptionBlockID(encodedPayload))
-		var buttons []slack.BlockElement
-		for i, opt := range options {
-			button := slack.NewButtonBlockElement(fmt.Sprintf("finished_%d", i), *opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false))
-			if !helpers.IsNil(opt.Style) {
-				switch *opt.Style {
-				case constants.InputStyleOk:
-					button.Style = slack.StylePrimary
-				case constants.InputStyleAlert:
-					button.Style = slack.StyleDanger
-				}
-			}
-			buttons = append(buttons, slack.BlockElement(button))
-		}
-		action := slack.NewActionBlock("action_block", buttons...)
-		blocks.BlockSet = append(blocks.BlockSet, header, action)
-	case constants.InputTypeSelect:
-		blockOptions := make([]*slack.OptionBlockObject, len(options))
-		for i, opt := range options {
-			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
-		}
-		ph := slack.NewTextBlockObject(slack.PlainTextType, "Select option", false, false)
-		s := slack.NewOptionsSelectBlockElement(slack.OptTypeStatic, ph, "finished", blockOptions...)
-		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, s)
-		blocks.BlockSet = append(blocks.BlockSet, input)
-	case constants.InputTypeMultiSelect:
-		blockOptions := make([]*slack.OptionBlockObject, len(options))
-		for i, opt := range options {
-			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
-		}
-		ms := slack.NewOptionsMultiSelectBlockElement(
-			slack.MultiOptTypeStatic,
-			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false), "not_finished", blockOptions...)
-		btn := slack.NewButtonBlockElement("finished", "submit", slack.NewTextBlockObject(slack.PlainTextType, "Submit", false, false))
-		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, ms)
-		action := slack.NewActionBlock("action_block", btn)
-		blocks.BlockSet = append(blocks.BlockSet, input, action)
-	case constants.InputTypeText:
-		textInput := slack.NewPlainTextInputBlockElement(nil, "finished")
-		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, textInput)
-		input.DispatchAction = true // required for being able to send event
-		blocks.BlockSet = append(blocks.BlockSet, input)
-	default:
-		return blocks, perr.InternalWithMessage(fmt.Sprintf("Type %s not yet implemented for Slack Integration", icm.InputType))
-	}
-
-	return blocks, nil
-}
-
-func (icm *InputStepMessageCreator) EmailMessage(iim *InputIntegrationEmail, options []InputIntegrationResponseOption) (string, error) {
-
-	header := make(map[string]string)
-	header["From"] = iim.From
-	header["To"] = strings.Join(iim.To, ", ")
-	if len(iim.Cc) > 0 {
-		header["Cc"] = strings.Join(iim.Cc, ", ")
-	}
-
-	header["Content-Type"] = "text/html; charset=\"UTF-8\";"
-	header["MIME-version"] = "1.0;"
-
-	subject := iim.Subject
-
-	if subject == "" {
-		subject = icm.Prompt
-		if len(subject) > 50 {
-			subject = subject[:50] + "..."
-		}
-	}
-
-	header["Subject"] = subject
-
-	var message string
-	for key, value := range header {
-		message += fmt.Sprintf("%s: %s\r\n", key, value)
-	}
-
-	var data any
-	templateFileName := "input-form-link.html"
-	switch icm.InputType {
-	case "button":
-		stepName := icm.StepName
-		templateFileName = "input-form-buttons.html"
-		data = struct {
-			Prompt   string
-			Options  []InputIntegrationResponseOption
-			StepName string
-			FormUrl  string
-		}{
-			Prompt:   icm.Prompt,
-			Options:  options,
-			StepName: stepName,
-			FormUrl:  iim.FormUrl,
-		}
-	default:
-		data = struct {
-			FormUrl string
-			Prompt  string
-		}{
-			FormUrl: iim.FormUrl,
-			Prompt:  icm.Prompt,
-		}
-	}
-
-	templateMessage, err := parseEmailInputTemplate(templateFileName, data)
-	if err != nil {
-		return "", err
-	}
-	message += templateMessage
-
-	return message, nil
-
 }
 
 func parseEmailInputTemplate(templateFileName string, data any) (string, error) {

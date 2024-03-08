@@ -165,7 +165,7 @@ func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modcon
 							}
 							return input
 						default:
-							// slack, teams, etc - do nothing
+							// slack, msteams, etc - do nothing
 						}
 					}
 				}
