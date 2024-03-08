@@ -648,6 +648,7 @@ func (icm *InputStepMessageCreator) TeamsMessage(ip *InputIntegrationTeams, opti
 			PotentialActionActionCardInputMultichoiceInput: messagecard.PotentialActionActionCardInputMultichoiceInput{
 				IsMultiSelect: isMulti,
 				Choices:       choices,
+				Style:         "expanded",
 			}})
 		pa.Actions = append(pa.Actions, messagecard.PotentialActionActionCardAction{
 			Type: messagecard.PotentialActionHTTPPostType,
