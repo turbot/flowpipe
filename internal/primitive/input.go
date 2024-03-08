@@ -591,6 +591,11 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 		return nil, err
 	}
 
+	body, err := ip.buildReturnPayload("{{options.value}}", icm.Prompt)
+	if err != nil {
+		return nil, perr.InternalWithMessage("error building return body payload for " + ip.IntegrationName)
+	}
+
 	switch {
 	case icm.InputType == constants.InputTypeButton && len(options) <= 4:
 		for _, option := range options {
@@ -598,7 +603,7 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 				Type: messagecard.PotentialActionHTTPPostType,
 				Name: *option.Label,
 				PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
-					Body:    ip.buildReturnPayload(*option.Value, icm.Prompt),
+					Body:    strings.Replace(body, "{{options.value}}", *option.Value, 1),
 					Target:  responseUrl,
 					Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 				},
@@ -616,7 +621,7 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 			Type: messagecard.PotentialActionHTTPPostType,
 			Name: "Submit",
 			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
-				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
+				Body:    body,
 				Target:  responseUrl,
 				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 			},
@@ -651,7 +656,7 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 			Type: messagecard.PotentialActionHTTPPostType,
 			Name: "Submit",
 			PotentialActionHTTPPOST: messagecard.PotentialActionHTTPPOST{
-				Body:    ip.buildReturnPayload("{{options.value}}", icm.Prompt),
+				Body:    body,
 				Target:  responseUrl,
 				Headers: []messagecard.PotentialActionHTTPPOSTHeader{},
 			},

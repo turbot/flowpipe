@@ -13,15 +13,16 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-type teamsResponse struct {
+type msTeamsResponse struct {
 	Value               string `json:"value"`
 	ExecutionID         string `json:"execution_id"`
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
+	StepExecutionToken  string `json:"step_execution_token"`
 	Prompt              string `json:"prompt"`
 }
 
-func (api *APIService) teamsPostHandler(c *gin.Context) {
+func (api *APIService) msTeamsPostHandler(c *gin.Context) {
 	var uri types.InputIDHash
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
@@ -49,10 +50,20 @@ func (api *APIService) teamsPostHandler(c *gin.Context) {
 		return
 	}
 
-	var resp teamsResponse
+	var resp msTeamsResponse
 	err = c.BindJSON(&resp)
 	if err != nil {
 		common.AbortWithError(c, perr.BadRequestWithMessage("invalid payload received"))
+		return
+	}
+
+	hSid, err := util.CalculateHash(resp.StepExecutionID, salt)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
+		return
+	}
+	if resp.StepExecutionToken == "" || hSid != resp.StepExecutionToken {
+		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid step_execution_token"))
 		return
 	}
 
