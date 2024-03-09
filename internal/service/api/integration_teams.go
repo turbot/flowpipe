@@ -1,8 +1,11 @@
 package api
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -23,6 +26,7 @@ type msTeamsResponse struct {
 }
 
 func (api *APIService) msTeamsPostHandler(c *gin.Context) {
+	var e perr.ErrorModel
 	var uri types.InputIDHash
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
@@ -35,48 +39,56 @@ func (api *APIService) msTeamsPostHandler(c *gin.Context) {
 	}
 
 	// verify hash
-	salt, err := util.GetGlobalSalt()
+	hashString, err := util.CalculateHashFromGlobalSalt(uri.ID)
 	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
-		return
-	}
-	hashString, err := util.CalculateHash(uri.ID, salt)
-	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
+		errors.As(err, &e)
+		api.msTeamsPostHandlerFail(c, e, true, "[Internal] unable to calculate hash: "+e.Error(), nil)
 		return
 	}
 	if hashString != uri.Hash {
-		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid hash"))
+		e := perr.UnauthorizedWithMessage("invalid hash")
+		api.msTeamsPostHandlerFail(c, e, true, "[Unauthorized] invalid hash", nil)
 		return
 	}
 
 	var resp msTeamsResponse
 	err = c.BindJSON(&resp)
 	if err != nil {
-		common.AbortWithError(c, perr.BadRequestWithMessage("invalid payload received"))
+		msg := "[BadRequest] invalid payload received, unable to parse body content"
+		api.msTeamsPostHandlerFail(c, perr.BadRequestWithMessage(msg), false, msg, nil)
 		return
 	}
 
-	hSid, err := util.CalculateHash(resp.StepExecutionID, salt)
-	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
-		return
-	}
-	if resp.StepExecutionToken == "" || hSid != resp.StepExecutionToken {
-		common.AbortWithError(c, perr.UnauthorizedWithMessage("invalid step_execution_token"))
+	hSid, err := util.CalculateHashFromGlobalSalt(resp.StepExecutionID)
+	if err != nil || resp.StepExecutionToken == "" || hSid != resp.StepExecutionToken {
+		msg := "[Unauthorized] invalid step_execution_token"
+		api.msTeamsPostHandlerFail(c, perr.UnauthorizedWithMessage(msg), false, msg, nil)
 		return
 	}
 
 	var value any
 	if strings.Contains(resp.Value, "; ") { // MSTeams puts multiselect into single string with '; ' separator
 		value = strings.Split(resp.Value, "; ")
-
 	} else {
 		value = resp.Value
 	}
 
 	eventPublished, stepExec, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, value)
 	if err != nil {
+		errors.As(err, &e)
+		switch e.Status {
+		case http.StatusNotFound: // exec/pexec/sexec not found, replace card cannot succeed
+			api.msTeamsPostHandlerFail(c, e, true, "Pipeline instance not found on the server", &resp.Prompt)
+			return
+		case http.StatusBadRequest: // submitted value invalid, can retry
+			api.msTeamsPostHandlerFail(c, e, false, fmt.Sprintf("Error parsing submitted response: %s - please amend the response to a valid option and try again", e.Detail), nil)
+			return
+		case http.StatusInternalServerError: // error submitting event, can retry
+			api.msTeamsPostHandlerFail(c, e, false, fmt.Sprintf("Error encountered when responding: %s - please try again", e.Detail), nil)
+			return
+		}
+
+		// internal error - failed to raise/publish event - can retry thread
 		common.AbortWithError(c, err)
 		return
 	}
@@ -104,5 +116,36 @@ func (api *APIService) msTeamsPostHandler(c *gin.Context) {
 		"summary":  "Received Response",
 		"title":    resp.Prompt,
 		"text":     text,
+	})
+}
+
+func (api *APIService) msTeamsPostHandlerFail(c *gin.Context, err perr.ErrorModel, replaceCard bool, msg string, cardTitle *string) {
+	// log error
+	var requestURL *url.URL
+	if c.Request != nil {
+		requestURL = c.Request.URL
+	}
+	slog.Error("Error "+err.Instance,
+		"error", err,
+		"errorID", err.Instance,
+		"requestURL", requestURL)
+
+	if !replaceCard {
+		c.Header("CARD-ACTION-STATUS", msg)
+		c.AbortWithStatusJSON(http.StatusOK, err)
+		return
+	}
+
+	title := "Error"
+	if cardTitle != nil {
+		title = *cardTitle
+	}
+	c.Header("CARD-UPDATE-IN-BODY", "true")
+	c.JSON(http.StatusOK, gin.H{
+		"@type":    "MessageCard",
+		"@context": "http://schema.org/extensions",
+		"summary":  "Error encountered",
+		"title":    title,
+		"text":     msg,
 	})
 }

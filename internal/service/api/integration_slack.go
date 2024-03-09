@@ -347,7 +347,7 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 	}
 
 	if !validValues(value, stepExecution.Input) {
-		return false, nil, perr.BadRequestWithMessage("invalid values")
+		return false, nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid value(s) '%v' specified", value))
 	}
 
 	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
