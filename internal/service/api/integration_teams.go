@@ -81,16 +81,12 @@ func (api *APIService) msTeamsPostHandler(c *gin.Context) {
 			api.msTeamsPostHandlerFail(c, e, true, "Pipeline instance not found on the server", &resp.Prompt)
 			return
 		case http.StatusBadRequest: // submitted value invalid, can retry
-			api.msTeamsPostHandlerFail(c, e, false, fmt.Sprintf("Error parsing submitted response: %s - please amend the response to a valid option and try again", e.Detail), nil)
+			api.msTeamsPostHandlerFail(c, e, false, fmt.Sprintf("Error validating submitted response: %s - please amend the response to a valid option and try again", e.Detail), nil)
 			return
 		case http.StatusInternalServerError: // error submitting event, can retry
 			api.msTeamsPostHandlerFail(c, e, false, fmt.Sprintf("Error encountered when responding: %s - please try again", e.Detail), nil)
 			return
 		}
-
-		// internal error - failed to raise/publish event - can retry thread
-		common.AbortWithError(c, err)
-		return
 	}
 
 	var text string

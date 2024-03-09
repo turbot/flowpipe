@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
@@ -35,6 +36,7 @@ type slackResponse struct {
 	ResponseUrl         string
 	Prompt              string
 	isFinished          bool
+	Ts                  string
 }
 
 func (s slackResponse) ValueAsString() string {
@@ -49,11 +51,14 @@ func (s slackResponse) ValueAsString() string {
 }
 
 type slackUpdate struct {
-	Text            string `json:"text"`
-	ReplaceOriginal bool   `json:"replace_original"`
+	Text            string  `json:"text"`
+	ReplaceOriginal bool    `json:"replace_original"`
+	ResponseType    *string `json:"response_type,omitempty"`
+	ThreadTs        *string `json:"thread_ts,omitempty"`
 }
 
 func (api *APIService) slackPostHandler(c *gin.Context) {
+	var e perr.ErrorModel
 	var uri types.InputIDHash
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
@@ -66,14 +71,10 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 	}
 
 	// verify hash
-	salt, err := util.GetGlobalSalt()
+	hashString, err := util.CalculateHashFromGlobalSalt(uri.ID)
 	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("salt not found"))
-		return
-	}
-	hashString, err := util.CalculateHash(uri.ID, salt)
-	if err != nil {
-		common.AbortWithError(c, perr.InternalWithMessage("error calculating hash"))
+		errors.As(err, &e)
+		common.AbortWithError(c, e)
 		return
 	}
 	if hashString != uri.Hash {
@@ -83,13 +84,13 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 
 	bodyBytes, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		common.AbortWithError(c, err)
+		common.AbortWithError(c, perr.InternalWithMessage("unable to read body content"))
 		return
 	}
 
 	resp, err := parseSlackResponse(bodyBytes)
 	if err != nil {
-		common.AbortWithError(c, err)
+		common.AbortWithError(c, perr.InternalWithMessage("error parsing body content"))
 		return
 	}
 	if !resp.isFinished { // acknowledge received event but take no further action
@@ -99,12 +100,24 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 
 	eventPublished, stepExec, err := api.finishInputStep(resp.ExecutionID, resp.PipelineExecutionID, resp.StepExecutionID, resp.Value)
 	if err != nil {
-		common.AbortWithError(c, err)
-		return
+		errors.As(err, &e)
+		switch e.Status {
+		case http.StatusNotFound: // exec/pexec/sexec not found, replace card cannot succeed
+			c.Status(200)
+			_ = updateSlackMessage(resp.ResponseUrl, "Pipeline instance not found on server", nil)
+			return
+		case http.StatusBadRequest: // submitted value invalid, can retry
+			c.Status(200)
+			_ = updateSlackMessage(resp.ResponseUrl, fmt.Sprintf("Error validating submitted response: %s - please amend the response to a valid option and try again", e.Detail), &resp.Ts)
+			return
+		case http.StatusInternalServerError: // error submitting event, can retry
+			_ = updateSlackMessage(resp.ResponseUrl, fmt.Sprintf("Error encountered when responding: %s - please try again", e.Detail), &resp.Ts)
+			return
+		}
 	} else if !eventPublished { // only event this is false & we don't have error is that we've already processed the step
 		common.AbortWithError(c, perr.ConflictWithMessage("already processed"))
 		replyMsg := fmt.Sprintf("%s\n<@%s> this was already responded to previously", resp.Prompt, resp.User)
-		_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
+		_ = updateSlackMessage(resp.ResponseUrl, replyMsg, nil)
 		return
 	} else {
 		c.Status(200)
@@ -116,11 +129,11 @@ func (api *APIService) slackPostHandler(c *gin.Context) {
 
 		if err != nil {
 			replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", prompt, resp.User, resp.ValueAsString())
-			_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
+			_ = updateSlackMessage(resp.ResponseUrl, replyMsg, nil)
 			return
 		}
 		replyMsg := fmt.Sprintf("%s\n<@%s> responded: %s", prompt, resp.User, labels)
-		_ = updateSlackMessage(resp.ResponseUrl, replyMsg)
+		_ = updateSlackMessage(resp.ResponseUrl, replyMsg, nil)
 		return
 	}
 }
@@ -153,6 +166,7 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 
 	response.User = in.User.Name
 	response.ResponseUrl = in.ResponseURL
+	response.Ts = in.Message.Timestamp
 
 	firstBlock := in.Message.Blocks.BlockSet[0]
 	isMultiSelect := false
@@ -205,10 +219,16 @@ func parseSlackResponse(bodyBytes []byte) (slackResponse, error) {
 	return response, nil
 }
 
-func updateSlackMessage(responseUrl string, newMessage string) error {
+func updateSlackMessage(responseUrl string, newMessage string, ts *string) error {
 	msg := slackUpdate{
 		Text:            newMessage,
 		ReplaceOriginal: true,
+	}
+	if ts != nil {
+		rt := "in_channel"
+		msg.ReplaceOriginal = false
+		msg.ThreadTs = ts
+		msg.ResponseType = &rt
 	}
 	jsonMsg, err := json.Marshal(msg)
 	if err != nil {
