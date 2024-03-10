@@ -482,13 +482,20 @@ func (icm *InputStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, opti
 		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, s)
 		blocks.BlockSet = append(blocks.BlockSet, input)
 	case constants.InputTypeMultiSelect:
+		var selectedOptions []*slack.OptionBlockObject
 		blockOptions := make([]*slack.OptionBlockObject, len(options))
 		for i, opt := range options {
 			blockOptions[i] = slack.NewOptionBlockObject(*opt.Value, slack.NewTextBlockObject(slack.PlainTextType, *opt.Label, false, false), nil)
+			if opt.Selected != nil && *opt.Selected {
+				selectedOptions = append(selectedOptions, blockOptions[i])
+			}
 		}
 		ms := slack.NewOptionsMultiSelectBlockElement(
 			slack.MultiOptTypeStatic,
 			slack.NewTextBlockObject(slack.PlainTextType, "Select options", false, false), "not_finished", blockOptions...)
+		if len(selectedOptions) > 0 {
+			ms.InitialOptions = selectedOptions
+		}
 		btn := slack.NewButtonBlockElement("finished", "submit", slack.NewTextBlockObject(slack.PlainTextType, "Submit", false, false))
 		input := slack.NewInputBlock(encodedPayload, promptBlock, nil, ms)
 		action := slack.NewActionBlock("action_block", btn)
