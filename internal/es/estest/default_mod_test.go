@@ -159,6 +159,29 @@ func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 	// TODO: test more here
 }
 
+func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_invalid_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("unknown parameter specified 'credentials'", pex.Errors[0].Error.Detail)
+}
+
 func (suite *DefaultModTestSuite) TestCredInStepOutput() {
 	assert := assert.New(suite.T())
 
