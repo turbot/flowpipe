@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.3.2 [tbd]
+
+_Bug fixes_
+
+* Multiselect Inputs with preselected Options now correctly pre-populate in Slack.
+
 ## v0.3.1 [2024-03-07]
 
 _Bug fixes_
