@@ -3223,6 +3223,9 @@ func (suite *ModTestSuite) TestErrorWithThrowInvalidMessage() {
 	// This pipeline step has a throw that the IF condition is not met, so it should not throw the error,
 	// however there was a bug that if the IF condition is not met, Flowpipe will still try to calculate the
 	// rest of the throw block
+	//
+	// What this test is trying to ensure is that if the IF condition in the throw block is NOT met, do not try to resolve
+	// the "message" attribute
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.error_with_throw_invalid_message", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
