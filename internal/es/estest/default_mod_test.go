@@ -3,6 +3,7 @@ package estest
 // Basic imports
 import (
 	"context"
+	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -26,6 +27,7 @@ type DefaultModTestSuite struct {
 	suite.Suite
 	*FlowpipeTestSuite
 
+	server                *http.Server
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
 }
@@ -53,6 +55,8 @@ func (suite *DefaultModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	suite.server = StartServer()
 
 	pipelineDirPath := path.Join(cwd, "default_mod")
 
@@ -98,6 +102,7 @@ func (suite *DefaultModTestSuite) TearDownSuite() {
 		panic(err)
 	}
 
+	suite.server.Shutdown(suite.ctx) //nolint:errcheck // just a test case
 	suite.TearDownSuiteRunCount++
 }
 
@@ -132,6 +137,75 @@ func (suite *DefaultModTestSuite) TestEchoOne() {
 	assert.Equal(1, len(pex.PipelineOutput))
 }
 
+func (suite *DefaultModTestSuite) TestBasicAuth() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"user_email": "asdf",
+		"token":      "12345",
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.test_basic_auth", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("401 Unauthorized", pex.Errors[0].Error.Detail)
+
+	// Now re-run with the correct credentials
+	pipelineInput = modconfig.Input{
+		"user_email": "testuser",
+		"token":      "testpass",
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.test_basic_auth", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+	assert.Equal("Authenticated successfully", pex.PipelineOutput["val"])
+
+	// re-run with bad creds, should fail again
+	pipelineInput = modconfig.Input{
+		"user_email": "testuser",
+		"token":      "testpassxxxxx",
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.test_basic_auth", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("401 Unauthorized", pex.Errors[0].Error.Detail)
+}
+
 func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 	assert := assert.New(suite.T())
 
@@ -157,6 +231,29 @@ func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 	outputValues := pex.PipelineOutput["value"].(map[string]interface{})
 	assert.Equal(4, len(outputValues))
 	// TODO: test more here
+}
+
+func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_invalid_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Equal("unknown parameter specified 'credentials'", pex.Errors[0].Error.Detail)
 }
 
 func (suite *DefaultModTestSuite) TestCredInStepOutput() {
