@@ -1,11 +1,11 @@
 # Flowpipe
 
-## v0.3.2 [tbd]
+## v0.3.2 [2023-03-08]
 
 _Bug fixes_
 
 * Multiselect Inputs with preselected Options now correctly pre-populate in Slack.
-* Change detection in `throw` and `output` block in pipeline steps now works with ternary operators and will not trigger mod reload for white space changes.
+* Change detection in `throw` and `output` block in pipeline steps works correctly with ternary operators and will not trigger mod reload for white space changes.
 
 ## v0.3.1 [2024-03-07]
 
