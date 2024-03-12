@@ -152,23 +152,23 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 	}
 
 	// Create an instance of the struct
-	var resultsJson map[string]interface{}
+	var responseJson map[string]interface{}
 
 	// Unmarshal the JSON string into the struct
-	err = json.Unmarshal(result, &resultsJson)
+	err = json.Unmarshal(result, &responseJson)
 	if err != nil {
 		return nil, err
 	}
 
 	// Guess if the result is actually an error
-	if resultsJson["errorType"] != nil && resultsJson["errorMessage"] != nil && resultsJson["trace"] != nil {
-		slog.Error("Function returned an error", "errorType", resultsJson["errorType"], "errorMessage", resultsJson["errorMessage"], "trace", resultsJson["trace"])
-		return nil, perr.InternalWithMessage("Function returned an error: " + resultsJson["errorMessage"].(string))
+	if responseJson["errorType"] != nil && responseJson["errorMessage"] != nil && responseJson["trace"] != nil {
+		slog.Error("Function returned an error", "errorType", responseJson["errorType"], "errorMessage", responseJson["errorMessage"], "trace", responseJson["trace"])
+		return nil, perr.InternalWithMessage("Function returned an error: " + responseJson["errorMessage"].(string))
 	}
 
 	output := modconfig.Output{
 		Data: map[string]interface{}{
-			schema.AttributeTypeResult:     resultsJson,
+			schema.AttributeTypeResponse:   responseJson,
 			schema.AttributeTypeStatusCode: statusCode,
 		},
 	}

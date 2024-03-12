@@ -6,6 +6,8 @@ _What's new?_
 
 _Bug fixes_
 
+* Step output attribute should be called response not result, ([#789](https://github.com/turbot/flowpipe/issues/789))
+
 ## v0.3.2 [2023-03-08]
 
 _Bug fixes_

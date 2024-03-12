@@ -49,15 +49,15 @@ pipeline "with_functions" {
     }
 
     output "val" {
-        value = step.function.hello_nodejs_step.result.body.message
+        value = step.function.hello_nodejs_step.response.body.message
     }
 
     output "env" {
-        value = step.function.hello_nodejs_step.result.body.env
+        value = step.function.hello_nodejs_step.response.body.env
     }
 
     output "status_code" {
-        value = step.function.hello_nodejs_step.result.statusCode
+        value = step.function.hello_nodejs_step.response.statusCode
     }
 }
 
