@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.4.0 [tbd]
+
+_What's new?_
+
+_Bug fixes_
+
 ## v0.3.2 [2023-03-08]
 
 _Bug fixes_

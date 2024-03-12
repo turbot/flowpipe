@@ -2,16 +2,25 @@ pipeline "with_functions" {
 
     param "event" {
         type = any
+        default = {
+            user = {
+                name = "Billie Eilish"
+                age = 25
+            }
+            notNested = true
+        }
     }
 
     param "aws_region" {
         type = string
         default = "us-east-1"
     }
+
     param "aws_access_key_id" {
         type = string
         default = "abc"
     }
+
     param "aws_secret_access_key" {
         type = string
         default = "abc"
