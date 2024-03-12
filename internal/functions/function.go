@@ -245,24 +245,24 @@ func (fn *Function) Validate() error {
 		return perr.BadRequestWithMessage(fmt.Sprintf("invalid runtime `%s` requested for function: %s", fn.Runtime, fn.Name))
 	}
 
-	// Validate the src
+	// Validate the source
 	if fn.Source == "" {
-		return perr.BadRequestWithMessage("src required for function: " + fn.Name)
+		return perr.BadRequestWithMessage("'source' required for function: " + fn.Name)
 	}
-	// Convert src to an absolute path
+	// Convert source to an absolute path
 	workspacePath := viper.GetString(constants.ArgModLocation)
 
 	path := filepath.Join(workspacePath, fn.Source)
 	absPath, err := filepath.Abs(path)
 	if err != nil {
-		return perr.BadRequestWithMessage("failed to get absolute path to src for function: " + fn.Name)
+		return perr.BadRequestWithMessage("failed to get absolute path to 'source 'for function: " + fn.Name)
 	}
 	srcStat, err := os.Stat(absPath)
 	if err != nil {
-		return perr.BadRequestWithMessage("src not found for function: " + fn.Name)
+		return perr.BadRequestWithMessage("'source' not found for function: " + fn.Name)
 	}
 	if !srcStat.IsDir() {
-		return perr.BadRequestWithMessage("src must be a directory for function: " + fn.Name)
+		return perr.BadRequestWithMessage("'source' must be a directory for function: " + fn.Name)
 	}
 	fn.AbsolutePath = absPath
 
