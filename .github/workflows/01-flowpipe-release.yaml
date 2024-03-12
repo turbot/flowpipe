@@ -14,7 +14,7 @@ on:
       version:
         description: "Version (without 'v')"
         required: true
-        default: 0.3.0
+        default: 0.4.\invalid
       confirmMain:
         description: Confirm running on main branch
         required: true
