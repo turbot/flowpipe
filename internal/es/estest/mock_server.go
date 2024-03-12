@@ -45,7 +45,7 @@ func basicAuthHandler(w http.ResponseWriter, r *http.Request) {
 	// Validate credentials
 	if username == expectedUsername && password == expectedPassword {
 		w.WriteHeader(http.StatusOK)
-		fmt.Fprintf(w, "Authenticated successfully")
+		fmt.Fprintf(w, "Authenticated successfully") //nolint:forbidigo // mock server
 	} else {
 		http.Error(w, "Unauthorized - invalid credentials", http.StatusUnauthorized)
 	}

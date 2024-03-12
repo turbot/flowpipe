@@ -46,7 +46,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
 	github.com/turbot/flowpipe-sdk-go v0.3.0
-	github.com/turbot/pipe-fittings v0.3.2
+	github.com/turbot/pipe-fittings v0.3.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.5.0
 )

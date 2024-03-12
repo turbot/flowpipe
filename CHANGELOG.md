@@ -1,11 +1,11 @@
 # Flowpipe
 
-## v0.3.2 [tbd]
+## v0.3.2 [2023-03-08]
 
 _Bug fixes_
 
 * Multiselect Inputs with preselected Options now correctly pre-populate in Slack.
-* Change detection in `throw` and `output` block in pipeline steps now works with ternary operators and will not trigger mod reload for white space changes.
+* Change detection in `throw` and `output` block in pipeline steps works correctly with ternary operators and will not trigger mod reload for white space changes.
 
 ## v0.3.1 [2024-03-07]
 
@@ -22,7 +22,6 @@ _What's new?_
 * Workflow - input step for buttons, text and other data. [Documentation](https://flowpipe.io/docs/flowpipe-hcl/step/input).
 * Workflow - simple, reusable integration and notifier configuration for HTTP, Slack and Email. [Documentation](https://flowpipe.io/docs/reference/config-files/integration).
 * Import Steampipe connections as Flowpipe credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/credential_import).
-* Run flowpipe in a container. [Documentation](https://flowpipe.io/docs/run/containers).
 * Manage concurrency of [pipelines](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments) and [steps](https://flowpipe.io/docs/flowpipe-hcl/step#common-step-arguments).
 * New credential types: `alicloud` and `mastodon`.
 * Shorter hash for HTTP triggers for simpler URLs.
