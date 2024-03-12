@@ -20,6 +20,11 @@ pipeline "tag_resources" {
     description = "Specifies the list of ARNs of the resources that you want to apply tags to."
   }
 
+  param "tags" {
+    type        = map(string)
+    description = "Specifies the tags that you want to apply to the specified resources."
+  }
+
   output "region" {
     value = param.region
   }
