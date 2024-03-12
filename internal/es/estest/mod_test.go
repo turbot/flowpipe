@@ -177,6 +177,26 @@ func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
 	assert.Equal("Hello World from Depend A: this is the value of var_one + this is the value of var_one", pex2.PipelineOutput["echo_one_output_val_var_one"])
 }
 
+func (suite *ModTestSuite) TestFunctionStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.with_functions", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+	assert.Contains(pex.PipelineOutput["val"], "From Billie Eilish with age: 25. Not nested: true.")
+}
+
 func (suite *ModTestSuite) TestSimpleForEachWithSleep() {
 	assert := assert.New(suite.T())
 
