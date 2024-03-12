@@ -48,7 +48,12 @@ test:
 .PHONY: integration-test
 integration-test:
 	go clean -testcache
-	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 240s -v
+	RUN_MODE=TEST_ES go test -tags=longRunningTests ./internal/es/estest -timeout 240s -v
+
+.PHONY: integration-test-all
+integration-test-all:
+	go clean -testcache
+	RUN_MODE=TEST_ES go test ./internal/es/estest -timeout 600s -v
 
 .PHONY: release-dry-run
 release-dry-run:
