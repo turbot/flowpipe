@@ -22,7 +22,7 @@
 
 [![Flowpipe Demo](https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
 
-## Getting Started
+## Install Flowpipe
 
 The <a href="https://flowpipe.io/downloads?utm_id=gfpreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme">downloads</a> page shows you how but tl;dr:
 
@@ -40,6 +40,11 @@ brew install flowpipe
 ```
 
 Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
+
+## Workflow for DevOps
+
+See our [documentation](https://flowpipe.io/docs) for examples of how to create pipelines and use [mods](https://hub.flowpipe.io/?type=library).
+
 
 ## Libraries and samples
 
