@@ -25,6 +25,10 @@ pipeline "tag_resources" {
     description = "Specifies the tags that you want to apply to the specified resources."
   }
 
+  step "transform" "echo" {
+    value = merge(credential.jira[param.cred].env, { AWS_REGION = param.region })
+  }
+
   output "region" {
     value = param.region
   }
@@ -35,6 +39,10 @@ pipeline "tag_resources" {
 
   output "resource_arns" {
     value = param.resource_arns
+  }
+
+  output "echo" {
+    value = step.transform.echo
   }
 }
 
