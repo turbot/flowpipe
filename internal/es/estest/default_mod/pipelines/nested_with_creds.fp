@@ -53,4 +53,8 @@ pipeline "parent_call_nested_mod_with_cred" {
     output "val" {
         value = step.pipeline.call_child.output.val
     }
+
+    output "val_merge" {
+        value = step.pipeline.call_child.output.val_merge
+    }
 }

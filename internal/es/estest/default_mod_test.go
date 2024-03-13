@@ -276,6 +276,7 @@ func (suite *DefaultModTestSuite) TestNestedModWithCreds() {
 	}
 	assert.Equal("finished", pex.Status)
 	assert.Equal("12345", pex.PipelineOutput["val"])
+	assert.Equal("default", pex.PipelineOutput["val_merge"].(map[string]interface{})["cred_name"])
 }
 
 func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {

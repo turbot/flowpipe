@@ -27,4 +27,8 @@ pipeline "with_github_creds" {
   output "val" {
     value = step.transform.creds.value
   }
+
+  output "val_merge" {
+    value = merge(credential.github[param.creds], {cred_name = param.creds})
+  }
 }
