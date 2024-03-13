@@ -168,7 +168,8 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 
 	var input types.CmdPipeline
 	if err := c.ShouldBindJSON(&input); err != nil {
-		common.AbortWithError(c, err)
+		slog.Error("error binding input", "error", err)
+		common.AbortWithError(c, perr.BadRequestWithMessage(err.Error()))
 		return
 	}
 
