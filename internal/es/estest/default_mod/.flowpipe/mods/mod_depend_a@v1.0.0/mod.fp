@@ -23,4 +23,8 @@ pipeline "with_github_creds" {
   step "transform" "creds" {
     value = credential.github[param.creds].token
   }
+
+  output "val" {
+    value = step.transform.creds.value
+  }
 }

@@ -233,6 +233,51 @@ func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 	// TODO: test more here
 }
 
+func (suite *DefaultModTestSuite) TestNestedWithCreds() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_with_creds", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+	assert.Equal("AAAA", pex.PipelineOutput["env"].(map[string]interface{})["AWS_ACCESS_KEY_ID"])
+	assert.Equal("BBBB", pex.PipelineOutput["env"].(map[string]interface{})["AWS_SECRET_ACCESS_KEY"])
+}
+
+func (suite *DefaultModTestSuite) TestNestedModWithCreds() {
+	assert := assert.New(suite.T())
+
+	os.Setenv("GITHUB_TOKEN", "12345")
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_call_nested_mod_with_cred", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+	assert.Equal("12345", pex.PipelineOutput["val"])
+}
+
 func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
 	assert := assert.New(suite.T())
 
