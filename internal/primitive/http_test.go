@@ -400,7 +400,7 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 	hr := HTTPRequest{}
 
 	input := modconfig.Input(map[string]interface{}{
-		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
+		schema.AttributeTypeUrl:    "http://www.google.com/notfound",
 		schema.AttributeTypeMethod: modconfig.HttpMethodPut,
 	})
 
