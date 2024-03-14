@@ -40,7 +40,7 @@ brew tap turbot/tap
 brew install flowpipe
 ```
 
-Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
+Now, [create and run your first pipeline →](https://flowpipe.io/docs).
 
 ## Flowpipe mods: libraries and samples
 
