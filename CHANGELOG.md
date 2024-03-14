@@ -1,6 +1,6 @@
 # Flowpipe
 
-## v0.4.0 [tbd]
+## v0.4.0 [2023-03-09]
 
 _What's new?_
 
@@ -9,6 +9,7 @@ _What's new?_
 _Bug fixes_
 
 * Step output attribute should be called `response` not `result`. ([#789](https://github.com/turbot/flowpipe/issues/789))
+* Pipeline execution should not fail when a string argument is passed with double quotes. ([#791](https://github.com/turbot/flowpipe/issues/791))
 
 ## v0.3.2 [2023-03-08]
 
