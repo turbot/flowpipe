@@ -17,11 +17,14 @@ pipeline "echo_one_depend_a" {
 pipeline "with_github_creds" {
   param "creds" {
     type = string
-    default = "default"
   }
 
   step "transform" "creds" {
     value = credential.github[param.creds].token
+  }
+
+  step "transform" "merge_creds" {
+    value = merge(credential.github[param.creds], {cred_name = param.creds})
   }
 
   output "val" {
@@ -29,6 +32,6 @@ pipeline "with_github_creds" {
   }
 
   output "val_merge" {
-    value = merge(credential.github[param.creds], {cred_name = param.creds})
+    value = step.transform.merge_creds.value
   }
 }
