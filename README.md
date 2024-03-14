@@ -42,11 +42,6 @@ brew install flowpipe
 
 Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
 
-## Workflow for DevOps
-
-See our [documentation](https://flowpipe.io/docs) for examples of how to create pipelines and use [mods](https://hub.flowpipe.io/?type=library).
-
-
 ## Flowpipe mods: libraries and samples
 
 Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for services including
