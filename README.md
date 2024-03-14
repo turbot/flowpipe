@@ -9,11 +9,11 @@
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Use it automate cloud operations, coordinate people and pipelines, and build workflows as code.
 
-**Pipelines**. 
+**Pipelines**. A [pipeline](https://flowpipe.io/docs/flowpipe-hcl/pipeline) is a sequence of [steps](https://flowpipe.io/docs/flowpipe-hcl/pipeline) to do work. 
 
-**Triggers**.
+**Steps**. A [step](https://flowpipe.io/docs/flowpipe-hcl/step) can [make an HTTP call)[https://flowpipe.io/docs/flowpipe-hcl/step/http], [gather human input](https://flowpipe.io/docs/flowpipe-hcl/step/input), [send a message](https://flowpipe.io/docs/flowpipe-hcl/step/message), [run a query](https://flowpipe.io/docs/flowpipe-hcl/step/query), or [run a pipeline](https://flowpipe.io/docs/flowpipe-hcl/step/pipeline).
 
-**Steps**.
+**Triggers**. A [trigger](https://flowpipe.io/docs/flowpipe-hcl/trigger) runs a pipeline when an event occurs, via a [webhook](https://flowpipe.io/docs/flowpipe-hcl/trigger/http), [query](https://flowpipe.io/docs/flowpipe-hcl/trigger/query), or [schedule](https://flowpipe.io/docs/flowpipe-hcl/trigger/schedule).
 
 **Code, not clicks**. Our pipelines are [code](https://flowpipe.io/docs/build): version-controlled, composable, shareable, easy to edit — designed for the way you work. 
 
