@@ -302,6 +302,30 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
 	assert.Equal("unknown parameter specified 'credentials'", pex.Errors[0].Error.Detail)
 }
 
+// Testing the "better" error message where Flowpipe tries to guess the error and present an improved error message with context.
+func (suite *DefaultModTestSuite) TestNestedWithInvalidCred() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_call_nested_mod_with_cred_with_invalid_cred", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "Missing credential: This object does not have an attribute named \"github\"")
+}
+
 func (suite *DefaultModTestSuite) TestCredInStepOutput() {
 	assert := assert.New(suite.T())
 
