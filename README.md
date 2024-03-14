@@ -15,7 +15,7 @@
 
 **Respond to events**. Run workflows manually or on a schedule. Trigger pipelines from webhooks or changes in data.
 
-**Code, not clicks**. Build and deploy DevOps workflows like infrastructure. Code in HCL and deploy from version control.
+**Code, not clicks**. Our pipelines are [code](https://flowpipe.io/docs): version-controlled, composable, shareable, easy to edit — designed for the way you work. 
 
 ## Demo time!
 
