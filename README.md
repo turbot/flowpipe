@@ -9,7 +9,7 @@
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Use it automate cloud operations, coordinate people and pipelines, and build workflows as code.
 
-**Connect people and tools**. Connect your cloud data to people and systems using email, chat & APIs. Workflow steps can even run containers, custom functions, and more.
+**Connect people and tools**. Connect your cloud data to people and systems using email, chat, and APIs. Workflow steps can even run containers, custom functions, and more.
 
 **Orchestrate your cloud**. Build simple steps into complex workflows. Run and test locally. Compose solutions across clouds using open source mods.
 
@@ -145,7 +145,7 @@ There are other third party tools that are required for the full development sui
 
 </details>
 
-## Open source & contributing
+## Open source and contributing
 This repository is published under the [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) license. Please see our [code of conduct](https://github.com/turbot/.github/blob/main/CODE_OF_CONDUCT.md). Contributors must sign our [Contributor License Agreement](https://turbot.com/open-source#cla) as part of their first pull request. We look forward to collaborating with you!
 
 [Flowpipe](https://flowpipe.io) is a product produced from this open source software, exclusively by [Turbot HQ, Inc](https://turbot.com). It is distributed under our commercial terms. Others are allowed to make their own distribution of the software, but cannot use any of the Turbot trademarks, cloud services, etc. You can learn more in our [Open Source FAQ](https://turbot.com/open-source).
