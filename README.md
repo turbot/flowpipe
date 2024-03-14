@@ -9,11 +9,11 @@
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Use it automate cloud operations, coordinate people and pipelines, and build workflows as code.
 
-**Connect people and tools**. Connect your cloud data to people and systems using email, chat, and APIs. Workflow steps can even run containers, custom functions, and more.
+**Pipelines**. 
 
-**Orchestrate your cloud**. Build simple steps into complex workflows. Run and test locally. Compose solutions across clouds using open source mods.
+**Triggers**.
 
-**Respond to events**. Run workflows manually or on a schedule. Trigger pipelines from webhooks or changes in data.
+**Steps**.
 
 **Code, not clicks**. Our pipelines are [code](https://flowpipe.io/docs/build): version-controlled, composable, shareable, easy to edit — designed for the way you work. 
 
