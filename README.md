@@ -19,7 +19,7 @@
 
 **[Watch on YouTube →](https://www.youtube.com/watch?v=h4mWhMzaS7Y)**
 
-[![Flowpipe Demo](https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
+<a href="https://www.youtube.com/watch?v=h4mWhMzaS7Y"><img width="500" alt="flowpipe demo" src="https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png" /></a>
 
 ## Install Flowpipe
 
