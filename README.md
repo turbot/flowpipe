@@ -1,11 +1,9 @@
 <a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark_outline.png"></a>
 
-<p>
-
 [![libraries](https://img.shields.io/badge/mods-62-blue)](https://hub.flowpipe.io) &nbsp;
 [![pipelines](https://img.shields.io/badge/pipelines-510-blue)](https://hub.flowpipe.io/mods) &nbsp;
-[![slack](https://img.shields.io/badge/slack-2297-blue)](https://turbot.com/community/join?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme) &nbsp;
-[![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com?utm_id=gspreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme)
+[![slack](https://img.shields.io/badge/slack-2297-blue)](https://turbot.com/community/join) &nbsp;
+[![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com)
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Use it automate cloud operations, coordinate people and pipelines, and build workflows as code.
 
@@ -25,7 +23,7 @@
 
 ## Install Flowpipe
 
-The <a href="https://flowpipe.io/downloads?utm_id=gfpreadme&utm_source=github&utm_medium=repo&utm_campaign=github&utm_content=readme">downloads</a> page shows you how but tl;dr:
+The <a href="https://flowpipe.io/downloads">downloads</a> page shows you how but tl;dr:
 
 Linux or WSL
 
