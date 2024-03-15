@@ -26,8 +26,8 @@
 See the [documentation](https://flowpipe.io/docs) for:
 
 - [Running Flowpipe](https://flowpipe.io/docs/run)
-- [HCL reference](https://flowpipe.io/docs/flowpipe-hcl)
 - [CLI commands](https://flowpipe.io/docs/reference/cli)
+- [HCL reference](https://flowpipe.io/docs/flowpipe-hcl)
 - [Configuration](https://flowpipe.io/docs/reference/config-files)
 - [Building mods](https://flowpipe.io/docs/build)
 
