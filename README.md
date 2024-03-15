@@ -21,6 +21,16 @@
 
 <a href="https://www.youtube.com/watch?v=h4mWhMzaS7Y"><img width="500" alt="flowpipe demo" src="https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png" /></a>
 
+## Documentation
+
+See the [documentation](https://flowpipe.io/docs) for:
+
+- [Running Flowpipe](https://flowpipe.io/docs/run)
+- [HCL reference](https://flowpipe.io/docs/flowpipe-hcl)
+- [CLI commands](https://flowpipe.io/docs/reference/cli)
+- [Configuration](https://flowpipe.io/docs/reference/config-files)
+
+
 ## Install Flowpipe
 
 The <a href="https://flowpipe.io/downloads">downloads</a> page shows you how but tl;dr:
