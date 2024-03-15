@@ -59,6 +59,8 @@ Check out [Flowpipe samples](https://hub.flowpipe.io/?type=sample) for ready-to-
 
 ## Developing
 
+If you want to help develop the core Flowpipe binary, these are the steps to build it.
+
 <details>
 <summary>Developing Flowpipe</summary>
 
@@ -66,30 +68,25 @@ Prerequisites:
 
 - [Golang](https://golang.org/doc/install) Version 1.21 or higher.
 
-Clone `github.com/flowpipe` and `github.com/turbot/pipe-fittings` repositories:
+Clone [github.com/flowpipe](https://github.com/turbot/flowpipe) and [github.com/turbot/pipe-fittings](https://github.com/turbot/pipe-fittings).
 
 ```sh
 git clone git@github.com:turbot/flowpipe
 git clone git@github.com:turbot/pipe-fittings
-cd flowpipe
 ```
 
-Build will build flowpipe binary in the current directory:
+Build.
 
 ```sh
+cd flowpipe
 make
 ```
+The Flowpipe binary lands in the current directory.
 
-Check the version:
+Check the version.
 ```sh
 ./flowpipe --version
 ```
-```
-Flowpipe v0.0.1-local.1
-```
-
-Flowpipe local version will always be `v0.0.1-local.1`. The real version is generated during the release process.
-
 Try it!
 
 ```sh
@@ -106,6 +103,7 @@ mod.test_suite_mod    test_suite_mod.pipeline.bad_http_not_ignored              
 ```
 
 Now run a simple pipeline:
+
 ```sh
 ./flowpipe pipeline run --mod-location ./internal/es/estest/test_suite_mod/ simple
 ```
@@ -142,6 +140,8 @@ There are other third party tools that are required for the full development sui
 1. Run `make` to build the Flowpipe binary.
 
 </details>
+
+If you're interested in developing Flowpipe mods, see our [documentation for mod developers](https://flowpipe.io/docs/build).
 
 ## Turbot Pipes
 
