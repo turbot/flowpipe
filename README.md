@@ -143,6 +143,10 @@ There are other third party tools that are required for the full development sui
 
 </details>
 
+## Turbot Pipes
+
+ Coming soon: bring your team to [Turbot Pipes](https://turbot.com/pipes) to use Flowpipe together in the cloud.
+
 ## Open source and contributing
 This repository is published under the [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) license. Please see our [code of conduct](https://github.com/turbot/.github/blob/main/CODE_OF_CONDUCT.md). Contributors must sign our [Contributor License Agreement](https://turbot.com/open-source#cla) as part of their first pull request. We look forward to collaborating with you!
 
