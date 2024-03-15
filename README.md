@@ -29,6 +29,7 @@ See the [documentation](https://flowpipe.io/docs) for:
 - [HCL reference](https://flowpipe.io/docs/flowpipe-hcl)
 - [CLI commands](https://flowpipe.io/docs/reference/cli)
 - [Configuration](https://flowpipe.io/docs/reference/config-files)
+- [Building mods](https://flowpipe.io/docs/build)
 
 
 ## Install Flowpipe
