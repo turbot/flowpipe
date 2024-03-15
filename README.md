@@ -141,7 +141,7 @@ There are other third party tools that are required for the full development sui
 
 </details>
 
-If you're interested in developing Flowpipe mods, see our [documentation for mod developers](https://flowpipe.io/docs/build).
+If you're interested in developing [Flowpipe mods](https://hub.flowpipe.io), see our [documentation for mod developers](https://flowpipe.io/docs/build).
 
 ## Turbot Pipes
 
