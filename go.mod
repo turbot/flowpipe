@@ -2,6 +2,8 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
+replace github.com/turbot/pipe-fittings => ../pipe-fittings
+
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
@@ -16,7 +18,7 @@ require (
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/goccy/go-yaml v1.11.2 // indirect
 	github.com/google/go-cmp v0.6.0
-	github.com/hashicorp/hcl/v2 v2.19.1
+	github.com/hashicorp/hcl/v2 v2.20.0
 	github.com/hashicorp/raft v1.3.11
 	github.com/hokaccha/go-prettyjson v0.0.0-20211117102719-0474bc63780f
 	github.com/karrick/gows v0.3.0 // indirect
@@ -29,7 +31,7 @@ require (
 	github.com/thediveo/enumflag/v2 v2.0.3
 	github.com/turbot/go-kit v0.10.0-rc.0
 	github.com/unrolled/secure v1.13.0
-	github.com/zclconf/go-cty v1.14.1
+	github.com/zclconf/go-cty v1.14.3
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
