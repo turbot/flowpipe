@@ -7,13 +7,13 @@
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Use it automate cloud operations, coordinate people and pipelines, and build workflows as code.
 
-**Pipelines**. A [pipeline](https://flowpipe.io/docs/flowpipe-hcl/pipeline) is a sequence of [steps](https://flowpipe.io/docs/flowpipe-hcl/pipeline) to do work. 
+**Pipelines**. A [pipeline](https://flowpipe.io/docs/flowpipe-hcl/pipeline) is a sequence of [steps](https://flowpipe.io/docs/flowpipe-hcl/pipeline) to do work.
 
 **Steps**. A step can [make an HTTP call](https://flowpipe.io/docs/flowpipe-hcl/step/http), [gather human input](https://flowpipe.io/docs/flowpipe-hcl/step/input), [send a message](https://flowpipe.io/docs/flowpipe-hcl/step/message), [run a query](https://flowpipe.io/docs/flowpipe-hcl/step/query), or [run a pipeline](https://flowpipe.io/docs/flowpipe-hcl/step/pipeline).
 
 **Triggers**. A [trigger](https://flowpipe.io/docs/flowpipe-hcl/trigger) runs a pipeline when an event occurs, via a [webhook](https://flowpipe.io/docs/flowpipe-hcl/trigger/http), [query](https://flowpipe.io/docs/flowpipe-hcl/trigger/query), or [schedule](https://flowpipe.io/docs/flowpipe-hcl/trigger/schedule).
 
-**Code, not clicks**. Our pipelines are [code](https://flowpipe.io/docs/build): version-controlled, composable, shareable, easy to edit — designed for the way you work. 
+**Code, not clicks**. Our pipelines are [code](https://flowpipe.io/docs/build): version-controlled, composable, shareable, easy to edit — designed for the way you work.
 
 ## Demo time!
 
@@ -73,11 +73,7 @@ Check out [Flowpipe samples](https://hub.flowpipe.io/?type=sample) for ready-to-
 If you want to help develop the core Flowpipe binary, these are the steps to build it.
 
 <details>
-<summary>Developing Flowpipe</summary>
-
-Prerequisites:
-
-- [Golang](https://golang.org/doc/install) Version 1.21 or higher.
+<summary>Clone</summary>
 
 Clone [github.com/flowpipe](https://github.com/turbot/flowpipe) and [github.com/turbot/pipe-fittings](https://github.com/turbot/pipe-fittings).
 
@@ -85,20 +81,33 @@ Clone [github.com/flowpipe](https://github.com/turbot/flowpipe) and [github.com/
 git clone git@github.com:turbot/flowpipe
 git clone git@github.com:turbot/pipe-fittings
 ```
+</details>
 
-Build.
+<details>
+<summary>Build</summary>
 
 ```sh
 cd flowpipe
 make
 ```
+
 The Flowpipe binary lands in the current directory.
 
-Check the version.
+</details>
+
+<details>
+<summary>Check the install</summary>
+
 ```sh
 ./flowpipe --version
+
+./flowpipe --help
 ```
-Try it!
+</details>
+
+<details>
+<summary>Try it!</summary>
+
 
 ```sh
 ./flowpipe pipeline list --mod-location ./internal/es/estest/test_suite_mod/
@@ -128,15 +137,13 @@ Now run a simple pipeline:
 [simple] Output val = Hello World
 [simple] Complete 12ms exec_clsm62ko47mjp5f74730
 ```
-
-That's it! You're ready to start developing.
-
-There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the Developer Setup section for more details.
-
 </details>
 
 <details>
-<summary>Developer Setup</summary>
+<summary>DevContainer</summary>
+
+There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the Developer Setup section for more details.
+
 
 1. Install [Docker](https://docs.docker.com/get-docker/)
 
@@ -153,6 +160,7 @@ There are other third party tools that are required for the full development sui
 </details>
 
 If you're interested in developing [Flowpipe mods](https://hub.flowpipe.io), see our [documentation for mod developers](https://flowpipe.io/docs/build).
+
 
 ## Turbot Pipes
 
