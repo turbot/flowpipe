@@ -88,3 +88,30 @@ pipeline "parent_call_nested_mod_with_cred_with_invalid_cred" {
         value = step.pipeline.call_child.output.val_merge
     }
 }
+
+pipeline "incorrect_better_error_message_from_id_attribute" {
+
+    param "stories" {
+        type = any
+        default = [
+            {
+                title = "Story 1"
+                description = "This is story 1"
+            },
+            {
+                title = "Story 2"
+                description = "This is story 2"
+            }
+        ]
+    }
+
+    step "transform" "echo" {
+        for_each = param.stories
+
+        // This was giving a bad error message:
+        // Missing credential: This object does not have an attribute named \"id\".
+        //
+        // nothing to do with Credential
+        value = each.value.id
+    }
+}

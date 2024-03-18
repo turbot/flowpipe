@@ -326,6 +326,29 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidCred() {
 	assert.Contains(pex.Errors[0].Error.Detail, "Missing credential: This object does not have an attribute named \"github\"")
 }
 
+func (suite *DefaultModTestSuite) TestNestedWithInvalidCredIncorrectErrorMessage() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.incorrect_better_error_message_from_id_attribute", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Detail, "Unsupported attribute: This object does not have an attribute named \"id\".")
+}
+
 func (suite *DefaultModTestSuite) TestCredInStepOutput() {
 	assert := assert.New(suite.T())
 

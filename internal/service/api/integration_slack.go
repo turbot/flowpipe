@@ -6,14 +6,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/constants"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/gin-gonic/gin"
 	"github.com/slack-go/slack"
@@ -356,10 +358,17 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 		return false, nil, perr.NotFoundWithMessage(fmt.Sprintf("pipeline execution %s not found", pExecId))
 	}
 
+	pipelineDefn, err := ex.PipelineDefinition(pExecId)
+	if err != nil {
+		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error getting pipeline definition: %s", err.Error()))
+	}
+
 	stepExecution := pipelineExecution.StepExecutions[sExecId]
 	if stepExecution == nil {
 		return false, nil, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", sExecId))
 	}
+
+	stepDefn := pipelineDefn.GetStep(stepExecution.Name)
 
 	if stepExecution.Status == "finished" || pipelineExecution.IsFinished() || pipelineExecution.IsFinishing() {
 		// step already processed
@@ -391,9 +400,17 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 	stepFinishedEvent.StepRetry = stepExecution.StepRetry
 	stepFinishedEvent.StepOutput = map[string]any{}
 	stepFinishedEvent.Output = &out
+
+	err = execution.ReleasePipelineExecutionStepSemaphore(pExecId, stepDefn)
+	if err != nil {
+		slog.Error("Error releasing pipeline execution step semaphore", "error", err)
+		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error releasing pipeline execution step semaphore: %s", err.Error()))
+	}
+
 	err = api.EsService.Raise(stepFinishedEvent)
 	if err != nil {
 		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
 	}
+
 	return true, stepExecution, nil
 }

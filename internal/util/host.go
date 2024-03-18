@@ -15,7 +15,7 @@ import (
 func GetHost() string {
 	host := viper.GetString(constants.ArgHost)
 	if host == "local" {
-		return "http://localhost:7103"
+		return localconstants.DefaultFlowpipeHost
 	}
 
 	return host
@@ -23,7 +23,7 @@ func GetHost() string {
 
 func GetBaseUrl() string {
 	baseUrl := viper.GetString(constants.ArgBaseUrl)
-	if baseUrl == "" {
+	if baseUrl == "" || baseUrl == localconstants.DefaultFlowpipeHost {
 		port := viper.GetInt(constants.ArgPort)
 		if port == 0 {
 			port = localconstants.DefaultServerPort
@@ -38,7 +38,7 @@ func GetHttpFormUrl(execId string, pExecId string, sExecId string) (string, erro
 
 	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
 		// in test env there's no global salt
-		return "http://localhost:7103/form/" + sExecId + "/abcdefg", nil
+		return localconstants.DefaultFlowpipeHost + "/form/" + sExecId + "/abcdefg", nil
 	}
 
 	baseUrl := GetBaseUrl()
