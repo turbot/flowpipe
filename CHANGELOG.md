@@ -4,10 +4,11 @@
 
 _Bug fixes_
 
-* Input step respects the `max_concurrency` argument. ([#798](https://github.com/turbot/flowpipe/issues/798))
+* Input step respects the `max_concurrency` argument. ([#798](https://github.com/turbot/flowpipe/issues/798)).
 * Erroneous error message detecting a missing credential where there isn't one.
 * HCL `try()` function should be evaluated at runtime rather than parse time.
-* Integration and input step URLs should use the provided custom host & port. ([#792](https://github.com/turbot/flowpipe/issues/792))
+* Integration and input step URLs should use the provided custom host & port. ([#792](https://github.com/turbot/flowpipe/issues/792)).
+* Shows filename and line number for invalid step references.
 
 ## v0.4.0 [2023-03-09]
 
