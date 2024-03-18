@@ -70,7 +70,7 @@ Check out [Flowpipe samples](https://hub.flowpipe.io/?type=sample) for ready-to-
 
 ## Developing
 
-If you want to help develop the core Flowpipe binary, these are the steps to build it.
+If you want to help develop the Flowpipe binary, these are the steps to build it.
 
 <details>
 <summary>Clone</summary>
@@ -142,8 +142,7 @@ Now run a simple pipeline:
 <details>
 <summary>DevContainer</summary>
 
-There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the Developer Setup section for more details.
-
+There are other third party tools that are required for the full suite that are not required for initial development tasks. We have built a [DevContainer](https://containers.dev/) that has all the required tools installed.
 
 1. Install [Docker](https://docs.docker.com/get-docker/)
 
@@ -157,10 +156,18 @@ There are other third party tools that are required for the full development sui
 
 1. Run `make` to build the Flowpipe binary.
 
+[Flowpipe DevContainer](https://github.com/turbot/flowpipe/pkgs/container/flowpipe-devcontainer) bundles the following:
+
+* [Java](https://openjdk.org/)
+* [Apache Maven](https://maven.apache.org/)
+* [Swag](https://github.com/swaggo/swag)
+* [MailHog](https://github.com/mailhog/MailHog)
+* [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator)
+
 </details>
 
-If you're interested in developing [Flowpipe mods](https://hub.flowpipe.io), see our [documentation for mod developers](https://flowpipe.io/docs/build).
 
+If you're interested in developing [Flowpipe mods](https://hub.flowpipe.io), see our [documentation for mod developers](https://flowpipe.io/docs/build).
 
 ## Turbot Pipes
 
