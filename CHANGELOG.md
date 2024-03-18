@@ -1,6 +1,6 @@
 # Flowpipe
 
-## v0.4.1 [tbd]
+## v0.4.1 [2023-03-19]
 
 _Bug fixes_
 
