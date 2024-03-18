@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	DefaultFlowpipeHost       = "http://localhost:7103"
 	DefaultServerPort         = 7103
 	DefaultListen             = "network"
 	DefaultExecutionMode      = ExecutionModeAsynchronous

@@ -6,13 +6,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/unrolled/secure"
 )
 
 func SecurityMiddleware(ctx context.Context) gin.HandlerFunc {
 	options := secure.Options{
 		// In development, many options are turned off automatically
-		IsDevelopment: viper.GetString("url.base") == "http://localhost:7103",
+		IsDevelopment: viper.GetString("url.base") == constants.DefaultFlowpipeHost,
 
 		// Redirect HTTP to HTTPS
 		SSLRedirect:          false,
