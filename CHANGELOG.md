@@ -1,15 +1,16 @@
 # Flowpipe
 
-## v0.4.1 [tbd]
+## v0.4.1 [2023-03-19]
 
 _Bug fixes_
 
-* Input step respects the `max_concurrency` argument. ([#798](https://github.com/turbot/flowpipe/issues/798))
+* Input step respects the `max_concurrency` argument. ([#798](https://github.com/turbot/flowpipe/issues/798)).
 * Erroneous error message detecting a missing credential where there isn't one.
 * HCL `try()` function should be evaluated at runtime rather than parse time.
-* Integration and input step URLs should use the provided custom host & port. ([#792](https://github.com/turbot/flowpipe/issues/792))
+* Integration and input step URLs should use the provided custom host & port. ([#792](https://github.com/turbot/flowpipe/issues/792)).
+* Shows filename and line number for invalid step references.
 
-## v0.4.0 [2023-03-09]
+## v0.4.0 [2023-03-14]
 
 _What's new?_
 
@@ -20,7 +21,7 @@ _Bug fixes_
 * Step output attribute should be called `response` not `result`. ([#789](https://github.com/turbot/flowpipe/issues/789))
 * Pipeline execution should not fail when a string argument is passed with double quotes. ([#791](https://github.com/turbot/flowpipe/issues/791))
 
-## v0.3.2 [2023-03-08]
+## v0.3.2 [2023-03-11]
 
 _Bug fixes_
 
