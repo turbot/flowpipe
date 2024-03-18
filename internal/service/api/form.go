@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 	"time"
@@ -146,6 +147,15 @@ func (api *APIService) postFormData(c *gin.Context) {
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
 		return
 	}
+
+	pipelineDefn, err := ex.PipelineDefinition(output.PipelineExecutionID)
+	if err != nil {
+		common.AbortWithError(c, perr.InternalWithMessage(fmt.Sprintf("error getting pipeline definition: %s", err.Error())))
+		return
+	}
+
+	stepDefn := pipelineDefn.GetStep(stepExecution.Name)
+
 	if !httpFormValidateNotifiers(stepExecution) {
 		// if not a valid notifier for this endpoint return NotFound
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("step execution %s not found", output.StepExecutionID)))
@@ -202,7 +212,7 @@ func (api *APIService) postFormData(c *gin.Context) {
 					}
 				}
 			}
-			err := api.finishInputStepFromForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, val)
+			err := api.finishInputStepFromForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, stepDefn, val)
 			if err != nil {
 				common.AbortWithError(c, err)
 				return
@@ -331,8 +341,8 @@ func httpFormValidateNotifiers(sexec *execution.StepExecution) bool {
 	return false
 }
 
-func (api *APIService) finishInputStepFromForm(execID, pexecID string, sexec *execution.StepExecution, value any) error {
-	evt := &event.Event{ExecutionID: execID, CreatedAt: time.Now()}
+func (api *APIService) finishInputStepFromForm(execId, pExecId string, stepExecution *execution.StepExecution, stepDefn modconfig.PipelineStep, value any) error {
+	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
 	stepFinishedEvent, err := event.NewStepFinished()
 	if err != nil {
 		return perr.InternalWithMessage("unable to create step finished event: " + err.Error())
@@ -346,16 +356,24 @@ func (api *APIService) finishInputStepFromForm(execID, pexecID string, sexec *ex
 	}
 
 	stepFinishedEvent.Event = evt
-	stepFinishedEvent.PipelineExecutionID = pexecID
-	stepFinishedEvent.StepExecutionID = sexec.ID
-	stepFinishedEvent.StepForEach = sexec.StepForEach
-	stepFinishedEvent.StepLoop = sexec.StepLoop
-	stepFinishedEvent.StepRetry = sexec.StepRetry
+	stepFinishedEvent.PipelineExecutionID = pExecId
+	stepFinishedEvent.StepExecutionID = stepExecution.ID
+	stepFinishedEvent.StepForEach = stepExecution.StepForEach
+	stepFinishedEvent.StepLoop = stepExecution.StepLoop
+	stepFinishedEvent.StepRetry = stepExecution.StepRetry
 	stepFinishedEvent.StepOutput = make(map[string]any)
 	stepFinishedEvent.Output = &out
+
+	err = execution.ReleasePipelineExecutionStepSemaphore(pExecId, stepDefn)
+	if err != nil {
+		slog.Error("Error releasing pipeline execution step semaphore", "error", err)
+		return perr.InternalWithMessage(fmt.Sprintf("error releasing pipeline execution step semaphore: %s", err.Error()))
+	}
+
 	err = api.EsService.Raise(stepFinishedEvent)
 	if err != nil {
 		return perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
 	}
+
 	return err
 }

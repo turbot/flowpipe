@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.4.1 [tbd]
+
+_Bug fixes_
+
+* Input step respects the `max_concurrency` argument. ([#798](https://github.com/turbot/flowpipe/issues/798))
+
 ## v0.4.0 [2023-03-09]
 
 _What's new?_
