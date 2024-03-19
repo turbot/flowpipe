@@ -595,6 +595,81 @@ func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadataInPipe
 	assert.True(end.Sub(start) > 900*time.Millisecond)
 }
 
+func (suite *DefaultModTestSuite) TestInputStepError() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.input_step_error_out", 1*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("failed", pex.Status)
+	assert.Equal("Internal Error: all 1 notifications failed:\nslack server error: 777 status code 777\n", pex.Errors[0].Error.Detail)
+	assert.Equal(500, pex.Errors[0].Error.Status)
+}
+
+func (suite *DefaultModTestSuite) TestInputStepErrorIgnored() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.input_step_error_out_error_config", 1*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// Pipeline finished
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal(1, len(pex.StepStatus["input.test"]["0"].StepExecutions))
+
+	// but the step execution actually failed, but the error was ignored
+	assert.Equal("failed", pex.StepStatus["input.test"]["0"].StepExecutions[0].Status)
+}
+
+func (suite *DefaultModTestSuite) TestInputStepErrorRetried() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.input_step_error_out_retry", 1*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// Pipeline failed
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+
+	// retry max attempts = 3
+	assert.Equal(3, len(pex.StepStatus["input.test"]["0"].StepExecutions))
+
+	// but the step execution actually failed, but the error was ignored
+	assert.Equal("failed", pex.StepStatus["input.test"]["0"].StepExecutions[0].Status)
+}
+
 func TestDefaultModTestingSuite(t *testing.T) {
 	suite.Run(t, &DefaultModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

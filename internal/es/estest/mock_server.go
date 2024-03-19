@@ -58,6 +58,13 @@ func mockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Path == "/bad_slack_integration" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(777)                                                // custom error code so we can check in the test
+		w.Write([]byte(`{"message": "This is a bad slack integration"}`)) //nolint:errcheck // just a test case
+		return
+	}
+
 	if r.URL.Path == "/special-case" {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

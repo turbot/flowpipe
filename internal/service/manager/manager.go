@@ -213,6 +213,7 @@ func (m *Manager) initializeResources() error {
 		error_helpers.FailOnError(err)
 
 		flowpipeConfig, ew := flowpipeconfig.LoadFlowpipeConfig(configPath)
+
 		// check for error
 		error_helpers.FailOnError(ew.Error)
 		ew.ShowWarnings()
