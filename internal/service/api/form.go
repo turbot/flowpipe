@@ -2,12 +2,11 @@ package api
 
 import (
 	"fmt"
-	"log/slog"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
@@ -212,7 +211,7 @@ func (api *APIService) postFormData(c *gin.Context) {
 					}
 				}
 			}
-			err := api.finishInputStepFromForm(output.ExecutionID, output.PipelineExecutionID, stepExecution, stepDefn, val)
+			err := api.finishInputStepFromForm(ex, stepExecution, pipelineDefn, stepDefn, val)
 			if err != nil {
 				common.AbortWithError(c, err)
 				return
@@ -341,13 +340,7 @@ func httpFormValidateNotifiers(sexec *execution.StepExecution) bool {
 	return false
 }
 
-func (api *APIService) finishInputStepFromForm(execId, pExecId string, stepExecution *execution.StepExecution, stepDefn modconfig.PipelineStep, value any) error {
-	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
-	stepFinishedEvent, err := event.NewStepFinished()
-	if err != nil {
-		return perr.InternalWithMessage("unable to create step finished event: " + err.Error())
-	}
-
+func (api *APIService) finishInputStepFromForm(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *modconfig.Pipeline, stepDefn modconfig.PipelineStep, value any) error {
 	out := modconfig.Output{
 		Data: map[string]any{
 			"value": value,
@@ -355,25 +348,7 @@ func (api *APIService) finishInputStepFromForm(execId, pExecId string, stepExecu
 		Status: "finished",
 	}
 
-	stepFinishedEvent.Event = evt
-	stepFinishedEvent.PipelineExecutionID = pExecId
-	stepFinishedEvent.StepExecutionID = stepExecution.ID
-	stepFinishedEvent.StepForEach = stepExecution.StepForEach
-	stepFinishedEvent.StepLoop = stepExecution.StepLoop
-	stepFinishedEvent.StepRetry = stepExecution.StepRetry
-	stepFinishedEvent.StepOutput = make(map[string]any)
-	stepFinishedEvent.Output = &out
-
-	err = execution.ReleasePipelineExecutionStepSemaphore(pExecId, stepDefn)
-	if err != nil {
-		slog.Error("Error releasing pipeline execution step semaphore", "error", err)
-		return perr.InternalWithMessage(fmt.Sprintf("error releasing pipeline execution step semaphore: %s", err.Error()))
-	}
-
-	err = api.EsService.Raise(stepFinishedEvent)
-	if err != nil {
-		return perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
-	}
+	err := command.EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, &out, api.EsService.EventBus)
 
 	return err
 }

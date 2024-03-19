@@ -7,18 +7,17 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/gin-gonic/gin"
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/service/api/common"
@@ -379,12 +378,6 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 		return false, nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid value(s) '%v' specified", value))
 	}
 
-	evt := &event.Event{ExecutionID: execId, CreatedAt: time.Now()}
-	stepFinishedEvent, err := event.NewStepFinished()
-	if err != nil {
-		return false, nil, perr.InternalWithMessage("unable to create step finished event: " + err.Error())
-	}
-
 	out := modconfig.Output{
 		Data: map[string]any{
 			"value": value,
@@ -392,22 +385,7 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 		Status: "finished",
 	}
 
-	stepFinishedEvent.Event = evt
-	stepFinishedEvent.PipelineExecutionID = pExecId
-	stepFinishedEvent.StepExecutionID = stepExecution.ID
-	stepFinishedEvent.StepForEach = stepExecution.StepForEach
-	stepFinishedEvent.StepLoop = stepExecution.StepLoop
-	stepFinishedEvent.StepRetry = stepExecution.StepRetry
-	stepFinishedEvent.StepOutput = map[string]any{}
-	stepFinishedEvent.Output = &out
-
-	err = execution.ReleasePipelineExecutionStepSemaphore(pExecId, stepDefn)
-	if err != nil {
-		slog.Error("Error releasing pipeline execution step semaphore", "error", err)
-		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error releasing pipeline execution step semaphore: %s", err.Error()))
-	}
-
-	err = api.EsService.Raise(stepFinishedEvent)
+	err = command.EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, &out, api.EsService.EventBus)
 	if err != nil {
 		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
 	}
