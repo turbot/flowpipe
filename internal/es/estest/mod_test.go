@@ -2654,6 +2654,136 @@ func (suite *ModTestSuite) TestContainerStep() {
 	assert.Equal("Line 3\n", lines[2].Line)
 }
 
+func (suite *ModTestSuite) TestContainerStepWithLoop() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.container_with_loop", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	// Validate inputs
+	input := pex.StepStatus["container.pipe"]["0"].StepExecutions[0].Input
+	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
+	assert.Equal("root", input[schema.AttributeTypeUser].(string))
+	assert.Equal(float64(60000), input[schema.AttributeTypeTimeout].(float64))
+	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
+	assert.Equal(float64(64), input[schema.AttributeTypeMemoryReservation].(float64))
+	assert.Equal(float64(256), input[schema.AttributeTypeMemorySwap].(float64))
+	assert.Equal(float64(10), input[schema.AttributeTypeMemorySwappiness].(float64))
+	assert.Equal(false, input[schema.AttributeTypeReadOnly].(bool))
+
+	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
+		assert.Fail("Cmd should be an array of strings")
+	}
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
+
+	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
+		assert.Fail("Cmd should be a map")
+	}
+	assert.Equal("bar", input[schema.AttributeTypeEnv].(map[string]interface{})["FOO"].(string))
+
+	output := pex.StepStatus["container.pipe"]["0"].StepExecutions[0].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+	assert.Equal("", output.Data["stderr"])
+	assert.Equal(0, output.Data["exit_code"])
+
+	// the second run should have a different memory
+
+	// first loop (after initial execution)
+	input = pex.StepStatus["container.pipe"]["0"].StepExecutions[1].Input
+	assert.Equal(float64(150), input[schema.AttributeTypeMemory].(float64))
+
+	output = pex.StepStatus["container.pipe"]["0"].StepExecutions[1].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+
+	// second loop
+	input = pex.StepStatus["container.pipe"]["0"].StepExecutions[2].Input
+	assert.Equal(float64(151), input[schema.AttributeTypeMemory].(float64))
+
+	output = pex.StepStatus["container.pipe"]["0"].StepExecutions[2].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+}
+
+func (suite *ModTestSuite) TestContainerStepWithLoopUpdateCmd() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.container_with_loop_update_cmd", 500*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 500*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	// Validate inputs
+	input := pex.StepStatus["container.pipe"]["0"].StepExecutions[0].Input
+	assert.Equal("alpine:3.7", input[schema.AttributeTypeImage].(string))
+	assert.Equal("root", input[schema.AttributeTypeUser].(string))
+	assert.Equal(float64(60000), input[schema.AttributeTypeTimeout].(float64))
+	assert.Equal(float64(128), input[schema.AttributeTypeMemory].(float64))
+	assert.Equal(float64(64), input[schema.AttributeTypeMemoryReservation].(float64))
+	assert.Equal(float64(256), input[schema.AttributeTypeMemorySwap].(float64))
+	assert.Equal(float64(10), input[schema.AttributeTypeMemorySwappiness].(float64))
+	assert.Equal(false, input[schema.AttributeTypeReadOnly].(bool))
+
+	if _, ok := input[schema.AttributeTypeCmd].([]interface{}); !ok {
+		assert.Fail("Cmd should be an array of strings")
+	}
+	assert.Equal(3, len(input[schema.AttributeTypeCmd].([]interface{})))
+
+	if _, ok := input[schema.AttributeTypeEnv].(map[string]interface{}); !ok {
+		assert.Fail("Cmd should be a map")
+	}
+	assert.Equal("bar", input[schema.AttributeTypeEnv].(map[string]interface{})["FOO"].(string))
+
+	output := pex.StepStatus["container.pipe"]["0"].StepExecutions[0].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("Line 1\nLine 2\nLine 3\n", output.Data["stdout"])
+	assert.Equal("", output.Data["stderr"])
+	assert.Equal(0, output.Data["exit_code"])
+
+	// the second run should have a different memory
+
+	// first loop (after initial execution)
+	input = pex.StepStatus["container.pipe"]["0"].StepExecutions[1].Input
+	assert.Equal(float64(150), input[schema.AttributeTypeMemory].(float64))
+
+	output = pex.StepStatus["container.pipe"]["0"].StepExecutions[1].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("0\n", output.Data["stdout"])
+
+	// second loop
+	input = pex.StepStatus["container.pipe"]["0"].StepExecutions[2].Input
+	assert.Equal(float64(151), input[schema.AttributeTypeMemory].(float64))
+
+	output = pex.StepStatus["container.pipe"]["0"].StepExecutions[2].Output
+	assert.Equal("finished", output.Status)
+	assert.Equal("1\n", output.Data["stdout"])
+}
+
 func (suite *ModTestSuite) TestContainerStepWithParam() {
 	assert := assert.New(suite.T())
 
