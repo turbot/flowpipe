@@ -158,7 +158,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			var nextStepAction modconfig.NextStepAction
 			var input modconfig.Input
 
-			if stepDefn.GetUnresolvedBodies()["loop"] != nil {
+			if !helpers.IsNil(stepDefn.GetLoopConfig()) {
 				// If the execution falls here, it means it's the beginning of the loop
 				// if it's part of a loop, it will be short circuited in the beginning of this for loop
 				evalContext = execution.AddLoop(nil, evalContext)

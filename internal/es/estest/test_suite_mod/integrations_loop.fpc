@@ -1,0 +1,23 @@
+notifier "notifier_start" {
+    notify {
+        integration = integration.http.default
+    }
+}
+
+notifier "notifier_0" {
+    notify {
+        integration = integration.http.default
+    }
+}
+
+notifier "notifier_1" {
+    notify {
+        integration = integration.http.default
+    }
+}
+
+notifier "notifier_2" {
+    notify {
+        integration = integration.http.default
+    }
+}

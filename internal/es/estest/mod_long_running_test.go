@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
@@ -19,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type ModLongRunningTestSuite struct {
@@ -107,9 +109,34 @@ func (suite *ModLongRunningTestSuite) TearDownSuite() {
 func (suite *ModLongRunningTestSuite) BeforeTest(suiteName, testName string) {
 
 }
-
 func (suite *ModLongRunningTestSuite) AfterTest(suiteName, testName string) {
 }
+
+func (suite *ModLongRunningTestSuite) TestSleepWithLoop() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_sleep", 5*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal(4, len(pex.StepStatus["sleep.sleep"]["0"].StepExecutions))
+
+	// Testing this loop config:
+	// loop {
+	//   until = loop.index > 2
+	//   duration = "${loop.index}s"
+	// }
+	assert.Equal("0s", pex.StepStatus["sleep.sleep"]["0"].StepExecutions[1].Input["duration"])
+	assert.Equal("1s", pex.StepStatus["sleep.sleep"]["0"].StepExecutions[2].Input["duration"])
+	assert.Equal("2s", pex.StepStatus["sleep.sleep"]["0"].StepExecutions[3].Input["duration"])
+
+}
+
 func TestModLongRunningTestingSuite(t *testing.T) {
 	suite.Run(t, &ModLongRunningTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

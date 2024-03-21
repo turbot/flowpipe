@@ -8,7 +8,6 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
@@ -555,11 +554,12 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modc
 
 	}
 
-	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+	loopConfig := stepDefn.GetLoopConfig()
+
 	var stepLoop *modconfig.StepLoop
-	if loopBlock != nil {
+	if !helpers.IsNil(loopConfig) {
 		var err error
-		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
+		stepLoop, err = calculateLoop(ctx, ex, loopConfig, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			slog.Error("Error calculating loop", "error", err)
 			// Failure from loop calculation ignores ignore = true and retry block
@@ -668,14 +668,7 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	return stepRetry, hcl.Diagnostics{}
 }
 
-func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopBlock hcl.Body, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
-
-	loopDefn := modconfig.GetLoopDefn(stepDefn.GetType())
-	if loopDefn == nil {
-		// We should never get here, because the loop block should have been validated
-		slog.Error("Unknown loop type", "type", stepDefn.GetType())
-		return nil, perr.InternalWithMessage("unkonwn loop type: " + stepDefn.GetType())
-	}
+func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopConfig modconfig.LoopDefn, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
 
 	// If this is the first iteration of the loop, the cmd.StepLoop should be nil
 	// thus the loop.index in the evaluation context should be 0
@@ -695,11 +688,6 @@ func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopBlo
 	// Because this IF is still part of the Iteration 0 loop.index should be 0
 	loopEvalContext := execution.AddLoop(stepLoop, evalContext)
 
-	attributes, diags := loopBlock.JustAttributes()
-	if len(diags) > 0 {
-		return nil, perr.InternalWithMessage("error getting loop attributes: " + diags.Error())
-	}
-
 	// We need to evaluate the "until" attribute separately than the rest of the loop body. Consider the following example:
 	//
 	// step "http" "http_list_pagination" {
@@ -714,15 +702,11 @@ func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopBlo
 	// The url may be invalid when until is reached, so we need to evaluate the until attribute first, independently,
 	// then evaluate the rest of the loop block
 
-	untilAttribute := attributes["until"]
-	if untilAttribute == nil {
-		return nil, perr.InternalWithMessage("loop block does not have an until attribute")
-	}
+	untilReached, diags := loopConfig.ResolveUntil(loopEvalContext)
 
 	// We have to evaluate the loop body here before the index is incremented to determine if the loop should run
 	// we will have to re-evaluate the loop body again after the index is incremented to get the correct values
 
-	untilReached, diags := untilAttribute.Expr.Value(loopEvalContext)
 	if len(diags) > 0 {
 		return nil, perr.InternalWithMessage("error evaluating until attribute: " + diags.Error())
 	}
@@ -735,18 +719,13 @@ func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopBlo
 	// The planner has no idea that the step is not yet finished. We have to tell the planner here that it needs to launch another step execution
 
 	// until has been reached so nothing to do
-	if untilReached.True() {
+	if untilReached {
 		newStepLoop := stepLoop
 		// complete the loop
 		// input is not required here
 		stepLoop.Input = nil
 		stepLoop.LoopCompleted = true
 		return newStepLoop, nil
-	}
-
-	diags = gohcl.DecodeBody(loopBlock, loopEvalContext, loopDefn)
-	if len(diags) > 0 {
-		return nil, perr.InternalWithMessage("error decoding loop block: " + diags.Error())
 	}
 
 	// Start with 1 because when we get here the first time, it was the 1st iteration of the loop (index = 0)
@@ -804,7 +783,7 @@ func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopBlo
 	//
 	evalContext = execution.AddLoop(stepLoop, evalContext)
 
-	newInput, err := loopDefn.UpdateInput(reevaluatedInput, evalContext)
+	newInput, err := loopConfig.UpdateInput(reevaluatedInput, evalContext)
 	if err != nil {
 		return nil, perr.InternalWithMessage("error updating input for loop: " + err.Error())
 	}

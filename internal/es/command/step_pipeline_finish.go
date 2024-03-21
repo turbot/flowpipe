@@ -14,7 +14,6 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/schema"
 )
 
 type StepPipelineFinishHandler CommandHandler
@@ -239,11 +238,11 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		return nil
 	}
 
-	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
+	loopConfig := stepDefn.GetLoopConfig()
 	var stepLoop *modconfig.StepLoop
-	if loopBlock != nil {
+	if loopConfig != nil {
 		var err error
-		stepLoop, err = calculateLoop(ctx, ex, loopBlock, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
+		stepLoop, err = calculateLoop(ctx, ex, loopConfig, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
 			if !perr.IsPerr(err) {
 				err = perr.InternalWithMessage(err.Error())
