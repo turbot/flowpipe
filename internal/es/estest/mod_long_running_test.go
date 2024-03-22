@@ -134,7 +134,64 @@ func (suite *ModLongRunningTestSuite) TestSleepWithLoop() {
 	assert.Equal("0s", pex.StepStatus["sleep.sleep"]["0"].StepExecutions[1].Input["duration"])
 	assert.Equal("1s", pex.StepStatus["sleep.sleep"]["0"].StepExecutions[2].Input["duration"])
 	assert.Equal("2s", pex.StepStatus["sleep.sleep"]["0"].StepExecutions[3].Input["duration"])
+}
 
+func (suite *ModLongRunningTestSuite) TestHttpWithLoop() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_http", 5*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal(4, len(pex.StepStatus["http.http"]["0"].StepExecutions))
+
+	assert.Equal("initial - 0", pex.StepStatus["http.http"]["0"].StepExecutions[1].Input["request_body"])
+	assert.Equal("initial - 0 - 1", pex.StepStatus["http.http"]["0"].StepExecutions[2].Input["request_body"])
+	assert.Equal("initial - 0 - 1 - 2", pex.StepStatus["http.http"]["0"].StepExecutions[3].Input["request_body"])
+}
+
+func (suite *ModLongRunningTestSuite) TestTransformWithLoop() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_transform", 5*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal(4, len(pex.StepStatus["transform.transform"]["0"].StepExecutions))
+
+	assert.Equal("initial value - 0", pex.StepStatus["transform.transform"]["0"].StepExecutions[1].Input["value"])
+	assert.Equal("initial value - 0 - 1", pex.StepStatus["transform.transform"]["0"].StepExecutions[2].Input["value"])
+	assert.Equal("initial value - 0 - 1 - 2", pex.StepStatus["transform.transform"]["0"].StepExecutions[3].Input["value"])
+}
+
+func (suite *ModLongRunningTestSuite) TestTransformWithLoopMap() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_transform_map", 5*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal(4, len(pex.StepStatus["transform.transform"]["0"].StepExecutions))
+
+	assert.Equal(map[string]interface{}{
+		"name": "victor - 0 - 1 - 2",
+		"age":  33,
+	}, pex.StepStatus["transform.transform"]["0"].StepExecutions[3].Input["value"])
 }
 
 func TestModLongRunningTestingSuite(t *testing.T) {
