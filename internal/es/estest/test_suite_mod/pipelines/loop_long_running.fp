@@ -54,3 +54,34 @@ pipeline "loop_transform_map" {
         }
     }
 }
+
+
+pipeline "loop_container" {
+
+  step "container" "container" {
+    image = "alpine:3.7"
+
+    cmd = [ "sh", "-c", "echo -n $FOO" ]
+
+    env = {
+      FOO = "bar"
+    }
+
+    timeout            = 60000 // in ms
+    memory             = 128
+    memory_reservation = 64
+    memory_swap        = 256
+    memory_swappiness  = 10
+    read_only          = false
+    user               = "root"
+
+
+    loop {
+        until = loop.index > 2
+        memory = 128 + loop.index
+        env = {
+          FOO = "bar - ${loop.index}"
+        }
+    }
+  }
+}

@@ -194,6 +194,25 @@ func (suite *ModLongRunningTestSuite) TestTransformWithLoopMap() {
 	}, pex.StepStatus["transform.transform"]["0"].StepExecutions[3].Input["value"])
 }
 
+func (suite *ModLongRunningTestSuite) TestContainerWithLoop() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_container", 5*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal(4, len(pex.StepStatus["container.container"]["0"].StepExecutions))
+
+	assert.Equal("bar - 0", pex.StepStatus["container.container"]["0"].StepExecutions[1].Output.Data["stdout"])
+	assert.Equal("bar - 1", pex.StepStatus["container.container"]["0"].StepExecutions[2].Output.Data["stdout"])
+	assert.Equal("bar - 2", pex.StepStatus["container.container"]["0"].StepExecutions[3].Output.Data["stdout"])
+}
+
 func TestModLongRunningTestingSuite(t *testing.T) {
 	suite.Run(t, &ModLongRunningTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

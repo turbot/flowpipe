@@ -62,9 +62,9 @@ func (cp *Container) ValidateInput(ctx context.Context, i modconfig.Input) error
 	}
 
 	// Validate the entrypoint attribute
-	if i[schema.AttributeTypeEntryPoint] != nil {
-		if _, ok := i[schema.AttributeTypeEntryPoint].([]interface{}); !ok {
-			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeEntryPoint + "' must be an array of strings")
+	if i[schema.AttributeTypeEntrypoint] != nil {
+		if _, ok := i[schema.AttributeTypeEntrypoint].([]interface{}); !ok {
+			return perr.BadRequestWithMessage("Container attribute '" + schema.AttributeTypeEntrypoint + "' must be an array of strings")
 		}
 	}
 
@@ -210,8 +210,8 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 		cConfig.Env = convertMapToStrings(input[schema.AttributeTypeEnv].(map[string]interface{}))
 	}
 
-	if input[schema.AttributeTypeEntryPoint] != nil {
-		cConfig.EntryPoint = convertToSliceOfString(input[schema.AttributeTypeEntryPoint].([]interface{}))
+	if input[schema.AttributeTypeEntrypoint] != nil {
+		cConfig.EntryPoint = convertToSliceOfString(input[schema.AttributeTypeEntrypoint].([]interface{}))
 	}
 
 	if input[schema.AttributeTypeUser] != nil {

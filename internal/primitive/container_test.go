@@ -169,7 +169,7 @@ func TestContainerStepInvalidEntrypoint(t *testing.T) {
 
 	input := modconfig.Input(map[string]interface{}{
 		schema.AttributeTypeImage:      "alpine:3.7",
-		schema.AttributeTypeEntryPoint: "echo",
+		schema.AttributeTypeEntrypoint: "echo",
 		schema.AttributeTypeEnv:        map[string]interface{}{"FOO": "bar"},
 		schema.AttributeTypeTimeout:    int64(120000),
 		schema.LabelName:               "container_test",

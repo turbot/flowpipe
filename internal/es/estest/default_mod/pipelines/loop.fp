@@ -1,4 +1,4 @@
-pipeline "simple_pipeline_loop_with_args" {
+pipeline "simple_pipeline_loop_with_args_and_function" {
 
   param "test_message" {
     type    = string
