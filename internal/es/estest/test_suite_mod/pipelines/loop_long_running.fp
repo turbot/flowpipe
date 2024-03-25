@@ -85,3 +85,58 @@ pipeline "loop_container" {
     }
   }
 }
+
+pipeline "loop_message" {
+
+    step "message" "message" {
+        notifier = notifier.default
+        text = "foo"
+
+        loop {
+            until = loop.index > 2
+            text = "${loop.index}"
+        }
+    }
+
+    output "val" {
+        value = step.message.message
+    }
+}
+
+
+pipeline "loop_message_2" {
+
+    step "message" "message" {
+        notifier = notifier.default
+        text = "foo"
+
+        loop {
+            until = loop.index > 2
+            text = "${loop.index}"
+            notifier = notifier["notifier_${loop.index}"]
+        }
+    }
+
+    output "val" {
+        value = step.message.message
+    }
+}
+
+pipeline "loop_message_failed" {
+
+    step "message" "message" {
+        notifier = notifier.default
+        text = "foo"
+
+        loop {
+            until = loop.index > 2
+            text = "${loop.index}"
+            notifier = notifier["notifiers_${loop.index}"]
+        }
+    }
+
+    output "val" {
+        value = step.message.message
+    }
+}
+
