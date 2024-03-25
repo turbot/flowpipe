@@ -237,8 +237,13 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 	case !extNotifySent && len(nErrors) > 0: // all external notifications failed
 		var detail string
 		for _, ne := range nErrors {
-			e := ne.(perr.ErrorModel)
-			detail += fmt.Sprintf("%s\n", e.Detail)
+			if e, ok := ne.(perr.ErrorModel); ok {
+				detail += fmt.Sprintf("%s\n", e.Detail)
+			} else if e, ok := ne.(slack.StatusCodeError); ok {
+				detail += fmt.Sprintf("%s\n", e.Error())
+			} else {
+				detail += fmt.Sprintf("%s\n", ne.Error())
+			}
 		}
 		return nil, perr.InternalWithMessage(fmt.Sprintf("all %d notifications failed:\n%s", len(nErrors), detail))
 	}

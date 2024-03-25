@@ -2,3 +2,16 @@ integration "slack" "my_default_slack_app" {
   token           = "xoxp-222223"
   signing_secret  = "Q#$$#@#$$#W"
 }
+
+
+integration "slack" "bad_slack_integration" {
+  webhook_url = "http://localhost:7104/bad_slack_integration"
+}
+
+
+notifier "bad_slack_notifier" {
+  notify {
+    integration = integration.slack.bad_slack_integration
+    channel     = "my_channel"
+  }
+}

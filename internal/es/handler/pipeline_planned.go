@@ -10,7 +10,6 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/json"
 )
@@ -122,9 +121,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			continue
 		}
 
-		loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
 		var stepLoop *modconfig.StepLoop
-		if loopBlock != nil {
+		if !helpers.IsNil(stepDefn.GetLoopConfig()) {
 			stepLoop = &modconfig.StepLoop{
 				Index: 0,
 			}

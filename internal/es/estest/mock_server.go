@@ -3,6 +3,7 @@ package estest
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -51,10 +52,40 @@ func basicAuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func loopHttpHandler(w http.ResponseWriter, r *http.Request) {
+
+	// this handler just return the request body
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		// Handle error
+		http.Error(w, "Error reading request body", http.StatusInternalServerError)
+		return
+	}
+
+	// Convert the body to a string
+	bodyString := string(body)
+	w.Write([]byte(bodyString)) //nolint:errcheck // just a test case
+}
+
 func mockHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Path == "/basic-auth-01" {
 		basicAuthHandler(w, r)
+		return
+	}
+
+	if r.URL.Path == "/loop_http" {
+		loopHttpHandler(w, r)
+		return
+	}
+
+	if r.URL.Path == "/bad_slack_integration" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(777)                                                // custom error code so we can check in the test
+		w.Write([]byte(`{"message": "This is a bad slack integration"}`)) //nolint:errcheck // just a test case
 		return
 	}
 

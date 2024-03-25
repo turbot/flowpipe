@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"golang.org/x/sync/semaphore"
@@ -14,13 +15,14 @@ func pipelineStepSemaphoreCacheKey(pipelineExecutionID string, stepDefn modconfi
 	return pipelineExecutionID + "-" + stepDefn.GetFullyQualifiedName()
 }
 
-func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep) error {
+func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) error {
 	if stepDefn == nil || pipelineExecutionID == "" {
 		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step semaphore")
 		return nil
 	}
 
-	if stepDefn.GetMaxConcurrency() == nil {
+	stepDefnMaxConcurrency := stepDefn.GetMaxConcurrency(evalContext)
+	if stepDefnMaxConcurrency == nil {
 		return nil
 	}
 
@@ -31,7 +33,7 @@ func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modc
 	var sem *semaphore.Weighted
 	if !found {
 
-		sem = semaphore.NewWeighted(int64(*stepDefn.GetMaxConcurrency()))
+		sem = semaphore.NewWeighted(int64(*stepDefnMaxConcurrency))
 		// Effectively forever
 		cache.GetCache().SetWithTTL(cacheKey, sem, 10*365*24*time.Hour)
 	}
