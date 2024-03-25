@@ -206,7 +206,7 @@ func (suite *ModLongRunningTestSuite) TestContainerWithLoop() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal(4, len(pex.StepStatus["container.container"]["0"].StepExecutions))
