@@ -73,17 +73,23 @@ pipeline "with_functions_no_env_var" {
         source  = "./functions/hello-nodejs"
         event   = param.event
         timeout = "60s"
+        loop {
+            until = loop.index  > 1
+        }
     }
 
     output "val" {
-        value = step.function.hello_nodejs_step.result.body.message
+        value = step.function.hello_nodejs_step
     }
+    // output "val" {
+    //     value = step.function.hello_nodejs_step.response.body.message
+    // }
 
-    output "env" {
-        value = step.function.hello_nodejs_step.result.body.env
-    }
+    // output "env" {
+    //     value = step.function.hello_nodejs_step.response.body.env
+    // }
 
-    output "status_code" {
-        value = step.function.hello_nodejs_step.result.statusCode
-    }
+    // output "status_code" {
+    //     value = step.function.hello_nodejs_step.response.statusCode
+    // }
 }
