@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -146,7 +147,7 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 		}
 
 		forEach := stepDefn.GetForEach() != nil
-		loop := stepDefn.GetUnresolvedBodies()["loop"] != nil
+		isThereLoopConfig := !helpers.IsNil(stepDefn.GetLoopConfig())
 
 		if !forEach {
 			if len(stepStatus) > 1 {
@@ -168,7 +169,7 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 			//
 			// But the index in the EvalContext should still be "0", "1", "2"
 
-			singleStepValueMap, err := buildSingleStepStatusOutput(stepName, loop, singleStepStatus)
+			singleStepValueMap, err := buildSingleStepStatusOutput(stepName, isThereLoopConfig, singleStepStatus)
 
 			if err != nil {
 				return nil, err
@@ -185,7 +186,7 @@ func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, erro
 				if singleStepStatus == nil || len(singleStepStatus.StepExecutions) == 0 {
 					continue
 				}
-				singleStepValueMap, err := buildSingleStepStatusOutput(stepName, loop, singleStepStatus)
+				singleStepValueMap, err := buildSingleStepStatusOutput(stepName, isThereLoopConfig, singleStepStatus)
 
 				if err != nil {
 					return nil, err

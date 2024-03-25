@@ -10,7 +10,6 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 )
 
@@ -117,8 +116,8 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 
 	// First thing first .. before we run the planner (either pipeline plan or step for each plan),
 	// check if we are in a loop. If we are in a loop start the next loop
-	loopBlock := stepDefn.GetUnresolvedBodies()[schema.BlockTypeLoop]
-	if loopBlock != nil && evt.StepLoop != nil && !evt.StepLoop.LoopCompleted {
+	loopConfig := stepDefn.GetLoopConfig()
+	if !helpers.IsNil(loopConfig) && evt.StepLoop != nil && !evt.StepLoop.LoopCompleted {
 		cmd := event.NewStepQueueFromPipelineStepFinishedForLoop(evt, stepName)
 		return h.CommandBus.Send(ctx, cmd)
 	}

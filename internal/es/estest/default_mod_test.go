@@ -211,7 +211,7 @@ func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.simple_pipeline_loop_with_args", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.simple_pipeline_loop_with_args_and_function", 100*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)
