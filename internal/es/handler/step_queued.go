@@ -37,9 +37,22 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 		}
 	}()
 
-	_, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	ex, pipelineDefn, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
 	if err != nil {
 		slog.Error("step_queued: Error loading pipeline execution", "error", err)
+		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(evt, err)))
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+
+		return nil
+	}
+
+	pe := ex.PipelineExecutions[evt.PipelineExecutionID]
+
+	evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(evt, err)))
 		if err != nil {
 			slog.Error("Error publishing event", "error", err)
@@ -79,7 +92,7 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 			return
 		}
 
-		err = execution.GetPipelineExecutionStepSemaphore(evt.PipelineExecutionID, stepDefn)
+		err = execution.GetPipelineExecutionStepSemaphore(evt.PipelineExecutionID, stepDefn, evalContext)
 		if err != nil {
 			err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(evt, err)))
 			if err != nil {
