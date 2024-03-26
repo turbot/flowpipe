@@ -3999,6 +3999,55 @@ func (suite *ModTestSuite) TestInputWithEmailNotifierNoRecipients() {
 	assert.Contains(pex.Errors[0].Error.Error(), "email notifications require recipients; one of 'to', 'cc' or 'bcc' need to be set")
 }
 
+func (suite *ModTestSuite) TestMessageStepWithThrow() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.message_step_with_throw", 40*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 40*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "throw here")
+	assert.Equal(461, pex.Errors[0].Error.Status)
+}
+
+// TODO: This actually calls slack... figure out a mocked approach or not test success path?
+func (suite *ModTestSuite) TestMessageStepBadSlack() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.message_step_bad_slack_call", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("failed", pex.Status)
+	assert.Equal(1, len(pex.Errors))
+	// assert.Equal(1, len(pex.Errors))
+	assert.Contains(pex.Errors[0].Error.Error(), "slack server error: 404 Not Found")
+}
+
+func (suite *ModTestSuite) TestMessageStepBadSlackIgnored() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.message_step_bad_slack_call_ignored", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	// pipeline finished successfully but the step failed
+	assert.Equal("failed", pex.StepStatus["message.message"]["0"].StepExecutions[0].Status)
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
