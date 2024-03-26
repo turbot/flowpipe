@@ -1,5 +1,13 @@
 # Flowpipe
 
+## v0.4.2 [2023-03-26]
+
+_Bug fixes_
+
+* `loop` block now works in `container`, `function`, `message` and `input` steps.
+* Use HCL expressions in `max_concurrency` step argument. ([#800](https://github.com/turbot/flowpipe/issues/800)).
+* `throw`, `retry` and `error` block now works for `input` step.
+
 ## v0.4.1 [2023-03-19]
 
 _Bug fixes_
