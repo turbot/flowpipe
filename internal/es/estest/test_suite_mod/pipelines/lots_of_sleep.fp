@@ -16,6 +16,21 @@ pipeline "lots_of_sleep_bound" {
     }
 }
 
+pipeline "lots_of_nested_pipeline" {
+    step "pipeline" "pipeline" {
+        for_each = [1, 2, 3, 4, 5, 6, 7]
+        max_concurrency = 2
+        pipeline = pipeline.nested
+    }
+}
+
+pipeline "nested" {
+    step "transform" "transform" {
+        value = "foo"
+    }
+}
+
+
 pipeline "lots_of_sleep_bound_with_param" {
     param "concurrency" {
         default = 1

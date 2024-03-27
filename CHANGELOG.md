@@ -5,6 +5,7 @@
 _Bug fixes_
 
 * Misleading error message for invalid step dependencies. ([#816](https://github.com/turbot/flowpipe/issues/816)).
+* Respect `max_concurrency` in `pipeline` and `input` steps. ([#815](https://github.com/turbot/flowpipe/issues/815)).
 
 ## v0.4.2 [2023-03-26]
 
