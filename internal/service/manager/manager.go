@@ -186,11 +186,6 @@ func (m *Manager) initializeModDirectory() error {
 		}
 	}
 
-	err = store.InitializeFlowpipeDB()
-	if err != nil {
-		return err
-	}
-
 	// Force cleanup if it hasn't run for 1 day
 	store.ForceCleanup()
 

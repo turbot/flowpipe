@@ -46,7 +46,20 @@ func InitializeFlowpipeDB() error {
 		return err
 	}
 
-	db, err := OpenFlowpipeDB()
+	dbPath := filepaths.FlowpipeDBFileName()
+
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+
+	// Enable foreign key constraints
+	_, err = db.Exec("PRAGMA foreign_keys=ON")
+	if err != nil {
+		slog.Error("error enabling foreign key constraints", "error", err)
+		return err
+	}
+
 	if err != nil {
 		return err
 	}
@@ -153,7 +166,19 @@ func InitializeFlowpipeDB() error {
 }
 
 func OpenFlowpipeDB() (*sql.DB, error) {
+
 	dbPath := filepaths.FlowpipeDBFileName()
+
+	_, err := os.Stat(dbPath)
+
+	if os.IsNotExist(err) {
+		slog.Debug("flowpipe.db does not exist, creating it")
+		err := InitializeFlowpipeDB()
+		if err != nil {
+			slog.Error("error initializing flowpipe.db", "error", err)
+			return nil, err
+		}
+	}
 
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {

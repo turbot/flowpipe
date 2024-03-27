@@ -109,6 +109,16 @@ func CleanupRunner() {
 
 // Force cleanup run if we haven't run it more than 1 day
 func ForceCleanup() {
+	// can only clean up if flowpipe.db exist
+	dbPath := filepaths.FlowpipeDBFileName()
+
+	_, err := os.Stat(dbPath)
+
+	if os.IsNotExist(err) {
+		slog.Debug("Skipping force cleanup as flowpipe.db does not exist")
+		return
+	}
+
 	slog.Debug("Checking if cleanup must be run")
 
 	sql := `select value from internal where name = 'last_cleanup'`
