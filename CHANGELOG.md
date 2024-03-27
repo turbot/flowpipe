@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.4.3 [tbd]
+
+_Bug fixes_
+
+* Misleading error message for invalid step dependencies. ([#816](https://github.com/turbot/flowpipe/issues/816)).
+
 ## v0.4.2 [2023-03-26]
 
 _Bug fixes_
