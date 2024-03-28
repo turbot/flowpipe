@@ -15,7 +15,7 @@ import (
 
 func FlowpipeLogger() *slog.Logger {
 	handlerOptions := &slog.HandlerOptions{
-		Level: getLogLevel(),
+		Level: GetLogLevel(),
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			sanitized := sanitize.Instance.SanitizeKeyValue(a.Key, a.Value.Any())
 
@@ -57,7 +57,7 @@ func SetDefaultLogger() {
 	slog.SetDefault(logger)
 }
 
-func getLogLevel() slog.Leveler {
+func GetLogLevel() slog.Leveler {
 	logLevel := os.Getenv(app_specific.EnvLogLevel)
 
 	if logLevel == "" {

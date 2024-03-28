@@ -217,6 +217,15 @@ func (m *Manager) initializeResources() error {
 		// effectively forever .. we don't want to expire the config
 		if flowpipeConfig != nil {
 			cache.GetCache().SetWithTTL(fpconstants.FlowpipeConfigCacheKey, flowpipeConfig, 24*7*52*99*time.Hour)
+			for _, c := range flowpipeConfig.Integrations {
+				slog.Debug("Integration loaded", "name", c.GetHclResourceImpl().FullName)
+			}
+
+			for _, c := range flowpipeConfig.Credentials {
+				if !strings.HasSuffix(c.GetHclResourceImpl().FullName, ".default") {
+					slog.Debug("Credential loaded", "name", c.GetHclResourceImpl().FullName)
+				}
+			}
 		}
 
 		err = m.cacheConfigData()
