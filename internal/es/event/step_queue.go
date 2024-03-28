@@ -2,9 +2,6 @@ package event
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/schema"
-	"log/slog"
-	"strings"
 
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -64,8 +61,10 @@ func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName strin
 		cmd.PipelineExecutionID = e.PipelineExecutionID
 	}
 
+	extendedInput := util.ExtendInputs(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, stepName, *e.StepLoop.Input)
+
 	cmd.StepName = stepName
-	cmd.StepInput = *e.StepLoop.Input
+	cmd.StepInput = extendedInput
 	cmd.StepForEach = e.StepForEach
 	cmd.StepLoop = e.StepLoop
 	cmd.StepRetry = e.StepRetry
@@ -105,7 +104,7 @@ func NewStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconf
 		return nil, perr.BadRequestWithMessage(fmt.Sprintf("missing pipeline execution ID in pipeline planned event: %v", e))
 	}
 
-	extendedInput := extendInputs(cmd, e.StepName, nextStep.Input)
+	extendedInput := util.ExtendInputs(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, e.StepName, nextStep.Input)
 	cmd.StepName = e.StepName
 	cmd.StepInput = extendedInput
 	cmd.StepForEach = nextStep.StepForEach
@@ -129,58 +128,12 @@ func StepQueueForPipelinePlanned(e *PipelinePlanned) StepQueueOption {
 
 func StepQueueWithStep(name string, input modconfig.Input, stepForEach *modconfig.StepForEach, stepLoop *modconfig.StepLoop, nextStepAction modconfig.NextStepAction) StepQueueOption {
 	return func(cmd *StepQueue) error {
-		extendedInput := extendInputs(cmd, name, input)
+		extendedInput := util.ExtendInputs(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, name, input)
 		cmd.StepName = name
 		cmd.StepInput = extendedInput
 		cmd.StepForEach = stepForEach
 		cmd.StepLoop = stepLoop
 		cmd.NextStepAction = nextStepAction
 		return nil
-	}
-}
-
-// TODO: refactor/tidy
-// extendInputs is only relevant for the "input step". This is the best location we can find right now.
-//
-// We have tried to encapsulate this in the:
-// 1) Step Definition's getInput() in pipe-fittings, but it needs the salt and we believe that it's not appropriate to use the salt in pipe-fittings.
-// 2) In the primitive itself, but it's too late. We need this information in the Event for the remote CLI use case.
-func extendInputs(cmd *StepQueue, stepName string, input modconfig.Input) modconfig.Input {
-	stepType := strings.Split(stepName, ".")[0]
-	switch stepType {
-	case "input":
-		if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
-			if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
-				for _, n := range notifies {
-					if notify, ok := n.(map[string]any); ok {
-						integration := notify["integration"].(map[string]any)
-						integrationType := integration["type"].(string)
-						switch integrationType {
-						case schema.IntegrationTypeEmail, schema.IntegrationTypeHttp:
-							formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
-							if err != nil {
-								slog.Error("Failed to get http form URL", "error", err)
-							} else {
-								input["form_url"] = formUrl
-							}
-							return input
-						default:
-							// slack, msteams, etc - do nothing
-						}
-					}
-				}
-			} else {
-				formUrl, err := util.GetHttpFormUrl(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID)
-				if err != nil {
-					slog.Error("Failed to get http form URL", "error", err)
-				} else {
-					input["form_url"] = formUrl
-				}
-				return input
-			}
-		}
-		return input
-	default:
-		return input
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/atc0005/go-teams-notify/v2/messagecard"
 	"github.com/slack-go/slack"
+	fconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
@@ -296,7 +297,7 @@ func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, m
 				case schema.IntegrationTypeEmail:
 					e := NewInputIntegrationEmail(base)
 
-					if formUrl, ok := input["form_url"].(string); ok {
+					if formUrl, ok := input[fconstants.FormUrl].(string); ok {
 						e.FormUrl = formUrl
 					}
 

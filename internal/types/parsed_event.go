@@ -15,6 +15,7 @@ import (
 	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/logrusorgru/aurora"
+	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -755,7 +756,7 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 
 		// Nasty .. but form_url is a special case where we "extend the input" (see extendInput function). It need to be removed
 		// because it's not a real input to the step.
-		if key == "form_url" {
+		if key == constants.FormUrl {
 			continue
 		}
 
@@ -785,7 +786,7 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 
 func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOptions) (string, *[]string) {
 	au := aurora.NewAurora(opts.ColorEnabled)
-	formUrl, hasFormUrl := input["form_url"].(string)
+	formUrl, hasFormUrl := input[constants.FormUrl].(string)
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 			switch len(notifies) {

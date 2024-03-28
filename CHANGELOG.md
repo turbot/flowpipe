@@ -7,6 +7,7 @@ _Bug fixes_
 * Lazy create `flowpipe.db`. ([#808](https://github.com/turbot/flowpipe/issues/808)).
 * Respect `max_concurrency` in `pipeline` and `input` steps. ([#815](https://github.com/turbot/flowpipe/issues/815)).
 * Misleading error message for invalid step dependencies. ([#816](https://github.com/turbot/flowpipe/issues/816)).
+* HTTP integration address is shown correctly at the beginning of each input step loop. ([#818](https://github.com/turbot/flowpipe/issues/818).
 
 ## v0.4.2 [2023-03-26]
 

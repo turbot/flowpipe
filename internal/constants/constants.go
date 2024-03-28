@@ -14,6 +14,8 @@ const (
 	ExecutionModeAsynchronous = "asynchronous"
 
 	MaxScanSize = bufio.MaxScanTokenSize * 40
+
+	FormUrl = "form_url"
 )
 
 const FlowpipeSampleContent = `
