@@ -1,15 +1,15 @@
 # Flowpipe
 
-## v0.4.3 [tbd]
+## v0.4.3 [2024-04-01]
 
 _Bug fixes_
 
 * Lazy create `flowpipe.db`. ([#808](https://github.com/turbot/flowpipe/issues/808)).
 * Respect `max_concurrency` in `pipeline` and `input` steps. ([#815](https://github.com/turbot/flowpipe/issues/815)).
 * Misleading error message for invalid step dependencies. ([#816](https://github.com/turbot/flowpipe/issues/816)).
-* HTTP integration address is shown correctly at the beginning of each input step loop. ([#818](https://github.com/turbot/flowpipe/issues/818).
+* HTTP integration address is shown correctly at the beginning of each input step loop. ([#818](https://github.com/turbot/flowpipe/issues/818)).
 
-## v0.4.2 [2023-03-26]
+## v0.4.2 [2024-03-26]
 
 _Bug fixes_
 
@@ -17,7 +17,7 @@ _Bug fixes_
 * Use HCL expressions in `max_concurrency` step argument. ([#800](https://github.com/turbot/flowpipe/issues/800)).
 * `throw`, `retry` and `error` block now works for `input` step.
 
-## v0.4.1 [2023-03-19]
+## v0.4.1 [2024-03-19]
 
 _Bug fixes_
 
@@ -27,7 +27,7 @@ _Bug fixes_
 * Integration and input step URLs should use the provided custom host & port. ([#792](https://github.com/turbot/flowpipe/issues/792)).
 * Shows filename and line number for invalid step references.
 
-## v0.4.0 [2023-03-14]
+## v0.4.0 [2024-03-14]
 
 _What's new?_
 
@@ -38,7 +38,7 @@ _Bug fixes_
 * Step output attribute should be called `response` not `result`. ([#789](https://github.com/turbot/flowpipe/issues/789))
 * Pipeline execution should not fail when a string argument is passed with double quotes. ([#791](https://github.com/turbot/flowpipe/issues/791))
 
-## v0.3.2 [2023-03-11]
+## v0.3.2 [2024-03-11]
 
 _Bug fixes_
 
