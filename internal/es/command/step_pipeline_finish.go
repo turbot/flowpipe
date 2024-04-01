@@ -260,6 +260,11 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		}
 	}
 
+	err = execution.ReleasePipelineExecutionStepSemaphore(cmd.PipelineExecutionID, stepDefn)
+	if err != nil {
+		return h.EventBus.Publish(ctx, event.NewPipelineFailedFromStepPipelineFinish(cmd, err))
+	}
+
 	e, err := event.NewStepFinished(event.ForPipelineStepFinish(cmd))
 	e.StepLoop = stepLoop
 

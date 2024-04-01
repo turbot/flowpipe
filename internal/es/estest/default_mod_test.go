@@ -15,9 +15,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	fconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
+
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	putils "github.com/turbot/pipe-fittings/utils"
@@ -463,7 +465,7 @@ func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 
 	assert.NotNil(stepExecution)
 	assert.Equal("starting", stepExecution.Status)
-	assert.True(strings.HasPrefix(stepExecution.Input["form_url"].(string), "http://localhost:7103/form"), "form_url should start with http://localhost:7103/form but "+stepExecution.Input["form_url"].(string))
+	assert.True(strings.HasPrefix(stepExecution.Input[fconstants.FormUrl].(string), "http://localhost:7103/form"), "form_url should start with http://localhost:7103/form but "+stepExecution.Input["form_url"].(string))
 }
 
 func (suite *DefaultModTestSuite) TestInputStepOptionResolution() {

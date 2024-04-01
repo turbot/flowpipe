@@ -34,15 +34,15 @@ func GetBaseUrl() string {
 	return baseUrl
 }
 
-func GetHttpFormUrl(execId string, pExecId string, sExecId string) (string, error) {
+func GetHttpFormUrl(executionId string, pipelineExecutionId string, stepExecutionId string) (string, error) {
 
 	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
 		// in test env there's no global salt
-		return localconstants.DefaultFlowpipeHost + "/form/" + sExecId + "/abcdefg", nil
+		return localconstants.DefaultFlowpipeHost + "/form/" + stepExecutionId + "/abcdefg", nil
 	}
 
 	baseUrl := GetBaseUrl()
-	key := db.MapStepExecutionID(execId, pExecId, sExecId)
+	key := db.MapStepExecutionID(executionId, pipelineExecutionId, stepExecutionId)
 
 	salt, err := GetGlobalSalt()
 	if err != nil {

@@ -349,6 +349,10 @@ func (api *APIService) finishInputStepFromForm(ex *execution.ExecutionInMemory, 
 	}
 
 	err := command.EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, &out, api.EsService.EventBus)
+	if err != nil {
+		return err
+	}
 
+	err = execution.ReleasePipelineExecutionStepSemaphore(stepExecution.PipelineExecutionID, stepDefn)
 	return err
 }

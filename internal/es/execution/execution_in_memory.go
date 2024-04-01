@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/pipe-fittings/constants"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
@@ -135,6 +136,17 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 		} else {
 			params[k] = v.Default
+		}
+	}
+
+	if log.GetLogLevel().Level() == slog.LevelDebug {
+		for k, p := range params {
+			goVal, err := hclhelpers.CtyToGo(p)
+			if err != nil {
+				slog.Debug("Error converting cty value to Go value", "error", err)
+			} else {
+				slog.Debug("Parsed param value", "name", k, "value", goVal)
+			}
 		}
 	}
 

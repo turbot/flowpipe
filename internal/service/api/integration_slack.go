@@ -390,5 +390,10 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error raising step finished event: %s", err.Error()))
 	}
 
+	err = execution.ReleasePipelineExecutionStepSemaphore(stepExecution.PipelineExecutionID, stepDefn)
+	if err != nil {
+		return false, nil, perr.InternalWithMessage(fmt.Sprintf("error releasing step semaphore: %s", err.Error()))
+	}
+
 	return true, stepExecution, nil
 }
