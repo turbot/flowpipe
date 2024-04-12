@@ -1,5 +1,13 @@
 # Flowpipe
 
+## v0.4.4 [tbd]
+
+_Bug fixes_
+
+* File watcher now correctly detect changes in the `loop` block. ([#808](https://github.com/turbot/flowpipe/issues/808)).
+* Duplicate step names are now detected and reported as an error. ([#820](https://github.com/turbot/flowpipe/issues/820)).
+
+
 ## v0.4.3 [2024-04-01]
 
 _Bug fixes_
