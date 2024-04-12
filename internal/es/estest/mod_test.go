@@ -3810,6 +3810,76 @@ func (suite *ModTestSuite) TestSqliteQueryPathAlternateC() {
 	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
 }
 
+func (suite *ModTestSuite) TestSqliteQueryWithParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqllite_query_wity_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(1, len(pex.StepExecutions))
+	assert.Equal(1, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
+}
+
+func (suite *ModTestSuite) TestSqliteQueryWithParam2() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqllite_query_wity_param_2", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(1, len(pex.StepExecutions))
+	assert.Equal(2, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
+	assert.Equal("John", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
+}
+
+func (suite *ModTestSuite) TestSqliteQueryWithParam2b() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"name_2": "Jill",
+	}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqllite_query_wity_param_2", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(1, len(pex.StepExecutions))
+	assert.Equal(2, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
+	assert.Equal("Jill", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
+}
+
 func (suite *ModTestSuite) TestDuckDBQuery() {
 	assert := assert.New(suite.T())
 
