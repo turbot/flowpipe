@@ -76,7 +76,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
 				slog.Debug("Step execution is an input step, not releasing semaphore", "step_name", cmd.StepName, "pipeline_execution_id", cmd.PipelineExecutionID)
 				return
-			} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline {
+			} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline && cmd.NextStepAction != modconfig.NextStepActionSkip {
 				slog.Debug("Step execution is a pipeline step, not releasing semaphore", "step_name", cmd.StepName, "pipeline_execution_id", cmd.PipelineExecutionID)
 				return
 			}

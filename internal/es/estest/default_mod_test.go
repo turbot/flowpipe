@@ -397,6 +397,30 @@ func (suite *DefaultModTestSuite) TestCredInOutput() {
 	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val"])
 }
 
+func (suite *DefaultModTestSuite) TestStalledPipelineWithIf() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// default_mod.pipeline.caller was failing due to issue https://github.com/turbot/flowpipe/issues/836
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.caller", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors))
+
+}
+
 func (suite *DefaultModTestSuite) TestDynamicCredResolution() {
 	assert := assert.New(suite.T())
 
