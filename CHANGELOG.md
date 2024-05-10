@@ -1,5 +1,12 @@
 # Flowpipe
 
+## v0.4.5 [2024-05-37]
+
+_Bug fixes_
+
+* Trigger Documentation supports functions. ([#394](https://github.com/turbot/pipe-fittings/issues/394)).
+* Pipeline execution no longer stalls when concurrency limit is applied and if clause returns false. ([#836](https://github.com/turbot/flowpipe/issues/836)).
+
 ## v0.4.4 [2024-04-23]
 
 _Bug fixes_
