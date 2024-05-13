@@ -1,11 +1,17 @@
 # Flowpipe
 
-## v0.4.5 [2024-05-37]
+## v0.4.6 [2024-05-14]
 
 _Bug fixes_
 
-* Trigger Documentation supports functions. ([#394](https://github.com/turbot/pipe-fittings/issues/394)).
+* Load `locals` in order of dependency. ([#399](https://github.com/turbot/pipe-fittings/issues/399)).
+
+## v0.4.5 [2024-05-10]
+
+_Bug fixes_
+
 * Pipeline execution no longer stalls when concurrency limit is applied and if clause returns false. ([#836](https://github.com/turbot/flowpipe/issues/836)).
+* Trigger's common attributes (title, description, tags, documentation) allow functions and expresions. ([#394](https://github.com/turbot/pipe-fittings/issues/394)).
 
 ## v0.4.4 [2024-04-23]
 
