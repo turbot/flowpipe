@@ -1,20 +1,18 @@
 {
-    "test_suite_mod": {
-      "mod_depend_a": {
-        "name": "mod_depend_a",
-        "alias": "mod_depend_a",
-        "version": "1.0.0",
-        "constraint": "*",
-        "struct_version": 20220411
-      }
-    },
-    "mod_depend_a@v1.0.0": {
-      "mod_depend_b": {
-        "name": "mod_depend_b",
-        "alias": "mod_depend_b",
-        "version": "1.0.0",
-        "constraint": "*",
-        "struct_version": 20220411
-      }
+  "mod_depend_a@v1.0.0": {
+    "mod_depend_b": {
+      "version": "1.0.0",
+      "name": "mod_depend_b",
+      "struct_version": 20240429,
+      "alias": "mod_depend_b"
+    }
+  },
+  "test_suite_mod": {
+    "mod_depend_a": {
+      "version": "1.0.0",
+      "name": "mod_depend_a",
+      "struct_version": 20240429,
+      "alias": "mod_depend_a"
     }
   }
+}
