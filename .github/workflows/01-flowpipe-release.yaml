@@ -43,6 +43,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          path: flowpipe
           ref: ${{ github.event.ref }}
 
       - name: Checkout Pipe Fittings Components repository
@@ -96,7 +97,7 @@ jobs:
 
       - name: Release dry-run to create binaries
         working-directory: flowpipe
-        run: |
+        run: |-
           make release-dry-run
 
       - name: Check binaries
