@@ -100,8 +100,8 @@ jobs:
           mkdir ~/artifacts
           mv $GITHUB_WORKSPACE/dist/flowpipe.linux.amd64.tar.gz ~/artifacts/linux.tar.gz
           mv $GITHUB_WORKSPACE/dist/flowpipe.linux.arm64.tar.gz ~/artifacts/linux-arm.tar.gz
-          mv $GITHUB_WORKSPACE/dist/flowpipe.darwin.amd64.zip ~/artifacts/darwin.zip
-          mv $GITHUB_WORKSPACE/dist/flowpipe.darwin.arm64.zip ~/artifacts/darwin-arm.zip
+          mv $GITHUB_WORKSPACE/dist/flowpipe.darwin.amd64.tar.gz ~/artifacts/darwin.tar.gz
+          mv $GITHUB_WORKSPACE/dist/flowpipe.darwin.arm64.tar.gz ~/artifacts/darwin-arm.tar.gz
 
       - name: List Build Artifacts
         run: ls -l ~/artifacts
