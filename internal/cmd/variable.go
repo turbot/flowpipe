@@ -112,7 +112,7 @@ func showVariableFunc(cmd *cobra.Command, args []string) {
 	variableName := args[0]
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
-		//resp, err = getIntegrationRemote(ctx, integrationName)
+		resp, err = getVariableRemote(ctx, variableName)
 	} else {
 		resp, err = getVariableLocal(ctx, variableName)
 	}
@@ -144,4 +144,14 @@ func getVariableLocal(ctx context.Context, variableName string) (*types.FpVariab
 	}()
 
 	return api.GetVariable(variableName)
+}
+
+func getVariableRemote(ctx context.Context, name string) (*types.FpVariable, error) {
+	apiClient := common.GetApiClient()
+	resp, _, err := apiClient.VariableApi.Get(ctx, name).Execute()
+	if err != nil {
+		return nil, err
+	}
+	t := types.FpVariableFromApi(*resp)
+	return t, nil
 }
