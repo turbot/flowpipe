@@ -173,7 +173,7 @@ jobs:
 
       - name: Run smoke tests
         run: |
-          docker exec -u steampipe ubuntu-24-test /scripts/smoke_test.sh
+          docker exec ubuntu-24-test /scripts/smoke_test.sh
   
       - name: Stop and Remove Container
         run: |
