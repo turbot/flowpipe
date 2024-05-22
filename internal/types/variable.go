@@ -1,10 +1,14 @@
 package types
 
 import (
+	"fmt"
+
+	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 )
 
 func NewPrintableVariable(resp *ListVariableResponse) *PrintableVariable {
@@ -72,6 +76,40 @@ type FpVariable struct {
 	Description *string     `json:"description,omitempty"`
 	Default     interface{} `json:"default,omitempty" `
 	Value       interface{} `json:"value,omitempty"`
+}
+
+func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
+	au := aurora.NewAurora(opts.ColorEnabled)
+	output := ""
+	keyWidth := 9
+	if p.Description != nil && len(*p.Description) > 0 {
+		keyWidth = 13
+	}
+	// deliberately shadow the receiver with a sanitized version of the struct
+	var err error
+	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+		return ""
+	}
+
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), p.Name)
+
+	if p.Description != nil && len(*p.Description) > 0 {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
+	}
+
+	if p.Type != "" {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
+	}
+
+	if p.Default != nil {
+		output += fmt.Sprintf("%-*s%v\n", keyWidth, au.Blue("Default:"), p.Default)
+	}
+
+	if p.Value != nil {
+		output += fmt.Sprintf("%-*s%v\n", keyWidth, au.Blue("Value:"), p.Value)
+	}
+
+	return output
 }
 
 func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {

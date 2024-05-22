@@ -107,14 +107,14 @@ func listVariableRemote(ctx context.Context) (*types.ListVariableResponse, error
 
 func showVariableFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp *types.FpIntegration
+	var resp *types.FpVariable
 	var err error
-	integrationName := args[0]
+	variableName := args[0]
 	// if a host is set, use it to connect to API server
 	if viper.IsSet(constants.ArgHost) {
-		resp, err = getIntegrationRemote(ctx, integrationName)
+		//resp, err = getIntegrationRemote(ctx, integrationName)
 	} else {
-		resp, err = getIntegrationLocal(ctx, integrationName)
+		resp, err = getVariableLocal(ctx, variableName)
 	}
 
 	if err != nil {
@@ -123,14 +123,25 @@ func showVariableFunc(cmd *cobra.Command, args []string) {
 	}
 
 	if resp != nil {
-		printer, err := printers.GetPrinter[types.FpIntegration](cmd)
+		printer, err := printers.GetPrinter[types.FpVariable](cmd)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error obtaining printer")
 		}
-		printableResource := types.NewPrintableIntegrationFromSingle(resp)
+		printableResource := types.NewPrintableVariableFromSingle(resp)
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "Error when printing")
 		}
 	}
+}
+func getVariableLocal(ctx context.Context, variableName string) (*types.FpVariable, error) {
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx).Start()
+	error_helpers.FailOnError(err)
+	defer func() {
+		// TODO ignore shutdown error?
+		_ = m.Stop()
+	}()
+
+	return api.GetVariable(variableName)
 }

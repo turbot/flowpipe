@@ -9,7 +9,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (api *APIService) VariableRegisterAPI(router *gin.RouterGroup) {
@@ -101,15 +100,22 @@ func (api *APIService) getVariable(c *gin.Context) {
 		return
 	}
 
-	rootMod := api.EsService.RootMod
-
-	for _, v := range rootMod.ResourceMaps.Variables {
-		if v.ShortName == uri.VariableName {
-			result := types.FpVariableFromModVariable(v)
-			c.JSON(http.StatusOK, *result)
-			return
-		}
+	variableName := ConstructFullyQualifiedName("var", uri.VariableName)
+	res, err := GetVariable(variableName)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
-	common.AbortWithError(c, perr.NotFoundWithMessage("not found"))
+	c.JSON(http.StatusOK, res)
+}
+
+func GetVariable(name string) (*types.FpVariable, error) {
+	variable, err := db.GetVariable(name)
+	if err != nil {
+		return nil, err
+	}
+
+	res := types.FpVariableFromModVariable(variable)
+	return res, nil
 }
