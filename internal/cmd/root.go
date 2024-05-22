@@ -70,7 +70,8 @@ func rootCommand() *cobra.Command {
 		processCmd(),
 		modCmd(),
 		integrationCmd(),
-		notifierCmd())
+		notifierCmd(),
+		variableCmd())
 
 	return rootCmd
 }
