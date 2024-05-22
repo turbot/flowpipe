@@ -77,11 +77,6 @@ jobs:
           go-version: '1.21'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
 
-      - name: Setup release environment
-        run: |-
-          cd flowpipe
-          echo 'GITHUB_TOKEN=${{secrets.GH_ACCESS_TOKEN}}' > .release-env
-
       - name: Build UI
         run: make build-ui
         working-directory: flowpipe
@@ -100,8 +95,8 @@ jobs:
           git status
 
       - name: Release dry-run to create binaries
-        run: |-
-          cd flowpipe
+        working-directory: flowpipe
+        run: |
           make release-dry-run
 
       - name: Check binaries
