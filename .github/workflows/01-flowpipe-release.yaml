@@ -24,8 +24,137 @@ env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
 jobs:
+  create_test_build:
+    name: Create test build
+    runs-on: ubuntu-latest
+    steps:
+      - name: validate
+        if: github.ref == 'refs/heads/main'
+        env:
+          CONFIRM_MAIN: ${{ github.event.inputs.confirmMain }}
+        run: |
+          if [ "$CONFIRM_MAIN" == 'false' ]; then
+            echo "It looks like you've accidentally tried to run this action in main branch. Either: "
+            echo " - Re-run the action and select the branch you wanted, or"
+            echo " - If you really do want to run this for main, then re-run and tick the box to confirm"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.ref }}
+
+      - name: Checkout Pipe Fittings Components repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/pipe-fittings
+          path: pipe-fittings
+          ref: v1.0.x
+
+      - name: Checkout Flowpipe SDK Go repository
+        uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
+          repository: turbot/flowpipe-sdk-go
+          path: flowpipe-sdk-go
+          ref: main
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.21'
+
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      # this is required, check golangci-lint-action docs
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
+
+      - name: Setup release environment
+        run: |-
+          cd flowpipe
+          echo 'GITHUB_TOKEN=${{secrets.GH_ACCESS_TOKEN}}' > .release-env
+
+      - name: Build UI
+        run: make build-ui
+        working-directory: flowpipe
+
+      # The ui build often changes the yarn.lock file, this causes issue with GoReleaser that needs a clean git status
+      # I'm hesitant to use the shortcut of --skip-validate or doing a localbuild (skip publish/snapshot) and uploading the
+      # binary ourselves. The other alternative is to commit the yarn.lock file post UI build which I'm not keen on either doing it
+      # automatically.
+      #
+      # For now I'm going to remove the yarn.lock post UI build.
+      - name: Clean UI artifacts
+        working-directory: flowpipe
+        run: |
+          git status
+          git restore ui/form/yarn.lock
+          git status
+
+      - name: Release dry-run to create binaries
+        run: |-
+          cd flowpipe
+          make release-dry-run
+
+      - name: Check binaries
+        working-directory: flowpipe
+        run: |
+          ls -al dist/
+      
+      - name: Move build artifacts
+        run: |
+          mkdir ~/artifacts
+          mv $GITHUB_WORKSPACE/dist/flowpipe.linux.amd64.tar.gz ~/artifacts/linux.tar.gz
+          mv $GITHUB_WORKSPACE/dist/flowpipe.linux.arm64.tar.gz ~/artifacts/linux-arm.tar.gz
+          mv $GITHUB_WORKSPACE/dist/flowpipe.darwin.amd64.zip ~/artifacts/darwin.zip
+          mv $GITHUB_WORKSPACE/dist/flowpipe.darwin.arm64.zip ~/artifacts/darwin-arm.zip
+
+      - name: List Build Artifacts
+        run: ls -l ~/artifacts
+
+      - name: Save Linux Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-linux
+          path: ~/artifacts/linux.tar.gz
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Save Linux ARM Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-linux-arm
+          path: ~/artifacts/linux-arm.tar.gz
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Save MacOS Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-darwin
+          path: ~/artifacts/darwin.zip
+          if-no-files-found: error
+          overwrite: true
+
+      - name: Save MacOS ARM Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact-darwin-arm
+          path: ~/artifacts/darwin-arm.zip
+          if-no-files-found: error
+          overwrite: true
+
   ensure_branch_in_homebrew:
     name: Ensure branch exists in homebrew-tap
+    needs: [create_test_build]
     runs-on: ubuntu-latest
     steps:
       - name: Calculate version
