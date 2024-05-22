@@ -97,6 +97,7 @@ jobs:
       
       - name: Move build artifacts
         run: |
+          sudo chown -R runner:docker $GITHUB_WORKSPACE/flowpipe/dist
           mkdir ~/artifacts
           mv $GITHUB_WORKSPACE/flowpipe/dist/flowpipe.linux.amd64.tar.gz ~/artifacts/linux.tar.gz
           mv $GITHUB_WORKSPACE/flowpipe/dist/flowpipe.linux.arm64.tar.gz ~/artifacts/linux-arm.tar.gz
