@@ -428,6 +428,12 @@ func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 		return err
 	}
 
+	variables := mod.ResourceMaps.Variables
+	err = cacheHclResource("variable", variables, true, nil)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

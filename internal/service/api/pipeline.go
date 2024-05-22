@@ -252,19 +252,23 @@ func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es
 }
 
 func ConstructPipelineFullyQualifiedName(pipelineName string) string {
+	return ConstructFullyQualifiedName("pipeline", pipelineName)
+}
+
+func ConstructFullyQualifiedName(resourceType, resouceName string) string {
 	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
 	// For example: foo.pipeline.bar
 	// However, since foo is the top level mod, we should be able to just run the pipeline bar
-	splitPipelineName := strings.Split(pipelineName, ".")
+	splitResourceName := strings.Split(resouceName, ".")
 	// If the pipeline name provided is not fully qualified
-	if len(splitPipelineName) == 1 {
+	if len(splitResourceName) == 1 {
 		// Get the root mod name from the cache
 		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
 			if rootModName, ok := rootModNameCached.(string); ok {
 				// Prepend the root mod name to the pipeline name to get the fully qualified name
-				pipelineName = fmt.Sprintf("%s.pipeline.%s", rootModName, pipelineName)
+				resouceName = fmt.Sprintf("%s.%s.%s", rootModName, resourceType, resouceName)
 			}
 		}
 	}
-	return pipelineName
+	return resouceName
 }
