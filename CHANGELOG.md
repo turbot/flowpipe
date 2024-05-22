@@ -2,6 +2,10 @@
 
 ## v0.4.7 [tbd]
 
+_What's new?_
+
+* Variable list and show commands. ([#373](https://github.com/turbot/flowpipe/issues/373))
+
 _Bug fixes_
 
 * Resolved an issue with pipeline resolution, ensuring that references declared in subsequently loaded files are correctly identified and processed.
