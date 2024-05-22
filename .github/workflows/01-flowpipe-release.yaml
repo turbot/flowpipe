@@ -113,7 +113,6 @@ jobs:
           name: build-artifact-linux
           path: ~/artifacts/linux.tar.gz
           if-no-files-found: error
-          overwrite: true
 
       - name: Save Linux ARM Build Artifact
         uses: actions/upload-artifact@v4
@@ -121,7 +120,6 @@ jobs:
           name: build-artifact-linux-arm
           path: ~/artifacts/linux-arm.tar.gz
           if-no-files-found: error
-          overwrite: true
 
       - name: Save MacOS Build Artifact
         uses: actions/upload-artifact@v4
@@ -129,7 +127,6 @@ jobs:
           name: build-artifact-darwin
           path: ~/artifacts/darwin.tar.gz
           if-no-files-found: error
-          overwrite: true
 
       - name: Save MacOS ARM Build Artifact
         uses: actions/upload-artifact@v4
@@ -137,7 +134,6 @@ jobs:
           name: build-artifact-darwin-arm
           path: ~/artifacts/darwin-arm.tar.gz
           if-no-files-found: error
-          overwrite: true
 
   smoke_test_ubuntu_24:
     name: Smoke test (Ubuntu 24, x86_64)
@@ -151,7 +147,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: build-artifact-linux
-          path: ./artifacts
+          path: ~/artifacts
   
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
