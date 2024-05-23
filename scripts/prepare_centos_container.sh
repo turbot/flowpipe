@@ -5,7 +5,7 @@
 set -e
 
 # update yum and install required packages
-yum install -y epel-release tar ca-certificates jq curl --allowerasing
+yum install -y epel-release tar ca-certificates jq curl git --allowerasing
 
 # Extract the flowpipe binary
 tar -xzf  /artifacts/linux.tar.gz -C /usr/local/bin

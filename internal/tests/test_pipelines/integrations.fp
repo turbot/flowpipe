@@ -5,6 +5,9 @@ pipeline "simple_with_trigger" {
     step "transform" "simple_echo" {
         value = "foo bar"
     }
+    output "echo" {
+        value = step.transform.simple_echo.value
+    }
 }
 
 

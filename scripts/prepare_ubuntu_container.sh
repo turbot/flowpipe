@@ -6,7 +6,7 @@ set -e
 
 # update apt and install required packages
 apt-get update
-apt-get install -y tar ca-certificates jq curl
+apt-get install -y tar ca-certificates jq curl git
 
 # Extract the flowpipe binary
 if [ "$(uname -m)" = "aarch64" ]; then
