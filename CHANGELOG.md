@@ -4,6 +4,7 @@
 
 _What's new?_
 
+* Mod install & update `pull` strategy ([#849](https://github.com/turbot/flowpipe/issues/849))
 * Variable list and show commands. ([#373](https://github.com/turbot/flowpipe/issues/373))
 
 _Bug fixes_
