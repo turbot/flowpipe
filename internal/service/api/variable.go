@@ -6,9 +6,9 @@ import (
 	"sort"
 
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/perr"
 )
 
 func (api *APIService) VariableRegisterAPI(router *gin.RouterGroup) {
@@ -41,30 +41,38 @@ func (api *APIService) listVariables(c *gin.Context) {
 		return
 	}
 
-	rootMod := api.EsService.RootMod
-
 	slog.Info("received list variable request", "next_token", nextToken, "limit", limit)
-
-	variables := []types.Variable{}
-	for _, v := range rootMod.ResourceMaps.Variables {
-		variables = append(variables, types.Variable{
-			Name:        v.ShortName,
-			Description: v.Description,
-			Type:        v.TypeString,
-			Value:       v.ValueGo,
-			Default:     v.DefaultGo,
-		})
-	}
-
-	sort.Slice(variables, func(i, j int) bool {
-		return variables[i].Name < variables[j].Name
-	})
-
-	result := types.ListVariableResponse{
-		Items: variables,
+	result, err := ListVariables()
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
 	c.JSON(http.StatusOK, result)
+}
+
+func ListVariables() (*types.ListVariableResponse, error) {
+
+	variables, err := db.ListAllVariables()
+	if err != nil {
+		return nil, err
+	}
+
+	fpVars := []*types.FpVariable{}
+	for _, v := range variables {
+		fpVars = append(fpVars, types.FpVariableFromModVariable(v))
+	}
+
+	sort.Slice(fpVars, func(i, j int) bool {
+		return fpVars[i].Name < fpVars[j].Name
+	})
+
+	result := types.ListVariableResponse{
+		Items: fpVars,
+	}
+
+	return &result, nil
+
 }
 
 // @Summary Get variable
@@ -76,7 +84,7 @@ func (api *APIService) listVariables(c *gin.Context) {
 // / ...
 // @Param variable_name path string true "The name of the variable" format(^[a-z]{0,32}$)
 // ...
-// @Success 200 {object} types.Variable
+// @Success 200 {object} types.FpVariable
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -92,21 +100,22 @@ func (api *APIService) getVariable(c *gin.Context) {
 		return
 	}
 
-	rootMod := api.EsService.RootMod
-
-	for _, v := range rootMod.ResourceMaps.Variables {
-		if v.ShortName == uri.VariableName {
-			result := types.Variable{
-				Name:        v.ShortName,
-				Type:        v.TypeString,
-				Value:       v.ValueGo,
-				Default:     v.DefaultGo,
-				Description: v.Description,
-			}
-			c.JSON(http.StatusOK, result)
-			return
-		}
+	variableName := ConstructFullyQualifiedName("var", uri.VariableName)
+	res, err := GetVariable(variableName)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
 	}
 
-	common.AbortWithError(c, perr.NotFoundWithMessage("not found"))
+	c.JSON(http.StatusOK, res)
+}
+
+func GetVariable(name string) (*types.FpVariable, error) {
+	variable, err := db.GetVariable(name)
+	if err != nil {
+		return nil, err
+	}
+
+	res := types.FpVariableFromModVariable(variable)
+	return res, nil
 }
