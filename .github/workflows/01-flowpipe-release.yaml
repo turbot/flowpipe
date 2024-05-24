@@ -280,7 +280,7 @@ jobs:
   
       - name: Create and Start Amazon Linux 2 Container
         run: |
-          docker run -d --name amazonlinux-2-test -v ${{ github.workspace }}/artifacts:/artifacts -v ${{ github.workspace }}/scripts:/scripts amazonlinux:2023 tail -f /dev/null
+          docker run -d --name amazonlinux-2-test -v ${{ github.workspace }}/artifacts:/artifacts -v ${{ github.workspace }}/scripts:/scripts amazonlinux:2 tail -f /dev/null
 
       - name: Get runner/container info
         run: |
