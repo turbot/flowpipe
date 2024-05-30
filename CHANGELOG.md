@@ -10,6 +10,7 @@ _What's new?_
 _Bug fixes_
 
 * Resolved an issue with pipeline resolution, ensuring that references declared in subsequently loaded files are correctly identified and processed.
+* Preserve pipeline params ordering as specified in the pipeline definition. ([#408](https://github.com/turbot/pipe-fittings/issues/408))
 
 ## v0.4.6 [2024-05-14]
 
