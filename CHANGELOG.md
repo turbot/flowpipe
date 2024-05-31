@@ -4,13 +4,30 @@
 
 _What's new?_
 
-* Mod install & update `pull` strategy ([#849](https://github.com/turbot/flowpipe/issues/849))
+* Add support for installing mods from a branch or from the local file system. ([#849](https://github.com/turbot/flowpipe/issues/849)).
+
+    To install from a branch:
+    ```
+    flowpipe mod install github.com/turbot/flowpipe-mod-aws-thrifty#main
+    ```
+    To reference a mod in the local file system:
+    ```
+    flowpipe mod install ../mods/local_mod_folder
+    ```
+
+- Add `--pull` flag to `mod` command to control the mod update strategy. ([#849](https://github.com/turbot/flowpipe/issues/849)). Possible update strategies are:
+
+    - `full` - check branch and tags for both latest and accuracy
+    - `latest` - update everything to latest, but only branches - not tags - are commit checked (which is the same as latest)
+    - `development` - update branches and broken constraints to latest, leave satisfied constraints unchanged
+    - `minimal` - only update broken constraints, do not check branches for new commits
+
 * Variable list and show commands. ([#373](https://github.com/turbot/flowpipe/issues/373))
 
 _Bug fixes_
 
-* Resolved an issue with pipeline resolution, ensuring that references declared in subsequently loaded files are correctly identified and processed.
-* Preserve pipeline params ordering as specified in the pipeline definition. ([#408](https://github.com/turbot/pipe-fittings/issues/408))
+* Pipeline references declared in subsequent files are correctly identified and processed.
+* Preserves pipeline params ordering as specified in the pipeline definition. ([#408](https://github.com/turbot/pipe-fittings/issues/408))
 
 ## v0.4.6 [2024-05-14]
 
