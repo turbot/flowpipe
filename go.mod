@@ -2,16 +2,12 @@ module github.com/turbot/flowpipe
 
 go 1.21.0
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings
-
-replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go
-
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/didip/tollbooth/v7 v7.0.1
 	github.com/docker/cli v24.0.6+incompatible
-	github.com/docker/docker v24.0.7+incompatible
+	github.com/docker/docker v24.0.9+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/garsue/watermillzap v1.2.0
@@ -47,8 +43,8 @@ require (
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
-	github.com/turbot/flowpipe-sdk-go v0.3.0
-	github.com/turbot/pipe-fittings v1.3.1
+	github.com/turbot/flowpipe-sdk-go v0.4.0
+	github.com/turbot/pipe-fittings v1.3.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.5.0
 )
