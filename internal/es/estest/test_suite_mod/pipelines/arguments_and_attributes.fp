@@ -1,7 +1,7 @@
 pipeline "refer_to_arguments" {
 
     step "http" "get" {
-        url = "http://api.open-notify.org/astros.json"
+        url = "http://localhost:7104/check.json"
     }
 
     step "transform" "refer_to_arguments" {

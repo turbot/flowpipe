@@ -115,6 +115,8 @@ func (suite *ModTestSuite) TearDownSuite() {
 
 	suite.server.Shutdown(suite.ctx) //nolint:errcheck // just a test case
 	suite.TearDownSuiteRunCount++
+
+	time.Sleep(1 * time.Second)
 }
 
 func (suite *ModTestSuite) BeforeTest(suiteName, testName string) {
@@ -3467,7 +3469,7 @@ func (suite *ModTestSuite) TestReferToArguments() {
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 
-	assert.Equal("http://api.open-notify.org/astros.json", pex.PipelineOutput["val"])
+	assert.Equal("http://localhost:7104/check.json", pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) TestSimpleErrorIgnoredMultiSteps() {

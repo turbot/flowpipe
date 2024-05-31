@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"testing"
@@ -34,6 +35,7 @@ type EsTestSuite struct {
 	suite.Suite
 	*FlowpipeTestSuite
 
+	server                *http.Server
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
 }
@@ -46,6 +48,8 @@ func (suite *EsTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	suite.server = StartServer()
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
@@ -98,6 +102,10 @@ func (suite *EsTestSuite) TearDownSuite() {
 		panic(err)
 	}
 	suite.TearDownSuiteRunCount++
+
+	suite.server.Shutdown(suite.ctx) //nolint:errcheck // just a test case
+	suite.TearDownSuiteRunCount++
+	time.Sleep(1 * time.Second)
 }
 
 func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {

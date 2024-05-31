@@ -181,7 +181,7 @@ pipeline "nested_with_http" {
     }
 
     step "http" "http" {
-        url = "http://api.open-notify.org/${param.file}"
+        url = "http://localhost:7104/${param.file}"
     }
 
     output "val" {
