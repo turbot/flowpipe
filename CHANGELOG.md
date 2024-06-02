@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.6.0 [tbd]
+
+_What's new?_
+
+* `--event-store` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852))
+
 ## v0.5.0 [2024-06-02]
 
 _What's new?_
