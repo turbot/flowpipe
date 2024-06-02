@@ -1,6 +1,6 @@
 # Flowpipe
 
-## v0.5.0 [tbd]
+## v0.5.0 [2024-06-02]
 
 _What's new?_
 
