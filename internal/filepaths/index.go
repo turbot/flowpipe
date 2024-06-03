@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -43,13 +44,14 @@ func LegacyFlowpipeDBFileName() string {
 }
 
 func FlowpipeDBFileName() string {
-	modLocation := ModFlowpipeDir()
-	dbPath := filepath.Join(modLocation, "flowpipe.db")
-	return dbPath
-}
 
-func EventStoreFilePath(executionId string) string {
-	return path.Join(EventStoreDir(), fmt.Sprintf("%s.jsonl", executionId))
+	dbPath := viper.GetString(constants.ArgEventStore)
+	if strings.Trim(dbPath, " ") != "" {
+		return dbPath
+	}
+	modLocation := ModFlowpipeDir()
+	dbPath = filepath.Join(modLocation, "flowpipe.db")
+	return dbPath
 }
 
 func SnapshotFilePath(executionId string) string {
