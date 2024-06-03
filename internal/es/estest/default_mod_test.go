@@ -174,6 +174,9 @@ func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 	// now delete the event store file
 	err = os.Remove("./event-store-test-dir/test-echo.db")
 	assert.Nil(err)
+
+	// removed the default value
+	viper.SetDefault(constants.ArgEventStore, "")
 }
 
 func (suite *DefaultModTestSuite) TestBasicAuth() {
