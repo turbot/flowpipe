@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/spf13/viper"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
+
+var exitCode int
 
 var (
 	// These variables will be set by GoReleaser. We have them in main package because we put everything else in internal
@@ -29,7 +32,11 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
+			if exitCode == 0 {
+				exitCode = 255
+			}
 		}
+		os.Exit(exitCode)
 	}()
 
 	viper.SetDefault(constants.ArgProcessRetention, 604800) // 7 days

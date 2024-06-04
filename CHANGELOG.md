@@ -4,7 +4,11 @@
 
 _What's new?_
 
-* `--event-store` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852))
+* `--event-store` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
+
+_Bug fixes_
+
+* Return a non-zero exit code if there's a failure. ([#855](https://github.com/turbot/flowpipe/issues/855)).
 
 ## v0.5.0 [2024-06-02]
 
