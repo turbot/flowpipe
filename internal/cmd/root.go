@@ -42,7 +42,7 @@ func rootCommand() *cobra.Command {
 		AddPersistentStringFlag(constants.ArgConfigPath, "", "Colon separated list of paths to search for workspace files, in order of decreasing precedence").
 		// Common (steampipe, flowpipe) flags
 		AddPersistentStringFlag(constants.ArgModLocation, cwd, "Path to the workspace working directory").
-		AddPersistentStringFlag(constants.ArgEventStore, cwd, "Event store datatabase filename").
+		AddPersistentStringFlag(constants.ArgEventStore, "", "Event store datatabase filename").
 		AddPersistentStringFlag(constants.ArgWorkspaceProfile, "default", "The workspace to use").
 		// Define the CLI flag parameters for wrapped enum flag.
 		AddPersistentVarFlag(enumflag.New(&outputMode, constants.ArgOutput, types.OutputModeIds, enumflag.EnumCaseInsensitive),
