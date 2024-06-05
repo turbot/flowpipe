@@ -178,7 +178,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	response, pipelineCmd, err := ExecutePipeline(input, pipelineName, api.EsService)
+	response, pipelineCmd, err := ExecutePipeline(input, "", pipelineName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -199,7 +199,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipelineDefn, err := db.GetPipeline(pipelineName)
 	if err != nil {
 		return nil, nil, err
@@ -215,8 +215,8 @@ func ExecutePipeline(input types.CmdPipeline, pipelineName string, esService *es
 	}
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Event:               event.NewEventForExecutionID(executionId),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineDefn.Name(),
 	}
 

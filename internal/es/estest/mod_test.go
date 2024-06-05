@@ -28,6 +28,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -146,6 +147,37 @@ func (suite *ModTestSuite) TestSimplestPipeline() {
 
 	assert.Equal("finished", pex.Status)
 	assert.Equal("Hello World", pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestPipelineCustomExecutionId() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	executionId := util.NewUniqueId()
+
+	_, pipelineCmd, err := runPipelineWithId(suite.FlowpipeTestSuite, executionId, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal(executionId, ex.ID)
+	assert.Equal("finished", pex.Status)
+	assert.Equal("Hello World", pex.PipelineOutput["val"])
+
+	// if we try to run it again it should fail
+	_, _, err = runPipelineWithId(suite.FlowpipeTestSuite, executionId, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
+
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "'"+executionId+"' already exists")
 }
 
 func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {

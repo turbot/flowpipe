@@ -33,7 +33,7 @@ func main() {
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
 			if exitCode == 0 {
-				exitCode = 255
+				exitCode = 1
 			}
 		}
 		os.Exit(exitCode)

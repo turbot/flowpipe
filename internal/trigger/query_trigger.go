@@ -306,7 +306,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 		Args:                pipelineArgs,
 	}

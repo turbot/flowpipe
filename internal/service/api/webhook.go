@@ -185,7 +185,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 
 	pipelineCmd := &event.PipelineQueue{
 		Event:               event.NewExecutionEvent(),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 	}
 

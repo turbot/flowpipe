@@ -39,7 +39,7 @@ type StepQueueOption func(*StepQueue) error
 func NewStepQueue(opts ...StepQueueOption) (*StepQueue, error) {
 	// Defaults
 	e := &StepQueue{
-		StepExecutionID: util.NewStepExecutionID(),
+		StepExecutionID: util.NewStepExecutionId(),
 	}
 	// Set options
 	for _, opt := range opts {
@@ -55,7 +55,7 @@ func NewStepQueueFromPipelineStepFinishedForLoop(e *StepFinished, stepName strin
 
 	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),
-		StepExecutionID: util.NewStepExecutionID(),
+		StepExecutionID: util.NewStepExecutionId(),
 	}
 	if e.PipelineExecutionID != "" {
 		cmd.PipelineExecutionID = e.PipelineExecutionID
@@ -77,7 +77,7 @@ func NewStepQueueFromPipelineStepFinishedForRetry(e *StepFinished, stepName stri
 
 	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),
-		StepExecutionID: util.NewStepExecutionID(),
+		StepExecutionID: util.NewStepExecutionId(),
 	}
 	if e.PipelineExecutionID != "" {
 		cmd.PipelineExecutionID = e.PipelineExecutionID
@@ -96,7 +96,7 @@ func NewStepQueueFromPipelineStepFinishedForRetry(e *StepFinished, stepName stri
 func NewStepQueueFromStepForEachPlanned(e *StepForEachPlanned, nextStep *modconfig.NextStep) (*StepQueue, error) {
 	cmd := &StepQueue{
 		Event:           NewChildEvent(e.Event),
-		StepExecutionID: util.NewStepExecutionID(),
+		StepExecutionID: util.NewStepExecutionId(),
 	}
 	if e.PipelineExecutionID != "" {
 		cmd.PipelineExecutionID = e.PipelineExecutionID

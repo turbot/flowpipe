@@ -189,7 +189,7 @@ func OpenFlowpipeDB() (*sql.DB, error) {
 	_, err = db.Exec("PRAGMA foreign_keys=ON")
 	if err != nil {
 		slog.Error("error enabling foreign key constraints", "error", err, "dbPath", dbPath)
-		return nil, perr.InternalWithMessage("error enabling foreign key constraints")
+		return nil, perr.InternalWithMessage("error enabling foreign key constraints " + err.Error())
 	}
 
 	// Note: do not close the db connection here. The caller is responsible for closing it.

@@ -40,7 +40,7 @@ type StepStartOption func(*StepStart) error
 func NewStepStart(opts ...StepStartOption) (*StepStart, error) {
 	// Defaults
 	e := &StepStart{
-		StepExecutionID: util.NewStepExecutionID(),
+		StepExecutionID: util.NewStepExecutionId(),
 	}
 	// Set options
 	for _, opt := range opts {

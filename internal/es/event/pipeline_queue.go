@@ -34,7 +34,7 @@ type PipelineQueueOption func(*PipelineQueue) error
 func NewPipelineQueue(opts ...PipelineQueueOption) (*PipelineQueue, error) {
 	// Defaults
 	e := &PipelineQueue{
-		PipelineExecutionID: util.NewPipelineExecutionID(),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
 	}
 	// Set options
 	for _, opt := range opts {

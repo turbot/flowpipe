@@ -73,7 +73,7 @@ func ForStepStart(cmd *StepStart) StepPipelineStartedOption {
 // the ChildPipelineExecutionID to a new ID.
 func WithNewChildPipelineExecutionID() StepPipelineStartedOption {
 	return func(e *StepPipelineStarted) error {
-		e.ChildPipelineExecutionID = util.NewPipelineExecutionID()
+		e.ChildPipelineExecutionID = util.NewPipelineExecutionId()
 		return nil
 	}
 }

@@ -20,13 +20,14 @@ type PayloadWithEvent struct {
 }
 
 func NewExecutionEvent() *Event {
-	return &Event{
-		ExecutionID: util.NewExecutionID(),
-		CreatedAt:   time.Now().UTC(),
-	}
+	return NewEventForExecutionID(util.NewExecutionId())
 }
 
 func NewEventForExecutionID(executionID string) *Event {
+	if executionID == "" {
+		executionID = util.NewExecutionId()
+	}
+
 	return &Event{
 		ExecutionID: executionID,
 		CreatedAt:   time.Now().UTC(),

@@ -5,6 +5,7 @@
 _What's new?_
 
 * `--event-store` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
+* `--execution-id` parameter to specify custom execution id for pipeline run. ([#856](https://github.com/turbot/flowpipe/issues/856)).
 
 _Bug fixes_
 

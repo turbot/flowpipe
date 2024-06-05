@@ -4,13 +4,14 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/mattn/go-sqlite3"
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 	putils "github.com/turbot/pipe-fittings/utils"
 )
 
-func StartPipeline(executionID, pipelineName string) error {
+func StartPipeline(executionId, pipelineName string) error {
 	retentionInSecond := viper.GetInt(constants.ArgProcessRetention)
 	if retentionInSecond == 0 {
 		return nil
@@ -33,8 +34,14 @@ func StartPipeline(executionID, pipelineName string) error {
 	// Execute the statement
 	currentTime := time.Now().UTC()
 	currentTimeString := currentTime.Format(putils.RFC3339WithMS)
-	_, err = stmt.Exec(executionID, pipelineName, "queued", currentTimeString, currentTimeString)
+	_, err = stmt.Exec(executionId, pipelineName, "queued", currentTimeString, currentTimeString)
 	if err != nil {
+		sqlIteErr, ok := err.(sqlite3.Error)
+		if ok && sqlIteErr.Code == sqlite3.ErrConstraint && sqlIteErr.ExtendedCode == sqlite3.ErrConstraintUnique {
+			slog.Error("pipeline execution already exists", "executionID", executionId)
+			return perr.BadRequestWithMessage("pipeline execution '" + executionId + "' already exists")
+		}
+
 		slog.Error("error executing statement", "error", err)
 		return perr.InternalWithMessage("error executing statement " + err.Error())
 	}
