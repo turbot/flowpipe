@@ -1,5 +1,68 @@
 # Flowpipe
 
+## v0.6.0 [tbd]
+
+_What's new?_
+
+* `--event-store` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
+* `--execution-id` parameter to specify custom execution id for pipeline run. ([#856](https://github.com/turbot/flowpipe/issues/856)).
+
+_Bug fixes_
+
+* Return a non-zero exit code if there's a failure. ([#855](https://github.com/turbot/flowpipe/issues/855)).
+
+## v0.5.0 [2024-06-02]
+
+_What's new?_
+
+* Add support for installing mods from a branch or from the local file system. ([#849](https://github.com/turbot/flowpipe/issues/849)).
+
+    To install from a branch:
+    ```
+    flowpipe mod install github.com/turbot/flowpipe-mod-aws-thrifty#main
+    ```
+    To reference a mod in the local file system:
+    ```
+    flowpipe mod install ../mods/local_mod_folder
+    ```
+
+- Add `--pull` flag to `mod` command to control the mod update strategy. ([#849](https://github.com/turbot/flowpipe/issues/849)). Possible update strategies are:
+
+    - `full` - check branch and tags for both latest and accuracy
+    - `latest` - update everything to latest, but only branches - not tags - are commit checked (which is the same as latest)
+    - `development` - update branches and broken constraints to latest, leave satisfied constraints unchanged
+    - `minimal` - only update broken constraints, do not check branches for new commits
+
+* Variable list and show commands. ([#373](https://github.com/turbot/flowpipe/issues/373))
+
+_Bug fixes_
+
+* Pipeline references declared in subsequent files are correctly identified and processed.
+* Preserves pipeline params ordering as specified in the pipeline definition. ([#408](https://github.com/turbot/pipe-fittings/issues/408))
+
+## v0.4.6 [2024-05-14]
+
+_Bug fixes_
+
+* Load `locals` in order of dependency. ([#399](https://github.com/turbot/pipe-fittings/issues/399)).
+
+## v0.4.5 [2024-05-10]
+
+_Bug fixes_
+
+* Pipeline execution no longer stalls when concurrency limit is applied and if clause returns false. ([#836](https://github.com/turbot/flowpipe/issues/836)).
+* Trigger's common attributes (title, description, tags, documentation) allow functions and expresions. ([#394](https://github.com/turbot/pipe-fittings/issues/394)).
+
+## v0.4.4 [2024-04-23]
+
+_Bug fixes_
+
+* Param can be used in query step's args attribute. ([#830](https://github.com/turbot/flowpipe/issues/830)).
+* File watcher now correctly detect changes in the `loop` block. ([#808](https://github.com/turbot/flowpipe/issues/808)).
+* Duplicate step names are now detected and reported as an error. ([#820](https://github.com/turbot/flowpipe/issues/820)).
+* Better error message for invalid notifier reference. ([#826](https://github.com/turbot/flowpipe/issues/826)).
+
+
 ## v0.4.3 [2024-04-01]
 
 _Bug fixes_

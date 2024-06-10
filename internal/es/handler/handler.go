@@ -98,7 +98,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		err = store.StartPipeline(executionID, pipelineQueueCmd.Name)
 		if err != nil {
 			slog.Error("Unable to save pipeline in the database", "error", err)
-			return perr.InternalWithMessage("Unable to save pipeline in the database " + err.Error())
+			return err
 		}
 
 	} else {

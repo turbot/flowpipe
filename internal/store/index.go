@@ -56,7 +56,7 @@ func InitializeFlowpipeDB() error {
 	// Enable foreign key constraints
 	_, err = db.Exec("PRAGMA foreign_keys=ON")
 	if err != nil {
-		slog.Error("error enabling foreign key constraints", "error", err)
+		slog.Error("error enabling foreign key constraints (init)", "error", err, "dbPath", dbPath)
 		return err
 	}
 
@@ -188,8 +188,8 @@ func OpenFlowpipeDB() (*sql.DB, error) {
 	// Enable foreign key constraints
 	_, err = db.Exec("PRAGMA foreign_keys=ON")
 	if err != nil {
-		slog.Error("error enabling foreign key constraints", "error", err)
-		return nil, perr.InternalWithMessage("error enabling foreign key constraints")
+		slog.Error("error enabling foreign key constraints", "error", err, "dbPath", dbPath)
+		return nil, perr.InternalWithMessage("error enabling foreign key constraints " + err.Error())
 	}
 
 	// Note: do not close the db connection here. The caller is responsible for closing it.

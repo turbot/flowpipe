@@ -174,7 +174,7 @@ func (es *ESService) Start() error {
 		return perr.InternalWithMessage("cqrsFacade is nil")
 	}
 
-	runID := util.NewProcessID()
+	runID := util.NewProcessId()
 
 	es.runID = runID
 	es.CommandBus = &handler.FpCommandBusImpl{Cb: cqrsFacade.CommandBus()}

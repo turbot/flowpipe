@@ -144,10 +144,10 @@ func (m *Manager) loadMod() error {
 	mod := w.Mod
 	m.RootMod = w.Mod
 
-	if mod.Require != nil && mod.Require.FlowpipeVersionConstraint() != nil {
+	if mod.Require != nil && mod.Require.Flowpipe != nil && mod.Require.Flowpipe.Constraint != nil {
 		flowpipeCliVersion := viper.GetString("main.version")
 		flowpipeSemverVersion := semver.MustParse(flowpipeCliVersion)
-		if !mod.Require.FlowpipeVersionConstraint().Check(flowpipeSemverVersion) {
+		if !mod.Require.Flowpipe.Constraint.Check(flowpipeSemverVersion) {
 			return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, mod.ShortName, mod.Require.Flowpipe.MinVersionString))
 		}
 	}

@@ -13,15 +13,15 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
+func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 3 {
 		name = "local.pipeline." + name
 	}
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(),
-		PipelineExecutionID: util.NewPipelineExecutionID(),
+		Event:               event.NewEventForExecutionID(executionId),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                name,
 	}
 
@@ -54,6 +54,10 @@ func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Dur
 	}
 
 	return ex, pipelineCmd, nil
+}
+
+func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
+	return runPipelineWithId(suite, "", name, initialWaitTime, args)
 }
 
 func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.ExecutionInMemory, *execution.PipelineExecution, error) {

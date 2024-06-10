@@ -139,6 +139,46 @@ func (suite *DefaultModTestSuite) TestEchoOne() {
 	assert.Equal(1, len(pex.PipelineOutput))
 }
 
+func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	viper.SetDefault(constants.ArgEventStore, "./event-store-test-dir/test-echo.db")
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("Hello World from Depend A", pex.PipelineOutput["echo_one_output"])
+	assert.Equal(1, len(pex.PipelineOutput))
+
+	// check if the event store file was created
+	fi, err := os.Stat("./event-store-test-dir/test-echo.db")
+	assert.Nil(err)
+
+	assert.Equal("test-echo.db", fi.Name())
+	assert.False(fi.IsDir())
+
+	// now delete the event store file
+	err = os.Remove("./event-store-test-dir/test-echo.db")
+	assert.Nil(err)
+
+	// removed the default value
+	viper.SetDefault(constants.ArgEventStore, "")
+}
+
 func (suite *DefaultModTestSuite) TestBasicAuth() {
 	assert := assert.New(suite.T())
 
@@ -395,6 +435,30 @@ func (suite *DefaultModTestSuite) TestCredInOutput() {
 
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val"])
+}
+
+func (suite *DefaultModTestSuite) TestStalledPipelineWithIf() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// default_mod.pipeline.caller was failing due to issue https://github.com/turbot/flowpipe/issues/836
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.caller", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal(0, len(pex.Errors))
+
 }
 
 func (suite *DefaultModTestSuite) TestDynamicCredResolution() {

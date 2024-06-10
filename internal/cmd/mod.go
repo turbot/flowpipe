@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/thediveo/enumflag/v2"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
@@ -70,12 +71,18 @@ func modInstallCmd() *cobra.Command {
 		Long:  `Install one or more mods and their dependencies.`,
 	}
 
+	// variable used to assign the output mode flag
+	var updateStrategy = constants.ModUpdateIdLatest
+
 	// setup hooks and flags
 	cmdconfig.OnCmd(cmd).
 		AddBoolFlag(constants.ArgHelp, false, "Help for init", cmdconfig.FlagOptions.WithShortHand("h")).
 		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
 		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be updated without modifying them").
-		AddBoolFlag(constants.ArgForce, false, "Install mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)")
+		AddBoolFlag(constants.ArgForce, false, "Install mods even if cli version requirements are not met (cannot be used with --dry-run)").
+		AddVarFlag(enumflag.New(&updateStrategy, constants.ArgPull, constants.ModUpdateStrategyIds, enumflag.EnumCaseInsensitive),
+			constants.ArgPull,
+			fmt.Sprintf("Update strategy; one of: %s", strings.Join(constants.FlagValues(constants.ModUpdateStrategyIds), ", ")))
 
 	return cmd
 }
@@ -105,9 +112,12 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 	}
 
 	// if any mod names were passed as args, convert into formed mod names
-	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
+	installOpts := modinstaller.NewInstallOpts(workspaceMod, args...)
+	installOpts.UpdateStrategy = viper.GetString(constants.ArgPull)
 
-	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
+	slog.Debug("Mod install installOpts", "installOpts", installOpts)
+
+	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, installOpts)
 	if err != nil {
 		// exitCode = constants.ExitCodeModInstallFailed
 		error_helpers.FailOnError(err)
@@ -167,10 +177,16 @@ func modUpdateCmd() *cobra.Command {
 		Long:  `Update one or more mods and their dependencies.`,
 	}
 
+	// variable used to assign the output mode flag
+	var updateStrategy = constants.ModUpdateIdLatest
+
 	cmdconfig.OnCmd(cmd).
-		AddBoolFlag(constants.ArgForce, false, "Update mods even if plugin/cli version requirements are not met (cannot be used with --dry-run)").
+		AddBoolFlag(constants.ArgForce, false, "Update mods even if cli version requirements are not met (cannot be used with --dry-run)").
 		AddBoolFlag(constants.ArgPrune, true, "Remove unused dependencies after update is complete").
 		AddBoolFlag(constants.ArgDryRun, false, "Show which mods would be updated without modifying them").
+		AddVarFlag(enumflag.New(&updateStrategy, constants.ArgPull, constants.ModUpdateStrategyIds, enumflag.EnumCaseInsensitive),
+			constants.ArgPull,
+			fmt.Sprintf("Update strategy; one of: %s", strings.Join(constants.FlagValues(constants.ModUpdateStrategyIds), ", "))).
 		AddBoolFlag(constants.ArgHelp, false, "Help for update", cmdconfig.FlagOptions.WithShortHand("h"))
 
 	return cmd
@@ -196,9 +212,12 @@ func runModUpdateCmd(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
+	installOpts := modinstaller.NewInstallOpts(workspaceMod, args...)
+	installOpts.UpdateStrategy = viper.GetString(constants.ArgPull)
 
-	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, opts)
+	slog.Debug("Mod update installOpts", "installOpts", installOpts)
+
+	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, installOpts)
 	error_helpers.FailOnError(err)
 
 	fmt.Println(modinstaller.BuildInstallSummary(installData))

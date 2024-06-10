@@ -59,25 +59,25 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	params := map[string]cty.Value{}
 
-	for k, v := range pipelineDefn.Params {
-		if pe.Args[k] != nil {
+	for _, v := range pipelineDefn.Params {
+		if pe.Args[v.Name] != nil {
 			if !v.Type.HasDynamicTypes() {
-				val, err := gocty.ToCtyValue(pe.Args[k], v.Type)
+				val, err := gocty.ToCtyValue(pe.Args[v.Name], v.Type)
 				if err != nil {
 					return nil, err
 				}
-				params[k] = val
+				params[v.Name] = val
 			} else {
 				// we'll do our best here
-				val, err := hclhelpers.ConvertInterfaceToCtyValue(pe.Args[k])
+				val, err := hclhelpers.ConvertInterfaceToCtyValue(pe.Args[v.Name])
 				if err != nil {
 					return nil, err
 				}
-				params[k] = val
+				params[v.Name] = val
 			}
 
 		} else {
-			params[k] = v.Default
+			params[v.Name] = v.Default
 		}
 	}
 

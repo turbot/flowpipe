@@ -197,7 +197,8 @@ func pipelineRunCmd() *cobra.Command {
 	cmdconfig.OnCmd(cmd).
 		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a pipeline argument. Multiple --arg may be passed.").
 		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.").
-		AddBoolFlag(constants.ArgDetach, false, "Run the pipeline in detached mode.")
+		AddBoolFlag(constants.ArgDetach, false, "Run the pipeline in detached mode.").
+		AddStringFlag(constants.ArgExecutionId, "", "Specify pipeline execution id. Execution id will generated if not provided.")
 
 	return cmd
 }
@@ -222,7 +223,7 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	var m *manager.Manager
 	m, resp, pollLogFunc, err = executePipeline(cmd, args, isRemote)
 	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed executing pipeline")
+		error_helpers.FailOnErrorWithMessage(err, "failed executing pipeline")
 		return
 	}
 
@@ -239,7 +240,7 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	case isDetach:
 		err := displayDetached(ctx, cmd, resp)
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "failed printing execution information")
+			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
 			return
 		}
 	case streamLogs:
@@ -301,7 +302,12 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 		ArgsString: pipelineArgs,
 	}
 
-	resp, _, err := api.ExecutePipeline(input, pipelineName, m.ESService)
+	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	resp, _, err := api.ExecutePipeline(input, executionId, pipelineName, m.ESService)
 	if err != nil {
 		return nil, nil, err
 	}

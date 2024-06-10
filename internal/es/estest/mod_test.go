@@ -28,6 +28,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -115,6 +116,8 @@ func (suite *ModTestSuite) TearDownSuite() {
 
 	suite.server.Shutdown(suite.ctx) //nolint:errcheck // just a test case
 	suite.TearDownSuiteRunCount++
+
+	time.Sleep(1 * time.Second)
 }
 
 func (suite *ModTestSuite) BeforeTest(suiteName, testName string) {
@@ -144,6 +147,37 @@ func (suite *ModTestSuite) TestSimplestPipeline() {
 
 	assert.Equal("finished", pex.Status)
 	assert.Equal("Hello World", pex.PipelineOutput["val"])
+}
+
+func (suite *ModTestSuite) TestPipelineCustomExecutionId() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	executionId := util.NewUniqueId()
+
+	_, pipelineCmd, err := runPipelineWithId(suite.FlowpipeTestSuite, executionId, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	ex, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal(executionId, ex.ID)
+	assert.Equal("finished", pex.Status)
+	assert.Equal("Hello World", pex.PipelineOutput["val"])
+
+	// if we try to run it again it should fail
+	_, _, err = runPipelineWithId(suite.FlowpipeTestSuite, executionId, "test_suite_mod.pipeline.simple", 100*time.Millisecond, pipelineInput)
+
+	assert.NotNil(err)
+	assert.Contains(err.Error(), "'"+executionId+"' already exists")
 }
 
 func (suite *ModTestSuite) TestCallingPipelineInDependentMod() {
@@ -3467,7 +3501,7 @@ func (suite *ModTestSuite) TestReferToArguments() {
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 
-	assert.Equal("http://api.open-notify.org/astros.json", pex.PipelineOutput["val"])
+	assert.Equal("http://localhost:7104/check.json", pex.PipelineOutput["val"])
 }
 
 func (suite *ModTestSuite) TestSimpleErrorIgnoredMultiSteps() {
@@ -3808,6 +3842,76 @@ func (suite *ModTestSuite) TestSqliteQueryPathAlternateC() {
 	assert.Equal(5, len(pex.PipelineOutput["val"].([]interface{})))
 	assert.Equal("John", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
 	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
+}
+
+func (suite *ModTestSuite) TestSqliteQueryWithParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqllite_query_wity_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(1, len(pex.StepExecutions))
+	assert.Equal(1, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
+}
+
+func (suite *ModTestSuite) TestSqliteQueryWithParam2() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqllite_query_wity_param_2", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(1, len(pex.StepExecutions))
+	assert.Equal(2, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
+	assert.Equal("John", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
+}
+
+func (suite *ModTestSuite) TestSqliteQueryWithParam2b() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"name_2": "Jill",
+	}
+
+	// The loop block has result.request_body which is an argument, we were only adding the output attributes rather than the argument attributes
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.sqllite_query_wity_param_2", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+
+	// There should be 3 step executions
+	assert.Equal(1, len(pex.StepExecutions))
+	assert.Equal(2, len(pex.PipelineOutput["val"].([]interface{})))
+	assert.Equal("Jane", pex.PipelineOutput["val"].([]interface{})[0].(map[string]interface{})["name"].(string))
+	assert.Equal("Jill", pex.PipelineOutput["val"].([]interface{})[1].(map[string]interface{})["name"].(string))
 }
 
 func (suite *ModTestSuite) TestDuckDBQuery() {

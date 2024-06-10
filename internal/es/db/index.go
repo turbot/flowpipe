@@ -57,6 +57,10 @@ func GetIntegration(name string) (modconfig.Integration, error) {
 	return GetCachedItem[modconfig.Integration](name)
 }
 
+func GetVariable(name string) (*modconfig.Variable, error) {
+	return GetCachedItem[*modconfig.Variable](name)
+}
+
 func GetPipeline(name string) (*modconfig.Pipeline, error) {
 	return GetCachedItem[*modconfig.Pipeline](name)
 }
@@ -109,6 +113,30 @@ func ListAllIntegrations() ([]modconfig.Integration, error) {
 	}
 
 	return integrations, nil
+}
+
+func ListAllVariables() ([]*modconfig.Variable, error) {
+	variableNamesCached, found := cache.GetCache().Get("#variable.names")
+	if !found {
+		return nil, perr.NotFoundWithMessage("variable names not found")
+	}
+
+	variableNames, ok := variableNamesCached.([]string)
+	if !ok {
+		return nil, perr.InternalWithMessage("invalid variable names")
+	}
+
+	var variables []*modconfig.Variable
+	for _, name := range variableNames {
+		variable, err := GetVariable(name)
+		if err != nil {
+			return nil, err
+		}
+		variables = append(variables, variable)
+	}
+
+	return variables, nil
+
 }
 
 func ListAllNotifiers() ([]modconfig.Notifier, error) {

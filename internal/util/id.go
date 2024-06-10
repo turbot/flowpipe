@@ -2,26 +2,26 @@ package util
 
 import "github.com/rs/xid"
 
-func NewUniqueID() string {
+func NewUniqueId() string {
 	return xid.New().String()
 }
 
-func NewExecutionID() string {
-	return "exec_" + NewUniqueID()
+func NewExecutionId() string {
+	return "exec_" + NewUniqueId()
 }
 
-func NewPipelineExecutionID() string {
-	return "pexec_" + NewUniqueID()
+func NewPipelineExecutionId() string {
+	return "pexec_" + NewUniqueId()
 }
 
-func NewStepExecutionID() string {
-	return "sexec_" + NewUniqueID()
+func NewStepExecutionId() string {
+	return "sexec_" + NewUniqueId()
 }
 
-func NewSessionID() string {
-	return "sess_" + NewUniqueID()
+func NewSessionId() string {
+	return "sess_" + NewUniqueId()
 }
 
-func NewProcessID() string {
-	return "p_" + NewUniqueID()
+func NewProcessId() string {
+	return "p_" + NewUniqueId()
 }

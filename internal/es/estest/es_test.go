@@ -3,9 +3,7 @@ package estest
 // Basic imports
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
+	"net/http"
 	"os"
 	"path"
 	"testing"
@@ -34,6 +32,7 @@ type EsTestSuite struct {
 	suite.Suite
 	*FlowpipeTestSuite
 
+	server                *http.Server
 	SetupSuiteRunCount    int
 	TearDownSuiteRunCount int
 }
@@ -46,6 +45,8 @@ func (suite *EsTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	suite.server = StartServer()
 
 	// Get the current working directory
 	cwd, err := os.Getwd()
@@ -98,6 +99,10 @@ func (suite *EsTestSuite) TearDownSuite() {
 		panic(err)
 	}
 	suite.TearDownSuiteRunCount++
+
+	suite.server.Shutdown(suite.ctx) //nolint:errcheck // just a test case
+	suite.TearDownSuiteRunCount++
+	time.Sleep(1 * time.Second)
 }
 
 func (suite *EsTestSuite) BeforeTest(suiteName, testName string) {
@@ -474,41 +479,6 @@ func (suite *EsTestSuite) TestErrorHandlingOnPipelines() {
 	assert.Equal(404, pex.StepStatus["http.http_step"]["0"].StepExecutions[0].Output.Data["status_code"])
 	assert.Equal(404, pex.StepStatus["http.http_step"]["1"].StepExecutions[0].Output.Data["status_code"])
 	assert.Equal(200, pex.StepStatus["http.http_step"]["2"].StepExecutions[0].Output.Data["status_code"])
-
-	if pex.StepStatus["transform.http_step"] == nil {
-		p := filepaths.EventStoreFilePath(cmd.Event.ExecutionID)
-
-		// Open the file
-		file, err := os.Open(p)
-		if err != nil {
-			assert.Fail("Error opening file:", err)
-			return
-		}
-		defer file.Close()
-
-		// Read the file
-		byteValue, err := io.ReadAll(file)
-		if err != nil {
-			assert.Fail("Error reading file:", err)
-			return
-		}
-
-		// Assuming the JSON is in a format like {"key": "value"}
-		var result map[string]interface{}
-
-		// Unmarshal the JSON data into the map
-		err = json.Unmarshal(byteValue, &result)
-		if err != nil {
-			assert.Fail("Error parsing JSON:", err)
-			return
-		}
-
-		// Print the data
-		fmt.Println(result) //nolint:forbidigo // test
-
-		assert.Fail("transform.http_step not found in StepStatus: " + cmd.Event.ExecutionID)
-		return
-	}
 
 	assert.Equal("skipped", pex.StepStatus["transform.http_step"]["0"].StepExecutions[0].Output.Status)
 	assert.Equal("skipped", pex.StepStatus["transform.http_step"]["1"].StepExecutions[0].Output.Status)

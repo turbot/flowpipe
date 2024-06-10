@@ -2,7 +2,7 @@ pipeline "bad_http_not_ignored" {
     description = "Pipeline with a HTTP step that will fail. Error is not ignored."
 
     step "http" "my_step_1" {
-        url = "http://api.open-notify.org/astros.jsons"
+        url = "http://google.com/astros.jsons"
     }
 
     step "transform" "bad_http" {
