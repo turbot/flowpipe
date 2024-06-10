@@ -6,6 +6,7 @@ on:
       - v*
     branches:
       - main
+      - develop
       - "v*"
   workflow_dispatch:
   pull_request:
