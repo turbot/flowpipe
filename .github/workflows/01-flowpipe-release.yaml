@@ -15,8 +15,8 @@ on:
         description: "Version (without 'v')"
         required: true
         default: 0.6.\invalid
-      confirmMain:
-        description: Confirm running on main branch
+      confirmDevelop:
+        description: Confirm running on develop branch
         required: true
         type: boolean
 
@@ -67,14 +67,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: validate
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/develop'
         env:
-          CONFIRM_MAIN: ${{ github.event.inputs.confirmMain }}
+          CONFIRM_MAIN: ${{ github.event.inputs.confirmDevelop }}
         run: |
           if [ "$CONFIRM_MAIN" == 'false' ]; then
-            echo "It looks like you've accidentally tried to run this action in main branch. Either: "
+            echo "It looks like you've accidentally tried to run this action in develop branch. Either: "
             echo " - Re-run the action and select the branch you wanted, or"
-            echo " - If you really do want to run this for main, then re-run and tick the box to confirm"
+            echo " - If you really do want to run this for develop, then re-run and tick the box to confirm"
             exit 1
           fi
 
