@@ -560,7 +560,9 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modc
 	loopConfig := stepDefn.GetLoopConfig()
 
 	var stepLoop *modconfig.StepLoop
-	if !helpers.IsNil(loopConfig) {
+
+	// Loop is calculated last, so it needs to respect the IF block evaluation
+	if !helpers.IsNil(loopConfig) && cmd.NextStepAction != modconfig.NextStepActionSkip {
 		var err error
 		stepLoop, err = calculateLoop(ctx, ex, loopConfig, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {

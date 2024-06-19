@@ -10,6 +10,7 @@ _What's new?_
 _Bug fixes_
 
 * Return a non-zero exit code if there's a failure. ([#855](https://github.com/turbot/flowpipe/issues/855)).
+* `loop` block now respect the `if` step attribute. ([#858](https://github.com/turbot/flowpipe/issues/858))
 
 ## v0.5.0 [2024-06-02]
 
