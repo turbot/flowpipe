@@ -736,6 +736,31 @@ func (suite *DefaultModTestSuite) TestInputStepErrorRetried() {
 	assert.Equal("failed", pex.StepStatus["input.test"]["0"].StepExecutions[0].Status)
 }
 
+func (suite *DefaultModTestSuite) TestIfLoop() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.if_loop", 1*time.Second, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	// Pipeline failed
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+
+	// retry max attempts = 3
+	assert.Equal(1, len(pex.StepStatus["message.test"]))
+}
+
 func TestDefaultModTestingSuite(t *testing.T) {
 	suite.Run(t, &DefaultModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

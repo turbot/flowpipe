@@ -155,6 +155,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		//
 		stepForEach := stepDefn.GetForEach()
 		if helpers.IsNil(stepForEach) {
+
+			// there's no step for each
 			var nextStepAction modconfig.NextStepAction
 			var input modconfig.Input
 

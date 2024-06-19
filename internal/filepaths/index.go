@@ -12,6 +12,12 @@ import (
 )
 
 func EventStoreDir() string {
+	dbPath := viper.GetString(constants.ArgEventStore)
+	if strings.Trim(dbPath, " ") != "" {
+		// strip the file name (if exist) and only return the directory path
+		return filepath.Dir(dbPath)
+	}
+
 	modLocation := viper.GetString(constants.ArgModLocation)
 	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
 	eventStoreDir := path.Join(modFlowpipeDir, "store")
@@ -60,4 +66,8 @@ func SnapshotFilePath(executionId string) string {
 
 func GlobalInternalDir() string {
 	return path.Join(app_specific.InstallDir, "internal")
+}
+
+func EventStoreFilePath(executionId string) string {
+	return path.Join(EventStoreDir(), fmt.Sprintf("%s.jsonl", executionId))
 }

@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -72,6 +73,13 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 	if err != nil {
 		slog.Error("Error adding event to execution", "error", err)
 		return perr.InternalWithMessage("Error adding event to execution")
+	}
+
+	if os.Getenv("FLOWPIPE_EVENT_MODE") == "jsonl" {
+		err := execution.LogEventMessageToFile(ctx, &logMessage)
+		if err != nil {
+			return err
+		}
 	}
 
 	db, err := store.OpenFlowpipeDB()

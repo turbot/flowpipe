@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"log/slog"
+	"os"
 	"sync"
 	"time"
 
@@ -53,12 +54,6 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		return perr.BadRequestWithMessage("event is not a CommandEvent")
 	}
 
-	db, err := store.OpenFlowpipeDB()
-	if err != nil {
-		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
-	}
-	defer db.Close()
-
 	logMessage := event.EventLogEntry{
 		Level:     "info",
 		Timestamp: time.Now().UTC().Format(putils.RFC3339WithMS),
@@ -67,6 +62,19 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		EventType: commandEvent.HandlerName(),
 		Payload:   commandEvent,
 	}
+
+	if os.Getenv("FLOWPIPE_EVENT_MODE") == "jsonl" {
+		err := execution.LogEventMessageToFile(ctx, &logMessage)
+		if err != nil {
+			return err
+		}
+	}
+
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
+	}
+	defer db.Close()
 
 	newExecution := false
 
