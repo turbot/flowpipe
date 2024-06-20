@@ -8,6 +8,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -23,6 +24,11 @@ func LogEventMessageToFile(ctx context.Context, logEntry *event.EventLogEntry) e
 	if err != nil {
 		slog.Error("Error marshalling JSON", "error", err)
 		os.Exit(1)
+	}
+
+	err = util.EnsureDir(filepaths.EventStoreDir())
+	if err != nil {
+		return perr.InternalWithMessage("Error creating directory " + err.Error())
 	}
 
 	eventStoreFilePath := filepaths.EventStoreFilePath(commandEvent.GetEvent().ExecutionID)
