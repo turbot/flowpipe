@@ -18,8 +18,7 @@ func EventStoreDir() string {
 		return filepath.Dir(dbPath)
 	}
 
-	modLocation := viper.GetString(constants.ArgModLocation)
-	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
+	modFlowpipeDir := ModFlowpipeDir()
 	eventStoreDir := path.Join(modFlowpipeDir, "store")
 
 	return eventStoreDir
