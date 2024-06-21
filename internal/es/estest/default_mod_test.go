@@ -144,7 +144,17 @@ func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 
 	pipelineInput := modconfig.Input{}
 
-	viper.SetDefault(constants.ArgEventStore, "./event-store-test-dir/test-echo.db")
+	// make sure that ./event-store-test-dir/flowpipe.db does not exist
+	_, err := os.Stat("./event-store-test-dir/flowpipe.db")
+	if !os.IsNotExist(err) {
+		// Remove the directory and its contents
+		err = os.Remove("./event-store-test-dir/flowpipe.db")
+		if err != nil {
+			assert.FailNow("Error removing event store file", err)
+		}
+	}
+
+	viper.SetDefault(constants.ArgDataDir, "./event-store-test-dir")
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
@@ -165,18 +175,18 @@ func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 	assert.Equal(1, len(pex.PipelineOutput))
 
 	// check if the event store file was created
-	fi, err := os.Stat("./event-store-test-dir/test-echo.db")
+	fi, err := os.Stat("./event-store-test-dir/flowpipe.db")
 	assert.Nil(err)
 
-	assert.Equal("test-echo.db", fi.Name())
+	assert.Equal("flowpipe.db", fi.Name())
 	assert.False(fi.IsDir())
 
 	// now delete the event store file
-	err = os.Remove("./event-store-test-dir/test-echo.db")
+	err = os.Remove("./event-store-test-dir/flowpipe.db")
 	assert.Nil(err)
 
 	// removed the default value
-	viper.SetDefault(constants.ArgEventStore, "")
+	viper.SetDefault(constants.ArgDataDir, "")
 }
 
 func (suite *DefaultModTestSuite) TestBasicAuth() {

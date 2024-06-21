@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -63,7 +64,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		Payload:   commandEvent,
 	}
 
-	if os.Getenv("FLOWPIPE_EVENT_MODE") == "jsonl" {
+	if strings.ToLower(os.Getenv("FLOWPIPE_EVENT_FORMAT")) == "jsonl" {
 		err := execution.LogEventMessageToFile(ctx, &logMessage)
 		if err != nil {
 			return err
