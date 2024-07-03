@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/types"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"

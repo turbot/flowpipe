@@ -2,11 +2,12 @@ package output
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/printers"
-	"github.com/turbot/pipe-fittings/sanitize"
 	"os"
 
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
+
+	"github.com/turbot/flowpipe/types"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 

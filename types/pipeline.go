@@ -68,24 +68,6 @@ type FpPipeline struct {
 	RootMod         string                     `json:"root_mod"`
 }
 
-//func (p FpPipeline) GetListData() *printers.RowData {
-//	return printers.NewRowData(
-//		printers.NewFieldValue("NAME", p.pipelineDisplayName()),
-//		printers.NewFieldValue("TITLE", p.Title),
-//	)
-//}
-//
-//func (p FpPipeline) GetShowData() *printers.RowData {
-//	return printers.NewRowData(
-//		printers.NewFieldValue("Name", p.pipelineDisplayName()),
-//		printers.NewFieldValue("Title", p.Title),
-//		printers.NewFieldValue("Description", p.Description),
-//		printers.NewFieldValue("Tags", p.Tags),
-//		printers.NewFieldValue("Params", p.Params),
-//		printers.NewFieldValue("Outputs", p.OutputConfig),
-//		printers.NewFieldValue("Usage", p.usage()))
-//}
-
 func (p FpPipeline) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	output := ""
@@ -326,20 +308,6 @@ type FpPipelineParam struct {
 	Type        string  `json:"type"`
 }
 
-//func (p FpPipelineParam) GetShowData() *printers.RowData {
-//	return printers.NewRowData(
-//		printers.NewFieldValue("Name", p.Name, printers.WithListKeyRender(p.renderName)),
-//		printers.NewFieldValue("Type", p.Type),
-//		printers.NewFieldValue("Description", p.Description),
-//		printers.NewFieldValue("Default", p.Default, printers.WithRenderValueFunc(p.renderDefault)))
-//}
-//
-//func (p FpPipelineParam) GetListData() *printers.RowData {
-//	return printers.NewRowData(
-//		printers.NewFieldValue("Name", p.Name),
-//		printers.NewFieldValue("Type", p.Type))
-//}
-
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	left := au.BrightBlack("[")
@@ -386,42 +354,6 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 	}
 	return output
 }
-
-//
-//func (p FpPipelineParam) renderName(opts sanitize.RenderOptions) string {
-//	au := aurora.NewAurora(opts.ColorEnabled)
-//	left := au.BrightBlack("[")
-//	right := au.BrightBlack("]")
-//
-//	var optString string
-//	if p.Optional == nil || !*p.Optional {
-//		optString = fmt.Sprintf(" %s%s%s:", left, au.Red("required"), right)
-//
-//	}
-//	return fmt.Sprintf("%s%s", au.Cyan(p.Name), optString)
-//}
-//
-//func (p FpPipelineParam) renderDefault(opts sanitize.RenderOptions) string {
-//	au := aurora.NewAurora(opts.ColorEnabled)
-//
-//	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
-//		if v, ok := defaults[p.Name]; ok {
-//			var valueString string
-//			if isSimpleType(v) {
-//				valueString = formatSimpleValue(v, aurora.NewAurora(false))
-//			} else {
-//				s, err := json.Marshal(v)
-//				if err != nil {
-//					valueString = au.Sprintf(au.Red("error parsing value"))
-//				} else {
-//					valueString = string(s)
-//				}
-//			}
-//			return valueString
-//		}
-//	}
-//	return ""
-//}
 
 type PipelineExecutionResponse map[string]interface{}
 

@@ -14,7 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/service/api/common"
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )

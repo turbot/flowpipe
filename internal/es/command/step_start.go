@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/types"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/go-kit/helpers"

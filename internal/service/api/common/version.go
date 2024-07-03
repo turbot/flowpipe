@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/types"
 )
 
 const (
