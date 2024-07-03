@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 )
 
 func ListPagingRequest(c *gin.Context) (nextToken string, limit int, err error) {

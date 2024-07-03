@@ -13,7 +13,7 @@ import (
 	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/store"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
 	putils "github.com/turbot/pipe-fittings/utils"
 )

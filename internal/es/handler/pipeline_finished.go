@@ -8,7 +8,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/store"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"

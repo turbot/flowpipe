@@ -12,7 +12,7 @@ import (
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig"

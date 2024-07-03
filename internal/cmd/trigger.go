@@ -13,7 +13,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/turbot/flowpipe/internal/cmd/common"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 

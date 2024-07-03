@@ -13,7 +13,7 @@ import (
 	fconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	o "github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
 	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/constants"

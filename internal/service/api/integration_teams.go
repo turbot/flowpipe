@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/service/api/common"
+	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/flowpipe/types"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

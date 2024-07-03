@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/types"
+	"github.com/turbot/flowpipe/internal/types"
 
 	ginlogger "github.com/FabienMht/ginslog/logger"
 	ginrecovery "github.com/FabienMht/ginslog/recovery"
