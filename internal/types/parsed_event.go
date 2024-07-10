@@ -196,6 +196,7 @@ type ParsedEvent struct {
 	StepType string `json:"step_type"`
 	Message  string `json:"message,omitempty"`
 	execId   string
+	isOuter  bool
 }
 
 func NewParsedEvent(prefix ParsedEventPrefix, executionId string, eventType string, stepType string, msg string) ParsedEvent {
@@ -237,66 +238,68 @@ func NewParsedEventWithInput(pe ParsedEvent, input map[string]any, isSkip bool) 
 }
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 	out := ""
+	if opts.Verbose || !helpers.IsNil(p.prefix) || p.isOuter {
+		au := aurora.NewAurora(opts.ColorEnabled)
+		pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return out
-	}
-
-	if p.isSkip {
-		return fmt.Sprintf("%s %s\n", pre, au.BrightBlack("Skipped"))
-	}
-
-	initText := "Starting"
-	if p.RetryIndex != nil {
-		initText = "Retrying"
-	}
-
-	switch p.StepType {
-	case "http":
-		method, _ := p.Input["method"].(string)
-		url, _ := p.Input["url"].(string)
-		if method == "" {
-			method = "GET"
-		} else {
-			method = strings.ToUpper(method)
+		// deliberately shadow the receiver with a sanitized version of the struct
+		var err error
+		if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+			return out
 		}
 
-		out += fmt.Sprintf("%s %s %s: %s %s\n", pre, initText, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
-	case "sleep":
-		duration, _ := p.Input["duration"].(string)
-		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(duration))
-	case "input":
-		summary, additional := parseInputStepNotifierToLines(p.Input, opts)
-		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, summary)
-		if opts.Verbose && !helpers.IsNil(additional) {
-			for _, line := range *additional {
-				out += fmt.Sprintf("%s %s\n", pre, line)
+		if p.isSkip {
+			return fmt.Sprintf("%s %s\n", pre, au.BrightBlack("Skipped"))
+		}
+
+		initText := "Starting"
+		if p.RetryIndex != nil {
+			initText = "Retrying"
+		}
+
+		switch p.StepType {
+		case "http":
+			method, _ := p.Input["method"].(string)
+			url, _ := p.Input["url"].(string)
+			if method == "" {
+				method = "GET"
+			} else {
+				method = strings.ToUpper(method)
 			}
-		}
-	case "message":
-		text, _ := p.Input["text"].(string)
-		displayText := text
-		if len(displayText) > 50 {
-			displayText = displayText[:50] + "…"
-		}
-		out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(displayText))
-		if !opts.Verbose { // arg will be shown in verbose mode anyway, no need for extra parsing
-			if stepNotifierHasHttp(p.Input) {
-				out += fmt.Sprintf("%s %s %s = %s\n", pre, "Arg", au.Blue("text"), formatSimpleValue(text, au))
-			}
-		}
-	default:
-		out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
-	}
 
-	// args
-	if opts.Verbose && len(p.Input) > 0 {
-		out += sortAndParseMap(p.Input, "Arg", pre, au, opts)
+			out += fmt.Sprintf("%s %s %s: %s %s\n", pre, initText, p.StepType, au.BrightBlack(method), au.BrightBlack(url))
+		case "sleep":
+			duration, _ := p.Input["duration"].(string)
+			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(duration))
+		case "input":
+			summary, additional := parseInputStepNotifierToLines(p.Input, opts)
+			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, summary)
+			if opts.Verbose && !helpers.IsNil(additional) {
+				for _, line := range *additional {
+					out += fmt.Sprintf("%s %s\n", pre, line)
+				}
+			}
+		case "message":
+			text, _ := p.Input["text"].(string)
+			displayText := text
+			if len(displayText) > 50 {
+				displayText = displayText[:50] + "…"
+			}
+			out += fmt.Sprintf("%s %s %s: %s\n", pre, initText, p.StepType, au.BrightBlack(displayText))
+			if !opts.Verbose { // arg will be shown in verbose mode anyway, no need for extra parsing
+				if stepNotifierHasHttp(p.Input) {
+					out += fmt.Sprintf("%s %s %s = %s\n", pre, "Arg", au.Blue("text"), formatSimpleValue(text, au))
+				}
+			}
+		default:
+			out += fmt.Sprintf("%s %s %s\n", pre, initText, p.StepType)
+		}
+
+		// args
+		if opts.Verbose && len(p.Input) > 0 {
+			out += sortAndParseMap(p.Input, "Arg", pre, au, opts)
+		}
 	}
 	return out
 }
@@ -320,47 +323,49 @@ func NewParsedEventWithOutput(parsedEvent ParsedEvent, output map[string]any, st
 }
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	au := aurora.NewAurora(opts.ColorEnabled)
-	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 	out := ""
-	// deliberately shadow the receiver with a sanitized version of the struct
-	var err error
-	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
-		return out
-	}
+	if opts.Verbose || !helpers.IsNil(p.prefix) || p.isOuter {
+		au := aurora.NewAurora(opts.ColorEnabled)
+		pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 
-	// attributes
-	if opts.Verbose && len(p.Output) > 0 {
-		out += sortAndParseMap(p.Output, "Attr", pre, au, opts)
-	}
-
-	// outputs
-	out += sortAndParseMap(p.StepOutput, "Output", pre, au, opts)
-
-	duration := ""
-	if p.Duration != nil {
-		duration = *p.Duration
-	}
-
-	switch p.StepType {
-	case "http":
-		statusCode, _ := p.Output["status_code"].(float64)
-		out += fmt.Sprintf("%s %s %g %s\n", pre, au.BrightGreen("Complete:"), au.BrightGreen(statusCode), au.Cyan(duration).Italic())
-	case "query":
-		if !helpers.IsNil(p.Output["rows"]) {
-			rows := len(p.Output["rows"].([]any))
-			out += fmt.Sprintf("%s %s %d %s %s\n", pre, au.BrightGreen("Complete:"), au.Cyan(rows), au.BrightGreen("row(s)"), au.Cyan(duration).Italic())
-		} else {
-			out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
+		// deliberately shadow the receiver with a sanitized version of the struct
+		var err error
+		if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
+			return out
 		}
-	default:
-		additionalText := ""
-		if p.isClosingEvent {
-			additionalText = fmt.Sprintf(" %s", p.execId)
-		}
-		out += fmt.Sprintf("%s %s %s%s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
-	}
 
+		// attributes
+		if opts.Verbose && len(p.Output) > 0 {
+			out += sortAndParseMap(p.Output, "Attr", pre, au, opts)
+		}
+
+		// outputs
+		out += sortAndParseMap(p.StepOutput, "Output", pre, au, opts)
+
+		duration := ""
+		if p.Duration != nil {
+			duration = *p.Duration
+		}
+
+		switch p.StepType {
+		case "http":
+			statusCode, _ := p.Output["status_code"].(float64)
+			out += fmt.Sprintf("%s %s %g %s\n", pre, au.BrightGreen("Complete:"), au.BrightGreen(statusCode), au.Cyan(duration).Italic())
+		case "query":
+			if !helpers.IsNil(p.Output["rows"]) {
+				rows := len(p.Output["rows"].([]any))
+				out += fmt.Sprintf("%s %s %d %s %s\n", pre, au.BrightGreen("Complete:"), au.Cyan(rows), au.BrightGreen("row(s)"), au.Cyan(duration).Italic())
+			} else {
+				out += fmt.Sprintf("%s %s %s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic())
+			}
+		default:
+			additionalText := ""
+			if p.isClosingEvent {
+				additionalText = fmt.Sprintf(" %s", p.execId)
+			}
+			out += fmt.Sprintf("%s %s %s%s\n", pre, au.BrightGreen("Complete"), au.Cyan(duration).Italic(), au.BrightBlack(additionalText))
+		}
+	}
 	return out
 }
 
@@ -477,6 +482,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					Type:              log.EventType,
 					StepType:          "pipeline",
 					execId:            e.Event.ExecutionID,
+					isOuter:           p.initialPipelineId == e.PipelineExecutionID,
 				},
 				Input:  args,
 				isSkip: false,
@@ -501,6 +507,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					ParsedEventPrefix: NewPrefix(fullName),
 					Type:              log.EventType,
 					execId:            e.Event.ExecutionID,
+					isOuter:           p.initialPipelineId == e.PipelineExecutionID,
 				},
 				Duration:       &duration,
 				StepOutput:     e.PipelineOutput,
@@ -545,8 +552,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 						FullPipelineName: fullName,
 						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
 					},
-					Type:   log.EventType,
-					execId: e.Event.ExecutionID,
+					Type:    log.EventType,
+					execId:  e.Event.ExecutionID,
+					isOuter: p.initialPipelineId == e.PipelineExecutionID,
 				},
 				Duration:        &duration,
 				Errors:          allErrors,

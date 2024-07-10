@@ -385,7 +385,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 				return
 			}
 
-			err = printableResource.SetEvents(logs)
+			err = printableResource.SetEvents(logs) // TODO: Can pass execId/pipelineId here to determine where we need outer pipeline but not other step/pipeline events (local non-verbose)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "failed parsing events")
 				return
