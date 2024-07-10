@@ -207,3 +207,7 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 
 	return fpTrigger
 }
+
+func ConstructTriggerFullyQualifiedName(triggerName string) string {
+	return ConstructFullyQualifiedName("trigger", 2, triggerName)
+}
