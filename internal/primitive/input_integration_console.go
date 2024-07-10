@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"os"
 )
@@ -52,8 +53,7 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 
 		output.Data = map[string]interface{}{"value": response}
 		output.Status = "finished"
-		fmt.Printf("Prompt: %s\n", is.Prompt)
-		fmt.Printf("Response: '%s'\n", *response.(*string))
+		fmt.Printf("%s: %s\n", is.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(*response.(*string)))
 	}
 
 	return &output, nil
