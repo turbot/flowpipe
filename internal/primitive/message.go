@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"github.com/charmbracelet/huh"
 	"strings"
 
 	"github.com/atc0005/go-teams-notify/v2/messagecard"
@@ -108,4 +109,8 @@ func (icm *MessageStepMessageCreator) MsTeamsMessage(iit *InputIntegrationMsTeam
 
 	msgCard.Text = icm.Text
 	return msgCard, nil
+}
+
+func (icm *MessageStepMessageCreator) ConsoleMessage(ip *InputIntegrationConsole, _ []InputIntegrationResponseOption) (*string, *huh.Form, any, error) {
+	return &icm.Text, nil, nil, nil
 }
