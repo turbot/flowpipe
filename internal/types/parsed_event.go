@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"reflect"
 	"strings"
 	"time"
@@ -15,9 +16,10 @@ import (
 	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/flowpipe/internal/constants"
+	cnts "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/utils"
 )
@@ -239,7 +241,8 @@ func NewParsedEventWithInput(pe ParsedEvent, input map[string]any, isSkip bool) 
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	out := ""
-	if opts.Verbose || !helpers.IsNil(p.prefix) || p.isOuter {
+	// only display if is remote execution, verbose mode, has a server prefix (running on server), or is an outer pipeline event.
+	if viper.IsSet(constants.ArgHost) || opts.Verbose || !helpers.IsNil(p.prefix) || p.isOuter {
 		au := aurora.NewAurora(opts.ColorEnabled)
 		pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 
@@ -324,7 +327,8 @@ func NewParsedEventWithOutput(parsedEvent ParsedEvent, output map[string]any, st
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	out := ""
-	if opts.Verbose || !helpers.IsNil(p.prefix) || p.isOuter {
+	// only display if is remote execution, verbose mode, has a server prefix (running on server), or is an outer pipeline event.
+	if viper.IsSet(constants.ArgHost) || opts.Verbose || !helpers.IsNil(p.prefix) || p.isOuter {
 		au := aurora.NewAurora(opts.ColorEnabled)
 		pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
 
@@ -764,7 +768,7 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 
 		// Nasty .. but form_url is a special case where we "extend the input" (see extendInput function). It need to be removed
 		// because it's not a real input to the step.
-		if key == constants.FormUrl {
+		if key == cnts.FormUrl {
 			continue
 		}
 
@@ -794,7 +798,7 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 
 func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOptions) (string, *[]string) {
 	au := aurora.NewAurora(opts.ColorEnabled)
-	formUrl, hasFormUrl := input[constants.FormUrl].(string)
+	formUrl, hasFormUrl := input[cnts.FormUrl].(string)
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 			switch len(notifies) {
