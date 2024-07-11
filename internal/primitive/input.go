@@ -258,8 +258,6 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 }
 
 func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, mc MessageCreator, opts []InputIntegrationResponseOption) (bool, []error) {
-	// TODO: Is this the location to hijack into the integrations when running in local mode and use a console integration
-
 	base := NewInputIntegrationBase(ip)
 	externalNotificationSent := false
 	var notificationErrors []error

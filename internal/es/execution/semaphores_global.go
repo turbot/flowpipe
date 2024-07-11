@@ -2,10 +2,10 @@ package execution
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/output"
 	"log/slog"
 
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/pipe-fittings/constants"
 	"golang.org/x/sync/semaphore"
 )

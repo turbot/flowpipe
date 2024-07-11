@@ -3,24 +3,22 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"reflect"
 	"strings"
 	"time"
 
-	"github.com/turbot/pipe-fittings/schema"
-
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/color"
-	"github.com/turbot/pipe-fittings/printers"
-	"github.com/turbot/pipe-fittings/sanitize"
-
 	"github.com/logrusorgru/aurora"
+	"github.com/spf13/viper"
 	cnts "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 )
 
