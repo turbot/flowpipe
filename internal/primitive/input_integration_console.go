@@ -4,7 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/spf13/viper"
+	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"os"
 )
@@ -33,7 +36,10 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 		output.Data = map[string]interface{}{"value": text}
 		output.Status = "finished"
 	case *InputStepMessageCreator:
+		var theme *huh.Theme
 		is := mc.(*InputStepMessageCreator)
+		enableColor := viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty
+
 		oldStdout := os.Stdout
 		r, w, _ := os.Pipe()
 		os.Stdout = w
@@ -47,13 +53,22 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 			fmt.Print(buf.String())
 		}()
 
-		if err := form.Run(); err != nil {
+		if enableColor {
+			theme = huh.ThemeCharm()
+		} else {
+			theme = huh.ThemeBase()
+		}
+		if err := form.WithTheme(theme).Run(); err != nil {
 			return nil, err
 		}
 
 		output.Data = map[string]interface{}{"value": response}
 		output.Status = "finished"
-		fmt.Printf("%s: %s\n", is.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(*response.(*string)))
+		if enableColor {
+			fmt.Printf("%s: %s\n", is.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(*response.(*string)))
+		} else {
+			fmt.Printf("%s: %s\n", is.Prompt, *response.(*string))
+		}
 	}
 
 	return &output, nil
