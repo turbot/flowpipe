@@ -1,6 +1,8 @@
 trigger "schedule" "report_trigger" {
   schedule = "* * * * *"
 
+  enabled = true
+
   param "param_one" {
     type = string
     default = "value_one"
@@ -32,21 +34,26 @@ trigger "schedule" "report_trigger" {
     }
   }
 
-  pipeline = pipeline.github_issue
+  pipeline = pipeline.report_pipeline
 
-  args = {
-    gh_repo = param.param_one
-  }
+  // args = {
+  //   gh_repo = param.param_one
+  // }
 }
 
 
-pipeline "github_issue" {
+pipeline "report_pipeline" {
   param "gh_repo" {
     type    = string
-    default = "foo"
+    default = "bar"
   }
 
-  step "http" "get_issue" {
-    url = "https://api.github.com/repos/octocat/${param.gh_repo}/issues/2743"
+  step "transform" "echo" {
+    value = param.gh_repo
   }
+
+  output "val" {
+    value = step.transform.echo.value
+  }
+
 }

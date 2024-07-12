@@ -7,7 +7,6 @@ import (
 	"github.com/turbot/pipe-fittings/printers"
 
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/cmdconfig"
@@ -216,7 +215,11 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Println(m)
+	defer func() {
+		if m != nil {
+			_ = m.Stop()
+		}
+	}()
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
 
@@ -226,13 +229,7 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 	fmt.Println(triggerName)
 	fmt.Println(triggerArgs)
 
-	trigger, err := db.GetTrigger(triggerName)
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "Error getting trigger")
-		return
-	}
-
-	fmt.Println(trigger)
+	// fmt.Println(resp)
 
 	// // if a host is set, use it to connect to API server
 	// var m *manager.Manager
