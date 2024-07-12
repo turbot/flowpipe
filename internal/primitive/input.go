@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -220,7 +221,7 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 		}
 	}
 
-	if o.IsServerMode {
+	if o.IsServerMode || (os.Getenv("RUN_MODE") == "TEST_ES") {
 		extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)
 
 		switch {
