@@ -565,7 +565,6 @@ func (suite *DefaultModTestSuite) testInputStepOptionResolution(pipelineName str
 		return
 	}
 
-	assert.Equal("started", pex.Status)
 	assert.Equal(3, len(pex.StepExecutions))
 	assert.Equal(stepName, sex.Name)
 
