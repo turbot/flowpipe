@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/turbot/go-kit/helpers"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
@@ -65,10 +67,19 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 
 		output.Data = map[string]interface{}{"value": response}
 		output.Status = "finished"
+		var displayResponse string
+		switch response.(type) {
+		case *[]string:
+			if !helpers.IsNil(response) {
+				displayResponse = strings.Join(*response.(*[]string), ", ")
+			}
+		case *string:
+			displayResponse = *response.(*string)
+		}
 		if enableColor {
-			fmt.Printf("%s: %s\n", is.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(*response.(*string)))
+			fmt.Printf("%s: %s\n", is.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
 		} else {
-			fmt.Printf("%s: %s\n", is.Prompt, *response.(*string))
+			fmt.Printf("%s: %s\n", is.Prompt, displayResponse)
 		}
 	}
 
