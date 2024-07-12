@@ -1,12 +1,14 @@
+//nolint:forbidigo // console output, will need fmt.Println()
 package primitive
 
 import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/turbot/go-kit/helpers"
 	"os"
 	"strings"
+
+	"github.com/turbot/go-kit/helpers"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
