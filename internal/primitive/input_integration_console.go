@@ -35,14 +35,13 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 		return nil, err
 	}
 
-	switch mc.(type) {
+	switch m := mc.(type) {
 	case *MessageStepMessageCreator:
 		fmt.Println(*text)
 		output.Data = map[string]interface{}{"value": text}
 		output.Status = "finished"
 	case *InputStepMessageCreator:
 		var theme *huh.Theme
-		is := mc.(*InputStepMessageCreator)
 		enableColor := viper.GetString(constants.ArgOutput) == constants.OutputFormatPretty
 
 		oldStdout := os.Stdout
@@ -70,18 +69,18 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 		output.Data = map[string]interface{}{"value": response}
 		output.Status = "finished"
 		var displayResponse string
-		switch response.(type) {
+		switch v := response.(type) {
 		case *[]string:
-			if !helpers.IsNil(response) {
-				displayResponse = strings.Join(*response.(*[]string), ", ")
+			if !helpers.IsNil(v) {
+				displayResponse = strings.Join(*v, ", ")
 			}
 		case *string:
-			displayResponse = *response.(*string)
+			displayResponse = *v
 		}
 		if enableColor {
-			fmt.Printf("%s: %s\n", is.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
+			fmt.Printf("%s: %s\n", m.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
 		} else {
-			fmt.Printf("%s: %s\n", is.Prompt, displayResponse)
+			fmt.Printf("%s: %s\n", m.Prompt, displayResponse)
 		}
 	}
 
