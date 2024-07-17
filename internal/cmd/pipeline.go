@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -434,6 +435,9 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 		stepNames := make(map[string]string)
 		lastIndex := -1
 		status := fmt.Sprintf("Beginning execution (%s) ...", executionId)
+		pipelineOutput := make(map[string]any)
+		var pipelineErrors []modconfig.StepError
+
 		o.PipelineProgress = o.NewProgress(status)
 		o.PipelineProgress.Start()
 		// poll logs for updates
@@ -472,7 +476,10 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
 					}
-					// TODO: Get pipeline outputs for outer pipeline for display
+					if e.PipelineExecutionID == pipelineId {
+						pipelineOutput = e.PipelineOutput
+					}
+
 				case event.HandlerPipelineFailed:
 					var e event.PipelineFailed
 					err := json.Unmarshal([]byte(log.Payload), &e)
@@ -480,7 +487,10 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
 					}
-					// TODO: Get pipeline errors for outer pipeline for display
+					if e.PipelineExecutionID == pipelineId {
+						pipelineOutput = e.PipelineOutput
+						pipelineErrors = e.Errors
+					}
 				case event.CommandStepStart:
 					var e event.StepStart
 					err := json.Unmarshal([]byte(log.Payload), &e)
@@ -504,7 +514,17 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 		if o.PipelineProgress.IsActive() {
 			o.PipelineProgress.Stop()
 		}
-		// TODO: display pipeline outputs!!!
+		// TODO: display pipeline outputs/errors (CAN'T USE fmt.Println NEED TO BUILD SOMETHING FOR PASSING TO A PRINTER)
+		if len(pipelineOutput) > 0 {
+			fmt.Println("Pipeline Outputs:")
+			for k, v := range pipelineOutput {
+				fmt.Printf("%s: %v\n", k, v)
+			}
+			fmt.Printf("\n")
+		}
+		if len(pipelineErrors) > 0 {
+			fmt.Println("***ERRORS***")
+		}
 	}
 }
 
