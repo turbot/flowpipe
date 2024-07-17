@@ -5,13 +5,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
 	"os"
 	"strings"
 
 	"github.com/turbot/go-kit/helpers"
 
 	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -78,9 +78,11 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 			displayResponse = *v
 		}
 		if enableColor {
-			fmt.Printf("%s: %s\n", m.Prompt, lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
+			fmt.Printf("%s\n", m.Prompt)
+			fmt.Printf("%s\n\n", lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
 		} else {
-			fmt.Printf("%s: %s\n", m.Prompt, displayResponse)
+			fmt.Printf("%s\n", m.Prompt)
+			fmt.Printf("%s\n\n", displayResponse)
 		}
 	}
 
