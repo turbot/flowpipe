@@ -5,16 +5,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/charmbracelet/lipgloss"
-	"os"
-	"strings"
-
-	"github.com/turbot/go-kit/helpers"
-
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/viper"
+	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"os"
+	"strings"
 )
 
 type InputIntegrationConsole struct {
@@ -34,6 +33,8 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 	if err != nil {
 		return nil, err
 	}
+
+	o.PipelineProgress.Stop()
 
 	switch m := mc.(type) {
 	case *MessageStepMessageCreator:
@@ -86,5 +87,6 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 		}
 	}
 
+	o.PipelineProgress.Start()
 	return &output, nil
 }
