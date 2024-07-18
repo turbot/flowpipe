@@ -35,7 +35,12 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 		return nil, err
 	}
 
-	o.PipelineProgress.Stop()
+	if err := o.PipelineProgress.Semaphore.Acquire(context.Background(), 1); err != nil {
+		return nil, err
+	}
+	defer func() {
+		o.PipelineProgress.Semaphore.Release(1)
+	}()
 
 	switch m := mc.(type) {
 	case *MessageStepMessageCreator:
@@ -88,6 +93,5 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 		}
 	}
 
-	o.PipelineProgress.Start()
 	return &output, nil
 }

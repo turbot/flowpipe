@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	types2 "github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"log/slog"
 	"regexp"
@@ -220,6 +222,12 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
 		return
 	}
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote)
+	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote
+	if progressLogs {
+		o.PipelineProgress = o.NewProgress("Initializing...")
+	}
 
 	// if a host is set, use it to connect to API server
 	var m *manager.Manager
@@ -236,9 +244,6 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	output := viper.GetString(constants.ArgOutput)
-	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote)
-	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote
 	switch {
 	case isDetach:
 		err := displayDetached(ctx, cmd, resp)
@@ -437,91 +442,110 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 		status := fmt.Sprintf("Beginning execution (%s) ...", executionId)
 		pipelineOutput := make(map[string]any)
 		var pipelineErrors []modconfig.StepError
+		exit := false
+		o.PipelineProgress.Update(status)
 
-		o.PipelineProgress = o.NewProgress(status)
-		o.PipelineProgress.Start()
 		// poll logs for updates
 		for {
-			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
+			progressFunc := func() {
+				// TODO: Somehow get this logic into a function with no input params or return type
+				complete, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
+					return
+				}
+				lastIndex = i
+				exit = complete
+
+				for _, log := range logs {
+					switch log.EventType {
+					case event.HandlerPipelineQueued:
+						var e event.PipelineQueued
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						stepNames[e.PipelineExecutionID] = e.Name
+					case event.HandlerPipelineStarted:
+						var e event.PipelineStarted
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						if stepName, ok := stepNames[e.PipelineExecutionID]; ok {
+							o.PipelineProgress.Update(fmt.Sprintf("Running pipeline %s", stepName))
+							time.Sleep(500 * time.Millisecond)
+						}
+					case event.HandlerPipelineFinished:
+						var e event.PipelineFinished
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						if e.PipelineExecutionID == pipelineId {
+							pipelineOutput = e.PipelineOutput
+						}
+
+					case event.HandlerPipelineFailed:
+						var e event.PipelineFailed
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						if e.PipelineExecutionID == pipelineId {
+							pipelineOutput = e.PipelineOutput
+							pipelineErrors = e.Errors
+						}
+					case event.CommandStepStart:
+						var e event.StepStart
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						o.PipelineProgress.Update(fmt.Sprintf("Running %s step %s", e.StepType, e.StepName))
+						time.Sleep(500 * time.Millisecond)
+					}
+				}
+				time.Sleep(1 * time.Second)
 				return
 			}
-			lastIndex = i
 
-			for _, log := range logs {
-				switch log.EventType {
-				case event.HandlerPipelineQueued:
-					var e event.PipelineQueued
-					err := json.Unmarshal([]byte(log.Payload), &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					stepNames[e.PipelineExecutionID] = e.Name
-				case event.HandlerPipelineStarted:
-					var e event.PipelineStarted
-					err := json.Unmarshal([]byte(log.Payload), &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					if stepName, ok := stepNames[e.PipelineExecutionID]; ok {
-						o.PipelineProgress.Update(fmt.Sprintf("Running pipeline %s", stepName))
-					}
-				case event.HandlerPipelineFinished:
-					var e event.PipelineFinished
-					err := json.Unmarshal([]byte(log.Payload), &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					if e.PipelineExecutionID == pipelineId {
-						pipelineOutput = e.PipelineOutput
-					}
-
-				case event.HandlerPipelineFailed:
-					var e event.PipelineFailed
-					err := json.Unmarshal([]byte(log.Payload), &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					if e.PipelineExecutionID == pipelineId {
-						pipelineOutput = e.PipelineOutput
-						pipelineErrors = e.Errors
-					}
-				case event.CommandStepStart:
-					var e event.StepStart
-					err := json.Unmarshal([]byte(log.Payload), &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					o.PipelineProgress.Update(fmt.Sprintf("Running %s step %s", e.StepType, e.StepName))
-				}
-
-			}
-
+			_ = o.PipelineProgress.Run(progressFunc)
 			if exit {
-				o.PipelineProgress.Stop()
 				break
 			}
-
-			// TODO: make this configurable
-			time.Sleep(500 * time.Millisecond)
 		}
 
 		// TODO: display pipeline outputs/errors (CAN'T USE fmt.Println NEED TO BUILD SOMETHING FOR PASSING TO A PRINTER)
 		if len(pipelineOutput) > 0 {
+
 			fmt.Println("Pipeline Outputs:")
 			for k, v := range pipelineOutput {
-				fmt.Printf("%s: %v\n", k, v)
+				valueString := ""
+				if types2.IsSimpleType(v) {
+					valueString = fmt.Sprintf("%v", v)
+				} else {
+					if b, err := color.NewJsonFormatter(true).Marshal(v); err != nil {
+						valueString = fmt.Sprintf("%v", v)
+					} else {
+						valueString = string(b)
+					}
+				}
+				fmt.Printf("%s = %s\n", k, valueString) //nolint:forbidigo // TODO: Move to a printable resource
 			}
-			fmt.Printf("\n")
+			fmt.Printf("\n") //nolint:forbidigo // TODO: Move to a printable resource
 		}
 		if len(pipelineErrors) > 0 {
 			fmt.Println("***ERRORS***")
+			for _, e := range pipelineErrors {
+				fmt.Println(e.Error.Error()) //nolint:forbidigo // TODO: Move to a printable resource
+			}
+
 		}
 	}
 }

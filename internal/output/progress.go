@@ -2,65 +2,48 @@ package output
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/charmbracelet/huh/spinner"
+	"golang.org/x/sync/semaphore"
 )
 
 var PipelineProgress *Progress
 
 type Progress struct {
-	spinner  *spinner.Spinner
-	cancel   context.CancelFunc
-	mu       sync.Mutex
-	status   string
-	isActive bool
+	spinner   *spinner.Spinner
+	mu        sync.Mutex
+	status    string
+	Semaphore *semaphore.Weighted
 }
 
 func NewProgress(initialText string) *Progress {
 	return &Progress{
-		status: initialText,
+		status:    initialText,
+		Semaphore: semaphore.NewWeighted(1),
+		spinner:   spinner.New(),
 	}
 }
 
-func (p *Progress) Start() {
-	if p.isActive {
-		return
+func (p *Progress) Run(action func()) error {
+	if err := p.Semaphore.Acquire(context.Background(), 1); err != nil {
+		return err
 	}
+	defer p.Semaphore.Release(1)
+
 	if p.spinner == nil {
 		p.spinner = spinner.New()
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	p.cancel = cancel
-	p.isActive = true
-	p.spinner.Title(p.status)
-	go func() {
-		p.spinner.Context(ctx).Run()
-	}()
-}
 
-func (p *Progress) Stop() {
-	if !p.isActive {
-		return
-	}
-	p.isActive = false
-	if p.cancel != nil {
-		p.cancel()
-		p.spinner = nil
-		fmt.Print("\r\033[K")
-	}
+	p.spinner.Title(p.status).Action(action)
+	return p.spinner.Run()
 }
 
 func (p *Progress) Update(msg string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.status = msg
-	if p.isActive {
+	if p.spinner != nil {
 		p.spinner.Title(p.status)
 	}
-}
-
-func (p *Progress) IsActive() bool {
-	return p.isActive
 }
