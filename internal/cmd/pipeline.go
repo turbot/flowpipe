@@ -476,8 +476,9 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 							return
 						}
 						if stepName, ok := stepNames[e.PipelineExecutionID]; ok {
-							o.PipelineProgress.Update(fmt.Sprintf("Running pipeline %s", stepName))
-							time.Sleep(500 * time.Millisecond)
+							pName := strings.Split(stepName, ".")[len(strings.Split(stepName, "."))-1]
+							o.PipelineProgress.Update(fmt.Sprintf("Running pipeline %s", pName))
+							//time.Sleep(500 * time.Millisecond)
 						}
 					case event.HandlerPipelineFinished:
 						var e event.PipelineFinished
@@ -508,11 +509,12 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 							return
 						}
-						o.PipelineProgress.Update(fmt.Sprintf("Running %s step %s", e.StepType, e.StepName))
-						time.Sleep(500 * time.Millisecond)
+						stepName := strings.Split(e.StepName, ".")[len(strings.Split(e.StepName, "."))-1]
+						o.PipelineProgress.Update(fmt.Sprintf("Running %s step %s", e.StepType, stepName))
+						//time.Sleep(500 * time.Millisecond)
 					}
 				}
-				time.Sleep(1 * time.Second)
+				time.Sleep(500 * time.Millisecond)
 				return
 			}
 
