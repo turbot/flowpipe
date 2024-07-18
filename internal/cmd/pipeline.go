@@ -218,13 +218,14 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 
 	isDetach := viper.GetBool(constants.ArgDetach)
 	isRemote := viper.IsSet(constants.ArgHost)
+	isVerbose := viper.IsSet(constants.ArgVerbose)
 	if !isRemote && isDetach {
 		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
 		return
 	}
 	output := viper.GetString(constants.ArgOutput)
-	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote)
-	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote
+	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
+	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
 	if progressLogs {
 		o.PipelineProgress = o.NewProgress("Initializing...")
 	}
@@ -521,7 +522,6 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 			}
 		}
 
-		// TODO: display pipeline outputs/errors (CAN'T USE fmt.Println NEED TO BUILD SOMETHING FOR PASSING TO A PRINTER)
 		if len(pipelineOutput) > 0 {
 
 			fmt.Println("Pipeline Outputs:")
