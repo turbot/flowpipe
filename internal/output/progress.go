@@ -42,8 +42,8 @@ func (p *Progress) Run(action func()) error {
 func (p *Progress) Update(msg string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	p.status = msg
-	if p.spinner != nil {
+	if p.spinner != nil && msg != p.status {
+		p.status = msg
 		p.spinner.Title(p.status)
 	}
 }
