@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	types2 "github.com/turbot/go-kit/types"
-	"github.com/turbot/pipe-fittings/color"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"log/slog"
 	"regexp"
 	"strings"
 	"time"
+
+	types2 "github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/color"
+	"github.com/turbot/pipe-fittings/modconfig"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -478,7 +479,6 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 						if stepName, ok := stepNames[e.PipelineExecutionID]; ok {
 							pName := strings.Split(stepName, ".")[len(strings.Split(stepName, "."))-1]
 							o.PipelineProgress.Update(fmt.Sprintf("Running pipeline %s", pName))
-							//time.Sleep(500 * time.Millisecond)
 						}
 					case event.HandlerPipelineFinished:
 						var e event.PipelineFinished
@@ -511,11 +511,9 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 						}
 						stepName := strings.Split(e.StepName, ".")[len(strings.Split(e.StepName, "."))-1]
 						o.PipelineProgress.Update(fmt.Sprintf("Running %s step %s", e.StepType, stepName))
-						//time.Sleep(500 * time.Millisecond)
 					}
 				}
 				time.Sleep(500 * time.Millisecond)
-				return
 			}
 
 			_ = o.PipelineProgress.Run(progressFunc)
@@ -526,7 +524,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 
 		if len(pipelineOutput) > 0 {
 
-			fmt.Println("Pipeline Outputs:")
+			fmt.Println("Pipeline Outputs:") //nolint:forbidigo // TODO: Move to a printable resource
 			for k, v := range pipelineOutput {
 				valueString := ""
 				if types2.IsSimpleType(v) {
@@ -543,7 +541,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 			fmt.Printf("\n") //nolint:forbidigo // TODO: Move to a printable resource
 		}
 		if len(pipelineErrors) > 0 {
-			fmt.Println("***ERRORS***")
+			fmt.Println("***ERRORS***") //nolint:forbidigo // TODO: Move to a printable resource
 			for _, e := range pipelineErrors {
 				fmt.Println(e.Error.Error()) //nolint:forbidigo // TODO: Move to a printable resource
 			}
