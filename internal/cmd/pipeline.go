@@ -504,6 +504,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 			}
 
 			if exit {
+				o.PipelineProgress.Stop()
 				break
 			}
 
@@ -511,9 +512,6 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[strin
 			time.Sleep(500 * time.Millisecond)
 		}
 
-		if o.PipelineProgress.IsActive() {
-			o.PipelineProgress.Stop()
-		}
 		// TODO: display pipeline outputs/errors (CAN'T USE fmt.Println NEED TO BUILD SOMETHING FOR PASSING TO A PRINTER)
 		if len(pipelineOutput) > 0 {
 			fmt.Println("Pipeline Outputs:")

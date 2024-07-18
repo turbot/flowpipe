@@ -2,8 +2,10 @@ package output
 
 import (
 	"context"
-	"github.com/charmbracelet/huh/spinner"
+	"fmt"
 	"sync"
+
+	"github.com/charmbracelet/huh/spinner"
 )
 
 var PipelineProgress *Progress
@@ -23,6 +25,9 @@ func NewProgress(initialText string) *Progress {
 }
 
 func (p *Progress) Start() {
+	if p.isActive {
+		return
+	}
 	if p.spinner == nil {
 		p.spinner = spinner.New()
 	}
@@ -36,9 +41,14 @@ func (p *Progress) Start() {
 }
 
 func (p *Progress) Stop() {
+	if !p.isActive {
+		return
+	}
 	p.isActive = false
 	if p.cancel != nil {
 		p.cancel()
+		p.spinner = nil
+		fmt.Print("\r\033[K")
 	}
 }
 
