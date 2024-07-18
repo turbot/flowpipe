@@ -9,12 +9,17 @@ import (
 	"strings"
 	"time"
 
+	types2 "github.com/turbot/go-kit/types"
+	"github.com/turbot/pipe-fittings/color"
+	"github.com/turbot/pipe-fittings/modconfig"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -214,9 +219,16 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 
 	isDetach := viper.GetBool(constants.ArgDetach)
 	isRemote := viper.IsSet(constants.ArgHost)
+	isVerbose := viper.IsSet(constants.ArgVerbose)
 	if !isRemote && isDetach {
 		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
 		return
+	}
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
+	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
+	if progressLogs {
+		o.PipelineProgress = o.NewProgress("Initializing...")
 	}
 
 	// if a host is set, use it to connect to API server
@@ -234,8 +246,6 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	output := viper.GetString(constants.ArgOutput)
-	streamLogs := output == "plain" || output == "pretty"
 	switch {
 	case isDetach:
 		err := displayDetached(ctx, cmd, resp)
@@ -245,6 +255,8 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		}
 	case streamLogs:
 		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	case progressLogs:
+		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
 	default:
 		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
 	}
@@ -405,6 +417,135 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[stri
 
 			// TODO: make this configurable
 			time.Sleep(500 * time.Millisecond)
+		}
+	}
+}
+
+func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
+	if resp != nil && resp["flowpipe"] != nil {
+		contents := resp["flowpipe"].(map[string]any)
+		executionId := ""
+		pipelineId := ""
+		if s, ok := contents["execution_id"].(string); !ok {
+			error_helpers.ShowError(ctx, fmt.Errorf("failed obtaining execution_id"))
+			return
+		} else {
+			executionId = s
+		}
+		if s, ok := contents["pipeline_execution_id"].(string); !ok {
+			error_helpers.ShowError(ctx, fmt.Errorf("failed obtaining pipeline_execution_id"))
+			return
+		} else {
+			pipelineId = s
+		}
+
+		stepNames := make(map[string]string)
+		lastIndex := -1
+		status := fmt.Sprintf("Beginning execution (%s) ...", executionId)
+		pipelineOutput := make(map[string]any)
+		var pipelineErrors []modconfig.StepError
+		exit := false
+		o.PipelineProgress.Update(status)
+
+		// poll logs for updates
+		for {
+			progressFunc := func() {
+				// TODO: Somehow get this logic into a function with no input params or return type
+				complete, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
+					return
+				}
+				lastIndex = i
+				exit = complete
+
+				for _, log := range logs {
+					switch log.EventType {
+					case event.HandlerPipelineQueued:
+						var e event.PipelineQueued
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						stepNames[e.PipelineExecutionID] = e.Name
+					case event.HandlerPipelineStarted:
+						var e event.PipelineStarted
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						if stepName, ok := stepNames[e.PipelineExecutionID]; ok {
+							pName := strings.Split(stepName, ".")[len(strings.Split(stepName, "."))-1]
+							o.PipelineProgress.Update(fmt.Sprintf("Running pipeline %s", pName))
+						}
+					case event.HandlerPipelineFinished:
+						var e event.PipelineFinished
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						if e.PipelineExecutionID == pipelineId {
+							pipelineOutput = e.PipelineOutput
+						}
+
+					case event.HandlerPipelineFailed:
+						var e event.PipelineFailed
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						if e.PipelineExecutionID == pipelineId {
+							pipelineOutput = e.PipelineOutput
+							pipelineErrors = e.Errors
+						}
+					case event.CommandStepStart:
+						var e event.StepStart
+						err := json.Unmarshal([]byte(log.Payload), &e)
+						if err != nil {
+							error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+							return
+						}
+						stepName := strings.Split(e.StepName, ".")[len(strings.Split(e.StepName, "."))-1]
+						o.PipelineProgress.Update(fmt.Sprintf("Running %s step %s", e.StepType, stepName))
+					}
+				}
+				time.Sleep(500 * time.Millisecond)
+			}
+
+			_ = o.PipelineProgress.Run(progressFunc)
+			if exit {
+				break
+			}
+		}
+
+		if len(pipelineOutput) > 0 {
+
+			fmt.Println("Pipeline Outputs:") //nolint:forbidigo // TODO: Move to a printable resource
+			for k, v := range pipelineOutput {
+				valueString := ""
+				if types2.IsSimpleType(v) {
+					valueString = fmt.Sprintf("%v", v)
+				} else {
+					if b, err := color.NewJsonFormatter(true).Marshal(v); err != nil {
+						valueString = fmt.Sprintf("%v", v)
+					} else {
+						valueString = string(b)
+					}
+				}
+				fmt.Printf("%s = %s\n", k, valueString) //nolint:forbidigo // TODO: Move to a printable resource
+			}
+			fmt.Printf("\n") //nolint:forbidigo // TODO: Move to a printable resource
+		}
+		if len(pipelineErrors) > 0 {
+			fmt.Println("***ERRORS***") //nolint:forbidigo // TODO: Move to a printable resource
+			for _, e := range pipelineErrors {
+				fmt.Println(e.Error.Error()) //nolint:forbidigo // TODO: Move to a printable resource
+			}
+
 		}
 	}
 }
