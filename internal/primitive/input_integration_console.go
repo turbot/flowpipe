@@ -45,7 +45,10 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 	}
 	switch m := mc.(type) {
 	case *MessageStepMessageCreator:
-		fmt.Println(*text)
+		if viper.IsSet(constants.ArgVerbose) {
+			fmt.Printf("\n")
+		}
+		fmt.Printf("%s\n\n", *text)
 		output.Data = map[string]interface{}{"value": text}
 		output.Status = "finished"
 	case *InputStepMessageCreator:
@@ -101,12 +104,15 @@ func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCrea
 				displayResponse = *v
 			}
 		}
+		if viper.IsSet(constants.ArgVerbose) {
+			fmt.Printf("\n")
+		}
 		if enableColor {
-			fmt.Printf("\n%s\n", m.Prompt)
-			fmt.Printf("%s\n", lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
+			fmt.Printf("%s\n", m.Prompt)
+			fmt.Printf("%s\n\n", lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#006400", Dark: "#00FF00"}).Render(displayResponse))
 		} else {
-			fmt.Printf("\n%s\n", m.Prompt)
-			fmt.Printf("%s\n", displayResponse)
+			fmt.Printf("%s\n", m.Prompt)
+			fmt.Printf("%s\n\n", displayResponse)
 		}
 	}
 
