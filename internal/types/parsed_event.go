@@ -752,6 +752,12 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts sanitize.RenderOptions) string {
 	out := ""
 	sortedKeys := utils.SortedMapKeys(input)
+	if typeString != "" {
+		typeString = fmt.Sprintf("%s ", typeString)
+	}
+	if prefix != "" {
+		prefix = fmt.Sprintf("%s ", prefix)
+	}
 	for _, key := range sortedKeys {
 
 		// Nasty .. but form_url is a special case where we "extend the input" (see extendInput function). It need to be removed
@@ -775,11 +781,8 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 				valueString = string(s)
 			}
 		}
-		if typeString == "" {
-			out += fmt.Sprintf("%s %s = %s\n", prefix, au.Blue(key), valueString)
-		} else {
-			out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
-		}
+
+		out += fmt.Sprintf("%s%s%s = %s\n", prefix, typeString, au.Blue(key), valueString)
 	}
 	return out
 }
