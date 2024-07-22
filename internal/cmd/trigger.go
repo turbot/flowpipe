@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/pipe-fittings/printers"
 
 	"github.com/spf13/viper"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/cmdconfig"
@@ -188,76 +189,107 @@ func triggerRunCmd() *cobra.Command {
 	cmdconfig.OnCmd(cmd).
 		AddStringArrayFlag(constants.ArgArg, nil, "Specify the value of a trigger argument. Multiple --arg may be passed.").
 		AddBoolFlag(constants.ArgVerbose, false, "Enable verbose output.").
-		AddBoolFlag(constants.ArgDetach, false, "Run the trigger in detached mode.")
-		// AddStringFlag(constants.ArgExecutionId, "", "Specify pipeline execution id. Execution id will generated if not provided.")
+		AddBoolFlag(constants.ArgDetach, false, "Run the trigger in detached mode.").
+		AddStringFlag(constants.ArgExecutionId, "", "Specify trigger execution id. Execution id will generated if not provided.")
 
 	return cmd
 }
 
-func runTriggerFunc(cmd *cobra.Command, args []string) {
+func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manager.Manager, error) {
 	ctx := cmd.Context()
-	// var resp map[string]any
-	// var err error
-	// var pollLogFunc pollEventLogFunc
 
-	isDetach := viper.GetBool(constants.ArgDetach)
-	isRemote := viper.IsSet(constants.ArgHost)
-	if !isRemote && isDetach {
-		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
-		return
-	}
-
+	// create and start the manager with ES service, and Docker, but no API server
 	// Move all this code to "run local"
 	// create and start the manager with ES service, and Docker, but no API server
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	if err != nil {
 		error_helpers.FailOnError(err)
-		return
+		return nil, nil, err
 	}
-
-	defer func() {
-		if m != nil {
-			_ = m.Stop()
-		}
-	}()
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
 
 	// extract the pipeline args from the flags
 	triggerArgs := getPipelineArgs(cmd)
 
-	fmt.Println(triggerName)
-	fmt.Println(triggerArgs)
+	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	// fmt.Println(resp)
+	input := types.CmdPipeline{
+		Command:    "run",
+		ArgsString: triggerArgs,
+	}
 
-	// // if a host is set, use it to connect to API server
-	// var m *manager.Manager
-	// m, resp, pollLogFunc, err = executePipeline(cmd, args, isRemote)
-	// if err != nil {
-	// 	error_helpers.FailOnErrorWithMessage(err, "failed executing pipeline")
-	// 	return
+	resp, _, err := api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+
+	return resp, m, err
+}
+
+func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, map[string]any, pollEventLogFunc, error) {
+	// if isRemote {
+	// 	// run pipeline on server
+	// 	resp, err := runTriggerRemote(cmd, args)
+	// 	pollLogFunc := pollServerEventLog
+	// 	return nil, resp, pollLogFunc, err
 	// }
+	// run pipeline in-process
+	var m *manager.Manager
+	resp, m, err := runTriggerLocal(cmd, args)
 
-	// // ensure to shut the manager when we are done
-	// defer func() {
-	// 	if m != nil {
-	// 		_ = m.Stop()
-	// 	}
-	// }()
+	pollLogFunc := pollLocalEventLog
+	return m, resp, pollLogFunc, err
+}
 
-	// output := viper.GetString(constants.ArgOutput)
-	// streamLogs := output == "plain" || output == "pretty"
-	// switch {
-	// case isDetach:
-	// 	err := displayDetached(ctx, cmd, resp)
-	// 	if err != nil {
-	// 		error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
-	// 		return
-	// 	}
-	// case streamLogs:
-	// 	displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
-	// default:
-	// 	displayBasicOutput(ctx, cmd, resp, pollLogFunc)
-	// }
+func runTriggerFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	var resp map[string]any
+	var err error
+	var pollLogFunc pollEventLogFunc
+
+	isDetach := viper.GetBool(constants.ArgDetach)
+	isRemote := viper.IsSet(constants.ArgHost)
+	isVerbose := viper.IsSet(constants.ArgVerbose)
+	if !isRemote && isDetach {
+		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
+		return
+	}
+
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
+	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
+	if progressLogs {
+		o.PipelineProgress = o.NewProgress("Initializing...")
+	}
+
+	// if a host is set, use it to connect to API server
+	var m *manager.Manager
+	m, resp, pollLogFunc, err = executeTrigger(cmd, args, isRemote)
+	if err != nil {
+		error_helpers.FailOnErrorWithMessage(err, "failed executing pipeline")
+		return
+	}
+
+	// ensure to shut the manager when we are done
+	defer func() {
+		if m != nil {
+			_ = m.Stop()
+		}
+	}()
+
+	switch {
+	case isDetach:
+		err := displayDetached(ctx, cmd, resp)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+			return
+		}
+	case streamLogs:
+		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	case progressLogs:
+		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
+	default:
+		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+	}
 }

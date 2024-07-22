@@ -142,7 +142,7 @@ func GetPipeline(pipelineName string, rootMod string) (*types.FpPipeline, error)
 }
 
 // @Summary Execute a pipeline command
-// @DescriptionExecute a pipeline command
+// @Description Execute a pipeline command
 // @ID   pipeline_command
 // @Tags Pipeline
 // @Accept json

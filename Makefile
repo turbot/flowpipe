@@ -6,7 +6,7 @@ build: build-ui
 	go build .
 
 run-mod:
-	go run . server --mod-location ./internal/es/estest/default_mod
+	go run . server --mod-location ./internal/es/estest/trigger_mod
 
 run-test-mod:
 	FP_VAR_var_from_env="from env var" go run . server --mod-location ./internal/es/estest/test_suite_mod

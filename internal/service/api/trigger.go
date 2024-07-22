@@ -235,6 +235,24 @@ func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, t
 	return resp, evt, nil
 }
 
+// @Summary Execute a trigger command
+// @Description Execute a trigger command
+// @ID   trigger_command
+// @Tags Trigger
+// @Accept json
+// @Produce json
+// / ...
+// @Param trigger_name path string true "The name of the trigger" format(^[a-z_]{0,32}$)
+// @Param request body types.CmdPipeline true "Trigger command."
+// ...
+// @Success 200 {object} types.PipelineExecutionResponse
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
+// @Router /trigger/{trigger_name}/command [post]
 func (api *APIService) cmdTrigger(c *gin.Context) {
 	var uri types.TriggerRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {

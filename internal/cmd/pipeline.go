@@ -318,9 +318,6 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manag
 	}
 
 	resp, _, err := api.ExecutePipeline(input, executionId, pipelineName, m.ESService)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	return resp, m, err
 }

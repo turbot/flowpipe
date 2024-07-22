@@ -537,6 +537,11 @@ func (tr *TriggerRunnerQuery) ExecuteTrigger() (types.PipelineExecutionResponse,
 			return nil, nil, err
 		}
 
+		if cmd == nil {
+			// No pipeline to run for the given capture because only if there's a result in the capture the pipeline will be run
+			continue
+		}
+
 		response[capture.Type] = types.PipelineExecutionResponse{
 			"flowpipe": map[string]interface{}{
 				"execution_id":          cmd.Event.ExecutionID,
