@@ -4,6 +4,8 @@
 
 _What's new?_
 
+* Interactive workflows in the terminal via console integration. [Blog](https://flowpipe.io/blog/interactive-workflows-in-console).
+* Simplified progress output for `flowpipe pipeline run` command when running in [Client](https://flowpipe.io/docs/run#operating-modes) mode and not using the `--verbose` arg.
 * `--data-dir` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
 * `--execution-id` parameter to specify custom execution id for pipeline run. ([#856](https://github.com/turbot/flowpipe/issues/856)).
 * Update `Go` version to v1.22.4.
@@ -11,7 +13,7 @@ _What's new?_
 _Bug fixes_
 
 * Return a non-zero exit code if there's a failure. ([#855](https://github.com/turbot/flowpipe/issues/855)).
-* `loop` block now respect the `if` step attribute. ([#858](https://github.com/turbot/flowpipe/issues/858))
+* `loop` block now respect the `if` step attribute. ([#858](https://github.com/turbot/flowpipe/issues/858)).
 
 ## v0.5.0 [2024-06-02]
 
