@@ -1,5 +1,5 @@
 PACKAGE_NAME          := github.com/turbot/flowpipe
-GOLANG_CROSS_VERSION  ?= v1.21.5
+GOLANG_CROSS_VERSION  ?= v1.22.4
 
 .PHONY: build
 build: build-ui
