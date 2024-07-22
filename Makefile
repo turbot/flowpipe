@@ -38,7 +38,7 @@ beta-tag-timetamp:
 
 .PHONY: build-ui
 build-ui:
-	cd ui/form && yarn install && yarn build
+	cd ui/form && corepack enable && yarn install && yarn build
 
 .PHONY: test
 test:
