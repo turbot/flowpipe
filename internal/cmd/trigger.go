@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/pipe-fittings/printers"
 
 	"github.com/spf13/viper"
@@ -209,7 +210,7 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manage
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
 
-	// extract the pipeline args from the flags
+	// extract the trigger args from the flags
 	triggerArgs := getPipelineArgs(cmd)
 
 	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
@@ -227,14 +228,34 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manage
 	return resp, m, err
 }
 
+func runTriggerRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
+	ctx := cmd.Context()
+
+	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
+
+	// extract the trigger args from the flags
+	triggerArgs := getPipelineArgs(cmd)
+
+	// API client
+	apiClient := common.GetApiClient()
+	cmdTriggerRun := flowpipeapiclient.NewCmdPipeline("run")
+
+	// Set the pipeline args
+	cmdTriggerRun.ArgsString = &triggerArgs
+
+	resp, _, err := apiClient.TriggerApi.Command(ctx, triggerName).Request(*cmdTriggerRun).Execute()
+
+	return resp, err
+}
+
 func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, map[string]any, pollEventLogFunc, error) {
-	// if isRemote {
-	// 	// run pipeline on server
-	// 	resp, err := runTriggerRemote(cmd, args)
-	// 	pollLogFunc := pollServerEventLog
-	// 	return nil, resp, pollLogFunc, err
-	// }
-	// run pipeline in-process
+	if isRemote {
+		// run trigger on server
+		resp, err := runTriggerRemote(cmd, args)
+		pollLogFunc := pollServerEventLog
+		return nil, resp, pollLogFunc, err
+	}
+	// run trigger in-process
 	var m *manager.Manager
 	resp, m, err := runTriggerLocal(cmd, args)
 
