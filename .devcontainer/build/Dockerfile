@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:1-1.21-bullseye
+FROM mcr.microsoft.com/devcontainers/go:1-1.22-bullseye
 
 ARG DEVCONTAINER_VERSION
 
