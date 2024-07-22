@@ -43,7 +43,7 @@ USER vscode
 # 5. Downloads the OpenAPI Generator CLI jar file, enabling the generation of API clients and documentation from a command line interface.
 # 6. Activates the Yarn package manager via Corepack, preparing the environment for JavaScript package management and development.
 RUN go install github.com/swaggo/swag/cmd/swag@v1.16.3 \
-    && go install github.com/goreleaser/goreleaser@v2.0.1 \
+    && go install github.com/goreleaser/goreleaser/v2@v2.0.0 \
     && go install github.com/mailhog/MailHog@v1.0.1 \
     && mkdir -p /home/vscode/openapi-generator \
     && wget https://repo1.maven.org/maven2/org/openapitools/openapi-generator-cli/6.6.0/openapi-generator-cli-6.6.0.jar -O /home/vscode/openapi-generator/openapi-generator-cli.jar \
