@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/output"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 
@@ -35,6 +36,7 @@ type TriggerRunner interface {
 	GetTrigger() *modconfig.Trigger
 	GetFqueue() *fqueue.FunctionQueue
 	ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error)
+	ExecuteTriggerForExecutionID(executionId string) (types.PipelineExecutionResponse, *event.PipelineQueue, error)
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
@@ -68,6 +70,10 @@ func (tr *TriggerRunnerBase) Run() {
 }
 
 func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+	return tr.ExecuteTriggerForExecutionID(util.NewExecutionId())
+}
+
+func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
@@ -108,7 +114,7 @@ func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, 
 	}
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(),
+		Event:               event.NewEventForExecutionID(executionId),
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 		Args:                pipelineArgs,
@@ -122,7 +128,10 @@ func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, 
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
-		return nil, nil, perr.InternalWithMessage("Error sending pipeline command")
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
+		}
+		return nil, nil, err
 	}
 
 	response := types.PipelineExecutionResponse{

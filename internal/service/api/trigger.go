@@ -227,7 +227,7 @@ func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, t
 
 	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
 
-	resp, evt, err := triggerRunner.ExecuteTrigger()
+	resp, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId)
 	if err != nil {
 		return nil, nil, err
 	}
