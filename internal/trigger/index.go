@@ -7,6 +7,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/util"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -14,10 +15,10 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fqueue"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -33,6 +34,7 @@ type TriggerRunner interface {
 	Run()
 	GetTrigger() *modconfig.Trigger
 	GetFqueue() *fqueue.FunctionQueue
+	ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error)
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
@@ -59,11 +61,18 @@ func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, root
 }
 
 func (tr *TriggerRunnerBase) Run() {
+	_, _, err := tr.ExecuteTrigger()
+	if err != nil {
+		slog.Error("Error executing trigger", "trigger", tr.Trigger.Name(), "error", err)
+	}
+}
+
+func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
 		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return
+		return nil, nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
 	}
 
 	pipelineDefn := pipeline.AsValueMap()
@@ -76,34 +85,26 @@ func (tr *TriggerRunnerBase) Run() {
 
 	if modFullName != tr.rootMod.FullName {
 		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
-		return
+		return nil, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod")
 	}
-
-	vars := map[string]cty.Value{}
-	for _, v := range tr.rootMod.ResourceMaps.Variables {
-		vars[v.GetMetadata().ResourceName] = v.Value
-	}
-
-	executionVariables := map[string]cty.Value{}
-	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
 	evalContext, err := buildEvalContext(tr.rootMod)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
-		return
+		return nil, nil, perr.InternalWithMessage("Error building eval context")
 	}
 
 	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
 	if err != nil {
 		slog.Error("Error getting latest trigger", "trigger", tr.Trigger.Name(), "error", err)
-		return
+		return nil, nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
 	pipelineArgs, diags := latestTrigger.GetArgs(evalContext)
 
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return
+		return nil, nil, perr.BadRequestWithMessage("Error getting trigger args")
 	}
 
 	pipelineCmd := &event.PipelineQueue{
@@ -121,8 +122,17 @@ func (tr *TriggerRunnerBase) Run() {
 
 	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
-		return
+		return nil, nil, perr.InternalWithMessage("Error sending pipeline command")
 	}
+
+	response := types.PipelineExecutionResponse{
+		"flowpipe": map[string]interface{}{
+			"execution_id":          pipelineCmd.Event.ExecutionID,
+			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
+			"pipeline":              pipelineCmd.Name,
+		},
+	}
+	return response, pipelineCmd, nil
 }
 
 func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {

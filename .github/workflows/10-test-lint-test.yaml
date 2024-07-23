@@ -66,7 +66,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: v1.4.x
+          ref: trigger-pparam
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v4
@@ -74,7 +74,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: v0.4.x
+          ref: trigger-refactor
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
@@ -94,7 +94,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
 
         with:
-          version: v1.56.1
+          version: v1.59.1
           args: --timeout=15m
           working-directory: flowpipe
 

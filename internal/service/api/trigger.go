@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -9,11 +10,16 @@ import (
 
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/schema"
+	putils "github.com/turbot/pipe-fittings/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/service/api/common"
+	"github.com/turbot/flowpipe/internal/service/es"
+	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -22,6 +28,7 @@ import (
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/trigger", api.listTriggers)
 	router.GET("/trigger/:trigger_name", api.getTrigger)
+	router.POST("/trigger/:trigger_name/command", api.cmdTrigger)
 }
 
 // @Summary List triggers
@@ -206,4 +213,87 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 	}
 
 	return fpTrigger
+}
+
+func ConstructTriggerFullyQualifiedName(triggerName string) string {
+	return ConstructFullyQualifiedName("trigger", 2, triggerName)
+}
+
+func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, triggerName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+	modTrigger, err := db.GetTrigger(triggerName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
+
+	resp, evt, err := triggerRunner.ExecuteTrigger()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resp, evt, nil
+}
+
+// @Summary Execute a trigger command
+// @Description Execute a trigger command
+// @ID   trigger_command
+// @Tags Trigger
+// @Accept json
+// @Produce json
+// / ...
+// @Param trigger_name path string true "The name of the trigger" format(^[a-z_]{0,32}$)
+// @Param request body types.CmdPipeline true "Trigger command."
+// ...
+// @Success 200 {object} types.PipelineExecutionResponse
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
+// @Router /trigger/{trigger_name}/command [post]
+func (api *APIService) cmdTrigger(c *gin.Context) {
+	var uri types.TriggerRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	var input types.CmdPipeline
+	if err := c.ShouldBindJSON(&input); err != nil {
+		slog.Error("error binding input", "error", err)
+		common.AbortWithError(c, perr.BadRequestWithMessage(err.Error()))
+		return
+	}
+
+	triggerName := ConstructTriggerFullyQualifiedName(uri.TriggerName)
+
+	if strings.Contains(triggerName, ".query.") {
+		common.AbortWithError(c, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly"))
+		return
+	}
+
+	executionMode := input.GetExecutionMode()
+	waitRetry := input.GetWaitRetry()
+
+	response, pipelineCmd, err := ExecuteTrigger(c, input, "", triggerName, api.EsService)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	if executionMode == localconstants.ExecutionModeSynchronous {
+		api.waitForPipeline(c, pipelineCmd, waitRetry)
+		return
+	}
+
+	if api.ModMetadata.IsStale {
+		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
+		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		c.Header("flowpipe-mod-is-stale", "true")
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
+	}
+
+	c.JSON(http.StatusOK, response)
 }

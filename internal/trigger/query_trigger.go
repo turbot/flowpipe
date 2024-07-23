@@ -84,221 +84,27 @@ func (tr *TriggerRunnerQuery) Run() {
 }
 
 func (tr *TriggerRunnerQuery) RunOne() error {
-
-	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
-
-	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
-
-	queryPrimitive := primitive.Query{}
-
-	input := modconfig.Input{
-		schema.AttributeTypeSql:      config.Sql,
-		schema.AttributeTypeDatabase: config.Database,
-	}
-
-	output, _, err := queryPrimitive.RunWithMetadata(context.Background(), input)
-	if err != nil {
-		slog.Error("Error running trigger query", "error", err)
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error running query trigger "+tr.Trigger.Name(), err))
-		}
-		return err
-	}
-
-	if output.Data["rows"] == nil {
-		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), 0, 0, 0))
-		}
-		return nil
-	}
-
-	rows, ok := output.Data["rows"].([]map[string]interface{})
-	if !ok {
-		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error converting rows to []interface{} "+tr.Trigger.Name(), err))
-		}
-		return nil
-	}
-
-	controlItems := []queryTriggerMetadata{}
-
-	primaryKeyRowMap := map[string]interface{}{}
-
-	if config.PrimaryKey != "" {
-		for _, r := range rows {
-			// get the primary key
-			primaryKey := r[config.PrimaryKey]
-			if primaryKey == nil {
-				slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
-				if o.IsServerMode {
-					errorString := fmt.Sprintf("primary key %s not found in query row from query trigger %s", config.PrimaryKey, tr.Trigger.Name())
-					err := perr.InternalWithMessage(errorString)
-					o.RenderServerOutput(
-						context.TODO(),
-						types.NewServerOutputError(
-							types.NewServerOutputPrefix(time.Now(), "flowpipe"),
-							errorString,
-							err))
-				}
-				return perr.InternalWithMessage("Primary key not found in row")
-			}
-			pkString, ok := primaryKey.(string)
-			if !ok {
-				pkString = fmt.Sprintf("%v", primaryKey)
-			}
-
-			primaryKeyRowMap[pkString] = r
-
-			rowHash := hashRow(r)
-
-			controlItem := queryTriggerMetadata{
-				PrimaryKey: pkString,
-				RowHash:    rowHash,
-			}
-			controlItems = append(controlItems, controlItem)
-		}
-	} else {
-		for _, r := range rows {
-			rowHash := hashRow(r)
-			// use the rowHash as the primary key
-			primaryKeyRowMap[rowHash] = r
-
-			controlItem := queryTriggerMetadata{
-				PrimaryKey: rowHash,
-				RowHash:    rowHash,
-			}
-			controlItems = append(controlItems, controlItem)
-		}
-	}
-
-	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
-
-	db, err := store.OpenFlowpipeDB()
-	if err != nil {
-		slog.Error("Error opening Flowpipe db", "error", err)
-		return err
-	}
-	defer db.Close()
-
-	newItemPrimaryKeys, updatedItemPrimaryKeys, deletedPrimaryKeys, err := calculatedNewUpdatedDeletedData(db, safeTriggerName, controlItems)
-	if err != nil {
-		slog.Error("Error storing slice", "error", err)
-		return err
-	}
-
-	newRows := []map[string]interface{}{}
-	for _, k := range newItemPrimaryKeys {
-		slog.Debug("New item key", "key", k)
-		row := primaryKeyRowMap[k]
-
-		if row == nil {
-			slog.Warn("New item not found in row map", "key", k)
-			continue
-		}
-
-		slog.Debug("New item rows", "row", row)
-		newRows = append(newRows, row.(map[string]interface{}))
-	}
-
-	newRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(newRows)
-	if err != nil {
-		slog.Error("Error building new rows cty", "error", err)
-		return err
-	}
-
-	updatedRows := []map[string]interface{}{}
-	for _, k := range updatedItemPrimaryKeys {
-		slog.Debug("New item key", "key", k)
-		row := primaryKeyRowMap[k]
-
-		if row == nil {
-			slog.Warn("New item not found in row map", "key", k)
-			continue
-		}
-
-		slog.Debug("Updated item row", "row", row)
-		updatedRows = append(updatedRows, row.(map[string]interface{}))
-	}
-
-	updatedRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(updatedRows)
-	if err != nil {
-		slog.Error("Error building updated rows cty", "error", err)
-		return err
-	}
-
-	deletedKeysCty, err := hclhelpers.ConvertInterfaceToCtyValue(deletedPrimaryKeys)
-	if err != nil {
-		slog.Error("Error building deleted rows cty", "error", err)
-		return err
-	}
-
-	evalContext, err := buildEvalContext(tr.rootMod)
-	if err != nil {
-		slog.Error("Error building eval context", "error", err)
-		return err
-	}
-
-	// Add the new rows to the pipeline args
-	selfVars := map[string]cty.Value{}
-
-	if len(newRows) > 0 {
-		selfVars["inserted_rows"] = newRowCtyVals
-	} else {
-		selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
-	}
-	if len(updatedRows) > 0 {
-		selfVars["updated_rows"] = updatedRowCtyVals
-	} else {
-		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
-	}
-
-	if len(deletedPrimaryKeys) > 0 {
-		selfVars["deleted_rows"] = deletedKeysCty
-	} else {
-		selfVars["deleted_rows"] = cty.ListValEmpty(cty.String)
-	}
-
-	varsEvalContext := evalContext.Variables
-	varsEvalContext["self"] = cty.ObjectVal(selfVars)
-
-	queryStat := map[string]int{
-		"insert": len(newRows),
-		"update": len(updatedRows),
-		"delete": len(deletedPrimaryKeys),
-	}
-	if o.IsServerMode {
-		o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), len(newRows), len(updatedRows), len(deletedPrimaryKeys)))
-	}
-	for _, capture := range config.Captures {
-		err := runPipeline(capture, tr, evalContext, queryStat)
-		if err != nil {
-			slog.Error("Error running pipeline", "error", err)
-			return err
-		}
-	}
-
-	return nil
+	_, _, err := tr.ExecuteTrigger()
+	return err
 }
 
-func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) error {
+func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
-		return nil
+		return nil, nil
 	}
 
 	pipelineArgs, diags := capture.GetArgs(evalContext)
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return perr.InternalWithMessage("Error getting trigger args")
+		return nil, perr.InternalWithMessage("Error getting trigger args")
 	}
 
 	pipeline := capture.Pipeline
 
 	if pipeline == cty.NilVal {
 		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
+		return nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
 	}
 
 	pipelineDefn := pipeline.AsValueMap()
@@ -321,10 +127,10 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 		if o.IsServerMode {
 			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
 		}
-		return err
+		return nil, err
 	}
 
-	return nil
+	return pipelineCmd, nil
 }
 
 func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItems []queryTriggerMetadata) ([]string, []string, []string, error) {
@@ -532,4 +338,218 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 		updatedItems = append(updatedItems, newData)
 	}
 	return updatedItems, nil
+}
+
+func (tr *TriggerRunnerQuery) ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
+
+	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
+
+	queryPrimitive := primitive.Query{}
+
+	input := modconfig.Input{
+		schema.AttributeTypeSql:      config.Sql,
+		schema.AttributeTypeDatabase: config.Database,
+	}
+
+	output, _, err := queryPrimitive.RunWithMetadata(context.Background(), input)
+	if err != nil {
+		slog.Error("Error running trigger query", "error", err)
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error running query trigger "+tr.Trigger.Name(), err))
+		}
+		return nil, nil, err
+	}
+
+	if output.Data["rows"] == nil {
+		slog.Info("No rows returned from trigger query", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), 0, 0, 0))
+		}
+		return nil, nil, nil
+	}
+
+	rows, ok := output.Data["rows"].([]map[string]interface{})
+	if !ok {
+		slog.Error("Error converting rows to []interface{}", "trigger", tr.Trigger.Name())
+		if o.IsServerMode {
+			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error converting rows to []interface{} "+tr.Trigger.Name(), err))
+		}
+		return nil, nil, nil
+	}
+
+	controlItems := []queryTriggerMetadata{}
+
+	primaryKeyRowMap := map[string]interface{}{}
+
+	if config.PrimaryKey != "" {
+		for _, r := range rows {
+			// get the primary key
+			primaryKey := r[config.PrimaryKey]
+			if primaryKey == nil {
+				slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
+				if o.IsServerMode {
+					errorString := fmt.Sprintf("primary key %s not found in query row from query trigger %s", config.PrimaryKey, tr.Trigger.Name())
+					err := perr.InternalWithMessage(errorString)
+					o.RenderServerOutput(
+						context.TODO(),
+						types.NewServerOutputError(
+							types.NewServerOutputPrefix(time.Now(), "flowpipe"),
+							errorString,
+							err))
+				}
+				return nil, nil, perr.InternalWithMessage("Primary key not found in row")
+			}
+			pkString, ok := primaryKey.(string)
+			if !ok {
+				pkString = fmt.Sprintf("%v", primaryKey)
+			}
+
+			primaryKeyRowMap[pkString] = r
+
+			rowHash := hashRow(r)
+
+			controlItem := queryTriggerMetadata{
+				PrimaryKey: pkString,
+				RowHash:    rowHash,
+			}
+			controlItems = append(controlItems, controlItem)
+		}
+	} else {
+		for _, r := range rows {
+			rowHash := hashRow(r)
+			// use the rowHash as the primary key
+			primaryKeyRowMap[rowHash] = r
+
+			controlItem := queryTriggerMetadata{
+				PrimaryKey: rowHash,
+				RowHash:    rowHash,
+			}
+			controlItems = append(controlItems, controlItem)
+		}
+	}
+
+	safeTriggerName := strings.ReplaceAll(tr.Trigger.FullName, ".", "_")
+
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		slog.Error("Error opening Flowpipe db", "error", err)
+		return nil, nil, err
+	}
+	defer db.Close()
+
+	newItemPrimaryKeys, updatedItemPrimaryKeys, deletedPrimaryKeys, err := calculatedNewUpdatedDeletedData(db, safeTriggerName, controlItems)
+	if err != nil {
+		slog.Error("Error storing slice", "error", err)
+		return nil, nil, err
+	}
+
+	newRows := []map[string]interface{}{}
+	for _, k := range newItemPrimaryKeys {
+		slog.Debug("New item key", "key", k)
+		row := primaryKeyRowMap[k]
+
+		if row == nil {
+			slog.Warn("New item not found in row map", "key", k)
+			continue
+		}
+
+		slog.Debug("New item rows", "row", row)
+		newRows = append(newRows, row.(map[string]interface{}))
+	}
+
+	newRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(newRows)
+	if err != nil {
+		slog.Error("Error building new rows cty", "error", err)
+		return nil, nil, err
+	}
+
+	updatedRows := []map[string]interface{}{}
+	for _, k := range updatedItemPrimaryKeys {
+		slog.Debug("New item key", "key", k)
+		row := primaryKeyRowMap[k]
+
+		if row == nil {
+			slog.Warn("New item not found in row map", "key", k)
+			continue
+		}
+
+		slog.Debug("Updated item row", "row", row)
+		updatedRows = append(updatedRows, row.(map[string]interface{}))
+	}
+
+	updatedRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(updatedRows)
+	if err != nil {
+		slog.Error("Error building updated rows cty", "error", err)
+		return nil, nil, err
+	}
+
+	deletedKeysCty, err := hclhelpers.ConvertInterfaceToCtyValue(deletedPrimaryKeys)
+	if err != nil {
+		slog.Error("Error building deleted rows cty", "error", err)
+		return nil, nil, err
+	}
+
+	evalContext, err := buildEvalContext(tr.rootMod)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return nil, nil, err
+	}
+
+	// Add the new rows to the pipeline args
+	selfVars := map[string]cty.Value{}
+
+	if len(newRows) > 0 {
+		selfVars["inserted_rows"] = newRowCtyVals
+	} else {
+		selfVars["inserted_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+	}
+	if len(updatedRows) > 0 {
+		selfVars["updated_rows"] = updatedRowCtyVals
+	} else {
+		selfVars["updated_rows"] = cty.ListValEmpty(cty.DynamicPseudoType)
+	}
+
+	if len(deletedPrimaryKeys) > 0 {
+		selfVars["deleted_rows"] = deletedKeysCty
+	} else {
+		selfVars["deleted_rows"] = cty.ListValEmpty(cty.String)
+	}
+
+	varsEvalContext := evalContext.Variables
+	varsEvalContext["self"] = cty.ObjectVal(selfVars)
+
+	queryStat := map[string]int{
+		"insert": len(newRows),
+		"update": len(updatedRows),
+		"delete": len(deletedPrimaryKeys),
+	}
+	if o.IsServerMode {
+		o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), len(newRows), len(updatedRows), len(deletedPrimaryKeys)))
+	}
+
+	response := types.PipelineExecutionResponse{}
+
+	for _, capture := range config.Captures {
+		cmd, err := runPipeline(capture, tr, evalContext, queryStat)
+		if err != nil {
+			slog.Error("Error running pipeline", "error", err)
+			return nil, nil, err
+		}
+
+		if cmd == nil {
+			// No pipeline to run for the given capture because only if there's a result in the capture the pipeline will be run
+			continue
+		}
+
+		response[capture.Type] = types.PipelineExecutionResponse{
+			"flowpipe": map[string]interface{}{
+				"execution_id":          cmd.Event.ExecutionID,
+				"pipeline_execution_id": cmd.PipelineExecutionID,
+				"pipeline":              cmd.Name,
+			},
+		}
+	}
+
+	return response, nil, err
 }

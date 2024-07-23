@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.7.0 [tbd]
+
+_What's new?_
+
+* On-demand trigger execution. ([#864](https://github.com/turbot/flowpipe/issues/864)).
+
 ## v0.6.0 [tbd]
 
 _What's new?_
