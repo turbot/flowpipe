@@ -269,6 +269,11 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 
 	triggerName := ConstructTriggerFullyQualifiedName(uri.TriggerName)
 
+	if strings.Contains(triggerName, ".query.") {
+		common.AbortWithError(c, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly"))
+		return
+	}
+
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 

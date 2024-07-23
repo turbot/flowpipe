@@ -3,8 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 
 	"github.com/spf13/viper"
@@ -209,6 +211,10 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manage
 	}
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
+
+	if strings.Contains(triggerName, ".query.") {
+		return nil, nil, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly")
+	}
 
 	// extract the trigger args from the flags
 	triggerArgs := getPipelineArgs(cmd)
