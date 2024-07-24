@@ -87,16 +87,14 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		triggerRunArgs = args
+	} else if len(argsString) > 0 {
+		coercedArgs, errs := tr.Trigger.CoerceTriggerParams(argsString)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		}
+		triggerRunArgs = coercedArgs
 	}
-
-	// } else if len(input.ArgsString) > 0 {
-	// 	args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
-	// 	if len(errs) > 0 {
-	// 		errStrs := error_helpers.MergeErrors(errs)
-	// 		return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
-	// 	}
-	// 	pipelineCmd.Args = args
-	// }
 
 	pipeline := tr.Trigger.GetPipeline()
 
