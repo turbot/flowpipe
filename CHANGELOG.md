@@ -6,7 +6,7 @@ _What's new?_
 
 * On-demand trigger execution. ([#864](https://github.com/turbot/flowpipe/issues/864)).
 
-## v0.6.0 [tbd]
+## v0.6.0 [2024-07-24]
 
 _What's new?_
 
