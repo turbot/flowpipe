@@ -1,7 +1,7 @@
 trigger "schedule" "report_trigger" {
   schedule = "* * * * *"
 
-  enabled = true
+  enabled = false
 
   param "param_one" {
     type = string
@@ -36,9 +36,9 @@ trigger "schedule" "report_trigger" {
 
   pipeline = pipeline.report_pipeline
 
-  // args = {
-  //   gh_repo = param.param_one
-  // }
+  args = {
+    gh_repo = param.param_one
+  }
 }
 
 

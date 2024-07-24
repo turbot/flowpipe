@@ -3,6 +3,7 @@ package trigger
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/output"
@@ -17,11 +18,14 @@ import (
 	"github.com/turbot/flowpipe/internal/es/handler"
 	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
+	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
+	"github.com/zclconf/go-cty/cty/gocty"
 )
 
 type TriggerRunnerBase struct {
@@ -36,7 +40,7 @@ type TriggerRunner interface {
 	GetTrigger() *modconfig.Trigger
 	GetFqueue() *fqueue.FunctionQueue
 	ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error)
-	ExecuteTriggerForExecutionID(executionId string) (types.PipelineExecutionResponse, *event.PipelineQueue, error)
+	ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.PipelineExecutionResponse, *event.PipelineQueue, error)
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
@@ -70,10 +74,30 @@ func (tr *TriggerRunnerBase) Run() {
 }
 
 func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
-	return tr.ExecuteTriggerForExecutionID(util.NewExecutionId())
+	return tr.ExecuteTriggerForExecutionID(util.NewExecutionId(), nil, nil)
 }
 
-func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+
+	var triggerRunArgs map[string]interface{}
+	if len(args) > 0 || len(argsString) == 0 {
+		errs := tr.Trigger.ValidateTriggerParam(args)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		}
+		triggerRunArgs = args
+	}
+
+	// } else if len(input.ArgsString) > 0 {
+	// 	args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
+	// 	if len(errs) > 0 {
+	// 		errStrs := error_helpers.MergeErrors(errs)
+	// 		return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+	// 	}
+	// 	pipelineCmd.Args = args
+	// }
+
 	pipeline := tr.Trigger.GetPipeline()
 
 	if pipeline == cty.NilVal {
@@ -94,7 +118,7 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string) (t
 		return nil, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod")
 	}
 
-	evalContext, err := buildEvalContext(tr.rootMod)
+	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 		return nil, nil, perr.InternalWithMessage("Error building eval context")
@@ -110,7 +134,8 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string) (t
 
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return nil, nil, perr.BadRequestWithMessage("Error getting trigger args")
+		err := error_helpers.HclDiagsToError("trigger", diags)
+		return nil, nil, err
 	}
 
 	pipelineCmd := &event.PipelineQueue{
@@ -152,20 +177,47 @@ func (tr *TriggerRunnerBase) GetFqueue() *fqueue.FunctionQueue {
 	return tr.Fqueue
 }
 
-func buildEvalContext(rootMod *modconfig.Mod) (*hcl.EvalContext, error) {
+func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.PipelineParam, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 	vars := make(map[string]cty.Value)
 	if rootMod != nil {
 		for _, v := range rootMod.ResourceMaps.Variables {
 			vars[v.GetMetadata().ResourceName] = v.Value
 		}
 	}
-
 	executionVariables := map[string]cty.Value{}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
+
+	params := map[string]cty.Value{}
+
+	for _, v := range triggerParams {
+		if triggerRunArgs[v.Name] != nil {
+			if !v.Type.HasDynamicTypes() {
+				val, err := gocty.ToCtyValue(triggerRunArgs[v.Name], v.Type)
+				if err != nil {
+					return nil, err
+				}
+				params[v.Name] = val
+			} else {
+				// we'll do our best here
+				val, err := hclhelpers.ConvertInterfaceToCtyValue(triggerRunArgs[v.Name])
+				if err != nil {
+					return nil, err
+				}
+				params[v.Name] = val
+			}
+
+		} else {
+			params[v.Name] = v.Default
+		}
+	}
+
+	paramsCtyVal := cty.ObjectVal(params)
+	executionVariables[schema.BlockTypeParam] = paramsCtyVal
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
 		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
+
 	return evalContext, nil
 }

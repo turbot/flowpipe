@@ -97,7 +97,7 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 	pipelineArgs, diags := capture.GetArgs(evalContext)
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return nil, perr.InternalWithMessage("Error getting trigger args")
+		return nil, perr.InternalWithMessage("parsing trigger args")
 	}
 
 	pipeline := capture.Pipeline
@@ -343,6 +343,8 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 func (tr *TriggerRunnerQuery) ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
+	var triggerRunArgs map[string]interface{}
+
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
 
 	queryPrimitive := primitive.Query{}
@@ -490,7 +492,7 @@ func (tr *TriggerRunnerQuery) ExecuteTrigger() (types.PipelineExecutionResponse,
 		return nil, nil, err
 	}
 
-	evalContext, err := buildEvalContext(tr.rootMod)
+	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 		return nil, nil, err
