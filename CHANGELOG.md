@@ -4,7 +4,7 @@
 
 _What's new?_
 
-* Interactive workflows in the terminal via console integration. [Blog](https://flowpipe.io/blog/interactive-workflows-in-console).
+* Interactive workflows in the terminal via console integration. [Blog](https://flowpipe.io/blog/interactive-workflows-pipelines).
 * Simplified progress output for `flowpipe pipeline run` command when running in [Client](https://flowpipe.io/docs/run#operating-modes) mode and not using the `--verbose` arg.
 * `--data-dir` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
 * `--execution-id` parameter to specify custom execution id for pipeline run. ([#856](https://github.com/turbot/flowpipe/issues/856)).
