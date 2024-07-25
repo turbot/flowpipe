@@ -69,3 +69,12 @@ pipeline "http" {
     }
 }
 
+
+
+trigger "schedule" "http_step_trigger" {
+  schedule = "* * * * *"
+
+  enabled = false
+
+  pipeline = pipeline.http
+}

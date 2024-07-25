@@ -220,8 +220,8 @@ func ConstructTriggerFullyQualifiedName(triggerName string) string {
 	return ConstructFullyQualifiedName("trigger", 2, triggerName)
 }
 
-func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, triggerName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
-	response := types.PipelineExecutionResponse{}
+func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (types.TriggerExecutionResponse, *event.PipelineQueue, error) {
+	response := types.TriggerExecutionResponse{}
 	modTrigger, err := db.GetTrigger(triggerName)
 	if err != nil {
 		return response, nil, err
@@ -229,10 +229,16 @@ func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, t
 
 	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
 
-	response, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
+	pipelineResponse, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
 	if err != nil {
 		return response, nil, err
 	}
+
+	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
+		Name: triggerRunner.GetTrigger().FullName,
+		Type: triggerRunner.GetTrigger().Config.GetType(),
+	}
+	response.Results = []types.PipelineExecutionResponse{pipelineResponse}
 
 	return response, evt, nil
 }
@@ -245,9 +251,9 @@ func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, t
 // @Produce json
 // / ...
 // @Param trigger_name path string true "The name of the trigger" format(^[a-z_]{0,32}$)
-// @Param request body types.CmdPipeline true "Trigger command."
+// @Param request body types.CmdTrigger true "Trigger command."
 // ...
-// @Success 200 {object} types.PipelineExecutionResponse
+// @Success 200 {object} types.TriggerExecutionResponse
 // @Failure 400 {object} perr.ErrorModel
 // @Failure 401 {object} perr.ErrorModel
 // @Failure 403 {object} perr.ErrorModel
@@ -262,7 +268,7 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 		return
 	}
 
-	var input types.CmdPipeline
+	var input types.CmdTrigger
 	if err := c.ShouldBindJSON(&input); err != nil {
 		slog.Error("error binding input", "error", err)
 		common.AbortWithError(c, perr.BadRequestWithMessage(err.Error()))
@@ -279,14 +285,9 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	response, pipelineCmd, err := ExecuteTrigger(c, input, "", triggerName, api.EsService)
+	response, pipelineCmd, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
-		return
-	}
-
-	if executionMode == localconstants.ExecutionModeSynchronous {
-		api.waitForPipeline(c, pipelineCmd, waitRetry)
 		return
 	}
 
@@ -297,7 +298,58 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
 
+	if executionMode == localconstants.ExecutionModeSynchronous {
+		pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
+		newResp := types.TriggerExecutionResponse{
+			Flowpipe: response.Flowpipe,
+		}
+		api.processTriggerExecutionResult(c, newResp, pipelineExecutionReponse, pipelineCmd, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, response)
+}
+
+func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExecutionResponse types.TriggerExecutionResponse, pipelineExecutionResponse types.PipelineExecutionResponse, pipelineCmd *event.PipelineQueue, err error) {
+
+	if err != nil {
+		if errorModel, ok := err.(perr.ErrorModel); ok {
+			pipelineExecutionResponse := types.PipelineExecutionResponse{}
+
+			pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
+			pipelineExecutionResponse.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
+			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
+			pipelineExecutionResponse.Flowpipe.Status = "failed"
+
+			pipelineExecutionResponse.Errors = []modconfig.StepError{
+				{
+					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+					Pipeline:            pipelineCmd.Name,
+					Error:               errorModel,
+				},
+			}
+
+			triggerExecutionResponse.Results = append(triggerExecutionResponse.Results, pipelineExecutionResponse)
+
+			c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+			c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+			c.Header("flowpipe-status", "failed")
+
+			c.JSON(500, triggerExecutionResponse)
+			return
+		} else {
+			common.AbortWithError(c, err)
+			return
+		}
+	}
+
+	triggerExecutionResponse.Results = append(triggerExecutionResponse.Results, pipelineExecutionResponse)
+
+	if pipelineExecutionResponse.Flowpipe.Status == "finished" {
+		c.JSON(http.StatusOK, triggerExecutionResponse)
+	} else {
+		c.JSON(209, triggerExecutionResponse)
+	}
 }
 
 // func (api *APIService) listTriggerKeys(c *gin.Context) {

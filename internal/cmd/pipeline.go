@@ -279,6 +279,11 @@ func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (*manager
 func runPipelineRemote(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, error) {
 	ctx := cmd.Context()
 
+	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
+	if err != nil {
+		return types.PipelineExecutionResponse{}, err
+	}
+
 	pipelineName := args[0]
 	// extract the pipeline args from the flags
 	pipelineArgs := getPipelineArgs(cmd)
@@ -289,6 +294,7 @@ func runPipelineRemote(cmd *cobra.Command, args []string) (types.PipelineExecuti
 
 	// Set the pipeline args
 	cmdPipelineRun.ArgsString = &pipelineArgs
+	cmdPipelineRun.ExecutionId = &executionId
 
 	response, _, err := apiClient.PipelineApi.Command(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
 	if err != nil {

@@ -403,26 +403,22 @@ type FlowpipeResponseMetadata struct {
 }
 
 type CmdPipeline struct {
-	Command       string                 `json:"command" binding:"required,oneof=run"`
+	Command string `json:"command" binding:"required,oneof=run"`
+
+	// Sepcify execution id, if not specified, a new execution id will be created
+	ExecutionID   string                 `json:"execution_id,omitempty"`
 	Args          map[string]interface{} `json:"args,omitempty"`
 	ArgsString    map[string]string      `json:"args_string,omitempty"`
 	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
-	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty"`
 }
 
 func (c *CmdPipeline) GetExecutionMode() string {
-	executionMode := localconstants.DefaultExecutionMode
-	if c.ExecutionMode != nil {
-		executionMode = *c.ExecutionMode
-	}
-	return executionMode
+	return utils.Deref(c.ExecutionMode, localconstants.DefaultExecutionMode)
 }
 
 func (c *CmdPipeline) GetWaitRetry() int {
-	if c.WaitRetry != nil {
-		return *c.WaitRetry
-	}
-	return localconstants.DefaultWaitRetry
+	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
 }
 
 type PrintablePipeline struct {

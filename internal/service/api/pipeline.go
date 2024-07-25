@@ -178,25 +178,76 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	response, pipelineCmd, err := ExecutePipeline(input, "", pipelineName, api.EsService)
+	pipelineExecutionResponse, pipelineCmd, err := ExecutePipeline(input, input.ExecutionID, pipelineName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
 	if executionMode == localconstants.ExecutionModeSynchronous {
-		api.waitForPipeline(c, pipelineCmd, waitRetry)
+		waitPipelineExecutionResponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
+		api.processSinglePipelineResult(c, &waitPipelineExecutionResponse, pipelineCmd, err)
 		return
 	}
 
 	if api.ModMetadata.IsStale {
-		response.Flowpipe.IsStale = &api.ModMetadata.IsStale
-		response.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
+		pipelineExecutionResponse.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		pipelineExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, pipelineExecutionResponse)
+}
+
+func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecutionResponse *types.PipelineExecutionResponse, pipelineCmd *event.PipelineQueue, err error) {
+	expectedState := "finished"
+
+	if err != nil {
+		if errorModel, ok := err.(perr.ErrorModel); ok {
+			pipelineExecutionResponse := types.PipelineExecutionResponse{}
+
+			pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
+			pipelineExecutionResponse.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
+			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
+			pipelineExecutionResponse.Flowpipe.Status = "failed"
+
+			pipelineExecutionResponse.Errors = []modconfig.StepError{
+				{
+					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+					Pipeline:            pipelineCmd.Name,
+					Error:               errorModel,
+				},
+			}
+
+			c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+			c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+			c.Header("flowpipe-status", "failed")
+
+			c.JSON(500, pipelineExecutionResponse)
+			return
+		} else {
+			common.AbortWithError(c, err)
+			return
+		}
+	}
+
+	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+	c.Header("flowpipe-status", pipelineExecutionResponse.Flowpipe.Status)
+
+	if api.ModMetadata.IsStale {
+		pipelineExecutionResponse.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		pipelineExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
+		c.Header("flowpipe-mod-is-stale", "true")
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
+	}
+
+	if pipelineExecutionResponse.Flowpipe.Status == expectedState {
+		c.JSON(http.StatusOK, pipelineExecutionResponse)
+	} else {
+		c.JSON(209, pipelineExecutionResponse)
+	}
 }
 
 func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {

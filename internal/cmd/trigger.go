@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/spf13/viper"
 	o "github.com/turbot/flowpipe/internal/output"
@@ -181,7 +183,7 @@ func triggerRunCmd() *cobra.Command {
 	// only for local for now
 
 	var cmd = &cobra.Command{
-		Use:   "run <pipeline-name>",
+		Use:   "run <trigger-name>",
 		Args:  cobra.ExactArgs(1),
 		Run:   runTriggerFunc,
 		Short: "Run a trigger from the current mod.",
@@ -198,10 +200,10 @@ func triggerRunCmd() *cobra.Command {
 	return cmd
 }
 
-func runTriggerLocal(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, *manager.Manager, error) {
+func runTriggerLocal(cmd *cobra.Command, args []string) (types.TriggerExecutionResponse, *manager.Manager, error) {
 	ctx := cmd.Context()
 
-	response := types.PipelineExecutionResponse{}
+	response := types.TriggerExecutionResponse{}
 
 	// create and start the manager with ES service, and Docker, but no API server
 	// Move all this code to "run local"
@@ -226,7 +228,7 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.PipelineExecution
 		return response, nil, err
 	}
 
-	input := types.CmdPipeline{
+	input := types.CmdTrigger{
 		Command:    "run",
 		ArgsString: triggerArgs,
 	}
@@ -236,8 +238,13 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.PipelineExecution
 	return response, m, err
 }
 
-func runTriggerRemote(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, error) {
+func runTriggerRemote(cmd *cobra.Command, args []string) (types.TriggerExecutionResponse, error) {
 	ctx := cmd.Context()
+
+	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
+	if err != nil {
+		return types.TriggerExecutionResponse{}, err
+	}
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
 
@@ -246,21 +253,46 @@ func runTriggerRemote(cmd *cobra.Command, args []string) (types.PipelineExecutio
 
 	// API client
 	apiClient := common.GetApiClient()
-	cmdTriggerRun := flowpipeapiclient.NewCmdPipeline("run")
+	cmdTriggerRun := flowpipeapiclient.NewCmdTrigger("run")
 
 	// Set the pipeline args
 	cmdTriggerRun.ArgsString = &triggerArgs
+	cmdTriggerRun.ExecutionId = &executionId
 
-	response, _, err := apiClient.TriggerApi.Command(ctx, triggerName).Request(*cmdTriggerRun).Execute()
+	apiResponse, _, err := apiClient.TriggerApi.Command(ctx, triggerName).Request(*cmdTriggerRun).Execute()
 	if err != nil {
-		return types.PipelineExecutionResponse{}, err
+		return types.TriggerExecutionResponse{}, err
 	}
 
-	resp := PipelineExecutionResponseFromAPIResponse(*response)
+	resp := TriggerExecutionResponseFromAPIResponse(*apiResponse)
 	return resp, err
 }
 
-func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, types.PipelineExecutionResponse, pollEventLogFunc, error) {
+func TriggerExecutionResponseFromAPIResponse(apiResponse flowpipeapiclient.TriggerExecutionResponse) types.TriggerExecutionResponse {
+	var results []types.PipelineExecutionResponse
+	for _, apiResult := range apiResponse.Results {
+		results = append(results, PipelineExecutionResponseFromAPIResponse(apiResult))
+	}
+
+	resp := types.TriggerExecutionResponse{
+		Results: results,
+		Flowpipe: types.FlowpipeTriggerResponseMetadata{
+			IsStale:   apiResponse.Flowpipe.IsStale,
+			ProcessID: utils.Deref(apiResponse.Flowpipe.ProcessId, ""),
+			Name:      utils.Deref(apiResponse.Flowpipe.Name, ""),
+			Type:      utils.Deref(apiResponse.Flowpipe.Type, ""),
+		},
+	}
+
+	if apiResponse.Flowpipe.LastLoaded != nil {
+		time, _ := time.Parse(utils.RFC3339WithMS, *apiResponse.Flowpipe.LastLoaded)
+		resp.Flowpipe.LastLoaded = &time
+	}
+
+	return resp
+}
+
+func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, types.TriggerExecutionResponse, pollEventLogFunc, error) {
 	if isRemote {
 		// run trigger on server
 		resp, err := runTriggerRemote(cmd, args)
@@ -277,7 +309,7 @@ func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.
 
 func runTriggerFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp types.PipelineExecutionResponse
+	var resp types.TriggerExecutionResponse
 	var err error
 	var pollLogFunc pollEventLogFunc
 
@@ -311,18 +343,19 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	pipelineExecutionResponse := resp.Results[0]
 	switch {
 	case isDetach:
-		err := displayDetached(ctx, cmd, resp)
+		err := displayDetached(ctx, cmd, pipelineExecutionResponse)
 		if err != nil {
 			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
 			return
 		}
 	case streamLogs:
-		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+		displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	case progressLogs:
-		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
+		displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	default:
-		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+		displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	}
 }
