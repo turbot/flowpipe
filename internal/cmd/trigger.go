@@ -198,8 +198,10 @@ func triggerRunCmd() *cobra.Command {
 	return cmd
 }
 
-func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manager.Manager, error) {
+func runTriggerLocal(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, *manager.Manager, error) {
 	ctx := cmd.Context()
+
+	response := types.PipelineExecutionResponse{}
 
 	// create and start the manager with ES service, and Docker, but no API server
 	// Move all this code to "run local"
@@ -207,13 +209,13 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manage
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	if err != nil {
 		error_helpers.FailOnError(err)
-		return nil, nil, err
+		return response, nil, err
 	}
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
 
 	if strings.Contains(triggerName, ".query.") {
-		return nil, nil, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly")
+		return response, nil, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly")
 	}
 
 	// extract the trigger args from the flags
@@ -221,7 +223,7 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manage
 
 	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
 	if err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
 	input := types.CmdPipeline{
@@ -229,12 +231,12 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (map[string]any, *manage
 		ArgsString: triggerArgs,
 	}
 
-	resp, _, err := api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+	response, _, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
 
-	return resp, m, err
+	return response, m, err
 }
 
-func runTriggerRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
+func runTriggerRemote(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, error) {
 	ctx := cmd.Context()
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
@@ -249,12 +251,16 @@ func runTriggerRemote(cmd *cobra.Command, args []string) (map[string]interface{}
 	// Set the pipeline args
 	cmdTriggerRun.ArgsString = &triggerArgs
 
-	resp, _, err := apiClient.TriggerApi.Command(ctx, triggerName).Request(*cmdTriggerRun).Execute()
+	response, _, err := apiClient.TriggerApi.Command(ctx, triggerName).Request(*cmdTriggerRun).Execute()
+	if err != nil {
+		return types.PipelineExecutionResponse{}, err
+	}
 
+	resp := PipelineExecutionResponseFromAPIResponse(*response)
 	return resp, err
 }
 
-func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, map[string]any, pollEventLogFunc, error) {
+func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, types.PipelineExecutionResponse, pollEventLogFunc, error) {
 	if isRemote {
 		// run trigger on server
 		resp, err := runTriggerRemote(cmd, args)
@@ -271,7 +277,7 @@ func executeTrigger(cmd *cobra.Command, args []string, isRemote bool) (*manager.
 
 func runTriggerFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp map[string]any
+	var resp types.PipelineExecutionResponse
 	var err error
 	var pollLogFunc pollEventLogFunc
 

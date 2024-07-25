@@ -3,6 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cmd/common"
@@ -13,7 +15,6 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/printers"
-	"time"
 )
 
 // process commands
@@ -248,11 +249,11 @@ func tailProcessLocal() error {
 	return fmt.Errorf("tail requires a remote server via --host <host>")
 }
 
-func buildLogDisplayInput(executionId, pipelineExecutionId string) map[string]any {
-	return map[string]any{
-		"flowpipe": map[string]any{
-			"execution_id":          executionId,
-			"pipeline_execution_id": pipelineExecutionId,
+func buildLogDisplayInput(executionId, pipelineExecutionId string) types.PipelineExecutionResponse {
+	return types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID:         executionId,
+			PipelineExecutionID: pipelineExecutionId,
 		},
 	}
 }

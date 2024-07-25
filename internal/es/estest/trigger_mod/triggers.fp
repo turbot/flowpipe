@@ -55,5 +55,17 @@ pipeline "report_pipeline" {
   output "val" {
     value = step.transform.echo.value
   }
-
 }
+
+pipeline "http" {
+    description = "Bad HTTP step, just one step in the pipeline."
+
+    step "http" "my_step_1" {
+        url = "https://www.google.coms"
+    }
+
+    output "http" {
+      value = step.http.my_step_1.response_body
+    }
+}
+

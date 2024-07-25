@@ -227,9 +227,14 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 
 		if err != nil {
 			if errorModel, ok := err.(perr.ErrorModel); ok {
-				response := map[string]interface{}{}
+				response := types.PipelineExecutionResponse{}
 
-				response["errors"] = []modconfig.StepError{
+				response.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
+				response.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
+				response.Flowpipe.Pipeline = pipelineCmd.Name
+				response.Flowpipe.Status = "failed"
+
+				response.Errors = []modconfig.StepError{
 					{
 						PipelineExecutionID: pipelineCmd.PipelineExecutionID,
 						Pipeline:            pipelineCmd.Name,
@@ -266,27 +271,35 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		return
 	}
 
-	response := pex.PipelineOutput
+	response := types.PipelineExecutionResponse{}
+	pipelineOutput := pex.PipelineOutput
 
-	if response == nil {
-		response = map[string]interface{}{}
+	if pipelineOutput == nil {
+		pipelineOutput = map[string]interface{}{}
 	}
 
 	for k, v := range pex.PipelineOutput {
-		response[k] = sanitize.Instance.Sanitize(v)
+		pipelineOutput[k] = sanitize.Instance.Sanitize(v)
 	}
 
-	if response["errors"] != nil {
-		response["errors"] = response["errors"].([]modconfig.StepError)
+	response.Output = pipelineOutput
+
+	if pipelineOutput["errors"] != nil {
+		response.Errors = pipelineOutput["errors"].([]modconfig.StepError)
 	}
+
+	response.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
+	response.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
+	response.Flowpipe.Pipeline = pipelineCmd.Name
+	response.Flowpipe.Status = pex.Status
 
 	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
 	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
 	c.Header("flowpipe-status", pex.Status)
 
 	if api.ModMetadata.IsStale {
-		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
-		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		response.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		response.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}

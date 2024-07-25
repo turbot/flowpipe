@@ -37,9 +37,6 @@ type FpCommandBusImpl struct {
 // Send sends command to the command bus.
 func (c FpCommandBusImpl) Send(ctx context.Context, cmd interface{}) error {
 
-	// Unfortunately we need to save the event *before* we sernd this command to Watermill. This mean we have to figure out what the
-	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
-	//
 	err := LogEventMessage(ctx, cmd, nil)
 	if err != nil {
 		return err

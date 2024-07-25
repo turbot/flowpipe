@@ -79,19 +79,20 @@ func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, 
 
 func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 
+	response := types.PipelineExecutionResponse{}
 	var triggerRunArgs map[string]interface{}
 	if len(args) > 0 || len(argsString) == 0 {
 		errs := tr.Trigger.ValidateTriggerParam(args)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
-			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		triggerRunArgs = args
 	} else if len(argsString) > 0 {
 		coercedArgs, errs := tr.Trigger.CoerceTriggerParams(argsString)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
-			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		triggerRunArgs = coercedArgs
 	}
@@ -100,7 +101,7 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 
 	if pipeline == cty.NilVal {
 		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return nil, nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
+		return response, nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
 	}
 
 	pipelineDefn := pipeline.AsValueMap()
@@ -113,19 +114,19 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 
 	if modFullName != tr.rootMod.FullName {
 		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
-		return nil, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod")
+		return response, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod")
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
-		return nil, nil, perr.InternalWithMessage("Error building eval context")
+		return response, nil, perr.InternalWithMessage("Error building eval context")
 	}
 
 	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
 	if err != nil {
 		slog.Error("Error getting latest trigger", "trigger", tr.Trigger.Name(), "error", err)
-		return nil, nil, perr.NotFoundWithMessage("trigger not found")
+		return response, nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
 	pipelineArgs, diags := latestTrigger.GetArgs(evalContext)
@@ -133,7 +134,7 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
 		err := error_helpers.HclDiagsToError("trigger", diags)
-		return nil, nil, err
+		return response, nil, err
 	}
 
 	pipelineCmd := &event.PipelineQueue{
@@ -154,15 +155,13 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 		if o.IsServerMode {
 			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
 		}
-		return nil, nil, err
+		return response, nil, err
 	}
 
-	response := types.PipelineExecutionResponse{
-		"flowpipe": map[string]interface{}{
-			"execution_id":          pipelineCmd.Event.ExecutionID,
-			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-			"pipeline":              pipelineCmd.Name,
-		},
+	response.Flowpipe = types.FlowpipeResponseMetadata{
+		ExecutionID:         pipelineCmd.Event.ExecutionID,
+		PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+		Pipeline:            pipelineCmd.Name,
 	}
 	return response, pipelineCmd, nil
 }

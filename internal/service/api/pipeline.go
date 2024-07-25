@@ -190,8 +190,8 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	}
 
 	if api.ModMetadata.IsStale {
-		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
-		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		response.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		response.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
@@ -201,17 +201,18 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 
 func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipelineDefn, err := db.GetPipeline(pipelineName)
+	response := types.PipelineExecutionResponse{}
 	if err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
 	// Execute the command
 	if input.Command != "run" {
-		return nil, nil, perr.BadRequestWithMessage("invalid command")
+		return response, nil, perr.BadRequestWithMessage("invalid command")
 	}
 
 	if len(input.Args) > 0 && len(input.ArgsString) > 0 {
-		return nil, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
+		return response, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
 	}
 
 	pipelineCmd := &event.PipelineQueue{
@@ -224,7 +225,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		errs := pipelineDefn.ValidatePipelineParam(input.Args)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
-			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		pipelineCmd.Args = input.Args
 
@@ -232,22 +233,21 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
-			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		pipelineCmd.Args = args
 	}
 
 	if err := esService.Send(pipelineCmd); err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
-	response := types.PipelineExecutionResponse{
-		"flowpipe": map[string]interface{}{
-			"execution_id":          pipelineCmd.Event.ExecutionID,
-			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-			"pipeline":              pipelineCmd.Name,
-		},
+	response.Flowpipe = types.FlowpipeResponseMetadata{
+		ExecutionID:         pipelineCmd.Event.ExecutionID,
+		PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+		Pipeline:            pipelineCmd.Name,
 	}
+
 	return response, pipelineCmd, nil
 }
 

@@ -29,6 +29,7 @@ func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/trigger", api.listTriggers)
 	router.GET("/trigger/:trigger_name", api.getTrigger)
 	router.POST("/trigger/:trigger_name/command", api.cmdTrigger)
+	// router.GET("/trigger/:trigger_name/key", api.listTriggerKeys)
 }
 
 // @Summary List triggers
@@ -220,19 +221,20 @@ func ConstructTriggerFullyQualifiedName(triggerName string) string {
 }
 
 func ExecuteTrigger(ctx context.Context, input types.CmdPipeline, executionId, triggerName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+	response := types.PipelineExecutionResponse{}
 	modTrigger, err := db.GetTrigger(triggerName)
 	if err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
 	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
 
-	resp, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
+	response, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
 	if err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
-	return resp, evt, nil
+	return response, evt, nil
 }
 
 // @Summary Execute a trigger command
@@ -289,11 +291,30 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	}
 
 	if api.ModMetadata.IsStale {
-		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
-		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		response.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		response.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
 
 	c.JSON(http.StatusOK, response)
 }
+
+// func (api *APIService) listTriggerKeys(c *gin.Context) {
+// 	// Get paging parameters
+// 	nextToken, limit, err := common.ListPagingRequest(c)
+// 	if err != nil {
+// 		common.AbortWithError(c, err)
+// 		return
+// 	}
+
+// 	slog.Info("received list trigger request", "next_token", nextToken, "limit", limit)
+
+// 	result, err := ListTriggers()
+// 	if err != nil {
+// 		common.AbortWithError(c, err)
+// 		return
+// 	}
+
+// 	c.JSON(http.StatusOK, result)
+// }
