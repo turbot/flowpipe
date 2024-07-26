@@ -220,27 +220,21 @@ func ConstructTriggerFullyQualifiedName(triggerName string) string {
 	return ConstructFullyQualifiedName("trigger", 2, triggerName)
 }
 
-func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (types.TriggerExecutionResponse, *event.PipelineQueue, error) {
-	response := types.TriggerExecutionResponse{}
+func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
+	triggerExecutionResponse := types.TriggerExecutionResponse{}
 	modTrigger, err := db.GetTrigger(triggerName)
 	if err != nil {
-		return response, nil, err
+		return triggerExecutionResponse, nil, err
 	}
 
 	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
 
-	pipelineResponse, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
+	triggerExecutionResponse, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
 	if err != nil {
-		return response, nil, err
+		return triggerExecutionResponse, nil, err
 	}
 
-	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
-		Name: triggerRunner.GetTrigger().FullName,
-		Type: triggerRunner.GetTrigger().Config.GetType(),
-	}
-	response.Results = []types.PipelineExecutionResponse{pipelineResponse}
-
-	return response, evt, nil
+	return triggerExecutionResponse, evt, nil
 }
 
 // @Summary Execute a trigger command
@@ -277,15 +271,10 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 
 	triggerName := ConstructTriggerFullyQualifiedName(uri.TriggerName)
 
-	if strings.Contains(triggerName, ".query.") {
-		common.AbortWithError(c, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly"))
-		return
-	}
-
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	response, pipelineCmd, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
+	response, pipelineCmds, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -299,18 +288,28 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	}
 
 	if executionMode == localconstants.ExecutionModeSynchronous {
-		pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
-		newResp := types.TriggerExecutionResponse{
-			Flowpipe: response.Flowpipe,
+		for _, pipelineCmd := range pipelineCmds {
+			pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
+			if err != nil {
+				slog.Error("error waiting for pipeline", "error", err)
+				api.processTriggerExecutionResult(c, response, pipelineCmd, err)
+				return
+			}
+			for i, res := range response.Results {
+				if res.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
+					response.Results[i].Output = pipelineExecutionReponse.Output
+				}
+			}
 		}
-		api.processTriggerExecutionResult(c, newResp, pipelineExecutionReponse, pipelineCmd, err)
+
+		api.processTriggerExecutionResult(c, response, event.PipelineQueue{}, err)
 		return
 	}
 
 	c.JSON(http.StatusOK, response)
 }
 
-func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExecutionResponse types.TriggerExecutionResponse, pipelineExecutionResponse types.PipelineExecutionResponse, pipelineCmd *event.PipelineQueue, err error) {
+func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExecutionResponse types.TriggerExecutionResponse, pipelineCmd event.PipelineQueue, err error) {
 
 	if err != nil {
 		if errorModel, ok := err.(perr.ErrorModel); ok {
@@ -343,9 +342,15 @@ func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExec
 		}
 	}
 
-	triggerExecutionResponse.Results = append(triggerExecutionResponse.Results, pipelineExecutionResponse)
+	allFinished := true
+	for _, res := range triggerExecutionResponse.Results {
+		if res.Flowpipe.Status != "finished" {
+			allFinished = false
+			break
+		}
+	}
 
-	if pipelineExecutionResponse.Flowpipe.Status == "finished" {
+	if allFinished {
 		c.JSON(http.StatusOK, triggerExecutionResponse)
 	} else {
 		c.JSON(209, triggerExecutionResponse)

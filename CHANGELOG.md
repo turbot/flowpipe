@@ -5,6 +5,7 @@
 _What's new?_
 
 * On-demand trigger execution. ([#864](https://github.com/turbot/flowpipe/issues/864)).
+* `params` support for trigger. ([#840](https://github.com/turbot/flowpipe/issues/840)).
 
 ## v0.6.0 [2024-07-24]
 

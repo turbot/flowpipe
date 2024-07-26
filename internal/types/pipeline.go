@@ -400,6 +400,7 @@ type FlowpipeResponseMetadata struct {
 	Status              string     `json:"status,omitempty"`
 	IsStale             *bool      `json:"is_stale,omitempty"`
 	LastLoaded          *time.Time `json:"last_loaded,omitempty"`
+	Type                string     `json:"type,omitempty"`
 }
 
 type CmdPipeline struct {

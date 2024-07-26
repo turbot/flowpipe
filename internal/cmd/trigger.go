@@ -3,11 +3,9 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
-	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/utils"
 
@@ -216,10 +214,6 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.TriggerExecutionR
 
 	triggerName := api.ConstructTriggerFullyQualifiedName(args[0])
 
-	if strings.Contains(triggerName, ".query.") {
-		return response, nil, perr.BadRequestWithMessage("not yet supported, query triggers cannot be run directly")
-	}
-
 	// extract the trigger args from the flags
 	triggerArgs := getPipelineArgs(cmd)
 
@@ -343,19 +337,20 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	pipelineExecutionResponse := resp.Results[0]
-	switch {
-	case isDetach:
-		err := displayDetached(ctx, cmd, pipelineExecutionResponse)
-		if err != nil {
-			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
-			return
+	for _, pipelineExecutionResponse := range resp.Results {
+		switch {
+		case isDetach:
+			err := displayDetached(ctx, cmd, pipelineExecutionResponse)
+			if err != nil {
+				error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+				return
+			}
+		case streamLogs:
+			displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+		case progressLogs:
+			displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+		default:
+			displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 		}
-	case streamLogs:
-		displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-	case progressLogs:
-		displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-	default:
-		displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	}
 }

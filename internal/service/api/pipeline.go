@@ -185,7 +185,7 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	}
 
 	if executionMode == localconstants.ExecutionModeSynchronous {
-		waitPipelineExecutionResponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
+		waitPipelineExecutionResponse, err := api.waitForPipeline(*pipelineCmd, waitRetry)
 		api.processSinglePipelineResult(c, &waitPipelineExecutionResponse, pipelineCmd, err)
 		return
 	}

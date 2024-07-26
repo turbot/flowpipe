@@ -182,7 +182,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	pipeline := triggerMethod.Pipeline
 	pipelineName := pipeline.AsValueMap()["name"].AsString()
 
-	pipelineCmd := &event.PipelineQueue{
+	pipelineCmd := event.PipelineQueue{
 		Event:               event.NewExecutionEvent(),
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
@@ -201,7 +201,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 
 	if triggerMethod.ExecutionMode == "synchronous" {
 		pipelineExecutionResponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
-		api.processSinglePipelineResult(c, &pipelineExecutionResponse, pipelineCmd, err)
+		api.processSinglePipelineResult(c, &pipelineExecutionResponse, &pipelineCmd, err)
 		return
 	}
 
@@ -217,7 +217,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	c.JSON(http.StatusOK, pipelineExecutionResponse)
 }
 
-func (api *APIService) waitForPipeline(pipelineCmd *event.PipelineQueue, waitRetry int) (types.PipelineExecutionResponse, error) {
+func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetry int) (types.PipelineExecutionResponse, error) {
 	if waitRetry == 0 {
 		waitRetry = 60
 	}

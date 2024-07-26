@@ -75,7 +75,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: trigger-refactor
+          ref: develop
 
       - uses: actions/setup-go@v4
         with:

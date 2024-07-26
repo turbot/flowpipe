@@ -39,8 +39,8 @@ type TriggerRunner interface {
 	Run()
 	GetTrigger() *modconfig.Trigger
 	GetFqueue() *fqueue.FunctionQueue
-	ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error)
-	ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.PipelineExecutionResponse, *event.PipelineQueue, error)
+	ExecuteTrigger() (types.TriggerExecutionResponse, []event.PipelineQueue, error)
+	ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.TriggerExecutionResponse, []event.PipelineQueue, error)
 }
 
 func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
@@ -73,13 +73,13 @@ func (tr *TriggerRunnerBase) Run() {
 	}
 }
 
-func (tr *TriggerRunnerBase) ExecuteTrigger() (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+func (tr *TriggerRunnerBase) ExecuteTrigger() (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
 	return tr.ExecuteTriggerForExecutionID(util.NewExecutionId(), nil, nil)
 }
 
-func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
+func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
 
-	response := types.PipelineExecutionResponse{}
+	response := types.TriggerExecutionResponse{}
 	var triggerRunArgs map[string]interface{}
 	if len(args) > 0 || len(argsString) == 0 {
 		errs := tr.Trigger.ValidateTriggerParam(args)
@@ -158,12 +158,22 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 		return response, nil, err
 	}
 
-	response.Flowpipe = types.FlowpipeResponseMetadata{
-		ExecutionID:         pipelineCmd.Event.ExecutionID,
-		PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-		Pipeline:            pipelineCmd.Name,
+	response.Results = []types.PipelineExecutionResponse{
+		{
+			Flowpipe: types.FlowpipeResponseMetadata{
+				ExecutionID:         pipelineCmd.Event.ExecutionID,
+				PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+				Pipeline:            pipelineCmd.Name,
+			},
+		},
 	}
-	return response, pipelineCmd, nil
+
+	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
+		Name: tr.Trigger.FullName,
+		Type: tr.Trigger.Config.GetType(),
+	}
+
+	return response, []event.PipelineQueue{*pipelineCmd}, nil
 }
 
 func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
