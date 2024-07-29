@@ -297,7 +297,7 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 			}
 			for i, res := range response.Results {
 				if res.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-					response.Results[i].Output = pipelineExecutionReponse.Output
+					response.Results[i].Results = pipelineExecutionReponse.Results
 				}
 			}
 		}

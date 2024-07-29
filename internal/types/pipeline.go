@@ -388,7 +388,7 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 }
 
 type PipelineExecutionResponse struct {
-	Output   map[string]interface{}   `json:"output,omitempty"`
+	Results  map[string]interface{}   `json:"results,omitempty"`
 	Flowpipe FlowpipeResponseMetadata `json:"flowpipe,omitempty"`
 	Errors   []modconfig.StepError    `json:"errors,omitempty"`
 }

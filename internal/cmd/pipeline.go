@@ -307,7 +307,7 @@ func runPipelineRemote(cmd *cobra.Command, args []string) (types.PipelineExecuti
 func PipelineExecutionResponseFromAPIResponse(apiResp flowpipeapiclient.PipelineExecutionResponse) types.PipelineExecutionResponse {
 	// map the API data type into the internal data type
 	return types.PipelineExecutionResponse{
-		Output:   apiResp.Output,
+		Results:  apiResp.Results,
 		Errors:   ModConfigStepErrorsFromAPIErrors(apiResp.Errors),
 		Flowpipe: FlowpipeResponseMetadataFromAPIResponse(*apiResp.Flowpipe),
 	}

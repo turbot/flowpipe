@@ -262,7 +262,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 		pipelineOutput[k] = sanitize.Instance.Sanitize(v)
 	}
 
-	pipelineExecutionResponse.Output = pipelineOutput
+	pipelineExecutionResponse.Results = pipelineOutput
 
 	if pipelineOutput["errors"] != nil {
 		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
