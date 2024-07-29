@@ -343,7 +343,7 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 // TODO: executionId doesn't mean anything here .. since can execute 0 - 3 pipelines
 func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
 	triggerExecutionResponse := types.TriggerExecutionResponse{
-		Results: []types.PipelineExecutionResponse{},
+		Results: map[string]interface{}{},
 	}
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
@@ -549,14 +549,14 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 		}
 
 		pipelineCmds = append(pipelineCmds, *cmd)
-		triggerExecutionResponse.Results = append(triggerExecutionResponse.Results, types.PipelineExecutionResponse{
+		triggerExecutionResponse.Results[capture.Type] = types.PipelineExecutionResponse{
 			Flowpipe: types.FlowpipeResponseMetadata{
 				ExecutionID:         cmd.Event.ExecutionID,
 				PipelineExecutionID: cmd.PipelineExecutionID,
 				Pipeline:            cmd.Name,
 				Type:                capture.Type,
 			},
-		})
+		}
 	}
 
 	triggerExecutionResponse.Flowpipe = types.FlowpipeTriggerResponseMetadata{

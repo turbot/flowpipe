@@ -158,13 +158,12 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 		return response, nil, err
 	}
 
-	response.Results = []types.PipelineExecutionResponse{
-		{
-			Flowpipe: types.FlowpipeResponseMetadata{
-				ExecutionID:         pipelineCmd.Event.ExecutionID,
-				PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-				Pipeline:            pipelineCmd.Name,
-			},
+	response.Results = map[string]interface{}{}
+	response.Results[tr.Trigger.Config.GetType()] = types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID:         pipelineCmd.Event.ExecutionID,
+			PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+			Pipeline:            pipelineCmd.Name,
 		},
 	}
 

@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -263,9 +265,25 @@ func runTriggerRemote(cmd *cobra.Command, args []string) (types.TriggerExecution
 }
 
 func TriggerExecutionResponseFromAPIResponse(apiResponse flowpipeapiclient.TriggerExecutionResponse) types.TriggerExecutionResponse {
-	var results []types.PipelineExecutionResponse
-	for _, apiResult := range apiResponse.Results {
-		results = append(results, PipelineExecutionResponseFromAPIResponse(apiResult))
+	results := map[string]interface{}{}
+
+	for k, apiResult := range apiResponse.Results {
+		// Marshal the interface{} to JSON
+		data, err := json.Marshal(apiResult)
+		if err != nil {
+			slog.Error("Error marshaling:", "error", err)
+			continue
+		}
+
+		// Unmarshal the JSON data to your struct
+		var apiResultStruct flowpipeapiclient.PipelineExecutionResponse
+		err = json.Unmarshal(data, &apiResultStruct)
+		if err != nil {
+			slog.Error("Error unmarshaling:", "error", err)
+			continue
+		}
+
+		results[k] = PipelineExecutionResponseFromAPIResponse(apiResultStruct)
 	}
 
 	resp := types.TriggerExecutionResponse{
@@ -337,20 +355,22 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	for _, pipelineExecutionResponse := range resp.Results {
-		switch {
-		case isDetach:
-			err := displayDetached(ctx, cmd, pipelineExecutionResponse)
-			if err != nil {
-				error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
-				return
+	for _, resp := range resp.Results {
+		if pipelineExecutionResponse, ok := resp.(types.PipelineExecutionResponse); ok {
+			switch {
+			case isDetach:
+				err := displayDetached(ctx, cmd, pipelineExecutionResponse)
+				if err != nil {
+					error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+					return
+				}
+			case streamLogs:
+				displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+			case progressLogs:
+				displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+			default:
+				displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 			}
-		case streamLogs:
-			displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-		case progressLogs:
-			displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-		default:
-			displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 		}
 	}
 }

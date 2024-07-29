@@ -19,7 +19,6 @@ trigger "query" "simple" {
         pipeline = pipeline.query_trigger_display
         args = {
             updated_rows = self.updated_rows
-            deleted_rows = self.deleted_rows
         }
     }
 

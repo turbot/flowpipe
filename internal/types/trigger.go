@@ -227,7 +227,7 @@ func (PrintableTrigger) getColumns() (columns []string) {
 }
 
 type TriggerExecutionResponse struct {
-	Results  []PipelineExecutionResponse     `json:"results"`
+	Results  map[string]interface{}          `json:"results"`
 	Flowpipe FlowpipeTriggerResponseMetadata `json:"flowpipe"`
 }
 

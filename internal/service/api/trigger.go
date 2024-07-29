@@ -274,15 +274,15 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	response, pipelineCmds, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
+	triggerExecutionResponse, pipelineCmds, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
 	if api.ModMetadata.IsStale {
-		response.Flowpipe.IsStale = &api.ModMetadata.IsStale
-		response.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
+		triggerExecutionResponse.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		triggerExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
@@ -292,21 +292,25 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 			pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
 			if err != nil {
 				slog.Error("error waiting for pipeline", "error", err)
-				api.processTriggerExecutionResult(c, response, pipelineCmd, err)
+				api.processTriggerExecutionResult(c, triggerExecutionResponse, pipelineCmd, err)
 				return
 			}
-			for i, res := range response.Results {
-				if res.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-					response.Results[i].Results = pipelineExecutionReponse.Results
+			for i, res := range triggerExecutionResponse.Results {
+				if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
+					if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
+						// Set the capture type in the nested Flowpipe metadata (good info)
+						pipelineExecutionReponse.Flowpipe.Type = i
+						triggerExecutionResponse.Results[i] = pipelineExecutionReponse
+					}
 				}
 			}
 		}
 
-		api.processTriggerExecutionResult(c, response, event.PipelineQueue{}, err)
+		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, triggerExecutionResponse)
 }
 
 func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExecutionResponse types.TriggerExecutionResponse, pipelineCmd event.PipelineQueue, err error) {
@@ -328,7 +332,17 @@ func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExec
 				},
 			}
 
-			triggerExecutionResponse.Results = append(triggerExecutionResponse.Results, pipelineExecutionResponse)
+			captureGroup := "unknown"
+			// correlate which capture group the error is coming from
+			for _, res := range triggerExecutionResponse.Results {
+				if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
+					if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
+						captureGroup = pipelineExecutionRes.Flowpipe.Type
+					}
+				}
+			}
+
+			triggerExecutionResponse.Results[captureGroup] = pipelineExecutionResponse
 
 			c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
 			c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
@@ -344,9 +358,11 @@ func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExec
 
 	allFinished := true
 	for _, res := range triggerExecutionResponse.Results {
-		if res.Flowpipe.Status != "finished" {
-			allFinished = false
-			break
+		if pipelineExecutionStatus, ok := res.(types.PipelineExecutionResponse); ok {
+			if pipelineExecutionStatus.Flowpipe.Status != "finished" {
+				allFinished = false
+				break
+			}
 		}
 	}
 
