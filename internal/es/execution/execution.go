@@ -847,153 +847,161 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
+	// logEntry.Detail is a map[string]interface{} because we just read it from the database
+	//
+	// we can do something smarter later check if it's interface{} or fully formed struct (not sure if the use case will appear later)
+	jsonData, err := json.Marshal(logEntry.GetDetail())
+	if err != nil {
+		slog.Error("Fail to marshal event detail", "execution", ex.ID, "error", err)
+		return perr.InternalWithMessage("Fail to marshal event detail")
+	}
+
+	switch logEntry.GetEventType() {
+
+	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
+		var et event.PipelineQueued
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
+		var et event.PipelineStarted
+
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
+		var et event.PipelineStarted
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
+		var et event.PipelinePlanned
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepQueueCommand.HandlerName(): //  "command.step_queue"
+		var et event.StepQueue
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepStartCommand.HandlerName(): // "command.step_start"
+		var et event.StepStart
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
+		var et event.StepPipelineStarted
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
+		var et event.StepFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
+		var et event.StepForEachPlanned
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
+		var et event.PipelineCanceled
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
+		var et event.PipelinePaused
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
+		var et event.PipelineFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
+		var et event.PipelineFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
+		var et event.PipelineFailed
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
+		}
+
+		return ex.appendEvent(&et)
+
+	default:
+		// TODO: should we ignore unknown types or error out?
+	}
+
 	return nil
-	// switch logEntry.GetEventType() {
-
-	// case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
-	// 	var et event.PipelineQueued
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
-	// 	var et event.PipelineStarted
-
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
-	// 	var et event.PipelineStarted
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
-	// 	var et event.PipelinePlanned
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case StepQueueCommand.HandlerName(): //  "command.step_queue"
-	// 	var et event.StepQueue
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case StepStartCommand.HandlerName(): // "command.step_start"
-	// 	var et event.StepStart
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
-	// 	var et event.StepPipelineStarted
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
-	// 	var et event.StepFinished
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
-	// 	var et event.StepForEachPlanned
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
-	// 	var et event.PipelineCanceled
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
-	// 	var et event.PipelinePaused
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
-	// 	var et event.PipelineFinished
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
-	// 	var et event.PipelineFinished
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
-	// 	var et event.PipelineFailed
-	// 	err := json.Unmarshal(logEntry.Payload, &et)
-	// 	if err != nil {
-	// 		slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
-	// 		return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
-	// 	}
-
-	// 	return ex.appendEvent(&et)
-
-	// default:
-	// 	// TODO: should we ignore unknown types or error out?
-	// }
-
-	// return nil
 }

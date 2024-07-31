@@ -43,32 +43,42 @@ type EventLogImpl struct {
 	Detail        interface{} `json:"detail"`
 }
 
-func (e EventLogImpl) GetID() string {
+func (e *EventLogImpl) GetID() string {
 	return e.ID
 }
 
-func (e EventLogImpl) GetStructVersion() string {
+func (e *EventLogImpl) GetStructVersion() string {
 	return "2.0"
 }
 
-func (e EventLogImpl) GetEventType() string {
+func (e *EventLogImpl) GetEventType() string {
 	return e.Message
 }
 
-func (e EventLogImpl) GetDetail() interface{} {
+func (e *EventLogImpl) GetDetail() interface{} {
 	return e.Detail
 }
 
-func (e EventLogImpl) GetCreatedAt() time.Time {
+func (e *EventLogImpl) GetCreatedAt() time.Time {
 	return e.CreatedAt.UTC()
 }
 
-func (e EventLogImpl) GetLevel() string {
+func (e *EventLogImpl) GetLevel() string {
 	return e.Level
 }
 
-func (e EventLogImpl) GetCreatedAtString() string {
+func (e *EventLogImpl) GetCreatedAtString() string {
 	return e.CreatedAt.UTC().Format(utils.RFC3339WithMS)
+}
+
+func (e *EventLogImpl) SetCreatedAtString(createdAt string) error {
+	ts, err := time.Parse(utils.RFC3339WithMS, createdAt)
+	if err != nil {
+		return err
+	}
+
+	e.CreatedAt = ts
+	return nil
 }
 
 func (e *EventLogImpl) SetDetail(detail interface{}) {

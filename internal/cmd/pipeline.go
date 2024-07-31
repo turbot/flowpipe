@@ -759,44 +759,59 @@ func pollEventLog(ctx context.Context, executionId, rootPipelineId string, lastI
 	return pollFunc(ctx, executionId, rootPipelineId, lastIndex)
 }
 
+func EventLogImplFromApiReponse(apiResp flowpipeapiclient.EventEventLogImpl) event.EventLogImpl {
+	e := event.EventLogImpl{
+		StructVersion: utils.Deref(apiResp.StructVersion, ""),
+		ID:            utils.Deref(apiResp.Id, ""),
+		ProcessID:     utils.Deref(apiResp.ProcessId, ""),
+		Message:       utils.Deref(apiResp.Message, ""),
+		Level:         utils.Deref(apiResp.Level, ""),
+	}
+	err := e.SetCreatedAtString(utils.Deref(apiResp.CreatedAt, ""))
+	if err != nil {
+		e.CreatedAt = time.Now()
+	}
+
+	e.Detail = apiResp.Detail
+
+	return e
+
+}
 func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
-	return false, last, types.ProcessEventLogs{}, nil
-	// complete := false
-	// var out types.ProcessEventLogs
-	// client := common.GetApiClient()
-	// logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
-	// if err != nil {
-	// 	return false, last, nil, err
-	// }
+	complete := false
+	var out types.ProcessEventLogs
+	client := common.GetApiClient()
+	logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
+	if err != nil {
+		return false, last, nil, err
+	}
 
-	// // check we have new events to parse
-	// if len(logs.Items)-1 > last {
-	// 	for index, item := range logs.Items {
-	// 		if index > last {
-	// 			ts, err := time.Parse(time.RFC3339Nano, *item.Ts)
-	// 			if err != nil {
-	// 				return false, 0, nil, fmt.Errorf("error parsing timestamp from %s", *item.Ts)
-	// 			}
-	// 			out = append(out, types.ProcessEventLog{
-	// 				EventType: *item.EventType,
-	// 				Timestamp: &ts,
-	// 				Payload:   *item.Payload,
-	// 			})
+	// check we have new events to parse
+	if len(logs.Items)-1 > last {
+		for index, item := range logs.Items {
+			if index > last {
+				e := EventLogImplFromApiReponse(item)
+				out = append(out, e)
 
-	// 			last = index
+				last = index
 
-	// 			if item.EventType != nil && (*item.EventType == event.HandlerPipelineFinished || *item.EventType == event.HandlerPipelineFailed) {
-	// 				payload := make(map[string]any)
-	// 				if err := json.Unmarshal([]byte(*item.Payload), &payload); err != nil {
-	// 					return false, 0, nil, fmt.Errorf("error parsing payload from %s", *item.Payload)
-	// 				}
-	// 				complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
-	// 			}
-	// 		}
-	// 	}
-	// }
+				if e.Message == event.HandlerPipelineFinished || e.Message == event.HandlerPipelineFailed {
+					jsonData, err := json.Marshal(item.Detail)
+					if err != nil {
+						return false, 0, nil, perr.InternalWithMessage("error marshalling log detail")
+					}
 
-	// return complete, last, out, nil
+					payload := make(map[string]any)
+					if err := json.Unmarshal(jsonData, &payload); err != nil {
+						return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
+					}
+					complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
+				}
+			}
+		}
+	}
+
+	return complete, last, out, nil
 }
 
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {

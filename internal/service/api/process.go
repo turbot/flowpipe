@@ -205,6 +205,10 @@ func GetProcess(executionId string) (*types.Process, error) {
 		}
 	}
 
+	if outerPipeline == nil {
+		return nil, perr.NotFoundWithMessage("No pipeline found for process " + executionId)
+	}
+
 	process := types.Process{
 		ID:        exFile.ID,
 		Pipeline:  outerPipeline.Name,
