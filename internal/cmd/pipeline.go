@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -491,10 +490,16 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 			exit = complete
 
 			for _, log := range logs {
-				switch log.EventType {
+				jsonPayload, err := json.Marshal(log.Detail)
+				if err != nil {
+					error_helpers.ShowErrorWithMessage(ctx, err, "failed marshalling log detail")
+					return
+				}
+
+				switch log.Message {
 				case event.HandlerPipelineQueued:
 					var e event.PipelineQueued
-					err := json.Unmarshal([]byte(log.Payload), &e)
+					err := json.Unmarshal(jsonPayload, &e)
 					if err != nil {
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
@@ -502,7 +507,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 					stepNames[e.PipelineExecutionID] = strings.Split(e.Name, ".")[len(strings.Split(e.Name, "."))-1]
 				case event.HandlerPipelineStarted:
 					var e event.PipelineStarted
-					err := json.Unmarshal([]byte(log.Payload), &e)
+					err := json.Unmarshal(jsonPayload, &e)
 					if err != nil {
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
@@ -512,7 +517,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 					}
 				case event.HandlerPipelineFinished:
 					var e event.PipelineFinished
-					err := json.Unmarshal([]byte(log.Payload), &e)
+					err := json.Unmarshal(jsonPayload, &e)
 					if err != nil {
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
@@ -526,7 +531,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 
 				case event.HandlerPipelineFailed:
 					var e event.PipelineFailed
-					err := json.Unmarshal([]byte(log.Payload), &e)
+					err := json.Unmarshal(jsonPayload, &e)
 					if err != nil {
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
@@ -537,7 +542,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 					}
 				case event.CommandStepStart:
 					var e event.StepStart
-					err := json.Unmarshal([]byte(log.Payload), &e)
+					err := json.Unmarshal(jsonPayload, &e)
 					if err != nil {
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
@@ -582,7 +587,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 					}
 				case event.HandlerStepFinished:
 					var e event.StepFinished
-					err := json.Unmarshal([]byte(log.Payload), &e)
+					err := json.Unmarshal(jsonPayload, &e)
 					if err != nil {
 						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 						return
@@ -636,10 +641,16 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 		lastIndex = i
 
 		for _, log := range logs {
-			switch log.EventType {
+			jsonPayload, err := json.Marshal(log.Detail)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed marshalling log detail")
+				return
+			}
+
+			switch log.Message {
 			case event.HandlerPipelineQueued:
 				var e event.PipelineQueued
-				err := json.Unmarshal([]byte(log.Payload), &e)
+				err := json.Unmarshal(jsonPayload, &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -651,7 +662,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 				}
 			case event.HandlerPipelineStarted:
 				var e event.PipelineStarted
-				err := json.Unmarshal([]byte(log.Payload), &e)
+				err := json.Unmarshal(jsonPayload, &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -661,7 +672,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 				}
 			case event.HandlerPipelineFinished:
 				var e event.PipelineFinished
-				err := json.Unmarshal([]byte(log.Payload), &e)
+				err := json.Unmarshal(jsonPayload, &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -672,7 +683,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 				}
 			case event.HandlerPipelineFailed:
 				var e event.PipelineFailed
-				err := json.Unmarshal([]byte(log.Payload), &e)
+				err := json.Unmarshal(jsonPayload, &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -749,45 +760,47 @@ func pollEventLog(ctx context.Context, executionId, rootPipelineId string, lastI
 }
 
 func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
-	complete := false
-	var out types.ProcessEventLogs
-	client := common.GetApiClient()
-	logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
-	if err != nil {
-		return false, last, nil, err
-	}
+	return false, last, types.ProcessEventLogs{}, nil
+	// complete := false
+	// var out types.ProcessEventLogs
+	// client := common.GetApiClient()
+	// logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
+	// if err != nil {
+	// 	return false, last, nil, err
+	// }
 
-	// check we have new events to parse
-	if len(logs.Items)-1 > last {
-		for index, item := range logs.Items {
-			if index > last {
-				ts, err := time.Parse(time.RFC3339Nano, *item.Ts)
-				if err != nil {
-					return false, 0, nil, fmt.Errorf("error parsing timestamp from %s", *item.Ts)
-				}
-				out = append(out, types.ProcessEventLog{
-					EventType: *item.EventType,
-					Timestamp: &ts,
-					Payload:   *item.Payload,
-				})
+	// // check we have new events to parse
+	// if len(logs.Items)-1 > last {
+	// 	for index, item := range logs.Items {
+	// 		if index > last {
+	// 			ts, err := time.Parse(time.RFC3339Nano, *item.Ts)
+	// 			if err != nil {
+	// 				return false, 0, nil, fmt.Errorf("error parsing timestamp from %s", *item.Ts)
+	// 			}
+	// 			out = append(out, types.ProcessEventLog{
+	// 				EventType: *item.EventType,
+	// 				Timestamp: &ts,
+	// 				Payload:   *item.Payload,
+	// 			})
 
-				last = index
+	// 			last = index
 
-				if item.EventType != nil && (*item.EventType == event.HandlerPipelineFinished || *item.EventType == event.HandlerPipelineFailed) {
-					payload := make(map[string]any)
-					if err := json.Unmarshal([]byte(*item.Payload), &payload); err != nil {
-						return false, 0, nil, fmt.Errorf("error parsing payload from %s", *item.Payload)
-					}
-					complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
-				}
-			}
-		}
-	}
+	// 			if item.EventType != nil && (*item.EventType == event.HandlerPipelineFinished || *item.EventType == event.HandlerPipelineFailed) {
+	// 				payload := make(map[string]any)
+	// 				if err := json.Unmarshal([]byte(*item.Payload), &payload); err != nil {
+	// 					return false, 0, nil, fmt.Errorf("error parsing payload from %s", *item.Payload)
+	// 				}
+	// 				complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
+	// 			}
+	// 		}
+	// 	}
+	// }
 
-	return complete, last, out, nil
+	// return complete, last, out, nil
 }
 
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+
 	ex, err := execution.GetExecution(exId)
 	if err != nil {
 		return true, 0, nil, err
@@ -804,30 +817,18 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 			continue
 		}
 
-		// Parse the string back to time.Time struct
-		parsedTime, err := time.Parse(time.RFC3339, item.Timestamp)
-		if err != nil {
-			slog.Error("Error parsing timestamp", "error", err)
-			return true, 0, nil, err
-		}
+		res = append(res, item)
 
-		// marshall item.Payload to JSON string
-		jsonData, err := json.Marshal(item.Payload)
-		if err != nil {
-			slog.Error("Error marshalling payload", "error", err)
-			return true, 0, nil, err
-		}
+		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed {
 
-		res = append(res, types.ProcessEventLog{
-			EventType: item.EventType,
-			Timestamp: &parsedTime,
-			Payload:   string(jsonData),
-		})
+			jsonData, err := json.Marshal(item.Detail)
+			if err != nil {
+				return false, 0, nil, perr.InternalWithMessage("error marshalling log detail")
+			}
 
-		if item.EventType == event.HandlerPipelineFinished || item.EventType == event.HandlerPipelineFailed {
 			payload := make(map[string]any)
 			if err := json.Unmarshal(jsonData, &payload); err != nil {
-				return false, 0, nil, perr.InternalWithMessage(fmt.Sprintf("error parsing payload from %s", item.Payload))
+				return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
 			}
 			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 		}
