@@ -1,12 +1,17 @@
 package store
 
 import (
+	"context"
 	"database/sql"
+	"log"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/utils"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -39,6 +44,94 @@ func moveFlowpipeDbFromModDirToFlowpipeModDir() error {
 	return nil
 }
 
+func createEventTable(tx *sql.Tx) error {
+	createTableSQL := `
+	create table if not exists event (
+		id text primary key,
+		struct_version text,
+		process_id text,
+		message text,
+		level stext,
+		created_at datetime,
+		detail text,
+		constraint fk_event_execution_id foreign key (process_id) references pipeline_run(execution_id) on delete cascade
+	)`
+
+	_, err := tx.Exec(createTableSQL)
+	if err != nil {
+		slog.Error("error creating event table", "error", err)
+		return perr.InternalWithMessage("error creating event table")
+	}
+
+	processIdIndexSql := `create index if not exists idx_event_process_id on event (process_id);`
+	_, err = tx.Exec(processIdIndexSql)
+	if err != nil {
+		slog.Error("error creating event index", "error", err)
+		return perr.InternalWithMessage("error creating process_id index")
+	}
+
+	processIdIndexSql = `create index if not exists idx_event_created_at on event (created_at);`
+	_, err = tx.Exec(processIdIndexSql)
+	if err != nil {
+		slog.Error("error creating event index", "error", err)
+		return perr.InternalWithMessage("error creating event index")
+	}
+
+	return nil
+}
+
+func migrateEventTable(tx *sql.Tx) error {
+	// Select data from the event_old table
+	rows, err := tx.Query(`SELECT id, execution_id, created_at, type, data FROM event_old`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	// Prepare insert statement for the event table
+	stmt, err := tx.Prepare(`
+			INSERT INTO event (id, struct_version, process_id, message, level, created_at, detail)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+		`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for rows.Next() {
+		var id int
+		var executionID, createdAt, eventType, data string
+		if err := rows.Scan(&id, &executionID, &createdAt, &eventType, &data); err != nil {
+			log.Fatal(err)
+		}
+
+		// Generate new ID using the utility function
+		newID := util.NewProcessLogId()
+
+		// Set level to "event"
+		level := "event"
+
+		// Use current timestamp if created_at is not a valid datetime
+		parsedCreatedAt, err := time.Parse(utils.RFC3339WithMS, createdAt)
+		if err != nil {
+			parsedCreatedAt = time.Now()
+		}
+
+		// Insert data into the event table
+		_, err = stmt.Exec(newID, "2.0", executionID, eventType, level, parsedCreatedAt, data)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	slog.Debug("Migrated event_old table to event table")
+	return nil
+}
+
 func UpgradeFlowpipeDB2() error {
 	dbPath := filepaths.FlowpipeDBFileName()
 
@@ -47,9 +140,9 @@ func UpgradeFlowpipeDB2() error {
 		return err
 	}
 
-	sql := `select value from internal where name = 'db_version'`
+	dbVersionSql := `select value from internal where name = 'db_version'`
 
-	rows, err := db.Query(sql)
+	rows, err := db.Query(dbVersionSql)
 	if err != nil {
 		slog.Error("error getting current db_version", "error", err)
 		return perr.InternalWithMessage("error getting current db_version")
@@ -63,7 +156,6 @@ func UpgradeFlowpipeDB2() error {
 		err = rows.Scan(&currentDbVersion)
 		if err != nil {
 			slog.Error("error getting db_version", "error", err)
-			return perr.InternalWithMessage("error getting db_version")
 		}
 	}
 	defer rows.Close()
@@ -71,62 +163,85 @@ func UpgradeFlowpipeDB2() error {
 	if currentDbVersion == "2.0" {
 		return nil
 	}
-
-	createTableSQL := `
-	create table if not exists process_log (
-		id text primary key,
-		struct_version text,
-		process_id text,
-		message text,
-		level stext,
-		created_at datetime,
-		detail text,
-		constraint fk_process_log_execution_id foreign key (process_id) references pipeline_run(execution_id) on delete cascade
-	)`
-
-	_, err = db.Exec(createTableSQL)
+	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{})
 	if err != nil {
-		slog.Error("error creating process_log table", "error", err)
-		return perr.InternalWithMessage("error creating process_log table")
+		slog.Error("error starting transaction", "error", err)
+		return perr.InternalWithMessage("error starting transaction")
 	}
 
-	createTableSQL = `drop table if exists event`
+	commited := false
+	defer func() {
+		if !commited {
+			err := tx.Rollback()
+			if err != nil {
+				slog.Error("error rolling back transaction", "error", err)
+			}
+		}
+	}()
 
-	_, err = db.Exec(createTableSQL)
+	// rename event table first
+	renameTableEvent := `alter table event rename to event_old`
+	_, err = tx.Exec(renameTableEvent)
 	if err != nil {
-		slog.Error("error dropping event table", "error", err)
-		return perr.InternalWithMessage("error dropping event table")
+		slog.Error("error renaming event table", "error", err)
+		return perr.InternalWithMessage("error renaming event table")
 	}
 
-	processIdIndexSql := `create index if not exists idx_process_log_execution_id on process_log (process_id);`
-	_, err = db.Exec(processIdIndexSql)
+	dropIndexSql := `drop index if exists idx_event_execution_id`
+	_, err = tx.Exec(dropIndexSql)
 	if err != nil {
-		slog.Error("error creating process_id index", "error", err)
-		return perr.InternalWithMessage("error creating process_id index in process_log table")
+		slog.Error("error dropping index", "error", err)
+		return perr.InternalWithMessage("error dropping index")
 	}
 
-	processIdIndexSql = `create index if not exists idx_process_log_created_at on process_log (created_at);`
-	_, err = db.Exec(processIdIndexSql)
+	dropIndexSql = `drop index if exists idx_event_created_at`
+	_, err = tx.Exec(dropIndexSql)
 	if err != nil {
-		slog.Error("error creating created_at index", "error", err)
-		return perr.InternalWithMessage("error creating created_at index in process_log_table")
+		slog.Error("error dropping index", "error", err)
+		return perr.InternalWithMessage("error dropping index")
+	}
+
+	err = createEventTable(tx)
+	if err != nil {
+		slog.Error("error creating event table", "error", err)
+		return perr.InternalWithMessage("error creating event table")
+	}
+
+	err = migrateEventTable(tx)
+	if err != nil {
+		slog.Error("error migrating event table", "error", err)
+		return perr.InternalWithMessage("error migrating event table")
+	}
+
+	dropTableSql := `drop table if exists event_old`
+	_, err = tx.Exec(dropTableSql)
+	if err != nil {
+		slog.Error("error dropping table", "error", err)
+		return perr.InternalWithMessage("error dropping table")
 	}
 
 	if currentDbVersion == "" {
 		updateMetadata := `insert into internal (name, value, created_at, updated_at) values ('db_version', '2.0', datetime('now'), datetime('now'))`
-		_, err = db.Exec(updateMetadata)
+		_, err = tx.Exec(updateMetadata)
 		if err != nil {
 			slog.Error("error updating metadata", "error", err)
 			return perr.InternalWithMessage("error updating metadata")
 		}
 	} else {
 		updateMetadata := `update internal set value = '2.0', updated_at = datetime('now') where name = 'db_version'`
-		_, err = db.Exec(updateMetadata)
+		_, err = tx.Exec(updateMetadata)
 		if err != nil {
 			slog.Error("error updating metadata", "error", err)
 			return perr.InternalWithMessage("error updating metadata")
 		}
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		slog.Error("error committing transaction", "error", err)
+		return perr.InternalWithMessage("error committing transaction")
+	}
+	commited = true
 
 	return nil
 }
@@ -154,6 +269,22 @@ func InitializeFlowpipeDB() error {
 
 	defer db.Close()
 
+	tx, err := db.BeginTx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		slog.Error("error starting transaction", "error", err)
+		return perr.InternalWithMessage("error starting transaction")
+	}
+
+	commited := false
+	defer func() {
+		if !commited {
+			err := tx.Rollback()
+			if err != nil {
+				slog.Error("error rolling back transaction", "error", err)
+			}
+		}
+	}()
+
 	createTableSQL := `create table if not exists pipeline_run (
 		id integer primary key autoincrement,
 		execution_id text,
@@ -163,57 +294,23 @@ func InitializeFlowpipeDB() error {
 		updated_at datetime
 	)`
 
-	_, err = db.Exec(createTableSQL)
+	_, err = tx.Exec(createTableSQL)
 	if err != nil {
 		slog.Error("error creating pipeline_run table", "error", err)
 		return perr.InternalWithMessage("error creating pipeline_run table")
 	}
 
 	processIdIndexSql := `create unique index if not exists idx_pipeline_run_execution_id on pipeline_run(execution_id)`
-	_, err = db.Exec(processIdIndexSql)
+	_, err = tx.Exec(processIdIndexSql)
 	if err != nil {
 		slog.Error("error creating pipeline_run index", "error", err)
 		return perr.InternalWithMessage("error creating pipeline_run index")
 	}
 
-	createTableSQL = `
-	create table if not exists process_log (
-		id text primary key,
-		struct_version text,
-		process_id text,
-		message text,
-		level stext,
-		created_at datetime,
-		detail text,
-		constraint fk_process_log_execution_id foreign key (process_id) references pipeline_run(execution_id) on delete cascade
-	)`
-
-	_, err = db.Exec(createTableSQL)
+	err = createEventTable(tx)
 	if err != nil {
-		slog.Error("error creating process_log table", "error", err)
-		return perr.InternalWithMessage("error creating process_log table")
-	}
-
-	createTableSQL = `drop table if exists event`
-
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		slog.Error("error dropping event table", "error", err)
-		return perr.InternalWithMessage("error dropping event table")
-	}
-
-	processIdIndexSql = `create index if not exists idx_process_log_execution_id on event (process_id);`
-	_, err = db.Exec(processIdIndexSql)
-	if err != nil {
-		slog.Error("error creating event index", "error", err)
-		return perr.InternalWithMessage("error creating process_id index")
-	}
-
-	processIdIndexSql = `create index if not exists idx_process_log_created_at on event (created_at);`
-	_, err = db.Exec(processIdIndexSql)
-	if err != nil {
-		slog.Error("error creating event index", "error", err)
-		return perr.InternalWithMessage("error creating event index")
+		slog.Error("error creating event table", "error", err)
+		return perr.InternalWithMessage("error creating event table")
 	}
 
 	createTableSQL = `create table if not exists query_trigger_captured_row (
@@ -225,14 +322,14 @@ func InitializeFlowpipeDB() error {
 		primary key (trigger_name, primary_key));`
 
 	slog.Debug("Creating table", "sql", createTableSQL)
-	_, err = db.Exec(createTableSQL)
+	_, err = tx.Exec(createTableSQL)
 	if err != nil {
 		slog.Error("error creating query_trigger_captured_row table", "error", err)
 		return perr.InternalWithMessage("error creating query_trigger_captured_row table")
 	}
 
 	processIdIndexSql = `create index if not exists idx_query_trigger_captured_row_trigger_name_primary_key on query_trigger_captured_row (trigger_name, primary_key);`
-	_, err = db.Exec(processIdIndexSql)
+	_, err = tx.Exec(processIdIndexSql)
 	if err != nil {
 		slog.Error("error creating query_trigger_captured_row index", "error", err)
 		return perr.ExecutionErrorWithMessage("error creating query_trigger_captured_row index")
@@ -248,18 +345,25 @@ func InitializeFlowpipeDB() error {
 	);
 	`
 
-	_, err = db.Exec(createTableSQL)
+	_, err = tx.Exec(createTableSQL)
 	if err != nil {
 		slog.Error("error creating internal table", "error", err)
 		return perr.InternalWithMessage("error creating internal table")
 	}
 
 	processIdIndexSql = `create unique index if not exists idx_internal_name on internal (name);`
-	_, err = db.Exec(processIdIndexSql)
+	_, err = tx.Exec(processIdIndexSql)
 	if err != nil {
 		slog.Error("error creating internal index", "error", err)
 		return perr.InternalWithMessage("error creating internal index")
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		slog.Error("error committing transaction", "error", err)
+		return perr.InternalWithMessage("error committing transaction")
+	}
+	commited = true
 
 	return nil
 }

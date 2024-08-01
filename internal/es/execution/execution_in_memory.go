@@ -671,7 +671,7 @@ func SaveEventToSQLite(db *sql.DB, executionID string, event event.EventLogImpl)
 
 	sanitizedPayloadData := sanitize.Instance.SanitizeString(string(payloadData))
 
-	statement := `insert into process_log (id, struct_version, process_id, created_at, message, level, detail) values (?, ?, ?, ?, ?, ?, ?)`
+	statement := `insert into event (id, struct_version, process_id, created_at, message, level, detail) values (?, ?, ?, ?, ?, ?, ?)`
 	_, err = db.Exec(statement, event.GetID(), event.GetStructVersion(), executionID, event.GetCreatedAt(), event.GetEventType(), event.GetLevel(), sanitizedPayloadData)
 	if err != nil {
 		return err

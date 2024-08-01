@@ -483,7 +483,7 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error)
 	}
 
 	// Prepare query to select all events
-	query := `SELECT id, struct_version, process_id, message, level, created_at, detail FROM process_log where process_id = ? order by created_at asc`
+	query := `select id, struct_version, process_id, message, level, created_at, detail from event where process_id = ? order by created_at asc`
 	rows, err := db.Query(query, e.ExecutionID)
 	if err != nil {
 		slog.Error("error querying event table", "error", err)
