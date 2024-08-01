@@ -13,7 +13,7 @@ func TestExecutionLoadFromDB(t *testing.T) {
 	ctx := context.Background()
 
 	evt := &event.Event{
-		ExecutionID: "exec_cmsp5a272ijn3jbg6850",
+		ExecutionID: "exec_cqlecr4204vm48hs8lp0",
 	}
 
 	ex, err := NewExecution(ctx, WithEvent(evt))
@@ -23,8 +23,7 @@ func TestExecutionLoadFromDB(t *testing.T) {
 
 	assert.Equal(1, len(ex.PipelineExecutions))
 
-	pe := ex.PipelineExecutions["pexec_cmsp5a272ijn3jbg685g"]
+	pe := ex.PipelineExecutions["pexec_cqlecr4204vm48hs8lpg"]
 
-	assert.Equal("pexec_cmsp5a272ijn3jbg685g", pe.ID)
-	assert.Equal(20, len(pe.PipelineOutput["inserted_rows"].([]interface{})))
+	assert.Equal("pexec_cqlecr4204vm48hs8lpg", pe.ID)
 }

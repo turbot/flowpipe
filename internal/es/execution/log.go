@@ -12,9 +12,9 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-func LogEventMessageToFile(ctx context.Context, logEntry *event.EventLogEntry) error {
+func LogEventMessageToFile(ctx context.Context, logEntry event.EventLogImpl) error {
 
-	commandEvent, ok := logEntry.Payload.(event.CommandEvent)
+	commandEvent, ok := logEntry.GetDetail().(event.CommandEvent)
 
 	if !ok {
 		return perr.BadRequestWithMessage("event is not a CommandEvent")

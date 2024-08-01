@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"reflect"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -450,19 +452,25 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 	var out []sanitize.SanitizedStringer
 
 	for _, log := range logs {
-		switch log.EventType {
+		jsonPayload, err := json.Marshal(log.Detail)
+		if err != nil {
+			slog.Error("Error marshalling JSON", "error", err)
+			return perr.InternalWithMessage("Error marshalling JSON")
+		}
+
+		switch log.Message {
 		case event.HandlerPipelineQueued:
 			var e event.PipelineQueued
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline queued event")
 			}
 			p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt, &e.Args}
 		case event.HandlerPipelineStarted:
 			var e event.PipelineStarted
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline started event")
 			}
 			fullName := "unknown.unknown"
 			var args modconfig.Input
@@ -474,7 +482,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEventWithInput{
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: NewPrefix(fullName),
-					Type:              log.EventType,
+					Type:              log.Message,
 					StepType:          "pipeline",
 					execId:            e.Event.ExecutionID,
 				},
@@ -484,7 +492,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerPipelineFinished:
 			var e event.PipelineFinished
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
@@ -499,7 +507,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEventWithOutput{
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: NewPrefix(fullName),
-					Type:              log.EventType,
+					Type:              log.Message,
 					execId:            e.Event.ExecutionID,
 				},
 				Duration:       &duration,
@@ -509,9 +517,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerPipelineFailed:
 			var e event.PipelineFailed
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline failed event")
 			}
 			fullName := "unknown.unknown"
 			started := e.Event.CreatedAt
@@ -545,7 +553,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 						FullPipelineName: fullName,
 						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
 					},
-					Type:   log.EventType,
+					Type:   log.Message,
 					execId: e.Event.ExecutionID,
 				},
 				Duration:        &duration,
@@ -556,9 +564,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerStepQueued:
 			var e event.StepQueued
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return perr.InternalWithMessage("Error unmarshalling JSON for step queued event")
 			}
 			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{
 				Name:    e.StepName,
@@ -566,9 +574,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			}
 		case event.CommandStepStart:
 			var e event.StepStart
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return perr.InternalWithMessage("Error unmarshalling JSON for step start event")
 			}
 
 			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt, &e.StepInput}
@@ -595,7 +603,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEventWithInput{
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: prefix,
-					Type:              log.EventType,
+					Type:              log.Message,
 					StepType:          stepType,
 					execId:            e.Event.ExecutionID,
 				},
@@ -605,7 +613,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerStepFinished:
 			var e event.StepFinished
-			err := json.Unmarshal([]byte(log.Payload), &e)
+			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
@@ -647,7 +655,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					parsed := ParsedEventWithOutput{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
-							Type:              log.EventType,
+							Type:              log.Message,
 							StepType:          stepType,
 							execId:            e.Event.ExecutionID,
 						},
@@ -664,7 +672,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					parsed := ParsedErrorEvent{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
-							Type:              log.EventType,
+							Type:              log.Message,
 							StepType:          stepType,
 							execId:            e.Event.ExecutionID,
 						},
@@ -690,7 +698,7 @@ func (p *PrintableParsedEvent) GetTable() (*printers.Table, error) {
 	return printers.NewTable(), nil
 }
 
-type ProcessEventLogs []ProcessEventLog
+type ProcessEventLogs []event.EventLogImpl
 
 // GetResourceType is used to satisfy the interface requirements of types.PrintableResource Transform function
 func (ProcessEventLogs) GetResourceType() string {
