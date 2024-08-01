@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -102,7 +101,7 @@ func migrateEventTable(tx *sql.Tx) error {
 		var id int
 		var executionID, createdAt, eventType, data string
 		if err := rows.Scan(&id, &executionID, &createdAt, &eventType, &data); err != nil {
-			log.Fatal(err)
+			return err
 		}
 
 		// Generate new ID using the utility function
