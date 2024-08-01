@@ -358,6 +358,13 @@ func InitializeFlowpipeDB() error {
 		return perr.InternalWithMessage("error creating internal index")
 	}
 
+	updateMetadata := `insert into internal (name, value, created_at, updated_at) values ('db_version', '2.0', datetime('now'), datetime('now'))`
+	_, err = tx.Exec(updateMetadata)
+	if err != nil {
+		slog.Error("error updating metadata", "error", err)
+		return perr.InternalWithMessage("error updating metadata")
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		slog.Error("error committing transaction", "error", err)
