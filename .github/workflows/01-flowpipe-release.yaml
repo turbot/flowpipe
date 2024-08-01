@@ -98,7 +98,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: v0.4.x
+          ref: develop
 
       # - name: Unshallow
       #   run: git fetch --prune --unshallow
