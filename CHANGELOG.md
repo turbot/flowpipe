@@ -1,10 +1,10 @@
 # Flowpipe
 
-## v0.6.1 [tbd]
+## v0.6.1 [2024-08-05]
 
 _Bug fixes_
 
-* The variable command no longer fails if the .flowpipe directory in the user's home directory is not created yet. ([#872](https://github.com/turbot/flowpipe/issues/872)).
+* The `variable` command no longer fails if the .flowpipe directory in the user's home directory is not created yet. ([#872](https://github.com/turbot/flowpipe/issues/872)).
 
 ## v0.6.0 [2024-07-24]
 
