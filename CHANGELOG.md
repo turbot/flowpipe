@@ -7,6 +7,12 @@ _What's new?_
 * On-demand trigger execution. ([#864](https://github.com/turbot/flowpipe/issues/864)).
 * `params` support for trigger. ([#840](https://github.com/turbot/flowpipe/issues/840)).
 
+## v0.6.1 [2024-08-05]
+
+_Bug fixes_
+
+* The `variable` command no longer fails if the `.flowpipe` directory in the user's home directory is not created yet. ([#872](https://github.com/turbot/flowpipe/issues/872)).
+
 ## v0.6.0 [2024-07-24]
 
 _What's new?_
