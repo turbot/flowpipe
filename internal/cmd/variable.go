@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/printers"
@@ -35,6 +36,9 @@ func variableShowCmd() *cobra.Command {
 		Long:  `Show variable from the current mod.`,
 	}
 
+	// initialize hooks
+	cmdconfig.OnCmd(cmd)
+
 	return cmd
 }
 
@@ -46,6 +50,9 @@ func variableListCmd() *cobra.Command {
 		Short: "List variables from the current mod",
 		Long:  `List variables from the current mod.`,
 	}
+
+	// initialize hooks
+	cmdconfig.OnCmd(cmd)
 
 	return cmd
 }
