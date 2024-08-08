@@ -199,7 +199,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 			Name:        param.Name,
 			Description: utils.ToStringPointer(param.Description),
 			Optional:    &pipeline.Params[i].Optional,
-			Type:        param.Type.FriendlyName(),
+			Type:        param.TypeString,
 			Default:     paramDefault,
 		})
 
