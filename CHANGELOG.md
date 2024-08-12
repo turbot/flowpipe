@@ -7,6 +7,10 @@ _What's new?_
 * On-demand trigger execution. ([#864](https://github.com/turbot/flowpipe/issues/864)).
 * `params` support for trigger. ([#840](https://github.com/turbot/flowpipe/issues/840)).
 
+_Bug fixes_
+
+* Complex data type in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879)).
+
 ## v0.6.1 [2024-08-05]
 
 _Bug fixes_
