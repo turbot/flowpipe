@@ -192,7 +192,6 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 			if err != nil {
 				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
 			}
-			// paramDefault = map[string]any{param.Name: paramDefaultGoVal}
 			paramDefault = paramDefaultGoVal
 		}
 

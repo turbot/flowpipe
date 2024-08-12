@@ -10,7 +10,7 @@ _What's new?_
 _Bug fixes_
 
 * Complex data type in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879)).
-* Pipeline `param` default value is not nested in a `map` data type. ([#880](
+* Pipeline `param` default value is not nested in a `map` data type. ([#880](https://github.com/turbot/flowpipe/issues/880)).
 
 ## v0.6.1 [2024-08-05]
 
