@@ -3,6 +3,7 @@ module github.com/turbot/flowpipe
 go 1.22.4
 
 replace github.com/turbot/pipe-fittings => ../pipe-fittings
+
 replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go
 
 require (
