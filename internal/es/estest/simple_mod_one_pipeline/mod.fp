@@ -3,18 +3,36 @@ mod "simple_mod" {
 }
 
 pipeline "echo_one" {
-    param "value" {
+    param "my_name" {
         type = string
         default = var.var_one
     }
 
-    param "value2" {
+    param "my_list" {
         type = list(string)
         default = ["Hello World", "Hello World 2"]
     }
 
-    param "value3" {
+    param "my_map" {
+        type = map(string)
+        default = {
+            key1 = "value1"
+            key2 = "value2"
+        }
+    }
+
+    param "my_list_map" {
         type = list(map(string))
+        default = [
+            {
+                key1 = "value1"
+                key2 = "value2"
+            },
+            {
+                key3 = "value3"
+                key4 = "value4"
+            }
+        ]
     }
 
     param "value4" {

@@ -192,7 +192,8 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 			if err != nil {
 				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
 			}
-			paramDefault = map[string]any{param.Name: paramDefaultGoVal}
+			// paramDefault = map[string]any{param.Name: paramDefaultGoVal}
+			paramDefault = paramDefaultGoVal
 		}
 
 		pipelineParams = append(pipelineParams, FpPipelineParam{
@@ -361,26 +362,25 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 		o = ""
 	}
 	output := fmt.Sprintf("  %s%s%s\n", au.Cyan(p.Name), o, au.Cyan(":"))
-	output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
+	output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Type:"), p.TypeString)
 	if p.Description != nil && len(*p.Description) > 0 {
 		output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
 
-	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
-		if v, ok := defaults[p.Name]; ok {
-			var valueString string
-			if isSimpleType(v) {
-				valueString = formatSimpleValue(v, aurora.NewAurora(false))
+	if !helpers.IsNil(p.Default) {
+		v := p.Default
+		var valueString string
+		if isSimpleType(v) {
+			valueString = formatSimpleValue(v, aurora.NewAurora(false))
+		} else {
+			s, err := json.Marshal(v)
+			if err != nil {
+				valueString = au.Sprintf(au.Red("error parsing value"))
 			} else {
-				s, err := json.Marshal(v)
-				if err != nil {
-					valueString = au.Sprintf(au.Red("error parsing value"))
-				} else {
-					valueString = string(s)
-				}
+				valueString = string(s)
 			}
-			output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Default:"), valueString)
 		}
+		output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Default:"), valueString)
 	}
 
 	if strings.HasSuffix(output, "\n\n") {
