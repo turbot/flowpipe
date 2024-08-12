@@ -1,6 +1,6 @@
 module github.com/turbot/flowpipe
 
-go 1.22.4
+go 1.22
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
@@ -46,8 +46,8 @@ require (
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
-	github.com/turbot/flowpipe-sdk-go v0.5.0-rc.1
-	github.com/turbot/pipe-fittings v1.5.0-rc.1
+	github.com/turbot/flowpipe-sdk-go v0.5.0
+	github.com/turbot/pipe-fittings v1.5.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.7.0
 )
