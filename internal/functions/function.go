@@ -213,8 +213,7 @@ func (fn *Function) Unload() error {
 	}
 
 	// Cleanup artifacts from Docker
-	// return fn.CleanupArtifacts()
-	return nil
+	return fn.CleanupArtifacts()
 }
 
 // Pull the fnuration of this function from its source location, e.g. GitHub or S3.
