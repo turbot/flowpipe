@@ -233,19 +233,20 @@ func WithSkipLatest(skipLatest bool) CleanupArtifactsOption {
 
 // CleanupArtifacts deletes all containers and images related to flowpipe.
 func (dc *DockerClient) CleanupArtifactsForLabel(key string, value string, opts ...CleanupArtifactsOption) error {
-	err := dc.deleteContainersWithLabel(key, value, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
-	}
-	err = dc.deleteImagesWithLabel(key, value, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
-	}
 	return nil
+	// err := dc.deleteContainersWithLabel(key, value, opts...)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
+	// }
+	// err = dc.deleteImagesWithLabel(key, value, opts...)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
+	// }
+	// return nil
 }
 
 // deleteContainersWithLabel deletes all containers with the specified label.
-func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
+func (dc *DockerClient) DeleteContainersWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
 
 	// Options
 	cleanupOptions := &CleanupArtifactsOptions{
@@ -299,7 +300,7 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 }
 
 // deleteImagesWithLabel deletes all images with the specified label.
-func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
+func (dc *DockerClient) DeleteImagesWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
 
 	// Options
 	cleanupOptions := &CleanupArtifactsOptions{
