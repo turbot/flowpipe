@@ -211,8 +211,10 @@ func (fn *Function) Unload() error {
 	if fn.watcher != nil {
 		fn.watcher.Close()
 	}
+
 	// Cleanup artifacts from Docker
-	return fn.CleanupArtifacts()
+	// return fn.CleanupArtifacts()
+	return nil
 }
 
 // Pull the fnuration of this function from its source location, e.g. GitHub or S3.
