@@ -4,7 +4,7 @@
 
 _Bug fixes_
 
-* Complex nested data types in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879))
+* Complex nested map data types in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879))
 
 ## v0.7.0 [2024-08-14]
 
