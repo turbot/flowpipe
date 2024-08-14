@@ -45,8 +45,7 @@ sudo /bin/sh -c "$(curl -fsSL https://flowpipe.io/install/flowpipe.sh)"
 MacOS
 
 ```sh
-brew tap turbot/tap
-brew install flowpipe
+brew install turbot/tap/flowpipe
 ```
 
 Now, [create and run your first pipeline →](https://flowpipe.io/docs).
