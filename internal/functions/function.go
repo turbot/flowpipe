@@ -389,7 +389,6 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 }
 
 func (fn *Function) Invoke(input []byte) (int, []byte, error) {
-
 	output := []byte{}
 
 	// Ensure the function has been started
@@ -400,15 +399,36 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 
 	// Forward request to lambda endpoint
 	v := fn.Versions[fn.CurrentVersionName]
+	// NOTE: Victor - Do we still want to log the input?
 	slog.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName, "input", string(input))
 
-	elapsed := 0
-	for elapsed < 60 {
-		slog.Info("Elapsed time", "elapsed", elapsed)
-		time.Sleep(1 * time.Second)
-		elapsed++
+	// Polling the Lambda endpoint until it's ready or we timeout in 30 seconds
+	timeout := 30
+	for i := 0; i < timeout; i++ {
+		resp, err := http.Get(v.LambdaEndpoint())
+		if err != nil {
+			slog.Warn("Error checking Lambda function status, retrying...", "error", err)
+			// Wait before retrying
+			time.Sleep(time.Second)
+			continue
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			break
+		}
+
+		if i == timeout-1 {
+			err := perr.InternalWithMessage("Timed out waiting for Lambda endpoint to be ready")
+			slog.Error("Timeout waiting for Lambda function", "error", err)
+			return 0, output, err
+		}
+
+		// Since the Lambda function is not ready yet, we wait for a second before retrying
+		time.Sleep(time.Second)
 	}
 
+	// Invoke the Lambda function
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
 		slog.Error("Error invoking Lambda function", "error", err)
