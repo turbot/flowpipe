@@ -400,16 +400,20 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 
 	// Forward request to lambda endpoint
 	v := fn.Versions[fn.CurrentVersionName]
-	slog.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName)
+	slog.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName, "input", string(input))
 
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
+		slog.Error("Error invoking Lambda function", "error", err)
 		return 0, output, err
 	}
 	defer resp.Body.Close()
 
 	// Response handling
 	output, err = io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("Error reading Lambda function response", "error", err)
+	}
 
 	return resp.StatusCode, output, err
 }
