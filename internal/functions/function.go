@@ -412,7 +412,7 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 			time.Sleep(time.Second)
 			continue
 		}
-		defer resp.Body.Close()
+		resp.Body.Close()
 
 		if resp.StatusCode == http.StatusOK {
 			break
