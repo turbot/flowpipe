@@ -402,6 +402,13 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 	v := fn.Versions[fn.CurrentVersionName]
 	slog.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName, "input", string(input))
 
+	elapsed := 0
+	for elapsed < 60 {
+		slog.Info("Elapsed time", "elapsed", elapsed)
+		time.Sleep(1 * time.Second)
+		elapsed++
+	}
+
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
 		slog.Error("Error invoking Lambda function", "error", err)
