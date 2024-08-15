@@ -90,6 +90,9 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 			function.WithDockerClient(docker.GlobalDockerClient),
 			function.WithName(input[schema.LabelName].(string)),
 			function.WithRuntime(input[schema.AttributeTypeRuntime].(string)),
+
+			// TODO: support in passing the Lambda function support timeout. Needs to either be added in the Pipeline Step definition or in Flowpipe config
+			function.WithStartTimeoutInSeconds(30),
 		)
 		if err != nil {
 			return nil, err
