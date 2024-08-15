@@ -155,19 +155,19 @@ func (dc *DockerClient) ImagePull(imageName string) error {
 // CleanupArtifacts deletes all containers and images related to flowpipe.
 func (dc *DockerClient) CleanupArtifacts() error {
 	// Delete any containers & images related to flowpipe
-	// err := dc.deleteContainersWithLabelKey("io.flowpipe.type")
-	// if err != nil {
-	// 	return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
-	// }
-	// err = dc.deleteImagesWithLabelKey("io.flowpipe.type")
-	// if err != nil {
-	// 	return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
-	// }
+	err := dc.deleteContainersWithLabelKey("io.flowpipe.type")
+	if err != nil {
+		return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
+	}
+	err = dc.deleteImagesWithLabelKey("io.flowpipe.type")
+	if err != nil {
+		return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
+	}
 	return nil
 }
 
 // deleteContainersWithLabel deletes all containers with the specified label.
-func (dc *DockerClient) DeleteContainersWithLabelKey(labelKey string) error {
+func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 	containers, err := dc.CLI.ContainerList(dc.ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
@@ -188,7 +188,7 @@ func (dc *DockerClient) DeleteContainersWithLabelKey(labelKey string) error {
 }
 
 // deleteImagesWithLabel deletes all images with the specified label.
-func (dc *DockerClient) DeleteImagesWithLabelKey(labelKey string) error {
+func (dc *DockerClient) deleteImagesWithLabelKey(labelKey string) error {
 
 	images, err := dc.CLI.ImageList(dc.ctx, types.ImageListOptions{})
 	if err != nil {
@@ -233,20 +233,19 @@ func WithSkipLatest(skipLatest bool) CleanupArtifactsOption {
 
 // CleanupArtifacts deletes all containers and images related to flowpipe.
 func (dc *DockerClient) CleanupArtifactsForLabel(key string, value string, opts ...CleanupArtifactsOption) error {
+	err := dc.deleteContainersWithLabel(key, value, opts...)
+	if err != nil {
+		return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
+	}
+	err = dc.deleteImagesWithLabel(key, value, opts...)
+	if err != nil {
+		return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
+	}
 	return nil
-	// err := dc.deleteContainersWithLabel(key, value, opts...)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to cleanup flowpipe containers: %v", err)
-	// }
-	// err = dc.deleteImagesWithLabel(key, value, opts...)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to cleanup flowpipe images: %v", err)
-	// }
-	// return nil
 }
 
 // deleteContainersWithLabel deletes all containers with the specified label.
-func (dc *DockerClient) DeleteContainersWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
+func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
 
 	// Options
 	cleanupOptions := &CleanupArtifactsOptions{
@@ -300,7 +299,7 @@ func (dc *DockerClient) DeleteContainersWithLabel(key string, value string, opts
 }
 
 // deleteImagesWithLabel deletes all images with the specified label.
-func (dc *DockerClient) DeleteImagesWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
+func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...CleanupArtifactsOption) error {
 
 	// Options
 	cleanupOptions := &CleanupArtifactsOptions{
