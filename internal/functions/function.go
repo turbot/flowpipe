@@ -405,6 +405,7 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 	// Lambda endpoint
 	v := fn.Versions[fn.CurrentVersionName]
 
+	started := false
 	for i := 0; i < timeout; i++ {
 		resp, err := http.Get(v.LambdaEndpoint())
 		if err != nil {
@@ -425,16 +426,17 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 		}()
 
 		if resp.StatusCode == http.StatusOK {
+			started = true
 			break
-		}
-
-		if i == timeout-1 {
-			slog.Error("Timeout waiting for Lambda function", "error", err)
-			return ret, perr.TimeoutWithMessage("Timed out waiting for Lambda endpoint to be ready")
 		}
 
 		// Since the Lambda function is not ready yet, we wait for a second before retrying
 		time.Sleep(time.Second)
+	}
+
+	if !started {
+		slog.Error("Timeout waiting for Lambda function", "error", err)
+		return ret, perr.TimeoutWithMessage("Timed out waiting for Lambda endpoint to be ready")
 	}
 
 	return ret, nil
@@ -460,7 +462,15 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 		slog.Error("Error invoking Lambda function", "error", err)
 		return 0, output, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			err := resp.Body.Close()
+			if err != nil {
+				slog.Warn("Error closing response body", "error", err)
+			}
+		}
+	}()
 
 	// Response handling
 	output, err = io.ReadAll(resp.Body)
