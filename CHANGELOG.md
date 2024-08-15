@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.7.2 [TBC]
+
+_Bug fixes_
+
+* Improve Flowpipe to wait for Lambda container or timeout after 30s. ([#888](https://github.com/turbot/flowpipe/issues/888))
+
 ## v0.7.1 [2024-08-14]
 
 _Bug fixes_
