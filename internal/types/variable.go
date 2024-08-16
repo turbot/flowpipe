@@ -120,6 +120,7 @@ func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 	var res = FpVariable{
 		ModName:     *apiVariable.ModName,
 		Type:        *apiVariable.Type,
+		TypeString:  *apiVariable.TypeString,
 		Name:        *apiVariable.Name,
 		Description: apiVariable.Description,
 	}
@@ -139,6 +140,7 @@ func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
 	return &FpVariable{
 		ModName:         variable.ModName,
 		Type:            variable.TypeString,
+		TypeString:      variable.TypeString,
 		Name:            variable.Name(),
 		Description:     variable.Description,
 		ValueDefault:    variable.DefaultGo,
