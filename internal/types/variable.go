@@ -49,7 +49,7 @@ func (p PrintableVariable) GetTable() (*printers.Table, error) {
 			item.Name,
 			item.Type,
 			description,
-			item.Default,
+			item.ValueDefault,
 			item.Value,
 		}
 
@@ -70,12 +70,16 @@ type ListVariableResponse struct {
 }
 
 type FpVariable struct {
-	ModName     string      `json:"mod_name"`
-	Type        string      `json:"type"`
-	Name        string      `json:"name"`
-	Description *string     `json:"description,omitempty"`
-	Default     interface{} `json:"default,omitempty" `
-	Value       interface{} `json:"value,omitempty"`
+	ModName         string      `json:"mod_name"`
+	Type            string      `json:"type"`
+	TypeString      string      `json:"type_string"`
+	Name            string      `json:"name"`
+	Description     *string     `json:"description,omitempty"`
+	ValueDefault    interface{} `json:"value_default,omitempty" `
+	Value           interface{} `json:"value,omitempty"`
+	FileName        string      `json:"file_name,omitempty"`
+	StartLineNumber int         `json:"start_line_number,omitempty"`
+	EndLineNumber   int         `json:"end_line_number,omitempty"`
 }
 
 func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -101,8 +105,8 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
 	}
 
-	if p.Default != nil {
-		output += fmt.Sprintf("%-*s%v\n", keyWidth, au.Blue("Default:"), p.Default)
+	if p.ValueDefault != nil {
+		output += fmt.Sprintf("%-*s%v\n", keyWidth, au.Blue("Default:"), p.ValueDefault)
 	}
 
 	if p.Value != nil {
@@ -120,8 +124,8 @@ func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 		Description: apiVariable.Description,
 	}
 
-	if !helpers.IsNil(apiVariable.Default) {
-		res.Default = *apiVariable.Default
+	if !helpers.IsNil(apiVariable.ValueDefault) {
+		res.ValueDefault = *apiVariable.ValueDefault
 	}
 
 	if !helpers.IsNil(apiVariable.Value) {
@@ -133,12 +137,15 @@ func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 
 func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
 	return &FpVariable{
-		ModName:     variable.ModName,
-		Type:        variable.TypeString,
-		Name:        variable.Name(),
-		Description: variable.Description,
-		Default:     variable.DefaultGo,
-		Value:       variable.ValueGo,
+		ModName:         variable.ModName,
+		Type:            variable.TypeString,
+		Name:            variable.Name(),
+		Description:     variable.Description,
+		ValueDefault:    variable.DefaultGo,
+		Value:           variable.ValueGo,
+		StartLineNumber: variable.ValueSourceStartLineNumber,
+		EndLineNumber:   variable.ValueSourceEndLineNumber,
+		FileName:        variable.ValueSourceFileName,
 	}
 }
 

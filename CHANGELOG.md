@@ -4,13 +4,14 @@
 
 _Bug fixes_
 
-* Improve Flowpipe to wait for Lambda container or timeout after 30s. ([#888](https://github.com/turbot/flowpipe/issues/888))
+* Function step will no longer randomly fail in slower host machines. ([#888](https://github.com/turbot/flowpipe/issues/888)).
+* Mod variable definition matches Powerpipe's definition. ([#889](https://github.com/turbot/flowpipe/issues/889)).
 
 ## v0.7.1 [2024-08-14]
 
 _Bug fixes_
 
-* Complex nested map data types in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879))
+* Complex nested map data types in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879)).
 
 ## v0.7.0 [2024-08-14]
 

@@ -23,4 +23,4 @@ echo "Post processing openapi.json"
 echo ""
 
 # Swaggo does not support AnyType which we need for the default and value fields of FpVariable. Otherwise they will be mapped to object and will be generated as map[string]interface{}
-jq '.components.schemas.FpVariable.properties.default.type = "AnyType" | .components.schemas.FpVariable.properties.value.type = "AnyType"' ${OUTPUT_DIR}/openapi.json > /tmp/flowpipe_openapi_api_temp.json; mv /tmp/flowpipe_openapi_api_temp.json ${OUTPUT_DIR}/openapi.json
+jq '.components.schemas.FpVariable.properties.value_default.type = "AnyType" | .components.schemas.FpVariable.properties.value.type = "AnyType"' ${OUTPUT_DIR}/openapi.json > /tmp/flowpipe_openapi_api_temp.json; mv /tmp/flowpipe_openapi_api_temp.json ${OUTPUT_DIR}/openapi.json

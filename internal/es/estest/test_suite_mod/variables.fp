@@ -62,3 +62,12 @@ variable "smtp_username" {
 variable "slack_signing_secret" {
   type = string
 }
+
+
+variable "map_var" {
+  type = map(string)
+  default = {
+    key1 = "value1"
+    key2 = "value2"
+  }
+}

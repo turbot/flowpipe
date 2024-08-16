@@ -922,8 +922,6 @@ github.com/tklauser/numcpus v0.3.0 h1:ILuRUQBtssgnxw0XXIjKUC56fgnOrFoQQ/4+DeU2bi
 github.com/tklauser/numcpus v0.3.0/go.mod h1:yFGUr7TUHQRAhyqBcEg0Ge34zDBAsIvJJcyE6boqnA8=
 github.com/tkrajina/go-reflector v0.5.6 h1:hKQ0gyocG7vgMD2M3dRlYN6WBBOmdoOzJ6njQSepKdE=
 github.com/tkrajina/go-reflector v0.5.6/go.mod h1:ECbqLgccecY5kPmPmXg1MrHW585yMcDkVl6IvJe64T4=
-github.com/turbot/flowpipe-sdk-go v0.5.0 h1:KdjwH2JKhDT/0KRFGoYUAPrNgIpj7/Ca3MLV9UhGrLo=
-github.com/turbot/flowpipe-sdk-go v0.5.0/go.mod h1:fhdeQ2PoeXDl8uwPLw5CBsMpsUqsa5cK3HXJj5WzYJM=
 github.com/turbot/go-kit v0.10.0-rc.0 h1:kd+jp2ibbIV33Hc8SsMAN410Dl9Pz6SJ40axbKUlSoA=
 github.com/turbot/go-kit v0.10.0-rc.0/go.mod h1:fFQqR59I5z5JeeBLfK1PjSifn4Oprs3NiQx0CxeSJxs=
 github.com/turbot/pipe-fittings v1.5.2 h1:0nAIJD//lyxRVGJltRg+sCq98U/N1mGxu4LNWUJSPX8=
