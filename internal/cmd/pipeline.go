@@ -479,8 +479,9 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 	o.PipelineProgress.Update(status)
 
 	// poll logs for updates
-	for {
-		progressFunc := func() {
+
+	progressFunc := func() {
+		for {
 			complete, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
@@ -609,29 +610,31 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 					o.PipelineProgress.Update(fmt.Sprintf("[%s.%s] Complete", pipelineName, stepName))
 				}
 			}
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(200 * time.Millisecond)
+
+			if exit {
+				break
+			}
 		}
+	}
 
-		_ = o.PipelineProgress.Run(progressFunc)
-		if exit {
-			break
+	_ = o.PipelineProgress.Run(progressFunc) // NOTE: If aborted (ctrl+c), this will return nil instead of an error as per underlying library
+
+	if exit {
+		output := types.NewProgressOutput(executionId, pipelineOutput, pipelineErrors)
+		printableOutput := types.NewPrintableProgressOutput()
+		printableOutput.Items = append(printableOutput.Items, output)
+		printer, err := printers.NewStringPrinter[sanitize.SanitizedStringer]()
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining output printer")
+			return
+		}
+		err = printer.PrintResource(ctx, printableOutput, cmd.OutOrStdout())
+		if err != nil {
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed printing output")
+			return
 		}
 	}
-
-	output := types.NewProgressOutput(executionId, pipelineOutput, pipelineErrors)
-	printableOutput := types.NewPrintableProgressOutput()
-	printableOutput.Items = append(printableOutput.Items, output)
-	printer, err := printers.NewStringPrinter[sanitize.SanitizedStringer]()
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining output printer")
-		return
-	}
-	err = printer.PrintResource(ctx, printableOutput, cmd.OutOrStdout())
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed printing output")
-		return
-	}
-
 }
 
 func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.PipelineExecutionResponse, pollLogFunc pollEventLogFunc) {
