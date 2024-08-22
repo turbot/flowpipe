@@ -1,4 +1,6 @@
-<a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark_outline.png"></a>
+<a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark.svg"></a>
+
+<p>
 
 [![libraries](https://img.shields.io/badge/mods-76-blue)](https://hub.flowpipe.io) &nbsp;
 [![pipelines](https://img.shields.io/badge/pipelines-1041-blue)](https://hub.flowpipe.io/mods) &nbsp;
@@ -9,21 +11,21 @@
 
 [Flowpipe](https://flowpipe.io) enables automation and workflow to connect your clouds to the people, systems and data that matter.
 
-**Pipelines**. A [pipeline](https://flowpipe.io/docs/flowpipe-hcl/pipeline) is a sequence of [steps](https://flowpipe.io/docs/flowpipe-hcl/pipeline) to do work.
+**Connect people and tools**. Connect your cloud data to people and systems using email, chat & APIs. Workflow steps can even run containers, custom functions, and more.
 
-**Steps**. A step can [make an HTTP call](https://flowpipe.io/docs/flowpipe-hcl/step/http), [gather human input](https://flowpipe.io/docs/flowpipe-hcl/step/input), [send a message](https://flowpipe.io/docs/flowpipe-hcl/step/message), [run a query](https://flowpipe.io/docs/flowpipe-hcl/step/query), or [run a pipeline](https://flowpipe.io/docs/flowpipe-hcl/step/pipeline).
+**Orchestrate your cloud**. Build simple steps into complex workflows. Run and test locally. Compose solutions across clouds using open source mods.
 
-**Triggers**. A [trigger](https://flowpipe.io/docs/flowpipe-hcl/trigger) runs a pipeline when an event occurs, via a [webhook](https://flowpipe.io/docs/flowpipe-hcl/trigger/http), [query](https://flowpipe.io/docs/flowpipe-hcl/trigger/query), or [schedule](https://flowpipe.io/docs/flowpipe-hcl/trigger/schedule).
+**Respond to events**. Run workflows manually or on a schedule. Trigger pipelines from webhooks or changes in data.
 
-**Code, not clicks**. Our pipelines are [code](https://flowpipe.io/docs/build): version-controlled, composable, shareable, easy to edit — designed for the way you work.
+**Code, not clicks**. Build and deploy DevOps workflows like infrastructure. Code in HCL and deploy from version control.
 
-## Demo time!
+## Demo Time!
 
 **[Watch on YouTube →](https://www.youtube.com/watch?v=h4mWhMzaS7Y)**
 
-<a href="https://www.youtube.com/watch?v=h4mWhMzaS7Y"><img width="500" alt="flowpipe demo" src="https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png" /></a>
+[![Flowpipe Demo](https://flowpipe.io/images/flowpipe_hero_video_thumbnail.png)](https://www.youtube.com/watch?v=h4mWhMzaS7Y)
 
-## Documentation
+## Getting Started
 
 See the [documentation](https://flowpipe.io/docs) for:
 
@@ -48,9 +50,9 @@ brew install turbot/tap/flowpipe
 sudo /bin/sh -c "$(curl -fsSL https://flowpipe.io/install/flowpipe.sh)"
 ```
 
-Now, [create and run your first pipeline →](https://flowpipe.io/docs).
+Now, **[create and run your first pipeline →](https://flowpipe.io/docs)**
 
-## Flowpipe mods: libraries and samples
+## Libraries and samples
 
 Flowpipe [library mods](https://hub.flowpipe.io/?type=library) are available for services including
   <a href="https://hub.flowpipe.io/mods/turbot/aws">AWS</a>,
@@ -69,44 +71,38 @@ Check out [Flowpipe samples](https://hub.flowpipe.io/?type=sample) for ready-to-
 
 ## Developing
 
-If you want to help develop the Flowpipe binary, these are the steps to build it.
-
 <details>
-<summary>Clone</summary>
+<summary>Developing Flowpipe</summary>
 
-Clone [github.com/flowpipe](https://github.com/turbot/flowpipe) and [github.com/turbot/pipe-fittings](https://github.com/turbot/pipe-fittings).
+Prerequisites:
+
+- [Golang](https://golang.org/doc/install) Version 1.21 or higher.
+
+Clone `github.com/flowpipe` and `github.com/turbot/pipe-fittings` repositories:
 
 ```sh
 git clone git@github.com:turbot/flowpipe
 git clone git@github.com:turbot/pipe-fittings
+cd flowpipe
 ```
-</details>
 
-<details>
-<summary>Build</summary>
+Build will build flowpipe binary in the current directory:
 
 ```sh
-cd flowpipe
 make
 ```
 
-The Flowpipe binary lands in the current directory.
-
-</details>
-
-<details>
-<summary>Check the install</summary>
-
+Check the version:
 ```sh
 ./flowpipe --version
-
-./flowpipe --help
 ```
-</details>
+```
+Flowpipe v0.0.1-local.1
+```
 
-<details>
-<summary>Try it!</summary>
+Flowpipe local version will always be `v0.0.1-local.1`. The real version is generated during the release process.
 
+Try it!
 
 ```sh
 ./flowpipe pipeline list --mod-location ./internal/es/estest/test_suite_mod/
@@ -122,7 +118,6 @@ mod.test_suite_mod    test_suite_mod.pipeline.bad_http_not_ignored              
 ```
 
 Now run a simple pipeline:
-
 ```sh
 ./flowpipe pipeline run --mod-location ./internal/es/estest/test_suite_mod/ simple
 ```
@@ -136,12 +131,15 @@ Now run a simple pipeline:
 [simple] Output val = Hello World
 [simple] Complete 12ms exec_clsm62ko47mjp5f74730
 ```
+
+That's it! You're ready to start developing.
+
+There are other third party tools that are required for the full development suite. These are not required for basic development. To make development easy, we have built a DevContainer that has all the required tools installed. See the Developer Setup section for more details.
+
 </details>
 
 <details>
-<summary>DevContainer</summary>
-
-There are other third party tools that are required for the full suite that are not required for initial development tasks. We have built a [DevContainer](https://containers.dev/) that has all the required tools installed.
+<summary>Developer Setup</summary>
 
 1. Install [Docker](https://docs.docker.com/get-docker/)
 
@@ -154,14 +152,6 @@ There are other third party tools that are required for the full suite that are 
 1. Open `flowpipe` in `Dev Containers: Open Folder in Container...` option.
 
 1. Run `make` to build the Flowpipe binary.
-
-[Flowpipe DevContainer](https://github.com/turbot/flowpipe/pkgs/container/flowpipe-devcontainer) bundles the following:
-
-* [Java](https://openjdk.org/)
-* [Apache Maven](https://maven.apache.org/)
-* [Swag](https://github.com/swaggo/swag)
-* [MailHog](https://github.com/mailhog/MailHog)
-* [OpenAPI Generator](https://github.com/OpenAPITools/openapi-generator)
 
 </details>
 
@@ -178,9 +168,10 @@ This repository is published under the [AGPL 3.0](https://www.gnu.org/licenses/a
 
 [Flowpipe](https://flowpipe.io) is a product produced from this open source software, exclusively by [Turbot HQ, Inc](https://turbot.com). It is distributed under our commercial terms. Others are allowed to make their own distribution of the software, but cannot use any of the Turbot trademarks, cloud services, etc. You can learn more in our [Open Source FAQ](https://turbot.com/open-source).
 
-
-## Get involved
+## Get Involved
 
 **[Join #flowpipe on Slack →](https://turbot.com/community/join)**
 
+Want to help but don't know where to start? Pick up one of the `help wanted` issues:
+* [Flowpipe](https://github.com/turbot/flowpipe/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22)
 

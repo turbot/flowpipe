@@ -142,17 +142,7 @@ func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 
 	pipelineInput := resources.Input{}
 
-	// make sure that ./event-store-test-dir/flowpipe.db does not exist
-	_, err := os.Stat("./event-store-test-dir/flowpipe.db")
-	if !os.IsNotExist(err) {
-		// Remove the directory and its contents
-		err = os.Remove("./event-store-test-dir/flowpipe.db")
-		if err != nil {
-			assert.FailNow("Error removing event store file", err)
-		}
-	}
-
-	viper.SetDefault(constants.ArgDataDir, "./event-store-test-dir")
+	viper.SetDefault(constants.ArgEventStore, "./event-store-test-dir/test-echo.db")
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
@@ -173,18 +163,18 @@ func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 	assert.Equal(1, len(pex.PipelineOutput))
 
 	// check if the event store file was created
-	fi, err := os.Stat("./event-store-test-dir/flowpipe.db")
+	fi, err := os.Stat("./event-store-test-dir/test-echo.db")
 	assert.Nil(err)
 
-	assert.Equal("flowpipe.db", fi.Name())
+	assert.Equal("test-echo.db", fi.Name())
 	assert.False(fi.IsDir())
 
 	// now delete the event store file
-	err = os.Remove("./event-store-test-dir/flowpipe.db")
+	err = os.Remove("./event-store-test-dir/test-echo.db")
 	assert.Nil(err)
 
 	// removed the default value
-	viper.SetDefault(constants.ArgDataDir, "")
+	viper.SetDefault(constants.ArgEventStore, "")
 }
 
 func (suite *DefaultModTestSuite) TestBasicAuth() {
@@ -699,7 +689,7 @@ func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 	}
 
 	assert.NotNil(stepExecution)
-	// assert.Equal("starting", stepExecution.Status)
+	assert.Equal("starting", stepExecution.Status)
 	assert.True(strings.HasPrefix(stepExecution.Input[fconstants.FormUrl].(string), "http://localhost:7103/form"), "form_url should start with http://localhost:7103/form but "+stepExecution.Input["form_url"].(string))
 }
 
@@ -726,6 +716,7 @@ func (suite *DefaultModTestSuite) testInputStepOptionResolution(pipelineName str
 		return
 	}
 
+	assert.Equal("started", pex.Status)
 	assert.Equal(3, len(pex.StepExecutions))
 	assert.Equal(stepName, sex.Name)
 

@@ -25,8 +25,6 @@ import (
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/trigger", api.listTriggers)
 	router.GET("/trigger/:trigger_name", api.getTrigger)
-	router.POST("/trigger/:trigger_name/command", api.cmdTrigger)
-	// router.GET("/trigger/:trigger_name/key", api.listTriggerKeys)
 }
 
 // @Summary List triggers

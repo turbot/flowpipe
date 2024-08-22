@@ -13,6 +13,5 @@ func TestRuntimeAvailable(t *testing.T) {
 
 	assert.NoError(err)
 	assert.Contains(runtimes, "nodejs:18")
-	assert.Contains(runtimes, "nodejs:20")
 	assert.Contains(runtimes, "python:3.10")
 }

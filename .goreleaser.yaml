@@ -1,5 +1,3 @@
-version: 2
-
 builds:
   - id: flowpipe-linux-arm64
     binary: flowpipe
@@ -81,7 +79,7 @@ snapshot:
   name_template: "{{ incpatch .Version }}-next"
 
 changelog:
-  disable: true
+  skip: true
   sort: asc
   filters:
     exclude:
@@ -96,7 +94,7 @@ brews:
       owner: turbot
       name: homebrew-tap
       branch: flowpipe-brew
-    directory: Formula
+    folder: Formula
     url_template: "https://github.com/turbot/flowpipe/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
     homepage: "https://flowpipe.io/"
     description: "Flowpipe is a cloud scripting engine. Automation and workflow to connect your clouds to the people, systems and data that matters."

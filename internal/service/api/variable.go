@@ -100,7 +100,7 @@ func (api *APIService) getVariable(c *gin.Context) {
 		return
 	}
 
-	variableName := ConstructFullyQualifiedName("var", 1, uri.VariableName)
+	variableName := ConstructFullyQualifiedName("var", uri.VariableName)
 	res, err := GetVariable(variableName)
 	if err != nil {
 		common.AbortWithError(c, err)
