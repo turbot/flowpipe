@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/atc0005/go-teams-notify/v2/messagecard"
-	"github.com/charmbracelet/huh"
 	"github.com/slack-go/slack"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
@@ -109,8 +108,4 @@ func (icm *MessageStepMessageCreator) MsTeamsMessage(iit *InputIntegrationMsTeam
 
 	msgCard.Text = icm.Text
 	return msgCard, nil
-}
-
-func (icm *MessageStepMessageCreator) ConsoleMessage(ip *InputIntegrationConsole, _ []InputIntegrationResponseOption) (*string, *huh.Form, any, error) {
-	return &icm.Text, nil, nil, nil
 }

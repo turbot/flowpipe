@@ -1,43 +1,15 @@
 # Flowpipe
 
-## v0.7.1 [2024-08-14]
-
-_Bug fixes_
-
-* Complex nested map data types in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879))
-
-## v0.7.0 [2024-08-14]
+## v0.6.0 [tbd]
 
 _What's new?_
 
-* On-demand trigger execution. ([#864](https://github.com/turbot/flowpipe/issues/864)).
-* `param` support for trigger. ([#840](https://github.com/turbot/flowpipe/issues/840)).
-
-_Bug fixes_
-
-* Complex data type in `pipeline param` no longer fails with a `mismatched types` error. ([#879](https://github.com/turbot/flowpipe/issues/879)).
-* Pipeline `param` default value is not nested in a `map` data type. ([#880](https://github.com/turbot/flowpipe/issues/880)).
-
-## v0.6.1 [2024-08-05]
-
-_Bug fixes_
-
-* The `variable` command no longer fails if the `.flowpipe` directory in the user's home directory is not created yet. ([#872](https://github.com/turbot/flowpipe/issues/872)).
-
-## v0.6.0 [2024-07-24]
-
-_What's new?_
-
-* Interactive workflows in the terminal via console integration. [Blog](https://flowpipe.io/blog/interactive-workflows-pipelines).
-* Simplified progress output for `flowpipe pipeline run` command when running in [Client](https://flowpipe.io/docs/run#operating-modes) mode and not using the `--verbose` arg.
-* `--data-dir` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
+* `--event-store` parameter to specify the location of the event store database. ([#852](https://github.com/turbot/flowpipe/issues/852)).
 * `--execution-id` parameter to specify custom execution id for pipeline run. ([#856](https://github.com/turbot/flowpipe/issues/856)).
-* Update `Go` version to v1.22.4.
 
 _Bug fixes_
 
 * Return a non-zero exit code if there's a failure. ([#855](https://github.com/turbot/flowpipe/issues/855)).
-* `loop` block now respect the `if` step attribute. ([#858](https://github.com/turbot/flowpipe/issues/858)).
 
 ## v0.5.0 [2024-06-02]
 

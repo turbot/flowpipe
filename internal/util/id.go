@@ -6,10 +6,6 @@ func NewUniqueId() string {
 	return xid.New().String()
 }
 
-func NewProcessLogId() string {
-	return "pl_" + NewUniqueId()
-}
-
 func NewExecutionId() string {
 	return "exec_" + NewUniqueId()
 }

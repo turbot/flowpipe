@@ -30,7 +30,7 @@ labels: release
 - [ ] Flowpipe Changelog updated and reviewed
 - [ ] Update Flowipe dependency to `flowpipe-go-sdk` to use the relase tag
 - [ ] Update Flowpipe dependency to `pipe-fittings` to use the relase tag
-- [ ] Run release build. Do not tag `flowpipe repo`, the workflow will create the tag
+- [ ] Run release build. Do not tag `flowpipe repo``, the workflow will create the tag
 - [ ] Update Changelog in the Release page (copy and paste from CHANGELOG.md)
 - [ ] Test Linux install script
 - [ ] Test Windows install
@@ -39,11 +39,11 @@ labels: release
 
 ### flowpipe.io
 
-- [ ] Raise Changelog update to `flowpipe.io`, get it reviewed.
-- [ ] Merge Changelog update to `flowpipe.io`.
+- [ ] Raise Changelog update to `flowpipe.io` get it reviewed.
+- [ ] Merge Changelog update to `flowpipe.io`. Need to get people who has permission in Vercel to do the last update: Ved, Chandra, John then anyone who has permission to the repo can merge it.
 - [ ] Run the Prod Deploy GitHub Action in `flowpipe.io` to publish the Changelog.
 
 ### Post release check & admin
 
 - [ ] Test Homebrew install
-- [ ] Release branches merged to `develop` (all three repos `flowpipe`, `flowpipe-go-sdk`, `pipe-fittings`)
+- [ ] Release branches merged to `main` (all three repos `flowpipe`, `flowpipe-go-sdk`, `pipe-fittings`)

@@ -3,22 +3,22 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/turbot/pipe-fittings/schema"
+
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/color"
+	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
-	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/perr"
-	"github.com/turbot/pipe-fittings/printers"
-	"github.com/turbot/pipe-fittings/sanitize"
-	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 )
 
@@ -237,9 +237,9 @@ func NewParsedEventWithInput(pe ParsedEvent, input map[string]any, isSkip bool) 
 }
 
 func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	out := ""
 	au := aurora.NewAurora(opts.ColorEnabled)
 	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
+	out := ""
 
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
@@ -298,7 +298,6 @@ func (p ParsedEventWithInput) String(sanitizer *sanitize.Sanitizer, opts sanitiz
 	if opts.Verbose && len(p.Input) > 0 {
 		out += sortAndParseMap(p.Input, "Arg", pre, au, opts)
 	}
-
 	return out
 }
 
@@ -321,10 +320,9 @@ func NewParsedEventWithOutput(parsedEvent ParsedEvent, output map[string]any, st
 }
 
 func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
-	out := ""
 	au := aurora.NewAurora(opts.ColorEnabled)
 	pre := p.ParsedEventPrefix.String(sanitize.NullSanitizer, opts)
-
+	out := ""
 	// deliberately shadow the receiver with a sanitized version of the struct
 	var err error
 	if p, err = sanitize.SanitizeStruct(sanitizer, p); err != nil {
@@ -452,25 +450,19 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 	var out []sanitize.SanitizedStringer
 
 	for _, log := range logs {
-		jsonPayload, err := json.Marshal(log.Detail)
-		if err != nil {
-			slog.Error("Error marshalling JSON", "error", err)
-			return perr.InternalWithMessage("Error marshalling JSON")
-		}
-
-		switch log.Message {
+		switch log.EventType {
 		case event.HandlerPipelineQueued:
 			var e event.PipelineQueued
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline queued event")
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 			p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt, &e.Args}
 		case event.HandlerPipelineStarted:
 			var e event.PipelineStarted
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline started event")
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 			fullName := "unknown.unknown"
 			var args modconfig.Input
@@ -482,7 +474,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEventWithInput{
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: NewPrefix(fullName),
-					Type:              log.Message,
+					Type:              log.EventType,
 					StepType:          "pipeline",
 					execId:            e.Event.ExecutionID,
 				},
@@ -492,7 +484,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerPipelineFinished:
 			var e event.PipelineFinished
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
@@ -507,7 +499,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEventWithOutput{
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: NewPrefix(fullName),
-					Type:              log.Message,
+					Type:              log.EventType,
 					execId:            e.Event.ExecutionID,
 				},
 				Duration:       &duration,
@@ -517,9 +509,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerPipelineFailed:
 			var e event.PipelineFailed
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline failed event")
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 			fullName := "unknown.unknown"
 			started := e.Event.CreatedAt
@@ -553,7 +545,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 						FullPipelineName: fullName,
 						PipelineName:     strings.Split(fullName, ".")[len(strings.Split(fullName, "."))-1],
 					},
-					Type:   log.Message,
+					Type:   log.EventType,
 					execId: e.Event.ExecutionID,
 				},
 				Duration:        &duration,
@@ -564,9 +556,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerStepQueued:
 			var e event.StepQueued
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for step queued event")
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{
 				Name:    e.StepName,
@@ -574,9 +566,9 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			}
 		case event.CommandStepStart:
 			var e event.StepStart
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for step start event")
+				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 
 			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt, &e.StepInput}
@@ -603,7 +595,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			parsed := ParsedEventWithInput{
 				ParsedEvent: ParsedEvent{
 					ParsedEventPrefix: prefix,
-					Type:              log.Message,
+					Type:              log.EventType,
 					StepType:          stepType,
 					execId:            e.Event.ExecutionID,
 				},
@@ -613,7 +605,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			out = append(out, parsed)
 		case event.HandlerStepFinished:
 			var e event.StepFinished
-			err := json.Unmarshal(jsonPayload, &e)
+			err := json.Unmarshal([]byte(log.Payload), &e)
 			if err != nil {
 				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
@@ -655,7 +647,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					parsed := ParsedEventWithOutput{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
-							Type:              log.Message,
+							Type:              log.EventType,
 							StepType:          stepType,
 							execId:            e.Event.ExecutionID,
 						},
@@ -672,7 +664,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					parsed := ParsedErrorEvent{
 						ParsedEvent: ParsedEvent{
 							ParsedEventPrefix: prefix,
-							Type:              log.Message,
+							Type:              log.EventType,
 							StepType:          stepType,
 							execId:            e.Event.ExecutionID,
 						},
@@ -698,7 +690,7 @@ func (p *PrintableParsedEvent) GetTable() (*printers.Table, error) {
 	return printers.NewTable(), nil
 }
 
-type ProcessEventLogs []event.EventLogImpl
+type ProcessEventLogs []ProcessEventLog
 
 // GetResourceType is used to satisfy the interface requirements of types.PrintableResource Transform function
 func (ProcessEventLogs) GetResourceType() string {
@@ -760,12 +752,6 @@ func formatSimpleValue(input any, au aurora.Aurora) string {
 func sortAndParseMap(input map[string]any, typeString string, prefix string, au aurora.Aurora, opts sanitize.RenderOptions) string {
 	out := ""
 	sortedKeys := utils.SortedMapKeys(input)
-	if typeString != "" {
-		typeString = fmt.Sprintf("%s ", typeString)
-	}
-	if prefix != "" {
-		prefix = fmt.Sprintf("%s ", prefix)
-	}
 	for _, key := range sortedKeys {
 
 		// Nasty .. but form_url is a special case where we "extend the input" (see extendInput function). It need to be removed
@@ -789,8 +775,11 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 				valueString = string(s)
 			}
 		}
-
-		out += fmt.Sprintf("%s%s%s = %s\n", prefix, typeString, au.Blue(key), valueString)
+		if typeString == "" {
+			out += fmt.Sprintf("%s %s = %s\n", prefix, au.Blue(key), valueString)
+		} else {
+			out += fmt.Sprintf("%s %s %s = %s\n", prefix, typeString, au.Blue(key), valueString)
+		}
 	}
 	return out
 }

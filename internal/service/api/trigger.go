@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -10,16 +9,11 @@ import (
 
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/schema"
-	putils "github.com/turbot/pipe-fittings/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
-	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
-	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/service/api/common"
-	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -28,8 +22,6 @@ import (
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/trigger", api.listTriggers)
 	router.GET("/trigger/:trigger_name", api.getTrigger)
-	router.POST("/trigger/:trigger_name/command", api.cmdTrigger)
-	// router.GET("/trigger/:trigger_name/key", api.listTriggerKeys)
 }
 
 // @Summary List triggers
@@ -215,179 +207,3 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 
 	return fpTrigger
 }
-
-func ConstructTriggerFullyQualifiedName(triggerName string) string {
-	return ConstructFullyQualifiedName("trigger", 2, triggerName)
-}
-
-func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-	triggerExecutionResponse := types.TriggerExecutionResponse{}
-	modTrigger, err := db.GetTrigger(triggerName)
-	if err != nil {
-		return triggerExecutionResponse, nil, err
-	}
-
-	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
-
-	triggerExecutionResponse, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
-	if err != nil {
-		return triggerExecutionResponse, nil, err
-	}
-
-	return triggerExecutionResponse, evt, nil
-}
-
-// @Summary Execute a trigger command
-// @Description Execute a trigger command
-// @ID   trigger_command
-// @Tags Trigger
-// @Accept json
-// @Produce json
-// / ...
-// @Param trigger_name path string true "The name of the trigger" format(^[a-z_]{0,32}$)
-// @Param request body types.CmdTrigger true "Trigger command."
-// ...
-// @Success 200 {object} types.TriggerExecutionResponse
-// @Failure 400 {object} perr.ErrorModel
-// @Failure 401 {object} perr.ErrorModel
-// @Failure 403 {object} perr.ErrorModel
-// @Failure 404 {object} perr.ErrorModel
-// @Failure 429 {object} perr.ErrorModel
-// @Failure 500 {object} perr.ErrorModel
-// @Router /trigger/{trigger_name}/command [post]
-func (api *APIService) cmdTrigger(c *gin.Context) {
-	var uri types.TriggerRequestURI
-	if err := c.ShouldBindUri(&uri); err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	var input types.CmdTrigger
-	if err := c.ShouldBindJSON(&input); err != nil {
-		slog.Error("error binding input", "error", err)
-		common.AbortWithError(c, perr.BadRequestWithMessage(err.Error()))
-		return
-	}
-
-	triggerName := ConstructTriggerFullyQualifiedName(uri.TriggerName)
-
-	executionMode := input.GetExecutionMode()
-	waitRetry := input.GetWaitRetry()
-
-	triggerExecutionResponse, pipelineCmds, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
-	if err != nil {
-		common.AbortWithError(c, err)
-		return
-	}
-
-	if api.ModMetadata.IsStale {
-		triggerExecutionResponse.Flowpipe.IsStale = &api.ModMetadata.IsStale
-		triggerExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
-		c.Header("flowpipe-mod-is-stale", "true")
-		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
-	}
-
-	if executionMode == localconstants.ExecutionModeSynchronous {
-		for _, pipelineCmd := range pipelineCmds {
-			pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
-			if err != nil {
-				slog.Error("error waiting for pipeline", "error", err)
-				api.processTriggerExecutionResult(c, triggerExecutionResponse, pipelineCmd, err)
-				return
-			}
-			for i, res := range triggerExecutionResponse.Results {
-				if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
-					if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-						// Set the capture type in the nested Flowpipe metadata (good info)
-						pipelineExecutionReponse.Flowpipe.Type = i
-						triggerExecutionResponse.Results[i] = pipelineExecutionReponse
-					}
-				}
-			}
-		}
-
-		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, triggerExecutionResponse)
-}
-
-func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExecutionResponse types.TriggerExecutionResponse, pipelineCmd event.PipelineQueue, err error) {
-
-	if err != nil {
-		if errorModel, ok := err.(perr.ErrorModel); ok {
-			pipelineExecutionResponse := types.PipelineExecutionResponse{}
-
-			pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
-			pipelineExecutionResponse.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
-			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
-			pipelineExecutionResponse.Flowpipe.Status = "failed"
-
-			pipelineExecutionResponse.Errors = []modconfig.StepError{
-				{
-					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-					Pipeline:            pipelineCmd.Name,
-					Error:               errorModel,
-				},
-			}
-
-			captureGroup := "unknown"
-			// correlate which capture group the error is coming from
-			for _, res := range triggerExecutionResponse.Results {
-				if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
-					if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-						captureGroup = pipelineExecutionRes.Flowpipe.Type
-					}
-				}
-			}
-
-			triggerExecutionResponse.Results[captureGroup] = pipelineExecutionResponse
-
-			c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
-			c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
-			c.Header("flowpipe-status", "failed")
-
-			c.JSON(500, triggerExecutionResponse)
-			return
-		} else {
-			common.AbortWithError(c, err)
-			return
-		}
-	}
-
-	allFinished := true
-	for _, res := range triggerExecutionResponse.Results {
-		if pipelineExecutionStatus, ok := res.(types.PipelineExecutionResponse); ok {
-			if pipelineExecutionStatus.Flowpipe.Status != "finished" {
-				allFinished = false
-				break
-			}
-		}
-	}
-
-	if allFinished {
-		c.JSON(http.StatusOK, triggerExecutionResponse)
-	} else {
-		c.JSON(209, triggerExecutionResponse)
-	}
-}
-
-// func (api *APIService) listTriggerKeys(c *gin.Context) {
-// 	// Get paging parameters
-// 	nextToken, limit, err := common.ListPagingRequest(c)
-// 	if err != nil {
-// 		common.AbortWithError(c, err)
-// 		return
-// 	}
-
-// 	slog.Info("received list trigger request", "next_token", nextToken, "limit", limit)
-
-// 	result, err := ListTriggers()
-// 	if err != nil {
-// 		common.AbortWithError(c, err)
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, result)
-// }

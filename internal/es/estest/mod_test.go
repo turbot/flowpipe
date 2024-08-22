@@ -4051,10 +4051,8 @@ func (suite *ModTestSuite) TestInputWithNoOptionsTextType() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "started")
-	// assert.Equal("started", pex.Status)
-	var states = []string{"started", "finished"}
-	assert.Contains(states, pex.Status)
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	assert.Equal("started", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 }
 

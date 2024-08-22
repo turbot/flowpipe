@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,7 +15,6 @@ import (
 	"github.com/turbot/flowpipe/internal/cmd/common"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -211,22 +208,15 @@ type pollEventLogFunc func(ctx context.Context, exId, plId string, last int) (bo
 
 func runPipelineFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
-	var resp types.PipelineExecutionResponse
+	var resp map[string]any
 	var err error
 	var pollLogFunc pollEventLogFunc
 
 	isDetach := viper.GetBool(constants.ArgDetach)
 	isRemote := viper.IsSet(constants.ArgHost)
-	isVerbose := viper.IsSet(constants.ArgVerbose)
 	if !isRemote && isDetach {
 		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
 		return
-	}
-	output := viper.GetString(constants.ArgOutput)
-	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
-	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
-	if progressLogs {
-		o.PipelineProgress = o.NewProgress("Initializing...")
 	}
 
 	// if a host is set, use it to connect to API server
@@ -244,6 +234,8 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := output == "plain" || output == "pretty"
 	switch {
 	case isDetach:
 		err := displayDetached(ctx, cmd, resp)
@@ -253,14 +245,12 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 		}
 	case streamLogs:
 		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
-	case progressLogs:
-		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
 	default:
 		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
 	}
 }
 
-func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, types.PipelineExecutionResponse, pollEventLogFunc, error) {
+func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (*manager.Manager, map[string]any, pollEventLogFunc, error) {
 	if isRemote {
 		// run pipeline on server
 		resp, err := runPipelineRemote(cmd, args)
@@ -275,13 +265,8 @@ func executePipeline(cmd *cobra.Command, args []string, isRemote bool) (*manager
 	return m, resp, pollLogFunc, err
 }
 
-func runPipelineRemote(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, error) {
+func runPipelineRemote(cmd *cobra.Command, args []string) (map[string]interface{}, error) {
 	ctx := cmd.Context()
-
-	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
-	if err != nil {
-		return types.PipelineExecutionResponse{}, err
-	}
 
 	pipelineName := args[0]
 	// extract the pipeline args from the flags
@@ -293,69 +278,13 @@ func runPipelineRemote(cmd *cobra.Command, args []string) (types.PipelineExecuti
 
 	// Set the pipeline args
 	cmdPipelineRun.ArgsString = &pipelineArgs
-	cmdPipelineRun.ExecutionId = &executionId
 
-	response, _, err := apiClient.PipelineApi.Command(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
-	if err != nil {
-		return types.PipelineExecutionResponse{}, err
-	}
+	resp, _, err := apiClient.PipelineApi.Command(ctx, pipelineName).Request(*cmdPipelineRun).Execute()
 
-	return PipelineExecutionResponseFromAPIResponse(*response), err
+	return resp, err
 }
 
-func PipelineExecutionResponseFromAPIResponse(apiResp flowpipeapiclient.PipelineExecutionResponse) types.PipelineExecutionResponse {
-	// map the API data type into the internal data type
-	return types.PipelineExecutionResponse{
-		Results:  apiResp.Results,
-		Errors:   ModConfigStepErrorsFromAPIErrors(apiResp.Errors),
-		Flowpipe: FlowpipeResponseMetadataFromAPIResponse(*apiResp.Flowpipe),
-	}
-}
-
-func FlowpipeResponseMetadataFromAPIResponse(apiResp flowpipeapiclient.FlowpipeResponseMetadata) types.FlowpipeResponseMetadata {
-	response := types.FlowpipeResponseMetadata{
-		ExecutionID:         utils.Deref(apiResp.ExecutionId, ""),
-		PipelineExecutionID: utils.Deref(apiResp.PipelineExecutionId, ""),
-		Pipeline:            utils.Deref(apiResp.Pipeline, ""),
-		IsStale:             apiResp.IsStale,
-	}
-	if apiResp.LastLoaded != nil {
-		time, _ := time.Parse(utils.RFC3339WithMS, *apiResp.LastLoaded)
-		response.LastLoaded = &time
-	}
-	return response
-}
-
-func ModConfigStepErrorsFromAPIErrors(apiErrors []flowpipeapiclient.ModconfigStepError) []modconfig.StepError {
-	var stepErrors []modconfig.StepError
-	for _, e := range apiErrors {
-		se := modconfig.StepError{
-			PipelineExecutionID: utils.Deref(e.PipelineExecutionId, ""),
-			StepExecutionID:     utils.Deref(e.StepExecutionId, ""),
-			Pipeline:            utils.Deref(e.Pipeline, ""),
-			Step:                utils.Deref(e.Step, ""),
-		}
-		if e.Error != nil {
-			se.Error = PerrModelFromAPIError(*e.Error)
-		}
-		stepErrors = append(stepErrors, se)
-	}
-	return stepErrors
-}
-
-func PerrModelFromAPIError(err flowpipeapiclient.PerrErrorModel) perr.ErrorModel {
-	return perr.ErrorModel{
-		Instance: err.Instance,
-		Type:     err.Type,
-		Title:    err.Title,
-		Detail:   err.Detail,
-		Status:   int(err.Status),
-
-		// TODO: ValidationErrors
-	}
-}
-
-func runPipelineLocal(cmd *cobra.Command, args []string) (types.PipelineExecutionResponse, *manager.Manager, error) {
+func runPipelineLocal(cmd *cobra.Command, args []string) (map[string]any, *manager.Manager, error) {
 	ctx := cmd.Context()
 
 	// create and start the manager with ES service, and Docker, but no API server
@@ -375,15 +304,18 @@ func runPipelineLocal(cmd *cobra.Command, args []string) (types.PipelineExecutio
 
 	executionId, err := cmd.Flags().GetString(constants.ArgExecutionId)
 	if err != nil {
-		return types.PipelineExecutionResponse{}, nil, err
+		return nil, nil, err
 	}
 
 	resp, _, err := api.ExecutePipeline(input, executionId, pipelineName, m.ESService)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	return resp, m, err
 }
 
-func displayDetached(ctx context.Context, cmd *cobra.Command, resp types.PipelineExecutionResponse) error {
+func displayDetached(ctx context.Context, cmd *cobra.Command, resp map[string]any) error {
 	exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
 	if err != nil {
 		return err
@@ -395,235 +327,89 @@ func displayDetached(ctx context.Context, cmd *cobra.Command, resp types.Pipelin
 	return nil
 }
 
-func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp types.PipelineExecutionResponse, pollLogFunc pollEventLogFunc) {
-	executionId := resp.Flowpipe.ExecutionID
-	pipelineId := resp.Flowpipe.PipelineExecutionID
-	stale := false
-	lastLoaded := ""
+func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
+	if resp != nil && resp["flowpipe"] != nil {
+		contents := resp["flowpipe"].(map[string]any)
+		executionId := ""
+		pipelineId := ""
+		stale := false
+		lastLoaded := ""
 
-	// check if the execution is stale
-	if resp.Flowpipe.IsStale != nil {
-		stale = *resp.Flowpipe.IsStale
-	}
-
-	if resp.Flowpipe.LastLoaded != nil {
-		lastLoaded = resp.Flowpipe.LastLoaded.UTC().Format(time.RFC3339)
-	}
-
-	lastIndex := -1
-
-	printer, err := printers.NewStringPrinter[sanitize.SanitizedStringer]()
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed instantiating string printer")
-		return
-	}
-	printer.Sanitizer = sanitize.Instance
-	printableResource := types.NewPrintableParsedEvent(pipelineId)
-
-	// print execution_id / stale info
-	var header []sanitize.SanitizedStringer
-	header = append(header, types.ParsedHeader{
-		ExecutionId: executionId,
-		IsStale:     stale,
-		LastLoaded:  lastLoaded,
-	})
-	printableResource.Items = header
-	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed writing execution header")
-		return
-	}
-
-	// TODO: should we time out?
-	// poll logs & print
-	for {
-		exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
-		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
+		if s, ok := contents["execution_id"].(string); !ok {
+			error_helpers.ShowError(ctx, fmt.Errorf("failed obtaining execution_id"))
 			return
+		} else {
+			executionId = s
+		}
+		if s, ok := contents["pipeline_execution_id"].(string); !ok {
+			error_helpers.ShowError(ctx, fmt.Errorf("failed obtaining pipeline_execution_id"))
+			return
+		} else {
+			pipelineId = s
+		}
+		if contents["is_stale"] != nil {
+			stale = true
+			lastLoaded = contents["last_loaded"].(string)
 		}
 
-		err = printableResource.SetEvents(logs)
+		lastIndex := -1
+
+		printer, err := printers.NewStringPrinter[sanitize.SanitizedStringer]()
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "failed parsing events")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed instantiating string printer")
 			return
 		}
+		printer.Sanitizer = sanitize.Instance
+		printableResource := types.NewPrintableParsedEvent(pipelineId)
 
+		// print execution_id / stale info
+		var header []sanitize.SanitizedStringer
+		header = append(header, types.ParsedHeader{
+			ExecutionId: executionId,
+			IsStale:     stale,
+			LastLoaded:  lastLoaded,
+		})
+		printableResource.Items = header
 		err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 		if err != nil {
-			error_helpers.ShowErrorWithMessage(ctx, err, "failed printing events")
+			error_helpers.ShowErrorWithMessage(ctx, err, "failed writing execution header")
 			return
 		}
 
-		lastIndex = i
-
-		if exit {
-			break
-		}
-
-		// TODO: make this configurable
-		time.Sleep(500 * time.Millisecond)
-	}
-}
-
-func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.PipelineExecutionResponse, pollLogFunc pollEventLogFunc) {
-	executionId := resp.Flowpipe.ExecutionID
-	pipelineId := resp.Flowpipe.PipelineExecutionID
-
-	stepNames := make(map[string]string)
-	lastIndex := -1
-	status := fmt.Sprintf("[flowpipe] Execution ID: %s", executionId)
-	pipelineOutput := make(map[string]any)
-	var pipelineErrors []modconfig.StepError
-	exit := false
-	o.PipelineProgress.Update(status)
-
-	// poll logs for updates
-	for {
-		progressFunc := func() {
-			complete, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
+		// TODO: should we time out?
+		// poll logs & print
+		for {
+			exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
 				return
 			}
-			lastIndex = i
-			exit = complete
 
-			for _, log := range logs {
-				jsonPayload, err := json.Marshal(log.Detail)
-				if err != nil {
-					error_helpers.ShowErrorWithMessage(ctx, err, "failed marshalling log detail")
-					return
-				}
-
-				switch log.Message {
-				case event.HandlerPipelineQueued:
-					var e event.PipelineQueued
-					err := json.Unmarshal(jsonPayload, &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					stepNames[e.PipelineExecutionID] = strings.Split(e.Name, ".")[len(strings.Split(e.Name, "."))-1]
-				case event.HandlerPipelineStarted:
-					var e event.PipelineStarted
-					err := json.Unmarshal(jsonPayload, &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					if pipelineName, ok := stepNames[e.PipelineExecutionID]; ok {
-						o.PipelineProgress.Update(fmt.Sprintf("[%s] Starting pipeline", pipelineName))
-					}
-				case event.HandlerPipelineFinished:
-					var e event.PipelineFinished
-					err := json.Unmarshal(jsonPayload, &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					if e.PipelineExecutionID == pipelineId {
-						pipelineOutput = e.PipelineOutput
-					}
-					if pipelineName, ok := stepNames[e.PipelineExecutionID]; ok {
-						o.PipelineProgress.Update(fmt.Sprintf("[%s] Complete", pipelineName))
-					}
-
-				case event.HandlerPipelineFailed:
-					var e event.PipelineFailed
-					err := json.Unmarshal(jsonPayload, &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					if e.PipelineExecutionID == pipelineId {
-						pipelineOutput = e.PipelineOutput
-						pipelineErrors = e.Errors
-					}
-				case event.CommandStepStart:
-					var e event.StepStart
-					err := json.Unmarshal(jsonPayload, &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-					stepName := strings.Split(e.StepName, ".")[len(strings.Split(e.StepName, "."))-1]
-					stepNames[e.StepExecutionID] = stepName
-
-					if pipelineName, ok := stepNames[e.PipelineExecutionID]; ok {
-						initText := "Starting"
-						if e.StepRetry != nil {
-							initText = "Retrying"
-						}
-						extraDetails := ""
-						switch e.StepType {
-						case "http":
-							method, _ := e.StepInput["method"].(string)
-							url, _ := e.StepInput["url"].(string)
-							if method == "" {
-								method = "GET"
-							} else {
-								method = strings.ToUpper(method)
-							}
-							extraDetails = fmt.Sprintf(": %s %s", method, url)
-						case "sleep":
-							duration, _ := e.StepInput["duration"].(string)
-							extraDetails = fmt.Sprintf(": %s", duration)
-						case "message":
-							message, _ := e.StepInput["text"].(string)
-							if len(message) > 50 {
-								message = message[:50] + "..."
-							}
-							extraDetails = fmt.Sprintf(": %s", message)
-						case "input":
-							message, _ := e.StepInput["prompt"].(string)
-							if len(message) > 50 {
-								message = message[:50] + "..."
-							}
-							extraDetails = fmt.Sprintf(": %s", message)
-
-						}
-						o.PipelineProgress.Update(fmt.Sprintf("[%s.%s] %s %s%s", pipelineName, stepName, initText, e.StepType, extraDetails))
-					}
-				case event.HandlerStepFinished:
-					var e event.StepFinished
-					err := json.Unmarshal(jsonPayload, &e)
-					if err != nil {
-						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
-						return
-					}
-
-					pipelineName := stepNames[e.PipelineExecutionID]
-					stepName := stepNames[e.StepExecutionID]
-					o.PipelineProgress.Update(fmt.Sprintf("[%s.%s] Complete", pipelineName, stepName))
-				}
+			err = printableResource.SetEvents(logs)
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed parsing events")
+				return
 			}
+
+			err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
+			if err != nil {
+				error_helpers.ShowErrorWithMessage(ctx, err, "failed printing events")
+				return
+			}
+
+			lastIndex = i
+
+			if exit {
+				break
+			}
+
+			// TODO: make this configurable
 			time.Sleep(500 * time.Millisecond)
 		}
-
-		_ = o.PipelineProgress.Run(progressFunc)
-		if exit {
-			break
-		}
 	}
-
-	output := types.NewProgressOutput(executionId, pipelineOutput, pipelineErrors)
-	printableOutput := types.NewPrintableProgressOutput()
-	printableOutput.Items = append(printableOutput.Items, output)
-	printer, err := printers.NewStringPrinter[sanitize.SanitizedStringer]()
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining output printer")
-		return
-	}
-	err = printer.PrintResource(ctx, printableOutput, cmd.OutOrStdout())
-	if err != nil {
-		error_helpers.ShowErrorWithMessage(ctx, err, "failed printing output")
-		return
-	}
-
 }
 
-func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.PipelineExecutionResponse, pollLogFunc pollEventLogFunc) {
+func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp map[string]any, pollLogFunc pollEventLogFunc) {
 	exec, err := types.FpPipelineExecutionFromAPIResponse(resp)
 	if err != nil {
 		error_helpers.ShowErrorWithMessage(ctx, err, "failed obtaining execution")
@@ -641,16 +427,10 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 		lastIndex = i
 
 		for _, log := range logs {
-			jsonPayload, err := json.Marshal(log.Detail)
-			if err != nil {
-				error_helpers.ShowErrorWithMessage(ctx, err, "failed marshalling log detail")
-				return
-			}
-
-			switch log.Message {
+			switch log.EventType {
 			case event.HandlerPipelineQueued:
 				var e event.PipelineQueued
-				err := json.Unmarshal(jsonPayload, &e)
+				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -662,7 +442,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 				}
 			case event.HandlerPipelineStarted:
 				var e event.PipelineStarted
-				err := json.Unmarshal(jsonPayload, &e)
+				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -672,7 +452,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 				}
 			case event.HandlerPipelineFinished:
 				var e event.PipelineFinished
-				err := json.Unmarshal(jsonPayload, &e)
+				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -683,7 +463,7 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 				}
 			case event.HandlerPipelineFailed:
 				var e event.PipelineFailed
-				err := json.Unmarshal(jsonPayload, &e)
+				err := json.Unmarshal([]byte(log.Payload), &e)
 				if err != nil {
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
@@ -759,24 +539,6 @@ func pollEventLog(ctx context.Context, executionId, rootPipelineId string, lastI
 	return pollFunc(ctx, executionId, rootPipelineId, lastIndex)
 }
 
-func EventLogImplFromApiReponse(apiResp flowpipeapiclient.EventEventLogImpl) event.EventLogImpl {
-	e := event.EventLogImpl{
-		StructVersion: utils.Deref(apiResp.StructVersion, ""),
-		ID:            utils.Deref(apiResp.Id, ""),
-		ProcessID:     utils.Deref(apiResp.ProcessId, ""),
-		Message:       utils.Deref(apiResp.Message, ""),
-		Level:         utils.Deref(apiResp.Level, ""),
-	}
-	err := e.SetCreatedAtString(utils.Deref(apiResp.CreatedAt, ""))
-	if err != nil {
-		e.CreatedAt = time.Now()
-	}
-
-	e.Detail = apiResp.Detail
-
-	return e
-
-}
 func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
 	complete := false
 	var out types.ProcessEventLogs
@@ -790,20 +552,22 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 	if len(logs.Items)-1 > last {
 		for index, item := range logs.Items {
 			if index > last {
-				e := EventLogImplFromApiReponse(item)
-				out = append(out, e)
+				ts, err := time.Parse(time.RFC3339Nano, *item.Ts)
+				if err != nil {
+					return false, 0, nil, fmt.Errorf("error parsing timestamp from %s", *item.Ts)
+				}
+				out = append(out, types.ProcessEventLog{
+					EventType: *item.EventType,
+					Timestamp: &ts,
+					Payload:   *item.Payload,
+				})
 
 				last = index
 
-				if e.Message == event.HandlerPipelineFinished || e.Message == event.HandlerPipelineFailed {
-					jsonData, err := json.Marshal(item.Detail)
-					if err != nil {
-						return false, 0, nil, perr.InternalWithMessage("error marshalling log detail")
-					}
-
+				if item.EventType != nil && (*item.EventType == event.HandlerPipelineFinished || *item.EventType == event.HandlerPipelineFailed) {
 					payload := make(map[string]any)
-					if err := json.Unmarshal(jsonData, &payload); err != nil {
-						return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
+					if err := json.Unmarshal([]byte(*item.Payload), &payload); err != nil {
+						return false, 0, nil, fmt.Errorf("error parsing payload from %s", *item.Payload)
 					}
 					complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 				}
@@ -815,7 +579,6 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 }
 
 func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
-
 	ex, err := execution.GetExecution(exId)
 	if err != nil {
 		return true, 0, nil, err
@@ -832,18 +595,30 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 			continue
 		}
 
-		res = append(res, item)
+		// Parse the string back to time.Time struct
+		parsedTime, err := time.Parse(time.RFC3339, item.Timestamp)
+		if err != nil {
+			slog.Error("Error parsing timestamp", "error", err)
+			return true, 0, nil, err
+		}
 
-		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed {
+		// marshall item.Payload to JSON string
+		jsonData, err := json.Marshal(item.Payload)
+		if err != nil {
+			slog.Error("Error marshalling payload", "error", err)
+			return true, 0, nil, err
+		}
 
-			jsonData, err := json.Marshal(item.Detail)
-			if err != nil {
-				return false, 0, nil, perr.InternalWithMessage("error marshalling log detail")
-			}
+		res = append(res, types.ProcessEventLog{
+			EventType: item.EventType,
+			Timestamp: &parsedTime,
+			Payload:   string(jsonData),
+		})
 
+		if item.EventType == event.HandlerPipelineFinished || item.EventType == event.HandlerPipelineFailed {
 			payload := make(map[string]any)
 			if err := json.Unmarshal(jsonData, &payload); err != nil {
-				return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
+				return false, 0, nil, perr.InternalWithMessage(fmt.Sprintf("error parsing payload from %s", item.Payload))
 			}
 			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
 		}

@@ -73,7 +73,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
 		defer func() {
-			if stepDefn.GetType() == schema.BlockTypePipelineStepInput && o.IsServerMode {
+			if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
 				slog.Debug("Step execution is an input step, not releasing semaphore", "step_name", cmd.StepName, "pipeline_execution_id", cmd.PipelineExecutionID)
 				return
 			} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline && cmd.NextStepAction != modconfig.NextStepActionSkip {
@@ -257,7 +257,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output.Status = constants.StateFinished
 		}
 
-		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && o.IsServerMode {
+		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput {
 			slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 			return
 		}
@@ -560,9 +560,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modc
 	loopConfig := stepDefn.GetLoopConfig()
 
 	var stepLoop *modconfig.StepLoop
-
-	// Loop is calculated last, so it needs to respect the IF block evaluation
-	if !helpers.IsNil(loopConfig) && cmd.NextStepAction != modconfig.NextStepActionSkip {
+	if !helpers.IsNil(loopConfig) {
 		var err error
 		stepLoop, err = calculateLoop(ctx, ex, loopConfig, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {

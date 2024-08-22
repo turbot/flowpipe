@@ -2,8 +2,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -13,6 +15,7 @@ import (
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
@@ -205,10 +208,6 @@ func GetProcess(executionId string) (*types.Process, error) {
 		}
 	}
 
-	if outerPipeline == nil {
-		return nil, perr.NotFoundWithMessage("No pipeline found for process " + executionId)
-	}
-
 	process := types.Process{
 		ID:        exFile.ID,
 		Pipeline:  outerPipeline.Name,
@@ -236,7 +235,6 @@ func GetProcess(executionId string) (*types.Process, error) {
 // @Failure 500 {object} perr.ErrorModel
 // @Router /process/{process_id}/log/process.json [get]
 func (api *APIService) listProcessEventLog(c *gin.Context) {
-
 	var uri types.ProcessRequestURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		common.AbortWithError(c, err)
@@ -246,8 +244,39 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 	// Get the one in memory first
 	ex, err := execution.GetExecution(uri.ProcessId)
 	if err == nil && ex != nil {
+		var items []types.ProcessEventLog
+		for _, event := range ex.Events {
+			var ts time.Time
+			if event.Timestamp != "" {
+				ts, err = time.Parse(putils.RFC3339WithMS, event.Timestamp)
+				if err != nil {
+					slog.Error("Error parsing timestamp", "timestamp", event.Timestamp, "error", err)
+					common.AbortWithError(c, perr.InternalWithMessage("Error parsing timestamp"))
+					return
+				}
+			} else {
+				ts = time.Now()
+			}
+
+			jsonData, err := json.Marshal(event.Payload)
+			if err != nil {
+				slog.Error("Error marshalling payload", "payload", event.Payload, "error", err)
+				common.AbortWithError(c, perr.InternalWithMessage("Error marshalling payload"))
+				return
+			}
+
+			// Convert JSON bytes to string and print
+			jsonString := string(jsonData)
+
+			items = append(items, types.ProcessEventLog{
+				EventType: event.EventType,
+				Timestamp: &ts,
+				Payload:   jsonString,
+			})
+		}
+
 		result := types.ListProcessLogJSONResponse{
-			Items: ex.Events,
+			Items: items,
 		}
 
 		c.JSON(http.StatusOK, result)
@@ -269,8 +298,18 @@ func (api *APIService) listProcessEventLog(c *gin.Context) {
 		common.AbortWithError(c, err)
 		return
 	}
+
+	var items []types.ProcessEventLog
+	for _, item := range logEntries {
+		items = append(items, types.ProcessEventLog{
+			EventType: item.EventType,
+			Timestamp: item.Timestamp,
+			Payload:   string(item.Payload),
+		})
+	}
+
 	result := types.ListProcessLogJSONResponse{
-		Items: logEntries,
+		Items: items,
 	}
 
 	c.JSON(http.StatusOK, result)

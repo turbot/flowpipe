@@ -192,15 +192,14 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 			if err != nil {
 				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
 			}
-			paramDefault = paramDefaultGoVal
+			paramDefault = map[string]any{param.Name: paramDefaultGoVal}
 		}
 
 		pipelineParams = append(pipelineParams, FpPipelineParam{
 			Name:        param.Name,
 			Description: utils.ToStringPointer(param.Description),
 			Optional:    &pipeline.Params[i].Optional,
-			Type:        param.Type,
-			TypeString:  param.TypeString,
+			Type:        param.Type.FriendlyName(),
 			Default:     paramDefault,
 		})
 
@@ -298,7 +297,7 @@ func pipelineParamFromApiResponse(paramApiResponse flowpipeapiclient.FpPipelineP
 		Description: paramApiResponse.Description,
 		Default:     paramApiResponse.Default,
 		Optional:    paramApiResponse.Optional,
-		// Type:        *paramApiResponse.Type,
+		Type:        *paramApiResponse.Type,
 	}
 	return param
 }
@@ -324,8 +323,7 @@ type FpPipelineParam struct {
 	Description *string `json:"description,omitempty"`
 	Optional    *bool   `json:"optional,omitempty"`
 	Default     any     `json:"default,omitempty"`
-	Type        any     `json:"type"`
-	TypeString  string  `json:"type_string"`
+	Type        string  `json:"type"`
 }
 
 //func (p FpPipelineParam) GetShowData() *printers.RowData {
@@ -361,25 +359,26 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 		o = ""
 	}
 	output := fmt.Sprintf("  %s%s%s\n", au.Cyan(p.Name), o, au.Cyan(":"))
-	output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Type:"), p.TypeString)
+	output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
 	if p.Description != nil && len(*p.Description) > 0 {
 		output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
 
-	if !helpers.IsNil(p.Default) {
-		v := p.Default
-		var valueString string
-		if isSimpleType(v) {
-			valueString = formatSimpleValue(v, aurora.NewAurora(false))
-		} else {
-			s, err := json.Marshal(v)
-			if err != nil {
-				valueString = au.Sprintf(au.Red("error parsing value"))
+	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+		if v, ok := defaults[p.Name]; ok {
+			var valueString string
+			if isSimpleType(v) {
+				valueString = formatSimpleValue(v, aurora.NewAurora(false))
 			} else {
-				valueString = string(s)
+				s, err := json.Marshal(v)
+				if err != nil {
+					valueString = au.Sprintf(au.Red("error parsing value"))
+				} else {
+					valueString = string(s)
+				}
 			}
+			output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Default:"), valueString)
 		}
-		output += fmt.Sprintf("    %-*s%s\n", keyWidth, au.Blue("Default:"), valueString)
 	}
 
 	if strings.HasSuffix(output, "\n\n") {
@@ -388,39 +387,65 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 	return output
 }
 
-type PipelineExecutionResponse struct {
-	Results  map[string]interface{}   `json:"results,omitempty"`
-	Flowpipe FlowpipeResponseMetadata `json:"flowpipe,omitempty"`
-	Errors   []modconfig.StepError    `json:"errors,omitempty"`
-}
+//
+//func (p FpPipelineParam) renderName(opts sanitize.RenderOptions) string {
+//	au := aurora.NewAurora(opts.ColorEnabled)
+//	left := au.BrightBlack("[")
+//	right := au.BrightBlack("]")
+//
+//	var optString string
+//	if p.Optional == nil || !*p.Optional {
+//		optString = fmt.Sprintf(" %s%s%s:", left, au.Red("required"), right)
+//
+//	}
+//	return fmt.Sprintf("%s%s", au.Cyan(p.Name), optString)
+//}
+//
+//func (p FpPipelineParam) renderDefault(opts sanitize.RenderOptions) string {
+//	au := aurora.NewAurora(opts.ColorEnabled)
+//
+//	if defaults, hasDefaults := p.Default.(map[string]any); hasDefaults {
+//		if v, ok := defaults[p.Name]; ok {
+//			var valueString string
+//			if isSimpleType(v) {
+//				valueString = formatSimpleValue(v, aurora.NewAurora(false))
+//			} else {
+//				s, err := json.Marshal(v)
+//				if err != nil {
+//					valueString = au.Sprintf(au.Red("error parsing value"))
+//				} else {
+//					valueString = string(s)
+//				}
+//			}
+//			return valueString
+//		}
+//	}
+//	return ""
+//}
 
-type FlowpipeResponseMetadata struct {
-	ExecutionID         string     `json:"execution_id,omitempty"`
-	Pipeline            string     `json:"pipeline,omitempty"`
-	PipelineExecutionID string     `json:"pipeline_execution_id,omitempty"`
-	Status              string     `json:"status,omitempty"`
-	IsStale             *bool      `json:"is_stale,omitempty"`
-	LastLoaded          *time.Time `json:"last_loaded,omitempty"`
-	Type                string     `json:"type,omitempty"`
-}
+type PipelineExecutionResponse map[string]interface{}
 
 type CmdPipeline struct {
-	Command string `json:"command" binding:"required,oneof=run"`
-
-	// Sepcify execution id, if not specified, a new execution id will be created
-	ExecutionID   string                 `json:"execution_id,omitempty"`
+	Command       string                 `json:"command" binding:"required,oneof=run"`
 	Args          map[string]interface{} `json:"args,omitempty"`
 	ArgsString    map[string]string      `json:"args_string,omitempty"`
 	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
-	WaitRetry     *int                   `json:"wait_retry,omitempty"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty" binding:"omitempty"`
 }
 
 func (c *CmdPipeline) GetExecutionMode() string {
-	return utils.Deref(c.ExecutionMode, localconstants.DefaultExecutionMode)
+	executionMode := localconstants.DefaultExecutionMode
+	if c.ExecutionMode != nil {
+		executionMode = *c.ExecutionMode
+	}
+	return executionMode
 }
 
 func (c *CmdPipeline) GetWaitRetry() int {
-	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
+	if c.WaitRetry != nil {
+		return *c.WaitRetry
+	}
+	return localconstants.DefaultWaitRetry
 }
 
 type PrintablePipeline struct {
@@ -509,22 +534,28 @@ func (p FpPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize
 	return out
 }
 
-func FpPipelineExecutionFromAPIResponse(apiResp PipelineExecutionResponse) (*FpPipelineExecution, error) {
-	executionId := apiResp.Flowpipe.ExecutionID
-	pipelineId := apiResp.Flowpipe.PipelineExecutionID
-	pipeline := apiResp.Flowpipe.Pipeline
+func FpPipelineExecutionFromAPIResponse(apiResp map[string]any) (*FpPipelineExecution, error) {
+	if apiResp != nil && apiResp["flowpipe"] != nil {
+		contents := apiResp["flowpipe"].(map[string]any)
 
-	exec := FpPipelineExecution{
-		ExecutionId:         executionId,
-		PipelineExecutionId: pipelineId,
-		Status:              "queued",
+		executionId, _ := contents["execution_id"].(string)
+		pipelineId, _ := contents["pipeline_execution_id"].(string)
+		pipeline, hasName := contents["pipeline"].(string)
+
+		exec := FpPipelineExecution{
+			ExecutionId:         executionId,
+			PipelineExecutionId: pipelineId,
+			Status:              "queued",
+		}
+
+		if hasName {
+			exec.PipelineName = &pipeline
+		}
+
+		return &exec, nil
 	}
 
-	if pipeline != "" {
-		exec.PipelineName = &pipeline
-	}
-
-	return &exec, nil
+	return nil, perr.Internal(fmt.Errorf("unexpected API response"))
 }
 
 type PrintablePipelineExecution struct {

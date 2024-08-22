@@ -36,7 +36,7 @@ import (
 type ExecutionInMemory struct {
 	Execution
 
-	Events                  []event.EventLogImpl `json:"events"`
+	Events                  []event.EventLogEntry `json:"events"`
 	LastProcessedEventIndex int
 }
 
@@ -98,7 +98,7 @@ func (ex *ExecutionInMemory) EndExecution() error {
 	return nil
 }
 
-func (ex *ExecutionInMemory) AddEvent(evt event.EventLogImpl) error {
+func (ex *ExecutionInMemory) AddEvent(evt event.EventLogEntry) error {
 	ex.Events = append(ex.Events, evt)
 	err := ex.ProcessEvents()
 	return err
@@ -519,12 +519,12 @@ func (ex *ExecutionInMemory) ProcessEvents() error {
 	return nil
 }
 
-func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) error {
+func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogEntry) error {
 
-	switch logEntry.GetEventType() {
+	switch logEntry.EventType {
 
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
-		et, ok := logEntry.GetDetail().(*event.PipelineQueued)
+		et, ok := logEntry.Payload.(*event.PipelineQueued)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
@@ -533,7 +533,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
-		et, ok := logEntry.GetDetail().(*event.PipelineStarted)
+		et, ok := logEntry.Payload.(*event.PipelineStarted)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
@@ -542,7 +542,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
-		et, ok := logEntry.GetDetail().(*event.PipelineResumed)
+		et, ok := logEntry.Payload.(*event.PipelineResumed)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
@@ -551,7 +551,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
-		et, ok := logEntry.GetDetail().(*event.PipelinePlanned)
+		et, ok := logEntry.Payload.(*event.PipelinePlanned)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
@@ -560,7 +560,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case StepQueueCommand.HandlerName(): //  "command.step_queue"
-		et, ok := logEntry.GetDetail().(*event.StepQueue)
+		et, ok := logEntry.Payload.(*event.StepQueue)
 		if !ok {
 			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
@@ -569,7 +569,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case StepStartCommand.HandlerName(): // "command.step_start"
-		et, ok := logEntry.GetDetail().(*event.StepStart)
+		et, ok := logEntry.Payload.(*event.StepStart)
 		if !ok {
 			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
@@ -578,7 +578,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
-		et, ok := logEntry.GetDetail().(*event.StepPipelineStarted)
+		et, ok := logEntry.Payload.(*event.StepPipelineStarted)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
@@ -588,7 +588,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 
 	// this is the generic step finish event that is fired by the command.step_start command
 	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
-		et, ok := logEntry.GetDetail().(*event.StepFinished)
+		et, ok := logEntry.Payload.(*event.StepFinished)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
@@ -597,7 +597,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
-		et, ok := logEntry.GetDetail().(*event.StepForEachPlanned)
+		et, ok := logEntry.Payload.(*event.StepForEachPlanned)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
@@ -606,7 +606,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
-		et, ok := logEntry.GetDetail().(*event.PipelineCanceled)
+		et, ok := logEntry.Payload.(*event.PipelineCanceled)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
@@ -615,7 +615,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
-		et, ok := logEntry.GetDetail().(*event.PipelinePaused)
+		et, ok := logEntry.Payload.(*event.PipelinePaused)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
@@ -624,7 +624,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
-		et, ok := logEntry.GetDetail().(*event.PipelineFinish)
+		et, ok := logEntry.Payload.(*event.PipelineFinish)
 		if !ok {
 			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
@@ -633,7 +633,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
-		et, ok := logEntry.GetDetail().(*event.PipelineFinished)
+		et, ok := logEntry.Payload.(*event.PipelineFinished)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
@@ -642,7 +642,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		return ex.Execution.appendEvent(et)
 
 	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
-		et, ok := logEntry.GetDetail().(*event.PipelineFailed)
+		et, ok := logEntry.Payload.(*event.PipelineFailed)
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
@@ -657,22 +657,22 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 	return nil
 }
 
-func SaveEventToSQLite(db *sql.DB, executionID string, event event.EventLogImpl) error {
+func SaveEventToSQLite(db *sql.DB, executionID string, event *event.EventLogEntry) error {
 	retentionInSecond := viper.GetInt(constants.ArgProcessRetention)
 	if retentionInSecond == 0 {
 		return nil
 	}
 
-	payloadData, err := json.Marshal(event.GetDetail())
+	payloadData, err := json.Marshal(event.Payload)
 	if err != nil {
 		slog.Error("Error marshalling JSON", "error", err)
 		return err
 	}
 
-	sanitizedPayloadData := sanitize.Instance.SanitizeString(string(payloadData))
+	sanitizePayloadData := sanitize.Instance.SanitizeString(string(payloadData))
 
-	statement := `insert into event (id, struct_version, process_id, created_at, message, level, detail) values (?, ?, ?, ?, ?, ?, ?)`
-	_, err = db.Exec(statement, event.GetID(), event.GetStructVersion(), executionID, event.GetCreatedAt(), event.GetEventType(), event.GetLevel(), sanitizedPayloadData)
+	statement := `INSERT INTO event (execution_id, created_at, type, data) values (?, ?, ?, ?)`
+	_, err = db.Exec(statement, executionID, event.Timestamp, event.EventType, sanitizePayloadData)
 	if err != nil {
 		return err
 	}

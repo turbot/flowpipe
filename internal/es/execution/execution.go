@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/flowpipe/internal/types"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -451,7 +452,7 @@ func (ex *Execution) PipelineStepExecutions(pipelineExecutionID, stepName string
 	return results
 }
 
-func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error) {
+func (ex *Execution) LoadProcessDB(e *event.Event) ([]types.EventLogEntry, error) {
 	// Attempt to aquire the execution lock if it's not given. If the execution lock is given then we assume the calling
 	// function is responsible for locking & unlocking the event load process.
 	var localLock *sync.Mutex
@@ -483,58 +484,39 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error)
 	}
 
 	// Prepare query to select all events
-	query := `select id, struct_version, process_id, message, level, created_at, detail from event where process_id = ? order by created_at asc`
+	query := `SELECT type, created_at, data FROM event where execution_id = ? order by id asc`
 	rows, err := db.Query(query, e.ExecutionID)
 	if err != nil {
-		slog.Error("error querying event table", "error", err)
 		return nil, perr.InternalWithMessage("error querying event table")
 	}
 	defer rows.Close()
 
-	var eventLogs []event.EventLogImpl
+	var events []types.EventLogEntry
 	// Iterate through the result set
 	for rows.Next() {
-
-		var id string
-		var structVersion string
-		var processId string
-		var message string
-		var level string
-		var createdAt time.Time
-		var detailString string
-
-		err := rows.Scan(&id, &structVersion, &processId, &message, &level, &createdAt, &detailString)
+		var ele types.EventLogEntry
+		var payload string
+		// Scan the row into the Event struct
+		err := rows.Scan(&ele.EventType, &ele.Timestamp, &payload)
 		if err != nil {
 			slog.Error("error scanning event table", "error", err)
 			return nil, perr.InternalWithMessage("error scanning event table")
 		}
 
-		ele := event.EventLogImpl{
-			ID:            id,
-			StructVersion: structVersion,
-			ProcessID:     processId,
-			Message:       message,
-			Level:         level,
-			CreatedAt:     createdAt,
-		}
-
 		// marshall the payload
-		var detail interface{}
-		err = json.Unmarshal([]byte(detailString), &detail)
+		err = json.Unmarshal([]byte(payload), &ele.Payload)
 		if err != nil {
 			slog.Error("error unmarshalling event payload", "error", err)
 			return nil, perr.InternalWithMessage("error unmarshalling event payload")
 		}
 
-		ele.SetDetail(detail)
-
 		err = ex.AppendEventLogEntry(ele)
 		if err != nil {
-			slog.Error("Fail to append event entry to execution", "execution", ex.ID, "error", err, "string", detailString)
+			slog.Error("Fail to append event entry to execution", "execution", ex.ID, "error", err, "string", payload)
 			return nil, err
 		}
 
-		eventLogs = append(eventLogs, ele)
+		events = append(events, ele)
 	}
 
 	if rows.Err() != nil {
@@ -542,7 +524,7 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error)
 		return nil, perr.InternalWithMessage("error iterating event table")
 	}
 
-	return eventLogs, nil
+	return events, nil
 }
 
 // Events
@@ -845,22 +827,13 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 	return nil
 }
 
-func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
+func (ex *Execution) AppendEventLogEntry(logEntry types.EventLogEntry) error {
 
-	// logEntry.Detail is a map[string]interface{} because we just read it from the database
-	//
-	// we can do something smarter later check if it's interface{} or fully formed struct (not sure if the use case will appear later)
-	jsonData, err := json.Marshal(logEntry.GetDetail())
-	if err != nil {
-		slog.Error("Fail to marshal event detail", "execution", ex.ID, "error", err)
-		return perr.InternalWithMessage("Fail to marshal event detail")
-	}
-
-	switch logEntry.GetEventType() {
+	switch logEntry.EventType {
 
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
 		var et event.PipelineQueued
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
@@ -870,8 +843,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
 		var et event.PipelineStarted
-
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
@@ -881,7 +853,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
 		var et event.PipelineStarted
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
@@ -891,7 +863,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
 		var et event.PipelinePlanned
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
@@ -901,7 +873,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case StepQueueCommand.HandlerName(): //  "command.step_queue"
 		var et event.StepQueue
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
@@ -911,7 +883,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case StepStartCommand.HandlerName(): // "command.step_start"
 		var et event.StepStart
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
@@ -921,7 +893,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
 		var et event.StepPipelineStarted
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
@@ -931,7 +903,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
 		var et event.StepFinished
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
@@ -941,7 +913,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
 		var et event.StepForEachPlanned
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
@@ -951,7 +923,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
 		var et event.PipelineCanceled
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
@@ -961,7 +933,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
 		var et event.PipelinePaused
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
@@ -971,7 +943,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
 		var et event.PipelineFinished
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
@@ -981,7 +953,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
 		var et event.PipelineFinished
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
@@ -991,7 +963,7 @@ func (ex *Execution) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
 		var et event.PipelineFailed
-		err := json.Unmarshal(jsonData, &et)
+		err := json.Unmarshal(logEntry.Payload, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")

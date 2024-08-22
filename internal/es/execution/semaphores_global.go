@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/pipe-fittings/constants"
 	"golang.org/x/sync/semaphore"
 )
@@ -14,7 +13,6 @@ var globalHttpStepSemaphore *semaphore.Weighted
 var globalQueryStepSemaphore *semaphore.Weighted
 var globalContainerStepSemaphore *semaphore.Weighted
 var globalFunctionStepSemaphore *semaphore.Weighted
-var globalInputStepSemaphore *semaphore.Weighted
 
 func InitGlobalStepSemaphores() {
 	// this helps with automated testing where we don't set Viper config
@@ -42,10 +40,6 @@ func InitGlobalStepSemaphores() {
 	globalQueryStepSemaphore = semaphore.NewWeighted(int64(queryMaxConcurrency))
 	globalContainerStepSemaphore = semaphore.NewWeighted(int64(containerMaxConcurrency))
 	globalFunctionStepSemaphore = semaphore.NewWeighted(int64(functionMaxConcurrency))
-
-	if !output.IsServerMode {
-		globalInputStepSemaphore = semaphore.NewWeighted(1)
-	}
 }
 
 func GetStepTypeSemaphore(stepType string) error {
@@ -67,20 +61,14 @@ func GetStepTypeSemaphore(stepType string) error {
 		slog.Debug("Getting semaphore for function")
 		err = globalFunctionStepSemaphore.Acquire(context.Background(), 1)
 		slog.Debug("Semaphore acquired for function")
-	case "input":
-		if !output.IsServerMode {
-			slog.Debug("Getting semaphore for input")
-			err = globalInputStepSemaphore.Acquire(context.Background(), 1)
-			slog.Debug("Semaphore acquired for input")
-		}
 	case "":
 		slog.Warn("Step type is empty")
 	}
 	return err
 }
 
-func ReleaseStepTypeSemaphore(stepType string) {
-	switch stepType {
+func ReleaseStepTypeSemaphore(stepTeyp string) {
+	switch stepTeyp {
 	case "http":
 		slog.Debug("Releasing semaphore for http")
 		globalHttpStepSemaphore.Release(1)
@@ -97,12 +85,6 @@ func ReleaseStepTypeSemaphore(stepType string) {
 		slog.Debug("Releasing semaphore for function")
 		globalFunctionStepSemaphore.Release(1)
 		slog.Debug("Semaphore released for function")
-	case "input":
-		if !output.IsServerMode {
-			slog.Debug("Releasing semaphore for input")
-			globalInputStepSemaphore.Release(1)
-			slog.Debug("Semaphore released for input")
-		}
 	case "":
 		slog.Warn("Step type is empty")
 	}

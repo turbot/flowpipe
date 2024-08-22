@@ -5,12 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/atc0005/go-teams-notify/v2/messagecard"
-	"github.com/charmbracelet/huh"
 	"github.com/slack-go/slack"
 	fconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -199,8 +197,8 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 	var resOptions []InputIntegrationResponseOption
 
 	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
-		for _, op := range options {
-			opt := op.(map[string]any)
+		for _, o := range options {
+			opt := o.(map[string]any)
 			option := InputIntegrationResponseOption{}
 			if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
 				option.Label = &l
@@ -221,41 +219,37 @@ func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageC
 		}
 	}
 
-	if o.IsServerMode || (os.Getenv("RUN_MODE") == "TEST_ES") {
-		extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)
+	extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)
 
-		switch {
-		case !extNotifySent && len(nErrors) == 0: // no integrations or only http integrations
-			return output, nil
-		case extNotifySent && len(nErrors) == 0: // all notifications sent
-			return output, nil
-		case extNotifySent && len(nErrors) > 0: // some external notifications sent, some failed...
-			// TODO: Figure out how to get this into the pipeline run output
-			if o.IsServerMode {
-				sp := types.NewServerOutputPrefixWithExecId(time.Now().UTC(), "pipeline", &ip.ExecutionID)
-				for _, ne := range nErrors {
-					o.RenderServerOutput(ctx, types.NewServerOutputError(sp, "unable to send notification", ne))
-				}
-			}
-			return output, nil
-		case !extNotifySent && len(nErrors) > 0: // all external notifications failed
-			var detail string
-			for _, ne := range nErrors {
-				if e, ok := ne.(perr.ErrorModel); ok {
-					detail += fmt.Sprintf("%s\n", e.Detail)
-				} else if e, ok := ne.(slack.StatusCodeError); ok {
-					detail += fmt.Sprintf("%s\n", e.Error())
-				} else {
-					detail += fmt.Sprintf("%s\n", ne.Error())
-				}
-			}
-			return nil, perr.InternalWithMessage(fmt.Sprintf("all %d notifications failed:\n%s", len(nErrors), detail))
-		}
-
+	switch {
+	case !extNotifySent && len(nErrors) == 0: // no integrations or only http integrations
 		return output, nil
+	case extNotifySent && len(nErrors) == 0: // all notifications sent
+		return output, nil
+	case extNotifySent && len(nErrors) > 0: // some external notifications sent, some failed...
+		// TODO: Figure out how to get this into the pipeline run output
+		if o.IsServerMode {
+			sp := types.NewServerOutputPrefixWithExecId(time.Now().UTC(), "pipeline", &ip.ExecutionID)
+			for _, ne := range nErrors {
+				o.RenderServerOutput(ctx, types.NewServerOutputError(sp, "unable to send notification", ne))
+			}
+		}
+		return output, nil
+	case !extNotifySent && len(nErrors) > 0: // all external notifications failed
+		var detail string
+		for _, ne := range nErrors {
+			if e, ok := ne.(perr.ErrorModel); ok {
+				detail += fmt.Sprintf("%s\n", e.Detail)
+			} else if e, ok := ne.(slack.StatusCodeError); ok {
+				detail += fmt.Sprintf("%s\n", e.Error())
+			} else {
+				detail += fmt.Sprintf("%s\n", ne.Error())
+			}
+		}
+		return nil, perr.InternalWithMessage(fmt.Sprintf("all %d notifications failed:\n%s", len(nErrors), detail))
 	}
 
-	return ip.consoleIntegration(ctx, input, mc, resOptions)
+	return output, nil
 }
 
 func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, mc MessageCreator, opts []InputIntegrationResponseOption) (bool, []error) {
@@ -412,11 +406,6 @@ func (ip *Input) sendNotifications(ctx context.Context, input modconfig.Input, m
 	return externalNotificationSent, notificationErrors
 }
 
-func (ip *Input) consoleIntegration(ctx context.Context, input modconfig.Input, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
-	c := NewInputIntegrationConsole(NewInputIntegrationBase(ip))
-	return c.PostMessage(ctx, mc, options)
-}
-
 func (ip *Input) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
 	if err := ip.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -444,7 +433,6 @@ type MessageCreator interface {
 	EmailMessage(*InputIntegrationEmail, []InputIntegrationResponseOption) (string, error)
 	SlackMessage(*InputIntegrationSlack, []InputIntegrationResponseOption) (slack.Blocks, error)
 	MsTeamsMessage(*InputIntegrationMsTeams, []InputIntegrationResponseOption) (*messagecard.MessageCard, error)
-	ConsoleMessage(*InputIntegrationConsole, []InputIntegrationResponseOption) (*string, *huh.Form, any, error)
 }
 
 type InputStepMessageCreator struct {
@@ -690,31 +678,4 @@ func (icm *InputStepMessageCreator) MsTeamsMessage(ip *InputIntegrationMsTeams, 
 
 	msgCard.PotentialActions = append(msgCard.PotentialActions, pa)
 	return msgCard, nil
-}
-
-func (icm *InputStepMessageCreator) ConsoleMessage(ip *InputIntegrationConsole, options []InputIntegrationResponseOption) (*string, *huh.Form, any, error) {
-	var responseValue any
-	var group *huh.Group
-	var opts []huh.Option[string]
-	for _, opt := range options {
-		opts = append(opts, huh.NewOption(*opt.Label, *opt.Value))
-	}
-
-	switch icm.InputType {
-	case constants.InputTypeButton, constants.InputTypeSelect:
-		responseValue = new(string)
-		s := huh.NewSelect[string]().Title(icm.Prompt).Options(opts...).Value(responseValue.(*string))
-		group = huh.NewGroup(s)
-	case constants.InputTypeMultiSelect:
-		responseValue = new([]string)
-		s := huh.NewMultiSelect[string]().Title(icm.Prompt).Options(opts...).Value(responseValue.(*[]string))
-		group = huh.NewGroup(s)
-	case constants.InputTypeText:
-		responseValue = new(string)
-		s := huh.NewInput().Title(icm.Prompt).Value(responseValue.(*string))
-		group = huh.NewGroup(s)
-	}
-
-	form := huh.NewForm(group)
-	return nil, form, responseValue, nil
 }

@@ -5,7 +5,6 @@ on:
       - v*
     branches:
       - main
-      - develop
       - "v*"
   workflow_dispatch:
   pull_request:
@@ -66,7 +65,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: develop
+          ref: v1.3.x
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v4
@@ -74,17 +73,13 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: develop
+          ref: v0.4.x
 
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
-          go-version: "1.22"
+          go-version: "1.21"
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
 
       - name: Build UI
         run: make build-ui
@@ -94,7 +89,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
 
         with:
-          version: v1.59.1
+          version: v1.55.2
           args: --timeout=15m
           working-directory: flowpipe
 
