@@ -142,7 +142,7 @@ func GetPipeline(pipelineName string, rootMod string) (*types.FpPipeline, error)
 }
 
 // @Summary Execute a pipeline command
-// @DescriptionExecute a pipeline command
+// @Description Execute a pipeline command
 // @ID   pipeline_command
 // @Tags Pipeline
 // @Accept json
@@ -178,40 +178,92 @@ func (api *APIService) cmdPipeline(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	response, pipelineCmd, err := ExecutePipeline(input, "", pipelineName, api.EsService)
+	pipelineExecutionResponse, pipelineCmd, err := ExecutePipeline(input, input.ExecutionID, pipelineName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
 	if executionMode == localconstants.ExecutionModeSynchronous {
-		api.waitForPipeline(c, pipelineCmd, waitRetry)
+		waitPipelineExecutionResponse, err := api.waitForPipeline(*pipelineCmd, waitRetry)
+		api.processSinglePipelineResult(c, &waitPipelineExecutionResponse, pipelineCmd, err)
 		return
 	}
 
 	if api.ModMetadata.IsStale {
-		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
-		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
+		pipelineExecutionResponse.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		pipelineExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
 	}
 
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, pipelineExecutionResponse)
+}
+
+func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecutionResponse *types.PipelineExecutionResponse, pipelineCmd *event.PipelineQueue, err error) {
+	expectedState := "finished"
+
+	if err != nil {
+		if errorModel, ok := err.(perr.ErrorModel); ok {
+			pipelineExecutionResponse := types.PipelineExecutionResponse{}
+
+			pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
+			pipelineExecutionResponse.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
+			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
+			pipelineExecutionResponse.Flowpipe.Status = "failed"
+
+			pipelineExecutionResponse.Errors = []modconfig.StepError{
+				{
+					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+					Pipeline:            pipelineCmd.Name,
+					Error:               errorModel,
+				},
+			}
+
+			c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+			c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+			c.Header("flowpipe-status", "failed")
+
+			c.JSON(500, pipelineExecutionResponse)
+			return
+		} else {
+			common.AbortWithError(c, err)
+			return
+		}
+	}
+
+	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
+	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
+	c.Header("flowpipe-status", pipelineExecutionResponse.Flowpipe.Status)
+
+	if api.ModMetadata.IsStale {
+		pipelineExecutionResponse.Flowpipe.IsStale = &api.ModMetadata.IsStale
+		pipelineExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
+		c.Header("flowpipe-mod-is-stale", "true")
+		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
+	}
+
+	if pipelineExecutionResponse.Flowpipe.Status == expectedState {
+		c.JSON(http.StatusOK, pipelineExecutionResponse)
+	} else {
+		c.JSON(209, pipelineExecutionResponse)
+	}
 }
 
 func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipelineDefn, err := db.GetPipeline(pipelineName)
+	response := types.PipelineExecutionResponse{}
 	if err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
 	// Execute the command
 	if input.Command != "run" {
-		return nil, nil, perr.BadRequestWithMessage("invalid command")
+		return response, nil, perr.BadRequestWithMessage("invalid command")
 	}
 
 	if len(input.Args) > 0 && len(input.ArgsString) > 0 {
-		return nil, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
+		return response, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
 	}
 
 	pipelineCmd := &event.PipelineQueue{
@@ -224,7 +276,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		errs := pipelineDefn.ValidatePipelineParam(input.Args)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
-			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		pipelineCmd.Args = input.Args
 
@@ -232,43 +284,42 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
-			return nil, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		pipelineCmd.Args = args
 	}
 
 	if err := esService.Send(pipelineCmd); err != nil {
-		return nil, nil, err
+		return response, nil, err
 	}
 
-	response := types.PipelineExecutionResponse{
-		"flowpipe": map[string]interface{}{
-			"execution_id":          pipelineCmd.Event.ExecutionID,
-			"pipeline_execution_id": pipelineCmd.PipelineExecutionID,
-			"pipeline":              pipelineCmd.Name,
-		},
+	response.Flowpipe = types.FlowpipeResponseMetadata{
+		ExecutionID:         pipelineCmd.Event.ExecutionID,
+		PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+		Pipeline:            pipelineCmd.Name,
 	}
+
 	return response, pipelineCmd, nil
 }
 
 func ConstructPipelineFullyQualifiedName(pipelineName string) string {
-	return ConstructFullyQualifiedName("pipeline", pipelineName)
+	return ConstructFullyQualifiedName("pipeline", 1, pipelineName)
 }
 
-func ConstructFullyQualifiedName(resourceType, resouceName string) string {
+func ConstructFullyQualifiedName(resourceType string, length int, resourceName string) string {
 	// If we run the API server with a mod foo, in order run the pipeline, the API needs the fully-qualified name of the pipeline.
 	// For example: foo.pipeline.bar
 	// However, since foo is the top level mod, we should be able to just run the pipeline bar
-	splitResourceName := strings.Split(resouceName, ".")
+	splitResourceName := strings.Split(resourceName, ".")
 	// If the pipeline name provided is not fully qualified
-	if len(splitResourceName) == 1 {
+	if len(splitResourceName) == length {
 		// Get the root mod name from the cache
 		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
 			if rootModName, ok := rootModNameCached.(string); ok {
 				// Prepend the root mod name to the pipeline name to get the fully qualified name
-				resouceName = fmt.Sprintf("%s.%s.%s", rootModName, resourceType, resouceName)
+				resourceName = fmt.Sprintf("%s.%s.%s", rootModName, resourceType, resourceName)
 			}
 		}
 	}
-	return resouceName
+	return resourceName
 }

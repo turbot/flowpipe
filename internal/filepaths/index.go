@@ -12,11 +12,14 @@ import (
 )
 
 func EventStoreDir() string {
-	modLocation := viper.GetString(constants.ArgModLocation)
-	modFlowpipeDir := path.Join(modLocation, app_specific.WorkspaceDataDir)
-	eventStoreDir := path.Join(modFlowpipeDir, "store")
+	dataDir := viper.GetString(constants.ArgDataDir)
+	if strings.Trim(dataDir, " ") != "" {
+		return dataDir
+	}
 
-	return eventStoreDir
+	modFlowpipeDir := ModFlowpipeDir()
+
+	return modFlowpipeDir
 }
 
 func ModInternalDir() string {
@@ -45,19 +48,21 @@ func LegacyFlowpipeDBFileName() string {
 
 func FlowpipeDBFileName() string {
 
-	dbPath := viper.GetString(constants.ArgEventStore)
+	dbPath := viper.GetString(constants.ArgDataDir)
 	if strings.Trim(dbPath, " ") != "" {
+		dbPath = filepath.Join(dbPath, "flowpipe.db")
 		return dbPath
 	}
+
 	modLocation := ModFlowpipeDir()
 	dbPath = filepath.Join(modLocation, "flowpipe.db")
 	return dbPath
 }
 
-func SnapshotFilePath(executionId string) string {
-	return path.Join(EventStoreDir(), fmt.Sprintf("%s.sps", executionId))
-}
-
 func GlobalInternalDir() string {
 	return path.Join(app_specific.InstallDir, "internal")
+}
+
+func EventStoreFilePath(executionId string) string {
+	return path.Join(EventStoreDir(), fmt.Sprintf("%s.jsonl", executionId))
 }

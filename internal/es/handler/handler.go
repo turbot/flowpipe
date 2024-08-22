@@ -3,6 +3,8 @@ package handler
 import (
 	"context"
 	"log/slog"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
-	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type EventHandler struct {
@@ -35,9 +36,6 @@ type FpCommandBusImpl struct {
 // Send sends command to the command bus.
 func (c FpCommandBusImpl) Send(ctx context.Context, cmd interface{}) error {
 
-	// Unfortunately we need to save the event *before* we sernd this command to Watermill. This mean we have to figure out what the
-	// event_type is manually. By the time it goes into the Watermill bus, it's too late.
-	//
 	err := LogEventMessage(ctx, cmd, nil)
 	if err != nil {
 		return err
@@ -53,20 +51,20 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		return perr.BadRequestWithMessage("event is not a CommandEvent")
 	}
 
+	logMessage := event.NewEventLogFromCommand(commandEvent)
+
+	if strings.ToLower(os.Getenv("FLOWPIPE_EVENT_FORMAT")) == "jsonl" {
+		err := execution.LogEventMessageToFile(ctx, logMessage)
+		if err != nil {
+			return err
+		}
+	}
+
 	db, err := store.OpenFlowpipeDB()
 	if err != nil {
 		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
 	}
 	defer db.Close()
-
-	logMessage := event.EventLogEntry{
-		Level:     "info",
-		Timestamp: time.Now().UTC().Format(putils.RFC3339WithMS),
-		Caller:    "command",
-		Message:   "es",
-		EventType: commandEvent.HandlerName(),
-		Payload:   commandEvent,
-	}
 
 	newExecution := false
 
@@ -116,7 +114,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		return err
 	}
 
-	err = execution.SaveEventToSQLite(db, executionID, &logMessage)
+	err = execution.SaveEventToSQLite(db, executionID, logMessage)
 	if err != nil {
 		slog.Error("Error saving event to SQLite", "error", err)
 		return err

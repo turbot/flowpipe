@@ -1,12 +1,12 @@
 PACKAGE_NAME          := github.com/turbot/flowpipe
-GOLANG_CROSS_VERSION  ?= v1.21.5
+GOLANG_CROSS_VERSION  ?= v1.22.4
 
 .PHONY: build
 build: build-ui
 	go build .
 
 run-mod:
-	go run . server --mod-location ./internal/es/estest/default_mod
+	go run . server --mod-location ./internal/es/estest/trigger_mod
 
 run-test-mod:
 	FP_VAR_var_from_env="from env var" go run . server --mod-location ./internal/es/estest/test_suite_mod
@@ -38,7 +38,7 @@ beta-tag-timetamp:
 
 .PHONY: build-ui
 build-ui:
-	cd ui/form && yarn install && yarn build
+	cd ui/form && corepack enable && yarn install && yarn build
 
 .PHONY: test
 test:

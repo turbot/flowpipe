@@ -3,15 +3,15 @@ package command
 import (
 	"context"
 	"log/slog"
+	"os"
+	"strings"
 	"sync"
-	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/pipe-fittings/perr"
-	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type CommandHandler struct {
@@ -48,14 +48,7 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		return perr.BadRequestWithMessage("event is not a CommandEvent")
 	}
 
-	logMessage := event.EventLogEntry{
-		Level:     "info",
-		Timestamp: time.Now().UTC().Format(putils.RFC3339WithMS),
-		Caller:    "command",
-		Message:   "es",
-		EventType: commandEvent.HandlerName(),
-		Payload:   evt,
-	}
+	logMessage := event.NewEventLogFromCommand(commandEvent)
 
 	executionID := commandEvent.GetEvent().ExecutionID
 
@@ -74,13 +67,20 @@ func LogEventMessage(ctx context.Context, evt interface{}, lock *sync.Mutex) err
 		return perr.InternalWithMessage("Error adding event to execution")
 	}
 
+	if strings.ToLower(os.Getenv("FLOWPIPE_EVENT_FORMAT")) == "jsonl" {
+		err := execution.LogEventMessageToFile(ctx, logMessage)
+		if err != nil {
+			return err
+		}
+	}
+
 	db, err := store.OpenFlowpipeDB()
 	if err != nil {
 		return perr.InternalWithMessage("Error opening SQLite database " + err.Error())
 	}
 	defer db.Close()
 
-	err = execution.SaveEventToSQLite(db, executionID, &logMessage)
+	err = execution.SaveEventToSQLite(db, executionID, logMessage)
 	if err != nil {
 		slog.Error("Error saving event to SQLite", "error", err)
 		return err

@@ -13,7 +13,7 @@ func ListExecutionIDs() ([]string, error) {
 	}
 	defer db.Close()
 
-	rows, err := db.Query("select distinct execution_id from event order by id desc")
+	rows, err := db.Query("select distinct process_id from event order by id desc")
 	if err != nil {
 		slog.Error("error querying process", "error", err)
 		return nil, perr.InternalWithMessage("error querying process")
