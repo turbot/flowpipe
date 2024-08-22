@@ -267,6 +267,33 @@ func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerPara
 	executionVariables[schema.BlockTypeParam] = cty.ObjectVal(paramsMap)
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(varMap)
 
+	params := map[string]cty.Value{}
+
+	for _, v := range triggerParams {
+		if triggerRunArgs[v.Name] != nil {
+			if !v.Type.HasDynamicTypes() {
+				val, err := gocty.ToCtyValue(triggerRunArgs[v.Name], v.Type)
+				if err != nil {
+					return nil, err
+				}
+				params[v.Name] = val
+			} else {
+				// we'll do our best here
+				val, err := hclhelpers.ConvertInterfaceToCtyValue(triggerRunArgs[v.Name])
+				if err != nil {
+					return nil, err
+				}
+				params[v.Name] = val
+			}
+
+		} else {
+			params[v.Name] = v.Default
+		}
+	}
+
+	paramsCtyVal := cty.ObjectVal(params)
+	executionVariables[schema.BlockTypeParam] = paramsCtyVal
+
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
 		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
