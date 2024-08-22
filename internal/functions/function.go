@@ -32,13 +32,14 @@ import (
 type Function struct {
 
 	// fnuration information
-	Name    string                 `json:"name"`
-	Runtime string                 `json:"runtime"`
-	Handler string                 `json:"handler"`
-	Source  string                 `json:"source"`
-	Env     map[string]string      `json:"env"`
-	Event   map[string]interface{} `json:"event"`
-	Timeout *int64                 `json:"timeout"`
+	Name                  string                 `json:"name"`
+	Runtime               string                 `json:"runtime"`
+	Handler               string                 `json:"handler"`
+	Source                string                 `json:"source"`
+	Env                   map[string]string      `json:"env"`
+	Event                 map[string]interface{} `json:"event"`
+	Timeout               *int64                 `json:"timeout"`
+	StartTimeoutInSeconds int                    `json:"start_timeout_in_seconds"`
 
 	fqueue *fqueue.FunctionQueue
 
@@ -106,6 +107,13 @@ func WithName(name string) FunctionOption {
 func WithRuntime(runtime string) FunctionOption {
 	return func(c *Function) error {
 		c.Runtime = runtime
+		return nil
+	}
+}
+
+func WithStartTimeoutInSeconds(timeoutInSeconds int) FunctionOption {
+	return func(c *Function) error {
+		c.StartTimeoutInSeconds = timeoutInSeconds
 		return nil
 	}
 }
@@ -211,6 +219,7 @@ func (fn *Function) Unload() error {
 	if fn.watcher != nil {
 		fn.watcher.Close()
 	}
+
 	// Cleanup artifacts from Docker
 	return fn.CleanupArtifacts()
 }
@@ -384,11 +393,56 @@ func (fn *Function) StartIfNotStarted(imageName string) (string, error) {
 	if fn.IsStarted(imageName) {
 		return fn.Versions[imageName].Port, nil
 	}
-	return fn.Start(imageName)
+	ret, err := fn.Start(imageName)
+	if err != nil {
+		return ret, err
+	}
+
+	// Wait for the Lambda function to be ready, StartTimeoutInSeconds should be set with a value when we instantiated this struct
+	// or the timeout will be 0
+	timeout := fn.StartTimeoutInSeconds
+
+	// Lambda endpoint
+	v := fn.Versions[fn.CurrentVersionName]
+
+	started := false
+	for i := 0; i < timeout; i++ {
+		resp, err := http.Get(v.LambdaEndpoint())
+		if err != nil {
+			slog.Debug("Lambda service may not be ready yet, retrying after 1 second", "error", err)
+
+			// Wait before retrying
+			time.Sleep(time.Second)
+			continue
+		}
+
+		defer func() {
+			if resp != nil && resp.Body != nil {
+				err := resp.Body.Close()
+				if err != nil {
+					slog.Warn("Error closing response body", "error", err)
+				}
+			}
+		}()
+
+		if resp.StatusCode == http.StatusOK {
+			started = true
+			break
+		}
+
+		// Since the Lambda function is not ready yet, we wait for a second before retrying
+		time.Sleep(time.Second)
+	}
+
+	if !started {
+		slog.Error("Timeout waiting for Lambda function", "error", err)
+		return ret, perr.TimeoutWithMessage("Timed out waiting for Lambda endpoint to be ready")
+	}
+
+	return ret, nil
 }
 
 func (fn *Function) Invoke(input []byte) (int, []byte, error) {
-
 	output := []byte{}
 
 	// Ensure the function has been started
@@ -399,48 +453,62 @@ func (fn *Function) Invoke(input []byte) (int, []byte, error) {
 
 	// Forward request to lambda endpoint
 	v := fn.Versions[fn.CurrentVersionName]
-	slog.Info("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName)
 
+	slog.Debug("Executing Lambda function", "LambdaEndpoint", v.LambdaEndpoint(), "CurrentVersionName", fn.CurrentVersionName)
+
+	// Invoke the Lambda function
 	resp, err := http.Post(v.LambdaEndpoint(), "application/json", bytes.NewReader(input))
 	if err != nil {
+		slog.Error("Error invoking Lambda function", "error", err)
 		return 0, output, err
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		if resp != nil && resp.Body != nil {
+			err := resp.Body.Close()
+			if err != nil {
+				slog.Warn("Error closing response body", "error", err)
+			}
+		}
+	}()
 
 	// Response handling
 	output, err = io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("Error reading Lambda function response", "error", err)
+	}
 
 	return resp.StatusCode, output, err
 }
 
-func (fn *Function) Restart(containerID string) (string, error) {
+func (fn *Function) Restart(containerId string) (string, error) {
 
-	newContainerID := ""
+	newContainerId := ""
 
-	slog.Info("restartDockerContainer", "imageTag", fn.GetImageTag(), "containerID", containerID)
+	slog.Info("restartDockerContainer", "imageTag", fn.GetImageTag(), "containerId", containerId)
 
 	// Stop the container
-	err := fn.dockerClient.CLI.ContainerStop(fn.ctx, containerID, container.StopOptions{})
+	err := fn.dockerClient.CLI.ContainerStop(fn.ctx, containerId, container.StopOptions{})
 	if err != nil {
 		slog.Error("Container stop failed", "error", err)
-		return newContainerID, err
+		return newContainerId, err
 	}
 
 	// Remove the container
-	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerID, types.ContainerRemoveOptions{})
+	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, types.ContainerRemoveOptions{})
 	if err != nil {
 		slog.Error("Container remove failed", "error", err)
-		return newContainerID, err
+		return newContainerId, err
 	}
 
 	// Run the Docker container again
-	newContainerID, err = fn.Start(fn.CurrentVersionName)
+	newContainerId, err = fn.Start(fn.CurrentVersionName)
 	if err != nil {
 		slog.Error("Container run failed", "error", err)
-		return newContainerID, err
+		return newContainerId, err
 	}
 
-	return newContainerID, nil
+	return newContainerId, nil
 }
 
 func (fn *Function) Build() error {

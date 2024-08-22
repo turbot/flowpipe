@@ -464,7 +464,7 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 
 	salt, err := util.GetGlobalSalt()
 	if err != nil {
-		slog.Error("salt not found", err)
+		slog.Error("salt not found", "error", err)
 		return err
 	}
 
@@ -473,7 +473,7 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		integrationName := integration.GetHclResourceImpl().FullName
 		hashString, err := util.CalculateHash(integrationName, salt)
 		if err != nil {
-			slog.Error("error computing hash", err)
+			slog.Error("error computing hash", "error", err)
 			return err
 		}
 		shortName := strings.TrimPrefix(integrationName, "slack.")
@@ -483,7 +483,7 @@ func integrationUrlProcessor(integration modconfig.Integration) error {
 		integrationName := integration.GetHclResourceImpl().FullName
 		hashString, err := util.CalculateHash(integrationName, salt)
 		if err != nil {
-			slog.Error("error computing hash", err)
+			slog.Error("error computing hash", "error", err)
 			return err
 		}
 		shortName := strings.TrimPrefix(integrationName, "msteams.")

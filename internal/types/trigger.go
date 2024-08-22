@@ -3,7 +3,9 @@ package types
 import (
 	"fmt"
 	"strings"
+	"time"
 
+	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -222,4 +224,36 @@ func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 
 func (PrintableTrigger) getColumns() (columns []string) {
 	return []string{"NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
+}
+
+type TriggerExecutionResponse struct {
+	Results  map[string]interface{}          `json:"results"`
+	Flowpipe FlowpipeTriggerResponseMetadata `json:"flowpipe"`
+}
+
+type FlowpipeTriggerResponseMetadata struct {
+	ProcessID  string     `json:"process_id,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Type       string     `json:"type,omitempty"`
+	IsStale    *bool      `json:"is_stale,omitempty"`
+	LastLoaded *time.Time `json:"last_loaded,omitempty"`
+}
+
+type CmdTrigger struct {
+	Command string `json:"command" binding:"required,oneof=run reset"`
+
+	// Sepcify execution id, if not specified, a new execution id will be created
+	ExecutionID   string                 `json:"execution_id,omitempty"`
+	Args          map[string]interface{} `json:"args,omitempty"`
+	ArgsString    map[string]string      `json:"args_string,omitempty"`
+	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty"`
+}
+
+func (c *CmdTrigger) GetExecutionMode() string {
+	return utils.Deref(c.ExecutionMode, localconstants.DefaultExecutionMode)
+}
+
+func (c *CmdTrigger) GetWaitRetry() int {
+	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
 }

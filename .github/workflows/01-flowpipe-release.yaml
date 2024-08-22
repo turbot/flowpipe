@@ -14,9 +14,9 @@ on:
       version:
         description: "Version (without 'v')"
         required: true
-        default: 0.6.\invalid
-      confirmMain:
-        description: Confirm running on main branch
+        default: 0.7.\invalid
+      confirmDevelop:
+        description: Confirm running on develop branch
         required: true
         type: boolean
 
@@ -67,14 +67,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: validate
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/develop'
         env:
-          CONFIRM_MAIN: ${{ github.event.inputs.confirmMain }}
+          CONFIRM_MAIN: ${{ github.event.inputs.confirmDevelop }}
         run: |
           if [ "$CONFIRM_MAIN" == 'false' ]; then
-            echo "It looks like you've accidentally tried to run this action in main branch. Either: "
+            echo "It looks like you've accidentally tried to run this action in develop branch. Either: "
             echo " - Re-run the action and select the branch you wanted, or"
-            echo " - If you really do want to run this for main, then re-run and tick the box to confirm"
+            echo " - If you really do want to run this for develop, then re-run and tick the box to confirm"
             exit 1
           fi
 
@@ -90,7 +90,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: v1.3.x
+          ref: develop
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: v0.4.x
+          ref: develop
 
       # - name: Unshallow
       #   run: git fetch --prune --unshallow
@@ -123,8 +123,12 @@ jobs:
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.21'
+          go-version: '1.22'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Setup release environment
         run: |-
