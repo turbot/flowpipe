@@ -64,7 +64,7 @@ func ListVariables() (*types.ListVariableResponse, error) {
 	}
 
 	sort.Slice(fpVars, func(i, j int) bool {
-		return fpVars[i].Name < fpVars[j].Name
+		return fpVars[i].QualifiedName < fpVars[j].QualifiedName
 	})
 
 	result := types.ListVariableResponse{

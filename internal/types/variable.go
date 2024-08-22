@@ -46,7 +46,7 @@ func (p PrintableVariable) GetTable() (*printers.Table, error) {
 
 		cells := []any{
 			item.ModName,
-			item.Name,
+			item.ResourceName,
 			item.Type,
 			description,
 			item.ValueDefault,
@@ -73,7 +73,8 @@ type FpVariable struct {
 	ModName         string      `json:"mod_name"`
 	Type            string      `json:"type"`
 	TypeString      string      `json:"type_string"`
-	Name            string      `json:"name"`
+	QualifiedName   string      `json:"qualified_name"`
+	ResourceName    string      `json:"resource_name"`
 	Description     *string     `json:"description,omitempty"`
 	ValueDefault    interface{} `json:"value_default,omitempty" `
 	Value           interface{} `json:"value,omitempty"`
@@ -95,7 +96,7 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 		return ""
 	}
 
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), p.Name)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), p.ResourceName)
 
 	if p.Description != nil && len(*p.Description) > 0 {
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
@@ -118,11 +119,12 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 
 func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 	var res = FpVariable{
-		ModName:     *apiVariable.ModName,
-		Type:        *apiVariable.Type,
-		TypeString:  *apiVariable.TypeString,
-		Name:        *apiVariable.Name,
-		Description: apiVariable.Description,
+		ModName:       *apiVariable.ModName,
+		Type:          *apiVariable.Type,
+		TypeString:    *apiVariable.TypeString,
+		QualifiedName: *apiVariable.QualifiedName,
+		ResourceName:  *apiVariable.ResourceName,
+		Description:   apiVariable.Description,
 	}
 
 	if !helpers.IsNil(apiVariable.ValueDefault) {
@@ -141,7 +143,8 @@ func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
 		ModName:         variable.ModName,
 		Type:            variable.TypeString,
 		TypeString:      variable.TypeString,
-		Name:            variable.Name(),
+		QualifiedName:   variable.Name(),
+		ResourceName:    variable.ResourceName,
 		Description:     variable.Description,
 		ValueDefault:    variable.DefaultGo,
 		Value:           variable.ValueGo,
