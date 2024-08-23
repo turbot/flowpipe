@@ -114,7 +114,7 @@ func (suite *TriggerModTestSuite) AfterTest(suiteName, testName string) {
 func (suite *TriggerModTestSuite) TestTriggerList() {
 	assert := assert.New(suite.T())
 
-	listTriggerResponse, err := api.ListTriggers()
+	listTriggerResponse, err := api.ListTriggers("mod.trigger_mod")
 	if err != nil {
 		assert.Fail("Error listing triggers: %v", err)
 		return

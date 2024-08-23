@@ -111,10 +111,21 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
 
 	// We can only run trigger from root mod
-
+	canRun := false
 	if modFullName != tr.rootMod.FullName {
-		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
-		return response, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod")
+		for _, m := range tr.rootMod.ResourceMaps.Mods {
+			if m.FullName == modFullName {
+				canRun = true
+				break
+			}
+		}
+	} else {
+		canRun = true
+	}
+
+	if !canRun {
+		slog.Error("Trigger can only be run from root mod and its immediate dependencies", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
+		return response, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod and its immediate dependencies")
 	}
 
 	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)

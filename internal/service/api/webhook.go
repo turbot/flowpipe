@@ -98,7 +98,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	modFullName := t.GetMetadata().ModFullName
 
 	if modFullName != mod.FullName {
-		slog.Error("Trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.FullName)
+		slog.Error("HTTP trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.FullName)
 		return
 	}
 

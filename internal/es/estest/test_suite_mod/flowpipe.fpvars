@@ -12,3 +12,5 @@ signing_secret = "bar"
 smtp_username  = "flowpipe_smtp_user"
 
 slack_signing_secret = "xxx123"
+
+mod_depend_a.var_a_number = 42

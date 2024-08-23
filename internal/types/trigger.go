@@ -20,6 +20,7 @@ import (
 
 type FpTrigger struct {
 	Name            string              `json:"name"`
+	Mod             string              `json:"mod"`
 	Type            string              `json:"type"`
 	Enabled         bool                `json:"enabled"`
 	Description     *string             `json:"description,omitempty"`
@@ -33,6 +34,7 @@ type FpTrigger struct {
 	Tags            map[string]string   `json:"tags,omitempty"`
 	Schedule        *string             `json:"schedule,omitempty"`
 	Query           *string             `json:"query,omitempty"`
+	RootMod         string              `json:"root_mod"`
 }
 
 type FpTriggerPipeline struct {
@@ -109,6 +111,20 @@ func (t FpTrigger) getTypeAndName() string {
 	return fmt.Sprintf("%s.%s", t.Type, shortName)
 }
 
+func (t FpTrigger) TriggerDisplayName() string {
+	if t.Mod == t.RootMod {
+		// Find the first dot
+
+		// Split the string into components and keep only the last two parts
+		parts := strings.SplitN(t.Name, ".", 3)
+
+		// Rejoin the last part
+		result := parts[2]
+		return result
+	}
+	return t.Name
+}
+
 func (t FpTrigger) getPipelineDisplay(pipeline string) string {
 	rootMod := strings.Split(t.Name, ".")[0]
 	if strings.Split(pipeline, ".")[0] == rootMod {
@@ -152,6 +168,8 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 	}
 	res := FpTrigger{
 		Name:          typehelpers.SafeString(apiTrigger.Name),
+		Mod:           typehelpers.SafeString(apiTrigger.Mod),
+		RootMod:       typehelpers.SafeString(apiTrigger.RootMod),
 		Type:          typehelpers.SafeString(apiTrigger.Type),
 		Enabled:       *apiTrigger.Enabled,
 		Description:   apiTrigger.Description,
@@ -211,7 +229,8 @@ func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 		}
 
 		cells := []any{
-			item.getTypeAndName(),
+			item.Mod[4:],
+			item.TriggerDisplayName(),
 			item.Enabled,
 			pipelineText,
 			description,
@@ -223,7 +242,7 @@ func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 }
 
 func (PrintableTrigger) getColumns() (columns []string) {
-	return []string{"NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
+	return []string{"MOD", "NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
 }
 
 type TriggerExecutionResponse struct {

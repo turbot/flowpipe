@@ -59,7 +59,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 	slog.Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
-	result, err := ListTriggers()
+	result, err := ListTriggers(api.EsService.RootMod.Name())
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -68,7 +68,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func ListTriggers() (*types.ListTriggerResponse, error) {
+func ListTriggers(rootMod string) (*types.ListTriggerResponse, error) {
 	triggers, err := db.ListAllTriggers()
 	if err != nil {
 		return nil, err
@@ -78,12 +78,15 @@ func ListTriggers() (*types.ListTriggerResponse, error) {
 	var fpTriggers []types.FpTrigger
 
 	for _, trigger := range triggers {
-		fpTrigger := getFpTriggerFromTrigger(trigger)
+		fpTrigger := getFpTriggerFromTrigger(trigger, rootMod)
 		fpTriggers = append(fpTriggers, fpTrigger)
 	}
 
 	// Sort the triggers by type, name
 	sort.Slice(fpTriggers, func(i, j int) bool {
+		if fpTriggers[i].Mod != fpTriggers[j].Mod {
+			return fpTriggers[i].Mod < fpTriggers[j].Mod
+		}
 		if fpTriggers[i].Type != fpTriggers[j].Type {
 			return fpTriggers[i].Type < fpTriggers[j].Type
 		}
@@ -122,7 +125,7 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	}
 	triggerName := uri.TriggerName
 
-	fpTrigger, err := GetTrigger(triggerName)
+	fpTrigger, err := GetTrigger(triggerName, api.EsService.RootMod.Name())
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -131,16 +134,18 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	c.JSON(http.StatusOK, fpTrigger)
 }
 
-func GetTrigger(triggerName string) (*types.FpTrigger, error) {
+func GetTrigger(triggerName string, rootMod string) (*types.FpTrigger, error) {
 	// If we run the API server with a mod foo, in order get the trigger, the API needs the fully-qualified name of the trigger.
 	// For example: foo.trigger.trigger_type.bar
 	// However, since foo is the top level mod, we should be able to just get the trigger bar
 	splitTriggerName := strings.Split(triggerName, ".")
 	// If the trigger name provided is not fully qualified
+	var rootModName string
 	if len(splitTriggerName) < 4 {
 		// Get the root mod name from the cache
 		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
-			if rootModName, ok := rootModNameCached.(string); ok {
+			var ok bool
+			if rootModName, ok = rootModNameCached.(string); ok {
 				// Prepend the root mod name to the trigger name to get the fully qualified name
 				// For example: foo.trigger.trigger_type.bar
 				triggerName = fmt.Sprintf("%s.trigger.%s", rootModName, triggerName)
@@ -158,15 +163,16 @@ func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	fpTrigger := getFpTriggerFromTrigger(*trigger)
+	fpTrigger := getFpTriggerFromTrigger(*trigger, rootModName)
 	return &fpTrigger, nil
 }
 
-func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
+func getFpTriggerFromTrigger(t modconfig.Trigger, rootMod string) types.FpTrigger {
 	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
 
 	fpTrigger := types.FpTrigger{
 		Name:            t.FullName,
+		Mod:             t.GetMod().Name(),
 		Type:            tt,
 		Description:     t.Description,
 		Title:           t.Title,
@@ -176,6 +182,7 @@ func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
 		StartLineNumber: t.StartLineNumber,
 		EndLineNumber:   t.EndLineNumber,
 		Enabled:         helpers.IsNil(t.Enabled) || *t.Enabled,
+		RootMod:         rootMod,
 	}
 
 	switch tt {

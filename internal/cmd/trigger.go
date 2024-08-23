@@ -43,8 +43,8 @@ func triggerListCmd() *cobra.Command {
 		Use:   "list",
 		Args:  cobra.NoArgs,
 		Run:   listTriggerFunc,
-		Short: "List triggers from the current mod",
-		Long:  `List triggers from the current mod.`,
+		Short: "List triggers from the current mod and it's first level dependent mods.",
+		Long:  `List triggers from the current mod and it's first level dependent mods..`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -106,7 +106,7 @@ func listTriggerLocal(cmd *cobra.Command, args []string) (*types.ListTriggerResp
 	}()
 
 	// now list the pipelines
-	return api.ListTriggers()
+	return api.ListTriggers(m.RootMod.Name())
 }
 
 // show
@@ -176,7 +176,7 @@ func getTriggerLocal(ctx context.Context, triggerName string) (*types.FpTrigger,
 	}()
 
 	// try to fetch the pipeline from the cache
-	return api.GetTrigger(triggerName)
+	return api.GetTrigger(triggerName, m.RootMod.Name())
 }
 
 func triggerRunCmd() *cobra.Command {

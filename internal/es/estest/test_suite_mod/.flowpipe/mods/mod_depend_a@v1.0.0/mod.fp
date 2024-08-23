@@ -60,3 +60,8 @@ pipeline "call_child_b" {
     value = step.pipeline.child_mod.output.result
   }
 }
+
+
+pipeline "echo_b" {
+  description = "this is from the var ${var.var_a_number}"
+}

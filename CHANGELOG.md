@@ -2,6 +2,10 @@
 
 ## v0.7.2 [TBC]
 
+_What's new?_
+
+* `trigger list` command includes triggers from root mod's immediate dependencies. ([#892](https://github.com/turbot/flowpipe/issues/892)).
+
 _Bug fixes_
 
 * Function step will no longer randomly fail in slower host machines. ([#888](https://github.com/turbot/flowpipe/issues/888)).
