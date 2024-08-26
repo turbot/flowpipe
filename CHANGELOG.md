@@ -1,6 +1,6 @@
 # Flowpipe
 
-## v0.7.2 [TBC]
+## v0.8.0 [TBC]
 
 _What's new?_
 
@@ -9,7 +9,7 @@ _What's new?_
 _Bug fixes_
 
 * Function step will no longer randomly fail in slower host machines. ([#888](https://github.com/turbot/flowpipe/issues/888)).
-* Mod variable definition matches Powerpipe's definition. ([#889](https://github.com/turbot/flowpipe/issues/889)).
+* Mod variable definition now matches Powerpipe's definition. ([#889](https://github.com/turbot/flowpipe/issues/889)).
 
 ## v0.7.1 [2024-08-14]
 
