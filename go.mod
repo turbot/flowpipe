@@ -7,7 +7,7 @@ require (
 	github.com/dgraph-io/ristretto v0.1.1
 	github.com/didip/tollbooth/v7 v7.0.1
 	github.com/docker/cli v24.0.6+incompatible
-	github.com/docker/docker v24.0.9+incompatible
+	github.com/docker/docker v25.0.6+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/garsue/watermillzap v1.2.0
@@ -111,7 +111,6 @@ require (
 	github.com/danwakefield/fnmatch v0.0.0-20160403171240-cbb64ac3d964 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.5.0 // indirect
-	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -186,6 +185,7 @@ require (
 	github.com/moby/patternmatcher v0.6.0 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/moby/sys/symlink v0.2.0 // indirect
+	github.com/moby/sys/user v0.3.0 // indirect
 	github.com/moby/term v0.5.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -198,7 +198,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
-	github.com/opencontainers/runc v1.1.12 // indirect
 	github.com/oras-project/oras-credentials-go v0.3.0 // indirect
 	github.com/otiai10/copy v1.14.0 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
