@@ -1,6 +1,6 @@
 # Flowpipe
 
-## v0.8.0 [TBC]
+## v0.8.0 [2024-08-26]
 
 _What's new?_
 
