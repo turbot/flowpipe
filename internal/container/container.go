@@ -347,7 +347,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 
 	// Start the container
 	containerStartStart := time.Now()
-	err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, types.ContainerStartOptions{})
+	err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, container.StartOptions{})
 	slog.Debug("container start", "elapsed", time.Since(containerStartStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, -1, perr.InternalWithMessage("Error starting container: " + err.Error())
@@ -378,7 +378,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 	}
 
 	// Retrieve the container output
-	containerLogsOptions := types.ContainerLogsOptions{
+	containerLogsOptions := container.LogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		// Timstamps inject timestamp text into the output, making it hard to parse
@@ -418,7 +418,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 		slog.Debug("retain artifacts", "name", c.Name)
 	} else {
 		containerRemoveStart := time.Now()
-		err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, types.ContainerRemoveOptions{})
+		err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, container.RemoveOptions{})
 
 		slog.Debug("container remove", "elapsed", time.Since(containerRemoveStart), "image", c.Image, "container", containerResp.ID)
 		if err != nil {

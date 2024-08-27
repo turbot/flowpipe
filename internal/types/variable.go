@@ -71,7 +71,7 @@ type ListVariableResponse struct {
 
 type FpVariable struct {
 	ModName         string      `json:"mod_name"`
-	Type            string      `json:"type"`
+	Type            interface{} `json:"type"`
 	TypeString      string      `json:"type_string"`
 	QualifiedName   string      `json:"qualified_name"`
 	ResourceName    string      `json:"resource_name"`

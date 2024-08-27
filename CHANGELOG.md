@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.9.0 [tbd]
+
+_What's new?_
+
+* Updated `Docker` dependency to v27.1.2.
+
 ## v0.8.0 [2024-08-26]
 
 _What's new?_

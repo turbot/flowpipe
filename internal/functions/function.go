@@ -365,7 +365,7 @@ func (fn *Function) Start(imageName string) (string, error) {
 	}
 
 	// Start the container
-	if err := fn.dockerClient.CLI.ContainerStart(fn.ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := fn.dockerClient.CLI.ContainerStart(fn.ctx, resp.ID, container.StartOptions{}); err != nil {
 		return "", err
 	}
 
@@ -495,7 +495,7 @@ func (fn *Function) Restart(containerId string) (string, error) {
 	}
 
 	// Remove the container
-	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, types.ContainerRemoveOptions{})
+	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, container.RemoveOptions{})
 	if err != nil {
 		slog.Error("Container remove failed", "error", err)
 		return newContainerId, err
