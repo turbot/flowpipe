@@ -1,4 +1,4 @@
-pipeline "simple_function" {
+pipeline "nested_simple_function" {
   param "event" {
     default = {
         "message": "Hello, world!"
@@ -6,7 +6,7 @@ pipeline "simple_function" {
   }
 
   step "function" "sleep" {
-      source    = "./functions/sleep"
+      source    = "./functions/nested_sleep"
       event     = param.event
       runtime = "nodejs:20"
   }
