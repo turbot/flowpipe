@@ -4,7 +4,7 @@
 
 _Bug fixes_
 
-* `source` attribute in function step now evaluated relative to the its mod directory rather than the root mod directory. ([#895](https://github.com/turbot/flowpipe/issues/895)).
+* `source` attribute in function step is now evaluated relative to the its mod directory rather than the root mod directory. ([#895](https://github.com/turbot/flowpipe/issues/895)).
 
 ## v0.8.0 [2024-08-26]
 
