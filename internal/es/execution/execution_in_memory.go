@@ -17,6 +17,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/constants"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
@@ -244,6 +245,76 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext
 	evalContext.Variables[schema.BlockTypeCredential] = cty.ObjectVal(credentialMap)
 
 	return evalContext, nil
+}
+
+func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+	stepDefns := pipelineDefn.Steps
+
+	allConnectionsDependsOn := []string{}
+	for _, stepDefn := range stepDefns {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, stepDefn.GetConnectionDependsOn()...)
+	}
+
+	params := map[string]cty.Value{}
+	if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
+		params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
+	}
+
+	connectionMap, err := ex.buildConnectionMapForEvalContext(allConnectionsDependsOn, params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override what we have
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
+
+	return evalContext, nil
+}
+
+func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	allConnections := fpConfig.PipelingConnections
+	relevantConnections := map[string]connection.PipelingConnection{}
+	dynamicConnType := map[string]bool{}
+
+	for _, connectionName := range connectionsInContext {
+		if allConnections[connectionName] != nil {
+			relevantConnections[connectionName] = allConnections[connectionName]
+		}
+
+		if strings.Contains(connectionName, "<dynamic>") {
+			parts := strings.Split(connectionName, ".")
+			if len(parts) > 0 {
+				dynamicConnType[parts[0]] = true
+			}
+		}
+	}
+
+	if len(dynamicConnType) > 0 {
+		for _, v := range params {
+			// Determine if the credential "may" be needed based on the param value.
+			if v.Type() == cty.String && !v.IsNull() {
+				potentialConnName := v.AsString()
+				for _, c := range allConnections {
+					if c.GetHclResourceImpl().ShortName == potentialConnName && dynamicConnType[c.GetConnectionType()] {
+						relevantConnections[c.Name()] = c
+						break
+					}
+				}
+			}
+		}
+	}
+
+	connectionMap, err := buildConnectionMapForEvalContext(context.TODO(), relevantConnections)
+	if err != nil {
+		return nil, err
+	}
+
+	return connectionMap, nil
 }
 
 func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
