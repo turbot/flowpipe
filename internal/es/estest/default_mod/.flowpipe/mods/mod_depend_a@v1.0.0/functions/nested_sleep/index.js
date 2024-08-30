@@ -6,8 +6,7 @@ exports.handler = async (event, context) => {
   // Printing initial log
   console.log(`Initial log at ${currentTime}`);
 
-  // Loop for 10 minutes (600 seconds) with a 2-second interval
-  for (let i = 0; i < 2; i++) {  // 300 iterations * 2 seconds = 600 seconds = 10 minutes
+  for (let i = 0; i < 2; i++) {
     console.log(`Heartbeat log at ${moment().format('YYYY-MM-DD HH:mm:ss')}`);
     await new Promise(resolve => setTimeout(resolve, 2000));  // wait for 2 seconds
   }
@@ -15,7 +14,7 @@ exports.handler = async (event, context) => {
   const response = {
     statusCode: 300,
     body: {
-      message: `Hello, World! The current time is ${currentTime}.`,
+      message: `Nested Hello, World! The current time is ${currentTime}.`,
       event,
       env: process.env,
       context

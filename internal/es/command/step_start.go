@@ -168,7 +168,9 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			p := primitive.Transform{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepFunction:
-			p := primitive.Function{}
+			p := primitive.Function{
+				ModPath: pipelineDefn.GetMod().ModPath,
+			}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepContainer:
 			p := primitive.Container{FullyQualifiedStepName: stepDefn.GetFullyQualifiedName()}
