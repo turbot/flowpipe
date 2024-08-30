@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.8.1 [tbd]
+
+_Bug fixes_
+
+* `source` attribute in function step now evaluated relative to the its mod directory rather than the root mod directory. ([#895](https://github.com/turbot/flowpipe/issues/895)).
+
 ## v0.8.0 [2024-08-26]
 
 _What's new?_
