@@ -255,6 +255,11 @@ func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext
 		allConnectionsDependsOn = append(allConnectionsDependsOn, stepDefn.GetConnectionDependsOn()...)
 	}
 
+	pipelineOutputs := pipelineDefn.OutputConfig
+	for _, output := range pipelineOutputs {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, output.ConnectionDependsOn...)
+	}
+
 	params := map[string]cty.Value{}
 	if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
 		params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()

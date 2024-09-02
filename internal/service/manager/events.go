@@ -126,6 +126,7 @@ func (m *Manager) loadMod() error {
 		m.ctx,
 		modLocation,
 		workspace.WithCredentials(flowpipeConfig.Credentials),
+		workspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
 		workspace.WithIntegrations(flowpipeConfig.Integrations),
 		workspace.WithNotifiers(flowpipeConfig.Notifiers))
 	if errorAndWarning.Error != nil {

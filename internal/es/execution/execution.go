@@ -240,9 +240,9 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 	if len(dynamicConnType) > 0 {
 		for _, v := range params {
 			if v.Type() == cty.String && !v.IsNull() {
-				potentialCredName := v.AsString()
+				potentialConnName := v.AsString()
 				for _, c := range allConnections {
-					if c.GetHclResourceImpl().ShortName == potentialCredName && dynamicConnType[c.GetCredentialType()] {
+					if c.GetHclResourceImpl().ShortName == potentialConnName && dynamicConnType[c.GetConnectionType()] {
 						relevantConnections[c.Name()] = c
 						break
 					}
@@ -251,7 +251,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 		}
 	}
 
-	credentialMap, err := buildCredentialMapForEvalContext(context.TODO(), relevantConnections)
+	credentialMap, err := buildConnectionMapForEvalContext(context.TODO(), relevantConnections)
 	if err != nil {
 		return nil, err
 	}
