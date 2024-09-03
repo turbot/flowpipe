@@ -6,10 +6,10 @@ build: build-ui
 	go build .
 
 run-mod:
-	FLOWPIPE_LOG_LEVEL=debug go run . server --mod-location ./internal/es/estest/default_mod
+	FLOWPIPE_LOG_LEVEL=debug go run . server --mod-location ./internal/es/estest/test_suite_mod_2
 
 run-test-mod:
-	FP_VAR_var_from_env="from env var" go run . server --mod-location ./internal/es/estest/test_suite_mod
+	FP_VAR_var_from_env="from env var" go run . server --mod-location ./internal/es/estest/test_suite_mod_2
 
 run-pipeline:
 	FLOWPIPE_LOG_LEVEL=INFO go run . server --mod-location ./internal/es/estest/pipelines

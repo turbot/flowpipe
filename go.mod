@@ -4,6 +4,8 @@ go 1.22
 
 replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
+replace github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go
+
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1

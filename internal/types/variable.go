@@ -70,17 +70,18 @@ type ListVariableResponse struct {
 }
 
 type FpVariable struct {
-	ModName         string      `json:"mod_name"`
-	Type            interface{} `json:"type"`
-	TypeString      string      `json:"type_string"`
-	QualifiedName   string      `json:"qualified_name"`
-	ResourceName    string      `json:"resource_name"`
-	Description     *string     `json:"description,omitempty"`
-	ValueDefault    interface{} `json:"value_default,omitempty" `
-	Value           interface{} `json:"value,omitempty"`
-	FileName        string      `json:"file_name,omitempty"`
-	StartLineNumber int         `json:"start_line_number,omitempty"`
-	EndLineNumber   int         `json:"end_line_number,omitempty"`
+	ModName         string            `json:"mod_name"`
+	Type            interface{}       `json:"type"`
+	TypeString      string            `json:"type_string"`
+	QualifiedName   string            `json:"qualified_name"`
+	ResourceName    string            `json:"resource_name"`
+	Description     *string           `json:"description,omitempty"`
+	ValueDefault    interface{}       `json:"value_default,omitempty" `
+	Value           interface{}       `json:"value,omitempty"`
+	Tags            map[string]string `json:"tags,omitempty"`
+	FileName        string            `json:"file_name,omitempty"`
+	StartLineNumber int               `json:"start_line_number,omitempty"`
+	EndLineNumber   int               `json:"end_line_number,omitempty"`
 }
 
 func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -120,7 +121,6 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 	var res = FpVariable{
 		ModName:       *apiVariable.ModName,
-		Type:          *apiVariable.Type,
 		TypeString:    *apiVariable.TypeString,
 		QualifiedName: *apiVariable.QualifiedName,
 		ResourceName:  *apiVariable.ResourceName,
@@ -135,6 +135,14 @@ func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 		res.Value = *apiVariable.Value
 	}
 
+	if !helpers.IsNil(apiVariable.Tags) {
+		res.Tags = *apiVariable.Tags
+	}
+
+	if !helpers.IsNil(apiVariable.Type) {
+		res.Type = apiVariable.Type
+	}
+
 	return &res
 }
 
@@ -143,6 +151,7 @@ func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
 		ModName:         variable.ModName,
 		Type:            variable.TypeString,
 		TypeString:      variable.TypeString,
+		Tags:            variable.Tags,
 		QualifiedName:   variable.Name(),
 		ResourceName:    variable.ResourceName,
 		Description:     variable.Description,

@@ -4,6 +4,7 @@
 
 _What's new?_
 
+* `tags` attribute in `Pipeline Param` and `Mod Variable` resources. ([#898](https://github.com/turbot/flowpipe/issues/898)).
 * Updated `Docker` dependency to v27.1.2.
 
 ## v0.8.1 [2024-08-30]
