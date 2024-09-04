@@ -226,6 +226,12 @@ func (m *Manager) initializeResources() error {
 					slog.Debug("Credential loaded", "name", c.GetHclResourceImpl().FullName)
 				}
 			}
+
+			for _, c := range flowpipeConfig.PipelingConnections {
+				if !strings.HasSuffix(c.GetHclResourceImpl().FullName, ".default") {
+					slog.Debug("Connection loaded", "name", c.GetHclResourceImpl().FullName)
+				}
+			}
 		}
 
 		err = m.cacheConfigData()

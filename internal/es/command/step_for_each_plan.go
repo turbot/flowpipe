@@ -204,6 +204,12 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 				return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 			}
 
+			evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn)
+			if err != nil {
+				slog.Error("Error adding connections to eval context", "error", err)
+				return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
+			}
+
 			stepInputs, err := stepDefn.GetInputs(evalContext)
 			if err != nil {
 				slog.Error("Error resolving step inputs for for_each step", "error", err)

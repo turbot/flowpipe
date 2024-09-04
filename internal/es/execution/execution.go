@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/pipe-fittings/connection"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -141,6 +142,26 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
+func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+	if stepDefn != nil && len(stepDefn.GetConnectionDependsOn()) > 0 {
+		params := map[string]cty.Value{}
+
+		if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
+			params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
+		}
+
+		connectionMap, err := ex.buildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params)
+		if err != nil {
+			return nil, err
+		}
+
+		// Override what we have
+		evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
+	}
+
+	return evalContext, nil
+}
+
 func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
 
 	fpConfig, err := db.GetFlowpipeConfig()
@@ -183,6 +204,54 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	}
 
 	credentialMap, err := buildCredentialMapForEvalContext(context.TODO(), relevantCredentials)
+	if err != nil {
+		return nil, err
+	}
+
+	return credentialMap, nil
+}
+
+func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	allConnections := fpConfig.PipelingConnections
+	relevantConnections := map[string]connection.PipelingConnection{}
+	dynamicConnType := map[string]bool{}
+
+	for _, connectionName := range connectionsInContext {
+		if allConnections[connectionName] != nil {
+			relevantConnections[connectionName] = allConnections[connectionName]
+		}
+
+		// Why do we bother with these <dynamic> dependencies?
+		// We don't want to resolve every single available in the system, we only want to resolve the ones that are
+		// are used. So this is part of how have an educated guess which credentials to resolve.
+		if strings.Contains(connectionName, "<dynamic>") {
+			parts := strings.Split(connectionName, ".")
+			if len(parts) > 0 {
+				dynamicConnType[parts[0]] = true
+			}
+		}
+	}
+
+	if len(dynamicConnType) > 0 {
+		for _, v := range params {
+			if v.Type() == cty.String && !v.IsNull() {
+				potentialConnName := v.AsString()
+				for _, c := range allConnections {
+					if c.GetHclResourceImpl().ShortName == potentialConnName && dynamicConnType[c.GetConnectionType()] {
+						relevantConnections[c.Name()] = c
+						break
+					}
+				}
+			}
+		}
+	}
+
+	credentialMap, err := buildConnectionMapForEvalContext(context.TODO(), relevantConnections)
 	if err != nil {
 		return nil, err
 	}
@@ -256,6 +325,74 @@ func buildCredentialMapForEvalContext(ctx context.Context, allCredentials map[st
 	}
 
 	return credentialMap, nil
+}
+
+func buildConnectionMapForEvalContext(ctx context.Context, allConnections map[string]connection.PipelingConnection) (map[string]cty.Value, error) {
+	connectionMap := map[string]cty.Value{}
+
+	cache := cache.GetConnectionCache()
+
+	for _, c := range allConnections {
+		parts := strings.Split(c.Name(), ".")
+		if len(parts) != 2 {
+			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
+		}
+
+		var connToUse connection.PipelingConnection
+
+		cachedConn, found := cache.Get(c.GetHclResourceImpl().FullName)
+		if !found {
+			// if not found, call the "resolve" function to resolve this credential, for temp cred this will
+			// generate the temp creds
+			newC, err := c.Resolve(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			// this cache is meant for connection that need to be resolved, i.e. AWS with temp creds
+			// however this can cause issue if user specified non-temp creds for AWS. This is because we will be caching the static creds, i.e. access_key
+			// and if the underlying value was changed, Flowpipe will correctly reload the static creds but then it will fail here
+			// when we get the **old** static creds from the cache!
+			//
+			// We can't let the connection "decide" if ttl > 0 because it can change from static -> temp creds and vice versa
+			//
+			// The only way to solve this issue is to wipe the credential cache when Flowpipe config is updated.
+			if newC.GetTtl() > 0 {
+				cache.SetWithTTL(c.GetHclResourceImpl().FullName, newC, time.Duration(newC.GetTtl())*time.Second)
+			}
+			connToUse = newC
+		} else {
+			var ok bool
+			connToUse, ok = cachedConn.(connection.PipelingConnection)
+			if !ok {
+				return nil, perr.BadRequestWithMessage("invalid connection type: " + c.Name())
+			}
+		}
+
+		pCty, err := connToUse.CtyValue()
+		if err != nil {
+			return nil, err
+		}
+
+		connectionType := parts[0]
+
+		if pCty != cty.NilVal {
+			// Check if the credential type already exists in the map
+			if existing, ok := connectionMap[connectionType]; ok {
+				// If it exists, merge the new object with the existing one
+				existingMap := existing.AsValueMap()
+				existingMap[parts[1]] = pCty
+				connectionMap[connectionType] = cty.ObjectVal(existingMap)
+			} else {
+				// If it doesn't exist, create a new entry
+				connectionMap[connectionType] = cty.ObjectVal(map[string]cty.Value{
+					parts[1]: pCty,
+				})
+			}
+		}
+	}
+
+	return connectionMap, nil
 }
 
 func (ex *Execution) buildPipelineMapForEvalContext() (map[string]cty.Value, error) {

@@ -111,6 +111,16 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
+		evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn)
+		if err != nil {
+			slog.Error("Error adding connections to eval context", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				slog.Error("Error publishing event", "error", err2)
+			}
+			return
+		}
+
 		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
 		// pipeline_plan phase
 		if cmd.NextStepAction == modconfig.NextStepActionSkip {
