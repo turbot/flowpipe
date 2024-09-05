@@ -138,6 +138,17 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		} else {
 			params[v.Name] = v.Default
 		}
+
+		// validate pipeline param
+		validParam, err := v.ValidateSetting(params[v.Name])
+		if err != nil {
+			slog.Error("Failed to validate pipeline param", "error", err)
+			return nil, err
+		}
+
+		if !validParam {
+			return nil, perr.BadRequestWithMessage("invalid value for param " + v.Name)
+		}
 	}
 
 	if log.GetLogLevel().Level() == slog.LevelDebug {

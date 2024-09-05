@@ -79,6 +79,17 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 		} else {
 			params[v.Name] = v.Default
 		}
+
+		// validate pipeline param
+		validParam, err := v.ValidateSetting(params[v.Name])
+		if err != nil {
+			slog.Error("Failed to validate pipeline param", "error", err)
+			return nil, err
+		}
+
+		if !validParam {
+			return nil, perr.BadRequestWithMessage("invalid value for param " + v.Name)
+		}
 	}
 
 	paramsCtyVal := cty.ObjectVal(params)
