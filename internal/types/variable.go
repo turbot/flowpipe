@@ -9,6 +9,7 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 func NewPrintableVariable(resp *ListVariableResponse) *PrintableVariable {
@@ -73,6 +74,7 @@ type FpVariable struct {
 	ModName         string            `json:"mod_name"`
 	Type            interface{}       `json:"type"`
 	TypeString      string            `json:"type_string"`
+	Enum            []interface{}     `json:"enum,omitempty"`
 	QualifiedName   string            `json:"qualified_name"`
 	ResourceName    string            `json:"resource_name"`
 	Description     *string           `json:"description,omitempty"`
@@ -103,8 +105,8 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
 
-	if p.Type != "" {
-		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
+	if p.TypeString != "" {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), p.TypeString)
 	}
 
 	if p.ValueDefault != nil {
@@ -120,11 +122,12 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 
 func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 	var res = FpVariable{
-		ModName:       *apiVariable.ModName,
-		TypeString:    *apiVariable.TypeString,
-		QualifiedName: *apiVariable.QualifiedName,
-		ResourceName:  *apiVariable.ResourceName,
+		ModName:       utils.Deref(apiVariable.ModName, ""),
+		TypeString:    utils.Deref(apiVariable.TypeString, ""),
+		QualifiedName: utils.Deref(apiVariable.QualifiedName, ""),
+		ResourceName:  utils.Deref(apiVariable.ResourceName, ""),
 		Description:   apiVariable.Description,
+		Enum:          apiVariable.Enum,
 	}
 
 	if !helpers.IsNil(apiVariable.ValueDefault) {
@@ -147,12 +150,13 @@ func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 }
 
 func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
-	return &FpVariable{
+	fpVar := &FpVariable{
 		ModName:         variable.ModName,
 		Type:            variable.TypeString,
 		TypeString:      variable.TypeString,
 		Tags:            variable.Tags,
 		QualifiedName:   variable.Name(),
+		Enum:            variable.EnumGo,
 		ResourceName:    variable.ResourceName,
 		Description:     variable.Description,
 		ValueDefault:    variable.DefaultGo,
@@ -161,6 +165,9 @@ func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
 		EndLineNumber:   variable.ValueSourceEndLineNumber,
 		FileName:        variable.ValueSourceFileName,
 	}
+
+	return fpVar
+
 }
 
 func ListVariableResponseFromAPI(apiResp *flowpipeapiclient.ListVariableResponse) *ListVariableResponse {

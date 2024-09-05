@@ -184,6 +184,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 			Name:        param.Name,
 			Description: utils.ToStringPointer(param.Description),
 			Tags:        param.Tags,
+			Enum:        param.EnumGo,
 			Optional:    &pipeline.Params[i].Optional,
 			Type:        param.Type,
 			TypeString:  param.TypeString,
@@ -282,13 +283,8 @@ func pipelineParamFromApiResponse(paramApiResponse flowpipeapiclient.FpPipelineP
 		Description: paramApiResponse.Description,
 		Default:     paramApiResponse.Default,
 		Optional:    paramApiResponse.Optional,
-		// Tags:        paramApiResponse.Tags,
-		// Type:        paramApiResponse.Type,
-		// TypeString:  *paramApiResponse.TypeString,
-	}
-
-	if paramApiResponse.TypeString != nil {
-		param.TypeString = *paramApiResponse.TypeString
+		TypeString:  utils.Deref(paramApiResponse.TypeString, ""),
+		Enum:        paramApiResponse.Enum,
 	}
 
 	if paramApiResponse.Tags != nil {
@@ -322,6 +318,7 @@ type FpPipelineParam struct {
 	Name        string            `json:"name"`
 	Description *string           `json:"description,omitempty"`
 	Tags        map[string]string `json:"tags,omitempty"`
+	Enum        []interface{}     `json:"enum,omitempty"`
 	Optional    *bool             `json:"optional,omitempty"`
 	Default     any               `json:"default,omitempty"`
 	Type        any               `json:"type"`
