@@ -1,10 +1,10 @@
 # Flowpipe
 
-## v0.9.1 [tbd]
+## v0.9.1 [2024-09-09]
 
 _Bug fixes_
 
-* `params` now correctly added in `trigger` introspection output. ([#900](https://github.com/turbot/flowpipe/issues/900))
+* `trigger` introspection output correctly shows `param` attribute. ([#900](https://github.com/turbot/flowpipe/issues/900))
 
 ## v0.9.0 [2024-09-04]
 
