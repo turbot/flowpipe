@@ -7,6 +7,12 @@ _What's new?_
 * `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/tbd).
 * `enum` supports for `pipeline param` and `mod variable` resources. [Documentation](https://flowpipe.io/docs/tbd).
 
+## v0.9.1 [2024-09-09]
+
+_Bug fixes_
+
+* `trigger` introspection output correctly shows `param` attribute. ([#900](https://github.com/turbot/flowpipe/issues/900))
+
 ## v0.9.0 [2024-09-04]
 
 _What's new?_
