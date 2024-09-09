@@ -377,7 +377,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		errs := pipelineDefn.ValidatePipelineParam(args)
+		errs := pipelineDefn.ValidatePipelineParam(args, nil)
 
 		if len(errs) > 0 {
 			slog.Error("Failed validating pipeline param", "errors", errs)

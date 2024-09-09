@@ -24,6 +24,7 @@ import (
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -111,12 +112,36 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		return nil, err
 	}
 
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
 		Functions: funcs.ContextFunctions(viper.GetString(pfconstants.ArgModLocation)),
 	}
 
 	params := map[string]cty.Value{}
+
+	// Why do we add notifier earlier? Because of the param validation before
+	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
+
+	// **temporarily** add add connections to eval context .. we need to remove them later and only add connections
+	// that are used by the pipelines. The connections are special because they may need to be resolved before
+	// we use them i.e. temp AWS creds.
+
+	connMap, err := parse.BuildTemporaryConnectionMapForEvalContext(context.TODO(), fpConfig.PipelingConnections)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	for _, v := range pipelineDefn.Params {
 		if pe.Args[v.Name] != nil {
@@ -140,7 +165,12 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		}
 
 		// validate pipeline param
-		validParam, err := v.ValidateSetting(params[v.Name])
+		//
+		// One of the validation is the "subtype" validation. There are only 2 subtypes supported:
+		// 1. connection
+		// 2. notifier
+		//
+		validParam, err := v.ValidateSetting(params[v.Name], evalContext)
 		if err != nil {
 			slog.Error("Failed to validate pipeline param", "error", err)
 			return nil, err
@@ -178,13 +208,6 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	}
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
-
-	notifierMap, err := buildNotifierMapForEvalContext()
-	if err != nil {
-		return nil, err
-	}
-
-	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
 
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)
@@ -459,25 +482,6 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 
 	return integrationMap, nil
 
-}
-
-func buildNotifierMapForEvalContext() (map[string]cty.Value, error) {
-	fpConfig, err := db.GetFlowpipeConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	varValueNotifierMap := make(map[string]cty.Value)
-
-	for k, i := range fpConfig.Notifiers {
-		var err error
-		varValueNotifierMap[k], err = i.CtyValue()
-		if err != nil {
-			slog.Warn("failed to convert notifier to cty value", "notifier", i.Name(), "error", err)
-		}
-	}
-
-	return varValueNotifierMap, nil
 }
 
 // StepDefinition returns the step definition for the given step execution ID.

@@ -30,6 +30,17 @@ pipeline "enum_param" {
         }
     }
 
+    param "aws_conn" {
+        type = string
+        default = "example"
+        subtype = connection.aws
+    }
+
+    param "aws_conn_list" {
+        type = list(string)
+        default = ["example", "example_2"]
+        subtype = list(connection.aws)
+    }
 
     step "transform" "echo" {
         value = "${param.string_param}"

@@ -273,7 +273,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 	}
 
 	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-		errs := pipelineDefn.ValidatePipelineParam(input.Args)
+		errs := pipelineDefn.ValidatePipelineParam(input.Args, nil)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
@@ -281,7 +281,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		pipelineCmd.Args = input.Args
 
 	} else if len(input.ArgsString) > 0 {
-		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
+		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString, nil)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))

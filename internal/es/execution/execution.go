@@ -24,6 +24,7 @@ import (
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -48,6 +49,11 @@ type Execution struct {
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
+	if err != nil {
+		return nil, err
+	}
+
+	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +87,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 		}
 
 		// validate pipeline param
-		validParam, err := v.ValidateSetting(params[v.Name])
+		validParam, err := v.ValidateSetting(params[v.Name], nil)
 		if err != nil {
 			slog.Error("Failed to validate pipeline param", "error", err)
 			return nil, err
@@ -109,12 +115,21 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	notifierMap, err := buildNotifierMapForEvalContext()
+	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
 	if err != nil {
 		return nil, err
 	}
-
 	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
+
+	// **temporarily** add add connections to eval context .. we need to remove them later and only add connections
+	// that are used by the pipelines. The connections are special because they may need to be resolved before
+	// we use them i.e. temp AWS creds.
+
+	connMap, err := parse.BuildTemporaryConnectionMapForEvalContext(context.TODO(), fpConfig.PipelingConnections)
+	if err != nil {
+		return nil, err
+	}
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
 	variablesMap := make(map[string]cty.Value)

@@ -82,14 +82,14 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 	response := types.TriggerExecutionResponse{}
 	var triggerRunArgs map[string]interface{}
 	if len(args) > 0 || len(argsString) == 0 {
-		errs := tr.Trigger.ValidateTriggerParam(args)
+		errs := tr.Trigger.ValidateTriggerParam(args, nil)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		triggerRunArgs = args
 	} else if len(argsString) > 0 {
-		coercedArgs, errs := tr.Trigger.CoerceTriggerParams(argsString)
+		coercedArgs, errs := tr.Trigger.CoerceTriggerParams(argsString, nil)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
