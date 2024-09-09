@@ -8,8 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/schema"
 	putils "github.com/turbot/pipe-fittings/utils"
 
 	"github.com/gin-gonic/gin"
@@ -78,8 +76,12 @@ func ListTriggers(rootMod string) (*types.ListTriggerResponse, error) {
 	var fpTriggers []types.FpTrigger
 
 	for _, trigger := range triggers {
-		fpTrigger := getFpTriggerFromTrigger(trigger, rootMod)
-		fpTriggers = append(fpTriggers, fpTrigger)
+		fpTrigger, err := types.FpTriggerFromModTrigger(trigger, rootMod)
+		if err != nil {
+			return nil, err
+		}
+
+		fpTriggers = append(fpTriggers, *fpTrigger)
 	}
 
 	// Sort the triggers by type, name
@@ -163,64 +165,11 @@ func GetTrigger(triggerName string, rootMod string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	fpTrigger := getFpTriggerFromTrigger(*trigger, rootModName)
-	return &fpTrigger, nil
-}
-
-func getFpTriggerFromTrigger(t modconfig.Trigger, rootMod string) types.FpTrigger {
-	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
-
-	fpTrigger := types.FpTrigger{
-		Name:            t.FullName,
-		Mod:             t.GetMod().Name(),
-		Type:            tt,
-		Description:     t.Description,
-		Title:           t.Title,
-		Tags:            t.Tags,
-		Documentation:   t.Documentation,
-		FileName:        t.FileName,
-		StartLineNumber: t.StartLineNumber,
-		EndLineNumber:   t.EndLineNumber,
-		Enabled:         helpers.IsNil(t.Enabled) || *t.Enabled,
-		RootMod:         rootMod,
+	fpTrigger, err := types.FpTriggerFromModTrigger(*trigger, rootModName)
+	if err != nil {
+		return nil, err
 	}
-
-	switch tt {
-	case schema.TriggerTypeHttp:
-		cfg := t.Config.(*modconfig.TriggerHttp)
-		fpTrigger.Url = &cfg.Url
-		for _, method := range cfg.Methods {
-			pipelineInfo := method.Pipeline.AsValueMap()
-			pipelineName := pipelineInfo["name"].AsString()
-			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
-				CaptureGroup: method.Type,
-				Pipeline:     pipelineName,
-			})
-		}
-	case schema.TriggerTypeQuery:
-		cfg := t.Config.(*modconfig.TriggerQuery)
-		fpTrigger.Schedule = &cfg.Schedule
-		fpTrigger.Query = &cfg.Sql
-		for _, capture := range cfg.Captures {
-			pipelineInfo := capture.Pipeline.AsValueMap()
-			pipelineName := pipelineInfo["name"].AsString()
-			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
-				CaptureGroup: capture.Type,
-				Pipeline:     pipelineName,
-			})
-		}
-	case schema.TriggerTypeSchedule:
-		cfg := t.Config.(*modconfig.TriggerSchedule)
-		fpTrigger.Schedule = &cfg.Schedule
-		pipelineInfo := t.GetPipeline().AsValueMap()
-		pipelineName := pipelineInfo["name"].AsString()
-		fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
-			CaptureGroup: "default",
-			Pipeline:     pipelineName,
-		})
-	}
-
-	return fpTrigger
+	return fpTrigger, nil
 }
 
 func ConstructTriggerFullyQualifiedName(triggerName string) string {

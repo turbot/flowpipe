@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.9.1 [tbd]
+
+_Bug fixes_
+
+* `params` now correctly added in `trigger` introspection output. ([#900](https://github.com/turbot/flowpipe/issues/900))
+
 ## v0.9.0 [2024-09-04]
 
 _What's new?_
