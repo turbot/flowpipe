@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -8,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -16,10 +19,15 @@ import (
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
+	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	putils "github.com/turbot/pipe-fittings/utils"
+	"github.com/zclconf/go-cty/cty"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
@@ -250,6 +258,39 @@ func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecu
 	}
 }
 
+func buildTempEvalContextForApi() (*hcl.EvalContext, error) {
+	executionVariables := make(map[string]cty.Value)
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: funcs.ContextFunctions(viper.GetString(pfconstants.ArgModLocation)),
+	}
+
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+	// Why do we add notifier earlier? Because of the param validation before
+	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
+
+	// **temporarily** add add connections to eval context .. we need to remove them later and only add connections
+	// that are used by the pipelines. The connections are special because they may need to be resolved before
+	// we use them i.e. temp AWS creds.
+
+	connMap, err := parse.BuildTemporaryConnectionMapForEvalContext(context.TODO(), fpConfig.PipelingConnections)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
+
+	return evalContext, nil
+}
 func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipelineDefn, err := db.GetPipeline(pipelineName)
 	response := types.PipelineExecutionResponse{}
@@ -272,8 +313,13 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		Name:                pipelineDefn.Name(),
 	}
 
+	evalContext, err := buildTempEvalContextForApi()
+	if err != nil {
+		return response, nil, err
+	}
+
 	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-		errs := pipelineDefn.ValidatePipelineParam(input.Args, nil)
+		errs := pipelineDefn.ValidatePipelineParam(input.Args, evalContext)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
@@ -281,7 +327,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		pipelineCmd.Args = input.Args
 
 	} else if len(input.ArgsString) > 0 {
-		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString, nil)
+		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString, evalContext)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))

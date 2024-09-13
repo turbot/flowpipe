@@ -17,10 +17,10 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/log"
-	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/constants"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -145,7 +145,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 	for _, v := range pipelineDefn.Params {
 		if pe.Args[v.Name] != nil {
-			if !v.Type.HasDynamicTypes() {
+			if !v.Type.HasDynamicTypes() && !v.Type.IsCapsuleType() {
 				val, err := gocty.ToCtyValue(pe.Args[v.Name], v.Type)
 				if err != nil {
 					return nil, err
@@ -170,13 +170,16 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		// 1. connection
 		// 2. notifier
 		//
-		validParam, err := v.ValidateSetting(params[v.Name], evalContext)
+		validParam, diags, err := v.ValidateSetting(params[v.Name], evalContext)
 		if err != nil {
 			slog.Error("Failed to validate pipeline param", "error", err)
 			return nil, err
 		}
 
 		if !validParam {
+			if len(diags) > 0 {
+				return nil, error_helpers.BetterHclDiagsToError(v.Name, diags)
+			}
 			return nil, perr.BadRequestWithMessage("invalid value for param " + v.Name)
 		}
 	}
@@ -299,25 +302,26 @@ func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext
 		params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
 	}
 
-	connectionMap, err := ex.buildConnectionMapForEvalContext(allConnectionsDependsOn, params)
+	connectionMap, newParamsMap, err := ex.buildConnectionMapForEvalContext(allConnectionsDependsOn, params, pipelineDefn)
 	if err != nil {
 		return nil, err
 	}
 
 	// Override what we have
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
+	evalContext.Variables[schema.BlockTypeParam] = cty.ObjectVal(newParamsMap)
 
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
+func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInContext []string, params map[string]cty.Value, pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	allConnections := fpConfig.PipelingConnections
-	relevantConnections := map[string]connection.PipelingConnection{}
+	relevantConnections := map[string]modconfig.PipelingConnection{}
 	dynamicConnType := map[string]bool{}
 
 	for _, connectionName := range connectionsInContext {
@@ -348,12 +352,46 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 		}
 	}
 
-	connectionMap, err := buildConnectionMapForEvalContext(context.TODO(), relevantConnections)
-	if err != nil {
-		return nil, err
+	for _, p := range pipelineDefn.Params {
+		if p.IsConnectionType() {
+			for k, v := range params {
+				if k != p.Name {
+					continue
+				}
+
+				if v.Type().IsObjectType() || v.Type().IsMapType() {
+					valueMap := v.AsValueMap()
+					paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
+					ctyVal, err := paramToUpdate.CtyValue()
+					if err != nil {
+						return nil, nil, err
+					}
+
+					params[p.Name] = ctyVal
+					break
+				} else if hclhelpers.IsCollectionOrTuple(v.Type()) {
+					for _, val := range v.AsValueSlice() {
+						valueMap := val.AsValueMap()
+						paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
+
+						ctyVal, err := paramToUpdate.CtyValue()
+						if err != nil {
+							return nil, nil, err
+						}
+
+						params[p.Name] = ctyVal
+					}
+				}
+			}
+		}
 	}
 
-	return connectionMap, nil
+	connectionMap, err := evaluateConnectionMapForEvalContext(context.TODO(), relevantConnections)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return connectionMap, params, nil
 }
 
 func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
@@ -394,7 +432,7 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 		}
 	}
 
-	credentialMap, err := buildCredentialMapForEvalContext(context.TODO(), relevantCredentials)
+	credentialMap, err := evalCredentialMapForEvalContext(context.TODO(), relevantCredentials)
 	if err != nil {
 		return nil, err
 	}

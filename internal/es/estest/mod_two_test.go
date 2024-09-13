@@ -106,13 +106,6 @@ func (suite *ModTwoTestSuite) TearDownSuite() {
 	time.Sleep(1 * time.Second)
 }
 
-func (suite *ModTwoTestSuite) BeforeTest(suiteName, testName string) {
-
-}
-
-func (suite *ModTwoTestSuite) AfterTest(suiteName, testName string) {
-}
-
 func (suite *ModTwoTestSuite) TestEnumParam() {
 	assert := assert.New(suite.T())
 
@@ -232,6 +225,133 @@ func (suite *ModTwoTestSuite) TestValidParam() {
 	}
 
 	assert.Equal("finished", pex.Status)
+}
+
+func (suite *ModTwoTestSuite) TestValidCustomParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"aws_conn": map[string]string{
+			"name":          "example_2",
+			"type":          "aws",
+			"resource_type": "connection",
+		},
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.conn_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("example2_access_key", pex.PipelineOutput["val"])
+
+	pipelineInput = modconfig.Input{
+		"aws_conn": map[string]string{
+			"name":          "example_3",
+			"type":          "aws",
+			"resource_type": "connection",
+		},
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.conn_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("example3_access_key", pex.PipelineOutput["val"])
+
+}
+
+func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"aws_conn": "foo",
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.conn_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("failed", pex.Status)
+	assert.Equal("Internal Error: aws_conn: Invalid type for param aws_conn: The param type is not compatible with the given value", pex.Errors[0].Error.Error())
+
+	// Wrong connection, expect slack not aws
+	pipelineInput = modconfig.Input{
+		"aws_conn": map[string]string{
+			"name":          "example_2",
+			"type":          "slack",
+			"resource_type": "connection",
+		},
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.conn_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("failed", pex.Status)
+	assert.Equal("Internal Error: aws_conn: Invalid type for param aws_conn: The param type is not compatible with the given value", pex.Errors[0].Error.Error())
+
+	// connection not found
+	pipelineInput = modconfig.Input{
+		"aws_conn": map[string]string{
+			"name":          "example_50",
+			"type":          "aws",
+			"resource_type": "connection",
+		},
+	}
+
+	_, pipelineCmd, err = runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.conn_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err = getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("failed", pex.Status)
+	assert.Equal("Internal Error: aws_conn: No connection found for the given connection name", pex.Errors[0].Error.Error())
 }
 
 func (suite *ModTwoTestSuite) TestInvalidParam() {

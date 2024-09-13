@@ -31,15 +31,14 @@ pipeline "enum_param" {
     }
 
     param "aws_conn" {
-        type = string
-        default = "example"
-        subtype = connection.aws
+        type = connection.aws
+        default = connection.aws.example
     }
 
     param "aws_conn_list" {
-        type = list(string)
-        default = ["example", "example_2"]
-        subtype = list(connection.aws)
+        type = list(connection.aws)
+        default = [connection.aws.example, connection.aws.example_2]
+
     }
 
     step "transform" "echo" {
@@ -52,5 +51,40 @@ pipeline "enum_param" {
 
     step "transform" "echo_3" {
         value = "${param.list_of_string_param}"
+    }
+}
+
+pipeline "conn_param" {
+
+    param "aws_conn" {
+        type = connection.aws
+        default = connection.aws.example
+    }
+
+    param "generic_conn" {
+        type = connection
+        default = connection.aws.example
+    }
+
+    param "aws_conn_list" {
+        type = list(connection.aws)
+        default = [connection.aws.example, connection.aws.example_2]
+
+    }
+
+    step "transform" "echo" {
+        value = param.aws_conn.access_key
+    }
+
+    step "transform" "echo_2" {
+        value = param.generic_conn
+    }
+
+    output "val" {
+        value = step.transform.echo.value
+    }
+
+    output "val2" {
+        value = step.transform.echo_2.value
     }
 }

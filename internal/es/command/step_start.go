@@ -111,7 +111,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
-		evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn)
+		evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn, pipelineDefn)
 		if err != nil {
 			slog.Error("Error adding connections to eval context", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))

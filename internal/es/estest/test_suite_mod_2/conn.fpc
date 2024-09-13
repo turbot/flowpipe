@@ -4,18 +4,18 @@ connection "aws" "example" {
 }
 
 connection "aws" "example_2" {
-    access_key = "ASIAQGDFAKEKGUI5MCEU"
+    access_key = "example2_access_key"
     secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
 }
 
 connection "aws" "example_3" {
-    access_key = "ASIAQGDFAKEKGUI5MCEU"
+    access_key = "example3_access_key"
     secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
 }
 
 
 connection "slack" "slack_conn" {
-  token = env("TEST_SLACK_TOKEN")
+  token = "abcdefg"
 }
 
 
