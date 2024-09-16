@@ -1,7 +1,6 @@
 package cmdconfig
 
 import (
-	"github.com/turbot/flowpipe/internal/cache"
 	"maps"
 	"os"
 	"path/filepath"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/cache"
 	constant "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/log"
@@ -18,15 +18,15 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/workspace_profile"
 )
 
 func initGlobalConfig() *flowpipeconfig.FlowpipeConfig {
 	ensureFlowpipeSample()
 
 	// load workspace profile from the configured install dir
-	loader, err := cmdconfig.GetWorkspaceProfileLoader[*modconfig.FlowpipeWorkspaceProfile]()
+	loader, err := cmdconfig.GetWorkspaceProfileLoader[*workspace_profile.FlowpipeWorkspaceProfile]()
 	error_helpers.FailOnError(err)
 
 	var cmd = viper.Get(constants.ConfigKeyActiveCommand).(*cobra.Command)
