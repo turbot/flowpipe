@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/pipe-fittings/connection"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -255,7 +256,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	return credentialMap, nil
 }
 
-func extractConnection(valueMap map[string]cty.Value, allConnections map[string]modconfig.PipelingConnection, relevantConnections map[string]modconfig.PipelingConnection) modconfig.PipelingConnection {
+func extractConnection(valueMap map[string]cty.Value, allConnections map[string]connection.PipelingConnection, relevantConnections map[string]connection.PipelingConnection) connection.PipelingConnection {
 	if valueMap["name"] != cty.NilVal && valueMap["name"].Type() == cty.String && !valueMap["name"].IsNull() &&
 		valueMap["type"] != cty.NilVal && valueMap["type"].Type() == cty.String && !valueMap["type"].IsNull() {
 
@@ -276,7 +277,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 	}
 
 	allConnections := fpConfig.PipelingConnections
-	relevantConnections := map[string]modconfig.PipelingConnection{}
+	relevantConnections := map[string]connection.PipelingConnection{}
 	dynamicConnType := map[string]bool{}
 
 	for _, connectionName := range connectionsInContext {
@@ -300,7 +301,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 			if v.Type() == cty.String && !v.IsNull() {
 				potentialConnName := v.AsString()
 				for _, c := range allConnections {
-					if c.GetHclResourceImpl().ShortName == potentialConnName && dynamicConnType[c.GetConnectionType()] {
+					if c.GetShortName() == potentialConnName && dynamicConnType[c.GetConnectionType()] {
 						relevantConnections[c.Name()] = c
 						break
 					}
@@ -450,7 +451,7 @@ func evalCredentialMapForEvalContext(ctx context.Context, allCredentials map[str
 	return credentialMap, nil
 }
 
-func evaluateConnectionMapForEvalContext(ctx context.Context, allConnections map[string]modconfig.PipelingConnection) (map[string]cty.Value, error) {
+func evaluateConnectionMapForEvalContext(ctx context.Context, allConnections map[string]connection.PipelingConnection) (map[string]cty.Value, error) {
 	connectionMap := map[string]cty.Value{}
 
 	cache := cache.GetConnectionCache()
@@ -461,9 +462,9 @@ func evaluateConnectionMapForEvalContext(ctx context.Context, allConnections map
 			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
 		}
 
-		var connToUse modconfig.PipelingConnection
+		var connToUse connection.PipelingConnection
 
-		cachedConn, found := cache.Get(c.GetHclResourceImpl().FullName)
+		cachedConn, found := cache.Get(c.Name())
 		if !found {
 			// if not found, call the "resolve" function to resolve this credential, for temp cred this will
 			// generate the temp creds
@@ -481,12 +482,12 @@ func evaluateConnectionMapForEvalContext(ctx context.Context, allConnections map
 			//
 			// The only way to solve this issue is to wipe the credential cache when Flowpipe config is updated.
 			if newC.GetTtl() > 0 {
-				cache.SetWithTTL(c.GetHclResourceImpl().FullName, newC, time.Duration(newC.GetTtl())*time.Second)
+				cache.SetWithTTL(c.Name(), newC, time.Duration(newC.GetTtl())*time.Second)
 			}
 			connToUse = newC
 		} else {
 			var ok bool
-			connToUse, ok = cachedConn.(modconfig.PipelingConnection)
+			connToUse, ok = cachedConn.(connection.PipelingConnection)
 			if !ok {
 				return nil, perr.BadRequestWithMessage("invalid connection type: " + c.Name())
 			}

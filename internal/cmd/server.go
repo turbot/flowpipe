@@ -27,7 +27,6 @@ func serverCmd() *cobra.Command {
 		Run:   startServerFunc(),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 
-			// TODO KAI look at whether this is really needed
 			serviceConfig.Initialize()
 			return nil
 		},
