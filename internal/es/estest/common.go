@@ -1,6 +1,7 @@
 package estest
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -77,7 +78,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 
 	pex := ex.PipelineExecutions[pipelineExecutionID]
 	if pex == nil {
-		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		return nil, nil, errors.New("Pipeline execution " + pipelineExecutionID + " not found")
 	}
 
 	if pex.Status == expectedState {
@@ -101,7 +102,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 
 		pex = ex.PipelineExecutions[pipelineExecutionID]
 		if pex == nil {
-			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+			return nil, nil, errors.New("Pipeline execution " + pipelineExecutionID + " not found")
 		}
 
 		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
@@ -114,7 +115,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 	// }
 
 	if !pex.IsComplete() {
-		return ex, pex, fmt.Errorf("not completed")
+		return ex, pex, errors.New("not completed")
 	}
 
 	return ex, pex, nil
@@ -137,7 +138,7 @@ func getPipelineExWaitForStepStarted(suite *FlowpipeTestSuite, evt *event.Event,
 
 	pex := ex.PipelineExecutions[pipelineExecutionID]
 	if pex == nil {
-		return nil, nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		return nil, nil, nil, errors.New("Pipeline execution " + pipelineExecutionID + " not found")
 	}
 
 	for _, stEx := range pex.StepExecutions {
@@ -162,7 +163,7 @@ func getPipelineExWaitForStepStarted(suite *FlowpipeTestSuite, evt *event.Event,
 
 		pex = ex.PipelineExecutions[pipelineExecutionID]
 		if pex == nil {
-			return nil, nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+			return nil, nil, nil, errors.New("Pipeline execution " + pipelineExecutionID + " not found")
 		}
 
 		for _, stEx := range pex.StepExecutions {
