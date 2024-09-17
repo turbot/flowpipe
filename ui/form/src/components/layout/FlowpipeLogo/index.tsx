@@ -1,13 +1,13 @@
 /// <reference types="vite-plugin-svgr/client" />
 import LogoWordmark from "@flowpipe/assets/flowpipe-logo-wordmark.svg?react";
 import LogoWordmarkDarkmode from "@flowpipe/assets/flowpipe-logo-wordmark-darkmode.svg?react";
-import {
-  ThemeNames,
-  useTheme,
-} from "@flowpipe/components/layout/ThemeProvider";
+import { ThemeNames } from "@flowpipe/components/layout/ThemeProvider";
+import { useInputForm } from "@flowpipe/components/InputForm";
 
 const FlowpipeLogo = () => {
-  const { theme } = useTheme();
+  const {
+    themeContext: { theme },
+  } = useInputForm();
   return (
     <div className="w-24">
       <a href="https://flowpipe.io" target="_blank" rel="noopener noreferrer">

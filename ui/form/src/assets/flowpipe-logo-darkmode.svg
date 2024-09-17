@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 356 404" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+<svg width="100%" height="100%" viewBox="0 0 356 404" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" xmlSpace="preserve" xmlnsSerif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
     <g transform="matrix(0.203738,0,0,0.953819,-7.19403,0)">
         <rect id="Flowpipe" x="35.31" y="0" width="1746.52" height="423.41" style="fill:none;"/>
-        <g id="Flowpipe1" serif:id="Flowpipe">
+        <g id="Flowpipe1" serifId="Flowpipe">
             <g id="Logo" transform="matrix(4.96566,0,0,1,-140.028,0)">
                 <g id="Outline" transform="matrix(0.98844,0,0,1.04842,35.3102,0)">
                     <path d="M121.08,237.792c-5.34,-4.864 -8.693,-11.871 -8.693,-19.655l-0,-38.478c-0,-11.827 7.75,-21.858 18.444,-25.287l-0,-0.04c-0.04,-0.468 -0.06,-0.939 -0.06,-1.412l0.004,-17.232c0,-39.778 32.45,-72.225 72.217,-72.219l37.962,-0.005c19.859,-0.001 37.927,8.1 51.018,21.191c0.053,0.053 10.002,13.506 -1.274,24.866c-6.905,6.956 -38.788,38.838 -45.124,45.122c-3.665,3.634 -7.54,5.048 -11.055,5.334c5.378,4.865 8.758,11.898 8.758,19.714l0,38.477c0,11.827 -7.749,21.858 -18.444,25.288l0.001,1.388l-0.001,0.791l-0.003,16.445c-0,39.778 -32.45,72.225 -72.217,72.219l-37.962,0.005c-19.859,0.001 -37.927,-8.1 -51.018,-21.191c-0.053,-0.053 -10.002,-13.506 1.274,-24.865c6.905,-6.957 38.788,-38.839 45.124,-45.123c3.663,-3.632 7.536,-5.046 11.049,-5.333Z" style="fill:#fff;"/>

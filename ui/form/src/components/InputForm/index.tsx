@@ -4,15 +4,18 @@ import FlowpipeLogo from "@flowpipe/components/layout/FlowpipeLogo";
 import SelectInput from "@flowpipe/components/forms/SelectInput";
 import SuccessMessage from "@flowpipe/components/layout/SuccessMessage";
 import TextInput from "@flowpipe/components/forms/TextInput";
-import { Form, Formik, FormikTouched } from "formik";
 import {
+  createContext,
   FormEvent,
   Fragment,
+  ReactNode,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { Form, Formik, FormikTouched } from "formik";
 import { FormikErrors } from "formik/dist/types";
 import {
   InputFormValues,
@@ -21,12 +24,25 @@ import {
   PipelineInputOption,
   PipelineInputType,
 } from "@flowpipe/types/input";
+import {
+  IThemeContext,
+  useTheme,
+} from "@flowpipe/components/layout/ThemeProvider";
 import { PipelingError } from "@flowpipe/api/error";
 import { useFormAPI } from "@flowpipe/api/pipeline";
 import { useLocation, useParams } from "react-router-dom";
 
-interface InputFormProps {
+interface InputFormWrapperProps {
   autoSubmit?: boolean;
+}
+
+interface InputFormProps extends InputFormWrapperProps {
+  form: PipelineForm | null;
+  error: PipelingError | undefined;
+  loading: boolean;
+  postForm: (
+    form_result: InputFormValues,
+  ) => Promise<{ form: PipelineForm | null; error: PipelingError | null }>;
 }
 
 interface InputFormState {
@@ -341,10 +357,15 @@ const InputFormInner = ({
   );
 };
 
-const InputForm = ({ autoSubmit = false }: InputFormProps) => {
-  const { id, hash } = useParams();
+const InputForm = ({
+  autoSubmit = false,
+  form,
+  error,
+  loading,
+  postForm,
+}: InputFormProps) => {
   const { search } = useLocation();
-  const { form, error, loading, postForm } = useFormAPI(id, hash);
+
   const initialValues = useMemo<InputFormValues>(() => {
     if (!form || !form.inputs) {
       return {};
@@ -466,4 +487,53 @@ const InputForm = ({ autoSubmit = false }: InputFormProps) => {
   );
 };
 
-export default InputForm;
+interface InputFormProviderProps {
+  children: ReactNode;
+  themeContext: any;
+}
+
+const InputFormWrapper = ({ autoSubmit = false }: InputFormWrapperProps) => {
+  const { id, hash } = useParams();
+  const { form, error, loading, postForm } = useFormAPI(id, hash);
+  const themeContext = useTheme();
+  return (
+    <InputFormProvider themeContext={themeContext}>
+      <InputForm
+        autoSubmit={autoSubmit}
+        form={form}
+        error={error}
+        loading={loading}
+        postForm={postForm}
+      />
+    </InputFormProvider>
+  );
+};
+
+type IInputFormContext = {
+  themeContext: IThemeContext;
+};
+
+const InputFormContext = createContext<IInputFormContext | null>(null);
+
+const InputFormProvider = ({
+  children,
+  themeContext,
+}: InputFormProviderProps) => {
+  return (
+    <InputFormContext.Provider value={{ themeContext }}>
+      {children}
+    </InputFormContext.Provider>
+  );
+};
+
+const useInputForm = () => {
+  const context = useContext(InputFormContext);
+  if (context === undefined) {
+    throw new Error("useDashboard must be used within a DashboardContext");
+  }
+  return context as IInputFormContext;
+};
+
+export { InputForm, InputFormProvider, useInputForm };
+
+export default InputFormWrapper;
