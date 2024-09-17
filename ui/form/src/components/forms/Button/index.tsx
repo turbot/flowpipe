@@ -27,7 +27,7 @@ const Button = ({
         "disabled:bg-opacity-50 disabled:cursor-not-allowed",
         size === "sm" ? "px-2 py-1 text-xs" : null,
         size === "md" ? "px-2.5 py-1.5 text-sm" : null,
-        size === "lg" ? "px-3.5 py-2.5 text-sm" : null,
+        size === "lg" ? "px-3 py-2.5 text-sm" : null,
         style === "ok" ? "bg-ok text-white" : null,
         style === "alert" ? "bg-alert text-white" : null,
         // Default style
