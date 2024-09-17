@@ -37,7 +37,7 @@
     "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3",
-    "vite": "^5.1.7",
+    "vite": "^5.3.6",
     "vite-plugin-svgr": "^4.2.0"
   },
   "packageManager": "yarn@4.3.1+sha512.af78262d7d125afbfeed740602ace8c5e4405cd7f4735c08feb327286b2fdb2390fbca01589bfd1f50b1240548b74806767f5a063c94b67e431aabd0d86f7774"
