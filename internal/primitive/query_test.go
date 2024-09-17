@@ -405,7 +405,7 @@ func TestPostgresSqlQueryListAll(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -541,7 +541,7 @@ func TestPostgresSqlQueryWithArgs(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -611,7 +611,7 @@ func TestPostgresSqlQueryWithArgsContainsRegexExpression(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -681,7 +681,7 @@ func TestPostgresSqlQueryTableNotFound(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -704,7 +704,7 @@ func TestPostgresSqlQueryNoRows(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -727,7 +727,7 @@ func TestPostgresSqlQueryBadQueryStatement(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -749,7 +749,7 @@ func TestMariaDbQueryListAll(t *testing.T) {
 	connectionString := "flowpipe:password@tcp(localhost:3306)/flowpipe-test"
 	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -877,7 +877,7 @@ func TestMariaDbQueryWithArgs(t *testing.T) {
 
 	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -941,7 +941,7 @@ func TestMariaDbQueryWithArgsContainsRegexExpression(t *testing.T) {
 
 	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -1005,7 +1005,7 @@ func TestMariaDbQueryTableNotFound(t *testing.T) {
 
 	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -1028,7 +1028,7 @@ func TestMariaDbQueryNoRows(t *testing.T) {
 
 	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
@@ -1051,7 +1051,7 @@ func TestMariaDbQueryBadQueryStatement(t *testing.T) {
 
 	err := applyDatabaseScript(DriverMySQL, connectionString, "./database_files/mariadb_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatal("Error setting up the database: " + err.Error())
 	}
 
 	assert := assert.New(t)
