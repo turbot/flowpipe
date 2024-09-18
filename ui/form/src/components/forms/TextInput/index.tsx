@@ -1,4 +1,3 @@
-import ErrorIcon from "@material-symbols/svg-300/rounded/error.svg?react";
 import { classNames } from "@flowpipe/utils/style";
 import { ThemeNames } from "@flowpipe/components/layout/ThemeProvider";
 import { useInputForm } from "@flowpipe/components/InputForm";
@@ -23,6 +22,7 @@ const TextInput = ({
   onChange,
 }: TextInputProps) => {
   const {
+    components: { ErrorIcon },
     themeContext: { theme },
   } = useInputForm();
   return (

@@ -4,6 +4,8 @@ import FlowpipeLogo from "@flowpipe/components/layout/FlowpipeLogo";
 import SelectInput from "@flowpipe/components/forms/SelectInput";
 import SuccessMessage from "@flowpipe/components/layout/SuccessMessage";
 import TextInput from "@flowpipe/components/forms/TextInput";
+import { buildComponentsMap } from "@flowpipe/components";
+import { ComponentsMap } from "@flowpipe/types/component.ts";
 import {
   createContext,
   FormEvent,
@@ -489,6 +491,7 @@ const InputForm = ({
 
 interface InputFormProviderProps {
   children: ReactNode;
+  componentOverrides?: {};
   themeContext: any;
 }
 
@@ -512,6 +515,7 @@ const InputFormWrapper = ({ autoSubmit = false }: InputFormWrapperProps) => {
 };
 
 type IInputFormContext = {
+  components: ComponentsMap;
   themeContext: IThemeContext;
 };
 
@@ -519,10 +523,12 @@ const InputFormContext = createContext<IInputFormContext | null>(null);
 
 const InputFormProvider = ({
   children,
+  componentOverrides,
   themeContext,
 }: InputFormProviderProps) => {
+  const components = buildComponentsMap(componentOverrides);
   return (
-    <InputFormContext.Provider value={{ themeContext }}>
+    <InputFormContext.Provider value={{ components, themeContext }}>
       {children}
     </InputFormContext.Provider>
   );

@@ -1,6 +1,6 @@
-import ErrorIcon from "@material-symbols/svg-300/rounded/error-fill.svg?react";
 import { classNames } from "@flowpipe/utils/style";
 import { PipelingError } from "@flowpipe/api/error";
+import { useInputForm } from "@flowpipe/components/InputForm";
 
 type ErrorMessageProps = {
   as?: "error" | "string";
@@ -20,6 +20,9 @@ const ErrorMessage = ({
   if (!error) {
     return null;
   }
+  const {
+    components: { ErrorIcon },
+  } = useInputForm();
   return (
     <span className={classNames(withIcon ? "flex space-x-2 items-start" : "")}>
       {withIcon ? (
