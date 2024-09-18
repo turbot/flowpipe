@@ -2,7 +2,6 @@ import useLocalStorage from "@flowpipe/hooks/useLocalStorage";
 import useMediaQuery from "@flowpipe/hooks/useMediaQuery";
 import { classNames } from "@flowpipe/utils/style";
 import { createContext, Ref, useContext, useState } from "react";
-import { useInputForm } from "@flowpipe/components/InputForm";
 
 type Theme = {
   name: string;
@@ -80,9 +79,7 @@ const ThemeProvider = ({ children }) => {
 };
 
 const FullHeightThemeWrapper = ({ children }) => {
-  const {
-    themeContext: { theme, setWrapperRef },
-  } = useInputForm();
+  const { theme, setWrapperRef } = useTheme();
   return (
     <div
       ref={setWrapperRef}
