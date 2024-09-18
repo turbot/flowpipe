@@ -408,7 +408,7 @@ const InputForm = ({
   }, [form, setState]);
 
   return (
-    <div className="mx-auto my-auto">
+    <>
       <div className="flex flex-col overflow-hidden rounded-lg bg-modal shadow w-screen md:min-w-xl max-w-xl">
         {error && (
           <div className="px-4 py-4">
@@ -483,7 +483,7 @@ const InputForm = ({
       <div className="ml-4 mt-4">
         <FlowpipeLogo />
       </div>
-    </div>
+    </>
   );
 };
 
@@ -498,13 +498,15 @@ const InputFormWrapper = ({ autoSubmit = false }: InputFormWrapperProps) => {
   const themeContext = useTheme();
   return (
     <InputFormProvider themeContext={themeContext}>
-      <InputForm
-        autoSubmit={autoSubmit}
-        form={form}
-        error={error}
-        loading={loading}
-        postForm={postForm}
-      />
+      <div className="mx-auto my-auto">
+        <InputForm
+          autoSubmit={autoSubmit}
+          form={form}
+          error={error}
+          loading={loading}
+          postForm={postForm}
+        />
+      </div>
     </InputFormProvider>
   );
 };
