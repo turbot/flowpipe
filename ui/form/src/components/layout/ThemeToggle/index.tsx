@@ -1,13 +1,13 @@
 import LightMode from "@material-symbols/svg-300/rounded/light_mode-fill.svg?react";
 import DarkMode from "@material-symbols/svg-300/rounded/dark_mode-fill.svg?react";
 import { classNames } from "@flowpipe/utils/style";
-import { ThemeNames } from "@flowpipe/components/layout/ThemeProvider";
-import { useInputForm } from "@flowpipe/components/InputForm";
+import {
+  ThemeNames,
+  useTheme,
+} from "@flowpipe/components/layout/ThemeProvider";
 
 const ThemeToggle = () => {
-  const {
-    themeContext: { theme, setTheme },
-  } = useInputForm();
+  const { theme, setTheme } = useTheme();
   return (
     <button
       className={classNames("flex items-center h-5 w-5")}
