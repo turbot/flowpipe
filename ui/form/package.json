@@ -14,13 +14,10 @@
     "@material-symbols/svg-300": "^0.23.0",
     "axios": "^1.7.7",
     "formik": "^2.4.6",
-    "localforage": "^1.10.0",
-    "match-sorter": "^6.3.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",
     "react-select": "^5.8.0",
-    "sort-by": "^1.2.0",
     "swr": "^2.2.5"
   },
   "devDependencies": {
