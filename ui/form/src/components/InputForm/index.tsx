@@ -407,7 +407,7 @@ const InputForm = ({
       value: form ? form.status : "pending",
       error: null,
     }));
-  }, [form, setState]);
+  }, [form]);
 
   return (
     <>
