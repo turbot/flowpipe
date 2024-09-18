@@ -353,7 +353,7 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 	}
 
 	for _, p := range pipelineDefn.Params {
-		if p.IsConnectionType() {
+		if p.IsCustomType() {
 			for k, v := range params {
 				if k != p.Name {
 					continue

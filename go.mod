@@ -1,8 +1,6 @@
 module github.com/turbot/flowpipe
 
-go 1.22.4
-
-toolchain go1.23.0
+go 1.23.0
 
 replace (
 	github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go

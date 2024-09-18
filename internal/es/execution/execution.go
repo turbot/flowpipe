@@ -179,7 +179,7 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 		addConn = true
 	} else {
 		for _, p := range pipelineDefn.Params {
-			if p.IsConnectionType() {
+			if p.IsCustomType() {
 				addConn = true
 				break
 			}
@@ -309,7 +309,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 	}
 
 	for _, p := range pipelineDefn.Params {
-		if p.IsConnectionType() {
+		if p.IsCustomType() {
 			for k, v := range params {
 				if k != p.Name {
 					continue
