@@ -4,15 +4,20 @@ import FlowpipeLogo from "@flowpipe/components/layout/FlowpipeLogo";
 import SelectInput from "@flowpipe/components/forms/SelectInput";
 import SuccessMessage from "@flowpipe/components/layout/SuccessMessage";
 import TextInput from "@flowpipe/components/forms/TextInput";
-import { Form, Formik, FormikTouched } from "formik";
+import { buildComponentsMap } from "@flowpipe/components";
+import { ComponentsMap } from "@flowpipe/types/component";
 import {
+  createContext,
   FormEvent,
   Fragment,
+  ReactNode,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { Form, Formik, FormikTouched } from "formik";
 import { FormikErrors } from "formik/dist/types";
 import {
   InputFormValues,
@@ -21,12 +26,25 @@ import {
   PipelineInputOption,
   PipelineInputType,
 } from "@flowpipe/types/input";
+import {
+  IThemeContext,
+  useTheme,
+} from "@flowpipe/components/layout/ThemeProvider";
 import { PipelingError } from "@flowpipe/api/error";
 import { useFormAPI } from "@flowpipe/api/pipeline";
 import { useLocation, useParams } from "react-router-dom";
 
-interface InputFormProps {
+interface InputFormWrapperProps {
   autoSubmit?: boolean;
+}
+
+interface InputFormProps extends InputFormWrapperProps {
+  form: PipelineForm | null;
+  error: PipelingError | undefined;
+  loading: boolean;
+  postForm: (
+    form_result: InputFormValues,
+  ) => Promise<{ form: PipelineForm | null; error: PipelingError | null }>;
 }
 
 interface InputFormState {
@@ -341,10 +359,15 @@ const InputFormInner = ({
   );
 };
 
-const InputForm = ({ autoSubmit = false }: InputFormProps) => {
-  const { id, hash } = useParams();
+const InputForm = ({
+  autoSubmit = false,
+  form,
+  error,
+  loading,
+  postForm,
+}: InputFormProps) => {
   const { search } = useLocation();
-  const { form, error, loading, postForm } = useFormAPI(id, hash);
+
   const initialValues = useMemo<InputFormValues>(() => {
     if (!form || !form.inputs) {
       return {};
@@ -384,10 +407,10 @@ const InputForm = ({ autoSubmit = false }: InputFormProps) => {
       value: form ? form.status : "pending",
       error: null,
     }));
-  }, [form, setState]);
+  }, [form]);
 
   return (
-    <div className="mx-auto my-auto">
+    <>
       <div className="flex flex-col overflow-hidden rounded-lg bg-modal shadow w-screen md:min-w-xl max-w-xl">
         {error && (
           <div className="px-4 py-4">
@@ -462,8 +485,63 @@ const InputForm = ({ autoSubmit = false }: InputFormProps) => {
       <div className="ml-4 mt-4">
         <FlowpipeLogo />
       </div>
-    </div>
+    </>
   );
 };
 
-export default InputForm;
+interface InputFormProviderProps {
+  children: ReactNode;
+  componentOverrides?: {};
+  themeContext: any;
+}
+
+const InputFormWrapper = ({ autoSubmit = false }: InputFormWrapperProps) => {
+  const { id, hash } = useParams();
+  const { form, error, loading, postForm } = useFormAPI(id, hash);
+  const themeContext = useTheme();
+  return (
+    <InputFormProvider themeContext={themeContext}>
+      <div className="mx-auto my-auto">
+        <InputForm
+          autoSubmit={autoSubmit}
+          form={form}
+          error={error}
+          loading={loading}
+          postForm={postForm}
+        />
+      </div>
+    </InputFormProvider>
+  );
+};
+
+type IInputFormContext = {
+  components: ComponentsMap;
+  themeContext: IThemeContext;
+};
+
+const InputFormContext = createContext<IInputFormContext | null>(null);
+
+const InputFormProvider = ({
+  children,
+  componentOverrides,
+  themeContext,
+}: InputFormProviderProps) => {
+  const components = buildComponentsMap(componentOverrides);
+  return (
+    <InputFormContext.Provider value={{ components, themeContext }}>
+      {children}
+    </InputFormContext.Provider>
+  );
+};
+
+const useInputForm = () => {
+  const context = useContext(InputFormContext);
+  if (context === undefined) {
+    throw new Error("useDashboard must be used within a DashboardContext");
+  }
+  return context as IInputFormContext;
+};
+
+export { InputForm, InputFormProvider, useInputForm };
+
+export default InputFormWrapper;

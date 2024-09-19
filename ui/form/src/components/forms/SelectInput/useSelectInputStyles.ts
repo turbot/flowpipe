@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
-import { useTheme } from "@flowpipe/components/layout/ThemeProvider";
+import { useInputForm } from "@flowpipe/components/InputForm";
 
 const useSelectInputStyles = () => {
   const [, setRandomVal] = useState(0);
-  const { theme, wrapperRef } = useTheme();
+  const {
+    themeContext: { theme, wrapperRef },
+  } = useInputForm();
 
   // This is annoying, but unless I force a refresh the theme doesn't stay in sync when you switch
   useEffect(() => setRandomVal(Math.random()), [theme.name]);

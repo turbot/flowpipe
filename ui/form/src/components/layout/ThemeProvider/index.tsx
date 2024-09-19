@@ -8,7 +8,7 @@ type Theme = {
   label: string;
 };
 
-type IThemeContext = {
+export type IThemeContext = {
   localStorageTheme: string | null;
   theme: Theme;
   wrapperRef: Ref<null>;
