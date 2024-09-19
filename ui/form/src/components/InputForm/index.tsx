@@ -5,7 +5,7 @@ import SelectInput from "@flowpipe/components/forms/SelectInput";
 import SuccessMessage from "@flowpipe/components/layout/SuccessMessage";
 import TextInput from "@flowpipe/components/forms/TextInput";
 import { buildComponentsMap } from "@flowpipe/components";
-import { ComponentsMap } from "@flowpipe/types/component.ts";
+import { ComponentsMap } from "@flowpipe/types/component";
 import {
   createContext,
   FormEvent,

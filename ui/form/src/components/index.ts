@@ -1,6 +1,6 @@
 import ErrorIcon from "@material-symbols/svg-300/rounded/error-fill.svg?react";
 import SuccessIcon from "@material-symbols/svg-300/rounded/check_circle-fill.svg?react";
-import { ComponentsMap } from "@flowpipe/types";
+import { ComponentsMap } from "@flowpipe/types/component";
 import { ReactNode } from "react";
 
 const componentsMap = {};
