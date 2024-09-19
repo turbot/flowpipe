@@ -20,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -247,7 +248,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		// We have some special steps that need to be handled differently:
 		// Pipeline Step -> launch a new pipeline
 		// Input Step -> waiting for external event to resume the pipeline
-		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, h)
+		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, evalContext, h)
 		if shouldReturn {
 			return
 		}
@@ -353,7 +354,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, h StepStartHandler) bool {
+func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, evalCtx *hcl.EvalContext, h StepStartHandler) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
 		args := modconfig.Input{}
@@ -377,7 +378,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		errs := pipelineDefn.ValidatePipelineParam(args, nil)
+		errs := parse.ValidateParams(pipelineDefn, args, evalCtx)
 
 		if len(errs) > 0 {
 			slog.Error("Failed validating pipeline param", "errors", errs)

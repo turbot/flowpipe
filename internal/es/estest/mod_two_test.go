@@ -458,6 +458,137 @@ func (suite *ModTwoTestSuite) TestInvalidParam() {
 	assert.Equal("Bad Request: invalid value for param list_of_string_param", pex.Errors[0].Error.Error())
 }
 
+func (suite *ModTwoTestSuite) TestNotifierParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"notifier": map[string]interface{}{
+			"resource_type": "notifier",
+			"name":          "backend",
+		},
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("backend", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestListNotifierParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"notifiers": []map[string]interface{}{
+			{
+				"resource_type": "notifier",
+				"name":          "backend",
+			},
+			{
+				"resource_type": "notifier",
+				"name":          "admin",
+			},
+		},
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_list_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	//assert.Equal("backend", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestListNotifierDefaultParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_list_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+}
+
+func (suite *ModTwoTestSuite) TestInvalidNotifierParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"notifier": map[string]interface{}{
+			"resource_type": "notifier",
+			"name":          "does_not_exist",
+		},
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "failed")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("failed", pex.Status)
+	assert.True(len(pex.Errors) > 0)
+	assert.Equal("Bad Request: notifier not found: does_not_exist", pex.Errors[0].Error.Error())
+}
+
+func (suite *ModTwoTestSuite) TestNotifierDefaultParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("frontend", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
 func TestModTwoTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTwoTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

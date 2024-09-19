@@ -145,12 +145,31 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 	for _, v := range pipelineDefn.Params {
 		if pe.Args[v.Name] != nil {
-			if !v.Type.HasDynamicTypes() && !v.Type.IsCapsuleType() {
+			paramArg := pe.Args[v.Name]
+
+			if !hclhelpers.IsComplexType(v.Type) && !v.Type.HasDynamicTypes() {
 				val, err := gocty.ToCtyValue(pe.Args[v.Name], v.Type)
 				if err != nil {
 					return nil, err
 				}
 				params[v.Name] = val
+			} else if mapParam, ok := paramArg.(map[string]any); ok && mapParam["resource_type"] == schema.BlockTypeNotifier {
+
+				// Special handling for Notifier type param. Connection type param is different, it has late binding requirement
+				// but notifier can be fully resolved here
+				// find the notifier in the fpConfig.Notifiers
+				notifierName := mapParam["name"].(string)
+				notifier, ok := fpConfig.Notifiers[notifierName]
+				if !ok {
+					return nil, perr.BadRequestWithMessage("notifier not found: " + notifierName)
+				}
+				notifierCtyValue, err := notifier.CtyValue()
+				if err != nil {
+					return nil, err
+				}
+
+				params[v.Name] = notifierCtyValue
+
 			} else {
 				// we'll do our best here
 				val, err := hclhelpers.ConvertInterfaceToCtyValue(pe.Args[v.Name])
@@ -353,7 +372,7 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 	}
 
 	for _, p := range pipelineDefn.Params {
-		if p.IsCustomType() {
+		if p.IsConnectionType() {
 			for k, v := range params {
 				if k != p.Name {
 					continue

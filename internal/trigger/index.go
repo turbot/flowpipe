@@ -22,6 +22,7 @@ import (
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -81,20 +82,35 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 
 	response := types.TriggerExecutionResponse{}
 	var triggerRunArgs map[string]interface{}
+
+	// TODO: add support for connection
+	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, nil)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return response, nil, perr.InternalWithMessage("Error building eval context")
+	}
+
 	if len(args) > 0 || len(argsString) == 0 {
-		errs := tr.Trigger.ValidateTriggerParam(args, nil)
+		errs := parse.ValidateParams(tr.Trigger, args, evalContext)
+
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		triggerRunArgs = args
 	} else if len(argsString) > 0 {
-		coercedArgs, errs := tr.Trigger.CoerceTriggerParams(argsString, nil)
+		coercedArgs, errs := parse.CoerceParams(tr.Trigger, argsString, evalContext)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 		}
 		triggerRunArgs = coercedArgs
+	}
+
+	evalContext, err = buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return response, nil, perr.InternalWithMessage("Error building eval context")
 	}
 
 	pipeline := tr.Trigger.GetPipeline()
@@ -126,12 +142,6 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 	if !canRun {
 		slog.Error("Trigger can only be run from root mod and its immediate dependencies", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
 		return response, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod and its immediate dependencies")
-	}
-
-	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
-	if err != nil {
-		slog.Error("Error building eval context", "error", err)
-		return response, nil, perr.InternalWithMessage("Error building eval context")
 	}
 
 	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
