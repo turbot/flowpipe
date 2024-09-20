@@ -2,7 +2,7 @@
 
 [![libraries](https://img.shields.io/badge/mods-76-blue)](https://hub.flowpipe.io) &nbsp;
 [![pipelines](https://img.shields.io/badge/pipelines-1041-blue)](https://hub.flowpipe.io/mods) &nbsp;
-[![slack](https://img.shields.io/badge/slack-2297-blue)](https://turbot.com/community/join) &nbsp;
+[![slack](https://img.shields.io/badge/slack-2695-blue)](https://turbot.com/community/join) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com)
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Automation and workflow to connect your clouds to the people, systems and data that matter.
