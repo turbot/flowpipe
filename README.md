@@ -1,6 +1,6 @@
 <a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark_outline.png"></a>
 
-[![libraries](https://img.shields.io/badge/mods-62-blue)](https://hub.flowpipe.io) &nbsp;
+[![libraries](https://img.shields.io/badge/mods-76-blue)](https://hub.flowpipe.io) &nbsp;
 [![pipelines](https://img.shields.io/badge/pipelines-510-blue)](https://hub.flowpipe.io/mods) &nbsp;
 [![slack](https://img.shields.io/badge/slack-2297-blue)](https://turbot.com/community/join) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com)
