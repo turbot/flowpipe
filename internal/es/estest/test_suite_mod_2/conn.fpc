@@ -13,11 +13,9 @@ connection "aws" "example_3" {
     secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
 }
 
-
 connection "slack" "slack_conn" {
   token = "abcdefg"
 }
-
 
 connection "slack" "slack_conn_2" {
   token = env("TEST_SLACK_TOKEN")

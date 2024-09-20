@@ -258,6 +258,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 func extractConnection(valueMap map[string]cty.Value, allConnections map[string]modconfig.PipelingConnection, relevantConnections map[string]modconfig.PipelingConnection) modconfig.PipelingConnection {
 	if valueMap["name"] != cty.NilVal && valueMap["name"].Type() == cty.String && !valueMap["name"].IsNull() &&
 		valueMap["type"] != cty.NilVal && valueMap["type"].Type() == cty.String && !valueMap["type"].IsNull() {
+
 		connName := valueMap["type"].AsString() + "." + valueMap["name"].AsString()
 
 		conn := allConnections[connName]
@@ -308,8 +309,10 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 		}
 	}
 
+	paramToConnMap := map[string]string{}
+
 	for _, p := range pipelineDefn.Params {
-		if p.IsCustomType() {
+		if p.IsConnectionType() {
 			for k, v := range params {
 				if k != p.Name {
 					continue
@@ -329,6 +332,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 							return nil, nil, err
 						}
 
+						paramToConnMap[p.Name] = paramToUpdate.Name()
 						params[p.Name] = ctyVal
 					}
 					break
@@ -342,6 +346,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 								return nil, nil, err
 							}
 
+							paramToConnMap[p.Name] = paramToUpdate.Name()
 							params[p.Name] = ctyVal
 						}
 					}
@@ -350,12 +355,31 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 		}
 	}
 
-	credentialMap, err := evaluateConnectionMapForEvalContext(context.TODO(), relevantConnections)
+	connMap, err := evaluateConnectionMapForEvalContext(context.TODO(), relevantConnections)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return credentialMap, params, nil
+	for k, v := range paramToConnMap {
+		connNameParts := strings.Split(v, ".")
+		if len(connNameParts) != 2 {
+			return nil, nil, perr.BadRequestWithMessage("invalid connection name: " + v)
+		}
+		connTypeGroup := connMap[connNameParts[0]]
+		if connTypeGroup == cty.NilVal {
+			return nil, nil, perr.BadRequestWithMessage("invalid connection type: " + connNameParts[0])
+		}
+
+		connObject := connTypeGroup.AsValueMap()[connNameParts[1]]
+		if connObject == cty.NilVal {
+			return nil, nil, perr.BadRequestWithMessage("invalid connection object: " + connNameParts[1])
+		}
+
+		// Update the params with the resolved connection
+		params[k] = connObject
+	}
+
+	return connMap, params, nil
 }
 
 func evalCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]credential.Credential) (map[string]cty.Value, error) {
