@@ -299,7 +299,12 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 	}
 
 	// Execute the command
-	if input.Command != "run" {
+	validCommands := map[string]struct{}{
+		"run":    {},
+		"resume": {},
+	}
+
+	if _, ok := validCommands[input.Command]; !ok {
 		return response, nil, perr.BadRequestWithMessage("invalid command")
 	}
 
@@ -307,45 +312,53 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		return response, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
 	}
 
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewEventForExecutionID(executionId),
-		PipelineExecutionID: util.NewPipelineExecutionId(),
-		Name:                pipelineDefn.Name(),
-	}
-
-	evalContext, err := buildTempEvalContextForApi()
-	if err != nil {
-		return response, nil, err
-	}
-
-	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-		errs := parse.ValidateParams(pipelineDefn, input.Args, evalContext)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+	if input.Command == "resume" {
+		pipelineCmd := &event.PipelineQueue{
+			Event:               event.NewEventForExecutionID(executionId),
+			PipelineExecutionID: util.NewPipelineExecutionId(),
+			Name:                pipelineDefn.Name(),
 		}
-		pipelineCmd.Args = input.Args
 
-	} else if len(input.ArgsString) > 0 {
-		args, errs := parse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		evalContext, err := buildTempEvalContextForApi()
+		if err != nil {
+			return response, nil, err
 		}
-		pipelineCmd.Args = args
+
+		if len(input.Args) > 0 || len(input.ArgsString) == 0 {
+			errs := parse.ValidateParams(pipelineDefn, input.Args, evalContext)
+			if len(errs) > 0 {
+				errStrs := error_helpers.MergeErrors(errs)
+				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			}
+			pipelineCmd.Args = input.Args
+
+		} else if len(input.ArgsString) > 0 {
+			args, errs := parse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
+			if len(errs) > 0 {
+				errStrs := error_helpers.MergeErrors(errs)
+				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			}
+			pipelineCmd.Args = args
+		}
+
+		if err := esService.Send(pipelineCmd); err != nil {
+			return response, nil, err
+		}
+
+		response.Flowpipe = types.FlowpipeResponseMetadata{
+			ExecutionID:         pipelineCmd.Event.ExecutionID,
+			PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+			Pipeline:            pipelineCmd.Name,
+		}
+
+		return response, pipelineCmd, nil
+	} else if input.Command == "run" {
+		event := event.NewEventForExecutionID(executionId)
+		ex := execution.
+
 	}
 
-	if err := esService.Send(pipelineCmd); err != nil {
-		return response, nil, err
-	}
-
-	response.Flowpipe = types.FlowpipeResponseMetadata{
-		ExecutionID:         pipelineCmd.Event.ExecutionID,
-		PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-		Pipeline:            pipelineCmd.Name,
-	}
-
-	return response, pipelineCmd, nil
+	return response, nil, perr.BadRequestWithMessage("invalid command")
 }
 
 func ConstructPipelineFullyQualifiedName(pipelineName string) string {

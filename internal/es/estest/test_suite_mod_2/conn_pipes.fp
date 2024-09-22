@@ -13,11 +13,6 @@ pipeline "pipe_with_conn_param" {
         default     = connection.aws.default
     }
 
-    step "transform" "conn" {
-        value = merge(param.conn.env, {AWS_REGION = param.region})
-    }
-
-
     step "container" "describe_vpcs" {
         image = "amazon/aws-cli"
 
@@ -34,6 +29,11 @@ pipeline "pipe_with_conn_param" {
 
     }
 
+    step "sleep" "sleep" {
+        depends_on = [step.container.describe_vpcs]
+        duration = "60s"
+    }
+
   output "stdout" {
     description = "The standard output stream from the AWS CLI."
     value       = jsondecode(step.container.describe_vpcs.stdout)
@@ -43,10 +43,5 @@ pipeline "pipe_with_conn_param" {
     description = "The standard error stream from the AWS CLI."
     value       = step.container.describe_vpcs.stderr
   }
-
-
-    output "val" {
-        value = step.transform.conn
-    }
 
 }

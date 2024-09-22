@@ -15,6 +15,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/constants"
@@ -871,4 +872,83 @@ func SaveEventToSQLite(db *sql.DB, executionID string, event event.EventLogImpl)
 		return err
 	}
 	return nil
+}
+
+func LoadExecutionFromProcessDB(e *event.Event) (*ExecutionInMemory, error) {
+
+	if e.ExecutionID == "" {
+		return nil, perr.BadRequestWithMessage("event execution ID is empty")
+	}
+
+	ex := &ExecutionInMemory{
+		Execution: Execution{
+			ID:                 e.ExecutionID,
+			PipelineExecutions: map[string]*PipelineExecution{},
+			Lock:               event.GetEventStoreMutex(e.ExecutionID),
+		},
+	}
+
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare query to select all events
+	query := `select id, struct_version, process_id, message, level, created_at, detail from event where process_id = ? order by created_at asc`
+	rows, err := db.Query(query, e.ExecutionID)
+	if err != nil {
+		slog.Error("error querying event table", "error", err)
+		return nil, perr.InternalWithMessage("error querying event table")
+	}
+	defer rows.Close()
+
+	// Iterate through the result set
+	for rows.Next() {
+
+		var id string
+		var structVersion string
+		var processId string
+		var message string
+		var level string
+		var createdAt time.Time
+		var detailString string
+
+		err := rows.Scan(&id, &structVersion, &processId, &message, &level, &createdAt, &detailString)
+		if err != nil {
+			slog.Error("error scanning event table", "error", err)
+			return nil, perr.InternalWithMessage("error scanning event table")
+		}
+
+		ele := event.EventLogImpl{
+			ID:            id,
+			StructVersion: structVersion,
+			ProcessID:     processId,
+			Message:       message,
+			Level:         level,
+			CreatedAt:     createdAt,
+		}
+
+		// marshall the payload
+		var detail interface{}
+		err = json.Unmarshal([]byte(detailString), &detail)
+		if err != nil {
+			slog.Error("error unmarshalling event payload", "error", err)
+			return nil, perr.InternalWithMessage("error unmarshalling event payload")
+		}
+
+		ele.SetDetail(detail)
+
+		err = ex.AppendEventLogEntry(ele)
+		if err != nil {
+			slog.Error("Fail to append event entry to execution", "execution", ex.ID, "error", err, "string", detailString)
+			return nil, err
+		}
+	}
+
+	if rows.Err() != nil {
+		slog.Error("error iterating event table", "error", rows.Err())
+		return nil, perr.InternalWithMessage("error iterating event table")
+	}
+
+	return ex, nil
 }
