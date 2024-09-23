@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v0.9.2 [tbd]
+
+_Bug fixes_
+
+* Pipeline reference to nested mod's pipeline now works. ([#908](https://github.com/turbot/flowpipe/issues/908))
+
 ## v0.9.1 [2024-09-09]
 
 _Bug fixes_
