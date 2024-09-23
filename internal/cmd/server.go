@@ -53,14 +53,16 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		// Check if the port is already in use
 		if isPortInUse(viper.GetInt(constants.ArgPort)) {
 			errMsg := fmt.Sprintf("the designated port (%d) is already in use", viper.GetInt(constants.ArgPort))
-			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg)))
+			//nolint:staticcheck //temporary 0.9.x compatibility
+			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg))) //nolint:govet //temporary 0.9.x compatibility
 			os.Exit(1)
 		}
 
 		outputMode := viper.GetString(constants.ArgOutput)
 		if outputMode == constants.OutputFormatJSON || outputMode == constants.OutputFormatYAML {
 			errMsg := "server command currently only supports '--output' for 'pretty' or 'plain'"
-			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg)))
+			//nolint:staticcheck //temporary 0.9.x compatibility
+			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", fmt.Errorf(errMsg))) //nolint:govet //temporary 0.9.x compatibility
 			os.Exit(1)
 		}
 

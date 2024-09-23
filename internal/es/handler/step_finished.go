@@ -99,7 +99,7 @@ func (h StepFinished) Handle(ctx context.Context, ei interface{}) error {
 		if evt.Output.Data == nil {
 			evt.Output.Data = make(map[string]any)
 		}
-		if evt.Output.Flowpipe != nil && len(evt.Output.Flowpipe) > 0 {
+		if evt.Output.Flowpipe != nil && len(evt.Output.Flowpipe) > 0 { //nolint:gosimple // temporary 0.9.x compatibility
 			evt.Output.Data["flowpipe"] = evt.Output.Flowpipe
 		}
 		switch evt.Output.Status {

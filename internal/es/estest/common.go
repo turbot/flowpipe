@@ -1,3 +1,4 @@
+//nolint:govet // this is a test file
 package estest
 
 import (
@@ -77,7 +78,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 
 	pex := ex.PipelineExecutions[pipelineExecutionID]
 	if pex == nil {
-		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found") //nolint:govet //temporary 0.9.x compatibility
 	}
 
 	if pex.Status == expectedState {
@@ -101,7 +102,7 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 
 		pex = ex.PipelineExecutions[pipelineExecutionID]
 		if pex == nil {
-			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+			return nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found") //nolint:govet //temporary 0.9.x compatibility
 		}
 
 		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
@@ -137,7 +138,7 @@ func getPipelineExWaitForStepStarted(suite *FlowpipeTestSuite, evt *event.Event,
 
 	pex := ex.PipelineExecutions[pipelineExecutionID]
 	if pex == nil {
-		return nil, nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found")
+		return nil, nil, nil, fmt.Errorf("Pipeline execution " + pipelineExecutionID + " not found") //nolint:govet //temporary 0.9.x compatibility
 	}
 
 	for _, stEx := range pex.StepExecutions {

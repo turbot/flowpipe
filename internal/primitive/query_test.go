@@ -1,3 +1,4 @@
+//nolint:govet // this is a test file
 package primitive
 
 import (
@@ -405,7 +406,7 @@ func TestPostgresSqlQueryListAll(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatalf("Error setting up the database: " + err.Error()) //nolint:govet //temporary 0.9.x compatibility
 	}
 
 	assert := assert.New(t)
@@ -541,7 +542,7 @@ func TestPostgresSqlQueryWithArgs(t *testing.T) {
 
 	err := applyDatabaseScript(DriverPostgres, connectionString, "./database_files/postgres_populate_data.sql")
 	if err != nil {
-		t.Fatalf("Error setting up the database: " + err.Error())
+		t.Fatalf("Error setting up the database: " + err.Error()) //nolint:govet //temporary 0.9.x compatibility
 	}
 
 	assert := assert.New(t)

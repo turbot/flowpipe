@@ -216,7 +216,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	if resp.StatusCode >= 400 {
 		output.Errors = []modconfig.StepError{
 			{
-				Error: perr.FromHttpError(fmt.Errorf(resp.Status), resp.StatusCode),
+				Error: perr.FromHttpError(fmt.Errorf(resp.Status), resp.StatusCode), //nolint:govet //temporary 0.9.x compatibility
 			},
 		}
 	}
