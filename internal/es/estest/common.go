@@ -1,4 +1,3 @@
-//nolint:govet // this is a test file
 package estest
 
 import (
