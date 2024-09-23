@@ -5,6 +5,7 @@
 _Bug fixes_
 
 * Pipeline reference to nested mod's pipeline now works. ([#908](https://github.com/turbot/flowpipe/issues/908))
+* Flowpipe no longer crash if the pipeline reference is set to a string. ([#911](https://github.com/turbot/flowpipe/issues/911))
 
 ## v0.9.1 [2024-09-09]
 
