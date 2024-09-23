@@ -8,6 +8,13 @@ _What's new?_
 * `enum` supports for `pipeline param` and `mod variable` resources. [Documentation](https://flowpipe.io/docs/tbd).
 * `connection` type supports for `pipeline param` and `mod variable` resources. ([#871](https://github.com/turbot/flowpipe/issues/871))
 
+## v0.9.2 [tbd]
+
+_Bug fixes_
+
+* Pipeline reference to nested mod's pipeline now works. ([#908](https://github.com/turbot/flowpipe/issues/908))
+* Flowpipe no longer crash if the pipeline reference is set to a string. ([#911](https://github.com/turbot/flowpipe/issues/911))
+
 ## v0.9.1 [2024-09-09]
 
 _Bug fixes_
