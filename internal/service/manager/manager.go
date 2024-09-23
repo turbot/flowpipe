@@ -228,8 +228,8 @@ func (m *Manager) initializeResources() error {
 			}
 
 			for _, c := range flowpipeConfig.PipelingConnections {
-				if !strings.HasSuffix(c.GetHclResourceImpl().FullName, ".default") {
-					slog.Debug("Connection loaded", "name", c.GetHclResourceImpl().FullName)
+				if !strings.HasSuffix(c.Name(), ".default") {
+					slog.Debug("Connection loaded", "name", c.Name())
 				}
 			}
 		}

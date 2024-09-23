@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/go-kit/helpers"
-
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/constants"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
@@ -340,7 +340,7 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 	}
 
 	allConnections := fpConfig.PipelingConnections
-	relevantConnections := map[string]modconfig.PipelingConnection{}
+	relevantConnections := map[string]connection.PipelingConnection{}
 	dynamicConnType := map[string]bool{}
 
 	for _, connectionName := range connectionsInContext {
@@ -362,7 +362,7 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 			if v.Type() == cty.String && !v.IsNull() {
 				potentialConnName := v.AsString()
 				for _, c := range allConnections {
-					if c.GetHclResourceImpl().ShortName == potentialConnName && dynamicConnType[c.GetConnectionType()] {
+					if c.GetShortName() == potentialConnName && dynamicConnType[c.GetConnectionType()] {
 						relevantConnections[c.Name()] = c
 						break
 					}
