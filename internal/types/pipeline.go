@@ -388,7 +388,7 @@ type FlowpipeResponseMetadata struct {
 }
 
 type CmdPipeline struct {
-	Command       string                 `json:"command" binding:"required,oneof=run,resume"`
+	Command       string                 `json:"command" binding:"required,oneof=run"`
 	ExecutionID   string                 `json:"execution_id,omitempty"`
 	Args          map[string]interface{} `json:"args,omitempty"`
 	ArgsString    map[string]string      `json:"args_string,omitempty"`

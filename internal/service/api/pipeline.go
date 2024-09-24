@@ -312,7 +312,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		return response, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
 	}
 
-	if input.Command == "resume" {
+	if input.Command == "run" {
 		pipelineCmd := &event.PipelineQueue{
 			Event:               event.NewEventForExecutionID(executionId),
 			PipelineExecutionID: util.NewPipelineExecutionId(),
@@ -352,10 +352,6 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		}
 
 		return response, pipelineCmd, nil
-	} else if input.Command == "run" {
-		event := event.NewEventForExecutionID(executionId)
-		ex := execution.
-
 	}
 
 	return response, nil, perr.BadRequestWithMessage("invalid command")

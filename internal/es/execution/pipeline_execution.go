@@ -401,10 +401,6 @@ func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 	return true
 }
 
-func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
-	return false
-}
-
 // TODO: this doesn't work for step execution retry, it assumes that the entire step
 // TODO: must be retried
 func (pe *PipelineExecution) IsStepQueued(stepName string) bool {

@@ -23,19 +23,13 @@ func (e *PipelineResume) HandlerName() string {
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineResumeOption func(*PipelineResume) error
 
-func NewPipelineResume(pipelineExecutionID string, opts ...PipelineResumeOption) (*PipelineResume, error) {
+func NewPipelineResume(executionId, pipelineExecutionId string) *PipelineResume {
 	// Defaults
-	e := NewEventForExecutionID(pipelineExecutionID)
+	e := NewEventForExecutionID(executionId)
 	// Defaults
 	evt := &PipelineResume{
-		Event: e,
+		Event:               e,
+		PipelineExecutionID: pipelineExecutionId,
 	}
-	// Set options
-	for _, opt := range opts {
-		err := opt(evt)
-		if err != nil {
-			return evt, err
-		}
-	}
-	return evt, nil
+	return evt
 }

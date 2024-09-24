@@ -19,17 +19,17 @@ func (e *PipelinePause) HandlerName() string {
 	return CommandPipelinePause
 }
 
-// ExecutionOption is a function that modifies an Execution instance.
 type PipelinePauseOption func(*PipelinePause) error
 
-// NewPipelineCancel creates a new PipelineCancel event.
-func NewPipelinePause(pipelineExecutionID string, opts ...PipelinePauseOption) (*PipelinePause, error) {
+func NewPipelinePause(executionId, pipelineExecutionId string, opts ...PipelinePauseOption) (*PipelinePause, error) {
 	// Defaults
-	e := NewEventForExecutionID(pipelineExecutionID)
+	e := NewEventForExecutionID(executionId)
 	// Defaults
 	cmd := &PipelinePause{
-		Event: e,
+		Event:               e,
+		PipelineExecutionID: pipelineExecutionId,
 	}
+
 	// Set options
 	for _, opt := range opts {
 		err := opt(cmd)
@@ -38,4 +38,12 @@ func NewPipelinePause(pipelineExecutionID string, opts ...PipelinePauseOption) (
 		}
 	}
 	return cmd, nil
+}
+
+func PipelinePauseFromPipelinePlanned(e *PipelinePlanned) *PipelinePause {
+	cmd := &PipelinePause{
+		Event:               NewFlowEvent(e.Event),
+		PipelineExecutionID: e.PipelineExecutionID,
+	}
+	return cmd
 }
