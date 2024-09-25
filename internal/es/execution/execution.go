@@ -129,10 +129,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	// that are used by the pipelines. The connections are special because they may need to be resolved before
 	// we use them i.e. temp AWS creds.
 
-	connMap, err := parse.BuildTemporaryConnectionMapForEvalContext(context.TODO(), fpConfig.PipelingConnections)
-	if err != nil {
-		return nil, err
-	}
+	connMap := parse.BuildTemporaryConnectionMapForEvalContext(fpConfig.PipelingConnections)
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
@@ -180,7 +177,7 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 		addConn = true
 	} else {
 		for _, p := range pipelineDefn.Params {
-			if p.IsCustomType() {
+			if modconfig.IsCustomType(p.Type) {
 				addConn = true
 				break
 			}
