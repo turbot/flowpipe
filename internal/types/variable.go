@@ -13,7 +13,9 @@ import (
 )
 
 func NewPrintableVariable(resp *ListVariableResponse) *PrintableVariable {
-	result := &PrintableVariable{}
+	result := &PrintableVariable{
+		Items: []FpVariable{},
+	}
 
 	for _, item := range resp.Items {
 		result.Items = append(result.Items, *item)

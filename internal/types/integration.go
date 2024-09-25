@@ -228,9 +228,15 @@ func FpIntegrationFromModIntegration(integration modconfig.Integration) (*FpInte
 }
 
 func NewPrintableIntegration(resp *ListIntegrationResponse) *PrintableIntegration {
-	return &PrintableIntegration{
-		Items: resp.Items,
+	result := &PrintableIntegration{
+		Items: []FpIntegration{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintableIntegrationFromSingle(input *FpIntegration) *PrintableIntegration {

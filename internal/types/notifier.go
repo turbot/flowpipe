@@ -182,9 +182,15 @@ func ListNotifierResponseFromAPI(apiResp *flowpipeapiclient.ListNotifierResponse
 }
 
 func NewPrintableNotifier(resp *ListNotifierResponse) *PrintableNotifier {
-	return &PrintableNotifier{
-		Items: resp.Items,
+	result := &PrintableNotifier{
+		Items: []FpNotifier{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintableNotifierFromSingle(input *FpNotifier) *PrintableNotifier {

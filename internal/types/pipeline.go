@@ -409,9 +409,15 @@ type PrintablePipeline struct {
 }
 
 func NewPrintablePipeline(resp *ListPipelineResponse) *PrintablePipeline {
-	return &PrintablePipeline{
-		Items: resp.Items,
+	result := &PrintablePipeline{
+		Items: []FpPipeline{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintablePipelineFromSingle(input *FpPipeline) *PrintablePipeline {

@@ -204,9 +204,15 @@ func (p PrintableTrigger) GetItems() []FpTrigger {
 }
 
 func NewPrintableTrigger(resp *ListTriggerResponse) *PrintableTrigger {
-	return &PrintableTrigger{
-		Items: resp.Items,
+	result := &PrintableTrigger{
+		Items: []FpTrigger{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintableTriggerFromSingle(input *FpTrigger) *PrintableTrigger {
