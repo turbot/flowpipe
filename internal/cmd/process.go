@@ -3,19 +3,28 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cmd/common"
+	"github.com/turbot/flowpipe/internal/es/command"
+	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 // process commands
@@ -42,7 +51,8 @@ func processResumeCmd() *cobra.Command {
 		Long:  `Resume a process.`,
 	}
 	// initialize hooks
-	cmdconfig.OnCmd(cmd)
+	cmdconfig.OnCmd(cmd).
+		AddStringArrayFlag(constants.ArgResumeInput, nil, "Specify input id and step execution id to resume. Use <step execution id>:<input> format. Multiple --resume-input may be passed.")
 
 	return cmd
 }
@@ -187,6 +197,60 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 		ExecutionID:         executionId,
 		PipelineExecutionID: pipelineExecutionId,
 		Pipeline:            pipelineName,
+	}
+
+	// this applies to local only (flowpipe process resume)
+	evt := &event.Event{
+		ExecutionID: executionId,
+	}
+
+	ex, err := execution.LoadExecutionFromProcessDB(evt)
+	if err != nil {
+		return nil, types.PipelineExecutionResponse{}, err
+	}
+
+	// restart all input step poller (if there's any)
+	if routerUrl, routed := primitive.GetInputRouter(); routed {
+		resumeInputs := viper.GetStringSlice(constants.ArgResumeInput)
+
+		resumeInputMap := map[string]string{}
+		for _, input := range resumeInputs {
+			parts := strings.Split(input, ":")
+			if len(parts) != 2 {
+				return nil, types.PipelineExecutionResponse{}, perr.BadRequestWithMessage("Invalid input format. Use <step execution id>:<input>")
+			}
+			resumeInputMap[parts[0]] = parts[1]
+		}
+
+		for _, pex := range ex.PipelineExecutions {
+			pipelineDefn, err := ex.PipelineDefinition(pex.ID)
+			if err != nil {
+				return nil, types.PipelineExecutionResponse{}, err
+			}
+
+			for _, se := range pex.StepExecutions {
+				if se.Status == "running" {
+					stepDefn := pipelineDefn.GetStep(se.Name)
+					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
+						slog.Info("Resuming input step poller", "step", se.Name)
+						endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+							return command.EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, m.ESService.EventBus)
+						}
+						p := primitive.NewRoutedInput(executionId, pex.ID, se.ID, pipelineDefn.PipelineName, se.Name, routerUrl, endStepFunc)
+
+						// input id
+						input, ok := resumeInputMap[se.ID]
+						if !ok {
+							return nil, types.PipelineExecutionResponse{}, perr.BadRequestWithMessage("Input not specified for step: " + se.Name)
+						}
+
+						slog.Info("Resuming input step", "p", p, "input", input)
+
+						// p.Poll()
+					}
+				}
+			}
+		}
 	}
 
 	return m, response, nil
