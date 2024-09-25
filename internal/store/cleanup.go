@@ -104,7 +104,7 @@ func CleanupRunner() {
 
 	slog.Info("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
 
-	deleteOldJsonlFiles(filepaths.EventStoreDir(), offset)
+	// deleteOldJsonlFiles(filepaths.EventStoreDir(), offset)
 }
 
 // Force cleanup run if we haven't run it more than 1 day
