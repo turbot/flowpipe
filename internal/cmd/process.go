@@ -99,6 +99,10 @@ func resumeProcessFunc(cmd *cobra.Command, args []string) {
 	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
 	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
 
+	if progressLogs {
+		o.PipelineProgress = o.NewProgress("Resuming...")
+	}
+
 	switch {
 	case isDetach:
 		err := displayDetached(ctx, cmd, resp)
