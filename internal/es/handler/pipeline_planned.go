@@ -112,7 +112,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				slog.Info("Pipeline is waiting for steps to complete", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 
 				// check if the step has been running for more than 5 minutes
-				if time.Since(latestActionTimestamp) > 10*time.Second {
+				if time.Since(latestActionTimestamp) > 10*time.Minute {
 					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 					cmd := event.PipelinePauseFromPipelinePlanned(evt)
 					err := h.CommandBus.Send(ctx, cmd)
