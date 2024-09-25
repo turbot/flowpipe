@@ -187,8 +187,17 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			p := primitive.Container{FullyQualifiedStepName: stepDefn.GetFullyQualifiedName()}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepInput:
-			p := primitive.NewInputPrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
-			output, primitiveError = p.Run(ctx, cmd.StepInput)
+			if routerUrl, routed := primitive.GetInputRouter(); routed {
+				endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
+				}
+				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, routerUrl, endStepFunc)
+				cmd.StepInput["router_url"] = routerUrl
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			} else {
+				p := primitive.NewInputPrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			}
 		case schema.BlockTypePipelineStepMessage:
 			p := primitive.NewMessagePrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
@@ -270,7 +279,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output.Status = constants.StateFinished
 		}
 
-		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && o.IsServerMode {
+		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && (o.IsServerMode || primitive.IsInputRouted()) {
 			slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 			return
 		}
