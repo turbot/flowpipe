@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -176,6 +177,7 @@ func (r *RoutedInput) execute(ctx context.Context, payload *RoutedInputCreatePay
 		return nil, err
 	}
 
+	slog.Info("RoutedInput created .. running the poller", "id", id)
 	r.Poll(ctx, client, token, id)
 
 	return output, nil
@@ -184,17 +186,21 @@ func (r *RoutedInput) execute(ctx context.Context, payload *RoutedInputCreatePay
 func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, token string, payload *RoutedInputCreatePayload) (string, error) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
+		slog.Error("failed to marshal payload", "error", err)
 		return "", perr.InternalWithMessage("failed to marshal payload")
 	}
 
 	req, err := http.NewRequest("POST", r.RoutedUrl, bytes.NewBuffer(jsonPayload))
 	if err != nil {
+		slog.Error("failed to create request", "error", err)
 		return "", perr.InternalWithMessage("failed to create request")
 	}
 
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
+	// TODO: remove this log entry before final release
+	slog.Info("RoutedInput creating ..", "payload", string(jsonPayload))
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", perr.InternalWithMessage("failed to execute request")
@@ -222,10 +228,16 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 		req, _ := http.NewRequest("GET", pollUrl, nil)
 		req.Header.Set("Authorization", "Bearer "+token)
 
+		slog.Info("RoutedInput polling start", "url", pollUrl)
+
+		count := 0
+
 		for {
 			var err error
 			time.Sleep(5 * time.Second) // TODO: #refactor better approach - this is at loop initialisation to handle continue from err delay before retry
 
+			count++
+			slog.Info("RoutedInput polling ..", "url", pollUrl, "count", count)
 			resp, err := client.Do(req)
 			if err != nil {
 				// TODO: #error handle errors in polling?
@@ -236,12 +248,14 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 			resBody, err := io.ReadAll(resp.Body)
 			if err != nil {
 				// TODO: #error handle errors in polling?
+				slog.Error("failed to read response body", "error", err)
 				continue
 			}
 			var response RoutedInputResponse
 			err = json.Unmarshal(resBody, &response)
 			if err != nil {
 				// TODO: #error handle errors in polling?
+				slog.Error("failed to unmarshal response body", "error", err)
 				continue
 			}
 
@@ -266,6 +280,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 						err = r.endFunc(stepExecution, &out)
 						if err != nil {
 							// TODO: #error handle errors in polling?
+							slog.Error("failed to end step", "error", err)
 							continue
 						}
 
