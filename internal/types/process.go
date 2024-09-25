@@ -59,9 +59,15 @@ type PrintableProcess struct {
 }
 
 func NewPrintableProcess(resp *ListProcessResponse) *PrintableProcess {
-	return &PrintableProcess{
-		Items: resp.Items,
+	result := &PrintableProcess{
+		Items: []Process{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintableProcessFromSingle(input *Process) *PrintableProcess {
