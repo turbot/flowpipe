@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/es/command"
@@ -134,6 +136,61 @@ func (api *APIService) postFormData(c *gin.Context) {
 		common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", output.ExecutionID)))
 		return
 	}
+
+	if ex.IsPaused() {
+		plannerMutex.Unlock()
+		plannerMutex = nil
+
+		// auto resume
+		// We have to do this after the execution is stored in the cache, there are code downstream
+		// that loads the execution from the cache
+		for _, pex := range ex.PipelineExecutions {
+			if !pex.IsPaused() {
+				continue
+			}
+			// Resume the execution
+			e := event.NewPipelineResume(ex.ID, pex.ID)
+			err := api.EsService.Send(e)
+			if err != nil {
+				common.AbortWithError(c, err)
+				return
+			}
+		}
+
+		var wg sync.WaitGroup
+		wg.Add(1)
+
+		// wait until the execution is resumed
+		go func() {
+			defer wg.Done() // Mark the goroutine as done when finished
+
+			for {
+				time.Sleep(200 * time.Millisecond)
+
+				e := &event.Event{
+					ExecutionID: ex.ID,
+				}
+
+				ex, err := execution.LoadExecutionFromProcessDB(e)
+				if err != nil {
+					// Handle the error, example:
+					common.AbortWithError(c, perr.NotFoundWithMessage(fmt.Sprintf("execution %s not found", e.ExecutionID)))
+					return
+				}
+
+				if !ex.IsPaused() {
+					break // Exit the loop when the execution is not paused
+				}
+			}
+		}()
+
+		// Wait for the goroutine to finish
+		wg.Wait()
+	}
+
+	// Lock again
+	plannerMutex = event.GetEventStoreMutex(output.ExecutionID)
+	plannerMutex.Lock()
 
 	pipelineExecution := ex.PipelineExecutions[output.PipelineExecutionID]
 	if pipelineExecution == nil {

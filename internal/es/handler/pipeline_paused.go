@@ -27,7 +27,7 @@ func (h PipelinePaused) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.PipelinePaused")
 	}
 
-	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
+	slog.Info("PipelinePaused event received", "execution_id", evt.Event.ExecutionID, "pipeline_execution_id", evt.PipelineExecutionID)
 
 	return nil
 }

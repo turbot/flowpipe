@@ -90,10 +90,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			continue
 		}
 
-		if pex.IsStepInLoopHold(stepDefn.GetFullyQualifiedName()) {
-			continue
-		}
-
 		// If the steps dependencies are not met, then skip it.
 		// TODO - this is completely naive and does not handle cycles.
 		dependendenciesMet := true

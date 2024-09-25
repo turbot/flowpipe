@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"time"
 
 	"log/slog"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/json"
 )
@@ -73,6 +75,70 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 				return h.CommandBus.Send(ctx, cmd)
 			}
+		} else {
+			// There are no new steps to run, but the pipeline isn't complete, so we need to wait
+			// for the existing steps to complete.
+			//
+			// We need to figure out if the steps are still running or all of the steps are in "steady state" waiting
+			// for external events to trigger them. Currently, this only applies to input steps
+			onlyInputStepsRunning := false
+			var latestActionTimestamp time.Time
+			for _, stepExecution := range pex.StepExecutions {
+				slog.Info("Checking step", "step", stepExecution.Name, "status", stepExecution.Status)
+				if stepExecution.Status == "starting" {
+					stepName := stepExecution.Name
+					stepDefn := pipelineDefn.GetStep(stepName)
+					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
+						onlyInputStepsRunning = true
+						if latestActionTimestamp.IsZero() || stepExecution.StartTime.After(latestActionTimestamp) {
+							latestActionTimestamp = stepExecution.StartTime
+						}
+					} else {
+						onlyInputStepsRunning = false
+						// As soon as there's another non-input step that is running, we break
+						break
+					}
+				}
+			}
+
+			if onlyInputStepsRunning {
+
+				if !pex.ResumedAt.IsZero() {
+					if pex.ResumedAt.After(latestActionTimestamp) {
+						latestActionTimestamp = pex.ResumedAt
+					}
+				}
+
+				slog.Info("Pipeline is waiting for steps to complete", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
+
+				// check if the step has been running for more than 5 minutes
+				if time.Since(latestActionTimestamp) > 10*time.Second {
+					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
+					cmd := event.PipelinePauseFromPipelinePlanned(evt)
+					err := h.CommandBus.Send(ctx, cmd)
+					if err != nil {
+						slog.Error("Error publishing event", "error", err)
+					}
+				} else {
+					// raise pipeline plan event in 5 minutes in a separate go routine so it doesn't block this handler
+					go func() {
+						// time.Sleep(5 * time.Minute)
+						time.Sleep(5 * time.Second)
+						slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes, raising pipeline plan event", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
+						cmd := event.PipelinePlanFromPipelinePlanned(evt)
+						if err != nil {
+							slog.Error("Error publishing event", "error", err)
+							return
+						}
+
+						err := h.CommandBus.Send(ctx, cmd)
+						if err != nil {
+							slog.Error("Error publishing event", "error", err)
+						}
+					}()
+				}
+			}
+
 		}
 
 		return nil
@@ -100,7 +166,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 		return h.CommandBus.Send(ctx, cmd)
 	}
 
-	// PRE: The planner has told us what steps to run next, our job is to start them
+	// The planner has told us what steps to run next, our job is to start them
 	for _, nextStep := range evt.NextSteps {
 
 		stepDefn := pipelineDefn.GetStep(nextStep.StepName)
