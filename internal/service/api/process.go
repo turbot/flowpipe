@@ -12,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/flowpipe/internal/service/api/common"
+	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
@@ -367,23 +368,34 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 
 	executionId := uri.ProcessId
 
-	evt := &event.Event{
-		ExecutionID: executionId,
-	}
-	ex, err := execution.LoadExecutionFromProcessDB(evt)
+	// TODO: return result when the time come
+	_, _, err := ResumeProcess(executionId, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
 
+	c.JSON(http.StatusOK, nil)
+}
+
+func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecutionId, pipelineName string, err error) {
+
+	evt := &event.Event{
+		ExecutionID: executionId,
+	}
+
+	ex, err := execution.LoadExecutionFromProcessDB(evt)
+	if err != nil {
+		return "", "", err
+	}
+
 	if ex == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("execution not found"))
-		return
+		return "", "", perr.NotFoundWithMessage("execution not found")
 	}
 
 	// Check if execution can be resumed, pipeline must be in a "paused" state
 	if !ex.IsPaused() {
-		common.AbortWithError(c, perr.BadRequestWithMessage("execution is not paused: "+executionId))
+		return "", "", perr.BadRequestWithMessage("execution is not paused: " + executionId)
 	}
 
 	slog.Info("Resuming execution", "execution_id", executionId)
@@ -391,22 +403,28 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 	ok := cache.GetCache().SetWithTTL(executionId, ex, 10*365*24*time.Hour)
 	if !ok {
 		slog.Error("Error setting execution in cache", "execution_id", executionId)
-		common.AbortWithError(c, perr.InternalWithMessage("Error setting execution in cache"))
-		return
+		return "", "", perr.InternalWithMessage("Error setting execution in cache")
 	}
 
 	// We have to do this after the execution is stored in the cache, there are code downstream
 	// that loads the execution from the cache
 	for _, pex := range ex.PipelineExecutions {
 		if !pex.IsPaused() {
-			common.AbortWithError(c, perr.BadRequestWithMessage("pipeline is not paused: "+pex.ID))
+			return "", "", perr.BadRequestWithMessage("pipeline is not paused: " + pex.ID)
 		}
 		// Resume the execution
 		e := event.NewPipelineResume(ex.ID, pex.ID)
-		err := api.EsService.Send(e)
+		err := esService.Send(e)
 		if err != nil {
-			common.AbortWithError(c, err)
-			return
+			return "", "", err
 		}
+
+		// Just pick the last one for now. Not sure what to do here if there are multiple
+		// pipeline executions that are being paused. But I don't think the downstream
+		// logic (streaming logs in the CLI) can deal with that anyway.
+		pipelineExecutionId = pex.ID
+		pipelineName = pex.Name
 	}
+
+	return pipelineExecutionId, pipelineName, nil
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cmd/common"
+	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
@@ -27,11 +28,25 @@ func processCmd() *cobra.Command {
 	cmd.AddCommand(processShowCmd())
 	cmd.AddCommand(processListCmd())
 	cmd.AddCommand(processTailCmd())
+	cmd.AddCommand(processResumeCmd())
 
 	return cmd
 }
 
-// get
+func processResumeCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "resume <execution-id>",
+		Args:  cobra.ExactArgs(1),
+		Run:   resumeProcessFunc,
+		Short: "Resume a process",
+		Long:  `Resume a process.`,
+	}
+	// initialize hooks
+	cmdconfig.OnCmd(cmd)
+
+	return cmd
+}
+
 func processShowCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "show <execution-id>",
@@ -44,6 +59,61 @@ func processShowCmd() *cobra.Command {
 	cmdconfig.OnCmd(cmd)
 
 	return cmd
+}
+
+func resumeProcessFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	var err error
+	executionId := args[0]
+
+	var m *manager.Manager
+
+	var resp types.PipelineExecutionResponse
+	var pollLogFunc pollEventLogFunc
+
+	if viper.IsSet(constants.ArgHost) {
+		_, err = getProcessRemote(executionId)
+	} else {
+		m, resp, err = resumeProcessLocal(ctx, executionId)
+		pollLogFunc = pollLocalEventLog
+	}
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+
+	defer func() {
+		if m != nil {
+			_ = m.Stop()
+		}
+	}()
+
+	isDetach := viper.GetBool(constants.ArgDetach)
+	isRemote := viper.IsSet(constants.ArgHost)
+	isVerbose := viper.IsSet(constants.ArgVerbose)
+	if !isRemote && isDetach {
+		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
+		return
+	}
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
+	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
+
+	switch {
+	case isDetach:
+		err := displayDetached(ctx, cmd, resp)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+			return
+		}
+	case streamLogs:
+		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	case progressLogs:
+		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
+	default:
+		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+	}
+
 }
 
 func showProcessFunc(cmd *cobra.Command, args []string) {
@@ -92,10 +162,30 @@ func getProcessLocal(ctx context.Context, executionId string) (*types.Process, e
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
 	defer func() {
-		// TODO ignore shutdown error?
 		_ = m.Stop()
 	}()
 	return api.GetProcess(executionId)
+}
+
+func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manager, types.PipelineExecutionResponse, error) {
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	error_helpers.FailOnError(err)
+
+	pipelineExecutionId, pipelineName, err := api.ResumeProcess(executionId, m.ESService)
+
+	if err != nil {
+		return nil, types.PipelineExecutionResponse{}, err
+	}
+
+	response := types.PipelineExecutionResponse{}
+	response.Flowpipe = types.FlowpipeResponseMetadata{
+		ExecutionID:         executionId,
+		PipelineExecutionID: pipelineExecutionId,
+		Pipeline:            pipelineName,
+	}
+
+	return m, response, nil
 }
 
 // list
