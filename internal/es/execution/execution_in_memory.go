@@ -884,16 +884,6 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 
 		return ex.appendEvent(&et)
 
-	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
-		var et event.PipelineResumed
-		err := json.Unmarshal(jsonData, &et)
-		if err != nil {
-			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
-			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
-		}
-
-		return ex.appendEvent(&et)
-
 	default:
 		// TODO: should we ignore unknown types or error out?
 	}
@@ -1028,15 +1018,6 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 		if !ok {
 			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID)
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
-		}
-
-		return ex.appendEvent(et)
-
-	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
-		et, ok := logEntry.GetDetail().(*event.PipelineResumed)
-		if !ok {
-			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID)
-			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
 		}
 
 		return ex.appendEvent(et)
