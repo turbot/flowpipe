@@ -867,6 +867,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		// TODO: is this right?
 		pe.Status = "started"
+		pe.ResumedAt = et.Event.CreatedAt
 
 	case *event.PipelinePlanned:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]

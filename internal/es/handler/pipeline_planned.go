@@ -82,7 +82,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			// We need to figure out if the steps are still running or all of the steps are in "steady state" waiting
 			// for external events to trigger them. Currently, this only applies to input steps
 			onlyInputStepsRunning := false
-			var latestInputStepTimestamp time.Time
+			var latestActionTimestamp time.Time
 			for _, stepExecution := range pex.StepExecutions {
 				slog.Info("Checking step", "step", stepExecution.Name, "status", stepExecution.Status)
 				if stepExecution.Status == "starting" {
@@ -90,8 +90,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					stepDefn := pipelineDefn.GetStep(stepName)
 					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
 						onlyInputStepsRunning = true
-						if latestInputStepTimestamp.IsZero() || stepExecution.StartTime.After(latestInputStepTimestamp) {
-							latestInputStepTimestamp = stepExecution.StartTime
+						if latestActionTimestamp.IsZero() || stepExecution.StartTime.After(latestActionTimestamp) {
+							latestActionTimestamp = stepExecution.StartTime
 						}
 					} else {
 						onlyInputStepsRunning = false
@@ -100,12 +100,20 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					}
 				}
 			}
+
 			if onlyInputStepsRunning {
+
+				if !pex.ResumedAt.IsZero() {
+					if pex.ResumedAt.After(latestActionTimestamp) {
+						latestActionTimestamp = pex.ResumedAt
+					}
+				}
+
 				slog.Info("Pipeline is waiting for steps to complete", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 
 				// check if the step has been running for more than 5 minutes
-				if time.Since(latestInputStepTimestamp) > 10*time.Second {
-					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
+				if time.Since(latestActionTimestamp) > 10*time.Second {
+					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 					cmd := event.PipelinePauseFromPipelinePlanned(evt)
 					err := h.CommandBus.Send(ctx, cmd)
 					if err != nil {

@@ -29,6 +29,8 @@ type PipelineExecution struct {
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
 
+	ResumedAt time.Time `json:"resumed_at,omitempty"`
+
 	// Status of each step on a per-step index basis. Used to determine if dependencies
 	// have been met etc. Note that each step may have multiple executions, the status
 	// of which are not tracked here.

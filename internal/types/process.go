@@ -137,7 +137,7 @@ type ListProcessLogJSONResponse struct {
 }
 
 type CmdProcess struct {
-	Command             string `json:"command" binding:"required,oneof=run resume"`
+	Command             string `json:"command" binding:"required,oneof=resume"`
 	PipelineExecutionID string `json:"pipeline_execution_id,omitempty" format:"^(pexec)_[0-9a-v]{20}$"`
 	Reason              string `json:"reason,omitempty"`
 }

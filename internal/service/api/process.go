@@ -361,6 +361,10 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 		return
 	}
 
+	if input.Command != "resume" {
+		common.AbortWithError(c, perr.BadRequestWithMessage("Invalid command"))
+	}
+
 	executionId := uri.ProcessId
 
 	evt := &event.Event{

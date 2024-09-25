@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
@@ -883,6 +884,16 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 
 		return ex.appendEvent(&et)
 
+	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
+		var et event.PipelineResumed
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
+		}
+
+		return ex.appendEvent(&et)
+
 	default:
 		// TODO: should we ignore unknown types or error out?
 	}
@@ -901,7 +912,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
 		et, ok := logEntry.GetDetail().(*event.PipelineStarted)
@@ -910,7 +921,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
 		et, ok := logEntry.GetDetail().(*event.PipelineResumed)
@@ -919,7 +930,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
 		et, ok := logEntry.GetDetail().(*event.PipelinePlanned)
@@ -928,7 +939,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepQueueCommand.HandlerName(): //  "command.step_queue"
 		et, ok := logEntry.GetDetail().(*event.StepQueue)
@@ -937,7 +948,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepStartCommand.HandlerName(): // "command.step_start"
 		et, ok := logEntry.GetDetail().(*event.StepStart)
@@ -946,7 +957,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
 		et, ok := logEntry.GetDetail().(*event.StepPipelineStarted)
@@ -955,7 +966,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	// this is the generic step finish event that is fired by the command.step_start command
 	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
@@ -965,7 +976,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
 		et, ok := logEntry.GetDetail().(*event.StepForEachPlanned)
@@ -974,7 +985,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
 		et, ok := logEntry.GetDetail().(*event.PipelineCanceled)
@@ -983,7 +994,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
 		et, ok := logEntry.GetDetail().(*event.PipelinePaused)
@@ -992,7 +1003,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
 		et, ok := logEntry.GetDetail().(*event.PipelineFinish)
@@ -1001,7 +1012,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
 		et, ok := logEntry.GetDetail().(*event.PipelineFinished)
@@ -1010,7 +1021,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
 		et, ok := logEntry.GetDetail().(*event.PipelineFailed)
@@ -1019,7 +1030,16 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
+
+	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
+		et, ok := logEntry.GetDetail().(*event.PipelineResumed)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
+		}
+
+		return ex.appendEvent(et)
 
 	default:
 		// TODO: should we ignore unknown types or error out?
@@ -1060,8 +1080,18 @@ func LoadExecutionFromProcessDB(e *event.Event) (*ExecutionInMemory, error) {
 		Execution: Execution{
 			ID:                 e.ExecutionID,
 			PipelineExecutions: map[string]*PipelineExecution{},
-			Lock:               event.GetEventStoreMutex(e.ExecutionID),
 		},
+	}
+
+	var localLock *sync.Mutex
+	if ex.Lock == nil {
+		localLock = event.GetEventStoreMutex(e.ExecutionID)
+		localLock.Lock()
+		defer func() {
+			if localLock != nil {
+				localLock.Unlock()
+			}
+		}()
 	}
 
 	db, err := store.OpenFlowpipeDB()

@@ -28,7 +28,6 @@ func (h PipelinePaused) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	slog.Info("PipelinePaused event received", "execution_id", evt.Event.ExecutionID, "pipeline_execution_id", evt.PipelineExecutionID)
-	event.ReleaseEventLogMutex(evt.Event.ExecutionID)
 
 	return nil
 }
