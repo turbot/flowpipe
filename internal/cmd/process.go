@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/app_specific"
+	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -21,6 +23,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -28,6 +31,7 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/schema"
+	"golang.org/x/exp/maps"
 )
 
 // process commands
@@ -54,8 +58,7 @@ func processResumeCmd() *cobra.Command {
 		Long:  `Resume a process.`,
 	}
 	// initialize hooks
-	cmdconfig.OnCmd(cmd).
-		AddStringArrayFlag(constants.ArgResumeInput, nil, "Specify input id and step execution id to resume. Use <step execution id>:<input> format. Multiple --resume-input may be passed.")
+	cmdconfig.OnCmd(cmd)
 
 	return cmd
 }
@@ -214,23 +217,14 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 
 	// restart all input step poller (if there's any)
 	if routerUrl, routed := primitive.GetInputRouter(); routed {
-		resumeInputs := viper.GetStringSlice(constants.ArgResumeInput)
-
-		resumeInputMap := map[string]string{}
-		for _, input := range resumeInputs {
-			parts := strings.Split(input, ":")
-			if len(parts) != 2 {
-				return nil, types.PipelineExecutionResponse{}, perr.BadRequestWithMessage("Invalid input format. Use <step execution id>:<input>")
-			}
-			resumeInputMap[parts[0]] = parts[1]
+		type definitions struct {
+			PipelineDef       *modconfig.Pipeline
+			StepDef           modconfig.PipelineStep
+			PipelineExecution *execution.PipelineExecution
+			StepExecution     *execution.StepExecution
 		}
-
-		client := &http.Client{}
-		token := os.Getenv(app_specific.EnvPipesToken)
-		if token == "" {
-			return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Missing token for routed input. Please set " + app_specific.EnvPipesToken + " env variable.")
-		}
-
+		// obtain any unfinished input steps & store pipeline definition as we need this to skip poller and end step if done
+		unfinishedInputSteps := make(map[string]definitions)
 		for _, pex := range ex.PipelineExecutions {
 			pipelineDefn, err := ex.PipelineDefinition(pex.ID)
 			if err != nil {
@@ -239,24 +233,59 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 
 			for _, se := range pex.StepExecutions {
 				if se.Status == "starting" {
-					stepDefn := pipelineDefn.GetStep(se.Name)
-					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
-						slog.Info("Resuming input step poller", "step", se.Name)
-						endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
-							return command.EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, m.ESService.EventBus)
+					if pipelineDefn.GetStep(se.Name).GetType() == schema.BlockTypePipelineStepInput {
+						unfinishedInputSteps[se.ID] = definitions{
+							PipelineDef:       pipelineDefn,
+							PipelineExecution: pex,
+							StepDef:           pipelineDefn.GetStep(se.Name),
+							StepExecution:     se,
 						}
-						p := primitive.NewRoutedInput(executionId, pex.ID, se.ID, pipelineDefn.PipelineName, se.Name, routerUrl, endStepFunc)
-
-						// input id
-						input, ok := resumeInputMap[se.ID]
-						if !ok {
-							return nil, types.PipelineExecutionResponse{}, perr.BadRequestWithMessage("Input not specified for step: " + se.Name)
-						}
-
-						slog.Info("Resuming input step", "p", p, "input", input)
-
-						p.Poll(ctx, client, token, input)
 					}
+				}
+			}
+		}
+
+		if len(unfinishedInputSteps) > 0 {
+
+			steps := maps.Keys(unfinishedInputSteps)
+			token := os.Getenv(app_specific.EnvPipesToken)
+			if token == "" {
+				return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Missing token for routed input. Please set " + app_specific.EnvPipesToken + " env variable.")
+			}
+
+			inputs, e := obtainRoutedInputsForExecution(routerUrl, token, steps)
+			if e != nil {
+				return nil, types.PipelineExecutionResponse{}, e
+			}
+
+			for _, input := range inputs.Items {
+				switch input.State {
+				case "pending", "started":
+					if step, ok := unfinishedInputSteps[input.StepExecutionID]; ok {
+						slog.Info("Resuming input step poller", "step", input.StepExecutionID)
+						endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+							return command.EndStepFromApi(ex, stepExecution, step.PipelineDef, step.StepDef, out, m.ESService.EventBus)
+						}
+						p := primitive.NewRoutedInput(executionId, step.PipelineExecution.ID, step.StepExecution.ID, step.PipelineDef.PipelineName, step.StepExecution.Name, routerUrl, endStepFunc)
+						p.Poll(ctx, &http.Client{}, token, input.ID)
+					}
+				case "finished":
+					if step, ok := unfinishedInputSteps[input.StepExecutionID]; ok {
+						slog.Info("Resuming input step with result", "step", input.StepExecutionID)
+						stepShortName := strings.Split(step.StepExecution.Name, ".")[len(strings.Split(step.StepExecution.Name, "."))-1]
+						out := modconfig.Output{
+							Data: map[string]any{
+								"value": input.Inputs[stepShortName].Response,
+							},
+							Status: "finished",
+						}
+						e := command.EndStepFromApi(ex, step.StepExecution, step.PipelineDef, step.StepDef, &out, m.ESService.EventBus)
+						if e != nil {
+							return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Failed finishing input step.")
+						}
+					}
+				case "error":
+					// TODO: #refactor #error Handle failed inputs from Pipes
 				}
 			}
 		}
@@ -423,4 +452,37 @@ func buildLogDisplayInput(executionId, pipelineExecutionId string) types.Pipelin
 			PipelineExecutionID: pipelineExecutionId,
 		},
 	}
+}
+
+func obtainRoutedInputsForExecution(routerUrl string, token string, stepKeys []string) (*primitive.RoutedInputListResponse, error) {
+	client := &http.Client{}
+
+	for i, step := range stepKeys {
+		stepKeys[i] = fmt.Sprintf("'%s'", step)
+	}
+	params := url.Values{}
+	params.Add("where", fmt.Sprintf("step_execution_id in (%s)", strings.Join(stepKeys, ",")))
+	listInputUrl := fmt.Sprintf("%s?%s", routerUrl, params.Encode())
+
+	req, e := http.NewRequest(http.MethodGet, listInputUrl, nil)
+	if e != nil {
+		return nil, perr.InternalWithMessage("Failed to build request to obtain routed inputs.")
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, e := client.Do(req)
+	if e != nil {
+		return nil, perr.InternalWithMessage("Failed to obtain list of routed inputs.")
+	}
+	defer resp.Body.Close()
+	resBody, e := io.ReadAll(resp.Body)
+	if e != nil {
+		return nil, perr.InternalWithMessage("Failed reading response body.")
+	}
+	var inputs primitive.RoutedInputListResponse
+	e = json.Unmarshal(resBody, &inputs)
+	if e != nil {
+		return nil, perr.InternalWithMessage("Failed to deserialize the response body from input router.")
+	}
+
+	return &inputs, nil
 }
