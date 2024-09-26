@@ -3,18 +3,31 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/app_specific"
+	"log/slog"
+	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cmd/common"
+	"github.com/turbot/flowpipe/internal/es/command"
+	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
+	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/schema"
 )
 
 // process commands
@@ -27,11 +40,26 @@ func processCmd() *cobra.Command {
 	cmd.AddCommand(processShowCmd())
 	cmd.AddCommand(processListCmd())
 	cmd.AddCommand(processTailCmd())
+	cmd.AddCommand(processResumeCmd())
 
 	return cmd
 }
 
-// get
+func processResumeCmd() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "resume <execution-id>",
+		Args:  cobra.ExactArgs(1),
+		Run:   resumeProcessFunc,
+		Short: "Resume a process",
+		Long:  `Resume a process.`,
+	}
+	// initialize hooks
+	cmdconfig.OnCmd(cmd).
+		AddStringArrayFlag(constants.ArgResumeInput, nil, "Specify input id and step execution id to resume. Use <step execution id>:<input> format. Multiple --resume-input may be passed.")
+
+	return cmd
+}
+
 func processShowCmd() *cobra.Command {
 	var cmd = &cobra.Command{
 		Use:   "show <execution-id>",
@@ -44,6 +72,65 @@ func processShowCmd() *cobra.Command {
 	cmdconfig.OnCmd(cmd)
 
 	return cmd
+}
+
+func resumeProcessFunc(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
+	var err error
+	executionId := args[0]
+
+	var m *manager.Manager
+
+	var resp types.PipelineExecutionResponse
+	var pollLogFunc pollEventLogFunc
+
+	if viper.IsSet(constants.ArgHost) {
+		_, err = getProcessRemote(executionId)
+	} else {
+		m, resp, err = resumeProcessLocal(ctx, executionId)
+		pollLogFunc = pollLocalEventLog
+	}
+	if err != nil {
+		error_helpers.ShowError(ctx, err)
+		return
+	}
+
+	defer func() {
+		if m != nil {
+			_ = m.Stop()
+		}
+	}()
+
+	isDetach := viper.GetBool(constants.ArgDetach)
+	isRemote := viper.IsSet(constants.ArgHost)
+	isVerbose := viper.IsSet(constants.ArgVerbose)
+	if !isRemote && isDetach {
+		error_helpers.ShowError(ctx, fmt.Errorf("unable to use --detach with local execution"))
+		return
+	}
+	output := viper.GetString(constants.ArgOutput)
+	streamLogs := (output == "plain" || output == "pretty") && (o.IsServerMode || isRemote || isVerbose)
+	progressLogs := (output == "plain" || output == "pretty") && !o.IsServerMode && !isRemote && !isVerbose
+
+	if progressLogs {
+		o.PipelineProgress = o.NewProgress("Resuming...")
+	}
+
+	switch {
+	case isDetach:
+		err := displayDetached(ctx, cmd, resp)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+			return
+		}
+	case streamLogs:
+		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+	case progressLogs:
+		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
+	default:
+		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+	}
+
 }
 
 func showProcessFunc(cmd *cobra.Command, args []string) {
@@ -92,10 +179,90 @@ func getProcessLocal(ctx context.Context, executionId string) (*types.Process, e
 	m, err := manager.NewManager(ctx).Start()
 	error_helpers.FailOnError(err)
 	defer func() {
-		// TODO ignore shutdown error?
 		_ = m.Stop()
 	}()
 	return api.GetProcess(executionId)
+}
+
+func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manager, types.PipelineExecutionResponse, error) {
+	// create and start the manager in local mode (i.e. do not set listen address)
+	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+	error_helpers.FailOnError(err)
+
+	pipelineExecutionId, pipelineName, err := api.ResumeProcess(executionId, m.ESService)
+
+	if err != nil {
+		return nil, types.PipelineExecutionResponse{}, err
+	}
+
+	response := types.PipelineExecutionResponse{}
+	response.Flowpipe = types.FlowpipeResponseMetadata{
+		ExecutionID:         executionId,
+		PipelineExecutionID: pipelineExecutionId,
+		Pipeline:            pipelineName,
+	}
+
+	// this applies to local only (flowpipe process resume)
+	evt := &event.Event{
+		ExecutionID: executionId,
+	}
+
+	ex, err := execution.LoadExecutionFromProcessDB(evt)
+	if err != nil {
+		return nil, types.PipelineExecutionResponse{}, err
+	}
+
+	// restart all input step poller (if there's any)
+	if routerUrl, routed := primitive.GetInputRouter(); routed {
+		resumeInputs := viper.GetStringSlice(constants.ArgResumeInput)
+
+		resumeInputMap := map[string]string{}
+		for _, input := range resumeInputs {
+			parts := strings.Split(input, ":")
+			if len(parts) != 2 {
+				return nil, types.PipelineExecutionResponse{}, perr.BadRequestWithMessage("Invalid input format. Use <step execution id>:<input>")
+			}
+			resumeInputMap[parts[0]] = parts[1]
+		}
+
+		client := &http.Client{}
+		token := os.Getenv(app_specific.EnvPipesToken)
+		if token == "" {
+			return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Missing token for routed input. Please set " + app_specific.EnvPipesToken + " env variable.")
+		}
+
+		for _, pex := range ex.PipelineExecutions {
+			pipelineDefn, err := ex.PipelineDefinition(pex.ID)
+			if err != nil {
+				return nil, types.PipelineExecutionResponse{}, err
+			}
+
+			for _, se := range pex.StepExecutions {
+				if se.Status == "starting" {
+					stepDefn := pipelineDefn.GetStep(se.Name)
+					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
+						slog.Info("Resuming input step poller", "step", se.Name)
+						endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+							return command.EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, m.ESService.EventBus)
+						}
+						p := primitive.NewRoutedInput(executionId, pex.ID, se.ID, pipelineDefn.PipelineName, se.Name, routerUrl, endStepFunc)
+
+						// input id
+						input, ok := resumeInputMap[se.ID]
+						if !ok {
+							return nil, types.PipelineExecutionResponse{}, perr.BadRequestWithMessage("Input not specified for step: " + se.Name)
+						}
+
+						slog.Info("Resuming input step", "p", p, "input", input)
+
+						p.Poll(ctx, client, token, input)
+					}
+				}
+			}
+		}
+	}
+
+	return m, response, nil
 }
 
 // list

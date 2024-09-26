@@ -188,8 +188,8 @@ func (api *APIService) postFormData(c *gin.Context) {
 		wg.Wait()
 	}
 
+	// Lock again
 	if plannerMutex == nil {
-		// Lock again
 		plannerMutex = event.GetEventStoreMutex(output.ExecutionID)
 		plannerMutex.Lock()
 	}

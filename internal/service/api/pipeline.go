@@ -300,8 +300,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 
 	// Execute the command
 	validCommands := map[string]struct{}{
-		"run":    {},
-		"resume": {},
+		"run": {},
 	}
 
 	if _, ok := validCommands[input.Command]; !ok {

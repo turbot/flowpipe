@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"io"
 	"log/slog"
 	"net/http"
@@ -165,7 +166,7 @@ func (r *RoutedInput) execute(ctx context.Context, payload *RoutedInputCreatePay
 	}
 
 	// TODO: #refactor #question is this a requirement for all routed inputs? Will they always go to Pipes?
-	token := os.Getenv("FLOWPIPE_PIPES_TOKEN")
+	token := os.Getenv(app_specific.EnvPipesToken)
 	if token == "" {
 		return nil, perr.InternalWithMessage("missing token")
 	}

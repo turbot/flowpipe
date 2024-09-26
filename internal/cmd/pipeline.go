@@ -814,9 +814,9 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 	return complete, last, out, nil
 }
 
-func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId string, last int) (bool, int, types.ProcessEventLogs, error) {
 
-	ex, err := execution.GetExecution(exId)
+	ex, err := execution.GetExecution(executionId)
 	if err != nil {
 		return true, 0, nil, err
 	}
@@ -845,7 +845,7 @@ func pollLocalEventLog(ctx context.Context, exId, plId string, last int) (bool, 
 			if err := json.Unmarshal(jsonData, &payload); err != nil {
 				return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
 			}
-			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
+			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == pipelineExecutionId
 		}
 
 		currentIndex++
