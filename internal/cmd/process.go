@@ -268,8 +268,6 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 						}
 						p := primitive.NewRoutedInput(executionId, step.PipelineExecution.ID, step.StepExecution.ID, step.PipelineDef.PipelineName, step.StepExecution.Name, routerUrl, endStepFunc)
 						p.Poll(ctx, &http.Client{}, token, input.ID)
-					} else {
-						// TODO: #error handle error
 					}
 				case "finished":
 					if step, ok := unfinishedInputSteps[input.StepExecutionID]; ok {
@@ -285,8 +283,6 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 						if e != nil {
 							return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Failed finishing input step.")
 						}
-					} else {
-						// TODO: #error handle error
 					}
 				case "error":
 					// TODO: #refactor #error Handle failed inputs from Pipes
