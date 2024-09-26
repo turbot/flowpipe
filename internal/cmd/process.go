@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"log/slog"
 	"net/http"
 	"os"
@@ -225,9 +226,9 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 		}
 
 		client := &http.Client{}
-		token := os.Getenv("FLOWPIPE_PIPES_TOKEN")
+		token := os.Getenv(app_specific.EnvPipesToken)
 		if token == "" {
-			return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Missing token for routed input. Please set FLOWPIPE_PIPES_TOKEN env variable.")
+			return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Missing token for routed input. Please set " + app_specific.EnvPipesToken + " env variable.")
 		}
 
 		for _, pex := range ex.PipelineExecutions {
