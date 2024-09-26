@@ -281,6 +281,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && (o.IsServerMode || primitive.IsInputRouted()) {
 			slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+			raisePipelinePlannedFromStepStart(stepDefn, cmd, h.EventBus)
 			return
 		}
 
@@ -318,6 +319,29 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 	}(ctx, c, h)
 
 	return nil
+}
+
+// This should only be called by input steps. It raises a pipeline planned event which in turn will do a regular check
+// to see if the pipeline needs to be automatically paused
+func raisePipelinePlannedFromStepStart(stepDefn modconfig.PipelineStep, cmd *event.StepStart, eventBus FpEventBus) {
+	if stepDefn.GetType() != schema.BlockTypePipelineStepInput {
+		return
+	}
+
+	go func() {
+		e := event.PipelinePlanned{
+			Event:     event.NewFlowEvent(cmd.Event),
+			NextSteps: []modconfig.NextStep{},
+		}
+
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+
+		err := eventBus.Publish(context.Background(), &e)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+	}()
+
 }
 
 // This function mutates stepOutput
