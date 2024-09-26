@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/turbot/pipe-fittings/app_specific"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -55,6 +55,11 @@ type RoutedInputResponse struct {
 	State           string                         `json:"state"`
 	StateReason     string                         `json:"state_reason"`
 	Inputs          map[string]RoutedInputFormData `json:"inputs"`
+}
+
+type RoutedInputListResponse struct {
+	Items     []RoutedInputResponse `json:"items"`
+	NextToken *string               `json:"next_token,omitempty"`
 }
 
 type RoutedInputFormData struct {
@@ -200,15 +205,12 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
-	// TODO: remove this log entry before final release
-	slog.Info("RoutedInput creating ..", "payload", string(jsonPayload))
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", perr.InternalWithMessage("failed to execute request")
 	}
 	defer resp.Body.Close()
 
-	// TODO: #refactor see if we can use some standard shared struct(s)
 	resBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", perr.InternalWithMessage("failed to read response body")
