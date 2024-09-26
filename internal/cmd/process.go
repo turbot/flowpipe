@@ -238,7 +238,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 			}
 
 			for _, se := range pex.StepExecutions {
-				if se.Status == "running" {
+				if se.Status == "starting" {
 					stepDefn := pipelineDefn.GetStep(se.Name)
 					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
 						slog.Info("Resuming input step poller", "step", se.Name)
