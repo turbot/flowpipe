@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -222,6 +224,12 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 			resumeInputMap[parts[0]] = parts[1]
 		}
 
+		client := &http.Client{}
+		token := os.Getenv("FLOWPIPE_PIPES_TOKEN")
+		if token == "" {
+			return nil, types.PipelineExecutionResponse{}, perr.InternalWithMessage("Missing token for routed input. Please set FLOWPIPE_PIPES_TOKEN env variable.")
+		}
+
 		for _, pex := range ex.PipelineExecutions {
 			pipelineDefn, err := ex.PipelineDefinition(pex.ID)
 			if err != nil {
@@ -246,7 +254,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 
 						slog.Info("Resuming input step", "p", p, "input", input)
 
-						// p.Poll()
+						p.Poll(ctx, client, token, input)
 					}
 				}
 			}
