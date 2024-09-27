@@ -106,7 +106,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 	//
 	// Each element in the array represent a "new" step execution. A non-for_each step execution will just have one input
 	// so if a step has a for_each we need to build the list if input. Each element in the list represents a step execution.
-	val, diags := stepForEach.Value(evalContext)
+	val, diags := stepForEach.Value(evalContext.EvalContext)
 
 	if diags.HasErrors() {
 		err := error_helpers.HclDiagsToError("param", diags)
@@ -179,7 +179,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
 			expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
 
-			val, diags := expr.Value(evalContext)
+			val, diags := expr.Value(evalContext.EvalContext)
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("diags", diags)
 				slog.Error("Error evaluating if condition", "error", err)

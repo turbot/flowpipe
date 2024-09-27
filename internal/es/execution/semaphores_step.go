@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"golang.org/x/sync/semaphore"
@@ -15,7 +14,7 @@ func pipelineStepSemaphoreCacheKey(pipelineExecutionID string, stepDefn modconfi
 	return pipelineExecutionID + "-" + stepDefn.GetFullyQualifiedName()
 }
 
-func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) error {
+func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modconfig.PipelineStep, evalContext *modconfig.EvalContext) error {
 	if stepDefn == nil || pipelineExecutionID == "" {
 		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step semaphore")
 		return nil

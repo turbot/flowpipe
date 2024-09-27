@@ -106,9 +106,9 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *hcl.EvalContext
+	var generatedEvalContext *modconfig.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -592,9 +592,9 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *hcl.EvalContext
+	var generatedEvalContext *modconfig.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -966,9 +966,9 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *hcl.EvalContext
+	var generatedEvalContext *modconfig.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -1281,9 +1281,9 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *hcl.EvalContext
+	var generatedEvalContext *modconfig.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -1433,9 +1433,9 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *hcl.EvalContext
+	var generatedEvalContext *modconfig.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),

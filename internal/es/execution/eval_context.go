@@ -1,7 +1,6 @@
 package execution
 
 import (
-	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -10,7 +9,7 @@ import (
 )
 
 // This function mutates evalContext
-func AddEachForEach(stepForEach *modconfig.StepForEach, evalContext *hcl.EvalContext) *hcl.EvalContext {
+func AddEachForEach(stepForEach *modconfig.StepForEach, evalContext *modconfig.EvalContext) *modconfig.EvalContext {
 	eachValue := map[string]cty.Value{}
 	eachValue[schema.AttributeTypeValue] = stepForEach.Each.Value
 	eachValue[schema.AttributeKey] = cty.StringVal(stepForEach.Key)
@@ -19,7 +18,7 @@ func AddEachForEach(stepForEach *modconfig.StepForEach, evalContext *hcl.EvalCon
 }
 
 // This function mutates evalContext
-func AddLoop(stepLoop *modconfig.StepLoop, evalContext *hcl.EvalContext) *hcl.EvalContext {
+func AddLoop(stepLoop *modconfig.StepLoop, evalContext *modconfig.EvalContext) *modconfig.EvalContext {
 	var loopValue cty.Value
 
 	// Always override the loop variable, this function may be called in a loop
@@ -38,7 +37,7 @@ func AddLoop(stepLoop *modconfig.StepLoop, evalContext *hcl.EvalContext) *hcl.Ev
 	return evalContext
 }
 
-func AddStepPrimitiveOutputAsResults(stepName string, output *modconfig.Output, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
+func AddStepPrimitiveOutputAsResults(stepName string, output *modconfig.Output, evalContext *modconfig.EvalContext) (*modconfig.EvalContext, error) {
 
 	var err error
 	stepPrimitiveOutputMap := map[string]cty.Value{}
@@ -56,7 +55,7 @@ func AddStepPrimitiveOutputAsResults(stepName string, output *modconfig.Output, 
 }
 
 // This function *mutates* the evalContext passed in
-func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]interface{}, stepInput *modconfig.Input, evalContext *hcl.EvalContext) (*hcl.EvalContext, error) {
+func AddStepCalculatedOutputAsResults(stepName string, stepOutput map[string]interface{}, stepInput *modconfig.Input, evalContext *modconfig.EvalContext) (*modconfig.EvalContext, error) {
 
 	var err error
 

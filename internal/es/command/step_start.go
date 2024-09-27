@@ -351,7 +351,7 @@ func raisePipelinePlannedFromStepStart(stepDefn modconfig.PipelineStep, cmd *eve
 // Evaluation error, i.e. calculating the output, it fails the step and the retry and ignore error directives are not followed.
 //
 // The way this function is returned, whatever output currently calculated will be returned.
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, cmdStepForEach *modconfig.StepForEach, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *modconfig.EvalContext, cmdStepForEach *modconfig.StepForEach, stepOutput map[string]interface{}) (*modconfig.EvalContext, map[string]interface{}, error) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
@@ -360,7 +360,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 				evalContext = execution.AddEachForEach(cmdStepForEach, evalContext)
 			}
 
-			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext)
+			ctyValue, diags := outputConfig.UnresolvedValue.Value(evalContext.EvalContext)
 			if len(diags) > 0 && diags.HasErrors() {
 				slog.Error("Error calculating output on step start", "error", diags)
 
@@ -387,7 +387,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, evalCtx *hcl.EvalContext, h StepStartHandler) bool {
+func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, evalCtx *modconfig.EvalContext, h StepStartHandler) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
 		args := modconfig.Input{}
@@ -483,7 +483,7 @@ func EndStepFromApi(ex *execution.ExecutionInMemory, stepExecution *execution.St
 	return nil
 }
 
-func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context, eventBus FpEventBus) {
+func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *modconfig.Output, stepOutput map[string]interface{}, stepDefn modconfig.PipelineStep, evalContext *modconfig.EvalContext, ctx context.Context, eventBus FpEventBus) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
 	endStepEvalContext, err := execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, &cmd.StepInput, evalContext)
@@ -652,7 +652,7 @@ func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, eventBus
 
 // This function returns 2 error. The first error is the result of the "throw" calculation, the second
 // error is system error that should lead directly to pipeline fail
-func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*perr.ErrorModel, error) {
+func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalContext *modconfig.EvalContext) (*perr.ErrorModel, error) {
 	throwConfigs := stepDefn.GetThrowConfig()
 
 	if len(throwConfigs) == 0 {
@@ -686,7 +686,7 @@ func calculateThrow(ctx context.Context, stepDefn modconfig.PipelineStep, evalCo
 	return nil, nil
 }
 
-func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepRetry, hcl.Diagnostics) {
+func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDefn modconfig.PipelineStep, evalContext *modconfig.EvalContext) (*modconfig.StepRetry, hcl.Diagnostics) {
 	// we have error, check the if there's a retry block
 	retryConfig, diags := stepDefn.GetRetryConfig(evalContext, true)
 
@@ -719,7 +719,7 @@ func calculateRetry(ctx context.Context, stepRetry *modconfig.StepRetry, stepDef
 	return stepRetry, hcl.Diagnostics{}
 }
 
-func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopConfig modconfig.LoopDefn, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *hcl.EvalContext) (*modconfig.StepLoop, error) {
+func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopConfig modconfig.LoopDefn, stepLoop *modconfig.StepLoop, stepForEach *modconfig.StepForEach, stepDefn modconfig.PipelineStep, evalContext *modconfig.EvalContext) (*modconfig.StepLoop, error) {
 
 	// If this is the first iteration of the loop, the cmd.StepLoop should be nil
 	// thus the loop.index in the evaluation context should be 0

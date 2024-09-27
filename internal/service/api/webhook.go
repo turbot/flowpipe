@@ -156,10 +156,10 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	executionVariables["self"] = cty.ObjectVal(selfObject)
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
-	evalContext := &hcl.EvalContext{
+	evalContext := modconfig.NewEvalContext(&hcl.EvalContext{
 		Variables: executionVariables,
 		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
-	}
+	})
 
 	// Get the available methods for the trigger
 	var triggerMethods []string
