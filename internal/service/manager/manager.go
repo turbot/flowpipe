@@ -383,7 +383,7 @@ func (m *Manager) InterruptHandler() {
 	done := make(chan bool, 1)
 	go func() {
 		sig := <-sigs
-		slog.Debug("Manager exiting", "signal", sig)
+		slog.Info("Manager exiting", "signal", sig)
 		err := m.Stop()
 		if err != nil {
 			panic(err)

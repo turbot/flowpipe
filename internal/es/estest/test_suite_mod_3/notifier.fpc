@@ -1,0 +1,20 @@
+notifier "admin" {
+    title = "admin"
+    notify {
+        integration = integration.http.default
+    }
+}
+
+notifier "frontend" {
+    title = "frontend"
+    notify {
+        integration = integration.http.default
+    }
+}
+
+notifier "backend" {
+    title = "backend"
+    notify {
+        integration = integration.http.default
+    }
+}

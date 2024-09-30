@@ -79,7 +79,9 @@ func (es *ESService) Start() error {
 	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 
 	// CQRS is built on messages router. Detailed documentation: https://watermill.io/docs/messages-router/
-	router, err := message.NewRouter(message.RouterConfig{}, wLogger)
+	router, err := message.NewRouter(message.RouterConfig{
+		CloseTimeout: time.Second * 5,
+	}, wLogger)
 	if err != nil {
 		return err
 	}
