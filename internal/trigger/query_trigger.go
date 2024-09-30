@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
@@ -87,7 +88,7 @@ func (tr *TriggerRunnerQuery) RunOne() error {
 	return err
 }
 
-func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery, evalContext *modconfig.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
+func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
 		return nil, nil

@@ -160,7 +160,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			if stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf] != nil {
 				expr := stepDefn.GetUnresolvedAttributes()[schema.AttributeTypeIf]
 
-				val, diags := expr.Value(evalContext.EvalContext)
+				val, diags := expr.Value(evalContext)
 				if len(diags) > 0 {
 					err := error_helpers.HclDiagsToError("diags", diags)
 

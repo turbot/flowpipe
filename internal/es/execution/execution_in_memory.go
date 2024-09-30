@@ -5,12 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"github.com/hashicorp/hcl/v2"
 	"log/slog"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -121,7 +121,7 @@ func (ex *ExecutionInMemory) AddEvent(evt event.EventLogImpl) error {
 	return err
 }
 
-func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*modconfig.EvalContext, error) {
+func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -132,10 +132,10 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		return nil, err
 	}
 
-	evalContext := modconfig.NewEvalContext(&hcl.EvalContext{
+	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
 		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
-	})
+	}
 
 	params := map[string]cty.Value{}
 
@@ -275,7 +275,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 }
 
 // This function mutates evalContext
-func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *modconfig.EvalContext, stepDefn modconfig.PipelineStep) (*modconfig.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
 
 	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. Credentials need to be resolved, and some (AWS) resolution
 	// can be expensive, i.e. getting session token. So we try to "guess" which credentials are required. It's not perfect, especially when the credentials
@@ -301,7 +301,7 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *modconfig.
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *modconfig.EvalContext, pipelineDefn *modconfig.Pipeline) (*modconfig.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
 	stepDefns := pipelineDefn.Steps
 
 	allCredentialsDependsOn := []string{}
@@ -330,7 +330,7 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *modconfig.EvalContext, pipelineDefn *modconfig.Pipeline) (*modconfig.EvalContext, error) {
+func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
 	stepDefns := pipelineDefn.Steps
 
 	allConnectionsDependsOn := []string{}

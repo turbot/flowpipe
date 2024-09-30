@@ -82,7 +82,7 @@ func (h PipelineFinishHandler) Handle(ctx context.Context, c interface{}) error 
 		}
 
 		for _, output := range pipelineDefn.OutputConfig {
-			ctyValue, diags := output.UnresolvedValue.Value(evalContext.EvalContext)
+			ctyValue, diags := output.UnresolvedValue.Value(evalContext)
 			if len(diags) > 0 {
 				err := error_helpers.HclDiagsToError("output", diags)
 				slog.Error("Error calculating output "+output.Name, "error", err)

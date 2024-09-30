@@ -77,7 +77,7 @@ func TestEmailStepWithParam(t *testing.T) {
 		}),
 	})
 
-	evalContext := modconfig.NewEvalContext(&hcl.EvalContext{})
+	evalContext := &hcl.EvalContext{}
 	evalContext.Variables = map[string]cty.Value{}
 	evalContext.Variables["step"] = objectVal
 

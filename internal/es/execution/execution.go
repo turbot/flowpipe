@@ -48,7 +48,7 @@ type Execution struct {
 	Lock *sync.Mutex `json:"-"`
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*modconfig.EvalContext, error) {
+func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -145,11 +145,11 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	}
 	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
 
-	return modconfig.NewEvalContext(evalContext), nil
+	return evalContext, nil
 }
 
 // This function mutates evalContext
-func (ex *Execution) AddCredentialsToEvalContext(evalContext *modconfig.EvalContext, stepDefn modconfig.PipelineStep) (*modconfig.EvalContext, error) {
+func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
 	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
 		params := map[string]cty.Value{}
 
@@ -169,7 +169,7 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *modconfig.EvalCont
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContext(evalContext *modconfig.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*modconfig.EvalContext, error) {
+func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
 
 	addConn := false
 

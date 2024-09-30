@@ -107,9 +107,9 @@ func TestTriggerQuery(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *modconfig.EvalContext
+	var generatedEvalContext *hcl.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -595,9 +595,9 @@ func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *modconfig.EvalContext
+	var generatedEvalContext *hcl.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -971,9 +971,9 @@ func TestTriggerQueryB(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *modconfig.EvalContext
+	var generatedEvalContext *hcl.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -1287,9 +1287,9 @@ func TestTriggerQueryBCustomCapture(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *modconfig.EvalContext
+	var generatedEvalContext *hcl.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
@@ -1441,9 +1441,9 @@ func TestTriggerQueryWithNull(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *modconfig.EvalContext
+	var generatedEvalContext *hcl.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
-		ValueFunc: func(evalCtx *modconfig.EvalContext) (cty.Value, hcl.Diagnostics) {
+		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
 			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),

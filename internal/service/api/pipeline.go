@@ -257,7 +257,7 @@ func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecu
 	}
 }
 
-func buildTempEvalContextForApi() (*modconfig.EvalContext, error) {
+func buildTempEvalContextForApi() (*hcl.EvalContext, error) {
 	executionVariables := make(map[string]cty.Value)
 
 	evalContext := &hcl.EvalContext{
@@ -284,7 +284,7 @@ func buildTempEvalContextForApi() (*modconfig.EvalContext, error) {
 	connMap := parse.BuildTemporaryConnectionMapForEvalContext(fpConfig.PipelingConnections)
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
-	return modconfig.NewEvalContext(evalContext), nil
+	return evalContext, nil
 }
 func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipelineDefn, err := db.GetPipeline(pipelineName)

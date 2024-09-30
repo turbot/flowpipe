@@ -204,7 +204,7 @@ func (tr *TriggerRunnerBase) GetFqueue() *fqueue.FunctionQueue {
 	return tr.Fqueue
 }
 
-func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.PipelineParam, triggerRunArgs map[string]interface{}) (*modconfig.EvalContext, error) {
+func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.PipelineParam, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 	vars := make(map[string]cty.Value)
 	if rootMod != nil {
 		for _, v := range rootMod.ResourceMaps.Variables {
@@ -246,5 +246,5 @@ func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.Pipeline
 		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
 
-	return modconfig.NewEvalContext(evalContext), nil
+	return evalContext, nil
 }
