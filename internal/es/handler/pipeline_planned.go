@@ -111,8 +111,9 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 				slog.Info("Pipeline is waiting for steps to complete", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 
-				// check if the step has been running for more than 5 minutes
-				if time.Since(latestActionTimestamp) > 10*time.Minute {
+				// Auto paused after 1 minute of inaction (waiting for input steps to complete)
+				// TODO: make this configurable
+				if time.Since(latestActionTimestamp) > 60*time.Second {
 					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 					cmd := event.PipelinePauseFromPipelinePlanned(evt)
 					err := h.CommandBus.Send(ctx, cmd)
@@ -120,9 +121,8 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						slog.Error("Error publishing event", "error", err)
 					}
 				} else {
-					// raise pipeline plan event in 5 minutes in a separate go routine so it doesn't block this handler
 					go func() {
-						// time.Sleep(5 * time.Minute)
+						// Check every 5 second what the status of the pipeline is
 						time.Sleep(5 * time.Second)
 						slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes, raising pipeline plan event", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 						cmd := event.PipelinePlanFromPipelinePlanned(evt)
