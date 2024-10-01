@@ -207,18 +207,21 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 
 	resp, err := client.Do(req)
 	if err != nil {
+		slog.Error("failed to execute request", "error", err)
 		return "", perr.InternalWithMessage("failed to execute request")
 	}
 	defer resp.Body.Close()
 
 	resBody, err := io.ReadAll(resp.Body)
 	if err != nil {
+		slog.Error("failed to read response body", "error", err)
 		return "", perr.InternalWithMessage("failed to read response body")
 	}
 
 	var response RoutedInputResponse
 	err = json.Unmarshal(resBody, &response)
 	if err != nil {
+		slog.Error("failed to unmarshal response body", "error", err)
 		return "", perr.InternalWithMessage("failed to unmarshal response body")
 	}
 
