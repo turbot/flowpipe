@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/turbot/go-kit/helpers"
-
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -18,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/connection"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
@@ -265,11 +264,7 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	return credentialMap, nil
 }
 
-func extractConnection(valueMap map[string]cty.Value, allConnections map[string]connection.PipelingConnection, relevantConnections map[string]connection.PipelingConnection) connection.PipelingConnection {
-	connName, ok := parse.ConnectionNameFromTemporaryConnectionMap(valueMap)
-	if !ok {
-		return nil
-	}
+func extractConnection(connName string, allConnections map[string]connection.PipelingConnection, relevantConnections map[string]connection.PipelingConnection) connection.PipelingConnection {
 
 	conn := allConnections[connName]
 	relevantConnections[connName] = conn
@@ -328,29 +323,14 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 					continue
 				}
 
-				if v.Type().IsObjectType() || v.Type().IsMapType() {
-					valueMap := v.AsValueMap()
-					conn := extractConnection(valueMap, allConnections, relevantConnections)
-
-					// conn can be nil because the connection has been fully resolved, so extractConnection function will not find it
-					// in the "temporary" connection map.
-					//
-					// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
-					if conn != nil {
-						ctyVal, err := conn.CtyValue()
-						if err != nil {
-							return nil, nil, nil, err
-						}
-
-						paramToConnMap[p.Name] = conn.Name()
-						params[p.Name] = ctyVal
-					}
-					break
-				} else if hclhelpers.IsCollectionOrTuple(v.Type()) {
-					// TODO is this correct - we are setting the param multiple times?
-					for _, val := range v.AsValueSlice() {
-						valueMap := val.AsValueMap()
-						conn := extractConnection(valueMap, allConnections, relevantConnections)
+				connectionNames, ok := parse.ConnectionNamesValueFromCtyValue(v)
+				if ok {
+					for _, connName := range connectionNames.AsValueSlice() {
+						conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
+						// conn can be nil because the connection has been fully resolved, so extractConnection function will not find it
+						// in the "temporary" connection map.
+						//
+						// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
 						if conn != nil {
 							ctyVal, err := conn.CtyValue()
 							if err != nil {
@@ -367,16 +347,17 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 	}
 
 	for name, v := range vars {
-		valueMap := v.AsValueMap()
 		// is this a connection type?
-		if _, isConnection := parse.ConnectionNameFromTemporaryConnectionMap(valueMap); isConnection {
-			conn := extractConnection(valueMap, allConnections, relevantConnections)
-			if conn != nil {
-				ctyVal, err := conn.CtyValue()
-				if err != nil {
-					return nil, nil, nil, err
+		if connectionNames, isConnection := parse.ConnectionNamesValueFromCtyValue(v); isConnection {
+			for _, connName := range connectionNames.AsValueSlice() {
+				conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
+				if conn != nil {
+					ctyVal, err := conn.CtyValue()
+					if err != nil {
+						return nil, nil, nil, err
+					}
+					vars[name] = ctyVal
 				}
-				vars[name] = ctyVal
 			}
 		}
 	}

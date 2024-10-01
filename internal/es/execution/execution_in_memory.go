@@ -409,27 +409,22 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 					continue
 				}
 
-				if v.Type().IsObjectType() || v.Type().IsMapType() {
-					valueMap := v.AsValueMap()
-					conn := extractConnection(valueMap, allConnections, relevantConnections)
-					ctyVal, err := conn.CtyValue()
-					if err != nil {
-						return nil, nil, err
-					}
+				connectionNames, ok := parse.ConnectionNamesValueFromCtyValue(v)
+				if ok {
+					for _, connName := range connectionNames.AsValueSlice() {
+						conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
+						// conn can be nil because the connection has been fully resolved, so extractConnection function will not find it
+						// in the "temporary" connection map.
+						//
+						// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
+						if conn != nil {
+							ctyVal, err := conn.CtyValue()
+							if err != nil {
+								return nil, nil, err
+							}
 
-					params[p.Name] = ctyVal
-					break
-				} else if hclhelpers.IsCollectionOrTuple(v.Type()) {
-					for _, val := range v.AsValueSlice() {
-						valueMap := val.AsValueMap()
-						conn := extractConnection(valueMap, allConnections, relevantConnections)
-
-						ctyVal, err := conn.CtyValue()
-						if err != nil {
-							return nil, nil, err
+							params[p.Name] = ctyVal
 						}
-
-						params[p.Name] = ctyVal
 					}
 				}
 			}
