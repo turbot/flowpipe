@@ -151,11 +151,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	// that are used by the pipelines. The connections are special because they may need to be resolved before
 	// we use them i.e. temp AWS creds.
 
-	connMap, err := parse.BuildTemporaryConnectionMapForEvalContext(context.TODO(), fpConfig.PipelingConnections)
-	if err != nil {
-		return nil, err
-	}
-
+	connMap := parse.BuildTemporaryConnectionMapForEvalContext(fpConfig.PipelingConnections)
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	for _, v := range pipelineDefn.Params {
@@ -247,7 +243,11 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
 	// populate the variables and locals
-	variablesMap := make(map[string]cty.Value)
+	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
+	variablesMap, lateBindingVars := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables)
+
+	// add these to eval context
+	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVars)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
@@ -409,27 +409,22 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 					continue
 				}
 
-				if v.Type().IsObjectType() || v.Type().IsMapType() {
-					valueMap := v.AsValueMap()
-					paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
-					ctyVal, err := paramToUpdate.CtyValue()
-					if err != nil {
-						return nil, nil, err
-					}
+				connectionNames, ok := parse.ConnectionNamesValueFromCtyValue(v)
+				if ok {
+					for _, connName := range connectionNames.AsValueSlice() {
+						conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
+						// conn can be nil because the connection has been fully resolved, so extractConnection function will not find it
+						// in the "temporary" connection map.
+						//
+						// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
+						if conn != nil {
+							ctyVal, err := conn.CtyValue()
+							if err != nil {
+								return nil, nil, err
+							}
 
-					params[p.Name] = ctyVal
-					break
-				} else if hclhelpers.IsCollectionOrTuple(v.Type()) {
-					for _, val := range v.AsValueSlice() {
-						valueMap := val.AsValueMap()
-						paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
-
-						ctyVal, err := paramToUpdate.CtyValue()
-						if err != nil {
-							return nil, nil, err
+							params[p.Name] = ctyVal
 						}
-
-						params[p.Name] = ctyVal
 					}
 				}
 			}

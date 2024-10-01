@@ -2,9 +2,8 @@ package command
 
 import (
 	"context"
-	"sync"
-
 	"log/slog"
+	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"

@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/turbot/go-kit/helpers"
-
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
@@ -18,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/connection"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
@@ -129,14 +128,18 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	// that are used by the pipelines. The connections are special because they may need to be resolved before
 	// we use them i.e. temp AWS creds.
 
-	connMap, err := parse.BuildTemporaryConnectionMapForEvalContext(context.TODO(), fpConfig.PipelingConnections)
-	if err != nil {
-		return nil, err
-	}
+	connMap := parse.BuildTemporaryConnectionMapForEvalContext(fpConfig.PipelingConnections)
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
-	variablesMap := make(map[string]cty.Value)
+
+	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
+	// NOTE: the late binding vars map contains a list of the late-binding resources that the var depends on
+	// (i.e pipeling connections)
+	variablesMap, lateBindingVars := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables)
+
+	// add these to eval context
+	evalContext.Variables[pfconstants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVars)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
@@ -180,7 +183,7 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 		addConn = true
 	} else {
 		for _, p := range pipelineDefn.Params {
-			if p.IsCustomType() {
+			if modconfig.IsCustomType(p.Type) {
 				addConn = true
 				break
 			}
@@ -189,12 +192,16 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 
 	if addConn {
 		params := map[string]cty.Value{}
-
 		if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
 			params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
 		}
 
-		connectionMap, paramsMap, err := ex.buildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params, pipelineDefn)
+		vars := map[string]cty.Value{}
+		if evalContext.Variables["var"] != cty.NilVal {
+			vars = evalContext.Variables["var"].AsValueMap()
+		}
+
+		connectionMap, paramsMap, varMap, err := ex.buildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params, vars, pipelineDefn)
 		if err != nil {
 			return nil, err
 		}
@@ -202,6 +209,7 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 		// Override what we have
 		evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
 		evalContext.Variables[schema.BlockTypeParam] = cty.ObjectVal(paramsMap)
+		evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(varMap)
 	}
 
 	return evalContext, nil
@@ -256,24 +264,17 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 	return credentialMap, nil
 }
 
-func extractConnection(valueMap map[string]cty.Value, allConnections map[string]connection.PipelingConnection, relevantConnections map[string]connection.PipelingConnection) connection.PipelingConnection {
-	if valueMap["name"] != cty.NilVal && valueMap["name"].Type() == cty.String && !valueMap["name"].IsNull() &&
-		valueMap["type"] != cty.NilVal && valueMap["type"].Type() == cty.String && !valueMap["type"].IsNull() {
+func extractConnection(connName string, allConnections map[string]connection.PipelingConnection, relevantConnections map[string]connection.PipelingConnection) connection.PipelingConnection {
 
-		connName := valueMap["type"].AsString() + "." + valueMap["name"].AsString()
-
-		conn := allConnections[connName]
-		relevantConnections[connName] = conn
-		return conn
-	}
-
-	return nil
+	conn := allConnections[connName]
+	relevantConnections[connName] = conn
+	return conn
 }
 
-func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []string, params map[string]cty.Value, pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, map[string]cty.Value, error) {
+func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []string, params, vars map[string]cty.Value, pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	allConnections := fpConfig.PipelingConnections
@@ -308,6 +309,9 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 				}
 			}
 		}
+		//for _, v := range vars {
+		// TODO kai
+		//}
 	}
 
 	paramToConnMap := map[string]string{}
@@ -319,35 +323,21 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 					continue
 				}
 
-				if v.Type().IsObjectType() || v.Type().IsMapType() {
-					valueMap := v.AsValueMap()
-					paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
-
-					// paramToUpdate can be nil because the connection has been fully resolved, so extractConnection function will not find it
-					// in the "temporary" connection map.
-					//
-					// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
-					if paramToUpdate != nil {
-						ctyVal, err := paramToUpdate.CtyValue()
-						if err != nil {
-							return nil, nil, err
-						}
-
-						paramToConnMap[p.Name] = paramToUpdate.Name()
-						params[p.Name] = ctyVal
-					}
-					break
-				} else if hclhelpers.IsCollectionOrTuple(v.Type()) {
-					for _, val := range v.AsValueSlice() {
-						valueMap := val.AsValueMap()
-						paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
-						if paramToUpdate != nil {
-							ctyVal, err := paramToUpdate.CtyValue()
+				connectionNames, ok := parse.ConnectionNamesValueFromCtyValue(v)
+				if ok {
+					for _, connName := range connectionNames.AsValueSlice() {
+						conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
+						// conn can be nil because the connection has been fully resolved, so extractConnection function will not find it
+						// in the "temporary" connection map.
+						//
+						// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
+						if conn != nil {
+							ctyVal, err := conn.CtyValue()
 							if err != nil {
-								return nil, nil, err
+								return nil, nil, nil, err
 							}
 
-							paramToConnMap[p.Name] = paramToUpdate.Name()
+							paramToConnMap[p.Name] = conn.Name()
 							params[p.Name] = ctyVal
 						}
 					}
@@ -356,31 +346,46 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 		}
 	}
 
+	for name, v := range vars {
+		// is this a connection type?
+		if connectionNames, isConnection := parse.ConnectionNamesValueFromCtyValue(v); isConnection {
+			for _, connName := range connectionNames.AsValueSlice() {
+				conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
+				if conn != nil {
+					ctyVal, err := conn.CtyValue()
+					if err != nil {
+						return nil, nil, nil, err
+					}
+					vars[name] = ctyVal
+				}
+			}
+		}
+	}
 	connMap, err := evaluateConnectionMapForEvalContext(context.TODO(), relevantConnections)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-
+	// TODO what is this for??? haven't we already donme this above?
 	for k, v := range paramToConnMap {
 		connNameParts := strings.Split(v, ".")
 		if len(connNameParts) != 2 {
-			return nil, nil, perr.BadRequestWithMessage("invalid connection name: " + v)
+			return nil, nil, nil, perr.BadRequestWithMessage("invalid connection name: " + v)
 		}
 		connTypeGroup := connMap[connNameParts[0]]
 		if connTypeGroup == cty.NilVal {
-			return nil, nil, perr.BadRequestWithMessage("invalid connection type: " + connNameParts[0])
+			return nil, nil, nil, perr.BadRequestWithMessage("invalid connection type: " + connNameParts[0])
 		}
 
 		connObject := connTypeGroup.AsValueMap()[connNameParts[1]]
 		if connObject == cty.NilVal {
-			return nil, nil, perr.BadRequestWithMessage("invalid connection object: " + connNameParts[1])
+			return nil, nil, nil, perr.BadRequestWithMessage("invalid connection object: " + connNameParts[1])
 		}
 
 		// Update the params with the resolved connection
 		params[k] = connObject
 	}
 
-	return connMap, params, nil
+	return connMap, params, vars, nil
 }
 
 func evalCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]credential.Credential) (map[string]cty.Value, error) {
