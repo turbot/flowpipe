@@ -67,7 +67,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: custom_var_rebase
+          ref: v1.6.x
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v4
