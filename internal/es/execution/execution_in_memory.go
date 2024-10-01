@@ -243,7 +243,11 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
 	// populate the variables and locals
-	variablesMap := make(map[string]cty.Value)
+	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
+	variablesMap, lateBindingVars := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables)
+
+	// add these to eval context
+	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVars)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
@@ -407,8 +411,8 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 
 				if v.Type().IsObjectType() || v.Type().IsMapType() {
 					valueMap := v.AsValueMap()
-					paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
-					ctyVal, err := paramToUpdate.CtyValue()
+					conn := extractConnection(valueMap, allConnections, relevantConnections)
+					ctyVal, err := conn.CtyValue()
 					if err != nil {
 						return nil, nil, err
 					}
@@ -418,9 +422,9 @@ func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInConte
 				} else if hclhelpers.IsCollectionOrTuple(v.Type()) {
 					for _, val := range v.AsValueSlice() {
 						valueMap := val.AsValueMap()
-						paramToUpdate := extractConnection(valueMap, allConnections, relevantConnections)
+						conn := extractConnection(valueMap, allConnections, relevantConnections)
 
-						ctyVal, err := paramToUpdate.CtyValue()
+						ctyVal, err := conn.CtyValue()
 						if err != nil {
 							return nil, nil, err
 						}
