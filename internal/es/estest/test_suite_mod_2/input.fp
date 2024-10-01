@@ -14,6 +14,18 @@ pipeline "my_step" {
         notifier = notifier.admin
     }
 
+    step "input" "my_step_2" {
+        depends_on = [step.input.my_step]
+
+        type   = "button"
+        prompt = "Do you want to approve (2)?"
+
+        option "Approve" {}
+        option "Deny" {}
+
+        notifier = notifier.admin
+    }
+
     step "transform" "do_the_thing" {
         depends_on = [step.input.my_step]
         value = step.input.my_step.value

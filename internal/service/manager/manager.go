@@ -386,7 +386,7 @@ func (m *Manager) InterruptHandler() {
 		slog.Info("Manager exiting", "signal", sig)
 		err := m.Stop()
 		if err != nil {
-			panic(err)
+			slog.Error("error stopping manager", "error", err)
 		}
 
 		done <- true

@@ -8,6 +8,8 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -76,6 +78,14 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				return h.CommandBus.Send(ctx, cmd)
 			}
 		} else {
+
+			// This following code only relevant if we are running in server mode OR console mode but not in routed input (using the CharmBracelet form)
+			if !o.IsServerMode {
+				if _, routed := primitive.GetInputRouter(); !routed {
+					return nil
+				}
+			}
+
 			// There are no new steps to run, but the pipeline isn't complete, so we need to wait
 			// for the existing steps to complete.
 			//
@@ -113,7 +123,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 				// Auto paused after 1 minute of inaction (waiting for input steps to complete)
 				// TODO: make this configurable
-				if time.Since(latestActionTimestamp) > 60*time.Second {
+				if time.Since(latestActionTimestamp) > 10*time.Second {
 					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 					cmd := event.PipelinePauseFromPipelinePlanned(evt)
 					err := h.CommandBus.Send(ctx, cmd)

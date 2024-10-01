@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -826,6 +828,16 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 
 	currentIndex := 0
 
+	paused := true
+
+	defer func() {
+		if paused {
+			slog.Info("Pipeline paused. To resume, run 'flowpipe process resume <execution-id>'")
+			// If we are here .. we should be in the local mode
+			os.Exit(0)
+		}
+	}()
+
 	for _, item := range ex.Events {
 		if currentIndex < last {
 			currentIndex++
@@ -834,7 +846,11 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 
 		res = append(res, item)
 
-		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed {
+		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed || item.Message == event.HandlerPipelinePaused {
+
+			if item.Message == event.HandlerPipelinePaused {
+				paused = true
+			}
 
 			jsonData, err := json.Marshal(item.Detail)
 			if err != nil {
