@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -833,8 +832,6 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 	defer func() {
 		if paused {
 			slog.Info("Pipeline paused. To resume, run 'flowpipe process resume <execution-id>'")
-			// If we are here .. we should be in the local mode
-			os.Exit(0)
 		}
 	}()
 
