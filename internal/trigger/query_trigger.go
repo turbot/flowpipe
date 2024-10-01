@@ -349,14 +349,31 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
 	var triggerRunArgs map[string]interface{}
+	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return triggerExecutionResponse, nil, err
+	}
 
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
+
+	resolvedConfig, err := config.GetConfig(evalContext)
+	if err != nil {
+		slog.Error("Error resolving trigger config", "error", err)
+		return triggerExecutionResponse, nil, err
+	}
+
+	resolvedTriggerConfig, ok := resolvedConfig.(*modconfig.TriggerQuery)
+	if !ok {
+		slog.Error("Error converting resolved config to TriggerQueryConfig", "error", err)
+		return triggerExecutionResponse, nil, perr.InternalWithMessage("Error converting resolved config to TriggerQueryConfig")
+	}
 
 	queryPrimitive := primitive.Query{}
 
 	input := modconfig.Input{
-		schema.AttributeTypeSql:      config.Sql,
-		schema.AttributeTypeDatabase: config.Database,
+		schema.AttributeTypeSql:      resolvedTriggerConfig.Sql,
+		schema.AttributeTypeDatabase: resolvedTriggerConfig.Database,
 	}
 
 	output, _, err := queryPrimitive.RunWithMetadata(context.Background(), input)
@@ -389,14 +406,14 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 
 	primaryKeyRowMap := map[string]interface{}{}
 
-	if config.PrimaryKey != "" {
+	if resolvedTriggerConfig.PrimaryKey != "" {
 		for _, r := range rows {
 			// get the primary key
-			primaryKey := r[config.PrimaryKey]
+			primaryKey := r[resolvedTriggerConfig.PrimaryKey]
 			if primaryKey == nil {
 				slog.Error("Primary key not found in row", "trigger", tr.Trigger.Name())
 				if o.IsServerMode {
-					errorString := fmt.Sprintf("primary key %s not found in query row from query trigger %s", config.PrimaryKey, tr.Trigger.Name())
+					errorString := fmt.Sprintf("primary key %s not found in query row from query trigger %s", resolvedTriggerConfig.PrimaryKey, tr.Trigger.Name())
 					err := perr.InternalWithMessage(errorString)
 					o.RenderServerOutput(
 						context.TODO(),
@@ -497,12 +514,6 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 		return triggerExecutionResponse, nil, err
 	}
 
-	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
-	if err != nil {
-		slog.Error("Error building eval context", "error", err)
-		return triggerExecutionResponse, nil, err
-	}
-
 	// Add the new rows to the pipeline args
 	selfVars := map[string]cty.Value{}
 
@@ -536,7 +547,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	}
 
 	var pipelineCmds []event.PipelineQueue
-	for _, capture := range config.Captures {
+	for _, capture := range resolvedTriggerConfig.Captures {
 		cmd, err := runPipeline(capture, tr, evalContext, queryStat)
 		if err != nil {
 			slog.Error("Error running pipeline", "error", err)

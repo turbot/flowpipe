@@ -1,13 +1,27 @@
 trigger "query" "simple" {
-    schedule = "* * * * *"
+    schedule = "1 * * * 1"
 
-    enabled = false
+    database = param.database_connection
 
-    database = "postgres://steampipe:@localhost:9193/steampipe"
+    param "database_connection" {
+        type = string
+        default = "postgres://steampipe:@localhost:9193/steampipe"
+    }
 
-    sql = "select * from aws_s3_bucket"
+    param "sql" {
+        type = string
+        default = "select * from aws_s3_bucket"
+    }
 
-    primary_key = "arn"
+    sql = param.sql
+
+    param "primary_key" {
+        type = string
+        default = "arn"
+    }
+
+    primary_key = param.primary_key
+
 
     capture "insert" {
         pipeline = pipeline.query_trigger_display
