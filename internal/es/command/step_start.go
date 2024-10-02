@@ -191,7 +191,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
 					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
 				}
-				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, routerUrl, endStepFunc)
+				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, schema.BlockTypePipelineStepInput, routerUrl, endStepFunc)
 				cmd.StepInput["router_url"] = routerUrl
 				output, primitiveError = p.Run(ctx, cmd.StepInput)
 			} else {
@@ -199,8 +199,17 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				output, primitiveError = p.Run(ctx, cmd.StepInput)
 			}
 		case schema.BlockTypePipelineStepMessage:
-			p := primitive.NewMessagePrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
-			output, primitiveError = p.Run(ctx, cmd.StepInput)
+			if routerUrl, routed := primitive.GetInputRouter(); routed {
+				endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
+				}
+				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, schema.BlockTypePipelineStepMessage, routerUrl, endStepFunc)
+				cmd.StepInput["router_url"] = routerUrl
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			} else {
+				p := primitive.NewMessagePrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			}
 		default:
 			slog.Error("Unknown step type", "type", stepDefn.GetType())
 
@@ -281,6 +290,12 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && (o.IsServerMode || primitive.IsInputRouted()) {
 			slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+			raisePipelinePlannedFromStepStart(stepDefn, cmd, h.EventBus)
+			return
+		}
+
+		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypePipelineStepMessage && primitive.IsInputRouted() {
+			slog.Info("routed message step started, waiting for external confirmation/response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
 			raisePipelinePlannedFromStepStart(stepDefn, cmd, h.EventBus)
 			return
 		}

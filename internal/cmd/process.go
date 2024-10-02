@@ -266,7 +266,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 						endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
 							return command.EndStepFromApi(ex, stepExecution, step.PipelineDef, step.StepDef, out, m.ESService.EventBus)
 						}
-						p := primitive.NewRoutedInput(executionId, step.PipelineExecution.ID, step.StepExecution.ID, step.PipelineDef.PipelineName, step.StepExecution.Name, routerUrl, endStepFunc)
+						p := primitive.NewRoutedInput(executionId, step.PipelineExecution.ID, step.StepExecution.ID, step.PipelineDef.PipelineName, step.StepExecution.Name, step.StepDef.GetType(), routerUrl, endStepFunc)
 						p.Poll(ctx, &http.Client{}, token, input.ID)
 					}
 				case "finished":
