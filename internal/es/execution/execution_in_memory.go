@@ -244,10 +244,10 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
-	variablesMap, lateBindingVars := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables)
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables)
 
 	// add these to eval context
-	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVars)
+	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
