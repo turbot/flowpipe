@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -218,8 +217,6 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 		slog.Error("failed to read response body", "error", err)
 		return "", perr.InternalWithMessage("failed to read response body")
 	}
-
-	fmt.Println("resBody", string(resBody))
 
 	var response RoutedInputResponse
 	err = json.Unmarshal(resBody, &response)
