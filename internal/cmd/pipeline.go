@@ -529,6 +529,17 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 						o.PipelineProgress.Update(fmt.Sprintf("[%s] Complete", pipelineName))
 					}
 
+				case event.HandlerPipelinePaused:
+					var e event.PipelinePaused
+					err := json.Unmarshal(jsonPayload, &e)
+					if err != nil {
+						error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
+						return
+					}
+					if pipelineName, ok := stepNames[e.PipelineExecutionID]; ok {
+						o.PipelineProgress.Update(fmt.Sprintf("[%s] Paused", pipelineName))
+					}
+
 				case event.HandlerPipelineFailed:
 					var e event.PipelineFailed
 					err := json.Unmarshal(jsonPayload, &e)
@@ -834,7 +845,7 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 
 		res = append(res, item)
 
-		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed {
+		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed || item.Message == event.HandlerPipelinePaused {
 
 			jsonData, err := json.Marshal(item.Detail)
 			if err != nil {

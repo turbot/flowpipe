@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"log/slog"
@@ -113,7 +114,16 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 
 				// Auto paused after 1 minute of inaction (waiting for input steps to complete)
 				// TODO: make this configurable
-				if time.Since(latestActionTimestamp) > 60*time.Second {
+				timeoutStr := os.Getenv("FLOWPIPE_AUTO_PAUSE_DURATION")
+				if timeoutStr == "" {
+					timeoutStr = "60s"
+				}
+				timeout, err := time.ParseDuration(timeoutStr)
+				if err != nil {
+					timeout = 60 * time.Second
+				}
+
+				if time.Since(latestActionTimestamp) > timeout {
 					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 					cmd := event.PipelinePauseFromPipelinePlanned(evt)
 					err := h.CommandBus.Send(ctx, cmd)

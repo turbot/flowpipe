@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -173,7 +174,7 @@ func (r *RoutedInput) execute(ctx context.Context, payload *RoutedInputCreatePay
 	// TODO: #refactor #question is this a requirement for all routed inputs? Will they always go to Pipes?
 	token := os.Getenv(app_specific.EnvPipesToken)
 	if token == "" {
-		return nil, perr.InternalWithMessage("missing token")
+		return nil, perr.BadRequestWithMessage("missing token for input router")
 	}
 
 	client := &http.Client{}
@@ -218,11 +219,13 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 		return "", perr.InternalWithMessage("failed to read response body")
 	}
 
+	fmt.Println("resBody", string(resBody))
+
 	var response RoutedInputResponse
 	err = json.Unmarshal(resBody, &response)
 	if err != nil {
 		slog.Error("failed to unmarshal response body", "error", err)
-		return "", perr.InternalWithMessage("failed to unmarshal response body")
+		return "", perr.InternalWithMessage("failed to unmarshal input router response body")
 	}
 
 	return response.ID, nil
@@ -289,10 +292,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 							slog.Error("failed to end step", "error", err)
 							continue
 						}
-
-						if err == nil {
-							return
-						}
+						return
 					}
 				}
 			}
