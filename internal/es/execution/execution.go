@@ -309,9 +309,6 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 				}
 			}
 		}
-		//for _, v := range vars {
-		// TODO kai
-		//}
 	}
 
 	paramToConnMap := map[string]string{}
@@ -365,7 +362,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	// TODO what is this for??? haven't we already donme this above?
+
 	for k, v := range paramToConnMap {
 		connNameParts := strings.Split(v, ".")
 		if len(connNameParts) != 2 {
