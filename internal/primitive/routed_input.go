@@ -27,6 +27,7 @@ type RoutedInput struct {
 	StepExecutionID     string
 	PipelineName        string
 	StepName            string
+	StepType            string
 	RoutedUrl           string
 
 	endFunc RoutedInputEndStepFunc
@@ -38,7 +39,9 @@ type RoutedInputCreatePayload struct {
 	PipelineExecutionID string                         `json:"pipeline_execution_id"`
 	StepExecutionID     string                         `json:"step_execution_id"`
 	NotifierName        string                         `json:"notifier_name"`
-	Inputs              map[string]RoutedInputFormData `json:"inputs"`
+	StepType            string                         `json:"step_type"`
+	Inputs              map[string]RoutedInputFormData `json:"inputs,omitempty"`
+	Message             *string                        `json:"message,omitempty"`
 }
 
 type RoutedInputResponse struct {
@@ -54,7 +57,9 @@ type RoutedInputResponse struct {
 	RandomID        string                         `json:"random_id"`
 	State           string                         `json:"state"`
 	StateReason     string                         `json:"state_reason"`
+	StepType        string                         `json:"step_type"`
 	Inputs          map[string]RoutedInputFormData `json:"inputs"`
+	Message         *string                        `json:"message,omitempty"`
 }
 
 type RoutedInputListResponse struct {
@@ -73,25 +78,28 @@ type RoutedInputFormData struct {
 // RoutedInputEndStepFunc is a function that ends a step
 type RoutedInputEndStepFunc func(stepExecution *execution.StepExecution, out *modconfig.Output) error
 
-func NewRoutedInput(executionID, pipelineExecutionID, stepExecutionID, pipelineName, stepName, url string, endStepFunc RoutedInputEndStepFunc) *RoutedInput {
+func NewRoutedInput(executionID, pipelineExecutionID, stepExecutionID, pipelineName, stepName, stepType, url string, endStepFunc RoutedInputEndStepFunc) *RoutedInput {
 	return &RoutedInput{
 		ExecutionID:         executionID,
 		PipelineExecutionID: pipelineExecutionID,
 		StepExecutionID:     stepExecutionID,
 		PipelineName:        pipelineName,
 		StepName:            stepName,
+		StepType:            stepType,
 		RoutedUrl:           url,
 		endFunc:             endStepFunc,
 	}
 }
 
-func NewRoutedInputHttpPayload(executionID, pipelineExecutionID, stepExecutionID, notifierName string, inputs map[string]RoutedInputFormData) *RoutedInputCreatePayload {
+func NewRoutedInputHttpPayload(executionID, pipelineExecutionID, stepExecutionID, notifierName, stepType string, inputs map[string]RoutedInputFormData, message *string) *RoutedInputCreatePayload {
 	return &RoutedInputCreatePayload{
 		ExecutionID:         executionID,
 		PipelineExecutionID: pipelineExecutionID,
 		StepExecutionID:     stepExecutionID,
 		NotifierName:        notifierName,
+		StepType:            stepType,
 		Inputs:              inputs,
+		Message:             message,
 	}
 }
 
@@ -117,9 +125,14 @@ func (r *RoutedInput) GetShortStepName() string {
 }
 
 func (r *RoutedInput) ValidateInput(ctx context.Context, i modconfig.Input) error {
-	err := validateInputStepInput(ctx, i)
-	if err != nil {
-		return err // will already be perr
+	switch r.StepType {
+	case "input":
+		err := validateInputStepInput(ctx, i)
+		if err != nil {
+			return err // will already be perr
+		}
+	case "message":
+		// no additional validation required
 	}
 
 	return nil
@@ -132,28 +145,49 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 	}
 
 	// Variables
-	var inputType, prompt, notifierName string
+	var inputType, prompt string
+	var message *string
+	var payload *RoutedInputCreatePayload
 
-	if it, ok := i[schema.AttributeTypeType].(string); ok {
-		inputType = it
+	notifierName := "default"
+	if notifier, ok := i[schema.AttributeTypeNotifier].(map[string]any); ok {
+		if name, hasName := notifier[schema.AttributeTypeNotifierName].(string); hasName {
+			notifierName = name
+		}
 	}
 
-	if p, ok := i[schema.AttributeTypePrompt].(string); ok {
-		prompt = p
-	}
+	switch r.StepType {
+	case schema.BlockTypePipelineStepMessage:
+		if t, ok := i[schema.AttributeTypeText].(string); ok {
+			message = &t
+		}
+		payload = NewRoutedInputHttpPayload(
+			r.ExecutionID,
+			r.PipelineExecutionID,
+			r.StepExecutionID,
+			notifierName,
+			r.StepType,
+			make(map[string]RoutedInputFormData),
+			message)
+	case schema.BlockTypePipelineStepInput:
+		if it, ok := i[schema.AttributeTypeType].(string); ok {
+			inputType = it
+		}
 
-	if _, ok := i[schema.AttributeTypeNotifier].(map[string]any); ok {
-		// TODO: #refactor figure out how to extract notifier name... we currently don't pass this into the step when parsing (only notifies/integrations - even those don't have names just types & details)
-		notifierName = "workspace_owners"
-	}
+		if p, ok := i[schema.AttributeTypePrompt].(string); ok {
+			prompt = p
+		}
 
-	opts := parseOptionsFromInput(i)
-	payload := NewRoutedInputHttpPayload(
-		r.ExecutionID,
-		r.PipelineExecutionID,
-		r.StepExecutionID,
-		notifierName,
-		map[string]RoutedInputFormData{r.GetShortStepName(): *NewRoutedInputHttpPayloadInput(prompt, inputType, opts)})
+		opts := parseOptionsFromInput(i)
+		payload = NewRoutedInputHttpPayload(
+			r.ExecutionID,
+			r.PipelineExecutionID,
+			r.StepExecutionID,
+			notifierName,
+			r.StepType,
+			map[string]RoutedInputFormData{r.GetShortStepName(): *NewRoutedInputHttpPayloadInput(prompt, inputType, opts)},
+			nil)
+	}
 
 	output, err := r.execute(ctx, payload)
 	if err != nil {
@@ -266,34 +300,42 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 			}
 
 			if response.State == "finished" {
-				if form, ok := response.Inputs[r.GetShortStepName()]; ok {
-					if form.Response != nil {
-						out := modconfig.Output{
-							Data: map[string]any{
-								"value": form.Response,
-							},
-							Status: "finished",
+				var out modconfig.Output
+				switch {
+				case r.StepType == schema.BlockTypePipelineStepInput:
+					if form, ok := response.Inputs[r.GetShortStepName()]; ok {
+						if form.Response != nil {
+							out = modconfig.Output{
+								Data: map[string]any{
+									"value": form.Response,
+								},
+								Status: "finished",
+							}
 						}
-
-						ex, err := execution.GetExecution(r.ExecutionID)
-						if err != nil {
-							// TODO: #error handle errors in polling?
-							continue
-						}
-						pipelineExecution := ex.PipelineExecutions[r.PipelineExecutionID]
-						stepExecution := pipelineExecution.StepExecutions[r.StepExecutionID]
-
-						err = r.endFunc(stepExecution, &out)
-						if err != nil {
-							// TODO: #error handle errors in polling?
-							slog.Error("failed to end step", "error", err)
-							continue
-						}
-						return
+					}
+				case r.StepType == schema.BlockTypePipelineStepMessage:
+					out = modconfig.Output{
+						Data:   make(map[string]any),
+						Status: "finished",
 					}
 				}
-			}
 
+				ex, err := execution.GetExecution(r.ExecutionID)
+				if err != nil {
+					// TODO: #error handle errors in polling?
+					continue
+				}
+				pipelineExecution := ex.PipelineExecutions[r.PipelineExecutionID]
+				stepExecution := pipelineExecution.StepExecutions[r.StepExecutionID]
+
+				err = r.endFunc(stepExecution, &out)
+				if err != nil {
+					// TODO: #error handle errors in polling?
+					slog.Error("failed to end step", "error", err)
+					continue
+				}
+				return
+			}
 		}
 	}()
 }
