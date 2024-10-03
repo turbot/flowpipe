@@ -17,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -111,14 +110,13 @@ func (suite *ModThreeTestSuite) TestExecutionEvents() {
 
 	name := "test_suite_mod_3.trigger.query.simple"
 
-	pipelineCmd := &event.PipelineQueue{
-		PipelineExecutionID: util.NewPipelineExecutionId(),
-		Name:                name,
+	triggerCmd := &event.TriggerQueue{
+		Name: name,
 	}
 
 	executionCmd := &event.ExecutionQueue{
-		Event:         event.NewExecutionEvent(),
-		PipelineQueue: pipelineCmd,
+		Event:        event.NewExecutionEvent(),
+		TriggerQueue: triggerCmd,
 	}
 
 	if err := suite.esService.Send(executionCmd); err != nil {
