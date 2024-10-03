@@ -321,7 +321,7 @@ type FpPipelineParam struct {
 	Enum        []interface{}     `json:"enum,omitempty"`
 	Optional    *bool             `json:"optional,omitempty"`
 	Default     any               `json:"default,omitempty"`
-	Type        any               `json:"type"`
+	Type        any               `json:"-"`
 	TypeString  string            `json:"type_string"`
 }
 
