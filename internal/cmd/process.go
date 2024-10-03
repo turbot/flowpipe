@@ -216,7 +216,9 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 	}
 
 	// restart all input step poller (if there's any)
+	slog.Info("Checking for routed input steps")
 	if routerUrl, routed := primitive.GetInputRouter(); routed {
+		slog.Info("Routed input steps found", "router", routerUrl)
 		type definitions struct {
 			PipelineDef       *modconfig.Pipeline
 			StepDef           modconfig.PipelineStep
@@ -231,7 +233,10 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 				return nil, types.PipelineExecutionResponse{}, err
 			}
 
+			// check for input steps that are starting
+			slog.Info("Checking for input steps", "pipeline", pex.ID)
 			for _, se := range pex.StepExecutions {
+				slog.Info("Checking step", "step", se.ID, "status", se.Status)
 				if se.Status == "starting" {
 					if pipelineDefn.GetStep(se.Name).GetType() == schema.BlockTypePipelineStepInput {
 						unfinishedInputSteps[se.ID] = definitions{
@@ -245,6 +250,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 			}
 		}
 
+		slog.Info("Unfinished input steps", "steps", unfinishedInputSteps)
 		if len(unfinishedInputSteps) > 0 {
 
 			steps := maps.Keys(unfinishedInputSteps)
@@ -259,6 +265,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 			}
 
 			for _, input := range inputs.Items {
+				slog.Info("Processing input", "input", input.ID, "state", input.State)
 				switch input.State {
 				case "pending", "started":
 					if step, ok := unfinishedInputSteps[input.StepExecutionID]; ok {
