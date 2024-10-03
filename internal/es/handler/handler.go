@@ -68,9 +68,15 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 
 	newExecution := false
 
+	var name string
 	pipelineQueueCmd, ok := commandEvent.(*event.PipelineQueue)
 	if ok && pipelineQueueCmd.ParentStepExecutionID == "" {
 		newExecution = true
+		name = pipelineQueueCmd.Name
+	} else if executionQueueCmd, ok := commandEvent.(*event.ExecutionQueue); ok {
+		newExecution = true
+		// TODO: this is wrong
+		name = executionQueueCmd.HandlerName()
 	}
 
 	var ex *execution.ExecutionInMemory
@@ -91,9 +97,9 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 			return perr.InternalWithMessage("Error setting execution in cache")
 		}
 
-		metrics.RunMetricInstance.StartExecution(executionID, pipelineQueueCmd.Name)
+		metrics.RunMetricInstance.StartExecution(executionID, name)
 
-		err = store.StartPipeline(executionID, pipelineQueueCmd.Name)
+		err = store.StartPipeline(executionID, name)
 		if err != nil {
 			slog.Error("Unable to save pipeline in the database", "error", err)
 			return err

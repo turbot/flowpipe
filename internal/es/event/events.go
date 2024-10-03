@@ -1,6 +1,13 @@
 package event
 
 const (
+	CommandExecutionQueue   = "command.execution_queue"
+	HandlerExecutionQueued  = "handler.execution_queued"
+	CommandExecutionStart   = "command.execution_start"
+	HandlerExecutionStarted = "handler.execution_started"
+	CommandExecutionPlan    = "command.execution_plan"
+	HandlerExecutionPlanned = "handler.execution_planned"
+
 	CommandPipelineCancel      = "command.pipeline_cancel"
 	HandlerPipelineCancelled   = "handler.pipeline_canceled"
 	CommandPipelineFail        = "command.pipeline_fail"
@@ -27,4 +34,6 @@ const (
 	CommandStepQueue           = "command.step_queue"
 	HandlerStepQueued          = "handler.step_queued"
 	CommandStepStart           = "command.step_start"
+	CommandTriggerQueue        = "command.trigger_queue"
+	HandlerTriggerQueued       = "handler.trigger_queued"
 )

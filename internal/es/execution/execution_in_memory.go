@@ -890,6 +890,24 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 
 	switch logEntry.GetEventType() {
 
+	case ExecutionQueuedEvent.HandlerName(): // "handler.execution_queued"
+		et, ok := logEntry.GetDetail().(*event.ExecutionQueued)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_queued event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_queued event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionStartedEvent.HandlerName(): // "handler.execution_started"
+		et, ok := logEntry.GetDetail().(*event.ExecutionStarted)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_started event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_started event")
+		}
+
+		return ex.appendEvent(et)
+
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
 		et, ok := logEntry.GetDetail().(*event.PipelineQueued)
 		if !ok {

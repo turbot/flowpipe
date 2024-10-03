@@ -38,7 +38,8 @@ var ExecutionMode string
 // pipelines being executed.
 type Execution struct {
 	// Unique identifier for this execution.
-	ID string `json:"id"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
 
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
@@ -810,6 +811,10 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error)
 
 // Events
 var (
+	ExecutionQueuedEvent  = event.ExecutionQueued{}
+	ExecutionStartedEvent = event.ExecutionStarted{}
+	ExecutionPlannedEvent = event.ExecutionPlanned{}
+
 	PipelineQueuedEvent   = event.PipelineQueued{}
 	PipelineStartedEvent  = event.PipelineStarted{}
 	PipelineResumedEvent  = event.PipelineResumed{}
@@ -829,6 +834,10 @@ var (
 
 // Commands
 var (
+	ExecutionQueueCommand = event.ExecutionQueue{}
+	ExecutionStartCommand = event.ExecutionStart{}
+	ExecutionPlanCommand  = event.ExecutionPlan{}
+
 	PipelineCancelCommand = event.PipelineCancel{}
 	PipelinePlanCommand   = event.PipelinePlan{}
 	PipelineFinishCommand = event.PipelineFinish{}
@@ -848,6 +857,12 @@ var (
 func (ex *Execution) appendEvent(entry interface{}) error {
 
 	switch et := entry.(type) {
+	case *event.ExecutionQueued:
+		ex.Status = "queued"
+
+	case *event.ExecutionStarted:
+		ex.Status = "started"
+
 	case *event.PipelineQueued:
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
 			ID:                    et.PipelineExecutionID,

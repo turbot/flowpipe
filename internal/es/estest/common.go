@@ -121,6 +121,44 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 	return ex, pex, nil
 }
 
+func getExAndWait(suite *FlowpipeTestSuite, executionId string, waitTime time.Duration, waitRetry int, expectedState string) (*execution.ExecutionInMemory, error) {
+
+	plannerMutex := event.GetEventStoreMutex(executionId)
+	plannerMutex.Lock()
+	defer func() {
+		if plannerMutex != nil {
+			plannerMutex.Unlock()
+		}
+	}()
+
+	ex, err := execution.GetExecution(executionId)
+	if err != nil {
+		return nil, err
+	}
+
+	// Wait for the pipeline to complete, but not forever
+	for i := 0; i < waitRetry; i++ {
+		plannerMutex.Unlock()
+		plannerMutex = nil
+
+		time.Sleep(waitTime)
+
+		plannerMutex = event.GetEventStoreMutex(executionId)
+		plannerMutex.Lock()
+
+		ex, err = execution.GetExecution(executionId)
+		if err != nil {
+			return nil, err
+		}
+
+		if ex.Status == "started" {
+			break
+		}
+	}
+
+	return ex, nil
+}
+
 func getPipelineExWaitForStepStarted(suite *FlowpipeTestSuite, evt *event.Event, pipelineExecutionID string, waitTime time.Duration, waitRetry int, stepName string) (*execution.ExecutionInMemory, *execution.PipelineExecution, *execution.StepExecution, error) {
 	startedStatuses := []string{"starting", "started", "finished", "failed"}
 	plannerMutex := event.GetEventStoreMutex(evt.ExecutionID)

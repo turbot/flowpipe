@@ -2,6 +2,7 @@ package estest
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
@@ -9,11 +10,14 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -102,14 +106,34 @@ func (suite *ModThreeTestSuite) TearDownSuite() {
 	suite.TearDownSuiteRunCount++
 }
 
-func (suite *ModThreeTestSuite) BeforeTest(suiteName, testName string) {
+func (suite *ModThreeTestSuite) TestExecutionEvents() {
+	assert := assert.New(suite.T())
+
+	name := "test_suite_mod_3.trigger.query.simple"
+
+	pipelineCmd := &event.PipelineQueue{
+		PipelineExecutionID: util.NewPipelineExecutionId(),
+		Name:                name,
+	}
+
+	executionCmd := &event.ExecutionQueue{
+		Event:         event.NewExecutionEvent(),
+		PipelineQueue: pipelineCmd,
+	}
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	//nolint:errcheck // just a test case
+	getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Second, 50, "started")
 
 }
 
-func (suite *ModThreeTestSuite) AfterTest(suiteName, testName string) {
-}
-
-func TestModTestThreeTestingSuite(t *testing.T) {
+func TestModThreeTestingSuite(t *testing.T) {
 	suite.Run(t, &ModThreeTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
 	})

@@ -27,6 +27,14 @@ func (e *PipelineQueue) HandlerName() string {
 	return CommandPipelineQueue
 }
 
+func (e *PipelineQueue) GetName() string {
+	return e.Name
+}
+
+func (e *PipelineQueue) GetType() string {
+	return "pipeline"
+}
+
 // ExecutionOption is a function that modifies an Execution instance.
 type PipelineQueueOption func(*PipelineQueue) error
 

@@ -132,6 +132,9 @@ func (es *ESService) Start() error {
 				command.StepQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.StepStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.StepForEachPlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionPlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -157,6 +160,9 @@ func (es *ESService) Start() error {
 				handler.StepQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 				handler.StepPipelineStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 				handler.StepForEachPlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionPlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 			}
 		},
 		EventsPublisher: eventsPubSub,
