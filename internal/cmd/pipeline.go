@@ -809,6 +809,8 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 
 				last = index
 
+				// TODO: we can't do what we do with pollLocalEventLog for pipeline paused because we don't have the
+				// execution object. We need to wait until we have execution_paused event before it will work properly
 				if e.Message == event.HandlerPipelineFinished || e.Message == event.HandlerPipelineFailed {
 					jsonData, err := json.Marshal(item.Detail)
 					if err != nil {
@@ -848,7 +850,17 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 
 		res = append(res, item)
 
-		if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed || item.Message == event.HandlerPipelinePaused {
+		if item.Message == event.HandlerPipelinePaused {
+			// if it's paused all pex must be in paused state before we decide it's "done"
+			paused := true
+			for _, pex := range ex.PipelineExecutions {
+				if pex.Status != "paused" {
+					paused = false
+					break
+				}
+			}
+			complete = paused
+		} else if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed {
 
 			jsonData, err := json.Marshal(item.Detail)
 			if err != nil {
