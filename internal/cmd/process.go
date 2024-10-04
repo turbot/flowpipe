@@ -468,7 +468,7 @@ func obtainRoutedInputsForExecution(routerUrl string, token string, stepKeys []s
 		req.Header.Set("Authorization", "Bearer "+token)
 		resp, e := client.Do(req)
 		if e != nil {
-			return nil, perr.InternalWithMessage("Failed to obtain list of routed inputs.")
+			return nil, perr.InternalWithMessage("Failed to get routed input details.")
 		}
 		defer resp.Body.Close()
 
