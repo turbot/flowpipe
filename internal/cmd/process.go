@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -457,32 +456,35 @@ func buildLogDisplayInput(executionId, pipelineExecutionId string) types.Pipelin
 func obtainRoutedInputsForExecution(routerUrl string, token string, stepKeys []string) (*primitive.RoutedInputListResponse, error) {
 	client := &http.Client{}
 
-	for i, step := range stepKeys {
-		stepKeys[i] = fmt.Sprintf("'%s'", step)
-	}
-	params := url.Values{}
-	params.Add("where", fmt.Sprintf("step_execution_id in (%s)", strings.Join(stepKeys, ",")))
-	listInputUrl := fmt.Sprintf("%s?%s", routerUrl, params.Encode())
+	inputItems := make([]primitive.RoutedInputResponse, 0)
+	for i := range stepKeys {
+		getInputUrl := fmt.Sprintf("%s/%s", routerUrl, stepKeys[i])
 
-	req, e := http.NewRequest(http.MethodGet, listInputUrl, nil)
-	if e != nil {
-		return nil, perr.InternalWithMessage("Failed to build request to obtain routed inputs.")
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	resp, e := client.Do(req)
-	if e != nil {
-		return nil, perr.InternalWithMessage("Failed to obtain list of routed inputs.")
-	}
-	defer resp.Body.Close()
-	resBody, e := io.ReadAll(resp.Body)
-	if e != nil {
-		return nil, perr.InternalWithMessage("Failed reading response body.")
-	}
-	var inputs primitive.RoutedInputListResponse
-	e = json.Unmarshal(resBody, &inputs)
-	if e != nil {
-		return nil, perr.InternalWithMessage("Failed to deserialize the response body from input router.")
+		req, e := http.NewRequest(http.MethodGet, getInputUrl, nil)
+		if e != nil {
+			return nil, perr.InternalWithMessage("Failed to build request to obtain routed inputs.")
+		}
+
+		req.Header.Set("Authorization", "Bearer "+token)
+		resp, e := client.Do(req)
+		if e != nil {
+			return nil, perr.InternalWithMessage("Failed to get routed input details.")
+		}
+		defer resp.Body.Close()
+
+		resBody, e := io.ReadAll(resp.Body)
+		if e != nil {
+			return nil, perr.InternalWithMessage("Failed reading response body.")
+		}
+
+		var input primitive.RoutedInputResponse
+		e = json.Unmarshal(resBody, &input)
+		if e != nil {
+			return nil, perr.InternalWithMessage("Failed to deserialize the response body from input router.")
+		}
+
+		inputItems = append(inputItems, input)
 	}
 
-	return &inputs, nil
+	return &primitive.RoutedInputListResponse{Items: inputItems, NextToken: nil}, nil
 }
