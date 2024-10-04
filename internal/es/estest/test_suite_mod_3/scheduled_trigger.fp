@@ -1,8 +1,26 @@
-trigger "schedule" "my_step" {
+
+trigger "schedule" "s_simple" {
     schedule = "1 * * * *"
     pipeline = pipeline.my_step
 }
 
+
+pipeline "simple" {
+
+    step "transform" "echo" {
+        value = "hello world"
+    }
+
+    output "val" {
+        value = step.transform.echo
+    }
+}
+
+
+trigger "schedule" "my_step" {
+    schedule = "1 * * * *"
+    pipeline = pipeline.my_step
+}
 
 
 pipeline "my_step" {

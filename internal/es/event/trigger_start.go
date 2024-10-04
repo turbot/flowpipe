@@ -2,22 +2,22 @@ package event
 
 import "github.com/turbot/pipe-fittings/modconfig"
 
-type TriggerQueued struct {
+type TriggerStart struct {
 	Event *Event          `json:"event"`
 	Name  string          `json:"name"`
 	Args  modconfig.Input `json:"args"`
 }
 
-func (e *TriggerQueued) GetEvent() *Event {
+func (e *TriggerStart) GetEvent() *Event {
 	return e.Event
 }
 
-func (e *TriggerQueued) HandlerName() string {
-	return HandlerTriggerQueued
+func (e *TriggerStart) HandlerName() string {
+	return CommandTriggerStart
 }
 
-func TriggerQueuedFromTriggerQueue(q *TriggerQueue) *TriggerQueued {
-	return &TriggerQueued{
+func TriggerStartFromTriggerQueued(q *TriggerQueued) *TriggerStart {
+	return &TriggerStart{
 		Event: q.Event,
 		Name:  q.Name,
 		Args:  q.Args,

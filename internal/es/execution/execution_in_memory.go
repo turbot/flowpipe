@@ -908,6 +908,24 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 
 		return ex.appendEvent(et)
 
+	case ExecutionFinishedEvent.HandlerName(): // "handler.execution_finished"
+		et, ok := logEntry.GetDetail().(*event.ExecutionFinished)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_finished event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_finished event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionFailedEvent.HandlerName(): // "handler.execution_failed"
+		et, ok := logEntry.GetDetail().(*event.ExecutionFailed)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_failed event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_failed event")
+		}
+
+		return ex.appendEvent(et)
+
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
 		et, ok := logEntry.GetDetail().(*event.PipelineQueued)
 		if !ok {

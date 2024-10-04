@@ -76,7 +76,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 	} else if executionQueueCmd, ok := commandEvent.(*event.ExecutionQueue); ok {
 		newExecution = true
 		// TODO: this is wrong
-		name = executionQueueCmd.HandlerName()
+		name = executionQueueCmd.Event.ExecutionID
 	}
 
 	var ex *execution.ExecutionInMemory

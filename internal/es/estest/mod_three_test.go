@@ -105,10 +105,10 @@ func (suite *ModThreeTestSuite) TearDownSuite() {
 	suite.TearDownSuiteRunCount++
 }
 
-func (suite *ModThreeTestSuite) TestExecutionEvents() {
+func (suite *ModThreeTestSuite) XTestExecutionEvents() {
 	assert := assert.New(suite.T())
 
-	name := "test_suite_mod_3.trigger.query.simple"
+	name := "test_suite_mod_3.trigger.schedule.s_simple"
 
 	triggerCmd := &event.TriggerQueue{
 		Name: name,

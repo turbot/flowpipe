@@ -36,5 +36,25 @@ func (h ExecutionPlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 	}()
 
+	if evt.TriggerQueue != nil {
+		if evt.TriggerQueue.Event == nil {
+			evt.TriggerQueue.Event = evt.Event
+		}
+
+		err := h.CommandBus.Send(ctx, evt.TriggerQueue)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+			return nil
+		}
+
+		return nil
+	}
+
+	cmd := event.ExecutionFinishFromExecutionPlanned(evt)
+	err := h.CommandBus.Send(ctx, cmd)
+	if err != nil {
+		slog.Error("Error publishing event", "error", err)
+	}
+
 	return nil
 }

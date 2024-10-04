@@ -135,6 +135,10 @@ func (es *ESService) Start() error {
 				command.ExecutionQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.ExecutionStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.ExecutionPlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionFinishHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionFailHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.TriggerQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.TriggerStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -163,6 +167,11 @@ func (es *ESService) Start() error {
 				handler.ExecutionQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 				handler.ExecutionStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 				handler.ExecutionPlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionFinished{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionFailed{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerFailed{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 			}
 		},
 		EventsPublisher: eventsPubSub,

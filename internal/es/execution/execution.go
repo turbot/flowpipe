@@ -811,9 +811,15 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error)
 
 // Events
 var (
-	ExecutionQueuedEvent  = event.ExecutionQueued{}
-	ExecutionStartedEvent = event.ExecutionStarted{}
-	ExecutionPlannedEvent = event.ExecutionPlanned{}
+	ExecutionQueuedEvent   = event.ExecutionQueued{}
+	ExecutionStartedEvent  = event.ExecutionStarted{}
+	ExecutionPlannedEvent  = event.ExecutionPlanned{}
+	ExecutionFinishedEvent = event.ExecutionFinished{}
+	ExecutionFailedEvent   = event.ExecutionFailed{}
+
+	TriggerQueuedEvent  = event.TriggerQueued{}
+	TriggerFailedEvent  = event.TriggerFailed{}
+	TriggerStartedEvent = event.TriggerStarted{}
 
 	PipelineQueuedEvent   = event.PipelineQueued{}
 	PipelineStartedEvent  = event.PipelineStarted{}
@@ -834,9 +840,14 @@ var (
 
 // Commands
 var (
-	ExecutionQueueCommand = event.ExecutionQueue{}
-	ExecutionStartCommand = event.ExecutionStart{}
-	ExecutionPlanCommand  = event.ExecutionPlan{}
+	ExecutionQueueCommand  = event.ExecutionQueue{}
+	ExecutionStartCommand  = event.ExecutionStart{}
+	ExecutionPlanCommand   = event.ExecutionPlan{}
+	ExecutionFinishCommand = event.ExecutionFinish{}
+	ExecutionFailCommand   = event.ExecutionFail{}
+
+	TriggerQueueCommand = event.TriggerQueue{}
+	TriggerStartCommand = event.TriggerStart{}
 
 	PipelineCancelCommand = event.PipelineCancel{}
 	PipelinePlanCommand   = event.PipelinePlan{}
@@ -862,6 +873,12 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 	case *event.ExecutionStarted:
 		ex.Status = "started"
+
+	case *event.ExecutionFinished:
+		ex.Status = "finished"
+
+	case *event.ExecutionFailed:
+		ex.Status = "failed"
 
 	case *event.PipelineQueued:
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{

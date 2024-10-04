@@ -3,11 +3,9 @@ package event
 import "github.com/turbot/pipe-fittings/modconfig"
 
 type TriggerQueue struct {
-	// Event metadata
-	Event *Event `json:"event"`
-	// Pipeline details
-	Name string          `json:"name"`
-	Args modconfig.Input `json:"args" cty:"args"`
+	Event *Event          `json:"event"`
+	Name  string          `json:"name"`
+	Args  modconfig.Input `json:"args"`
 }
 
 func (e *TriggerQueue) GetEvent() *Event {

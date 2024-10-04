@@ -32,6 +32,9 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
+	// Right now there's not much to do in execution plan, we still need to start with either a single
+	// pipeline or a trigger
+
 	e := event.ExecutionPlannedFromExecutionPlan(cmd)
 
 	err := h.EventBus.Publish(ctx, e)

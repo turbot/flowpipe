@@ -11,7 +11,7 @@ type PipelineQueue struct {
 	Event *Event `json:"event"`
 	// Pipeline details
 	Name string          `json:"name"`
-	Args modconfig.Input `json:"args" cty:"args"`
+	Args modconfig.Input `json:"args"`
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent pipeline execution ID
