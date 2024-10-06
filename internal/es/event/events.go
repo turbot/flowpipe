@@ -45,10 +45,11 @@ const (
 	HandlerStepQueued          = "handler.step_queued"
 	CommandStepStart           = "command.step_start"
 
-	CommandTriggerQueue   = "command.trigger_queue"
-	HandlerTriggerQueued  = "handler.trigger_queued"
-	CommandTriggerStart   = "command.trigger_start"
-	HandlerTriggerStarted = "handler.trigger_started"
-	CommandTriggerFail    = "command.trigger_fail"
-	HandlerTriggerFailed  = "handler.trigger_failed"
+	CommandTriggerQueue    = "command.trigger_queue"
+	HandlerTriggerQueued   = "handler.trigger_queued"
+	CommandTriggerStart    = "command.trigger_start"
+	HandlerTriggerStarted  = "handler.trigger_started"
+	CommandTriggerFail     = "command.trigger_fail"
+	HandlerTriggerFailed   = "handler.trigger_failed"
+	HandlerTriggerFinished = "handler.trigger_finished"
 )

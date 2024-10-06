@@ -39,6 +39,35 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return err
 	}
 
+	// Check if we have started the trigger execution
+	if cmd.TriggerQueue != nil && ex.TriggerExecution == nil {
+
+		// Right now there's not much to do in execution plan, we still need to start with either a single
+		// pipeline or a trigger
+		evt := event.ExecutionPlannedFromExecutionPlan(cmd)
+
+		err = h.EventBus.Publish(ctx, evt)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+			return nil
+		}
+
+		return nil
+	}
+
+	if cmd.PipelineQueue != nil && len(ex.PipelineExecutions) == 0 {
+		// Pipeline hasn't started yet
+		evt := event.ExecutionPlannedFromExecutionPlan(cmd)
+
+		err = h.EventBus.Publish(ctx, evt)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+			return nil
+		}
+
+		return nil
+	}
+
 	// Check if all the pipelines are finished
 	allFinished := true
 	for _, pex := range ex.PipelineExecutions {
@@ -49,11 +78,50 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	if allFinished {
+
+		failure := false
+
 		// any failure?
 		for _, pex := range ex.PipelineExecutions {
 			if pex.Status == "failed" {
+				failure = true
+				break
+			}
+		}
+
+		if ex.TriggerExecution != nil {
+			if failure {
+				// raise trigger fail
+				cmd := event.TriggerFailedFromExecutionPlan(cmd, ex.TriggerExecution.Name)
+				err = h.EventBus.Publish(ctx, cmd)
+				if err != nil {
+					slog.Error("Error publishing event", "error", err)
+					return nil
+				}
+				return nil
+			} else {
+				// raise trigger finish
+				cmd := event.TriggerFinishedFromExecutionPlan(cmd, ex.TriggerExecution.Name)
+				err = h.EventBus.Publish(ctx, cmd)
+				if err != nil {
+					slog.Error("Error publishing event", "error", err)
+					return nil
+				}
+				return nil
+			}
+		} else {
+			if failure {
 				// raise execution fail
 				cmd := event.ExecutionFailedFromExecutionPlan(cmd)
+				err = h.EventBus.Publish(ctx, cmd)
+				if err != nil {
+					slog.Error("Error publishing event", "error", err)
+					return nil
+				}
+				return nil
+			} else {
+				// raise execution finish
+				cmd := event.ExecutionFinishedFromExecutionPlan(cmd)
 				err = h.EventBus.Publish(ctx, cmd)
 				if err != nil {
 					slog.Error("Error publishing event", "error", err)
@@ -63,14 +131,6 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 		}
 
-		// raise execution finish
-		cmd := event.ExecutionFinishedFromExecutionPlan(cmd)
-		err = h.EventBus.Publish(ctx, cmd)
-		if err != nil {
-			slog.Error("Error publishing event", "error", err)
-			return nil
-		}
-		return nil
 	}
 
 	// Right now there's not much to do in execution plan, we still need to start with either a single

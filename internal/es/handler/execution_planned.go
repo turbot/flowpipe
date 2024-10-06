@@ -6,6 +6,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -40,6 +41,8 @@ func (h ExecutionPlanned) Handle(ctx context.Context, ei interface{}) error {
 		if evt.TriggerQueue.Event == nil {
 			evt.TriggerQueue.Event = evt.Event
 		}
+
+		evt.TriggerQueue.TriggerExecutionID = util.NewTriggerExecutionId()
 
 		err := h.CommandBus.Send(ctx, evt.TriggerQueue)
 		if err != nil {

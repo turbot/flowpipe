@@ -45,8 +45,8 @@ type Execution struct {
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
-
-	RootPipelines []string `json:"root_pipelines"`
+	TriggerExecution   *TriggerExecution             `json:"trigger_execution"`
+	RootPipelines      []string                      `json:"root_pipelines"`
 
 	Lock *sync.Mutex `json:"-"`
 }
@@ -820,9 +820,10 @@ var (
 	ExecutionFinishedEvent = event.ExecutionFinished{}
 	ExecutionFailedEvent   = event.ExecutionFailed{}
 
-	TriggerQueuedEvent  = event.TriggerQueued{}
-	TriggerFailedEvent  = event.TriggerFailed{}
-	TriggerStartedEvent = event.TriggerStarted{}
+	TriggerQueuedEvent   = event.TriggerQueued{}
+	TriggerFailedEvent   = event.TriggerFailed{}
+	TriggerStartedEvent  = event.TriggerStarted{}
+	TriggerFinishedEvent = event.TriggerFinished{}
 
 	PipelineQueuedEvent   = event.PipelineQueued{}
 	PipelineStartedEvent  = event.PipelineStarted{}
@@ -882,6 +883,17 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 	case *event.ExecutionFailed:
 		ex.Status = "failed"
+
+	case *event.TriggerQueue:
+		if ex.TriggerExecution != nil {
+			return perr.BadRequestWithMessage("trigger execution already exists")
+		}
+
+		ex.TriggerExecution = &TriggerExecution{
+			ID:   et.TriggerExecutionID,
+			Name: et.Name,
+			Args: et.Args,
+		}
 
 	case *event.PipelineQueue:
 		if et.Trigger != "" && !slices.Contains(ex.RootPipelines, et.PipelineExecutionID) {

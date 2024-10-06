@@ -19,3 +19,10 @@ func ExecutionFinishFromExecutionPlanned(e *ExecutionPlanned) *ExecutionFinish {
 		Type:  e.Type,
 	}
 }
+
+func ExecutionFinishFromTriggerFinished(e *TriggerFinished) *ExecutionFinish {
+	return &ExecutionFinish{
+		Event: NewFlowEvent(e.Event),
+		Type:  "trigger",
+	}
+}

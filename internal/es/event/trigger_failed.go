@@ -19,3 +19,10 @@ func TriggerFailedFromTriggerStart(q *TriggerStart) *TriggerFailed {
 		Name:  q.Name,
 	}
 }
+
+func TriggerFailedFromExecutionPlan(q *ExecutionPlan, triggerName string) *TriggerFailed {
+	return &TriggerFailed{
+		Event: NewFlowEvent(q.Event),
+		Name:  triggerName,
+	}
+}
