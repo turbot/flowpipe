@@ -18,7 +18,7 @@ func (e *TriggerStarted) HandlerName() string {
 
 func TriggerStartedFromTriggerStart(s *TriggerStart, trigger *modconfig.Trigger) *TriggerStarted {
 	return &TriggerStarted{
-		Event:   s.Event,
+		Event:   NewFlowEvent(s.Event),
 		Args:    s.Args,
 		Trigger: trigger,
 	}

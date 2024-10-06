@@ -69,14 +69,15 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 	newExecution := false
 
 	var name string
-	pipelineQueueCmd, ok := commandEvent.(*event.PipelineQueue)
-	if ok && pipelineQueueCmd.ParentStepExecutionID == "" {
+	if executionQueueCmd, ok := commandEvent.(*event.ExecutionQueue); ok {
 		newExecution = true
-		name = pipelineQueueCmd.Name
-	} else if executionQueueCmd, ok := commandEvent.(*event.ExecutionQueue); ok {
-		newExecution = true
-		// TODO: this is wrong
-		name = executionQueueCmd.Event.ExecutionID
+		if executionQueueCmd.TriggerQueue != nil {
+			name = executionQueueCmd.TriggerQueue.Name
+		} else if executionQueueCmd.PipelineQueue != nil {
+			name = executionQueueCmd.PipelineQueue.Name
+		} else {
+			return perr.BadRequestWithMessage("Invalid ExecutionQueue command, no TriggerQueue or PipelineQueue")
+		}
 	}
 
 	var ex *execution.ExecutionInMemory

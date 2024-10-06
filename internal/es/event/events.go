@@ -1,5 +1,11 @@
 package event
 
+var EndEvents = []string{
+	"finished",
+	"failed",
+	"cancelled",
+}
+
 const (
 	CommandExecutionQueue    = "command.execution_queue"
 	HandlerExecutionQueued   = "handler.execution_queued"

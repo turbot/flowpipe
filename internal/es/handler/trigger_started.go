@@ -90,6 +90,7 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 		Args:                pipelineArgs,
+		Trigger:             trg.Name(),
 	}
 
 	slog.Info("Trigger fired", "trigger", trg.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
@@ -97,6 +98,8 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 	if output.IsServerMode {
 		output.RenderServerOutput(ctx, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, trg.Name(), pipelineName))
 	}
+
+	plannerMutex.Lock()
 
 	if err := h.CommandBus.Send(ctx, pipelineCmd); err != nil {
 		slog.Error("Error sending pipeline command", "error", err)

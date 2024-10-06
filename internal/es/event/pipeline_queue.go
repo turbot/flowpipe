@@ -7,16 +7,19 @@ import (
 
 // PipelineQueue commands a pipeline to be queued for execution.
 type PipelineQueue struct {
-	// Event metadata
-	Event *Event `json:"event"`
-	// Pipeline details
-	Name string          `json:"name"`
-	Args modconfig.Input `json:"args"`
+	Event *Event          `json:"event"`
+	Name  string          `json:"name"`
+	Args  modconfig.Input `json:"args"`
+
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
+
 	// If this is a child pipeline then set the parent pipeline execution ID
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
+
+	// If pipeline is triggered by a trigger, this is the trigger name
+	Trigger string
 }
 
 func (e *PipelineQueue) GetEvent() *Event {

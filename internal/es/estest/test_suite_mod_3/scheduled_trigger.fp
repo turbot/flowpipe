@@ -1,9 +1,8 @@
 
 trigger "schedule" "s_simple" {
     schedule = "1 * * * *"
-    pipeline = pipeline.my_step
+    pipeline = pipeline.simple
 }
-
 
 pipeline "simple" {
 

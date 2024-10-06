@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +45,8 @@ type Execution struct {
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
+
+	RootPipelines []string `json:"root_pipelines"`
 
 	Lock *sync.Mutex `json:"-"`
 }
@@ -880,6 +883,11 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 	case *event.ExecutionFailed:
 		ex.Status = "failed"
 
+	case *event.PipelineQueue:
+		if et.Trigger != "" && !slices.Contains(ex.RootPipelines, et.PipelineExecutionID) {
+			ex.RootPipelines = append(ex.RootPipelines, et.PipelineExecutionID)
+		}
+
 	case *event.PipelineQueued:
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
 			ID:                    et.PipelineExecutionID,
@@ -891,6 +899,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			ParentExecutionID:     et.ParentExecutionID,
 			Errors:                []modconfig.StepError{},
 			StepExecutions:        map[string]*StepExecution{},
+			Trigger:               et.Trigger,
 		}
 	case *event.PipelineStarted:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]

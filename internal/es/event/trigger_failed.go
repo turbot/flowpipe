@@ -15,7 +15,7 @@ func (e *TriggerFailed) HandlerName() string {
 
 func TriggerFailedFromTriggerStart(q *TriggerStart) *TriggerFailed {
 	return &TriggerFailed{
-		Event: q.Event,
+		Event: NewFlowEvent(q.Event),
 		Name:  q.Name,
 	}
 }

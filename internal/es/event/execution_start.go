@@ -20,7 +20,7 @@ func (e *ExecutionStart) HandlerName() string {
 
 func ExecutionStartFromExecutionQueued(e *ExecutionQueued) *ExecutionStart {
 	return &ExecutionStart{
-		Event:         e.Event,
+		Event:         NewFlowEvent(e.Event),
 		PipelineQueue: e.PipelineQueue,
 		TriggerQueue:  e.TriggerQueue,
 	}

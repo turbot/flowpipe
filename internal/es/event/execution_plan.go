@@ -24,3 +24,27 @@ func ExecutionPlanFromExecutionStarted(e *ExecutionStarted) *ExecutionPlan {
 		TriggerQueue:  e.TriggerQueue,
 	}
 }
+
+func ExecutionPlanFromPipelineFinished(e *PipelineFinished) *ExecutionPlan {
+	return &ExecutionPlan{
+		Event: NewFlowEvent(e.Event),
+	}
+}
+
+func ExecutionPlanFromPipelineFailed(e *PipelineFailed) *ExecutionPlan {
+	return &ExecutionPlan{
+		Event: NewFlowEvent(e.Event),
+	}
+}
+
+func ExecutionPlanFromPipelineCancelled(e *PipelineCanceled) *ExecutionPlan {
+	return &ExecutionPlan{
+		Event: NewFlowEvent(e.Event),
+	}
+}
+
+func ExecutionPlanFromPipelinePaused(e *PipelinePaused) *ExecutionPlan {
+	return &ExecutionPlan{
+		Event: NewFlowEvent(e.Event),
+	}
+}

@@ -16,14 +16,14 @@ func (e *ExecutionFail) HandlerName() string {
 
 func ExecutionFailFromTriggerFailed(q *TriggerFailed) *ExecutionFail {
 	return &ExecutionFail{
-		Event: q.Event,
+		Event: NewFlowEvent(q.Event),
 		Name:  q.Name,
 	}
 }
 
 func ExecutionFailFromTriggerStarted(q *TriggerStarted, err error) *ExecutionFail {
 	return &ExecutionFail{
-		Event: q.Event,
+		Event: NewFlowEvent(q.Event),
 		Name:  q.Trigger.Name(),
 		Error: err,
 	}

@@ -5,6 +5,8 @@ type ExecutionPlanned struct {
 	Event *Event `json:"event"`
 	Type  string `json:"type"`
 
+	NextStep string `json:"next_step"`
+
 	// TODO: make this an interface and implement JSON serialization
 	PipelineQueue *PipelineQueue `json:"pipeline_queue"`
 	TriggerQueue  *TriggerQueue  `json:"trigger_queue"`

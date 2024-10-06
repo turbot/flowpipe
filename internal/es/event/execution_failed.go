@@ -15,7 +15,14 @@ func (e *ExecutionFailed) HandlerName() string {
 
 func ExecutionFailedFromExecutionFail(q *ExecutionFail) *ExecutionFailed {
 	return &ExecutionFailed{
-		Event: q.Event,
+		Event: NewFlowEvent(q.Event),
 		Name:  q.Name,
+	}
+}
+
+func ExecutionFailedFromExecutionPlan(q *ExecutionPlan) *ExecutionFailed {
+	return &ExecutionFailed{
+		Event: NewFlowEvent(q.Event),
+		Name:  q.Type,
 	}
 }

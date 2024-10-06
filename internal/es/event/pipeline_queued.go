@@ -18,6 +18,7 @@ type PipelineQueued struct {
 	// If this is a child pipeline then set the parent step execution ID
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
+	Trigger               string `json:"trigger,omitempty"`
 }
 
 func (e *PipelineQueued) GetEvent() *Event {
@@ -60,6 +61,7 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 		}
 		e.ParentStepExecutionID = cmd.ParentStepExecutionID
 		e.ParentExecutionID = cmd.ParentExecutionID
+		e.Trigger = cmd.Trigger
 		return nil
 	}
 }

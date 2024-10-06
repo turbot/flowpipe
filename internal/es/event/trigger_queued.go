@@ -18,7 +18,7 @@ func (e *TriggerQueued) HandlerName() string {
 
 func TriggerQueuedFromTriggerQueue(q *TriggerQueue) *TriggerQueued {
 	return &TriggerQueued{
-		Event: q.Event,
+		Event: NewFlowEvent(q.Event),
 		Name:  q.Name,
 		Args:  q.Args,
 	}
