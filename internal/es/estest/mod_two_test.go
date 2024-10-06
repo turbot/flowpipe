@@ -589,6 +589,50 @@ func (suite *ModTwoTestSuite) TestNotifierDefaultParam() {
 	assert.Equal("frontend", pex.PipelineOutput["val"].(map[string]any)["value"])
 }
 
+func (suite *ModTwoTestSuite) TestSteampipeConn() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.steampipe_conn", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(string))
+}
+
+func (suite *ModTwoTestSuite) TestSteampipeConnWithParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.steampipe_conn_with_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(string))
+}
+
 func TestModTwoTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTwoTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

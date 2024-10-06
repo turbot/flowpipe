@@ -20,3 +20,11 @@ connection "slack" "slack_conn" {
 connection "slack" "slack_conn_2" {
   token = env("TEST_SLACK_TOKEN")
 }
+
+connection "steampipe" "default" {
+  connection_string = "default_conn_string"
+}
+
+connection "steampipe" "one" {
+  connection_string = "one_conn_string"
+}
