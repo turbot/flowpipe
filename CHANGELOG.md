@@ -9,7 +9,7 @@ _What's new?_
 * `connection` type supports for `pipeline param` and `mod variable` resources. ([#871](https://github.com/turbot/flowpipe/issues/871))
 
 ## v0.9.2 [tbd]
-
+ 
 _Bug fixes_
 
 * Pipeline reference to nested mod's pipeline now works. ([#908](https://github.com/turbot/flowpipe/issues/908))
