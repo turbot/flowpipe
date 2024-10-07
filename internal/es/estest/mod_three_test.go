@@ -105,7 +105,7 @@ func (suite *ModThreeTestSuite) TearDownSuite() {
 	suite.TearDownSuiteRunCount++
 }
 
-func (suite *ModThreeTestSuite) TestExecutionEvents() {
+func (suite *ModThreeTestSuite) TestExecutionEventsSimple() {
 	assert := assert.New(suite.T())
 
 	name := "test_suite_mod_3.trigger.schedule.s_simple"
@@ -127,7 +127,88 @@ func (suite *ModThreeTestSuite) TestExecutionEvents() {
 	time.Sleep(100 * time.Millisecond)
 
 	//nolint:errcheck // just a test case
-	getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Second, 50, "started")
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+
+	if ex.Status != "finished" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
+
+}
+
+func (suite *ModThreeTestSuite) TestExecutionEventsSimpleErrorIgnored() {
+	assert := assert.New(suite.T())
+
+	name := "test_suite_mod_3.trigger.schedule.s_simple_error_ignored_with_if_matches"
+
+	triggerCmd := &event.TriggerQueue{
+		Name: name,
+	}
+
+	executionCmd := &event.ExecutionQueue{
+		Event:        event.NewExecutionEvent(),
+		TriggerQueue: triggerCmd,
+	}
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	//nolint:errcheck // just a test case
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+
+	if ex.Status != "finished" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
+
+	assert.Equal(1, len(ex.PipelineExecutions), "Expected 1 pipeline execution")
+	for _, pex := range ex.PipelineExecutions {
+		assert.Equal("finished", pex.Status)
+		assert.Equal("should be calculated", pex.PipelineOutput["val"])
+	}
+}
+
+func (suite *ModThreeTestSuite) TestExecutionEventsSimpleFailure() {
+	assert := assert.New(suite.T())
+
+	name := "test_suite_mod_3.trigger.schedule.s_simple_failure"
+
+	triggerCmd := &event.TriggerQueue{
+		Name: name,
+	}
+
+	executionCmd := &event.ExecutionQueue{
+		Event:        event.NewExecutionEvent(),
+		TriggerQueue: triggerCmd,
+	}
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	//nolint:errcheck // just a test case
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "failed")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+
+	if ex.Status != "failed" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
 
 }
 

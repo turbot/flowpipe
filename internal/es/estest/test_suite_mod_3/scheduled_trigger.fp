@@ -16,6 +16,43 @@ pipeline "simple" {
 }
 
 
+trigger "schedule" "s_simple_failure" {
+    schedule = "1 * * * *"
+    pipeline = pipeline.simple_failure
+}
+
+pipeline "simple_failure" {
+
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+    }
+
+    output "val" {
+        value = "should not be calculated"
+    }
+}
+
+trigger "schedule" "s_simple_error_ignored_with_if_matches" {
+    schedule = "1 * * * *"
+    pipeline = pipeline.simple_error_ignored_with_if_matches
+}
+
+pipeline "simple_error_ignored_with_if_matches" {
+    step "http" "does_not_exist" {
+        url = "https://google.com/bad.json"
+
+        error {
+            if = result.status_code == 404
+            ignore = true
+        }
+    }
+
+    output "val" {
+        value = "should be calculated"
+    }
+}
+
+
 trigger "schedule" "my_step" {
     schedule = "1 * * * *"
     pipeline = pipeline.my_step

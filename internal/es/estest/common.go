@@ -151,7 +151,7 @@ func getExAndWait(suite *FlowpipeTestSuite, executionId string, waitTime time.Du
 			return nil, err
 		}
 
-		if ex.Status == "started" {
+		if ex.Status == expectedState {
 			break
 		}
 	}
