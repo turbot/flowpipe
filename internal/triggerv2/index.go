@@ -1,12 +1,18 @@
 package triggerv2
 
 import (
+	"context"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -26,7 +32,8 @@ type TriggerRunnerBase struct {
 
 type TriggerRunner interface {
 	Validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error)
-	GetPipelineArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error)
+	GetTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error)
+	Run(ctx context.Context, evt *event.TriggerStarted, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error)
 }
 
 func NewTriggerRunner(trigger *modconfig.Trigger) TriggerRunner {
@@ -78,7 +85,7 @@ func (tr *TriggerRunnerBase) Validate(args map[string]interface{}, argsString ma
 	return triggerRunArgs, nil
 }
 
-func (tr *TriggerRunnerBase) GetPipelineArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
+func (tr *TriggerRunnerBase) GetTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
 
 	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
@@ -86,36 +93,37 @@ func (tr *TriggerRunnerBase) GetPipelineArgs(triggerRunArgs map[string]interface
 		return nil, perr.InternalWithMessage("Error building eval context")
 	}
 
-	pipeline := tr.Trigger.GetPipeline()
+	// TODO: move this to a separate function .. maybe in the API level?
+	// pipeline := tr.Trigger.GetPipeline()
 
-	if pipeline == cty.NilVal {
-		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
-	}
+	// if pipeline == cty.NilVal {
+	// 	slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
+	// 	return nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
+	// }
 
-	pipelineDefn := pipeline.AsValueMap()
-	pipelineName := pipelineDefn["name"].AsString()
+	// pipelineDefn := pipeline.AsValueMap()
+	// pipelineName := pipelineDefn["name"].AsString()
 
-	modFullName := tr.Trigger.GetMetadata().ModFullName
-	slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
+	// modFullName := tr.Trigger.GetMetadata().ModFullName
+	// slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
 
-	// We can only run trigger from root mod
-	canRun := false
-	if modFullName != tr.rootMod.FullName {
-		for _, m := range tr.rootMod.ResourceMaps.Mods {
-			if m.FullName == modFullName {
-				canRun = true
-				break
-			}
-		}
-	} else {
-		canRun = true
-	}
+	// // We can only run trigger from root mod
+	// canRun := false
+	// if modFullName != tr.rootMod.FullName {
+	// 	for _, m := range tr.rootMod.ResourceMaps.Mods {
+	// 		if m.FullName == modFullName {
+	// 			canRun = true
+	// 			break
+	// 		}
+	// 	}
+	// } else {
+	// 	canRun = true
+	// }
 
-	if !canRun {
-		slog.Error("Trigger can only be run from root mod and its immediate dependencies", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
-		return nil, perr.BadRequestWithMessage("Trigger can only be run from root mod and its immediate dependencies")
-	}
+	// if !canRun {
+	// 	slog.Error("Trigger can only be run from root mod and its immediate dependencies", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
+	// 	return nil, perr.BadRequestWithMessage("Trigger can only be run from root mod and its immediate dependencies")
+	// }
 
 	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
 	if err != nil {
@@ -132,6 +140,28 @@ func (tr *TriggerRunnerBase) GetPipelineArgs(triggerRunArgs map[string]interface
 	}
 
 	return pipelineArgs, nil
+}
+
+func (tr *TriggerRunnerBase) Run(ctx context.Context, evt *event.TriggerStarted, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
+	// raise pipeline
+	pipelineDefn := trg.Pipeline.AsValueMap()
+	pipelineName := pipelineDefn["name"].AsString()
+
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewEventForExecutionID(evt.Event.ExecutionID),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
+		Name:                pipelineName,
+		Args:                triggerArgs,
+		Trigger:             trg.Name(),
+	}
+
+	slog.Info("Trigger fired", "trigger", trg.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+
+	if output.IsServerMode {
+		output.RenderServerOutput(ctx, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, trg.Name(), pipelineName))
+	}
+
+	return []*event.PipelineQueue{pipelineCmd}, nil
 }
 
 func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.PipelineParam, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {

@@ -62,7 +62,7 @@ func GetExecution(executionID string) (*ExecutionInMemory, error) {
 func completeExecution(executionID string) error {
 	ex, err := GetExecution(executionID)
 	if err != nil && !perr.IsNotFound(err) {
-		slog.Error("Error getting execution from cache", "execution_id", executionID)
+		slog.Error("Error getting execution from cache to complete execution", "execution_id", executionID, "error", err)
 		return err
 	} else if perr.IsNotFound(err) {
 		return nil

@@ -110,8 +110,8 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		var err error
 		ex, err = execution.GetExecution(executionID)
 		if err != nil {
-			slog.Error("Error getting execution from cache", "execution_id", executionID)
-			return perr.InternalWithMessage("Error getting execution from cache")
+			slog.Error("Error getting execution from cache to log event.", "execution_id", executionID, "error", err)
+			return perr.InternalWithMessage("Error getting execution from cache to log event")
 		}
 	}
 

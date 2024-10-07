@@ -11,7 +11,6 @@ import (
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/triggerv2"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -71,7 +70,7 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	pipelineArgs, err := triggerRunner.GetPipelineArgs(triggerRunArgs)
+	triggerArgs, err := triggerRunner.GetTriggerArgs(triggerRunArgs)
 	if err != nil {
 		slog.Error("Error getting pipeline args", "error", err)
 
@@ -81,27 +80,9 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	// raise pipeline
-	pipelineDefn := trg.Pipeline.AsValueMap()
-	pipelineName := pipelineDefn["name"].AsString()
-
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewEventForExecutionID(evt.Event.ExecutionID),
-		PipelineExecutionID: util.NewPipelineExecutionId(),
-		Name:                pipelineName,
-		Args:                pipelineArgs,
-		Trigger:             trg.Name(),
-	}
-
-	slog.Info("Trigger fired", "trigger", trg.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
-
-	if output.IsServerMode {
-		output.RenderServerOutput(ctx, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, trg.Name(), pipelineName))
-	}
-
 	plannerMutex.Lock()
-
-	if err := h.CommandBus.Send(ctx, pipelineCmd); err != nil {
+	cmds, err := triggerRunner.Run(ctx, evt, triggerArgs, trg)
+	if err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
 
 		if output.IsServerMode {
@@ -109,6 +90,16 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		h.raiseError(ctx, evt, err)
+	}
+
+	for _, cmd := range cmds {
+		if err := h.CommandBus.Send(context.TODO(), cmd); err != nil {
+			slog.Error("Error sending pipeline command", "error", err)
+			if output.IsServerMode {
+				output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
+			}
+			h.raiseError(ctx, evt, err)
+		}
 	}
 
 	return nil

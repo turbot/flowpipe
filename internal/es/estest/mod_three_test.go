@@ -126,7 +126,6 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimple() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	//nolint:errcheck // just a test case
 	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
@@ -160,7 +159,6 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleErrorIgnored() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	//nolint:errcheck // just a test case
 	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
@@ -199,7 +197,6 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleFailure() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	//nolint:errcheck // just a test case
 	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "failed")
 	if err != nil {
 		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
@@ -207,6 +204,38 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleFailure() {
 	}
 
 	if ex.Status != "failed" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
+}
+
+func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
+	assert := assert.New(suite.T())
+
+	name := "test_suite_mod_3.trigger.query.simple_sqlite"
+
+	triggerCmd := &event.TriggerQueue{
+		Name: name,
+	}
+
+	executionCmd := &event.ExecutionQueue{
+		Event:        event.NewExecutionEvent(),
+		TriggerQueue: triggerCmd,
+	}
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+
+	if ex.Status != "finished" {
 		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
 	}
 

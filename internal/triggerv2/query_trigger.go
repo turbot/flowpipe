@@ -78,12 +78,7 @@ func hashRow(row map[string]interface{}) string {
 	return hex.EncodeToString(hashBytes)
 }
 
-func (tr *TriggerRunnerQuery) RunOne() error {
-	_, _, err := tr.ExecuteTrigger()
-	return err
-}
-
-func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
+func queuePipeline(capture *modconfig.TriggerQueryCapture, evt *event.TriggerStarted, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
 		return nil, nil
@@ -106,10 +101,11 @@ func runPipeline(capture *modconfig.TriggerQueryCapture, tr *TriggerRunnerQuery,
 	pipelineName := pipelineDefn["name"].AsString()
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewExecutionEvent(),
+		Event:               event.NewFlowEvent(evt.Event),
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 		Args:                pipelineArgs,
+		Trigger:             tr.Trigger.Name(),
 	}
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])
@@ -335,11 +331,7 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	return updatedItems, nil
 }
 
-// TODO: executionId doesn't mean anything here .. since can execute 0 - 3 pipelines
-func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-	triggerExecutionResponse := types.TriggerExecutionResponse{
-		Results: map[string]interface{}{},
-	}
+func (tr *TriggerRunnerQuery) Run(ctx context.Context, evt *event.TriggerStarted, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
@@ -347,7 +339,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
@@ -355,13 +347,13 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	resolvedConfig, err := config.GetConfig(evalContext)
 	if err != nil {
 		slog.Error("Error resolving trigger config", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	resolvedTriggerConfig, ok := resolvedConfig.(*modconfig.TriggerQuery)
 	if !ok {
 		slog.Error("Error converting resolved config to TriggerQueryConfig", "error", err)
-		return triggerExecutionResponse, nil, perr.InternalWithMessage("Error converting resolved config to TriggerQueryConfig")
+		return nil, perr.InternalWithMessage("Error converting resolved config to TriggerQueryConfig")
 	}
 
 	queryPrimitive := primitive.Query{}
@@ -377,7 +369,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 		if o.IsServerMode {
 			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error running query trigger "+tr.Trigger.Name(), err))
 		}
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	if output.Data["rows"] == nil {
@@ -385,7 +377,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 		if o.IsServerMode {
 			o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), 0, 0, 0))
 		}
-		return triggerExecutionResponse, nil, nil
+		return nil, nil
 	}
 
 	rows, ok := output.Data["rows"].([]map[string]interface{})
@@ -394,7 +386,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 		if o.IsServerMode {
 			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error converting rows to []interface{} "+tr.Trigger.Name(), err))
 		}
-		return triggerExecutionResponse, nil, nil
+		return nil, nil
 	}
 
 	controlItems := []queryTriggerMetadata{}
@@ -417,7 +409,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 							errorString,
 							err))
 				}
-				return triggerExecutionResponse, nil, perr.InternalWithMessage("Primary key not found in row")
+				return nil, perr.InternalWithMessage("Primary key not found in row")
 			}
 			pkString, ok := primaryKey.(string)
 			if !ok {
@@ -453,14 +445,14 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	db, err := store.OpenFlowpipeDB()
 	if err != nil {
 		slog.Error("Error opening Flowpipe db", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 	defer db.Close()
 
 	newItemPrimaryKeys, updatedItemPrimaryKeys, deletedPrimaryKeys, err := calculatedNewUpdatedDeletedData(db, safeTriggerName, controlItems)
 	if err != nil {
 		slog.Error("Error storing slice", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	newRows := []map[string]interface{}{}
@@ -480,7 +472,7 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	newRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(newRows)
 	if err != nil {
 		slog.Error("Error building new rows cty", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	updatedRows := []map[string]interface{}{}
@@ -500,13 +492,13 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 	updatedRowCtyVals, err := hclhelpers.ConvertInterfaceToCtyValue(updatedRows)
 	if err != nil {
 		slog.Error("Error building updated rows cty", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	deletedKeysCty, err := hclhelpers.ConvertInterfaceToCtyValue(deletedPrimaryKeys)
 	if err != nil {
 		slog.Error("Error building deleted rows cty", "error", err)
-		return triggerExecutionResponse, nil, err
+		return nil, err
 	}
 
 	// Add the new rows to the pipeline args
@@ -537,42 +529,24 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerForExecutionID(executionId string, a
 		"update": len(updatedRows),
 		"delete": len(deletedPrimaryKeys),
 	}
+
+	slog.Info("Trigger stats", "stats", queryStat)
 	if o.IsServerMode {
 		o.RenderServerOutput(context.TODO(), types.NewServerOutputQueryTriggerRun(tr.Trigger.Name(), len(newRows), len(updatedRows), len(deletedPrimaryKeys)))
 	}
 
-	var pipelineCmds []event.PipelineQueue
+	var pipelineCmds []*event.PipelineQueue
 	for _, capture := range resolvedTriggerConfig.Captures {
-		cmd, err := runPipeline(capture, tr, evalContext, queryStat)
+		cmd, err := queuePipeline(capture, evt, tr, evalContext, queryStat)
 		if err != nil {
 			slog.Error("Error running pipeline", "error", err)
-			return triggerExecutionResponse, nil, err
+			return nil, err
 		}
 
-		if cmd == nil {
-			// No pipeline to run for the given capture because only if there's a result in the capture the pipeline will be run
-			continue
-		}
-
-		pipelineCmds = append(pipelineCmds, *cmd)
-		triggerExecutionResponse.Results[capture.Type] = types.PipelineExecutionResponse{
-			Flowpipe: types.FlowpipeResponseMetadata{
-				ExecutionID:         cmd.Event.ExecutionID,
-				PipelineExecutionID: cmd.PipelineExecutionID,
-				Pipeline:            cmd.Name,
-				Type:                capture.Type,
-			},
+		if cmd != nil {
+			pipelineCmds = append(pipelineCmds, cmd)
 		}
 	}
 
-	triggerExecutionResponse.Flowpipe = types.FlowpipeTriggerResponseMetadata{
-		Name: tr.Trigger.FullName,
-		Type: tr.Trigger.Config.GetType(),
-	}
-
-	return triggerExecutionResponse, pipelineCmds, err
-}
-
-func (tr *TriggerRunnerQuery) ExecuteTrigger() (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-	return tr.ExecuteTriggerForExecutionID("", nil, nil)
+	return pipelineCmds, nil
 }
