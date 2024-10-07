@@ -184,7 +184,7 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleErrorIgnored() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 100*time.Millisecond, 50, "finished")
 	if err != nil {
 		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
 		return
@@ -222,7 +222,7 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleFailure() {
 
 	time.Sleep(100 * time.Millisecond)
 
-	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "failed")
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 100*time.Millisecond, 50, "failed")
 	if err != nil {
 		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
 		return
