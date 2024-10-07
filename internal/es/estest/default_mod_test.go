@@ -918,7 +918,7 @@ func (suite *DefaultModTestSuite) TestIfLoop() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
