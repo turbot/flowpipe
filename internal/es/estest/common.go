@@ -9,7 +9,6 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -20,17 +19,13 @@ func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initi
 		name = "local.pipeline." + name
 	}
 
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewEventForExecutionID(executionId),
-		PipelineExecutionID: util.NewPipelineExecutionId(),
-		Name:                name,
-	}
+	executionCmd := event.NewExecutionQueueForPipeline(executionId, name)
 
 	if args != nil {
-		pipelineCmd.Args = args
+		executionCmd.PipelineQueue.Args = args
 	}
 
-	if err := suite.esService.Send(pipelineCmd); err != nil {
+	if err := suite.esService.Send(executionCmd); err != nil {
 		return nil, nil, fmt.Errorf("error sending pipeline command: %w", err)
 
 	}
@@ -38,12 +33,12 @@ func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initi
 	// give it a moment to let Watermill does its thing, we need just over 2 seconds because we have a sleep step for 2 seconds
 	time.Sleep(initialWaitTime)
 
-	ex, err := execution.GetExecution(pipelineCmd.Event.ExecutionID)
+	ex, err := execution.GetExecution(executionCmd.Event.ExecutionID)
 
 	if err != nil && perr.IsNotFound(err) {
 		for i := 0; i < 100; i++ {
 			time.Sleep(100 * time.Millisecond)
-			ex, err = execution.GetExecution(pipelineCmd.Event.ExecutionID)
+			ex, err = execution.GetExecution(executionCmd.Event.ExecutionID)
 			if err == nil {
 				break
 			}
@@ -54,7 +49,7 @@ func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initi
 		return nil, nil, err
 	}
 
-	return ex, pipelineCmd, nil
+	return ex, executionCmd.PipelineQueue, nil
 }
 
 func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
@@ -106,16 +101,21 @@ func getPipelineExAndWait(suite *FlowpipeTestSuite, evt *event.Event, pipelineEx
 		}
 
 		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
-			break
+			// check the ex.Status as well
+			if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" {
+				break
+			}
 		}
 	}
 
-	// if pex.Status == expectedState {
-	// 	return ex, pex, nil
-	// }
-
 	if !pex.IsComplete() {
 		return ex, pex, errors.New("not completed")
+	}
+
+	// This is a simple 1:1 mapping between execution & pipeline execution. The bulk of the test cases were written before
+	// we elevated Execution to have a status and so we're just going to keep the same pattern for now.
+	if ex.Status != expectedState {
+		return ex, pex, fmt.Errorf("pipeline execution %s expected state '%s' execution status '%s'", pipelineExecutionID, expectedState, ex.Status)
 	}
 
 	return ex, pex, nil

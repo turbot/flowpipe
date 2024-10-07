@@ -110,14 +110,7 @@ func (suite *ModThreeTestSuite) TestExecutionPipelineSimple() {
 
 	name := "test_suite_mod_3.pipeline.simple"
 
-	pipelineCmd := &event.PipelineQueue{
-		Name: name,
-	}
-
-	executionCmd := &event.ExecutionQueue{
-		Event:         event.NewExecutionEvent(),
-		PipelineQueue: pipelineCmd,
-	}
+	executionCmd := event.NewExecutionQueueForPipeline("", name)
 
 	if err := suite.esService.Send(executionCmd); err != nil {
 		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
