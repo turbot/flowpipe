@@ -39,57 +39,36 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 			plannerMutex.Unlock()
 		}
 	}()
+	plannerMutex.Lock()
 
 	trg, err := db.GetTrigger(evt.Trigger.Name())
 	if err != nil {
 		slog.Error("Error getting trigger", "error", err)
 
-		plannerMutex.Lock()
 		h.raiseError(ctx, evt, err)
 
 		return nil
 	}
-	triggerRunner := triggerv2.NewTriggerRunner(trg)
+	triggerRunner := triggerv2.NewTriggerRunner(trg, evt.Event.ExecutionID, "")
 
 	if triggerRunner == nil {
 		slog.Error("Error creating trigger runner")
 
-		plannerMutex.Lock()
 		h.raiseError(ctx, evt, err)
 
 		return nil
 	}
 
-	triggerRunArgs, err := triggerRunner.Validate(evt.Args, nil)
+	cmds, err := triggerRunner.ExecuteTriggerWithArgs(ctx, evt.Args, nil)
 	if err != nil {
-		slog.Error("Error validating trigger", "error", err)
-
-		plannerMutex.Lock()
-		h.raiseError(ctx, evt, err)
-
-		return nil
-	}
-
-	triggerArgs, err := triggerRunner.GetTriggerArgs(triggerRunArgs)
-	if err != nil {
-		slog.Error("Error getting pipeline args", "error", err)
-
-		plannerMutex.Lock()
-		h.raiseError(ctx, evt, err)
-
-		return nil
-	}
-
-	plannerMutex.Lock()
-	cmds, err := triggerRunner.Run(ctx, evt, triggerArgs, trg)
-	if err != nil {
-		slog.Error("Error sending pipeline command", "error", err)
+		slog.Error("Error executing trigger", "error", err)
 
 		if output.IsServerMode {
-			output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
+			output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error executing trigger", err))
 		}
 
 		h.raiseError(ctx, evt, err)
+		return nil
 	}
 
 	for _, cmd := range cmds {

@@ -78,7 +78,7 @@ func hashRow(row map[string]interface{}) string {
 	return hex.EncodeToString(hashBytes)
 }
 
-func queuePipeline(capture *modconfig.TriggerQueryCapture, evt *event.TriggerStarted, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
+func queuePipeline(capture *modconfig.TriggerQueryCapture, executionID string, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
 		return nil, nil
@@ -101,7 +101,7 @@ func queuePipeline(capture *modconfig.TriggerQueryCapture, evt *event.TriggerSta
 	pipelineName := pipelineDefn["name"].AsString()
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewFlowEvent(evt.Event),
+		Event:               event.NewEventForExecutionID(executionID),
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 		Args:                pipelineArgs,
@@ -331,7 +331,31 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	return updatedItems, nil
 }
 
-func (tr *TriggerRunnerQuery) Run(ctx context.Context, evt *event.TriggerStarted, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
+func (tr *TriggerRunnerQuery) ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
+	triggerRunArgs, err := tr.validate(args, argsString)
+
+	if err != nil {
+		slog.Error("Error validating trigger", "error", err)
+		return nil, err
+	}
+
+	triggerArgs, err := tr.getTriggerArgs(triggerRunArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	cmds, err := tr.execute(ctx, tr.ExecutionID, triggerArgs, tr.Trigger)
+	if err != nil {
+		slog.Error("Error sending pipeline command", "error", err)
+
+		return nil, err
+	}
+
+	return cmds, nil
+
+}
+
+func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
@@ -537,7 +561,7 @@ func (tr *TriggerRunnerQuery) Run(ctx context.Context, evt *event.TriggerStarted
 
 	var pipelineCmds []*event.PipelineQueue
 	for _, capture := range resolvedTriggerConfig.Captures {
-		cmd, err := queuePipeline(capture, evt, tr, evalContext, queryStat)
+		cmd, err := queuePipeline(capture, executionID, tr, evalContext, queryStat)
 		if err != nil {
 			slog.Error("Error running pipeline", "error", err)
 			return nil, err

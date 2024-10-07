@@ -51,6 +51,20 @@ func (h ExecutionPlanned) Handle(ctx context.Context, ei interface{}) error {
 		}
 
 		return nil
+	} else if evt.PipelineQueue != nil {
+		if evt.PipelineQueue.Event == nil {
+			evt.PipelineQueue.Event = evt.Event
+		}
+
+		evt.PipelineQueue.PipelineExecutionID = util.NewPipelineExecutionId()
+
+		err := h.CommandBus.Send(ctx, evt.PipelineQueue)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+			return nil
+		}
+
+		return nil
 	}
 
 	cmd := event.ExecutionFinishFromExecutionPlanned(evt)

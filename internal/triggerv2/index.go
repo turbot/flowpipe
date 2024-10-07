@@ -26,29 +26,34 @@ import (
 )
 
 type TriggerRunnerBase struct {
-	Trigger *modconfig.Trigger
-	rootMod *modconfig.Mod
+	ExecutionID        string
+	TriggerExecutionID string
+	Trigger            *modconfig.Trigger
+	rootMod            *modconfig.Mod
 }
 
 type TriggerRunner interface {
-	Validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error)
-	GetTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error)
-	Run(ctx context.Context, evt *event.TriggerStarted, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error)
+	ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
+	Run()
 }
 
-func NewTriggerRunner(trigger *modconfig.Trigger) TriggerRunner {
+func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionID string) TriggerRunner {
 
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule:
 		return &TriggerRunnerBase{
-			Trigger: trigger,
-			rootMod: trigger.GetMod(),
+			Trigger:            trigger,
+			rootMod:            trigger.GetMod(),
+			ExecutionID:        executionID,
+			TriggerExecutionID: triggerExecutionID,
 		}
 	case *modconfig.TriggerQuery:
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
-				Trigger: trigger,
-				rootMod: trigger.GetMod(),
+				Trigger:            trigger,
+				rootMod:            trigger.GetMod(),
+				ExecutionID:        executionID,
+				TriggerExecutionID: triggerExecutionID,
 			},
 		}
 	default:
@@ -56,7 +61,38 @@ func NewTriggerRunner(trigger *modconfig.Trigger) TriggerRunner {
 	}
 }
 
-func (tr *TriggerRunnerBase) Validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error) {
+func (tr *TriggerRunnerBase) ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
+	triggerRunArgs, err := tr.validate(args, argsString)
+
+	if err != nil {
+		slog.Error("Error validating trigger", "error", err)
+		return nil, err
+	}
+
+	triggerArgs, err := tr.getTriggerArgs(triggerRunArgs)
+	if err != nil {
+		return nil, err
+	}
+
+	cmds, err := tr.execute(ctx, tr.ExecutionID, triggerArgs, tr.Trigger)
+	if err != nil {
+		slog.Error("Error sending pipeline command", "error", err)
+
+		return nil, err
+	}
+
+	return cmds, nil
+
+}
+
+func (tr *TriggerRunnerBase) Run() {
+	_, err := tr.ExecuteTriggerWithArgs(context.Background(), nil, nil)
+	if err != nil {
+		slog.Error("Error executing trigger", "trigger", tr.Trigger.Name(), "error", err)
+	}
+}
+
+func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error) {
 	var triggerRunArgs map[string]interface{}
 
 	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, nil)
@@ -85,7 +121,7 @@ func (tr *TriggerRunnerBase) Validate(args map[string]interface{}, argsString ma
 	return triggerRunArgs, nil
 }
 
-func (tr *TriggerRunnerBase) GetTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
+func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
 
 	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
@@ -142,13 +178,12 @@ func (tr *TriggerRunnerBase) GetTriggerArgs(triggerRunArgs map[string]interface{
 	return pipelineArgs, nil
 }
 
-func (tr *TriggerRunnerBase) Run(ctx context.Context, evt *event.TriggerStarted, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
-	// raise pipeline
+func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
 	pipelineDefn := trg.Pipeline.AsValueMap()
 	pipelineName := pipelineDefn["name"].AsString()
 
 	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewEventForExecutionID(evt.Event.ExecutionID),
+		Event:               event.NewEventForExecutionID(executionID),
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 		Args:                triggerArgs,

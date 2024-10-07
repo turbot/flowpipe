@@ -105,6 +105,39 @@ func (suite *ModThreeTestSuite) TearDownSuite() {
 	suite.TearDownSuiteRunCount++
 }
 
+func (suite *ModThreeTestSuite) TestExecutionPipelineSimple() {
+	assert := assert.New(suite.T())
+
+	name := "test_suite_mod_3.pipeline.simple"
+
+	pipelineCmd := &event.PipelineQueue{
+		Name: name,
+	}
+
+	executionCmd := &event.ExecutionQueue{
+		Event:         event.NewExecutionEvent(),
+		PipelineQueue: pipelineCmd,
+	}
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+
+	if ex.Status != "finished" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
+
+}
+
 func (suite *ModThreeTestSuite) TestExecutionEventsSimple() {
 	assert := assert.New(suite.T())
 
@@ -135,7 +168,6 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimple() {
 	if ex.Status != "finished" {
 		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
 	}
-
 }
 
 func (suite *ModThreeTestSuite) TestExecutionEventsSimpleErrorIgnored() {
@@ -238,6 +270,19 @@ func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
 	if ex.Status != "finished" {
 		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
 	}
+
+	// There should only be 1 root pipeline
+	assert.Equal(1, len(ex.RootPipelines), "Expected 1 root pipeline")
+	// And there should only be 1 pipeline execution
+	assert.Equal(1, len(ex.PipelineExecutions), "Expected 1 pipeline execution")
+
+	pex := ex.PipelineExecutions[ex.RootPipelines[0]]
+	if pex == nil {
+		assert.Fail("root pipeline execution")
+		return
+	}
+
+	assert.Equal(6, len(pex.PipelineOutput["inserted_rows"].([]any)), "Expected 6 inserted rows")
 
 }
 

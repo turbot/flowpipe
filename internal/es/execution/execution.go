@@ -897,7 +897,16 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 	case *event.PipelineQueue:
 		if et.Trigger != "" && !slices.Contains(ex.RootPipelines, et.PipelineExecutionID) {
+			// Trigger -> there can be 1 root pipeline or up to 3 root pipelines (for query trigger)
 			ex.RootPipelines = append(ex.RootPipelines, et.PipelineExecutionID)
+		} else if et.ParentExecutionID == "" && !slices.Contains(ex.RootPipelines, et.PipelineExecutionID) {
+			// "normal" path, there can only be 1 root pipeline
+			ex.RootPipelines = append(ex.RootPipelines, et.PipelineExecutionID)
+
+			// For now we only support 1 root pipeline
+			if len(ex.RootPipelines) > 1 {
+				return perr.BadRequestWithMessage("multiple root pipelines found")
+			}
 		}
 
 	case *event.PipelineQueued:
