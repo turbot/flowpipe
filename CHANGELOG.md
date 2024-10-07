@@ -2,8 +2,6 @@
 
 ## v1.0.0 [tbd]
 
-
-
 _What's new?_
 
 * `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/tbd).
