@@ -9,10 +9,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/util"
@@ -23,6 +24,8 @@ import (
 
 func TestPostgresSqlTriggerQuery(t *testing.T) {
 	ctx := context.Background()
+
+	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -157,22 +160,19 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		},
 	}
 
-	var triggerCommands []interface{}
-	commandBusMock := &util.CommandBusMock{
-		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommands = append(triggerCommands, command)
-			return nil
-		},
+	// Add trigger to db
+	cache.GetCache().SetWithTTL(trigger.Name(), trigger, 10*time.Minute)
+
+	executionId := util.NewExecutionId()
+	triggerExecutionId := util.NewTriggerExecutionId()
+
+	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
+
+	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
 	}
-
-	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	receiveChannel := make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res := <-receiveChannel
-	assert.Nil(res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -216,26 +216,24 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	}
 
 	// check the triggerCommands .. we check how many pipeline is executed and which pipeline is executed
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
-	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// SECOND RUN
 	//
 	// Without changing anything, the second run should not have any new "inserted_rows"
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.Equal(0, len(triggerCommands), "trigger command should be nil, since there's no change the pipeline should NOT be called")
-	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(pipelineQueues), "trigger command should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// THIRD RUN
@@ -265,18 +263,15 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.NotNil(triggerCommands, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -311,8 +306,8 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
-	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// FOURTH RUN
@@ -331,16 +326,14 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -377,27 +370,24 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the update pipeline should be executed")
-	assert.Equal("update_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the update pipeline should be executed")
+	assert.Equal("update_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// FIFTH RUN
 	//
 	// run it again, shouldn't have any new updates
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
-	assert.Equal(0, len(triggerCommands), "no update")
+	assert.Equal(0, len(pipelineQueues), "no update")
 
 	//
 	// SIXTH RUN
@@ -410,16 +400,14 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -453,8 +441,8 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the delete pipeline should be executed")
-	assert.Equal("delete_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Equal("delete_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// SEVENTH RUN
@@ -490,25 +478,25 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.Equal(2, len(triggerCommands), "wrong number of trigger commands only the delete pipeline should be executed")
-	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
-	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[1].(*event.PipelineQueue).Name, "wrong pipeline name")
-	assert.False(triggerCommands[0].(*event.PipelineQueue).Name == triggerCommands[1].(*event.PipelineQueue).Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
+	assert.Equal(2, len(pipelineQueues), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, pipelineQueues[0].Name, "wrong pipeline name")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, pipelineQueues[1].Name, "wrong pipeline name")
+	assert.False(pipelineQueues[0].Name == pipelineQueues[1].Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
 }
 
 func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	ctx := context.Background()
+
+	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -642,24 +630,19 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	var triggerCommands []interface{}
-	commandBusMock := &util.CommandBusMock{
-		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommands = append(triggerCommands, command)
-			return nil
-		},
+	// Add trigger to db
+	cache.GetCache().SetWithTTL(trigger.Name(), trigger, 10*time.Minute)
+
+	executionId := util.NewExecutionId()
+	triggerExecutionId := util.NewTriggerExecutionId()
+
+	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
+
+	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
 	}
-
-	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	assert.NotNil(triggerRunner, "trigger runner should not be nil")
-
-	receiveChannel := make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res := <-receiveChannel
-	assert.Nil(res)
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -702,26 +685,24 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
-	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// SECOND RUN
 	//
 	// Without changing anything, the second run should not have any new "inserted_rows"
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
 
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.Equal(0, len(triggerCommands), "trigger command should be nil, since there's no change the pipeline should NOT be called")
-	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(pipelineQueues), "trigger command should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// THIRD RUN
@@ -751,12 +732,14 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
+	// Reset
+	generatedEvalContext = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -799,8 +782,8 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
-	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// FOURTH RUN
@@ -819,16 +802,14 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
 	selfVar = generatedEvalContext.Variables["self"]
 	if selfVar == cty.NilVal {
@@ -865,10 +846,10 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	assert.Equal("0432ffd1257d9c9e9903528dc8367bed39b5aff0afe68662fd0afa4e85b20b56", deletedKeysSlice[0].AsString(), "wrong deleted key")
 
 	// because update doesn't work without primary key, we have insert & delete instead
-	assert.Equal(2, len(triggerCommands), "wrong number of trigger commands only the delete pipeline should be executed")
-	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
-	assert.Contains([]string{"delete_pipe", "insert_pipe"}, triggerCommands[1].(*event.PipelineQueue).Name, "wrong pipeline name")
-	assert.False(triggerCommands[0].(*event.PipelineQueue).Name == triggerCommands[1].(*event.PipelineQueue).Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
+	assert.Equal(2, len(pipelineQueues), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, pipelineQueues[0].Name, "wrong pipeline name")
+	assert.Contains([]string{"delete_pipe", "insert_pipe"}, pipelineQueues[1].Name, "wrong pipeline name")
+	assert.False(pipelineQueues[0].Name == pipelineQueues[1].Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
 }
 
 func TestPostgresSqlTriggerQueryB(t *testing.T) {
@@ -1017,25 +998,19 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		},
 	}
 
-	var triggerCommands []interface{}
-	commandBusMock := &util.CommandBusMock{
-		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommands = append(triggerCommands, command)
-			return nil
-		},
+	// Add trigger to db
+	cache.GetCache().SetWithTTL(trigger.Name(), trigger, 10*time.Minute)
+
+	executionId := util.NewExecutionId()
+	triggerExecutionId := util.NewTriggerExecutionId()
+
+	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
+
+	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
 	}
-
-	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	assert.NotNil(triggerRunner, "trigger runner should not be nil")
-
-	receiveChannel := make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res := <-receiveChannel
-	assert.Nil(res)
-
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -1089,27 +1064,24 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	}
 
 	// check the triggerCommands .. we check how many pipeline is executed and which pipeline is executed
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the insert pipeline should be executed")
-	assert.Equal("insert_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
 	// SECOND RUN
 	//
 	// No update
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.Equal(0, len(triggerCommands), "trigger command should be nil, since there's no change the pipeline should NOT be called")
-	assert.Nil(generatedEvalContext, "generated eval context should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(pipelineQueues), "trigger command should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// THIRD RUN
@@ -1127,19 +1099,17 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		return
 	}
 
-	receiveChannel = make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
 	// Reset
 	generatedEvalContext = nil
-	triggerCommands = nil
 
-	triggerRunner.Run()
-	res = <-receiveChannel
-	assert.Nil(res)
+	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
+	}
 
-	assert.Equal(1, len(triggerCommands), "wrong number of trigger commands only the update pipeline should be executed")
-	assert.Equal("update_pipe", triggerCommands[0].(*event.PipelineQueue).Name, "wrong pipeline name")
+	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the update pipeline should be executed")
+	assert.Equal("update_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
@@ -1191,6 +1161,8 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 
 func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	ctx := context.Background()
+
+	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -1281,10 +1253,8 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		"name": cty.StringVal("delete_pipe"),
 	}
 
-	var generatedEvalContext *hcl.EvalContext
 	hclExpressionMock := &util.HclExpressionMock{
 		ValueFunc: func(evalCtx *hcl.EvalContext) (cty.Value, hcl.Diagnostics) {
-			generatedEvalContext = evalCtx
 			res := map[string]cty.Value{
 				"from": cty.StringVal("test"),
 			}
@@ -1325,31 +1295,27 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		},
 	}
 
-	var triggerCommands []interface{}
-	commandBusMock := &util.CommandBusMock{
-		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommands = append(triggerCommands, command)
-			return nil
-		},
+	// Add trigger to db
+	cache.GetCache().SetWithTTL(trigger.Name(), trigger, 10*time.Minute)
+
+	executionId := util.NewExecutionId()
+	triggerExecutionId := util.NewTriggerExecutionId()
+
+	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
+
+	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
 	}
 
-	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	assert.NotNil(triggerRunner, "trigger runner should not be nil")
-
-	receiveChannel := make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res := <-receiveChannel
-	assert.Nil(res)
-
-	assert.Nil(generatedEvalContext, "generated eval context should be nil, insert capture not defined no pipeline should be executed")
-	assert.Equal(0, len(triggerCommands), "insert capture not defined no pipeline should be executed")
+	assert.Equal(0, len(pipelineQueues), "insert capture not defined no pipeline should be executed")
 }
 
 func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	ctx := context.Background()
+
+	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -1483,25 +1449,19 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		},
 	}
 
-	var triggerCommands []interface{}
-	commandBusMock := &util.CommandBusMock{
-		SendFunc: func(ctx context.Context, command interface{}) error {
-			triggerCommands = append(triggerCommands, command)
-			return nil
-		},
+	// Add trigger to db
+	cache.GetCache().SetWithTTL(trigger.Name(), trigger, 10*time.Minute)
+
+	executionId := util.NewExecutionId()
+	triggerExecutionId := util.NewTriggerExecutionId()
+
+	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
+
+	_, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	if err != nil {
+		assert.Fail("Error executing trigger", err)
+		return
 	}
-
-	triggerRunner := NewTriggerRunner(ctx, commandBusMock, nil, trigger)
-
-	assert.NotNil(triggerRunner, "trigger runner should not be nil")
-
-	receiveChannel := make(chan error)
-	triggerRunner.GetFqueue().RegisterCallback(receiveChannel)
-
-	triggerRunner.Run()
-	res := <-receiveChannel
-	assert.Nil(res)
-
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
