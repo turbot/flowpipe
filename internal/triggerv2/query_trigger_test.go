@@ -38,6 +38,7 @@ func TestTriggerQuery(t *testing.T) {
 			return
 		}
 	}
+
 	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)

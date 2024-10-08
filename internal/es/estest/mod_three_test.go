@@ -236,6 +236,16 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleFailure() {
 func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
 	assert := assert.New(suite.T())
 
+	sourceDbFilename := "./test_suite_mod_3/test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
+
 	name := "test_suite_mod_3.trigger.query.simple_sqlite"
 
 	triggerCmd := &event.TriggerQueue{
