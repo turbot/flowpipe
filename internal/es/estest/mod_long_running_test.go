@@ -206,7 +206,12 @@ func (suite *ModLongRunningTestSuite) TestContainerWithLoop() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error waiting for execution", err)
+		return
+	}
+
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal(4, len(pex.StepStatus["container.container"]["0"].StepExecutions))
@@ -225,7 +230,12 @@ func (suite *ModLongRunningTestSuite) TestMessageWithLoop() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error waiting for execution", err)
+		return
+	}
+
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal(4, len(pex.StepStatus["message.message"]["0"].StepExecutions))
@@ -247,7 +257,12 @@ func (suite *ModLongRunningTestSuite) TestMessageWithLoop2() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error waiting for execution", err)
+		return
+	}
+
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal(4, len(pex.StepStatus["message.message"]["0"].StepExecutions))

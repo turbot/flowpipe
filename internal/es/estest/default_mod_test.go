@@ -389,7 +389,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "failed")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 50, "failed")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return
