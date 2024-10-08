@@ -317,7 +317,7 @@ func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry
 		},
 	}
 
-	if ex != nil && trg.Config.GetType() == "schedule" && len(ex.PipelineExecutions) > 0 {
+	if ex != nil {
 
 		for _, pex := range ex.PipelineExecutions {
 			response.Results = map[string]interface{}{}
@@ -343,9 +343,18 @@ func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry
 				pipelineResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
 			}
 
-			response.Results[trg.Config.GetType()] = pipelineResponse
-		}
+			if trg.Config.GetType() == "schedule" {
+				response.Results[trg.Config.GetType()] = pipelineResponse
+			} else {
 
+				// find which capture group is this
+				for _, capture := range trg.Config.(*modconfig.TriggerQuery).Captures {
+					if capture.Pipeline.AsString() == pex.Name {
+						response.Results[capture.Type] = pipelineResponse
+					}
+				}
+			}
+		}
 	}
 
 	return response, nil
