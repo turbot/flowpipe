@@ -286,7 +286,6 @@ func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry
 	waitTime := 1 * time.Second
 	expectedState := "finished"
 
-	var pex *execution.PipelineExecution
 	var ex *execution.ExecutionInMemory
 
 	// Wait for the pipeline to complete, but not forever
@@ -322,29 +321,29 @@ func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry
 
 		for _, pex := range ex.PipelineExecutions {
 			response.Results = map[string]interface{}{}
-			response.Results[trg.Config.GetType()] = types.PipelineExecutionResponse{
+			pipelineResponse := types.PipelineExecutionResponse{
 				Flowpipe: types.FlowpipeResponseMetadata{
 					ExecutionID:         executionId,
 					PipelineExecutionID: pex.ID,
 					Pipeline:            pex.Name,
 				},
 			}
-		}
+			pipelineOutput := pex.PipelineOutput
 
-		pipelineOutput := pex.PipelineOutput
+			if pipelineOutput == nil {
+				pipelineOutput = map[string]interface{}{}
+			}
 
-		if pipelineOutput == nil {
-			pipelineOutput = map[string]interface{}{}
-		}
+			for k, v := range pex.PipelineOutput {
+				pipelineOutput[k] = sanitize.Instance.Sanitize(v)
+			}
+			pipelineResponse.Results = pipelineOutput
 
-		for k, v := range pex.PipelineOutput {
-			pipelineOutput[k] = sanitize.Instance.Sanitize(v)
-		}
+			if pipelineOutput["errors"] != nil {
+				pipelineResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+			}
 
-		response.Results = pipelineOutput
-
-		if pipelineOutput["errors"] != nil {
-			response.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+			response.Results[trg.Config.GetType()] = pipelineResponse
 		}
 
 	}

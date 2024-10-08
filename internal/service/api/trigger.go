@@ -8,8 +8,6 @@ import (
 	"sort"
 	"strings"
 
-	putils "github.com/turbot/pipe-fittings/utils"
-
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
@@ -20,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -227,10 +226,54 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	triggerExecutionResponse, pipelineCmds, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
+	executionId, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+
+	trg, err := db.GetTrigger(triggerName)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	if executionMode == localconstants.ExecutionModeSynchronous {
+		triggerExecutionResponse, err := api.waitForTrigger(triggerName, executionId, waitRetry)
+		if err != nil {
+			slog.Error("error waiting for trigger", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
+
+		// for _, pipelineCmd := range pipelineCmds {
+		// 	pipelineExecutionReponse, err := api.waitForPipeline(*pipelineCmd, waitRetry)
+		// 	if err != nil {
+		// 		slog.Error("error waiting for pipeline", "error", err)
+		// 		api.processTriggerExecutionResult(c, triggerExecutionResponse, *pipelineCmd, err)
+		// 		return
+		// 	}
+		// 	for i, res := range triggerExecutionResponse.Results {
+		// 		if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
+		// 			if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
+		// 				// Set the capture type in the nested Flowpipe metadata (good info)
+		// 				pipelineExecutionReponse.Flowpipe.Type = i
+		// 				triggerExecutionResponse.Results[i] = pipelineExecutionReponse
+		// 			}
+		// 		}
+		// 	}
+		// }
+
+		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
+		return
+	}
+
+	triggerExecutionResponse := types.TriggerExecutionResponse{
+		Flowpipe: types.FlowpipeTriggerResponseMetadata{
+			ProcessID: executionId,
+			Name:      trg.FullName,
+			Type:      trg.Config.GetType(),
+		},
 	}
 
 	if api.ModMetadata.IsStale {
@@ -238,29 +281,6 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 		triggerExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
-	}
-
-	if executionMode == localconstants.ExecutionModeSynchronous {
-		for _, pipelineCmd := range pipelineCmds {
-			pipelineExecutionReponse, err := api.waitForPipeline(*pipelineCmd, waitRetry)
-			if err != nil {
-				slog.Error("error waiting for pipeline", "error", err)
-				api.processTriggerExecutionResult(c, triggerExecutionResponse, *pipelineCmd, err)
-				return
-			}
-			for i, res := range triggerExecutionResponse.Results {
-				if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
-					if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-						// Set the capture type in the nested Flowpipe metadata (good info)
-						pipelineExecutionReponse.Flowpipe.Type = i
-						triggerExecutionResponse.Results[i] = pipelineExecutionReponse
-					}
-				}
-			}
-		}
-
-		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
-		return
 	}
 
 	c.JSON(http.StatusOK, triggerExecutionResponse)
