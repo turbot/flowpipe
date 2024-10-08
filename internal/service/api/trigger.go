@@ -17,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
@@ -176,21 +175,19 @@ func ConstructTriggerFullyQualifiedName(triggerName string) string {
 	return ConstructFullyQualifiedName("trigger", 2, triggerName)
 }
 
-func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-	triggerExecutionResponse := types.TriggerExecutionResponse{}
-	modTrigger, err := db.GetTrigger(triggerName)
+func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (string, error) {
+	_, err := db.GetTrigger(triggerName)
 	if err != nil {
-		return triggerExecutionResponse, nil, err
+		return "", err
 	}
 
-	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
-
-	triggerExecutionResponse, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
+	executionCmd := event.NewExecutionQueueForTrigger(executionId, triggerName)
+	err = esService.CommandBus.Send(ctx, executionCmd)
 	if err != nil {
-		return triggerExecutionResponse, nil, err
+		return "", err
 	}
 
-	return triggerExecutionResponse, evt, nil
+	return executionCmd.Event.ExecutionID, nil
 }
 
 // @Summary Execute a trigger command
@@ -245,10 +242,10 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 
 	if executionMode == localconstants.ExecutionModeSynchronous {
 		for _, pipelineCmd := range pipelineCmds {
-			pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
+			pipelineExecutionReponse, err := api.waitForPipeline(*pipelineCmd, waitRetry)
 			if err != nil {
 				slog.Error("error waiting for pipeline", "error", err)
-				api.processTriggerExecutionResult(c, triggerExecutionResponse, pipelineCmd, err)
+				api.processTriggerExecutionResult(c, triggerExecutionResponse, *pipelineCmd, err)
 				return
 			}
 			for i, res := range triggerExecutionResponse.Results {

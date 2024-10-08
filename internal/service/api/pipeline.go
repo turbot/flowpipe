@@ -17,7 +17,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
@@ -307,11 +306,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 	}
 
 	if input.Command == "run" {
-		pipelineCmd := &event.PipelineQueue{
-			Event:               event.NewEventForExecutionID(executionId),
-			PipelineExecutionID: util.NewPipelineExecutionId(),
-			Name:                pipelineDefn.Name(),
-		}
+		executionCmd := event.NewExecutionQueueForPipeline(executionId, pipelineDefn.Name())
 
 		evalContext, err := buildTempEvalContextForApi()
 		if err != nil {
@@ -324,7 +319,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 				errStrs := error_helpers.MergeErrors(errs)
 				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 			}
-			pipelineCmd.Args = input.Args
+			executionCmd.PipelineQueue.Args = input.Args
 
 		} else if len(input.ArgsString) > 0 {
 			args, errs := parse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
@@ -332,20 +327,21 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 				errStrs := error_helpers.MergeErrors(errs)
 				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
 			}
-			pipelineCmd.Args = args
+			executionCmd.PipelineQueue.Args = args
 		}
 
-		if err := esService.Send(pipelineCmd); err != nil {
+		if err := esService.Send(executionCmd); err != nil {
 			return response, nil, err
 		}
 
 		response.Flowpipe = types.FlowpipeResponseMetadata{
-			ExecutionID:         pipelineCmd.Event.ExecutionID,
-			PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-			Pipeline:            pipelineCmd.Name,
+			ExecutionID:         executionCmd.Event.ExecutionID,
+			PipelineExecutionID: executionCmd.PipelineQueue.PipelineExecutionID,
+			Pipeline:            executionCmd.PipelineQueue.Name,
 		}
 
-		return response, pipelineCmd, nil
+		// This effectively returns the root pipeline queue command
+		return response, executionCmd.PipelineQueue, nil
 	}
 
 	return response, nil, perr.BadRequestWithMessage("invalid command")

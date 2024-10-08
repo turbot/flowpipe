@@ -30,11 +30,12 @@ type TriggerRunnerBase struct {
 	TriggerExecutionID string
 	Trigger            *modconfig.Trigger
 	rootMod            *modconfig.Mod
+	Type               string
 }
 
 type TriggerRunner interface {
 	ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
-	Run()
+	GetTriggerResponse([]*event.PipelineQueue) (types.TriggerExecutionResponse, error)
 }
 
 func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionID string) TriggerRunner {
@@ -46,6 +47,7 @@ func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionI
 			rootMod:            trigger.GetMod(),
 			ExecutionID:        executionID,
 			TriggerExecutionID: triggerExecutionID,
+			Type:               "schedule",
 		}
 	case *modconfig.TriggerQuery:
 		return &TriggerRunnerQuery{
@@ -54,6 +56,7 @@ func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionI
 				rootMod:            trigger.GetMod(),
 				ExecutionID:        executionID,
 				TriggerExecutionID: triggerExecutionID,
+				Type:               "query",
 			},
 		}
 	default:
@@ -85,11 +88,34 @@ func (tr *TriggerRunnerBase) ExecuteTriggerWithArgs(ctx context.Context, args ma
 
 }
 
-func (tr *TriggerRunnerBase) Run() {
-	_, err := tr.ExecuteTriggerWithArgs(context.Background(), nil, nil)
-	if err != nil {
-		slog.Error("Error executing trigger", "trigger", tr.Trigger.Name(), "error", err)
+func (tr *TriggerRunnerBase) GetTriggerResponse(pipelineCmds []*event.PipelineQueue) (types.TriggerExecutionResponse, error) {
+	response := types.TriggerExecutionResponse{}
+
+	if len(pipelineCmds) == 0 {
+		return response, perr.NotFoundWithMessage("no pipeline commands found")
 	}
+
+	if len(pipelineCmds) > 1 {
+		return response, perr.BadRequestWithMessage("multiple pipeline commands found")
+	}
+
+	pipelineCmd := pipelineCmds[0]
+
+	response.Results = map[string]interface{}{}
+	response.Results[tr.Trigger.Config.GetType()] = types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID:         pipelineCmd.Event.ExecutionID,
+			PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+			Pipeline:            pipelineCmd.Name,
+		},
+	}
+
+	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
+		Name: tr.Trigger.FullName,
+		Type: tr.Trigger.Config.GetType(),
+	}
+
+	return response, nil
 }
 
 func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error) {
