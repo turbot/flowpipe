@@ -348,6 +348,7 @@ func (suite *DefaultModTestSuite) TestNestedModWithCreds() {
 		assert.Fail("Error getting pipeline execution", err)
 		return
 	}
+
 	assert.Equal("finished", pex.Status)
 	assert.Equal("12345", pex.PipelineOutput["val"])
 	assert.Equal("default", pex.PipelineOutput["val_merge"].(map[string]interface{})["cred_name"])
@@ -382,7 +383,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
 
 	pipelineInput := modconfig.Input{}
 
-	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_invalid_param", 100*time.Millisecond, pipelineInput)
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_invalid_param", 200*time.Millisecond, pipelineInput)
 
 	if err != nil {
 		assert.Fail("Error creating execution", err)

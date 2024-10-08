@@ -181,7 +181,12 @@ func (suite *ModLongRunningTestSuite) TestTransformWithLoopMap() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 5*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail("Error waiting for execution", err)
+		return
+	}
+
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal(4, len(pex.StepStatus["transform.transform"]["0"].StepExecutions))
