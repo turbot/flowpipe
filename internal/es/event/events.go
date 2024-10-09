@@ -17,6 +17,8 @@ const (
 	HandlerExecutionFinished = "handler.execution_finished"
 	CommandExecutionFail     = "command.execution_fail"
 	HandlerExecutionFailed   = "handler.execution_failed"
+	CommandExecutionPause    = "command.execution_pause"
+	HandlerExecutionPaused   = "handler.execution_paused"
 
 	CommandPipelineCancel      = "command.pipeline_cancel"
 	HandlerPipelineCancelled   = "handler.pipeline_canceled"

@@ -207,7 +207,7 @@ func pipelineRunCmd() *cobra.Command {
 }
 
 // func used to poll event store
-type pollEventLogFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)
+type pollEventLogFunc func(ctx context.Context, executionId string, last int) (bool, int, types.ProcessEventLogs, error)
 
 func runPipelineFunc(cmd *cobra.Command, args []string) {
 	ctx := cmd.Context()
@@ -437,7 +437,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp types.Pi
 	// TODO: should we time out?
 	// poll logs & print
 	for {
-		exit, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
+		exit, i, logs, err := pollEventLog(ctx, executionId, lastIndex, pollLogFunc)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
 			return
@@ -468,7 +468,7 @@ func displayStreamingLogs(ctx context.Context, cmd *cobra.Command, resp types.Pi
 
 func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.PipelineExecutionResponse, pollLogFunc pollEventLogFunc) {
 	executionId := resp.Flowpipe.ExecutionID
-	pipelineId := resp.Flowpipe.PipelineExecutionID
+	pipelineId := ""
 
 	stepNames := make(map[string]string)
 	lastIndex := -1
@@ -481,7 +481,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 	// poll logs for updates
 	for {
 		progressFunc := func() {
-			complete, i, logs, err := pollEventLog(ctx, executionId, pipelineId, lastIndex, pollLogFunc)
+			complete, i, logs, err := pollEventLog(ctx, executionId, lastIndex, pollLogFunc)
 			if err != nil {
 				error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
 				return
@@ -505,6 +505,12 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 						return
 					}
 					stepNames[e.PipelineExecutionID] = strings.Split(e.Name, ".")[len(strings.Split(e.Name, "."))-1]
+
+					// Assume the root pipeline here .. BUT will not work for query trigger when we have 3 pipelines.
+					if e.Trigger != "" || e.ParentExecutionID == "" {
+						pipelineId = e.PipelineExecutionID
+					}
+
 				case event.HandlerPipelineStarted:
 					var e event.PipelineStarted
 					err := json.Unmarshal(jsonPayload, &e)
@@ -641,10 +647,11 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 		return
 	}
 
+	rootPipelineId := ""
 	lastIndex := -1
 
 	for {
-		exit, i, logs, err := pollEventLog(ctx, exec.ExecutionId, exec.PipelineExecutionId, lastIndex, pollLogFunc)
+		exit, i, logs, err := pollEventLog(ctx, exec.ExecutionId, lastIndex, pollLogFunc)
 		if err != nil {
 			error_helpers.ShowErrorWithMessage(ctx, err, "failed polling events")
 			return
@@ -666,11 +673,19 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
+
+				if e.Trigger != "" || e.ParentExecutionID == "" {
+					// this is the "root" pipeline
+					rootPipelineId = e.PipelineExecutionID
+					exec.PipelineExecutionId = rootPipelineId
+				}
+
 				if e.PipelineExecutionID == exec.PipelineExecutionId {
 					exec.PipelineName = &e.Name
 					exec.CreatedAt = &e.Event.CreatedAt
 					exec.Status = "queued"
 				}
+
 			case event.HandlerPipelineStarted:
 				var e event.PipelineStarted
 				err := json.Unmarshal(jsonPayload, &e)
@@ -678,9 +693,10 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
-				if e.PipelineExecutionID == exec.PipelineExecutionId {
+				if e.PipelineExecutionID == rootPipelineId {
 					exec.Status = "started"
 				}
+
 			case event.HandlerPipelineFinished:
 				var e event.PipelineFinished
 				err := json.Unmarshal(jsonPayload, &e)
@@ -688,10 +704,11 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
-				if e.PipelineExecutionID == exec.PipelineExecutionId {
+				if e.PipelineExecutionID == rootPipelineId {
 					exec.Status = "finished"
 					exec.Outputs = e.PipelineOutput
 				}
+
 			case event.HandlerPipelineFailed:
 				var e event.PipelineFailed
 				err := json.Unmarshal(jsonPayload, &e)
@@ -699,11 +716,12 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 					error_helpers.ShowErrorWithMessage(ctx, err, fmt.Sprintf("failed unmarshalling %s event", e.HandlerName()))
 					return
 				}
-				if e.PipelineExecutionID == exec.PipelineExecutionId {
+				if e.PipelineExecutionID == rootPipelineId {
 					exec.Status = "failed"
 					exec.Outputs = e.PipelineOutput
 					exec.Errors = e.Errors
 				}
+
 			default:
 				// ignore other events
 			}
@@ -766,8 +784,8 @@ func validatePipelineArgs(pipelineArgs []string) error {
 	return nil
 }
 
-func pollEventLog(ctx context.Context, executionId, rootPipelineId string, lastIndex int, pollFunc func(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error)) (bool, int, types.ProcessEventLogs, error) {
-	return pollFunc(ctx, executionId, rootPipelineId, lastIndex)
+func pollEventLog(ctx context.Context, executionId string, lastIndex int, pollFunc func(ctx context.Context, exId string, last int) (bool, int, types.ProcessEventLogs, error)) (bool, int, types.ProcessEventLogs, error) {
+	return pollFunc(ctx, executionId, lastIndex)
 }
 
 func EventLogImplFromApiReponse(apiResp flowpipeapiclient.EventEventLogImpl) event.EventLogImpl {
@@ -788,11 +806,11 @@ func EventLogImplFromApiReponse(apiResp flowpipeapiclient.EventEventLogImpl) eve
 	return e
 
 }
-func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool, int, types.ProcessEventLogs, error) {
+func pollServerEventLog(ctx context.Context, executionId string, last int) (bool, int, types.ProcessEventLogs, error) {
 	complete := false
 	var out types.ProcessEventLogs
 	client := common.GetApiClient()
-	logs, _, err := client.ProcessApi.GetLog(ctx, exId).Execute()
+	logs, _, err := client.ProcessApi.GetLog(ctx, executionId).Execute()
 	if err != nil {
 		return false, last, nil, err
 	}
@@ -806,9 +824,8 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 
 				last = index
 
-				// TODO: we can't do what we do with pollLocalEventLog for pipeline paused because we don't have the
-				// execution object. We need to wait until we have execution_paused event before it will work properly
-				if e.Message == event.HandlerPipelineFinished || e.Message == event.HandlerPipelineFailed {
+				// TODO: execution paused
+				if e.Message == event.HandlerExecutionFinished || e.Message == event.HandlerExecutionFailed {
 					jsonData, err := json.Marshal(item.Detail)
 					if err != nil {
 						return false, 0, nil, perr.InternalWithMessage("error marshalling log detail")
@@ -818,7 +835,7 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 					if err := json.Unmarshal(jsonData, &payload); err != nil {
 						return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
 					}
-					complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == plId
+					complete = true
 				}
 			}
 		}
@@ -827,7 +844,7 @@ func pollServerEventLog(ctx context.Context, exId, plId string, last int) (bool,
 	return complete, last, out, nil
 }
 
-func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId string, last int) (bool, int, types.ProcessEventLogs, error) {
+func pollLocalEventLog(ctx context.Context, executionId string, last int) (bool, int, types.ProcessEventLogs, error) {
 
 	ex, err := execution.GetExecution(executionId)
 	if err != nil {
@@ -847,17 +864,9 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 
 		res = append(res, item)
 
-		if item.Message == event.HandlerPipelinePaused {
-			// if it's paused all pex must be in paused state before we decide it's "done"
-			paused := true
-			for _, pex := range ex.PipelineExecutions {
-				if pex.Status != "paused" {
-					paused = false
-					break
-				}
-			}
-			complete = paused
-		} else if item.Message == event.HandlerPipelineFinished || item.Message == event.HandlerPipelineFailed {
+		if item.Message == event.HandlerExecutionPaused {
+			complete = true
+		} else if item.Message == event.HandlerExecutionFinished || item.Message == event.HandlerExecutionFailed {
 
 			jsonData, err := json.Marshal(item.Detail)
 			if err != nil {
@@ -868,7 +877,7 @@ func pollLocalEventLog(ctx context.Context, executionId, pipelineExecutionId str
 			if err := json.Unmarshal(jsonData, &payload); err != nil {
 				return false, 0, nil, perr.InternalWithMessage("eror parsing payload")
 			}
-			complete = payload["pipeline_execution_id"] != nil && payload["pipeline_execution_id"] == pipelineExecutionId
+			complete = true
 		}
 
 		currentIndex++

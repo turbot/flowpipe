@@ -229,9 +229,13 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.TriggerExecutionR
 		ArgsString: triggerArgs,
 	}
 
-	_, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+	executionId, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
 	if err != nil {
 		return response, m, err
+	}
+
+	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
+		ProcessID: executionId,
 	}
 
 	return response, m, err
@@ -358,22 +362,26 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 		}
 	}()
 
-	for _, resp := range resp.Results {
-		if pipelineExecutionResponse, ok := resp.(types.PipelineExecutionResponse); ok {
-			switch {
-			case isDetach:
-				err := displayDetached(ctx, cmd, pipelineExecutionResponse)
-				if err != nil {
-					error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
-					return
-				}
-			case streamLogs:
-				displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-			case progressLogs:
-				displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-			default:
-				displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-			}
-		}
+	pipelineExecutionResponse := types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID: resp.Flowpipe.ProcessID,
+			IsStale:     resp.Flowpipe.IsStale,
+		},
 	}
+
+	switch {
+	case isDetach:
+		err := displayDetached(ctx, cmd, pipelineExecutionResponse)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+			return
+		}
+	case streamLogs:
+		displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+	case progressLogs:
+		displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+	default:
+		displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+	}
+
 }
