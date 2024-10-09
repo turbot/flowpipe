@@ -922,7 +922,9 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			Errors:                []modconfig.StepError{},
 			StepExecutions:        map[string]*StepExecution{},
 			Trigger:               et.Trigger,
+			TriggerCapture:        et.TriggerCapture,
 		}
+
 	case *event.PipelineStarted:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "started"

@@ -20,6 +20,9 @@ type PipelineQueue struct {
 
 	// If pipeline is triggered by a trigger, this is the trigger name
 	Trigger string
+
+	// If pipeline is triggered by query trigger, this is the capture name
+	TriggerCapture string
 }
 
 func (e *PipelineQueue) GetEvent() *Event {

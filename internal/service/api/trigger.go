@@ -246,24 +246,6 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 			return
 		}
 
-		// for _, pipelineCmd := range pipelineCmds {
-		// 	pipelineExecutionReponse, err := api.waitForPipeline(*pipelineCmd, waitRetry)
-		// 	if err != nil {
-		// 		slog.Error("error waiting for pipeline", "error", err)
-		// 		api.processTriggerExecutionResult(c, triggerExecutionResponse, *pipelineCmd, err)
-		// 		return
-		// 	}
-		// 	for i, res := range triggerExecutionResponse.Results {
-		// 		if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
-		// 			if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-		// 				// Set the capture type in the nested Flowpipe metadata (good info)
-		// 				pipelineExecutionReponse.Flowpipe.Type = i
-		// 				triggerExecutionResponse.Results[i] = pipelineExecutionReponse
-		// 			}
-		// 		}
-		// 	}
-		// }
-
 		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
 		return
 	}

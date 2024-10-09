@@ -76,7 +76,11 @@ type PipelineExecution struct {
 	// If this is a child pipeline, then track it's parent
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
-	Trigger               string `json:"trigger,omitempty"`
+
+	// If pipeline is started by a trigger, this is the trigger name
+	Trigger string `json:"trigger,omitempty"`
+	// If pipeline is started by a query trigger, this is the capture name
+	TriggerCapture string `json:"trigger_capture,omitempty"`
 
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
 	Errors []modconfig.StepError `json:"errors,omitempty"`

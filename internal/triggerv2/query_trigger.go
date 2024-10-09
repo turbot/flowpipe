@@ -106,6 +106,7 @@ func queuePipeline(capture *modconfig.TriggerQueryCapture, executionID string, t
 		Name:                pipelineName,
 		Args:                pipelineArgs,
 		Trigger:             tr.Trigger.Name(),
+		TriggerCapture:      capture.Type,
 	}
 
 	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID, "args", pipelineArgs, "capture_type", capture.Type, "capture_count", queryStat[capture.Type])

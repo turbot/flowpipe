@@ -19,6 +19,7 @@ type PipelineQueued struct {
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 	Trigger               string `json:"trigger,omitempty"`
+	TriggerCapture        string `json:"trigger_capture,omitempty"`
 }
 
 func (e *PipelineQueued) GetEvent() *Event {
@@ -62,6 +63,7 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 		e.ParentStepExecutionID = cmd.ParentStepExecutionID
 		e.ParentExecutionID = cmd.ParentExecutionID
 		e.Trigger = cmd.Trigger
+		e.TriggerCapture = cmd.TriggerCapture
 		return nil
 	}
 }
