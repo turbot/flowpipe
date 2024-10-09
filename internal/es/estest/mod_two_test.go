@@ -81,6 +81,7 @@ func (suite *ModTwoTestSuite) SetupSuite() {
 
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
+
 	error_helpers.FailOnError(err)
 	suite.esService = m.ESService
 
@@ -232,7 +233,8 @@ func (suite *ModTwoTestSuite) TestValidCustomParam() {
 
 	pipelineInput := modconfig.Input{
 		"aws_conn": map[string]string{
-			"name":          "example_2",
+			"short_name":    "example_2",
+			"name":          "aws.example_2",
 			"type":          "aws",
 			"resource_type": "connection",
 		},
@@ -256,7 +258,8 @@ func (suite *ModTwoTestSuite) TestValidCustomParam() {
 
 	pipelineInput = modconfig.Input{
 		"aws_conn": map[string]string{
-			"name":          "example_3",
+			"short_name":    "example_3",
+			"name":          "aws.example_3",
 			"type":          "aws",
 			"resource_type": "connection",
 		},
@@ -306,7 +309,8 @@ func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
 	// Wrong connection, expect slack not aws
 	pipelineInput = modconfig.Input{
 		"aws_conn": map[string]string{
-			"name":          "example_2",
+			"short_name":    "example_2",
+			"name":          "slack.example_2",
 			"type":          "slack",
 			"resource_type": "connection",
 		},
@@ -331,7 +335,8 @@ func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
 	// connection not found
 	pipelineInput = modconfig.Input{
 		"aws_conn": map[string]string{
-			"name":          "example_50",
+			"name":          "aws.example_50",
+			"short_name":    "example_50",
 			"type":          "aws",
 			"resource_type": "connection",
 		},
@@ -485,6 +490,78 @@ func (suite *ModTwoTestSuite) TestNotifierParam() {
 	assert.Equal("backend", pex.PipelineOutput["val"].(map[string]any)["value"])
 }
 
+func (suite *ModTwoTestSuite) TestNotifierVarParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_var_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("admin", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestNotifierVar() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_var", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("admin", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestNotifierParamChildPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"notifier": map[string]interface{}{
+			"resource_type": "notifier",
+			"name":          "backend",
+		},
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_param_parent", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("backend", pex.PipelineOutput["val"].(map[string]any)["value"].(map[string]any)["title"])
+}
+
 func (suite *ModTwoTestSuite) TestListNotifierParam() {
 	assert := assert.New(suite.T())
 
@@ -630,7 +707,79 @@ func (suite *ModTwoTestSuite) TestSteampipeConnWithParam() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(string))
+	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestSteampipeConnectionVarParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.connection_var_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestSteampipeConnectionVar() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.connection_var", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"])
+}
+
+func (suite *ModTwoTestSuite) TestConnectionParamChildPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{
+		"Connection": map[string]interface{}{
+			"resource_type": "Connection",
+			"name":          "backend",
+		},
+	}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.connection_param_parent", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"].(string))
 }
 
 func TestModTwoTestingSuite(t *testing.T) {

@@ -272,7 +272,6 @@ func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []str
 }
 
 func extractConnection(connName string, allConnections map[string]connection.PipelingConnection, relevantConnections map[string]connection.PipelingConnection) connection.PipelingConnection {
-
 	conn := allConnections[connName]
 	relevantConnections[connName] = conn
 	return conn

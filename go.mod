@@ -5,7 +5,6 @@ go 1.23.0
 replace (
 	// uncomment for goland devcontainer
 	//github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
-	//github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
 	github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go
 	github.com/turbot/pipe-fittings => ../pipe-fittings
 )
