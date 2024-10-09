@@ -51,5 +51,6 @@ const (
 	HandlerTriggerStarted  = "handler.trigger_started"
 	CommandTriggerFail     = "command.trigger_fail"
 	HandlerTriggerFailed   = "handler.trigger_failed"
+	CommandTriggerFinish   = "command.trigger_finish"
 	HandlerTriggerFinished = "handler.trigger_finished"
 )

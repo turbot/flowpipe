@@ -71,6 +71,17 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
+	if len(cmds) == 0 {
+		slog.Info("No commands to execute, ending trigger execution")
+		cmd := event.TrigerFinishFromTriggerStarted(evt)
+		err := h.CommandBus.Send(ctx, cmd)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+
+		return nil
+	}
+
 	for _, cmd := range cmds {
 		if err := h.CommandBus.Send(context.TODO(), cmd); err != nil {
 			slog.Error("Error sending pipeline command", "error", err)

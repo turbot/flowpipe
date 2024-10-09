@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
+	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
@@ -236,7 +237,7 @@ func (suite *ModThreeTestSuite) TestExecutionEventsSimpleFailure() {
 func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
 	assert := assert.New(suite.T())
 
-	sourceDbFilename := "./test_suite_mod_3/test_trigger_query.db"
+	sourceDbFilename := "./test_suite_mod_3/query_source_modified.db"
 	_, err := os.Stat(sourceDbFilename)
 	if !os.IsNotExist(err) {
 		err = os.Remove(sourceDbFilename)
@@ -244,6 +245,13 @@ func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
 			assert.Fail("Error removing test db", err)
 			return
 		}
+	}
+
+	// copy the clean db to the modified db
+	err = utils.CopyFile("./test_suite_mod_3/query_source_clean.db", sourceDbFilename)
+	if err != nil {
+		assert.Fail("Error copying test db", err)
+		return
 	}
 
 	name := "test_suite_mod_3.trigger.query.simple_sqlite"

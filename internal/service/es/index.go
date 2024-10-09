@@ -139,6 +139,7 @@ func (es *ESService) Start() error {
 				command.ExecutionFailHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.TriggerQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.TriggerStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.TriggerFinishHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,

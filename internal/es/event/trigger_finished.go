@@ -19,3 +19,10 @@ func TriggerFinishedFromExecutionPlan(q *ExecutionPlan, triggerName string) *Tri
 		Name:  triggerName,
 	}
 }
+
+func TriggerFinishedFromTriggerFinish(cmd *TriggerFinish) *TriggerFinished {
+	return &TriggerFinished{
+		Event: cmd.Event,
+		Name:  cmd.Name,
+	}
+}

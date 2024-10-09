@@ -850,8 +850,9 @@ var (
 	ExecutionFinishCommand = event.ExecutionFinish{}
 	ExecutionFailCommand   = event.ExecutionFail{}
 
-	TriggerQueueCommand = event.TriggerQueue{}
-	TriggerStartCommand = event.TriggerStart{}
+	TriggerFinishCommand = event.TriggerFinish{}
+	TriggerQueueCommand  = event.TriggerQueue{}
+	TriggerStartCommand  = event.TriggerStart{}
 
 	PipelineCancelCommand = event.PipelineCancel{}
 	PipelinePlanCommand   = event.PipelinePlan{}

@@ -349,7 +349,13 @@ func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry
 
 				// find which capture group is this
 				for _, capture := range trg.Config.(*modconfig.TriggerQuery).Captures {
-					if capture.Pipeline.AsString() == pex.Name {
+					if capture.Pipeline == cty.NilVal {
+						return response, perr.InternalWithMessage("pipeline not found for capture group " + capture.Type + " is nil")
+					}
+
+					pipelineMap := capture.Pipeline.AsValueMap()
+
+					if pipelineMap["name"].AsString() == pex.Name {
 						response.Results[capture.Type] = pipelineResponse
 					}
 				}
