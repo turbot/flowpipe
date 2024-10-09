@@ -245,7 +245,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 		}
 
 		// Wait for the execution to finish
-		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" {
+		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" || ex.Status == "paused" {
 			break
 		}
 	}

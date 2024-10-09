@@ -828,7 +828,7 @@ func pollServerEventLog(ctx context.Context, executionId string, last int) (bool
 				last = index
 
 				// TODO: execution paused
-				if e.Message == event.HandlerExecutionFinished || e.Message == event.HandlerExecutionFailed {
+				if e.Message == event.HandlerExecutionFinished || e.Message == event.HandlerExecutionFailed || e.Message == event.HandlerExecutionPaused {
 					jsonData, err := json.Marshal(item.Detail)
 					if err != nil {
 						return false, 0, nil, perr.InternalWithMessage("error marshalling log detail")
@@ -868,6 +868,8 @@ func pollLocalEventLog(ctx context.Context, executionId string, last int) (bool,
 		res = append(res, item)
 
 		if item.Message == event.HandlerExecutionPaused {
+			slog.Info("poll local event log - execution paused")
+
 			complete = true
 		} else if item.Message == event.HandlerExecutionFinished || item.Message == event.HandlerExecutionFailed {
 

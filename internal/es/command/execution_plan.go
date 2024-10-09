@@ -40,7 +40,7 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// Check if we have started the trigger execution
-	if cmd.TriggerQueue != nil && ex.TriggerExecution == nil {
+	if cmd.TriggerQueue != nil && ex.TriggerExecution == nil && len(ex.PipelineExecutions) == 0 {
 
 		// Right now there's not much to do in execution plan, we still need to start with either a single
 		// pipeline or a trigger
@@ -55,6 +55,7 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 		return nil
 	}
 
+	// Check if this is the start of pipeline queue
 	if cmd.PipelineQueue != nil && len(ex.PipelineExecutions) == 0 {
 		// Pipeline hasn't started yet
 		evt := event.ExecutionPlannedFromExecutionPlan(cmd)
@@ -65,6 +66,26 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 			return nil
 		}
 
+		return nil
+	}
+
+	// check if all pipelines are paused
+	allPaused := true
+	for _, pex := range ex.PipelineExecutions {
+		if pex.Status != "paused" {
+			allPaused = false
+			break
+		}
+	}
+
+	if allPaused {
+		// raise execution paused
+		cmd := event.ExecutionPausedFromExecutionPlan(cmd)
+		err = h.EventBus.Publish(ctx, cmd)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+			return nil
+		}
 		return nil
 	}
 

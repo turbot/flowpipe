@@ -1,9 +1,5 @@
 pipeline "my_step" {
 
-    step "sleep" "sleep" {
-        duration = "3s"
-    }
-
     step "input" "my_step" {
         type   = "button"
         prompt = "Do you want to approve?"

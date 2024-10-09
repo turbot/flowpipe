@@ -822,6 +822,7 @@ var (
 	ExecutionPlannedEvent  = event.ExecutionPlanned{}
 	ExecutionFinishedEvent = event.ExecutionFinished{}
 	ExecutionFailedEvent   = event.ExecutionFailed{}
+	ExecutionPausedEvent   = event.ExecutionPaused{}
 
 	TriggerQueuedEvent   = event.TriggerQueued{}
 	TriggerFailedEvent   = event.TriggerFailed{}
