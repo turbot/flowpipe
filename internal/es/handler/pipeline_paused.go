@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"slices"
 
 	"log/slog"
 
@@ -28,6 +29,31 @@ func (h PipelinePaused) Handle(ctx context.Context, ei interface{}) error {
 	}
 
 	slog.Info("PipelinePaused event received", "execution_id", evt.Event.ExecutionID, "pipeline_execution_id", evt.PipelineExecutionID)
+
+	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
+	plannerMutex.Lock()
+	defer func() {
+		plannerMutex.Unlock()
+	}()
+
+	ex, _, err := execution.GetPipelineDefnFromExecution(evt.Event.ExecutionID, evt.PipelineExecutionID)
+	if err != nil {
+		slog.Error("pipeline_finished: Error loading pipeline execution", "error", err)
+		err2 := h.CommandBus.Send(ctx, event.PipelineFailFromPipelinePaused(evt, err))
+		if err2 != nil {
+			slog.Error("Error publishing PipelineFailed event", "error", err2)
+		}
+		return nil
+	}
+
+	// raise execution plan command if this pipeline is in the root pipeline list
+	if slices.Contains(ex.RootPipelines, evt.PipelineExecutionID) {
+		cmd := event.ExecutionPlanFromPipelinePaused(evt)
+		err = h.CommandBus.Send(ctx, cmd)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+	}
 
 	return nil
 }

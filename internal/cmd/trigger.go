@@ -229,7 +229,10 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.TriggerExecutionR
 		ArgsString: triggerArgs,
 	}
 
-	response, _, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+	_, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+	if err != nil {
+		return response, m, err
+	}
 
 	return response, m, err
 }

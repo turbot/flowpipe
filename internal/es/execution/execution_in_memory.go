@@ -62,7 +62,7 @@ func GetExecution(executionID string) (*ExecutionInMemory, error) {
 func completeExecution(executionID string) error {
 	ex, err := GetExecution(executionID)
 	if err != nil && !perr.IsNotFound(err) {
-		slog.Error("Error getting execution from cache", "execution_id", executionID)
+		slog.Error("Error getting execution from cache to complete execution", "execution_id", executionID, "error", err)
 		return err
 	} else if perr.IsNotFound(err) {
 		return nil
@@ -735,6 +735,55 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 	}
 
 	switch logEntry.GetEventType() {
+	case ExecutionQueuedEvent.HandlerName(): // "handler.execution_queued"
+		var et event.ExecutionQueued
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_queued event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_queued event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case ExecutionStartedEvent.HandlerName(): // "handler.execution_started"
+		var et event.ExecutionStarted
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_started event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_started event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case ExecutionFinishedEvent.HandlerName(): // "handler.execution_finished"
+		var et event.ExecutionFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_finished event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_finished event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case ExecutionFailedEvent.HandlerName(): // "handler.execution_failed"
+		var et event.ExecutionFailed
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_failed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_failed event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineQueueCommand.HandlerName(): // "command.pipeline_queue"
+		var et event.PipelineQueue
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.pipeline_queue event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_queue event")
+		}
+
+		return ex.appendEvent(&et)
 
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
 		var et event.PipelineQueued
@@ -889,6 +938,51 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	switch logEntry.GetEventType() {
+
+	case ExecutionQueuedEvent.HandlerName(): // "handler.execution_queued"
+		et, ok := logEntry.GetDetail().(*event.ExecutionQueued)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_queued event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_queued event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionStartedEvent.HandlerName(): // "handler.execution_started"
+		et, ok := logEntry.GetDetail().(*event.ExecutionStarted)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_started event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_started event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionFinishedEvent.HandlerName(): // "handler.execution_finished"
+		et, ok := logEntry.GetDetail().(*event.ExecutionFinished)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_finished event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_finished event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionFailedEvent.HandlerName(): // "handler.execution_failed"
+		et, ok := logEntry.GetDetail().(*event.ExecutionFailed)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_failed event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_failed event")
+		}
+
+		return ex.appendEvent(et)
+
+	case PipelineQueueCommand.HandlerName(): // "command.pipeline_queue"
+		et, ok := logEntry.GetDetail().(*event.PipelineQueue)
+		if !ok {
+			slog.Error("Fail to unmarshall command.pipeline_queue event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_queue event")
+		}
+
+		return ex.appendEvent(et)
 
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
 		et, ok := logEntry.GetDetail().(*event.PipelineQueued)

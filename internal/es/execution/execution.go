@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -38,11 +39,14 @@ var ExecutionMode string
 // pipelines being executed.
 type Execution struct {
 	// Unique identifier for this execution.
-	ID string `json:"id"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
 
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
 	PipelineExecutions map[string]*PipelineExecution `json:"pipeline_executions"`
+	TriggerExecution   *TriggerExecution             `json:"trigger_execution"`
+	RootPipelines      []string                      `json:"root_pipelines"`
 
 	Lock *sync.Mutex `json:"-"`
 }
@@ -810,6 +814,17 @@ func (ex *Execution) LoadProcessDB(e *event.Event) ([]event.EventLogImpl, error)
 
 // Events
 var (
+	ExecutionQueuedEvent   = event.ExecutionQueued{}
+	ExecutionStartedEvent  = event.ExecutionStarted{}
+	ExecutionPlannedEvent  = event.ExecutionPlanned{}
+	ExecutionFinishedEvent = event.ExecutionFinished{}
+	ExecutionFailedEvent   = event.ExecutionFailed{}
+
+	TriggerQueuedEvent   = event.TriggerQueued{}
+	TriggerFailedEvent   = event.TriggerFailed{}
+	TriggerStartedEvent  = event.TriggerStarted{}
+	TriggerFinishedEvent = event.TriggerFinished{}
+
 	PipelineQueuedEvent   = event.PipelineQueued{}
 	PipelineStartedEvent  = event.PipelineStarted{}
 	PipelineResumedEvent  = event.PipelineResumed{}
@@ -829,6 +844,16 @@ var (
 
 // Commands
 var (
+	ExecutionQueueCommand  = event.ExecutionQueue{}
+	ExecutionStartCommand  = event.ExecutionStart{}
+	ExecutionPlanCommand   = event.ExecutionPlan{}
+	ExecutionFinishCommand = event.ExecutionFinish{}
+	ExecutionFailCommand   = event.ExecutionFail{}
+
+	TriggerFinishCommand = event.TriggerFinish{}
+	TriggerQueueCommand  = event.TriggerQueue{}
+	TriggerStartCommand  = event.TriggerStart{}
+
 	PipelineCancelCommand = event.PipelineCancel{}
 	PipelinePlanCommand   = event.PipelinePlan{}
 	PipelineFinishCommand = event.PipelineFinish{}
@@ -848,6 +873,43 @@ var (
 func (ex *Execution) appendEvent(entry interface{}) error {
 
 	switch et := entry.(type) {
+	case *event.ExecutionQueued:
+		ex.Status = "queued"
+
+	case *event.ExecutionStarted:
+		ex.Status = "started"
+
+	case *event.ExecutionFinished:
+		ex.Status = "finished"
+
+	case *event.ExecutionFailed:
+		ex.Status = "failed"
+
+	case *event.TriggerQueue:
+		if ex.TriggerExecution != nil {
+			return perr.BadRequestWithMessage("trigger execution already exists")
+		}
+
+		ex.TriggerExecution = &TriggerExecution{
+			ID:   et.TriggerExecutionID,
+			Name: et.Name,
+			Args: et.Args,
+		}
+
+	case *event.PipelineQueue:
+		if et.Trigger != "" && !slices.Contains(ex.RootPipelines, et.PipelineExecutionID) {
+			// Trigger -> there can be 1 root pipeline or up to 3 root pipelines (for query trigger)
+			ex.RootPipelines = append(ex.RootPipelines, et.PipelineExecutionID)
+		} else if et.ParentExecutionID == "" && !slices.Contains(ex.RootPipelines, et.PipelineExecutionID) {
+			// "normal" path, there can only be 1 root pipeline
+			ex.RootPipelines = append(ex.RootPipelines, et.PipelineExecutionID)
+
+			// For now we only support 1 root pipeline
+			if len(ex.RootPipelines) > 1 {
+				return perr.BadRequestWithMessage("multiple root pipelines found")
+			}
+		}
+
 	case *event.PipelineQueued:
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
 			ID:                    et.PipelineExecutionID,
@@ -859,7 +921,10 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			ParentExecutionID:     et.ParentExecutionID,
 			Errors:                []modconfig.StepError{},
 			StepExecutions:        map[string]*StepExecution{},
+			Trigger:               et.Trigger,
+			TriggerCapture:        et.TriggerCapture,
 		}
+
 	case *event.PipelineStarted:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 		pe.Status = "started"

@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
@@ -236,13 +237,15 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 			return types.PipelineExecutionResponse{}, err
 		}
 
+		// Integrity check
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 		if pex == nil {
 			slog.Warn("Pipeline execution not found", "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
 			return types.PipelineExecutionResponse{}, perr.NotFoundWithMessage("pipeline execution not found")
 		}
 
-		if pex.Status == expectedState || pex.Status == "failed" || pex.Status == "finished" {
+		// Wait for the execution to finish
+		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" {
 			break
 		}
 	}
@@ -274,4 +277,79 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 	pipelineExecutionResponse.Flowpipe.Status = pex.Status
 
 	return pipelineExecutionResponse, nil
+}
+
+func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry int) (types.TriggerExecutionResponse, error) {
+	if waitRetry == 0 {
+		waitRetry = 60
+	}
+	waitTime := 1 * time.Second
+	expectedState := "finished"
+
+	var ex *execution.ExecutionInMemory
+
+	// Wait for the pipeline to complete, but not forever
+	for i := 0; i < waitRetry; i++ {
+		time.Sleep(waitTime)
+
+		var err error
+
+		ex, err = execution.GetExecution(executionId)
+		if err != nil {
+			return types.TriggerExecutionResponse{}, err
+		}
+
+		// Wait for the execution to finish
+		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" {
+			break
+		}
+	}
+
+	trg, err := db.GetTrigger(triggerName)
+	if err != nil {
+		return types.TriggerExecutionResponse{}, err
+	}
+
+	response := types.TriggerExecutionResponse{
+		Flowpipe: types.FlowpipeTriggerResponseMetadata{
+			Name: trg.FullName,
+			Type: trg.Config.GetType(),
+		},
+	}
+
+	if ex != nil {
+
+		for _, pex := range ex.PipelineExecutions {
+			response.Results = map[string]interface{}{}
+			pipelineResponse := types.PipelineExecutionResponse{
+				Flowpipe: types.FlowpipeResponseMetadata{
+					ExecutionID:         executionId,
+					PipelineExecutionID: pex.ID,
+					Pipeline:            pex.Name,
+				},
+			}
+			pipelineOutput := pex.PipelineOutput
+
+			if pipelineOutput == nil {
+				pipelineOutput = map[string]interface{}{}
+			}
+
+			for k, v := range pex.PipelineOutput {
+				pipelineOutput[k] = sanitize.Instance.Sanitize(v)
+			}
+			pipelineResponse.Results = pipelineOutput
+
+			if pipelineOutput["errors"] != nil {
+				pipelineResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+			}
+
+			if trg.Config.GetType() == "schedule" {
+				response.Results[trg.Config.GetType()] = pipelineResponse
+			} else {
+				response.Results[pex.TriggerCapture] = pipelineResponse
+			}
+		}
+	}
+
+	return response, nil
 }

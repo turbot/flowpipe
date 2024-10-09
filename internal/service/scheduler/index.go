@@ -12,7 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/schedule"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/store"
-	"github.com/turbot/flowpipe/internal/trigger"
+	"github.com/turbot/flowpipe/internal/triggerv2"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -168,9 +168,13 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		tags = append(tags, "pipeline:"+pipelineName)
 	}
 
-	triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
+	triggerRunner := triggerv2.NewTriggerRunner(t, "", "")
 
-	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(triggerRunner.Run)
+	scheduledTriggerRunner := TriggerScheduleRunner{
+		TriggerRunner: triggerRunner,
+	}
+
+	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(scheduledTriggerRunner.Run)
 	if err != nil {
 		cronExpression, err := schedule.IntervalToCronExpression(t.FullName, scheduleString)
 		if err != nil {
@@ -178,7 +182,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		}
 
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", scheduleString, "tags", tags, "cronExpression", cronExpression)
-		_, err = s.cronScheduler.Cron(cronExpression).Tag(tags...).Do(triggerRunner.Run)
+		_, err = s.cronScheduler.Cron(cronExpression).Tag(tags...).Do(scheduledTriggerRunner.Run)
 		if err != nil {
 			return err
 		}

@@ -29,3 +29,7 @@ func NewSessionId() string {
 func NewProcessId() string {
 	return "p_" + NewUniqueId()
 }
+
+func NewTriggerExecutionId() string {
+	return "texec_" + NewUniqueId()
+}
