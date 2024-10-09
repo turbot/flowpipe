@@ -9,6 +9,7 @@ import (
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/spf13/viper"
@@ -16,6 +17,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/spf13/cobra"
@@ -236,6 +238,7 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.TriggerExecutionR
 
 	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
 		ProcessID: executionId,
+		Name:      triggerName,
 	}
 
 	return response, m, err
@@ -381,7 +384,33 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 	case progressLogs:
 		displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	default:
-		displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+		triggerResult, err := api.WaitForTrigger(resp.Flowpipe.Name, resp.Flowpipe.ProcessID, 500)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed waiting for trigger")
+			return
+		}
+
+		s, err := json.Marshal(triggerResult)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed marshaling trigger result")
+			return
+		}
+
+		// sanitize
+		s = []byte(sanitize.Instance.SanitizeString(string(s)))
+
+		// format
+		s, err = color.NewJsonFormatter(true).Format(s)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed formatting trigger result")
+			return
+		}
+
+		cmd.OutOrStdout().Write(s)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed writing trigger result")
+			return
+		}
 	}
 
 }

@@ -49,6 +49,9 @@ type Execution struct {
 	RootPipelines      []string                      `json:"root_pipelines"`
 
 	Lock *sync.Mutex `json:"-"`
+
+	// Execution level errors - new concept since we elevated the importance of execution
+	Errors []perr.ErrorModel `json:"errors"`
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
@@ -873,6 +876,7 @@ var (
 func (ex *Execution) appendEvent(entry interface{}) error {
 
 	switch et := entry.(type) {
+
 	case *event.ExecutionQueued:
 		ex.Status = "queued"
 
@@ -884,6 +888,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 	case *event.ExecutionFailed:
 		ex.Status = "failed"
+		ex.Errors = append(ex.Errors, et.Error)
 
 	case *event.TriggerQueue:
 		if ex.TriggerExecution != nil {

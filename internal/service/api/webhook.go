@@ -279,7 +279,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 	return pipelineExecutionResponse, nil
 }
 
-func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry int) (types.TriggerExecutionResponse, error) {
+func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.TriggerExecutionResponse, error) {
 	if waitRetry == 0 {
 		waitRetry = 60
 	}
@@ -318,9 +318,11 @@ func (api *APIService) waitForTrigger(triggerName, executionId string, waitRetry
 	}
 
 	if ex != nil {
+		response.Errors = ex.Errors
+		response.Results = map[string]interface{}{}
 
 		for _, pex := range ex.PipelineExecutions {
-			response.Results = map[string]interface{}{}
+
 			pipelineResponse := types.PipelineExecutionResponse{
 				Flowpipe: types.FlowpipeResponseMetadata{
 					ExecutionID:         executionId,

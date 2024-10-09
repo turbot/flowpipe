@@ -45,7 +45,8 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 	if err != nil {
 		slog.Error("Error getting trigger", "error", err)
 
-		h.raiseError(ctx, evt, err)
+		fperr := perr.InternalWithMessage("error getting trigger")
+		h.raiseError(ctx, evt, fperr)
 
 		return nil
 	}
@@ -54,7 +55,9 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 	if triggerRunner == nil {
 		slog.Error("Error creating trigger runner")
 
-		h.raiseError(ctx, evt, err)
+		fperr := perr.InternalWithMessage("error creating trigger runner")
+
+		h.raiseError(ctx, evt, fperr)
 
 		return nil
 	}
@@ -67,7 +70,13 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 			output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error executing trigger", err))
 		}
 
-		h.raiseError(ctx, evt, err)
+		if fperr, ok := err.(perr.ErrorModel); ok {
+			h.raiseError(ctx, evt, fperr)
+		} else {
+			fperr := perr.InternalWithMessage("error executing trigger " + err.Error())
+			h.raiseError(ctx, evt, fperr)
+		}
+
 		return nil
 	}
 
@@ -88,14 +97,16 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 			if output.IsServerMode {
 				output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
 			}
-			h.raiseError(ctx, evt, err)
+
+			fperr := perr.InternalWithMessage("error sending pipeline command " + err.Error())
+			h.raiseError(ctx, evt, fperr)
 		}
 	}
 
 	return nil
 }
 
-func (h TriggerStarted) raiseError(ctx context.Context, evt *event.TriggerStarted, errToLog error) {
+func (h TriggerStarted) raiseError(ctx context.Context, evt *event.TriggerStarted, errToLog perr.ErrorModel) {
 	cmd := event.ExecutionFailFromTriggerStarted(evt, errToLog)
 	err := h.CommandBus.Send(ctx, cmd)
 	if err != nil {

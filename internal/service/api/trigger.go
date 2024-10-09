@@ -239,7 +239,7 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	}
 
 	if executionMode == localconstants.ExecutionModeSynchronous {
-		triggerExecutionResponse, err := api.waitForTrigger(triggerName, executionId, waitRetry)
+		triggerExecutionResponse, err := WaitForTrigger(triggerName, executionId, waitRetry)
 		if err != nil {
 			slog.Error("error waiting for trigger", "error", err)
 			common.AbortWithError(c, err)

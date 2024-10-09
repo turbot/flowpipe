@@ -112,7 +112,7 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 		} else {
 			if failure {
 				// raise execution fail
-				cmd := event.ExecutionFailedFromExecutionPlan(cmd)
+				cmd := event.ExecutionFailedFromExecutionPlan(cmd, perr.InternalWithMessage("pipeline failed"))
 				err = h.EventBus.Publish(ctx, cmd)
 				if err != nil {
 					slog.Error("Error publishing event", "error", err)

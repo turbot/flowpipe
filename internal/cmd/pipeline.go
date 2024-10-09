@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -745,14 +746,16 @@ func displayBasicOutput(ctx context.Context, cmd *cobra.Command, resp types.Pipe
 func displayPipelineExecution(ctx context.Context, pe *types.FpPipelineExecution, cmd *cobra.Command) error {
 	printer, err := printers.GetPrinter[types.FpPipelineExecution](cmd)
 	if err != nil {
-		return fmt.Errorf("error obtaining printer\n%v", err)
+		slog.Error("error obtaining printer", "error", err)
+		return perr.InternalWithMessage("error obtaining printer " + err.Error())
 	}
 	printableResource := types.PrintablePipelineExecution{
 		Items: []types.FpPipelineExecution{*pe},
 	}
 	err = printer.PrintResource(ctx, printableResource, cmd.OutOrStdout())
 	if err != nil {
-		return fmt.Errorf("error when printing\n%v", err)
+		slog.Error("error printing", "error", err)
+		return perr.InternalWithMessage("error printing " + err.Error())
 	}
 
 	return nil

@@ -260,7 +260,8 @@ func (PrintableTrigger) getColumns() (columns []string) {
 }
 
 type TriggerExecutionResponse struct {
-	Results  map[string]interface{}          `json:"results"`
+	Results  map[string]interface{}          `json:"results,omitempty"`
+	Errors   []perr.ErrorModel               `json:"errors,omitempty"`
 	Flowpipe FlowpipeTriggerResponseMetadata `json:"flowpipe"`
 }
 

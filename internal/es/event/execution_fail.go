@@ -1,9 +1,11 @@
 package event
 
+import "github.com/turbot/pipe-fittings/perr"
+
 type ExecutionFail struct {
-	Event *Event `json:"event"`
-	Name  string `json:"name"`
-	Error error  `json:"error"`
+	Event *Event          `json:"event"`
+	Name  string          `json:"name"`
+	Error perr.ErrorModel `json:"error"`
 }
 
 func (e *ExecutionFail) GetEvent() *Event {
@@ -21,7 +23,7 @@ func ExecutionFailFromTriggerFailed(q *TriggerFailed) *ExecutionFail {
 	}
 }
 
-func ExecutionFailFromTriggerStarted(q *TriggerStarted, err error) *ExecutionFail {
+func ExecutionFailFromTriggerStarted(q *TriggerStarted, err perr.ErrorModel) *ExecutionFail {
 	return &ExecutionFail{
 		Event: NewFlowEvent(q.Event),
 		Name:  q.Trigger.Name(),
