@@ -564,7 +564,7 @@ func evaluateConnectionMapForEvalContext(ctx context.Context, allConnections map
 	for _, c := range allConnections {
 		parts := strings.Split(c.Name(), ".")
 		if len(parts) != 2 {
-			return nil, perr.BadRequestWithMessage("invalid credential name: " + c.Name())
+			return nil, perr.BadRequestWithMessage("invalid connection name: " + c.Name())
 		}
 
 		var connToUse connection.PipelingConnection

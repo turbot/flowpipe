@@ -86,6 +86,7 @@ type FpVariable struct {
 	FileName        string            `json:"file_name,omitempty"`
 	StartLineNumber int               `json:"start_line_number,omitempty"`
 	EndLineNumber   int               `json:"end_line_number,omitempty"`
+	Format          string            `json:"format,omitempty"`
 }
 
 func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -166,6 +167,7 @@ func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
 		StartLineNumber: variable.ValueSourceStartLineNumber,
 		EndLineNumber:   variable.ValueSourceEndLineNumber,
 		FileName:        variable.ValueSourceFileName,
+		Format:          variable.Format,
 	}
 
 	return fpVar
