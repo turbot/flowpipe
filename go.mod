@@ -45,7 +45,6 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/atc0005/go-teams-notify/v2 v2.10.0
 	github.com/charmbracelet/huh v0.4.2
-	github.com/charmbracelet/huh/spinner v0.0.0-20240716200945-b98d891ceab3
 	github.com/charmbracelet/lipgloss v0.11.0
 	github.com/denisss025/slog-watermill v0.1.0
 	github.com/go-sql-driver/mysql v1.7.1

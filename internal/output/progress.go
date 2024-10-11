@@ -4,14 +4,15 @@ import (
 	"context"
 	"sync"
 
-	"github.com/charmbracelet/huh/spinner"
 	"golang.org/x/sync/semaphore"
+
+	spinner "github.com/turbot/pipe-fittings/statushooks"
 )
 
 var PipelineProgress *Progress
 
 type Progress struct {
-	spinner   *spinner.Spinner
+	spinner   *spinner.StatusSpinner
 	mu        sync.Mutex
 	status    string
 	Semaphore *semaphore.Weighted
@@ -21,7 +22,7 @@ func NewProgress(initialText string) *Progress {
 	return &Progress{
 		status:    initialText,
 		Semaphore: semaphore.NewWeighted(1),
-		spinner:   spinner.New(),
+		spinner:   spinner.NewStatusSpinnerHook(),
 	}
 }
 
@@ -32,11 +33,14 @@ func (p *Progress) Run(action func()) error {
 	defer p.Semaphore.Release(1)
 
 	if p.spinner == nil {
-		p.spinner = spinner.New()
+		p.spinner = spinner.NewStatusSpinnerHook()
 	}
 
-	p.spinner.Title(p.status).Action(action)
-	return p.spinner.Run()
+	p.spinner.UpdateSpinnerMessage(p.status)
+	p.spinner.Show()
+	defer p.spinner.Hide()
+	action()
+	return nil
 }
 
 func (p *Progress) Update(msg string) {
@@ -44,6 +48,6 @@ func (p *Progress) Update(msg string) {
 	defer p.mu.Unlock()
 	if p.spinner != nil && msg != p.status {
 		p.status = msg
-		p.spinner.Title(p.status)
+		p.spinner.UpdateSpinnerMessage(p.status)
 	}
 }
