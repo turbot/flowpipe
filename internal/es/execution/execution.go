@@ -143,7 +143,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	// NOTE: the late binding vars map contains a list of the late-binding resources that the var depends on
 	// (i.e pipeling connections)
-	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables)
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables, true)
 
 	// add these to eval context
 	evalContext.Variables[pfconstants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
