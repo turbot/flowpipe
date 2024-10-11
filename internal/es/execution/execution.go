@@ -208,7 +208,7 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 			vars = evalContext.Variables["var"].AsValueMap()
 		}
 
-		connectionMap, paramsMap, varMap, err := ex.buildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params, vars, pipelineDefn)
+		connectionMap, paramsMap, varMap, err := BuildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params, vars, pipelineDefn.Params)
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +277,9 @@ func extractConnection(connName string, allConnections map[string]connection.Pip
 	return conn
 }
 
-func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []string, params, vars map[string]cty.Value, pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
+// runParams = the params supplied when the pipeline is run
+// defnParams = the params as defined in the HCL files
+func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, vars map[string]cty.Value, defnParam []modconfig.PipelineParam) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
 		return nil, nil, nil, err
@@ -304,7 +306,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 	}
 
 	if len(dynamicConnType) > 0 {
-		for _, v := range params {
+		for _, v := range runParams {
 			if v.Type() == cty.String && !v.IsNull() {
 				potentialConnName := v.AsString()
 				for _, c := range allConnections {
@@ -319,9 +321,9 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 
 	paramToConnMap := map[string]string{}
 
-	for _, p := range pipelineDefn.Params {
+	for _, p := range defnParam {
 		if p.IsConnectionType() {
-			for k, v := range params {
+			for k, v := range runParams {
 				if k != p.Name {
 					continue
 				}
@@ -341,7 +343,7 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 							}
 
 							paramToConnMap[p.Name] = conn.Name()
-							params[p.Name] = ctyVal
+							runParams[p.Name] = ctyVal
 						}
 					}
 				}
@@ -385,10 +387,10 @@ func (ex *Execution) buildConnectionMapForEvalContext(connectionsInContext []str
 		}
 
 		// Update the params with the resolved connection
-		params[k] = connObject
+		runParams[k] = connObject
 	}
 
-	return connMap, params, vars, nil
+	return connMap, runParams, vars, nil
 }
 
 func evalCredentialMapForEvalContext(ctx context.Context, allCredentials map[string]credential.Credential) (map[string]cty.Value, error) {

@@ -18,7 +18,6 @@ import (
 	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -352,7 +351,12 @@ func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext
 		params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
 	}
 
-	connectionMap, newParamsMap, err := ex.buildConnectionMapForEvalContext(allConnectionsDependsOn, params, pipelineDefn)
+	vars := map[string]cty.Value{}
+	if evalContext.Variables["var"] != cty.NilVal {
+		vars = evalContext.Variables["var"].AsValueMap()
+	}
+
+	connectionMap, newParamsMap, varMap, err := BuildConnectionMapForEvalContext(allConnectionsDependsOn, params, vars, pipelineDefn.Params)
 	if err != nil {
 		return nil, err
 	}
@@ -360,83 +364,9 @@ func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext
 	// Override what we have
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
 	evalContext.Variables[schema.BlockTypeParam] = cty.ObjectVal(newParamsMap)
+	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(varMap)
 
 	return evalContext, nil
-}
-
-func (ex *ExecutionInMemory) buildConnectionMapForEvalContext(connectionsInContext []string, params map[string]cty.Value, pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, map[string]cty.Value, error) {
-	fpConfig, err := db.GetFlowpipeConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	allConnections := fpConfig.PipelingConnections
-	relevantConnections := map[string]connection.PipelingConnection{}
-	dynamicConnType := map[string]bool{}
-
-	for _, connectionName := range connectionsInContext {
-		if allConnections[connectionName] != nil {
-			relevantConnections[connectionName] = allConnections[connectionName]
-		}
-
-		if strings.Contains(connectionName, "<dynamic>") {
-			parts := strings.Split(connectionName, ".")
-			if len(parts) > 0 {
-				dynamicConnType[parts[0]] = true
-			}
-		}
-	}
-
-	if len(dynamicConnType) > 0 {
-		for _, v := range params {
-			// Determine if the credential "may" be needed based on the param value.
-			if v.Type() == cty.String && !v.IsNull() {
-				potentialConnName := v.AsString()
-				for _, c := range allConnections {
-					if c.GetShortName() == potentialConnName && dynamicConnType[c.GetConnectionType()] {
-						relevantConnections[c.Name()] = c
-						break
-					}
-				}
-			}
-		}
-	}
-
-	for _, p := range pipelineDefn.Params {
-		if p.IsConnectionType() {
-			for k, v := range params {
-				if k != p.Name {
-					continue
-				}
-
-				connectionNames, ok := parse.ConnectionNamesValueFromCtyValue(v)
-				if ok {
-					for _, connName := range connectionNames.AsValueSlice() {
-						conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
-						// conn can be nil because the connection has been fully resolved, so extractConnection function will not find it
-						// in the "temporary" connection map.
-						//
-						// This can happen because in the plan handler, we loop through all the steps and keep building up the eval context
-						if conn != nil {
-							ctyVal, err := conn.CtyValue()
-							if err != nil {
-								return nil, nil, err
-							}
-
-							params[p.Name] = ctyVal
-						}
-					}
-				}
-			}
-		}
-	}
-
-	connectionMap, err := evaluateConnectionMapForEvalContext(context.TODO(), relevantConnections)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return connectionMap, params, nil
 }
 
 func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {

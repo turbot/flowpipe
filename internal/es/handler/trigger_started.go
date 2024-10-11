@@ -67,13 +67,13 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		slog.Error("Error executing trigger", "error", err)
 
 		if output.IsServerMode {
-			output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error executing trigger", err))
+			output.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "executing trigger", err))
 		}
 
 		if fperr, ok := err.(perr.ErrorModel); ok {
 			h.raiseError(ctx, evt, fperr)
 		} else {
-			fperr := perr.InternalWithMessage("error executing trigger " + err.Error())
+			fperr := perr.InternalWithMessage("trigger execution " + err.Error())
 			h.raiseError(ctx, evt, fperr)
 		}
 

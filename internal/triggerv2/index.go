@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
@@ -121,7 +122,7 @@ func (tr *TriggerRunnerBase) GetTriggerResponse(pipelineCmds []*event.PipelineQu
 func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error) {
 	var triggerRunArgs map[string]interface{}
 
-	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, nil)
+	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, nil)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 		return nil, perr.InternalWithMessage("Error building eval context")
@@ -149,7 +150,7 @@ func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString ma
 
 func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
 
-	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
+	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, triggerRunArgs)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 		return nil, perr.InternalWithMessage("Error building eval context")
@@ -225,7 +226,7 @@ func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, tr
 	return []*event.PipelineQueue{pipelineCmd}, nil
 }
 
-func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.PipelineParam, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
+func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []modconfig.PipelineParam, triggerConfig modconfig.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 	vars := make(map[string]cty.Value)
 	if rootMod != nil {
 		for _, v := range rootMod.ResourceMaps.Variables {
@@ -235,32 +236,41 @@ func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.Pipeline
 	executionVariables := map[string]cty.Value{}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
-	params := map[string]cty.Value{}
+	runParams := map[string]cty.Value{}
 
-	for _, v := range triggerParams {
+	for _, v := range defnTriggerParams {
 		if triggerRunArgs[v.Name] != nil {
 			if !v.Type.HasDynamicTypes() {
 				val, err := gocty.ToCtyValue(triggerRunArgs[v.Name], v.Type)
 				if err != nil {
 					return nil, err
 				}
-				params[v.Name] = val
+				runParams[v.Name] = val
 			} else {
 				// we'll do our best here
 				val, err := hclhelpers.ConvertInterfaceToCtyValue(triggerRunArgs[v.Name])
 				if err != nil {
 					return nil, err
 				}
-				params[v.Name] = val
+				runParams[v.Name] = val
 			}
 
 		} else {
-			params[v.Name] = v.Default
+			runParams[v.Name] = v.Default
 		}
 	}
 
-	paramsCtyVal := cty.ObjectVal(params)
+	paramsCtyVal := cty.ObjectVal(runParams)
 	executionVariables[schema.BlockTypeParam] = paramsCtyVal
+
+	connectionMap, paramsMap, varMap, err := execution.BuildConnectionMapForEvalContext(triggerConfig.GetConnectionDependsOn(), runParams, vars, defnTriggerParams)
+	if err != nil {
+		return nil, err
+	}
+
+	executionVariables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
+	executionVariables[schema.BlockTypeParam] = cty.ObjectVal(paramsMap)
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(varMap)
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,

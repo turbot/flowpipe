@@ -361,7 +361,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
 	var triggerRunArgs map[string]interface{}
-	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
+	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, triggerRunArgs)
 	if err != nil {
 		slog.Error("Error building eval context", "error", err)
 		return nil, err
