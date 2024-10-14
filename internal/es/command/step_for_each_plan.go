@@ -206,7 +206,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 
 			evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn, pipelineDefn)
 			if err != nil {
-				slog.Error("Error adding connections to eval context", "error", err)
+				slog.Error("Error adding connections to eval context during step for each plan", "error", err)
 				return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 			}
 

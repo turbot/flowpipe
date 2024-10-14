@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/constants"
@@ -182,8 +183,7 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
-
+func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline, withForEach bool) (*hcl.EvalContext, error) {
 	addConn := false
 
 	if stepDefn != nil && len(stepDefn.GetConnectionDependsOn()) > 0 {
@@ -197,10 +197,12 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 		}
 	}
 
+	var extraConns []string
+
 	if addConn {
-		params := map[string]cty.Value{}
+		runParams := map[string]cty.Value{}
 		if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
-			params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
+			runParams = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
 		}
 
 		vars := map[string]cty.Value{}
@@ -208,7 +210,44 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 			vars = evalContext.Variables["var"].AsValueMap()
 		}
 
-		connectionMap, paramsMap, varMap, err := BuildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params, vars, pipelineDefn.Params)
+		for _, v := range stepDefn.GetUnresolvedAttributes() {
+			if modconfig.IsConnectionExpr(v) {
+
+				// guess the connection
+				potentialConnectionString := modconfig.GuessRequiredConnection(v)
+				for _, connName := range potentialConnectionString {
+
+					if !withForEach && strings.HasPrefix(connName.Source, "each.value") {
+						continue
+					}
+
+					// Parse the expression string
+					fakeFilename := fmt.Sprintf("<value for var.%s>", connName.Source)
+					expr, diags := hclsyntax.ParseExpression([]byte(connName.Source), fakeFilename, hcl.Pos{Line: 1, Column: 1})
+					if diags.HasErrors() {
+						return nil, error_helpers.BetterHclDiagsToError("diags", diags)
+					}
+
+					// Evaluate the expression
+					result, diags := expr.Value(evalContext)
+					if diags.HasErrors() {
+						return nil, error_helpers.BetterHclDiagsToError("diags", diags)
+					}
+
+					if result.IsNull() {
+						continue
+					}
+
+					asString := result.AsString()
+					connectionNeeded := connName.Type + "." + asString
+					extraConns = append(extraConns, connectionNeeded)
+				}
+			}
+		}
+
+		extraConns = append(extraConns, stepDefn.GetConnectionDependsOn()...)
+
+		connectionMap, paramsMap, varMap, err := BuildConnectionMapForEvalContext(extraConns, runParams, vars, pipelineDefn.Params)
 		if err != nil {
 			return nil, err
 		}
@@ -220,6 +259,10 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 	}
 
 	return evalContext, nil
+
+}
+func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true)
 }
 
 func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
@@ -292,16 +335,6 @@ func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, 
 	for _, connectionName := range connectionsInContext {
 		if allConnections[connectionName] != nil {
 			relevantConnections[connectionName] = allConnections[connectionName]
-		}
-
-		// Why do we bother with these <dynamic> dependencies?
-		// We don't want to resolve every single available in the system, we only want to resolve the ones that are
-		// are used. So this is part of how have an educated guess which credentials to resolve.
-		if strings.Contains(connectionName, "<dynamic>") {
-			parts := strings.Split(connectionName, ".")
-			if len(parts) > 0 {
-				dynamicConnType[parts[0]] = true
-			}
 		}
 	}
 
