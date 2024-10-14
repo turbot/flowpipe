@@ -183,18 +183,11 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline, withForEach bool) (*hcl.EvalContext, error) {
+func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline, withForEach bool, newlyDiscoveredConnections []modconfig.ConnectionDependency) (*hcl.EvalContext, error) {
 	addConn := false
 
-	if stepDefn != nil && len(stepDefn.GetConnectionDependsOn()) > 0 {
+	if stepDefn != nil && (len(stepDefn.GetConnectionDependsOn()) > 0 || len(newlyDiscoveredConnections) > 0) {
 		addConn = true
-	} else {
-		for _, p := range pipelineDefn.Params {
-			if modconfig.IsCustomType(p.Type) {
-				addConn = true
-				break
-			}
-		}
 	}
 
 	var extraConns []string
@@ -210,39 +203,32 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 			vars = evalContext.Variables["var"].AsValueMap()
 		}
 
-		for _, v := range stepDefn.GetUnresolvedAttributes() {
-			if modconfig.IsConnectionExpr(v) {
+		for _, newConn := range newlyDiscoveredConnections {
 
-				// guess the connection
-				potentialConnectionString := modconfig.GuessRequiredConnection(v)
-				for _, connName := range potentialConnectionString {
-
-					if !withForEach && strings.HasPrefix(connName.Source, "each.value") {
-						continue
-					}
-
-					// Parse the expression string
-					fakeFilename := fmt.Sprintf("<value for var.%s>", connName.Source)
-					expr, diags := hclsyntax.ParseExpression([]byte(connName.Source), fakeFilename, hcl.Pos{Line: 1, Column: 1})
-					if diags.HasErrors() {
-						return nil, error_helpers.BetterHclDiagsToError("diags", diags)
-					}
-
-					// Evaluate the expression
-					result, diags := expr.Value(evalContext)
-					if diags.HasErrors() {
-						return nil, error_helpers.BetterHclDiagsToError("diags", diags)
-					}
-
-					if result.IsNull() {
-						continue
-					}
-
-					asString := result.AsString()
-					connectionNeeded := connName.Type + "." + asString
-					extraConns = append(extraConns, connectionNeeded)
-				}
+			if !withForEach && strings.HasPrefix(newConn.Source, "each.value") {
+				continue
 			}
+
+			// Parse the expression string
+			fakeFilename := fmt.Sprintf("<value for var.%s>", newConn.Source)
+			expr, diags := hclsyntax.ParseExpression([]byte(newConn.Source), fakeFilename, hcl.Pos{Line: 1, Column: 1})
+			if diags.HasErrors() {
+				return nil, error_helpers.BetterHclDiagsToError("diags", diags)
+			}
+
+			// Evaluate the expression
+			result, diags := expr.Value(evalContext)
+			if diags.HasErrors() {
+				return nil, error_helpers.BetterHclDiagsToError("diags", diags)
+			}
+
+			if result.IsNull() {
+				continue
+			}
+
+			asString := result.AsString()
+			connectionNeeded := newConn.Type + "." + asString
+			extraConns = append(extraConns, connectionNeeded)
 		}
 
 		extraConns = append(extraConns, stepDefn.GetConnectionDependsOn()...)
@@ -259,10 +245,28 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 	}
 
 	return evalContext, nil
-
 }
+
 func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
-	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true)
+	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true, nil)
+}
+
+func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	connTypeMap := map[string]cty.Value{}
+
+	for _, c := range fpConfig.PipelingConnections {
+		if connTypeMap[c.GetConnectionType()] == cty.NilVal {
+			connTypeMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{})
+		}
+	}
+
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connTypeMap)
+	return evalContext, nil
 }
 
 func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {

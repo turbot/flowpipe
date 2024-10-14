@@ -186,16 +186,29 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
-				evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn, pipelineDefn)
+				evalContext, err = ex.AddTemporaryConnectionsToEvalContext(evalContext, stepDefn, pipelineDefn)
 				if err != nil {
 					slog.Error("Error adding connections to eval context during pipeline plan", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
-				stepInputs, err := stepDefn.GetInputs(evalContext)
+				stepInputs, connDepend, err := stepDefn.GetInputs2(evalContext)
 				if err != nil {
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
+
+				if len(connDepend) > 0 {
+					evalContext, err := ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, connDepend)
+					if err != nil {
+						slog.Error("Error adding connections to eval context during pipeline plan", "error", err)
+						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
+					}
+					stepInputs, _, err = stepDefn.GetInputs2(evalContext)
+					if err != nil {
+						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
+					}
+				}
+
 				// There's no for_each, there's only a single input
 				input = stepInputs
 			} else {
