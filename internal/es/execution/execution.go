@@ -219,7 +219,7 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 			// Evaluate the expression
 			result, diags := expr.Value(evalContext)
 			if diags.HasErrors() {
-				return nil, error_helpers.BetterHclDiagsToError("diags", diags)
+				continue
 			}
 
 			if result.IsNull() {
@@ -260,8 +260,18 @@ func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalC
 	connTypeMap := map[string]cty.Value{}
 
 	for _, c := range fpConfig.PipelingConnections {
+		if c.GetShortName() != "default" {
+			continue
+		}
+		connCtyValue, err := c.CtyValue()
+		if err != nil {
+			return nil, err
+		}
+
 		if connTypeMap[c.GetConnectionType()] == cty.NilVal {
-			connTypeMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{})
+			connTypeMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
+				"default": connCtyValue,
+			})
 		}
 	}
 
@@ -339,6 +349,15 @@ func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, 
 	for _, connectionName := range connectionsInContext {
 		if allConnections[connectionName] != nil {
 			relevantConnections[connectionName] = allConnections[connectionName]
+		}
+		// Why do we bother with these <dynamic> dependencies?
+		// We don't want to resolve every single available in the system, we only want to resolve the ones that are
+		// are used. So this is part of how have an educated guess which credentials to resolve.
+		if strings.Contains(connectionName, "<dynamic>") {
+			parts := strings.Split(connectionName, ".")
+			if len(parts) > 0 {
+				dynamicConnType[parts[0]] = true
+			}
 		}
 	}
 

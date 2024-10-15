@@ -203,9 +203,26 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 						slog.Error("Error adding connections to eval context during pipeline plan", "error", err)
 						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 					}
-					stepInputs, _, err = stepDefn.GetInputs2(evalContext)
+					var connDepend2 []modconfig.ConnectionDependency
+					stepInputs, connDepend2, err = stepDefn.GetInputs2(evalContext)
 					if err != nil {
 						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
+					}
+					if len(connDepend2) > 0 {
+						// we are missing some connections
+						missingConnStr := ""
+						for i, connDep := range connDepend2 {
+							if i > 0 {
+								missingConnStr += ", "
+							}
+							missingConnStr += connDep.Type
+							if connDep.Source != "" {
+								missingConnStr += "." + connDep.Source
+							}
+						}
+						missingConnErrors := perr.InternalWithMessage("Missing connections for step '" + stepDefn.GetName() + "': " + missingConnStr)
+						slog.Error("Missing connections for step", "step", stepDefn.GetName(), "missing", missingConnStr)
+						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, missingConnErrors, pex.Name, stepDefn.GetName())
 					}
 				}
 
