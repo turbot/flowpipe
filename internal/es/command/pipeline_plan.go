@@ -186,7 +186,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
-				evalContext, err = ex.AddTemporaryConnectionsToEvalContext(evalContext, stepDefn, pipelineDefn)
+				evalContext, err := ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, nil)
 				if err != nil {
 					slog.Error("Error adding connections to eval context during pipeline plan", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())

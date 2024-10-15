@@ -238,6 +238,35 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 			return nil, err
 		}
 
+		// Add missing connection type & default to the connection map if they are not already there, this is for the GetInputs2 function
+		// to detect "missing connections"
+		fpConfig, err := db.GetFlowpipeConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, c := range fpConfig.PipelingConnections {
+			if c.GetShortName() != "default" {
+				continue
+			}
+			connCtyValue, err := c.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+
+			if connectionMap[c.GetConnectionType()] == cty.NilVal {
+				connectionMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
+					"default": connCtyValue,
+				})
+			} else {
+				if connectionMap[c.GetConnectionType()].AsValueMap()["default"] == cty.NilVal {
+					connTypeMap := connectionMap[c.GetConnectionType()].AsValueMap()
+					connTypeMap["default"] = connCtyValue
+					connectionMap[c.GetConnectionType()] = cty.ObjectVal(connTypeMap)
+				}
+			}
+		}
+
 		// Override what we have
 		evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
 		evalContext.Variables[schema.BlockTypeParam] = cty.ObjectVal(paramsMap)
@@ -251,33 +280,33 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true, nil)
 }
 
-func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
-	fpConfig, err := db.GetFlowpipeConfig()
-	if err != nil {
-		return nil, err
-	}
+// func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+// 	fpConfig, err := db.GetFlowpipeConfig()
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	connTypeMap := map[string]cty.Value{}
+// 	connTypeMap := map[string]cty.Value{}
 
-	for _, c := range fpConfig.PipelingConnections {
-		if c.GetShortName() != "default" {
-			continue
-		}
-		connCtyValue, err := c.CtyValue()
-		if err != nil {
-			return nil, err
-		}
+// 	for _, c := range fpConfig.PipelingConnections {
+// 		if c.GetShortName() != "default" {
+// 			continue
+// 		}
+// 		connCtyValue, err := c.CtyValue()
+// 		if err != nil {
+// 			return nil, err
+// 		}
 
-		if connTypeMap[c.GetConnectionType()] == cty.NilVal {
-			connTypeMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
-				"default": connCtyValue,
-			})
-		}
-	}
+// 		if connTypeMap[c.GetConnectionType()] == cty.NilVal {
+// 			connTypeMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
+// 				"default": connCtyValue,
+// 			})
+// 		}
+// 	}
 
-	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connTypeMap)
-	return evalContext, nil
-}
+// 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connTypeMap)
+// 	return evalContext, nil
+// }
 
 func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
 
