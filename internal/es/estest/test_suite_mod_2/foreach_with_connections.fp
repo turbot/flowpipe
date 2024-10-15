@@ -96,3 +96,67 @@ pipeline "from_another_step" {
         value = step.transform.next
     }
 }
+
+
+pipeline "parent_foreach_connection" {
+
+    step "transform" "source" {
+        value = ["example", "example_2"]
+    }
+
+    step "pipeline" "call_nested" {
+        for_each = step.transform.source.value
+        pipeline = pipeline.child_connection
+
+        args = {
+            conn = connection.aws[each.value]
+        }
+    }
+
+    output "val" {
+        value = step.pipeline.call_nested
+    }
+}
+
+pipeline "parent_complex_foreach_connection" {
+
+    step "transform" "source" {
+        value = [
+            {
+                "name": "example",
+                "conn_name": "example"
+            },
+            {
+                "name": "example_2",
+                "conn_name": "example_2"
+            }
+        ]
+    }
+
+    step "pipeline" "call_nested" {
+        for_each = step.transform.source.value
+        pipeline = pipeline.child_connection
+
+        args = {
+            conn = connection.aws[each.value.conn_name]
+        }
+    }
+
+    output "val" {
+        value = step.pipeline.call_nested
+    }
+}
+
+pipeline "child_connection" {
+    param "conn" {
+        type = connection.aws
+    }
+
+    step "transform" "echo" {
+        value = param.conn.access_key
+    }
+
+    output "val" {
+        value = step.transform.echo
+    }
+}

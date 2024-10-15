@@ -909,6 +909,58 @@ func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInObject() {
 	assert.Equal("example3_access_key", pipelineOutput.(map[string]any)["2"].(map[string]any)["value"].(map[string]any)["akey"].(map[string]any)["access_key"])
 }
 
+func (suite *ModTwoTestSuite) TestForEachConnectedNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.parent_foreach_connection", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	pipelineOutput := pex.PipelineOutput["val"]
+	assert.Equal(2, len(pipelineOutput.(map[string]any)))
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pipelineOutput.(map[string]any)["0"].(map[string]any)["args"].(map[string]any)["conn"].(map[string]any)["access_key"])
+	assert.Equal("example2_access_key", pipelineOutput.(map[string]any)["1"].(map[string]any)["args"].(map[string]any)["conn"].(map[string]any)["access_key"])
+}
+
+func (suite *ModTwoTestSuite) TestComplexForEachConnectedNestedPipeline() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.parent_foreach_connection", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	pipelineOutput := pex.PipelineOutput["val"]
+	assert.Equal(2, len(pipelineOutput.(map[string]any)))
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pipelineOutput.(map[string]any)["0"].(map[string]any)["args"].(map[string]any)["conn"].(map[string]any)["access_key"])
+	assert.Equal("example2_access_key", pipelineOutput.(map[string]any)["1"].(map[string]any)["args"].(map[string]any)["conn"].(map[string]any)["access_key"])
+}
+
 func TestModTwoTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTwoTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
