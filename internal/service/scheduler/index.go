@@ -12,7 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/schedule"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/store"
-	"github.com/turbot/flowpipe/internal/triggerv2"
+	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -168,7 +168,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		tags = append(tags, "pipeline:"+pipelineName)
 	}
 
-	triggerRunner := triggerv2.NewTriggerRunner(t, "", "")
+	triggerRunner := trigger.NewTriggerRunner(t, "", "")
 
 	scheduledTriggerRunner := TriggerScheduleRunner{
 		TriggerRunner: triggerRunner,

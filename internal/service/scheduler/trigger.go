@@ -4,11 +4,11 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/turbot/flowpipe/internal/triggerv2"
+	"github.com/turbot/flowpipe/internal/trigger"
 )
 
 type TriggerScheduleRunner struct {
-	TriggerRunner triggerv2.TriggerRunner
+	TriggerRunner trigger.TriggerRunner
 }
 
 func (s *TriggerScheduleRunner) Run() {

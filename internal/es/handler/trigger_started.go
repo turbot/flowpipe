@@ -9,7 +9,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/triggerv2"
+	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
 )
@@ -50,7 +50,7 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 
 		return nil
 	}
-	triggerRunner := triggerv2.NewTriggerRunner(trg, evt.Event.ExecutionID, "")
+	triggerRunner := trigger.NewTriggerRunner(trg, evt.Event.ExecutionID, "")
 
 	if triggerRunner == nil {
 		slog.Error("Error creating trigger runner")

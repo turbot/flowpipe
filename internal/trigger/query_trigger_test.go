@@ -1,4 +1,4 @@
-package triggerv2
+package trigger
 
 import (
 	"context"
@@ -22,16 +22,24 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
-func TestPostgresSqlTriggerQuery(t *testing.T) {
+func TestTriggerQuery(t *testing.T) {
 	ctx := context.Background()
 
 	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
-	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
 
-	db, err := sql.Open("postgres", connectionString)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
@@ -56,13 +64,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	err = dropPostgresSqlTestTable(db, "test_one")
-	if err != nil {
-		assert.Fail("Error deleting test table", err)
-		return
-	}
-
-	err = createPostgresSqlTestTableA(db, "test_one")
+	err = createTestTableA(db, "test_one")
 	if err != nil {
 		assert.Fail("Error creating test table", err)
 		return
@@ -92,7 +94,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		},
 	}
 
-	err = populatePostgresSqlTestTableA(db, "test_one", data)
+	err = populateTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -150,7 +152,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		Database:   connectionString,
+		Database:   "sqlite:./test_trigger_query.db",
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
@@ -174,11 +176,8 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	// The callback to the mocks should have been called by now
-	if generatedEvalContext == nil {
-		assert.Fail("generated eval context should not be nil")
-		return
-	}
+	assert.Equal(1, len(pipelineQueues), "wrong number of pipeline queues there should be only 1 insert")
+	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	selfVar := generatedEvalContext.Variables["self"]
 	if selfVar == cty.NilVal {
@@ -215,10 +214,6 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		}
 	}
 
-	// check the triggerCommands .. we check how many pipeline is executed and which pipeline is executed
-	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
-	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
-
 	//
 	// SECOND RUN
 	//
@@ -233,7 +228,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	assert.Equal(0, len(pipelineQueues), "trigger command should be nil, since there's no change the pipeline should NOT be called")
+	assert.Equal(0, len(pipelineQueues), "pipeline queues should be nil, since there's no change the pipeline should NOT be called")
 
 	//
 	// THIRD RUN
@@ -257,7 +252,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		},
 	}
 
-	err = populatePostgresSqlTestTableA(db, "test_one", data)
+	err = populateTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -272,6 +267,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
+	assert.NotNil(pipelineQueues, "trigger command should not be nil")
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -306,7 +302,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the insert pipeline should be executed")
+	assert.Equal(1, len(pipelineQueues), "wrong number of pipeline queue, only the insert pipeline should be executed")
 	assert.Equal("insert_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
@@ -314,7 +310,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	//
 	// Test for update
 
-	err = updatePostgresSqlTestTableA(db, "test_one", map[string]interface{}{
+	err = updateTestTableA(db, "test_one", map[string]interface{}{
 		"id":                "1",
 		"name":              "John",
 		"age":               35,
@@ -370,7 +366,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		}
 	}
 
-	assert.Equal(1, len(pipelineQueues), "wrong number of trigger commands only the update pipeline should be executed")
+	assert.Equal(1, len(pipelineQueues), "wrong number of pipeline queue commands only the update pipeline should be executed")
 	assert.Equal("update_pipe", pipelineQueues[0].Name, "wrong pipeline name")
 
 	//
@@ -394,7 +390,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	//
 	// Delete some rows
 	idsToDelete := []any{"1", "4"}
-	err = deleteFromPostgresSqlTestTable(db, "test_one", idsToDelete)
+	err = deleteFromTestTable(db, "test_one", idsToDelete)
 	if err != nil {
 		assert.Fail("Error deleting from test table", err)
 		return
@@ -465,14 +461,14 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		},
 	}
 
-	err = populatePostgresSqlTestTableA(db, "test_one", data)
+	err = populateTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
 	}
 
 	idsToDelete = []any{"2"}
-	err = deleteFromPostgresSqlTestTable(db, "test_one", idsToDelete)
+	err = deleteFromTestTable(db, "test_one", idsToDelete)
 	if err != nil {
 		assert.Fail("Error deleting from test table", err)
 		return
@@ -487,22 +483,30 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		return
 	}
 
-	assert.Equal(2, len(pipelineQueues), "wrong number of trigger commands only the delete pipeline should be executed")
+	assert.Equal(2, len(pipelineQueues), "wrong number of commands")
 	assert.Contains([]string{"delete_pipe", "insert_pipe"}, pipelineQueues[0].Name, "wrong pipeline name")
 	assert.Contains([]string{"delete_pipe", "insert_pipe"}, pipelineQueues[1].Name, "wrong pipeline name")
 	assert.False(pipelineQueues[0].Name == pipelineQueues[1].Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
 }
 
-func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
+func TestTriggerQueryNoPrimaryKey(t *testing.T) {
 	ctx := context.Background()
 
 	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
-	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
 
-	db, err := sql.Open("postgres", connectionString)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
@@ -527,13 +531,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		return
 	}
 
-	err = dropPostgresSqlTestTable(db, "test_one")
-	if err != nil {
-		assert.Fail("Error deleting test table", err)
-		return
-	}
-
-	err = createPostgresSqlTestTableA(db, "test_one")
+	err = createTestTableA(db, "test_one")
 	if err != nil {
 		assert.Fail("Error creating test table", err)
 		return
@@ -563,7 +561,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	err = populatePostgresSqlTestTableA(db, "test_one", data)
+	err = populateTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -621,7 +619,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		Database: connectionString,
+		Database: "sqlite:./test_trigger_query.db",
 		Sql:      "select * from test_one",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
 			"insert": insertCapture,
@@ -637,6 +635,8 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	triggerExecutionId := util.NewTriggerExecutionId()
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
+
+	assert.NotNil(triggerRunner, "trigger runner should not be nil")
 
 	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
 	if err != nil {
@@ -726,14 +726,11 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	err = populatePostgresSqlTestTableA(db, "test_one", data)
+	err = populateTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
 	}
-
-	// Reset
-	generatedEvalContext = nil
 
 	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
 	if err != nil {
@@ -790,7 +787,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	//
 	// Update doesn't work with no primary key
 
-	err = updatePostgresSqlTestTableA(db, "test_one", map[string]interface{}{
+	err = updateTestTableA(db, "test_one", map[string]interface{}{
 		"id":                "1",
 		"name":              "John",
 		"age":               35,
@@ -843,7 +840,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	deletedKeysSlice := deletedKeys.AsValueSlice()
 	assert.Equal(1, len(deletedKeysSlice), "wrong number of deleted keys")
 	// This Hash is generated in the function RunOne
-	assert.Equal("0432ffd1257d9c9e9903528dc8367bed39b5aff0afe68662fd0afa4e85b20b56", deletedKeysSlice[0].AsString(), "wrong deleted key")
+	assert.Equal("a7f390faa9ddca021f647b042c2c127f70e49ed3bdec2194df4e784367b5416a", deletedKeysSlice[0].AsString(), "wrong deleted key")
 
 	// because update doesn't work without primary key, we have insert & delete instead
 	assert.Equal(2, len(pipelineQueues), "wrong number of trigger commands only the delete pipeline should be executed")
@@ -852,14 +849,24 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	assert.False(pipelineQueues[0].Name == pipelineQueues[1].Name, "ensure that we don't call insert_pipe twice or delete_pipe twice")
 }
 
-func TestPostgresSqlTriggerQueryB(t *testing.T) {
+func TestTriggerQueryB(t *testing.T) {
 	ctx := context.Background()
+
+	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
-	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+	sourceDbFilename := "./test_trigger_query_b.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
 
-	db, err := sql.Open("postgres", connectionString)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
@@ -884,13 +891,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		return
 	}
 
-	err = dropPostgresSqlTestTable(db, "test_one")
-	if err != nil {
-		assert.Fail("Error deleting test table", err)
-		return
-	}
-
-	err = createPostgresSqlTestTableB(db, "test_one")
+	err = createTestTableB(db, "test_one")
 	if err != nil {
 		assert.Fail("Error creating test table", err)
 		return
@@ -930,7 +931,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		item["blob_data"] = blobData
 	}
 
-	err = populatePostgresSqlTestTableB(db, "test_one", data)
+	err = populateTestTableB(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -988,7 +989,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		Database:   connectionString,
+		Database:   "sqlite:./test_trigger_query_b.db",
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
@@ -1011,6 +1012,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		assert.Fail("Error executing trigger", err)
 		return
 	}
+
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -1093,7 +1095,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		data[1]["blob_data"].([]byte)[i] = byte(rand.Intn(256)) //nolint:gosec // just a test case
 	}
 
-	err = updatePostgresSqlTestTableB(db, "test_one", data[1])
+	err = updateTestTableB(db, "test_one", data[1])
 	if err != nil {
 		assert.Fail("Error updating test table", err)
 		return
@@ -1159,16 +1161,21 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	}
 }
 
-func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
+func TestTriggerQueryBCustomCapture(t *testing.T) {
 	ctx := context.Background()
-
-	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
-	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
-
-	db, err := sql.Open("postgres", connectionString)
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
@@ -1193,13 +1200,7 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		return
 	}
 
-	err = dropPostgresSqlTestTable(db, "test_one")
-	if err != nil {
-		assert.Fail("Error deleting test table", err)
-		return
-	}
-
-	err = createPostgresSqlTestTableB(db, "test_one")
+	err = createTestTableB(db, "test_one")
 	if err != nil {
 		assert.Fail("Error creating test table", err)
 		return
@@ -1239,7 +1240,7 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		item["blob_data"] = blobData
 	}
 
-	err = populatePostgresSqlTestTableB(db, "test_one", data)
+	err = populateTestTableB(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -1286,7 +1287,7 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		Database:   connectionString,
+		Database:   "sqlite:./test_trigger_query_b.db",
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
@@ -1295,7 +1296,6 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		},
 	}
 
-	// Add trigger to db
 	cache.GetCache().SetWithTTL(trigger.Name(), trigger, 10*time.Minute)
 
 	executionId := util.NewExecutionId()
@@ -1312,16 +1312,24 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	assert.Equal(0, len(pipelineQueues), "insert capture not defined no pipeline should be executed")
 }
 
-func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
+func TestTriggerQueryWithNull(t *testing.T) {
 	ctx := context.Background()
 
 	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
-	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
+	sourceDbFilename := "./test_trigger_query.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
 
-	db, err := sql.Open("postgres", connectionString)
+	db, err := sql.Open("sqlite3", sourceDbFilename)
 	if err != nil {
 		assert.Fail("Error initializing db", err)
 		return
@@ -1346,13 +1354,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		return
 	}
 
-	err = dropPostgresSqlTestTable(db, "test_one")
-	if err != nil {
-		assert.Fail("Error deleting test table", err)
-		return
-	}
-
-	err = createPostgresSqlTestTableA(db, "test_one")
+	err = createTestTableA(db, "test_one")
 	if err != nil {
 		assert.Fail("Error creating test table", err)
 		return
@@ -1382,7 +1384,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		},
 	}
 
-	err = populatePostgresSqlTestTableA(db, "test_one", data)
+	err = populateTestTableA(db, "test_one", data)
 	if err != nil {
 		assert.Fail("Error populating test table", err)
 		return
@@ -1439,7 +1441,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	}
 
 	trigger.Config = &modconfig.TriggerQuery{
-		Database:   connectionString,
+		Database:   "sqlite:./test_trigger_query.db",
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
 		Captures: map[string]*modconfig.TriggerQueryCapture{
@@ -1457,11 +1459,14 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
 
+	assert.NotNil(triggerRunner, "trigger runner should not be nil")
+
 	_, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
 	}
+
 	// The callback to the mocks should have been called by now
 	if generatedEvalContext == nil {
 		assert.Fail("generated eval context should not be nil")
@@ -1504,7 +1509,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	}
 }
 
-func createPostgresSqlTestTableA(db *sql.DB, tableName string) error {
+func createTestTableA(db *sql.DB, tableName string) error {
 	createTableSQL := `create table if not exists ` + tableName + ` (id text primary key, name text, age integer, registration_date date, is_active boolean);`
 
 	slog.Info("Creating table", "sql", createTableSQL)
@@ -1516,19 +1521,7 @@ func createPostgresSqlTestTableA(db *sql.DB, tableName string) error {
 	return nil
 }
 
-func dropPostgresSqlTestTable(db *sql.DB, tableName string) error {
-	dropTableSql := fmt.Sprintf("DROP TABLE IF EXISTS %s;", tableName)
-
-	slog.Info("Deleting table", "sql", dropTableSql)
-	_, err := db.Exec(dropTableSql)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func populatePostgresSqlTestTableA(db *sql.DB, tableName string, data []map[string]interface{}) error {
+func populateTestTableA(db *sql.DB, tableName string, data []map[string]interface{}) error {
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
@@ -1536,7 +1529,7 @@ func populatePostgresSqlTestTableA(db *sql.DB, tableName string, data []map[stri
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active) VALUES ($1, $2, $3, $4, $5)`) //nolint:gosec // should be safe to use
+	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active) VALUES (?, ?, ?, ?, ?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -1569,13 +1562,13 @@ func populatePostgresSqlTestTableA(db *sql.DB, tableName string, data []map[stri
 	return nil
 }
 
-func updatePostgresSqlTestTableA(db *sql.DB, tableName string, data map[string]interface{}) error {
+func updateTestTableA(db *sql.DB, tableName string, data map[string]interface{}) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 
-	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = $1, age = $2, registration_date = $3, is_active = $4 WHERE id = $5`) //nolint:gosec // should be safe to use
+	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ? WHERE id = ?`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -1603,29 +1596,19 @@ func updatePostgresSqlTestTableA(db *sql.DB, tableName string, data map[string]i
 	return nil
 }
 
-func deleteFromPostgresSqlTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
+func deleteFromTestTable(db *sql.DB, tableName string, idsToDelete []any) error {
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 
-	// Generate placeholders for each ID in the format PostgreSQL expects
-	placeholders := make([]string, len(idsToDelete))
-	for i := range idsToDelete {
-		placeholders[i] = fmt.Sprintf("$%d", i+1)
-	}
-	placeholdersStr := strings.Join(placeholders, ", ")
+	// Prepare statement for inserting into the temporary table
+	placeholders := strings.Join(strings.Split(strings.Repeat("?", len(idsToDelete)), ""), ",")
 
-	query := fmt.Sprintf("DELETE FROM %s WHERE id IN (%s)", tableName, placeholdersStr) //nolint:gosec // should be safe to use
-	tempStmt, err := tx.Prepare(query)
+	tempStmt, err := tx.Prepare(fmt.Sprintf("DELETE FROM %s WHERE id in (%s)", tableName, placeholders))
 	if err != nil {
-		// Roll back the transaction on error
-		err2 := tx.Rollback()
-		if err2 != nil {
-			slog.Error("Error rolling back transaction", "error", err2)
-			return err
-		}
+		return err
 	}
 	defer tempStmt.Close()
 
@@ -1643,14 +1626,14 @@ func deleteFromPostgresSqlTestTable(db *sql.DB, tableName string, idsToDelete []
 	return nil
 }
 
-func createPostgresSqlTestTableB(db *sql.DB, tableName string) error {
+func createTestTableB(db *sql.DB, tableName string) error {
 	createTableSQL := `CREATE TABLE IF NOT EXISTS ` + tableName + ` (
 		id INTEGER PRIMARY KEY,  -- Changed to INTEGER and is the primary key
 		name TEXT,
 		age INTEGER,
 		registration_date DATE,
 		is_active BOOLEAN,
-		blob_data BYTEA          -- for storing BLOB data
+		blob_data BLOB       -- for storing BLOB data
 	);`
 
 	_, err := db.Exec(createTableSQL)
@@ -1661,7 +1644,7 @@ func createPostgresSqlTestTableB(db *sql.DB, tableName string) error {
 	return nil
 }
 
-func populatePostgresSqlTestTableB(db *sql.DB, tableName string, data []map[string]interface{}) error {
+func populateTestTableB(db *sql.DB, tableName string, data []map[string]interface{}) error {
 	// Start a transaction
 	tx, err := db.Begin()
 	if err != nil {
@@ -1669,7 +1652,7 @@ func populatePostgresSqlTestTableB(db *sql.DB, tableName string, data []map[stri
 	}
 
 	// Prepare statement for inserting into the temporary table
-	tempStmt, err := tx.Prepare(fmt.Sprintf(`INSERT INTO %s (id, name, age, registration_date, is_active, blob_data) VALUES ($1, $2, $3, $4, $5, $6)`, tableName))
+	tempStmt, err := tx.Prepare(`INSERT INTO ` + tableName + ` (id, name, age, registration_date, is_active, blob_data) VALUES (?, ?, ?, ?, ?, ?)`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
@@ -1702,14 +1685,13 @@ func populatePostgresSqlTestTableB(db *sql.DB, tableName string, data []map[stri
 	return nil
 }
 
-func updatePostgresSqlTestTableB(db *sql.DB, tableName string, data map[string]interface{}) error {
+func updateTestTableB(db *sql.DB, tableName string, data map[string]interface{}) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 
-	stmtText := fmt.Sprintf(`UPDATE %s SET name = $1, age = $2, registration_date = $3, is_active = $4, blob_data = $5 WHERE id = $6`, tableName) //nolint:gosec // should be safe to use
-	tempStmt, err := tx.Prepare(stmtText)
+	tempStmt, err := tx.Prepare(`UPDATE ` + tableName + ` SET name = ?, age = ?, registration_date = ?, is_active = ?, blob_data = ? WHERE id = ?`) //nolint:gosec // should be safe to use
 	if err != nil {
 		err2 := tx.Rollback()
 		if err2 != nil {
