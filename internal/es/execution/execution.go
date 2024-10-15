@@ -189,6 +189,14 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 	if stepDefn != nil && (len(stepDefn.GetConnectionDependsOn()) > 0 || len(newlyDiscoveredConnections) > 0) {
 		addConn = true
 	}
+	if !addConn {
+		for _, p := range pipelineDefn.Params {
+			if modconfig.IsCustomType(p.Type) {
+				addConn = true
+				break
+			}
+		}
+	}
 
 	var extraConns []string
 
@@ -206,6 +214,10 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 		for _, newConn := range newlyDiscoveredConnections {
 
 			if !withForEach && strings.HasPrefix(newConn.Source, "each.value") {
+				continue
+			}
+
+			if newConn.Source == "" {
 				continue
 			}
 
@@ -258,12 +270,10 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 				connectionMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
 					"default": connCtyValue,
 				})
-			} else {
-				if connectionMap[c.GetConnectionType()].AsValueMap()["default"] == cty.NilVal {
-					connTypeMap := connectionMap[c.GetConnectionType()].AsValueMap()
-					connTypeMap["default"] = connCtyValue
-					connectionMap[c.GetConnectionType()] = cty.ObjectVal(connTypeMap)
-				}
+			} else if connectionMap[c.GetConnectionType()].AsValueMap()["default"] == cty.NilVal {
+				connTypeMap := connectionMap[c.GetConnectionType()].AsValueMap()
+				connTypeMap["default"] = connCtyValue
+				connectionMap[c.GetConnectionType()] = cty.ObjectVal(connTypeMap)
 			}
 		}
 

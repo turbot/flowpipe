@@ -188,7 +188,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 				evalContext, err := ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, nil)
 				if err != nil {
-					slog.Error("Error adding connections to eval context during pipeline plan", "error", err)
+					slog.Error("Error adding connections to eval context during pipeline plan (1)", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
@@ -200,7 +200,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				if len(connDepend) > 0 {
 					evalContext, err := ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, connDepend)
 					if err != nil {
-						slog.Error("Error adding connections to eval context during pipeline plan", "error", err)
+						slog.Error("Error adding connections to eval context during pipeline plan (2)", "error", err)
 						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 					}
 					var connDepend2 []modconfig.ConnectionDependency

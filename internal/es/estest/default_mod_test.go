@@ -422,7 +422,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidCred() {
 	assert.Equal("failed", pex.Status)
 
 	assert.Equal(1, len(pex.Errors))
-	assert.Contains(pex.Errors[0].Error.Detail, "Missing credential: This object does not have an attribute named \"github\"")
+	assert.Contains(pex.Errors[0].Error.Detail, "Missing connections for step 'creds': github")
 }
 
 func (suite *DefaultModTestSuite) TestNestedWithInvalidConn() {
