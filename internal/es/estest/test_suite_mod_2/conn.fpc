@@ -13,6 +13,11 @@ connection "aws" "example_3" {
     secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
 }
 
+connection "aws" "example_4" {
+    access_key = "example4_access_key"
+    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+}
+
 connection "slack" "slack_conn" {
   token = "abcdefg"
 }

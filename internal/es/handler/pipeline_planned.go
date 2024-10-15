@@ -85,7 +85,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			onlyInputStepsRunning := false
 			var latestActionTimestamp time.Time
 			for _, stepExecution := range pex.StepExecutions {
-				slog.Info("Checking step", "step", stepExecution.Name, "status", stepExecution.Status)
+				slog.Debug("Checking step", "step", stepExecution.Name, "status", stepExecution.Status)
 				if stepExecution.Status == "starting" {
 					stepName := stepExecution.Name
 					stepDefn := pipelineDefn.GetStep(stepName)

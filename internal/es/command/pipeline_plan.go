@@ -186,16 +186,46 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
-				evalContext, err = ex.AddConnectionsToEvalContext(evalContext, stepDefn, pipelineDefn)
+				evalContext, err := ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, nil)
 				if err != nil {
-					slog.Error("Error adding connections to eval context", "error", err)
+					slog.Error("Error adding connections to eval context during pipeline plan (1)", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
 
-				stepInputs, err := stepDefn.GetInputs(evalContext)
+				stepInputs, connDepend, err := stepDefn.GetInputs2(evalContext)
 				if err != nil {
 					return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 				}
+
+				if len(connDepend) > 0 {
+					evalContext, err := ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, connDepend)
+					if err != nil {
+						slog.Error("Error adding connections to eval context during pipeline plan (2)", "error", err)
+						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
+					}
+					var connDepend2 []modconfig.ConnectionDependency
+					stepInputs, connDepend2, err = stepDefn.GetInputs2(evalContext)
+					if err != nil {
+						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
+					}
+					if len(connDepend2) > 0 {
+						// we are missing some connections
+						missingConnStr := ""
+						for i, connDep := range connDepend2 {
+							if i > 0 {
+								missingConnStr += ", "
+							}
+							missingConnStr += connDep.Type
+							if connDep.Source != "" {
+								missingConnStr += "." + connDep.Source
+							}
+						}
+						missingConnErrors := perr.InternalWithMessage("Missing connections for step '" + stepDefn.GetName() + "': " + missingConnStr)
+						slog.Error("Missing connections for step", "step", stepDefn.GetName(), "missing", missingConnStr)
+						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, missingConnErrors, pex.Name, stepDefn.GetName())
+					}
+				}
+
 				// There's no for_each, there's only a single input
 				input = stepInputs
 			} else {

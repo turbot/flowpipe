@@ -3470,7 +3470,12 @@ func (suite *ModTestSuite) TestEmptyArrayResponseFromHttpServer() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 50*time.Millisecond, 100, "finished")
+	if pex == nil {
+		assert.Fail("Pipeline execution not found")
+		return
+	}
+
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 

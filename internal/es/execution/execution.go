@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/constants"
@@ -182,13 +183,13 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
-
+func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline, withForEach bool, newlyDiscoveredConnections []modconfig.ConnectionDependency) (*hcl.EvalContext, error) {
 	addConn := false
 
-	if stepDefn != nil && len(stepDefn.GetConnectionDependsOn()) > 0 {
+	if stepDefn != nil && (len(stepDefn.GetConnectionDependsOn()) > 0 || len(newlyDiscoveredConnections) > 0) {
 		addConn = true
-	} else {
+	}
+	if !addConn {
 		for _, p := range pipelineDefn.Params {
 			if modconfig.IsCustomType(p.Type) {
 				addConn = true
@@ -197,10 +198,12 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 		}
 	}
 
+	var extraConns []string
+
 	if addConn {
-		params := map[string]cty.Value{}
+		runParams := map[string]cty.Value{}
 		if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
-			params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
+			runParams = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
 		}
 
 		vars := map[string]cty.Value{}
@@ -208,9 +211,70 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 			vars = evalContext.Variables["var"].AsValueMap()
 		}
 
-		connectionMap, paramsMap, varMap, err := BuildConnectionMapForEvalContext(stepDefn.GetConnectionDependsOn(), params, vars, pipelineDefn.Params)
+		for _, newConn := range newlyDiscoveredConnections {
+
+			if !withForEach && strings.HasPrefix(newConn.Source, "each.value") {
+				continue
+			}
+
+			if newConn.Source == "" {
+				continue
+			}
+
+			// Parse the expression string
+			fakeFilename := fmt.Sprintf("<value for var.%s>", newConn.Source)
+			expr, diags := hclsyntax.ParseExpression([]byte(newConn.Source), fakeFilename, hcl.Pos{Line: 1, Column: 1})
+			if diags.HasErrors() {
+				return nil, error_helpers.BetterHclDiagsToError("diags", diags)
+			}
+
+			// Evaluate the expression
+			result, diags := expr.Value(evalContext)
+			if diags.HasErrors() {
+				continue
+			}
+
+			if result.IsNull() {
+				continue
+			}
+
+			asString := result.AsString()
+			connectionNeeded := newConn.Type + "." + asString
+			extraConns = append(extraConns, connectionNeeded)
+		}
+
+		extraConns = append(extraConns, stepDefn.GetConnectionDependsOn()...)
+
+		connectionMap, paramsMap, varMap, err := BuildConnectionMapForEvalContext(extraConns, runParams, vars, pipelineDefn.Params)
 		if err != nil {
 			return nil, err
+		}
+
+		// Add missing connection type & default to the connection map if they are not already there, this is for the GetInputs2 function
+		// to detect "missing connections"
+		fpConfig, err := db.GetFlowpipeConfig()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, c := range fpConfig.PipelingConnections {
+			if c.GetShortName() != "default" {
+				continue
+			}
+			connCtyValue, err := c.CtyValue()
+			if err != nil {
+				return nil, err
+			}
+
+			if connectionMap[c.GetConnectionType()] == cty.NilVal {
+				connectionMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
+					"default": connCtyValue,
+				})
+			} else if connectionMap[c.GetConnectionType()].AsValueMap()["default"] == cty.NilVal {
+				connTypeMap := connectionMap[c.GetConnectionType()].AsValueMap()
+				connTypeMap["default"] = connCtyValue
+				connectionMap[c.GetConnectionType()] = cty.ObjectVal(connTypeMap)
+			}
 		}
 
 		// Override what we have
@@ -221,6 +285,38 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 
 	return evalContext, nil
 }
+
+func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true, nil)
+}
+
+// func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+// 	fpConfig, err := db.GetFlowpipeConfig()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	connTypeMap := map[string]cty.Value{}
+
+// 	for _, c := range fpConfig.PipelingConnections {
+// 		if c.GetShortName() != "default" {
+// 			continue
+// 		}
+// 		connCtyValue, err := c.CtyValue()
+// 		if err != nil {
+// 			return nil, err
+// 		}
+
+// 		if connTypeMap[c.GetConnectionType()] == cty.NilVal {
+// 			connTypeMap[c.GetConnectionType()] = cty.ObjectVal(map[string]cty.Value{
+// 				"default": connCtyValue,
+// 			})
+// 		}
+// 	}
+
+// 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connTypeMap)
+// 	return evalContext, nil
+// }
 
 func (ex *Execution) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
 
@@ -293,7 +389,6 @@ func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, 
 		if allConnections[connectionName] != nil {
 			relevantConnections[connectionName] = allConnections[connectionName]
 		}
-
 		// Why do we bother with these <dynamic> dependencies?
 		// We don't want to resolve every single available in the system, we only want to resolve the ones that are
 		// are used. So this is part of how have an educated guess which credentials to resolve.
