@@ -782,6 +782,133 @@ func (suite *ModTwoTestSuite) TestConnectionParamChildPipeline() {
 	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"].(string))
 }
 
+func (suite *ModTwoTestSuite) TestConnectionReferenceFromAnotherStep() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.from_another_step", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("example2_access_key", pex.PipelineOutput["val"].(map[string]any)["value"].(map[string]any)["access_key"])
+}
+
+func (suite *ModTwoTestSuite) TestConnectionReferenceFromParam() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.from_param", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pex.PipelineOutput["val"].(map[string]any)["value"].(map[string]any)["access_key"])
+}
+
+func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEach() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.foreach_with_conn_simple", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	pipelineOutput := pex.PipelineOutput["val"]
+	assert.Equal(3, len(pipelineOutput.(map[string]any)))
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pipelineOutput.(map[string]any)["0"].(map[string]any)["value"].(map[string]any)["access_key"])
+	assert.Equal("example2_access_key", pipelineOutput.(map[string]any)["1"].(map[string]any)["value"].(map[string]any)["access_key"])
+	assert.Equal("example3_access_key", pipelineOutput.(map[string]any)["2"].(map[string]any)["value"].(map[string]any)["access_key"])
+}
+
+func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInLiteral() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.foreach_with_conn_literal", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	pipelineOutput := pex.PipelineOutput["val"]
+	assert.Equal(3, len(pipelineOutput.(map[string]any)))
+	assert.Equal("Foo: bar and ASIAQGDFAKEKGUI5MCEU", pipelineOutput.(map[string]any)["0"].(map[string]any)["value"].(string))
+	assert.Equal("Foo: bar and example2_access_key", pipelineOutput.(map[string]any)["1"].(map[string]any)["value"].(string))
+	assert.Equal("Foo: bar and example3_access_key", pipelineOutput.(map[string]any)["2"].(map[string]any)["value"].(string))
+}
+
+func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInObject() {
+	assert := assert.New(suite.T())
+
+	pipelineInput := modconfig.Input{}
+
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.foreach_with_conn_object", 100*time.Millisecond, pipelineInput)
+
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
+	if err != nil {
+		assert.Fail("Error getting pipeline execution", err)
+		return
+	}
+
+	assert.Equal("finished", pex.Status)
+
+	pipelineOutput := pex.PipelineOutput["val"]
+	assert.Equal(3, len(pipelineOutput.(map[string]any)))
+	assert.Equal("ASIAQGDFAKEKGUI5MCEU", pipelineOutput.(map[string]any)["0"].(map[string]any)["value"].(map[string]any)["akey"].(map[string]any)["access_key"])
+	assert.Equal("example2_access_key", pipelineOutput.(map[string]any)["1"].(map[string]any)["value"].(map[string]any)["akey"].(map[string]any)["access_key"])
+	assert.Equal("example3_access_key", pipelineOutput.(map[string]any)["2"].(map[string]any)["value"].(map[string]any)["akey"].(map[string]any)["access_key"])
+}
+
 func TestModTwoTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTwoTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
