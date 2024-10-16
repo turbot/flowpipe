@@ -356,7 +356,7 @@ func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
 	}
 
 	assert.Equal("failed", pex.Status)
-	assert.Equal("Internal Error: aws_conn: No connection found for the given connection name", pex.Errors[0].Error.Error())
+	assert.Equal("Internal Error: aws_conn: No connection found for the given connection name: example_50", pex.Errors[0].Error.Error())
 }
 
 func (suite *ModTwoTestSuite) TestInvalidParam() {
