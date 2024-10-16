@@ -19,6 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
@@ -31,7 +32,6 @@ import (
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -205,12 +205,12 @@ func (m *Manager) initializeResources() error {
 	if _, exists := parse.ModFileExists(modLocation); exists {
 		// build the list of possible config path locations
 		configPath, err := cmdconfig.GetConfigPath()
-		error_helpers.FailOnError(err)
+		fperr.FailOnError(err, nil, fperr.ErrorCodeModLoadFailed)
 
 		flowpipeConfig, ew := flowpipeconfig.LoadFlowpipeConfig(configPath)
 
 		// check for error
-		error_helpers.FailOnError(ew.Error)
+		fperr.FailOnError(ew.Error, nil, fperr.ErrorCodeModLoadFailed)
 		ew.ShowWarnings()
 
 		// Add the "Credentials" in the context
@@ -246,15 +246,14 @@ func (m *Manager) initializeResources() error {
 			})
 
 			if err != nil {
-				return err
+				return fperr.WrapsWith(err, nil, fperr.ErrorCodeAPIInitFailed)
 			}
 		}
 
 		err = m.loadMod()
 		if err != nil {
-			return err
+			return fperr.WrapsWith(err, nil, fperr.ErrorCodeModLoadFailed)
 		}
-
 	} else {
 		// there is no mod, just load pipelines and triggers from the directory
 		var err error

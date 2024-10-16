@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thediveo/enumflag/v2"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
@@ -93,8 +94,8 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 	defer func() {
 		utils.LogTime("cmd.runModInstallCmd end")
 		if r := recover(); r != nil {
-			error_helpers.ShowError(ctx, helpers.ToError(r))
-			// exitCode = constants.ExitCodeUnknownErrorPanic
+			err := helpers.ToError(r)
+			error_helpers.ShowError(ctx, err)
 		}
 	}()
 
@@ -102,12 +103,12 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 	// - if it does not exist, this will return a nil mod and a nil error
 	workspacePath := viper.GetString(constants.ArgModLocation)
 	workspaceMod, err := parse.LoadModfile(workspacePath)
-	error_helpers.FailOnErrorWithMessage(err, "failed to load mod definition")
+	fperr.FailOnErrorWithMessage(err, "failed to load mod definition", nil, fperr.ErrorCodeModLoadFailed)
 
 	// if no mod was loaded, create a default
 	if workspaceMod == nil {
 		workspaceMod, err = createWorkspaceMod(ctx, cmd, workspacePath)
-		error_helpers.FailOnError(err)
+		fperr.FailOnError(err, nil, fperr.ErrorCodeModLoadFailed)
 
 	}
 
@@ -119,8 +120,7 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 
 	installData, err := modinstaller.InstallWorkspaceDependencies(ctx, installOpts)
 	if err != nil {
-		// exitCode = constants.ExitCodeModInstallFailed
-		error_helpers.FailOnError(err)
+		fperr.FailOnError(err, nil, fperr.ErrorCodeModInstallFailed)
 	}
 
 	fmt.Println(modinstaller.BuildInstallSummary(installData))
@@ -164,7 +164,7 @@ func runModUninstallCmd(cmd *cobra.Command, args []string) {
 	}
 	opts := modinstaller.NewInstallOpts(workspaceMod, args...)
 	installData, err := modinstaller.UninstallWorkspaceDependencies(ctx, opts)
-	error_helpers.FailOnError(err)
+	fperr.FailOnError(err, nil, "")
 	fmt.Println(modinstaller.BuildUninstallSummary(installData))
 }
 

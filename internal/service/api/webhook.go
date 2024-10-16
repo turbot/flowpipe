@@ -287,6 +287,7 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 	expectedState := "finished"
 
 	var ex *execution.ExecutionInMemory
+	lastStatus := ""
 
 	// Wait for the pipeline to complete, but not forever
 	for i := 0; i < waitRetry; i++ {
@@ -301,6 +302,15 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 
 		// Wait for the execution to finish
 		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" {
+			if ex.Status == "failed" {
+				lastStatus = event.HandlerExecutionFailed
+			} else if ex.Status == "finished" {
+				lastStatus = event.HandlerExecutionFinished
+			} else if ex.Status == "paused" {
+				lastStatus = event.HandlerExecutionPaused
+			} else if ex.Status == "cancelled" {
+				lastStatus = event.HandlerExecutionCancelled
+			}
 			break
 		}
 	}
@@ -311,6 +321,7 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 	}
 
 	response := types.TriggerExecutionResponse{
+		LastStatus: lastStatus,
 		Flowpipe: types.FlowpipeTriggerResponseMetadata{
 			Name: trg.FullName,
 			Type: trg.Config.GetType(),

@@ -17,6 +17,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/command"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/fperr"
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/flowpipe/internal/service/api"
@@ -97,10 +98,15 @@ func resumeProcessFunc(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	exitCode := 0
+	lastStatus := ""
+
 	defer func() {
 		if m != nil {
 			_ = m.Stop()
 		}
+		slog.Debug("Completed execution from resumeProcessFunc", "status", lastStatus, "exitCode", exitCode)
+		os.Exit(exitCode)
 	}()
 
 	isDetach := viper.GetBool(constants.ArgDetach)
@@ -126,11 +132,20 @@ func resumeProcessFunc(cmd *cobra.Command, args []string) {
 			return
 		}
 	case streamLogs:
-		displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
+		lastStatus = displayStreamingLogs(ctx, cmd, resp, pollLogFunc)
 	case progressLogs:
-		displayProgressLogs(ctx, cmd, resp, pollLogFunc)
+		lastStatus = displayProgressLogs(ctx, cmd, resp, pollLogFunc)
 	default:
-		displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+		lastStatus = displayBasicOutput(ctx, cmd, resp, pollLogFunc)
+	}
+
+	switch lastStatus {
+	case event.HandlerExecutionFailed:
+		exitCode = fperr.ExitCodeExecutionFailed
+	case event.HandlerExecutionCancelled:
+		exitCode = fperr.ExitCodeExecutionCancelled
+	case event.HandlerExecutionPaused:
+		exitCode = fperr.ExitCodeExecutionPaused
 	}
 
 }

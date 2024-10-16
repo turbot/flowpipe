@@ -5,14 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
+	"reflect"
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/fperr"
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -354,15 +359,24 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 	var m *manager.Manager
 	m, resp, pollLogFunc, err = executeTrigger(cmd, args, isRemote)
 	if err != nil {
+		if perr.IsNotFound(err) {
+			fperr.FailOnError(err, reflect.TypeOf(perr.NotFound), fperr.ErrorCodeNotFound)
+		}
+
 		error_helpers.FailOnErrorWithMessage(err, "failed executing pipeline")
 		return
 	}
+
+	lastStatus := ""
+	exitCode := 0
 
 	// ensure to shut the manager when we are done
 	defer func() {
 		if m != nil {
 			_ = m.Stop()
 		}
+		slog.Debug("Completed execution from resumeProcessFunc", "status", lastStatus, "exitCode", exitCode)
+		os.Exit(exitCode)
 	}()
 
 	pipelineExecutionResponse := types.PipelineExecutionResponse{
@@ -380,9 +394,9 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 			return
 		}
 	case streamLogs:
-		displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+		lastStatus = displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	case progressLogs:
-		displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+		lastStatus = displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	default:
 		// TODO: hack here. We should have a printer for this
 		triggerResult, err := api.WaitForTrigger(resp.Flowpipe.Name, resp.Flowpipe.ProcessID, 500)
@@ -412,6 +426,17 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 			error_helpers.FailOnErrorWithMessage(err, "failed writing trigger result")
 			return
 		}
+
+		lastStatus = triggerResult.LastStatus
+	}
+
+	switch lastStatus {
+	case event.HandlerExecutionFailed:
+		exitCode = fperr.ExitCodeExecutionFailed
+	case event.HandlerExecutionCancelled:
+		exitCode = fperr.ExitCodeExecutionCancelled
+	case event.HandlerExecutionPaused:
+		exitCode = fperr.ExitCodeExecutionPaused
 	}
 
 }
