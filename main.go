@@ -33,10 +33,9 @@ func main() {
 		if r := recover(); r != nil {
 			err = helpers.ToError(r)
 			error_helpers.ShowError(ctx, err)
+			exitCode := fperr.GetExitCode(err, true)
+			os.Exit(exitCode)
 		}
-
-		exitCode := fperr.GetExitCode(err, true)
-		os.Exit(exitCode)
 	}()
 
 	viper.SetDefault(constants.ArgProcessRetention, 604800) // 7 days
