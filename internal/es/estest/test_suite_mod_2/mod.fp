@@ -2,10 +2,6 @@ mod "test_suite_mod_2" {
     title = "Test Suite Mod 2"
 }
 
-param "fpp" {
-
-}
-
 pipeline "with_tags" {
     title = "tags on pipeline"
 
