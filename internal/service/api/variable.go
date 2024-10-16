@@ -58,7 +58,7 @@ func ListVariables() (*types.ListVariableResponse, error) {
 		return nil, err
 	}
 
-	fpVars := []*types.FpVariable{}
+	var fpVars []*types.FpVariable
 	for _, v := range variables {
 		fpVars = append(fpVars, types.FpVariableFromModVariable(v))
 	}
