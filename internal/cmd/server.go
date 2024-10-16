@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/flowpipe/internal/output"
 	serviceConfig "github.com/turbot/flowpipe/internal/service/config"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -53,14 +54,14 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		if isPortInUse(viper.GetInt(constants.ArgPort)) {
 			errMsg := fmt.Sprintf("the designated port (%d) is already in use", viper.GetInt(constants.ArgPort))
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", errors.New(errMsg)))
-			os.Exit(1)
+			os.Exit(constants.ExitCodeBindPortUnavailable)
 		}
 
 		outputMode := viper.GetString(constants.ArgOutput)
 		if outputMode == constants.OutputFormatJSON || outputMode == constants.OutputFormatYAML {
 			errMsg := "server command currently only supports '--output' for 'pretty' or 'plain'"
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", errors.New(errMsg)))
-			os.Exit(1)
+			os.Exit(constants.ExitCodeInsufficientOrWrongInputs)
 		}
 
 		// start manager, passing server config
@@ -70,7 +71,7 @@ func startServerFunc() func(cmd *cobra.Command, args []string) {
 		).Start()
 		if err != nil {
 			output.RenderServerOutput(ctx, types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "unable to start server", err))
-			os.Exit(1)
+			fperr.FailOnError(err, nil, "")
 		}
 
 		// Block until we receive a signal
