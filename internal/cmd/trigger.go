@@ -360,7 +360,7 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 	m, resp, pollLogFunc, err = executeTrigger(cmd, args, isRemote)
 	if err != nil {
 		if perr.IsNotFound(err) {
-			fperr.FailOnError(err, reflect.TypeOf(perr.NotFound), fperr.ErrorCodeNotFound)
+			fperr.FailOnError(err, reflect.TypeOf(perr.NotFound), fperr.ErrorCodeResourceNotFound)
 		}
 
 		error_helpers.FailOnErrorWithMessage(err, "failed executing pipeline")

@@ -13,12 +13,11 @@ const (
 	ErrorCodeModInstallFailed = "error_mod_install_failed"
 	ErrorCodeAPIInitFailed    = "error_api_init_failed"
 	ErrorCodeUnknownError     = "error_unknown_error"
-	ErrorCodeNotFound         = "error_not_found"
+	ErrorCodeResourceNotFound = "error_resource_not_found"
 
 	ExitCodeExecutionPaused      = 1
 	ExitCodeExecutionFailed      = 2
 	ExitCodeExecutionCancelled   = 3
-	ExitCodeNotFound             = 4
 	ExitCodeExecutionDidNotStart = 9
 	ExitCodeUnknownFlowpipeError = 10
 )
@@ -32,8 +31,8 @@ func GetExitCode(err error, fromPanic bool) int {
 			return constants.ExitCodeModInstallFailed
 		case ErrorCodeAPIInitFailed:
 			return constants.ExitCodeInitializationFailed
-		case ErrorCodeNotFound:
-			return ExitCodeNotFound
+		case ErrorCodeResourceNotFound:
+			return constants.ExitCodeInitializationFailed // matches Powerpipe that returns 250 if control not found
 		case ErrorCodeUnknownError:
 			return ExitCodeUnknownFlowpipeError
 		}

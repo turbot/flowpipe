@@ -238,7 +238,7 @@ func runPipelineFunc(cmd *cobra.Command, args []string) {
 	m, resp, pollLogFunc, err = executePipeline(cmd, args, isRemote)
 	if err != nil {
 		if perr.IsNotFound(err) {
-			fperr.FailOnError(err, reflect.TypeOf(perr.NotFound), fperr.ErrorCodeNotFound)
+			fperr.FailOnError(err, reflect.TypeOf(perr.NotFound), fperr.ErrorCodeResourceNotFound)
 		}
 
 		fperr.FailOnErrorWithMessage(err, "failed executing pipeline", nil, "")
