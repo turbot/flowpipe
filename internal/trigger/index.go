@@ -35,6 +35,7 @@ type TriggerRunnerBase struct {
 }
 
 type TriggerRunner interface {
+	ExecutionQueueWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.ExecutionQueue, error)
 	ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
 	GetTriggerResponse([]*event.PipelineQueue) (types.TriggerExecutionResponse, error)
 }
@@ -63,6 +64,10 @@ func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionI
 	default:
 		return nil
 	}
+}
+
+func (tr *TriggerRunnerBase) ExecutionQueueWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.ExecutionQueue, error) {
+	return nil, nil
 }
 
 func (tr *TriggerRunnerBase) ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {

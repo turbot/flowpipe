@@ -1,7 +1,7 @@
 trigger "query" "simple" {
     schedule = "* * * * *"
 
-    enabled = true
+    enabled = false
 
     database = "sqlite:./query_source_clean.db"
     sql      = "select * from test_one order by id"
