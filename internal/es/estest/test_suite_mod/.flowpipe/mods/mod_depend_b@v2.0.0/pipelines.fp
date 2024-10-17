@@ -2,7 +2,7 @@
 pipeline "in_b" {
 
     step "transform" "test_b" {
-        value = "echo b v1.0.0"
+        value = "echo b v2.0.0"
     }
 
     output "val" {

@@ -4171,7 +4171,22 @@ func (suite *ModTestSuite) TestNestedModChildPipeline() {
 	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
-	assert.Equal("echo", pex.PipelineOutput["out"].(map[string]interface{})["value"].(string))
+	assert.Equal("echo b v1.0.0", pex.PipelineOutput["out"].(map[string]interface{})["output"].(map[string]any)["val"].(map[string]any)["value"].(string))
+}
+
+func (suite *ModTestSuite) TestNestedModChildPipeline2() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "mod_depend_c.pipeline.c_calls_b", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("echo b v2.0.0", pex.PipelineOutput["out"].(map[string]interface{})["output"].(map[string]any)["val"].(map[string]any)["value"].(string))
 }
 
 func TestModTestingSuite(t *testing.T) {

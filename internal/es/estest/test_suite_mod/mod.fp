@@ -28,6 +28,10 @@ mod "test_suite_mod" {
                 var_depend_a_two = "abc"
             }
         }
+
+        mod "mod_depend_c" {
+            version = "2.0.0"
+        }
     }
 
 }
