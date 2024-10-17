@@ -244,6 +244,10 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 		}
 
 		extraConns = append(extraConns, stepDefn.GetConnectionDependsOn()...)
+		// add in mod connection dependendencies
+		if mod := stepDefn.GetPipeline().GetMod(); mod != nil {
+			extraConns = append(extraConns, mod.GetConnectionDependsOn()...)
+		}
 
 		connectionMap, paramsMap, varMap, err := BuildConnectionMapForEvalContext(extraConns, runParams, vars, pipelineDefn.Params)
 		if err != nil {

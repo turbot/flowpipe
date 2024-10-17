@@ -297,6 +297,69 @@ func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
 
 }
 
+func (suite *ModThreeTestSuite) TestExecutionQueryTriggerModDb() {
+	assert := assert.New(suite.T())
+
+	sourceDbFilename := "./test_suite_mod_3/query_source_modified.db"
+	_, err := os.Stat(sourceDbFilename)
+	if !os.IsNotExist(err) {
+		err = os.Remove(sourceDbFilename)
+		if err != nil {
+			assert.Fail("Error removing test db", err)
+			return
+		}
+	}
+
+	// copy the clean db to the modified db
+	err = utils.CopyFile("./test_suite_mod_3/query_source_clean.db", sourceDbFilename)
+	if err != nil {
+		assert.Fail("Error copying test db", err)
+		return
+	}
+
+	name := "test_suite_mod_3.trigger.query.simple_sqlite_no_db"
+
+	triggerCmd := &event.TriggerQueue{
+		Name: name,
+	}
+
+	executionCmd := &event.ExecutionQueue{
+		Event:        event.NewExecutionEvent(),
+		TriggerQueue: triggerCmd,
+	}
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+
+	if ex.Status != "finished" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
+
+	// There should only be 1 root pipeline
+	assert.Equal(1, len(ex.RootPipelines), "Expected 1 root pipeline")
+	// And there should only be 1 pipeline execution
+	assert.Equal(1, len(ex.PipelineExecutions), "Expected 1 pipeline execution")
+
+	pex := ex.PipelineExecutions[ex.RootPipelines[0]]
+	if pex == nil {
+		assert.Fail("root pipeline execution")
+		return
+	}
+
+	assert.Equal(6, len(pex.PipelineOutput["inserted_rows"].([]any)), "Expected 6 inserted rows")
+
+}
+
 func TestModThreeTestingSuite(t *testing.T) {
 	suite.Run(t, &ModThreeTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

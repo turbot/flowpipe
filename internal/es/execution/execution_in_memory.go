@@ -356,6 +356,11 @@ func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext
 		vars = evalContext.Variables["var"].AsValueMap()
 	}
 
+	// add in mod connection dependendencies
+	if mod := pipelineDefn.GetMod(); mod != nil {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, mod.GetConnectionDependsOn()...)
+	}
+
 	connectionMap, newParamsMap, varMap, err := BuildConnectionMapForEvalContext(allConnectionsDependsOn, params, vars, pipelineDefn.Params)
 	if err != nil {
 		return nil, err
