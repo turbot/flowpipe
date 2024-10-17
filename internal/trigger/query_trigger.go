@@ -348,7 +348,6 @@ func (tr *TriggerRunnerQuery) ExecuteTriggerWithArgs(ctx context.Context, args m
 	cmds, err := tr.execute(ctx, tr.ExecutionID, triggerArgs, tr.Trigger)
 	if err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
-
 		return nil, err
 	}
 
