@@ -1016,6 +1016,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 		ex.PipelineExecutions[et.PipelineExecutionID] = &PipelineExecution{
 			ID:                    et.PipelineExecutionID,
 			Name:                  et.Name,
+			ModFullVersion:        et.ModFullVersion,
 			Args:                  et.Args,
 			Status:                "queued",
 			StepStatus:            map[string]map[string]*StepStatus{},

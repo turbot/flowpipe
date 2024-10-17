@@ -4159,6 +4159,21 @@ func (suite *ModTestSuite) TestMessageStepBadSlackIgnored() {
 	assert.Equal("failed", pex.StepStatus["message.message"]["0"].StepExecutions[0].Status)
 }
 
+func (suite *ModTestSuite) TestNestedModChildPipeline() {
+	assert := assert.New(suite.T())
+	pipelineInput := modconfig.Input{}
+	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "mod_depend_a.pipeline.a_calls_b", 100*time.Millisecond, pipelineInput)
+	if err != nil {
+		assert.Fail("Error creating execution", err)
+		return
+	}
+
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	assert.Equal("finished", pex.Status)
+	assert.Equal(0, len(pex.Errors))
+	assert.Equal("echo", pex.PipelineOutput["out"].(map[string]interface{})["value"].(string))
+}
+
 func TestModTestingSuite(t *testing.T) {
 	suite.Run(t, &ModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},

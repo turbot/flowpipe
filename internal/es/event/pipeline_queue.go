@@ -11,6 +11,11 @@ type PipelineQueue struct {
 	Name  string          `json:"name"`
 	Args  modconfig.Input `json:"args"`
 
+	// The name of the mod including its version number. May be blank if not required,
+	// for example top level mod or 1st level children. Since the 1st level children must have
+	// unique names, we don't need ModFullVersion
+	ModFullVersion string `json:"mod_full_version"`
+
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 
@@ -72,6 +77,7 @@ func ForPipelineStepStartedToPipelineQueue(e *StepPipelineStarted) PipelineQueue
 
 		cmd.Name = e.ChildPipelineName
 		cmd.Args = e.ChildPipelineArgs
+		cmd.ModFullVersion = e.ChildPipelineModFullVersion
 		return nil
 	}
 }

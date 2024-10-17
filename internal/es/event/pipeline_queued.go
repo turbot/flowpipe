@@ -11,6 +11,10 @@ type PipelineQueued struct {
 	Event *Event `json:"event"`
 	// Name of the pipeline to be queued
 	Name string `json:"name"`
+	// The name of the mod including its version number. May be blank if not required,
+	// for example top level mod or 1st level children. Since the 1st level children must have
+	// unique names, we don't need ModFullVersion
+	ModFullVersion string `json:"mod_full_version"`
 	// Input to the pipeline
 	Args modconfig.Input `json:"args"`
 	// Unique identifier for this pipeline execution
@@ -55,6 +59,7 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 	return func(e *PipelineQueued) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.Name = cmd.Name
+		e.ModFullVersion = cmd.ModFullVersion
 		e.Args = cmd.Args
 		if cmd.PipelineExecutionID != "" {
 			// Only overwrite the default execution ID if we've been given one to use
@@ -64,6 +69,7 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 		e.ParentExecutionID = cmd.ParentExecutionID
 		e.Trigger = cmd.Trigger
 		e.TriggerCapture = cmd.TriggerCapture
+
 		return nil
 	}
 }

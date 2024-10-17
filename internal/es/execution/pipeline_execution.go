@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -20,6 +21,12 @@ type PipelineExecution struct {
 	ID string `json:"id"`
 	// The name of the pipeline
 	Name string `json:"name"`
+
+	// The name of the mod including its version number. May be blank if not required,
+	// for example top level mod or 1st level children. Since the 1st level children must have
+	// unique names, we don't need ModFullVersion
+	ModFullVersion string `json:"mod_full_version"`
+
 	// The input to the pipeline
 	Args modconfig.Input `json:"args,omitempty"`
 
@@ -123,7 +130,7 @@ type PipelineExecution struct {
 func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, error) {
 	stepVariables := make(map[string]cty.Value)
 
-	pipelineDefn, err := db.GetPipeline(pe.Name)
+	pipelineDefn, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 
 	if err != nil {
 		return nil, err
@@ -336,9 +343,9 @@ func (pe *PipelineExecution) ShouldFail() bool {
 
 // IsComplete returns true if all steps are complete.
 func (pe *PipelineExecution) IsComplete() bool {
-	pipeline, err := db.GetPipeline(pe.Name)
+	pipeline, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 	if err != nil {
-		// TODO: what do we do here?
+		fperr.FailOnError(err, nil, fperr.ErrorCodeResourceNotFound)
 		return false
 	}
 

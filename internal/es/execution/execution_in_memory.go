@@ -227,7 +227,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	paramsCtyVal := cty.ObjectVal(params)
 	evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 
-	pipelineMap, err := ex.buildPipelineMapForEvalContext()
+	pipelineMap, err := ex.buildPipelineMapForEvalContext(pipelineDefn)
 	if err != nil {
 		return nil, err
 	}
@@ -415,8 +415,20 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 	return credentialMap, nil
 }
 
-func (ex *ExecutionInMemory) buildPipelineMapForEvalContext() (map[string]cty.Value, error) {
-	allPipelines, err := db.ListAllPipelines()
+func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+
+	var allPipelines []*modconfig.Pipeline
+	var err error
+
+	if pipelineDefn != nil {
+		allPipelines, err = db.ListAllPipelines()
+	} else {
+		contextMod := pipelineDefn.GetMod()
+		for _, p := range contextMod.ResourceMaps.Pipelines {
+			allPipelines = append(allPipelines, p)
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -554,11 +566,11 @@ func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*mo
 		return nil, perr.BadRequestWithMessage("pipeline execution " + pipelineExecutionID + " not found")
 	}
 
-	pipeline, err := db.GetPipeline(pe.Name)
-
+	pipeline, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 	if err != nil {
 		return nil, err
 	}
+
 	return pipeline, nil
 }
 

@@ -439,7 +439,42 @@ func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 		return err
 	}
 
+	// Now cache mod version <-> pipeline for all pipelines, not just the root and direct children. This is needed
+	// because 2nd level children can be referenced in the 1st level children, and so on.
+	cacheModPipeline(mod)
+
 	return nil
+}
+
+func cacheModPipeline(mod *modconfig.Mod) {
+
+	modCacheKey := mod.CacheKey()
+
+	cache.GetCache().SetWithTTL(modCacheKey, mod, 24*7*52*99*time.Hour)
+
+	for _, pipeline := range mod.ResourceMaps.Pipelines {
+		if pipeline.ModFullName != mod.Name() {
+			continue
+		}
+
+		cacheKey := modCacheKey + "." + pipeline.Name()
+		cache.GetCache().SetWithTTL(cacheKey, pipeline, 24*7*52*99*time.Hour)
+	}
+
+	for _, m := range mod.ResourceMaps.Mods {
+		if m.Name() == mod.Name() {
+			continue
+		}
+
+		modCacheKey = m.CacheKey()
+
+		_, exists := cache.GetCache().Get(modCacheKey)
+		if exists {
+			continue
+		}
+
+		cacheModPipeline(m)
+	}
 }
 
 func triggerUrlProcessor(trigger *modconfig.Trigger) error {

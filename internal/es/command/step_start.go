@@ -418,7 +418,21 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		pipelineDefn, err := db.GetPipeline(nestedPipelineName)
+		currentStepPipeline := stepDefn.GetPipeline()
+		if currentStepPipeline == nil {
+			slog.Error("Unable to get pipeline from step definition")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h.EventBus, cmd, perr.InternalWithMessage("Unable to get pipeline from step definition"))
+			return true
+		}
+
+		currentStepMod := currentStepPipeline.GetMod()
+		if currentStepMod == nil {
+			slog.Error("Unable to get mod from step definition")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h.EventBus, cmd, perr.InternalWithMessage("Unable to get mod from step definition"))
+			return true
+		}
+
+		pipelineDefnToCall, err := db.GetPipelineResolvedFromMod(currentStepMod, nestedPipelineName)
 
 		if err != nil {
 			slog.Error("Unable to get pipeline " + nestedPipelineName + " from cache")
@@ -426,7 +440,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		errs := parse.ValidateParams(pipelineDefn, args, evalCtx)
+		errs := parse.ValidateParams(pipelineDefnToCall, args, evalCtx)
 
 		if len(errs) > 0 {
 			slog.Error("Failed validating pipeline param", "errors", errs)
@@ -439,6 +453,8 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			event.ForStepStart(cmd),
 			event.WithNewChildPipelineExecutionID(),
 			event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
+		e.ChildPipelineName = nestedPipelineName
+		e.ChildPipelineModFullVersion = pipelineDefnToCall.GetMod().CacheKey()
 
 		if cmd.StepForEach != nil {
 			e.Key = cmd.StepForEach.Key
