@@ -1,6 +1,6 @@
 mod "test_suite_mod_3" {
     title = "Test Suite Mod 3"
-
+    database = connection.sqlite.query_source_modified
     require {
         mod "mod_depend_a" {
             version = "1.0.0"

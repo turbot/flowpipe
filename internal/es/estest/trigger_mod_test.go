@@ -124,7 +124,7 @@ func (suite *TriggerModTestSuite) TestTriggerList() {
 	assert.Equal(4, len(listTriggerResponse.Items), "Expected 4 trigger")
 }
 
-func TestTriggertModTestingSuite(t *testing.T) {
+func TestTriggerModTestingSuite(t *testing.T) {
 	suite.Run(t, &TriggerModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
 	})

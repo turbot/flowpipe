@@ -1,6 +1,6 @@
 
 mod "trigger_mod" {
-  title = "Mod with Triggers"
+    title = "Mod with Triggers"
     require {
         mod "mod_depend_a" {
             version = "1.0.0"
