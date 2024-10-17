@@ -264,7 +264,10 @@ func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerPara
 	executionVariables[schema.BlockTypeParam] = paramsCtyVal
 
 	// add in mod connection dependendencies
-	allConnectionsDependsOn := append(triggerConfig.GetConnectionDependsOn(), rootMod.GetConnectionDependsOn()...)
+	allConnectionsDependsOn := triggerConfig.GetConnectionDependsOn()
+	if rootMod != nil {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, rootMod.GetConnectionDependsOn()...)
+	}
 	connectionMap, paramsMap, varMap, err := execution.BuildConnectionMapForEvalContext(allConnectionsDependsOn, runParams, vars, defnTriggerParams)
 	if err != nil {
 		return nil, err
