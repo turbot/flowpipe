@@ -5,6 +5,12 @@
       "name": "mod_depend_b",
       "struct_version": 20240429,
       "alias": "mod_depend_b"
+    },
+    "mod_depend_x": {
+      "version": "1.0.0",
+      "name": "mod_depend_x",
+      "struct_version": 20240429,
+      "alias": "mod_depend_x"
     }
   },
   "mod_depend_c@v2.0.0": {

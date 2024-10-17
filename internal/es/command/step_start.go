@@ -432,7 +432,8 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		pipelineDefnToCall, err := db.GetPipelineResolvedFromMod(currentStepMod, nestedPipelineName)
+		nestedPipelineModFullVersion := cmd.StepInput["mod_full_version"].(string)
+		pipelineDefnToCall, err := db.GetPipelineWithModFullVersion(nestedPipelineModFullVersion, nestedPipelineName)
 
 		if err != nil {
 			slog.Error("Unable to get pipeline " + nestedPipelineName + " from cache")

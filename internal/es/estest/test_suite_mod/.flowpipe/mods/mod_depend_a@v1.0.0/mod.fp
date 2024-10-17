@@ -5,6 +5,10 @@ mod "mod_depend_a" {
         mod "mod_depend_b" {
             version = "1.0.0"
         }
+
+        mod "mod_depend_x" {
+            version = "1.0.0"
+        }
     }
 }
 
