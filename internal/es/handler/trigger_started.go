@@ -62,7 +62,7 @@ func (h TriggerStarted) Handle(ctx context.Context, ei interface{}) error {
 		return nil
 	}
 
-	cmds, err := triggerRunner.ExecuteTriggerWithArgs(ctx, evt.Args, nil)
+	cmds, err := triggerRunner.GetPipelineQueuesWithArgs(ctx, evt.Args, nil)
 	if err != nil {
 		slog.Error("Error executing trigger", "error", err)
 

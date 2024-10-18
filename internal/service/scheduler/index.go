@@ -172,6 +172,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 
 	scheduledTriggerRunner := TriggerScheduleRunner{
 		TriggerRunner: triggerRunner,
+		CommandBus:    s.esService.CommandBus,
 	}
 
 	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(scheduledTriggerRunner.Run)

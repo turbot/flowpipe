@@ -35,7 +35,8 @@ type TriggerRunnerBase struct {
 }
 
 type TriggerRunner interface {
-	ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
+	GetTrigger() *modconfig.Trigger
+	GetPipelineQueuesWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
 	GetTriggerResponse([]*event.PipelineQueue) (types.TriggerExecutionResponse, error)
 }
 
@@ -65,7 +66,11 @@ func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionI
 	}
 }
 
-func (tr *TriggerRunnerBase) ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
+func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
+	return tr.Trigger
+}
+
+func (tr *TriggerRunnerBase) GetPipelineQueuesWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
 	triggerRunArgs, err := tr.validate(args, argsString)
 
 	if err != nil {
