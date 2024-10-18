@@ -189,6 +189,7 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 			Type:        param.Type,
 			TypeString:  param.TypeString,
 			Default:     paramDefault,
+			Format:      param.Format,
 		})
 
 		resp.Params = pipelineParams
@@ -323,6 +324,7 @@ type FpPipelineParam struct {
 	Default     any               `json:"default,omitempty"`
 	Type        any               `json:"-"`
 	TypeString  string            `json:"type_string"`
+	Format      string            `json:"format,omitempty"`
 }
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
