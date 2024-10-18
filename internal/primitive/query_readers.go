@@ -28,7 +28,7 @@ func NewQueryReader(dbConnectionString string) (QueryReader, error) {
 	parts := strings.SplitN(dbConnectionString, ":", 2)
 
 	if len(parts) != 2 {
-		return nil, perr.BadRequestWithMessage("Invalid database connection string")
+		return nil, perr.BadRequestWithMessage("Invalid database connection string: " + dbConnectionString)
 	}
 
 	var queryReader QueryReader
@@ -87,7 +87,7 @@ func (q *QueryReaderImpl) Initialize() error {
 	parts := strings.SplitN(q.connectionString, ":", 2)
 
 	if len(parts) != 2 {
-		return perr.BadRequestWithMessage("Invalid database connection string")
+		return perr.BadRequestWithMessage("Invalid database connection string: " + q.connectionString)
 	}
 
 	driver := parts[0]
@@ -203,7 +203,7 @@ func (s *SQLiteQueryReader) Initialize() error {
 	parts := strings.SplitN(s.QueryReaderImpl.connectionString, ":", 2)
 
 	if len(parts) != 2 {
-		return perr.BadRequestWithMessage("Invalid database connection string")
+		return perr.BadRequestWithMessage("Invalid database connection string: " + s.QueryReaderImpl.connectionString)
 	}
 
 	driver := parts[0]
@@ -234,7 +234,7 @@ func (s *FileBasedQueryReader) Initialize() error {
 	parts := strings.SplitN(s.QueryReaderImpl.connectionString, ":", 2)
 
 	if len(parts) != 2 {
-		return perr.BadRequestWithMessage("Invalid database connection string")
+		return perr.BadRequestWithMessage("Invalid database connection string: " + s.QueryReaderImpl.connectionString)
 	}
 
 	driver := parts[0]

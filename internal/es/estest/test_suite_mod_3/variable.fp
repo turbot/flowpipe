@@ -1,7 +1,7 @@
  variable "database" {
   type = connection.steampipe
   description = "The database connection to use."
-  default = connection.steampipe.default
+  default = connection.steampipe.mock
 }
 
 variable "notifier" {

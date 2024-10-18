@@ -72,6 +72,15 @@ func loopHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 func mockHandler(w http.ResponseWriter, r *http.Request) {
 
+	fmt.Println("Request received: ", r.URL.Path)
+
+	if r.URL.Path == "/api/v0/org/abc/workspace/workspace/connection/steampipe/private" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"config": {"connection_string": "conn_string_from_mock_server"}}`)) //nolint:errcheck // just a test case
+		return
+	}
+
 	if r.URL.Path == "/basic-auth-01" {
 		basicAuthHandler(w, r)
 		return

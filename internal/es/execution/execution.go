@@ -450,17 +450,14 @@ func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, 
 		}
 	}
 
+	varToConnMap := map[string]string{}
 	for name, v := range vars {
 		// is this a connection type?
 		if connectionNames, isConnection := parse.ConnectionNamesValueFromCtyValue(v); isConnection {
 			for _, connName := range connectionNames.AsValueSlice() {
 				conn := extractConnection(connName.AsString(), allConnections, relevantConnections)
 				if conn != nil {
-					ctyVal, err := conn.CtyValue()
-					if err != nil {
-						return nil, nil, nil, err
-					}
-					vars[name] = ctyVal
+					varToConnMap[name] = conn.Name()
 				}
 			}
 		}
@@ -488,6 +485,25 @@ func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, 
 
 		// Update the params with the resolved connection
 		runParams[k] = connObject
+	}
+
+	for k, v := range varToConnMap {
+		connNameParts := strings.Split(v, ".")
+		if len(connNameParts) != 2 {
+			return nil, nil, nil, perr.BadRequestWithMessage("invalid connection name: " + v)
+		}
+		connTypeGroup := connMap[connNameParts[0]]
+		if connTypeGroup == cty.NilVal {
+			return nil, nil, nil, perr.BadRequestWithMessage("invalid connection type: " + connNameParts[0])
+		}
+
+		connObject := connTypeGroup.AsValueMap()[connNameParts[1]]
+		if connObject == cty.NilVal {
+			return nil, nil, nil, perr.BadRequestWithMessage("invalid connection object: " + connNameParts[1])
+		}
+
+		// Update the vars with the resolved connection
+		vars[k] = connObject
 	}
 
 	return connMap, runParams, vars, nil
@@ -561,12 +577,12 @@ func evalCredentialMapForEvalContext(ctx context.Context, allCredentials map[str
 	return credentialMap, nil
 }
 
-func evaluateConnectionMapForEvalContext(ctx context.Context, allConnections map[string]connection.PipelingConnection) (map[string]cty.Value, error) {
+func evaluateConnectionMapForEvalContext(ctx context.Context, allConnectionsToEvaluate map[string]connection.PipelingConnection) (map[string]cty.Value, error) {
 	connectionMap := map[string]cty.Value{}
 
 	cache := cache.GetConnectionCache()
 
-	for _, c := range allConnections {
+	for _, c := range allConnectionsToEvaluate {
 		parts := strings.Split(c.Name(), ".")
 		if len(parts) != 2 {
 			return nil, perr.BadRequestWithMessage("invalid connection name: " + c.Name())
