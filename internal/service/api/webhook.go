@@ -183,8 +183,10 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	pipeline := triggerMethod.Pipeline
 	pipelineName := pipeline.AsValueMap()["name"].AsString()
 
+	executionCmd := event.NewExecutionQueueForPipeline("", pipelineName)
+
 	pipelineCmd := event.PipelineQueue{
-		Event:               event.NewExecutionEvent(),
+		Event:               event.NewFlowEvent(executionCmd.Event),
 		PipelineExecutionID: util.NewPipelineExecutionId(),
 		Name:                pipelineName,
 	}
@@ -195,7 +197,9 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		output.RenderServerOutput(c, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, t.Name(), pipelineName))
 	}
 
-	if err := api.EsService.Send(pipelineCmd); err != nil {
+	executionCmd.PipelineQueue = &pipelineCmd
+
+	if err := api.EsService.Send(executionCmd); err != nil {
 		common.AbortWithError(c, err)
 		return
 	}
