@@ -332,7 +332,7 @@ func updatedItems(tx *sql.Tx, triggerName string) ([]string, error) {
 	return updatedItems, nil
 }
 
-func (tr *TriggerRunnerQuery) ExecuteTriggerWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
+func (tr *TriggerRunnerQuery) GetPipelineQueuesWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
 	triggerRunArgs, err := tr.validate(args, argsString)
 
 	if err != nil {

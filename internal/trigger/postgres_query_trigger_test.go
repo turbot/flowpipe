@@ -168,7 +168,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
 
-	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err := triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -227,7 +227,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -266,7 +266,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -329,7 +329,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -381,7 +381,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -403,7 +403,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -481,7 +481,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -638,7 +638,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
 
-	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err := triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -696,7 +696,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -735,7 +735,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -805,7 +805,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -1006,7 +1006,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
 
-	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err := triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -1075,7 +1075,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -1102,7 +1102,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	// Reset
 	generatedEvalContext = nil
 
-	pipelineQueues, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -1303,7 +1303,7 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
 
-	pipelineQueues, err := triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	pipelineQueues, err := triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
@@ -1457,7 +1457,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 
 	triggerRunner := NewTriggerRunner(trigger, executionId, triggerExecutionId)
 
-	_, err = triggerRunner.ExecuteTriggerWithArgs(ctx, nil, nil)
+	_, err = triggerRunner.GetPipelineQueuesWithArgs(ctx, nil, nil)
 	if err != nil {
 		assert.Fail("Error executing trigger", err)
 		return
