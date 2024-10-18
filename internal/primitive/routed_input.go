@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/turbot/flowpipe/internal/constants"
 	"io"
 	"log/slog"
 	"net/http"
@@ -295,12 +296,13 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 			err = json.Unmarshal(resBody, &response)
 			if err != nil {
 				// TODO: #error handle errors in polling?
-				slog.Error("failed to unmarshal response body", "error", err)
+				slog.Error("failed to unmarshal response body", "error", err, "body", string(resBody))
 				continue
 			}
 
-			if response.State == "finished" {
-				var out modconfig.Output
+			var out modconfig.Output
+			switch response.State {
+			case "finished":
 				switch {
 				case r.StepType == schema.BlockTypePipelineStepInput:
 					if form, ok := response.Inputs[r.GetShortStepName()]; ok {
@@ -309,18 +311,48 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 								Data: map[string]any{
 									"value": form.Response,
 								},
-								Status: "finished",
+								Status: constants.StateFinished,
 							}
 						}
 					}
 				case r.StepType == schema.BlockTypePipelineStepMessage:
 					out = modconfig.Output{
 						Data:   make(map[string]any),
-						Status: "finished",
+						Status: constants.StateFinished,
 					}
 				}
 
-				ex, err := execution.GetExecution(r.ExecutionID)
+				var ex *execution.ExecutionInMemory
+				ex, err = execution.GetExecution(r.ExecutionID)
+				if err != nil {
+					// TODO: #error handle errors in polling?
+					continue
+				}
+				pipelineExecution := ex.PipelineExecutions[r.PipelineExecutionID]
+				stepExecution := pipelineExecution.StepExecutions[r.StepExecutionID]
+
+				err = r.endFunc(stepExecution, &out)
+				if err != nil {
+					// TODO: #error handle errors in polling?
+					slog.Error("failed to end step", "error", err)
+					continue
+				}
+				return
+			case "error":
+				stateErr := perr.InternalWithMessage(response.StateReason)
+				out = modconfig.Output{
+					Status:      constants.StateFailed,
+					FailureMode: constants.FailureModeFatal,
+					Errors: []modconfig.StepError{{
+						Error:               stateErr,
+						PipelineExecutionID: r.PipelineExecutionID,
+						StepExecutionID:     r.StepExecutionID,
+						Pipeline:            r.PipelineName,
+						Step:                r.StepName,
+					}},
+				}
+				var ex *execution.ExecutionInMemory
+				ex, err = execution.GetExecution(r.ExecutionID)
 				if err != nil {
 					// TODO: #error handle errors in polling?
 					continue
@@ -336,6 +368,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 				}
 				return
 			}
+
 		}
 	}()
 }
