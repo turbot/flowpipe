@@ -72,7 +72,7 @@ func loopHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 func mockHandler(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println("Request received: ", r.URL.Path)
+	fmt.Println("Request received: ", r.URL.Path) //nolint:forbidigo // mock server
 
 	if r.URL.Path == "/api/v0/org/abc/workspace/workspace/connection/steampipe/private" {
 		w.Header().Set("Content-Type", "application/json")
