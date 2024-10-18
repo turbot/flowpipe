@@ -36,6 +36,13 @@ type ModThreeTestSuite struct {
 // start of the testing suite, before any tests are run.
 func (suite *ModThreeTestSuite) SetupSuite() {
 
+	// Test suite 3 contains a pipes metadata in one of the connection. This connection is referenced in the variable.
+	//
+	// Currently (2024-10) all connections in the variable are resolved regardless they are used by the pipeline execution or not. This is
+	// different than the connection dependency in the step.
+
+	os.Setenv("FLOWPIPE_PIPES_TOKEN", "foo")
+
 	err := os.Setenv("RUN_MODE", "TEST_ES")
 	if err != nil {
 		panic(err)
@@ -94,6 +101,8 @@ func (suite *ModThreeTestSuite) SetupSuite() {
 // The TearDownSuite method will be run by testify once, at the very
 // end of the testing suite, after all tests have been run.
 func (suite *ModThreeTestSuite) TearDownSuite() {
+	os.Unsetenv("FLOWPIPE_PIPES_TOKEN")
+
 	// Wait for a bit to allow the Watermill to finish running the pipelines
 	time.Sleep(3 * time.Second)
 
@@ -121,6 +130,7 @@ func (suite *ModThreeTestSuite) TestExecutionPipelineSimple() {
 	time.Sleep(100 * time.Millisecond)
 
 	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "finished")
+
 	if err != nil {
 		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
 		return
@@ -295,6 +305,47 @@ func (suite *ModThreeTestSuite) TestExecutionQueryTrigger() {
 
 	assert.Equal(6, len(pex.PipelineOutput["inserted_rows"].([]any)), "Expected 6 inserted rows")
 
+}
+
+func (suite *ModThreeTestSuite) TestSteampipeQueryUsingPipesMockServer() {
+	assert := assert.New(suite.T())
+
+	os.Setenv("FLOWPIPE_PIPES_TOKEN", "foo")
+
+	// This simple query step uses a var for the database argument
+	// that var is connection.steampipe.default which there is an override
+	// pipes metadata to call the pipes mock server (localhost:7104)
+	//
+	// this tests the resolution of the database connection in var with Pipes server
+	name := "test_suite_mod_3.pipeline.query_steampipe"
+
+	executionCmd := event.NewExecutionQueueForPipeline("", name)
+
+	if err := suite.esService.Send(executionCmd); err != nil {
+		assert.Fail(fmt.Sprintf("error sending pipeline command: %v", err))
+		return
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	ex, err := getExAndWait(suite.FlowpipeTestSuite, executionCmd.Event.ExecutionID, 10*time.Millisecond, 50, "failed")
+
+	os.Unsetenv("FLOWPIPE_PIPES_TOKEN")
+	if err != nil {
+		assert.Fail(fmt.Sprintf("error getting execution: %v", err))
+		return
+	}
+	if ex.Status != "failed" {
+		assert.Fail(fmt.Sprintf("execution status is %s", ex.Status))
+	}
+
+	assert.Equal(1, len(ex.PipelineExecutions), "Expected 1 pipeline execution")
+	for _, pex := range ex.PipelineExecutions {
+		assert.Equal(1, len(pex.Errors))
+		// This proves that the pipes mock server was called and resolved for step
+		assert.Equal("Internal Error: Error initializing the database: Bad Request: Invalid database connection string: conn_string_from_mock_server", pex.Errors[0].Error.Detail)
+		assert.Equal("query.steampipe", pex.Errors[0].Step)
+	}
 }
 
 func (suite *ModThreeTestSuite) TestExecutionQueryTriggerModDb() {

@@ -1,3 +1,12 @@
 connection "sqlite" "query_source_modified" {
     connection_string = "sqlite:./query_source_modified.db"
 }
+
+connection "steampipe" "mock" {
+    pipes {
+        cloud_host = "localhost:7104"
+        org = "abc"
+        workspace = "workspace"
+        connection = "steampipe"
+    }
+}

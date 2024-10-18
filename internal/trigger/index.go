@@ -129,8 +129,8 @@ func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString ma
 
 	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, nil)
 	if err != nil {
-		slog.Error("Error building eval context", "error", err)
-		return nil, perr.InternalWithMessage("Error building eval context")
+		slog.Error("Error building eval context (trigger validation)", "error", err)
+		return nil, perr.InternalWithMessage("Error building eval context: " + err.Error())
 	}
 
 	if len(args) > 0 || len(argsString) == 0 {
@@ -160,38 +160,6 @@ func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{
 		slog.Error("Error building eval context", "error", err)
 		return nil, perr.InternalWithMessage("Error building eval context")
 	}
-
-	// TODO: move this to a separate function .. maybe in the API level?
-	// pipeline := tr.Trigger.GetPipeline()
-
-	// if pipeline == cty.NilVal {
-	// 	slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-	// 	return nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
-	// }
-
-	// pipelineDefn := pipeline.AsValueMap()
-	// pipelineName := pipelineDefn["name"].AsString()
-
-	// modFullName := tr.Trigger.GetMetadata().ModFullName
-	// slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
-
-	// // We can only run trigger from root mod
-	// canRun := false
-	// if modFullName != tr.rootMod.FullName {
-	// 	for _, m := range tr.rootMod.ResourceMaps.Mods {
-	// 		if m.FullName == modFullName {
-	// 			canRun = true
-	// 			break
-	// 		}
-	// 	}
-	// } else {
-	// 	canRun = true
-	// }
-
-	// if !canRun {
-	// 	slog.Error("Trigger can only be run from root mod and its immediate dependencies", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
-	// 	return nil, perr.BadRequestWithMessage("Trigger can only be run from root mod and its immediate dependencies")
-	// }
 
 	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
 	if err != nil {
@@ -232,14 +200,25 @@ func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, tr
 }
 
 func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []modconfig.PipelineParam, triggerConfig modconfig.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
-	vars := make(map[string]cty.Value)
-	if rootMod != nil {
-		for _, v := range rootMod.ResourceMaps.Variables {
-			vars[v.GetMetadata().ResourceName] = v.Value
-		}
-	}
+
 	executionVariables := map[string]cty.Value{}
-	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
+
+	// populate the variables and locals
+	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(rootMod.ResourceMaps.Variables, true)
+
+	// add these to eval context
+	executionVariables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
+	for _, variable := range rootMod.ResourceMaps.Variables {
+		variablesMap[variable.ShortName] = variable.Value
+	}
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
+
+	localsMap := make(map[string]cty.Value)
+	for _, local := range rootMod.ResourceMaps.Locals {
+		localsMap[local.ShortName] = local.Value
+	}
+	executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
 
 	runParams := map[string]cty.Value{}
 
@@ -273,7 +252,7 @@ func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerPara
 	if rootMod != nil {
 		allConnectionsDependsOn = append(allConnectionsDependsOn, rootMod.GetConnectionDependsOn()...)
 	}
-	connectionMap, paramsMap, varMap, err := execution.BuildConnectionMapForEvalContext(allConnectionsDependsOn, runParams, vars, defnTriggerParams)
+	connectionMap, paramsMap, varMap, err := execution.BuildConnectionMapForEvalContext(allConnectionsDependsOn, runParams, variablesMap, defnTriggerParams)
 	if err != nil {
 		return nil, err
 	}

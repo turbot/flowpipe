@@ -3452,7 +3452,7 @@ func (suite *ModTestSuite) TestRedact() {
 		return
 	}
 
-	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, _ := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
 	assert.Equal("finished", pex.Status)
 	assert.Equal(0, len(pex.Errors))
 	assert.Equal("this should not be redacted: 9d9bdaa9-fa12-436b-bce8-9e783695b3ff", pex.PipelineOutput["val"])

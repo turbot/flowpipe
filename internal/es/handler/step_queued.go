@@ -52,7 +52,7 @@ func (h StepQueued) Handle(ctx context.Context, ei interface{}) error {
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 	if err != nil {
-		slog.Error("Error building eval context", "error", err)
+		slog.Error("Error building eval context (step queued handler)", "error", err)
 		err := h.CommandBus.Send(ctx, event.NewPipelineFail(event.ForStepQueuedToPipelineFail(evt, err)))
 		if err != nil {
 			slog.Error("Error publishing event", "error", err)
