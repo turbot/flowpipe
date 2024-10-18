@@ -94,7 +94,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
-			slog.Error("Error building eval context", "error", err)
+			slog.Error("Error building eval context (step start handler)", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				slog.Error("Error publishing event", "error", err2)
@@ -500,7 +500,7 @@ func EndStepFromApi(ex *execution.ExecutionInMemory, stepExecution *execution.St
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 	if err != nil {
-		slog.Error("Error building eval context", "error", err)
+		slog.Error("Error building eval context (end step handler)", "error", err)
 		return err
 	}
 

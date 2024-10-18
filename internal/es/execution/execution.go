@@ -465,6 +465,7 @@ func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, 
 			}
 		}
 	}
+
 	connMap, err := evaluateConnectionMapForEvalContext(context.TODO(), relevantConnections)
 	if err != nil {
 		return nil, nil, nil, err

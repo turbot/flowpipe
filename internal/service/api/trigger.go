@@ -13,6 +13,7 @@ import (
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
@@ -177,6 +178,12 @@ func ConstructTriggerFullyQualifiedName(triggerName string) string {
 func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (string, error) {
 	_, err := db.GetTrigger(triggerName)
 	if err != nil {
+		if perr.IsNotFound(err) {
+			newErr := perr.NotFoundWithMessage("unable to find trigger " + triggerName)
+			newErr.Type = fperr.ErrorCodeResourceNotFound
+			fperr.FailOnError(newErr, nil, "")
+		}
+
 		return "", err
 	}
 

@@ -55,7 +55,7 @@ func (h StepQueueHandler) Handle(ctx context.Context, c interface{}) error {
 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 		if err != nil {
-			slog.Error("Error building eval context", "error", err)
+			slog.Error("Error building eval context (step queue handler)", "error", err)
 			return h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepQueueToPipelineFailed(cmd, err)))
 		}
 
