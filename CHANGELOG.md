@@ -5,14 +5,18 @@
 _What's new?_
 
 * `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/tbd).
-* `enum` supports for `pipeline param` and `mod variable` resources. [Documentation](https://flowpipe.io/docs/tbd).
-* `connection` and `notifer` type supports for `pipeline param` and `mod variable` resources. ([#871](https://github.com/turbot/flowpipe/issues/871))
-* Exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/tbd).
+* `connection` and `notifier` types for variables and params. ([#871](https://github.com/turbot/flowpipe/issues/871))
+* `enum` validation for variables and params. [Documentation](https://flowpipe.io/docs/tbd).
+* Defined exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/tbd).
 
 _Bug fixes_
 
-* Pipeline reference to nested mod's pipeline now works. ([#908](https://github.com/turbot/flowpipe/issues/908))
-* Flowpipe no longer crash if the pipeline reference is set to a string. ([#911](https://github.com/turbot/flowpipe/issues/911))
+* Passing pipeline references to nested mods for execution. ([#908](https://github.com/turbot/flowpipe/issues/908))
+* Do not crash if pipeline reference is set to a string. ([#911](https://github.com/turbot/flowpipe/issues/911))
+
+_Deprecation_
+
+* `credential` and `credential_import` are deprecated to be replaced with `connection` and `connection_import`.
 
 ## v0.9.1 [2024-09-09]
 
