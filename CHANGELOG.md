@@ -1,13 +1,13 @@
 # Flowpipe
 
-## v1.0.0 [tbd]
+## v1.0.0 [2024-10-22]
 
 _What's new?_
 
-* `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/tbd).
+* `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/connection).
 * `connection` and `notifier` types for variables and params. ([#871](https://github.com/turbot/flowpipe/issues/871))
-* `enum` validation for variables and params. [Documentation](https://flowpipe.io/docs/tbd).
-* Defined exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/tbd).
+* `enum` validation for [variables](https://flowpipe.io/docs/flowpipe-hcl/variable#variable-types) and [params](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments-1).
+* Defined exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/reference/cli#exit-code).
 
 _Bug fixes_
 
