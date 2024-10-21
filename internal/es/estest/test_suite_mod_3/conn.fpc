@@ -1,5 +1,5 @@
 connection "sqlite" "query_source_modified" {
-    connection_string = "sqlite:./query_source_modified.db"
+    filename = "./query_source_modified.db"
 }
 
 connection "steampipe" "mock" {
