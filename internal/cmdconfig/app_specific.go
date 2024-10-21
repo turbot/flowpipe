@@ -94,6 +94,7 @@ func registerConnections() {
 		connection.NewJumpCloudConnection,
 		connection.NewMastodonConnection,
 		connection.NewMicrosoftTeamsConnection,
+		connection.NewMysqlConnection,
 		connection.NewDuckDbConnection,
 		connection.NewOktaConnection,
 		connection.NewOpenAIConnection,
