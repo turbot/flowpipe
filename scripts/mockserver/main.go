@@ -175,7 +175,7 @@ func mockHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func StartServer() *http.Server {
-	server := &http.Server{Addr: ":7704", Handler: http.HandlerFunc(mockHandler)} //nolint:gosec // just a test case
+	server := &http.Server{Addr: ":7104", Handler: http.HandlerFunc(mockHandler)} //nolint:gosec // just a test case
 
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("Mock HTTP server failed to start", "error", err)
@@ -186,6 +186,6 @@ func StartServer() *http.Server {
 }
 
 func main() {
-	fmt.Println("Starting mock server on port 7704")
+	fmt.Println("Starting mock server on port 7104")
 	StartServer()
 }

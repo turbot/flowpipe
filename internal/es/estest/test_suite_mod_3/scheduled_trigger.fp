@@ -1,6 +1,7 @@
 
 trigger "schedule" "s_simple" {
     schedule = "1 * * * *"
+    enabled =false
     pipeline = pipeline.simple
 }
 
@@ -18,6 +19,7 @@ pipeline "simple" {
 
 trigger "schedule" "s_simple_failure" {
     schedule = "1 * * * *"
+    enabled =false
     pipeline = pipeline.simple_failure
 }
 
@@ -34,6 +36,7 @@ pipeline "simple_failure" {
 
 trigger "schedule" "s_simple_error_ignored_with_if_matches" {
     schedule = "1 * * * *"
+    enabled =false
     pipeline = pipeline.simple_error_ignored_with_if_matches
 }
 
@@ -55,6 +58,7 @@ pipeline "simple_error_ignored_with_if_matches" {
 
 trigger "schedule" "my_step" {
     schedule = "1 * * * *"
+    enabled =false
     pipeline = pipeline.my_step
 }
 
