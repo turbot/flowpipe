@@ -27,9 +27,9 @@ connection "slack" "slack_conn_2" {
 }
 
 connection "steampipe" "default" {
-  connection_string = "default_conn_string"
+    host = "default_host"
 }
 
 connection "steampipe" "one" {
-  connection_string = "one_conn_string"
+    host = "host_one"
 }
