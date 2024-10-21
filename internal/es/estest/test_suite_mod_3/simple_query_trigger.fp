@@ -1,7 +1,7 @@
 trigger "query" "simple_sqlite" {
     schedule = "* * * * *"
 
-    enabled = true
+    enabled = false
 
     database = "sqlite:./query_source_modified.db"
     sql      = "select * from test_one order by id"
@@ -33,7 +33,7 @@ trigger "query" "simple_sqlite" {
 trigger "query" "simple_sqlite_no_db" {
     schedule = "* * * * *"
 
-    enabled = true
+    enabled = false
 
     sql      = "select * from test_one order by id"
 
@@ -64,7 +64,7 @@ trigger "query" "simple_sqlite_no_db" {
 trigger "query" "simple_sqlite_connection" {
     schedule = "* * * * *"
 
-    enabled = true
+    enabled = false
 
     database = connection.sqlite.query_source_modified
     sql      = "select * from test_one order by id"
@@ -98,7 +98,7 @@ trigger "query" "simple_sqlite_connection" {
 trigger "query" "simple_sqlite_connection_in_param" {
     schedule = "* * * * *"
 
-    enabled = true
+    enabled = false
 
     param "db" {
         type = connection

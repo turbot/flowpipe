@@ -124,7 +124,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 				}
 
 				if time.Since(latestActionTimestamp) > timeout {
-					slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
+					slog.Info("Pipeline has been waiting for input steps to complete for more than 1 minutes. Automatically pausing the pipeline.", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 					cmd := event.PipelinePauseFromPipelinePlanned(evt)
 					err := h.CommandBus.Send(ctx, cmd)
 					if err != nil {
@@ -134,7 +134,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 					go func() {
 						// Check every 5 second what the status of the pipeline is
 						time.Sleep(5 * time.Second)
-						slog.Info("Pipeline has been waiting for input steps to complete for more than 5 minutes, raising pipeline plan event", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
+						slog.Info("Pipeline has been waiting for input steps to complete for more than 5 seconds, raising pipeline plan event", "pipeline", pipelineDefn.Name(), "onlyInputStepsRunning", onlyInputStepsRunning)
 						cmd := event.PipelinePlanFromPipelinePlanned(evt)
 						if err != nil {
 							slog.Error("Error publishing event", "error", err)

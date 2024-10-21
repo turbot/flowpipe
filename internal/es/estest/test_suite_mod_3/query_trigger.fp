@@ -3,6 +3,8 @@ trigger "query" "simple" {
 
     database = param.database_connection
 
+    enabled = false
+
     param "database_connection" {
         type = string
         default = "postgres://steampipe:@localhost:9193/steampipe"
