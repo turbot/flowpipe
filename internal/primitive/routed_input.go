@@ -35,7 +35,6 @@ type RoutedInput struct {
 }
 
 type RoutedInputCreatePayload struct {
-	// TODO: #refactor - can we use a shared struct with pipes for this?
 	ExecutionID         string                         `json:"execution_id"`
 	PipelineExecutionID string                         `json:"pipeline_execution_id"`
 	StepExecutionID     string                         `json:"step_execution_id"`
@@ -43,10 +42,10 @@ type RoutedInputCreatePayload struct {
 	StepType            string                         `json:"step_type"`
 	Inputs              map[string]RoutedInputFormData `json:"inputs,omitempty"`
 	Message             *string                        `json:"message,omitempty"`
+	Overrides           *RoutedInputOverrides          `json:"overrides,omitempty"`
 }
 
 type RoutedInputResponse struct {
-	// TODO: #refactor - can we use a shared struct with pipes for this?
 	ID              string                         `json:"id"`
 	TenantID        string                         `json:"tenant_id"`
 	IdentityID      string                         `json:"identity_id"`
@@ -61,6 +60,7 @@ type RoutedInputResponse struct {
 	StepType        string                         `json:"step_type"`
 	Inputs          map[string]RoutedInputFormData `json:"inputs"`
 	Message         *string                        `json:"message,omitempty"`
+	Overrides       *RoutedInputOverrides          `json:"overrides,omitempty"`
 }
 
 type RoutedInputListResponse struct {
@@ -74,6 +74,14 @@ type RoutedInputFormData struct {
 	InputType string                           `json:"input_type"`
 	Options   []InputIntegrationResponseOption `json:"options,omitempty"`
 	Response  any                              `json:"response,omitempty"`
+}
+
+type RoutedInputOverrides struct {
+	To      []string `json:"to,omitempty"`
+	Cc      []string `json:"cc,omitempty"`
+	Bcc     []string `json:"bcc,omitempty"`
+	Subject *string  `json:"subject,omitempty"`
+	Channel *string  `json:"channel,omitempty"`
 }
 
 // RoutedInputEndStepFunc is a function that ends a step
@@ -92,7 +100,7 @@ func NewRoutedInput(executionID, pipelineExecutionID, stepExecutionID, pipelineN
 	}
 }
 
-func NewRoutedInputHttpPayload(executionID, pipelineExecutionID, stepExecutionID, notifierName, stepType string, inputs map[string]RoutedInputFormData, message *string) *RoutedInputCreatePayload {
+func NewRoutedInputHttpPayload(executionID, pipelineExecutionID, stepExecutionID, notifierName, stepType string, inputs map[string]RoutedInputFormData, message *string, overrides *RoutedInputOverrides) *RoutedInputCreatePayload {
 	return &RoutedInputCreatePayload{
 		ExecutionID:         executionID,
 		PipelineExecutionID: pipelineExecutionID,
@@ -101,6 +109,7 @@ func NewRoutedInputHttpPayload(executionID, pipelineExecutionID, stepExecutionID
 		StepType:            stepType,
 		Inputs:              inputs,
 		Message:             message,
+		Overrides:           overrides,
 	}
 }
 
@@ -150,12 +159,16 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 	var message *string
 	var payload *RoutedInputCreatePayload
 
+	// Notifier
 	notifierName := "default"
 	if notifier, ok := i[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if name, hasName := notifier[schema.AttributeTypeNotifierName].(string); hasName {
 			notifierName = name
 		}
 	}
+
+	// Notifier Overrides
+	overrides := r.GetOverrides(i)
 
 	switch r.StepType {
 	case schema.BlockTypePipelineStepMessage:
@@ -169,7 +182,8 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 			notifierName,
 			r.StepType,
 			make(map[string]RoutedInputFormData),
-			message)
+			message,
+			overrides)
 	case schema.BlockTypePipelineStepInput:
 		if it, ok := i[schema.AttributeTypeType].(string); ok {
 			inputType = it
@@ -187,7 +201,8 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 			notifierName,
 			r.StepType,
 			map[string]RoutedInputFormData{r.GetShortStepName(): *NewRoutedInputHttpPayloadInput(prompt, inputType, opts)},
-			nil)
+			nil,
+			overrides)
 	}
 
 	output, err := r.execute(ctx, payload)
@@ -275,7 +290,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 
 		for {
 			var err error
-			time.Sleep(5 * time.Second) // TODO: #refactor better approach - this is at loop initialisation to handle continue from err delay before retry
+			time.Sleep(2 * time.Second) // TODO: #refactor better approach - this is at loop initialisation to handle continue from err delay before retry
 
 			count++
 			slog.Info("RoutedInput polling ..", "url", pollUrl, "count", count)
@@ -371,4 +386,52 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 
 		}
 	}()
+}
+
+func (r *RoutedInput) GetOverrides(stepInput modconfig.Input) *RoutedInputOverrides {
+	overrides := &RoutedInputOverrides{}
+	hasOverrides := false
+
+	if to, ok := stepInput[schema.AttributeTypeTo].([]any); ok {
+		hasOverrides = true
+		for _, t := range to {
+			if email, ok := t.(string); ok {
+				overrides.To = append(overrides.To, email)
+			}
+		}
+	}
+
+	if cc, ok := stepInput[schema.AttributeTypeCc].([]any); ok {
+		hasOverrides = true
+		for _, c := range cc {
+			if email, ok := c.(string); ok {
+				overrides.Cc = append(overrides.Cc, email)
+			}
+		}
+	}
+
+	if bcc, ok := stepInput[schema.AttributeTypeBcc].([]any); ok {
+		hasOverrides = true
+		for _, b := range bcc {
+			if email, ok := b.(string); ok {
+				overrides.Bcc = append(overrides.Bcc, email)
+			}
+		}
+	}
+
+	if subject, ok := stepInput[schema.AttributeTypeSubject].(string); ok {
+		hasOverrides = true
+		overrides.Subject = &subject
+	}
+
+	if channel, ok := stepInput[schema.AttributeTypeChannel].(string); ok {
+		hasOverrides = true
+		overrides.Channel = &channel
+	}
+
+	if hasOverrides {
+		return overrides
+	}
+
+	return nil
 }
