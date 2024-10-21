@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/turbot/pipe-fittings/sanitize"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hokaccha/go-prettyjson"
@@ -24,6 +22,7 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/manager"
@@ -31,6 +30,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
