@@ -35,34 +35,6 @@ builds:
     ldflags:
       - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
 
-  - id: flowpipe-darwin-arm64
-    binary: flowpipe
-    goos:
-      - darwin
-    goarch:
-      - arm64
-
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
-
-  - id: flowpipe-darwin-amd64
-    binary: flowpipe
-    goos:
-      - darwin
-    goarch:
-      - amd64
-
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-
-    ldflags:
-      - -s -w -X main.version={{.Version}} -X version.buildTime={{.Date}} -X version.commit={{.Commit}} -X version.builtBy=goreleaser
-
 release:
   # Always set as pre-release. Publishing release must be done manually.
   prerelease: true
