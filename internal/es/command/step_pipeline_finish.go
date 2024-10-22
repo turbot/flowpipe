@@ -58,7 +58,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pex)
 	if err != nil {
-		slog.Error("Error building eval context", "error", err)
+		slog.Error("Error building eval context (pipeline finish handler)", "error", err)
 
 		raisePipelineFailedFromStepPipelineFinishError(ctx, h, cmd, err)
 		return nil

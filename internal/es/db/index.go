@@ -31,7 +31,7 @@ func GetCachedItem[T any](name string) (T, error) {
 	// Special handling for pipeline names
 	if _, ok := any(defaultT).(*modconfig.Pipeline); ok {
 		parts := strings.Split(name, ".")
-		if len(parts) != 3 {
+		if len(parts) == 1 {
 			name = "local.pipeline." + name
 		}
 	}
@@ -66,8 +66,66 @@ func GetVariable(name string) (*modconfig.Variable, error) {
 	return GetCachedItem[*modconfig.Variable](name)
 }
 
+func GetPipelineWithModFullVersion(modFullVersion, name string) (*modconfig.Pipeline, error) {
+	if modFullVersion == "" {
+		return GetPipeline(name)
+	}
+	p, err := GetCachedItem[*modconfig.Pipeline](modFullVersion + "." + name)
+	if perr.IsNotFound(err) {
+		return GetPipeline(name)
+	}
+	return p, err
+}
+
 func GetPipeline(name string) (*modconfig.Pipeline, error) {
 	return GetCachedItem[*modconfig.Pipeline](name)
+}
+
+func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*modconfig.Pipeline, error) {
+
+	// check if the pipeline is coming from the given mod
+	pipelineParts := strings.Split(name, ".")
+	if len(pipelineParts) != 3 {
+		return nil, perr.BadRequestWithMessage("invalid pipeline name: " + name)
+	}
+
+	pipelineModName := pipelineParts[0]
+
+	if pipelineParts[0] == "local" {
+		return GetCachedItem[*modconfig.Pipeline](name)
+	}
+
+	// check if it's coming from the current mod
+	if pipelineModName == mod.ModName {
+		return GetPipelineFromCurrentMod(mod, name)
+	}
+
+	// If not check if the mod in the pipeline is a dependent of the given mod
+	//
+	// Don't recurse because you can only call a pipeline from a mod that is a direct dependency
+	// not a dependency of a dependency
+	for _, m := range mod.ResourceMaps.Mods {
+		if m.ModName == pipelineModName {
+			return GetPipelineFromCurrentMod(m, name)
+		}
+	}
+
+	return nil, perr.NotFoundWithMessage("pipeline not found: " + name + " from mod " + mod.Name())
+}
+
+func GetPipelineFromCurrentMod(mod *modconfig.Mod, name string) (*modconfig.Pipeline, error) {
+	if mod == nil {
+		return nil, perr.BadRequestWithMessage("mod is nil")
+	}
+
+	prefixCacheKey := mod.Name()
+	if mod.Version != nil {
+		prefixCacheKey += "." + mod.Version.String()
+	}
+
+	cacheKey := prefixCacheKey + "." + name
+
+	return GetCachedItem[*modconfig.Pipeline](cacheKey)
 }
 
 func GetTrigger(name string) (*modconfig.Trigger, error) {

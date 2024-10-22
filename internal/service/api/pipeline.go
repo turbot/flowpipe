@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hashicorp/hcl/v2"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -15,11 +17,15 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
+	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/schema"
 	putils "github.com/turbot/pipe-fittings/utils"
+	"github.com/zclconf/go-cty/cty"
 )
 
 func (api *APIService) PipelineRegisterAPI(router *gin.RouterGroup) {
@@ -250,6 +256,35 @@ func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecu
 	}
 }
 
+func buildTempEvalContextForApi() (*hcl.EvalContext, error) {
+	executionVariables := make(map[string]cty.Value)
+
+	evalContext := &hcl.EvalContext{
+		Variables: executionVariables,
+		Functions: funcs.ContextFunctions(viper.GetString(pfconstants.ArgModLocation)),
+	}
+
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+	// Why do we add notifier earlier? Because of the param validation before
+	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
+
+	// **temporarily** add add connections to eval context .. we need to remove them later and only add connections
+	// that are used by the pipelines. The connections are special because they may need to be resolved before
+	// we use them i.e. temp AWS creds.
+
+	connMap := parse.BuildTemporaryConnectionMapForEvalContext(fpConfig.PipelingConnections)
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
+
+	return evalContext, nil
+}
 func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, esService *es.ESService) (types.PipelineExecutionResponse, *event.PipelineQueue, error) {
 	pipelineDefn, err := db.GetPipeline(pipelineName)
 	response := types.PipelineExecutionResponse{}
@@ -258,7 +293,11 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 	}
 
 	// Execute the command
-	if input.Command != "run" {
+	validCommands := map[string]struct{}{
+		"run": {},
+	}
+
+	if _, ok := validCommands[input.Command]; !ok {
 		return response, nil, perr.BadRequestWithMessage("invalid command")
 	}
 
@@ -266,40 +305,46 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		return response, nil, perr.BadRequestWithMessage("args and args_string are mutually exclusive")
 	}
 
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewEventForExecutionID(executionId),
-		PipelineExecutionID: util.NewPipelineExecutionId(),
-		Name:                pipelineDefn.Name(),
-	}
+	if input.Command == "run" {
+		executionCmd := event.NewExecutionQueueForPipeline(executionId, pipelineDefn.Name())
 
-	if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-		errs := pipelineDefn.ValidatePipelineParam(input.Args)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		evalContext, err := buildTempEvalContextForApi()
+		if err != nil {
+			return response, nil, err
 		}
-		pipelineCmd.Args = input.Args
 
-	} else if len(input.ArgsString) > 0 {
-		args, errs := pipelineDefn.CoercePipelineParams(input.ArgsString)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		if len(input.Args) > 0 || len(input.ArgsString) == 0 {
+			errs := parse.ValidateParams(pipelineDefn, input.Args, evalContext)
+			if len(errs) > 0 {
+				errStrs := error_helpers.MergeErrors(errs)
+				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			}
+			executionCmd.PipelineQueue.Args = input.Args
+
+		} else if len(input.ArgsString) > 0 {
+			args, errs := parse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
+			if len(errs) > 0 {
+				errStrs := error_helpers.MergeErrors(errs)
+				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+			}
+			executionCmd.PipelineQueue.Args = args
 		}
-		pipelineCmd.Args = args
+
+		if err := esService.Send(executionCmd); err != nil {
+			return response, nil, err
+		}
+
+		response.Flowpipe = types.FlowpipeResponseMetadata{
+			ExecutionID:         executionCmd.Event.ExecutionID,
+			PipelineExecutionID: executionCmd.PipelineQueue.PipelineExecutionID,
+			Pipeline:            executionCmd.PipelineQueue.Name,
+		}
+
+		// This effectively returns the root pipeline queue command
+		return response, executionCmd.PipelineQueue, nil
 	}
 
-	if err := esService.Send(pipelineCmd); err != nil {
-		return response, nil, err
-	}
-
-	response.Flowpipe = types.FlowpipeResponseMetadata{
-		ExecutionID:         pipelineCmd.Event.ExecutionID,
-		PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-		Pipeline:            pipelineCmd.Name,
-	}
-
-	return response, pipelineCmd, nil
+	return response, nil, perr.BadRequestWithMessage("invalid command")
 }
 
 func ConstructPipelineFullyQualifiedName(pipelineName string) string {

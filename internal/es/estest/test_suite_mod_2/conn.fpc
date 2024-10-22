@@ -1,0 +1,35 @@
+connection "aws" "example" {
+    access_key = "ASIAQGDFAKEKGUI5MCEU"
+    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+}
+
+connection "aws" "example_2" {
+    access_key = "example2_access_key"
+    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+}
+
+connection "aws" "example_3" {
+    access_key = "example3_access_key"
+    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+}
+
+connection "aws" "example_4" {
+    access_key = "example4_access_key"
+    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+}
+
+connection "slack" "slack_conn" {
+  token = "abcdefg"
+}
+
+connection "slack" "slack_conn_2" {
+  token = env("TEST_SLACK_TOKEN")
+}
+
+connection "steampipe" "default" {
+    host = "default_host"
+}
+
+connection "steampipe" "one" {
+    host = "host_one"
+}

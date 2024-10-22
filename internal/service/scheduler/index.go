@@ -168,9 +168,14 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		tags = append(tags, "pipeline:"+pipelineName)
 	}
 
-	triggerRunner := trigger.NewTriggerRunner(s.ctx, s.esService.CommandBus, s.esService.RootMod, t)
+	triggerRunner := trigger.NewTriggerRunner(t, "", "")
 
-	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(triggerRunner.Run)
+	scheduledTriggerRunner := TriggerScheduleRunner{
+		TriggerRunner: triggerRunner,
+		CommandBus:    s.esService.CommandBus,
+	}
+
+	_, err := s.cronScheduler.Cron(scheduleString).Tag(tags...).Do(scheduledTriggerRunner.Run)
 	if err != nil {
 		cronExpression, err := schedule.IntervalToCronExpression(t.FullName, scheduleString)
 		if err != nil {
@@ -178,7 +183,7 @@ func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
 		}
 
 		slog.Info("Scheduling trigger", "name", t.Name(), "schedule", scheduleString, "tags", tags, "cronExpression", cronExpression)
-		_, err = s.cronScheduler.Cron(cronExpression).Tag(tags...).Do(triggerRunner.Run)
+		_, err = s.cronScheduler.Cron(cronExpression).Tag(tags...).Do(scheduledTriggerRunner.Run)
 		if err != nil {
 			return err
 		}

@@ -104,3 +104,13 @@ pipeline "expr_depend_and_function" {
         value = step.transform.echo_sleep_for[1].value
     }
 }
+
+pipeline "my_pipeline" {
+    param "event" {
+        type = any
+    }
+
+    output "val" {
+        value = param.event
+    }
+}

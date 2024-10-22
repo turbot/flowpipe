@@ -13,13 +13,15 @@ import (
 type StepPipelineStarted struct {
 	// Event metadata
 	Event *Event `json:"event"`
+
 	// Step execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 	// Optional details for step execution
-	ChildPipelineExecutionID string          `json:"child_pipeline_execution_id,omitempty"`
-	ChildPipelineName        string          `json:"child_pipeline_name,omitempty"`
-	ChildPipelineArgs        modconfig.Input `json:"child_pipeline_args,omitempty"`
+	ChildPipelineExecutionID    string          `json:"child_pipeline_execution_id,omitempty"`
+	ChildPipelineName           string          `json:"child_pipeline_name,omitempty"`
+	ChildPipelineModFullVersion string          `json:"child_pipeline_mod_full_version,omitempty"`
+	ChildPipelineArgs           modconfig.Input `json:"child_pipeline_args,omitempty"`
 
 	// The key for a single step is always "0" but say this pipeline step start is part of for_each, the key is
 	// populated with the actual key: "0"/"1"/"2" or "foo"/"bar"/"baz" (for map based for_each)

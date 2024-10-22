@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"log/slog"
+	"slices"
 
 	"github.com/turbot/pipe-fittings/utils"
 
@@ -109,15 +110,17 @@ func (h PipelineFinished) Handle(ctx context.Context, ei interface{}) error {
 		data[schema.BlockTypePipelineOutput] = evt.PipelineOutput
 	}
 
-	err = ex.EndExecution()
-	if err != nil {
-		slog.Error("pipeline_finished: Error saving execution", "error", err)
-		// Should we raise pipeline fail here?
-		return nil
-	}
-
 	// release the execution mutex (do the same thing for pipeline_failed and pipeline_finished)
 	pipelineCompletionHandler(evt.Event.ExecutionID, evt.PipelineExecutionID, pipelineDefn, ex.PipelineExecutions[evt.PipelineExecutionID].StepExecutions)
+
+	// raise execution plan command if this pipeline is in the root pipeline list
+	if slices.Contains(ex.RootPipelines, evt.PipelineExecutionID) {
+		cmd := event.ExecutionPlanFromPipelineFinished(evt)
+		err = h.CommandBus.Send(ctx, cmd)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+	}
 
 	return nil
 }

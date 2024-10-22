@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -20,6 +21,12 @@ type PipelineExecution struct {
 	ID string `json:"id"`
 	// The name of the pipeline
 	Name string `json:"name"`
+
+	// The name of the mod including its version number. May be blank if not required,
+	// for example top level mod or 1st level children. Since the 1st level children must have
+	// unique names, we don't need ModFullVersion
+	ModFullVersion string `json:"mod_full_version"`
+
 	// The input to the pipeline
 	Args modconfig.Input `json:"args,omitempty"`
 
@@ -28,6 +35,8 @@ type PipelineExecution struct {
 
 	// The status of the pipeline execution: queued, planned, started, completed, failed
 	Status string `json:"status"`
+
+	ResumedAt time.Time `json:"resumed_at,omitempty"`
 
 	// Status of each step on a per-step index basis. Used to determine if dependencies
 	// have been met etc. Note that each step may have multiple executions, the status
@@ -75,6 +84,11 @@ type PipelineExecution struct {
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
 
+	// If pipeline is started by a trigger, this is the trigger name
+	Trigger string `json:"trigger,omitempty"`
+	// If pipeline is started by a query trigger, this is the capture name
+	TriggerCapture string `json:"trigger_capture,omitempty"`
+
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
 	Errors []modconfig.StepError `json:"errors,omitempty"`
 
@@ -116,7 +130,7 @@ type PipelineExecution struct {
 func (pe *PipelineExecution) GetExecutionVariables() (map[string]cty.Value, error) {
 	stepVariables := make(map[string]cty.Value)
 
-	pipelineDefn, err := db.GetPipeline(pe.Name)
+	pipelineDefn, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 
 	if err != nil {
 		return nil, err
@@ -329,9 +343,9 @@ func (pe *PipelineExecution) ShouldFail() bool {
 
 // IsComplete returns true if all steps are complete.
 func (pe *PipelineExecution) IsComplete() bool {
-	pipeline, err := db.GetPipeline(pe.Name)
+	pipeline, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 	if err != nil {
-		// TODO: what do we do here?
+		fperr.FailOnError(err, nil, fperr.ErrorCodeResourceNotFound)
 		return false
 	}
 
@@ -399,10 +413,6 @@ func (pe *PipelineExecution) IsStepInitialized(stepName string) bool {
 	// 	}
 	// }
 	return true
-}
-
-func (pe *PipelineExecution) IsStepInLoopHold(stepName string) bool {
-	return false
 }
 
 // TODO: this doesn't work for step execution retry, it assumes that the entire step

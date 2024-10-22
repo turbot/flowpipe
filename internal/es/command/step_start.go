@@ -20,6 +20,7 @@ import (
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -93,7 +94,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 		if err != nil {
-			slog.Error("Error building eval context", "error", err)
+			slog.Error("Error building eval context (step start handler)", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				slog.Error("Error publishing event", "error", err2)
@@ -104,6 +105,16 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		evalContext, err = ex.AddCredentialsToEvalContext(evalContext, stepDefn)
 		if err != nil {
 			slog.Error("Error adding credentials to eval context", "error", err)
+			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
+			if err2 != nil {
+				slog.Error("Error publishing event", "error", err2)
+			}
+			return
+		}
+
+		evalContext, err = ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, false, nil)
+		if err != nil {
+			slog.Error("Error adding connections to eval context during step start", "error", err)
 			err2 := h.EventBus.Publish(ctx, event.NewPipelineFailed(ctx, event.ForStepStartToPipelineFailed(cmd, err)))
 			if err2 != nil {
 				slog.Error("Error publishing event", "error", err2)
@@ -168,17 +179,37 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			p := primitive.Transform{}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepFunction:
-			p := primitive.Function{}
+			p := primitive.Function{
+				ModPath: pipelineDefn.GetMod().ModPath,
+			}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepContainer:
 			p := primitive.Container{FullyQualifiedStepName: stepDefn.GetFullyQualifiedName()}
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepInput:
-			p := primitive.NewInputPrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
-			output, primitiveError = p.Run(ctx, cmd.StepInput)
+			if routerUrl, routed := primitive.GetInputRouter(); routed {
+				endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
+				}
+				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, schema.BlockTypePipelineStepInput, routerUrl, endStepFunc)
+				cmd.StepInput["router_url"] = routerUrl
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			} else {
+				p := primitive.NewInputPrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			}
 		case schema.BlockTypePipelineStepMessage:
-			p := primitive.NewMessagePrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
-			output, primitiveError = p.Run(ctx, cmd.StepInput)
+			if routerUrl, routed := primitive.GetInputRouter(); routed {
+				endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
+				}
+				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, schema.BlockTypePipelineStepMessage, routerUrl, endStepFunc)
+				cmd.StepInput["router_url"] = routerUrl
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			} else {
+				p := primitive.NewMessagePrimitive(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName)
+				output, primitiveError = p.Run(ctx, cmd.StepInput)
+			}
 		default:
 			slog.Error("Unknown step type", "type", stepDefn.GetType())
 
@@ -235,7 +266,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		// We have some special steps that need to be handled differently:
 		// Pipeline Step -> launch a new pipeline
 		// Input Step -> waiting for external event to resume the pipeline
-		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, h)
+		shouldReturn := specialStepHandler(ctx, stepDefn, cmd, evalContext, h)
 		if shouldReturn {
 			return
 		}
@@ -257,8 +288,15 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output.Status = constants.StateFinished
 		}
 
-		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && o.IsServerMode {
+		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypeInput && (o.IsServerMode || primitive.IsInputRouted()) {
 			slog.Info("input step started, waiting for external response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+			raisePipelinePlannedFromStepStart(stepDefn, cmd, h.EventBus)
+			return
+		}
+
+		if output.Status == constants.StateFinished && stepDefn.GetType() == schema.BlockTypePipelineStepMessage && primitive.IsInputRouted() {
+			slog.Info("routed message step started, waiting for external confirmation/response", "step", cmd.StepName, "pipelineExecutionID", cmd.PipelineExecutionID, "executionID", cmd.Event.ExecutionID)
+			raisePipelinePlannedFromStepStart(stepDefn, cmd, h.EventBus)
 			return
 		}
 
@@ -296,6 +334,29 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 	}(ctx, c, h)
 
 	return nil
+}
+
+// This should only be called by input steps. It raises a pipeline planned event which in turn will do a regular check
+// to see if the pipeline needs to be automatically paused
+func raisePipelinePlannedFromStepStart(stepDefn modconfig.PipelineStep, cmd *event.StepStart, eventBus FpEventBus) {
+	if stepDefn.GetType() != schema.BlockTypePipelineStepInput {
+		return
+	}
+
+	go func() {
+		e := event.PipelinePlanned{
+			Event:     event.NewFlowEvent(cmd.Event),
+			NextSteps: []modconfig.NextStep{},
+		}
+
+		e.PipelineExecutionID = cmd.PipelineExecutionID
+
+		err := eventBus.Publish(context.Background(), &e)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+	}()
+
 }
 
 // This function mutates stepOutput
@@ -341,7 +402,7 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn modconfig.Pipel
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, h StepStartHandler) bool {
+func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cmd *event.StepStart, evalCtx *hcl.EvalContext, h StepStartHandler) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
 		args := modconfig.Input{}
@@ -357,7 +418,22 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		pipelineDefn, err := db.GetPipeline(nestedPipelineName)
+		currentStepPipeline := stepDefn.GetPipeline()
+		if currentStepPipeline == nil {
+			slog.Error("Unable to get pipeline from step definition")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h.EventBus, cmd, perr.InternalWithMessage("Unable to get pipeline from step definition"))
+			return true
+		}
+
+		currentStepMod := currentStepPipeline.GetMod()
+		if currentStepMod == nil {
+			slog.Error("Unable to get mod from step definition")
+			raisePipelineFailedEventFromPipelineStepStart(ctx, h.EventBus, cmd, perr.InternalWithMessage("Unable to get mod from step definition"))
+			return true
+		}
+
+		nestedPipelineModFullVersion := cmd.StepInput["mod_full_version"].(string)
+		pipelineDefnToCall, err := db.GetPipelineWithModFullVersion(nestedPipelineModFullVersion, nestedPipelineName)
 
 		if err != nil {
 			slog.Error("Unable to get pipeline " + nestedPipelineName + " from cache")
@@ -365,7 +441,7 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			return true
 		}
 
-		errs := pipelineDefn.ValidatePipelineParam(args)
+		errs := parse.ValidateParams(pipelineDefnToCall, args, evalCtx)
 
 		if len(errs) > 0 {
 			slog.Error("Failed validating pipeline param", "errors", errs)
@@ -378,6 +454,8 @@ func specialStepHandler(ctx context.Context, stepDefn modconfig.PipelineStep, cm
 			event.ForStepStart(cmd),
 			event.WithNewChildPipelineExecutionID(),
 			event.WithChildPipeline(cmd.StepInput[schema.AttributeTypePipeline].(string), args))
+		e.ChildPipelineName = nestedPipelineName
+		e.ChildPipelineModFullVersion = pipelineDefnToCall.GetMod().CacheKey()
 
 		if cmd.StepForEach != nil {
 			e.Key = cmd.StepForEach.Key
@@ -422,7 +500,7 @@ func EndStepFromApi(ex *execution.ExecutionInMemory, stepExecution *execution.St
 
 	evalContext, err := ex.BuildEvalContext(pipelineDefn, pe)
 	if err != nil {
-		slog.Error("Error building eval context", "error", err)
+		slog.Error("Error building eval context (end step handler)", "error", err)
 		return err
 	}
 

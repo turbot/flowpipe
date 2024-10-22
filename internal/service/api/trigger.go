@@ -8,21 +8,18 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/schema"
-	putils "github.com/turbot/pipe-fittings/utils"
-
 	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
-	"github.com/turbot/flowpipe/internal/trigger"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 func (api *APIService) TriggerRegisterAPI(router *gin.RouterGroup) {
@@ -59,7 +56,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 
 	slog.Info("received list trigger request", "next_token", nextToken, "limit", limit)
 
-	result, err := ListTriggers()
+	result, err := ListTriggers(api.EsService.RootMod.Name())
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -68,7 +65,7 @@ func (api *APIService) listTriggers(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-func ListTriggers() (*types.ListTriggerResponse, error) {
+func ListTriggers(rootMod string) (*types.ListTriggerResponse, error) {
 	triggers, err := db.ListAllTriggers()
 	if err != nil {
 		return nil, err
@@ -78,12 +75,19 @@ func ListTriggers() (*types.ListTriggerResponse, error) {
 	var fpTriggers []types.FpTrigger
 
 	for _, trigger := range triggers {
-		fpTrigger := getFpTriggerFromTrigger(trigger)
-		fpTriggers = append(fpTriggers, fpTrigger)
+		fpTrigger, err := types.FpTriggerFromModTrigger(trigger, rootMod)
+		if err != nil {
+			return nil, err
+		}
+
+		fpTriggers = append(fpTriggers, *fpTrigger)
 	}
 
 	// Sort the triggers by type, name
 	sort.Slice(fpTriggers, func(i, j int) bool {
+		if fpTriggers[i].Mod != fpTriggers[j].Mod {
+			return fpTriggers[i].Mod < fpTriggers[j].Mod
+		}
 		if fpTriggers[i].Type != fpTriggers[j].Type {
 			return fpTriggers[i].Type < fpTriggers[j].Type
 		}
@@ -122,7 +126,7 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	}
 	triggerName := uri.TriggerName
 
-	fpTrigger, err := GetTrigger(triggerName)
+	fpTrigger, err := GetTrigger(triggerName, api.EsService.RootMod.Name())
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
@@ -131,16 +135,18 @@ func (api *APIService) getTrigger(c *gin.Context) {
 	c.JSON(http.StatusOK, fpTrigger)
 }
 
-func GetTrigger(triggerName string) (*types.FpTrigger, error) {
+func GetTrigger(triggerName string, rootMod string) (*types.FpTrigger, error) {
 	// If we run the API server with a mod foo, in order get the trigger, the API needs the fully-qualified name of the trigger.
 	// For example: foo.trigger.trigger_type.bar
 	// However, since foo is the top level mod, we should be able to just get the trigger bar
 	splitTriggerName := strings.Split(triggerName, ".")
 	// If the trigger name provided is not fully qualified
+	var rootModName string
 	if len(splitTriggerName) < 4 {
 		// Get the root mod name from the cache
 		if rootModNameCached, found := cache.GetCache().Get("#rootmod.name"); found {
-			if rootModName, ok := rootModNameCached.(string); ok {
+			var ok bool
+			if rootModName, ok = rootModNameCached.(string); ok {
 				// Prepend the root mod name to the trigger name to get the fully qualified name
 				// For example: foo.trigger.trigger_type.bar
 				triggerName = fmt.Sprintf("%s.trigger.%s", rootModName, triggerName)
@@ -158,83 +164,36 @@ func GetTrigger(triggerName string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	fpTrigger := getFpTriggerFromTrigger(*trigger)
-	return &fpTrigger, nil
-}
-
-func getFpTriggerFromTrigger(t modconfig.Trigger) types.FpTrigger {
-	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
-
-	fpTrigger := types.FpTrigger{
-		Name:            t.FullName,
-		Type:            tt,
-		Description:     t.Description,
-		Title:           t.Title,
-		Tags:            t.Tags,
-		Documentation:   t.Documentation,
-		FileName:        t.FileName,
-		StartLineNumber: t.StartLineNumber,
-		EndLineNumber:   t.EndLineNumber,
-		Enabled:         helpers.IsNil(t.Enabled) || *t.Enabled,
+	fpTrigger, err := types.FpTriggerFromModTrigger(*trigger, rootModName)
+	if err != nil {
+		return nil, err
 	}
-
-	switch tt {
-	case schema.TriggerTypeHttp:
-		cfg := t.Config.(*modconfig.TriggerHttp)
-		fpTrigger.Url = &cfg.Url
-		for _, method := range cfg.Methods {
-			pipelineInfo := method.Pipeline.AsValueMap()
-			pipelineName := pipelineInfo["name"].AsString()
-			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
-				CaptureGroup: method.Type,
-				Pipeline:     pipelineName,
-			})
-		}
-	case schema.TriggerTypeQuery:
-		cfg := t.Config.(*modconfig.TriggerQuery)
-		fpTrigger.Schedule = &cfg.Schedule
-		fpTrigger.Query = &cfg.Sql
-		for _, capture := range cfg.Captures {
-			pipelineInfo := capture.Pipeline.AsValueMap()
-			pipelineName := pipelineInfo["name"].AsString()
-			fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
-				CaptureGroup: capture.Type,
-				Pipeline:     pipelineName,
-			})
-		}
-	case schema.TriggerTypeSchedule:
-		cfg := t.Config.(*modconfig.TriggerSchedule)
-		fpTrigger.Schedule = &cfg.Schedule
-		pipelineInfo := t.GetPipeline().AsValueMap()
-		pipelineName := pipelineInfo["name"].AsString()
-		fpTrigger.Pipelines = append(fpTrigger.Pipelines, types.FpTriggerPipeline{
-			CaptureGroup: "default",
-			Pipeline:     pipelineName,
-		})
-	}
-
-	return fpTrigger
+	return fpTrigger, nil
 }
 
 func ConstructTriggerFullyQualifiedName(triggerName string) string {
 	return ConstructFullyQualifiedName("trigger", 2, triggerName)
 }
 
-func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-	triggerExecutionResponse := types.TriggerExecutionResponse{}
-	modTrigger, err := db.GetTrigger(triggerName)
+func ExecuteTrigger(ctx context.Context, input types.CmdTrigger, executionId, triggerName string, esService *es.ESService) (string, error) {
+	_, err := db.GetTrigger(triggerName)
 	if err != nil {
-		return triggerExecutionResponse, nil, err
+		if perr.IsNotFound(err) {
+			newErr := perr.NotFoundWithMessage("unable to find trigger " + triggerName)
+			newErr.Type = fperr.ErrorCodeResourceNotFound
+			fperr.FailOnError(newErr, nil, "")
+		}
+
+		return "", err
 	}
 
-	triggerRunner := trigger.NewTriggerRunner(ctx, esService.CommandBus, esService.RootMod, modTrigger)
-
-	triggerExecutionResponse, evt, err := triggerRunner.ExecuteTriggerForExecutionID(executionId, input.Args, input.ArgsString)
+	executionCmd := event.NewExecutionQueueForTrigger(executionId, triggerName)
+	err = esService.CommandBus.Send(ctx, executionCmd)
 	if err != nil {
-		return triggerExecutionResponse, nil, err
+		return "", err
 	}
 
-	return triggerExecutionResponse, evt, nil
+	return executionCmd.Event.ExecutionID, nil
 }
 
 // @Summary Execute a trigger command
@@ -274,10 +233,36 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 	executionMode := input.GetExecutionMode()
 	waitRetry := input.GetWaitRetry()
 
-	triggerExecutionResponse, pipelineCmds, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
+	executionId, err := ExecuteTrigger(c, input, input.ExecutionID, triggerName, api.EsService)
 	if err != nil {
 		common.AbortWithError(c, err)
 		return
+	}
+
+	trg, err := db.GetTrigger(triggerName)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	if executionMode == localconstants.ExecutionModeSynchronous {
+		triggerExecutionResponse, err := WaitForTrigger(triggerName, executionId, waitRetry)
+		if err != nil {
+			slog.Error("error waiting for trigger", "error", err)
+			common.AbortWithError(c, err)
+			return
+		}
+
+		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
+		return
+	}
+
+	triggerExecutionResponse := types.TriggerExecutionResponse{
+		Flowpipe: types.FlowpipeTriggerResponseMetadata{
+			ProcessID: executionId,
+			Name:      trg.FullName,
+			Type:      trg.Config.GetType(),
+		},
 	}
 
 	if api.ModMetadata.IsStale {
@@ -285,29 +270,6 @@ func (api *APIService) cmdTrigger(c *gin.Context) {
 		triggerExecutionResponse.Flowpipe.LastLoaded = &api.ModMetadata.LastLoaded
 		c.Header("flowpipe-mod-is-stale", "true")
 		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
-	}
-
-	if executionMode == localconstants.ExecutionModeSynchronous {
-		for _, pipelineCmd := range pipelineCmds {
-			pipelineExecutionReponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
-			if err != nil {
-				slog.Error("error waiting for pipeline", "error", err)
-				api.processTriggerExecutionResult(c, triggerExecutionResponse, pipelineCmd, err)
-				return
-			}
-			for i, res := range triggerExecutionResponse.Results {
-				if pipelineExecutionRes, ok := res.(types.PipelineExecutionResponse); ok {
-					if pipelineExecutionRes.Flowpipe.PipelineExecutionID == pipelineCmd.PipelineExecutionID {
-						// Set the capture type in the nested Flowpipe metadata (good info)
-						pipelineExecutionReponse.Flowpipe.Type = i
-						triggerExecutionResponse.Results[i] = pipelineExecutionReponse
-					}
-				}
-			}
-		}
-
-		api.processTriggerExecutionResult(c, triggerExecutionResponse, event.PipelineQueue{}, err)
-		return
 	}
 
 	c.JSON(http.StatusOK, triggerExecutionResponse)

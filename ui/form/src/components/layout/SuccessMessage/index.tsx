@@ -1,5 +1,5 @@
-import SuccessIcon from "@material-symbols/svg-300/rounded/check_circle-fill.svg?react";
 import { classNames } from "@flowpipe/utils/style";
+import { useInputForm } from "@flowpipe/components/InputForm";
 
 type ErrorMessageProps = {
   className?: string;
@@ -12,6 +12,9 @@ const SuccessMessage = ({
   message,
   withIcon = true,
 }: ErrorMessageProps) => {
+  const {
+    components: { SuccessIcon },
+  } = useInputForm();
   return (
     <span className={classNames(withIcon ? "flex space-x-1 items-center" : "")}>
       {withIcon ? (

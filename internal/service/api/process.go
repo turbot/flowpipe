@@ -4,12 +4,15 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/flowpipe/internal/service/api/common"
+	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
@@ -18,6 +21,7 @@ import (
 func (api *APIService) ProcessRegisterAPI(router *gin.RouterGroup) {
 	router.GET("/process", api.listProcess)
 	router.GET("/process/:process_id", api.getProcess)
+	router.POST("/process/:process_id/command", api.cmdProcess)
 	router.GET("/process/:process_id/log/process.json", api.listProcessEventLog)
 	router.GET("/process/:process_id/execution", api.getProcessExecution)
 }
@@ -325,4 +329,102 @@ func (api *APIService) getProcessExecution(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, exFile)
+}
+
+// @Summary Command process
+// @Description Command process
+// @ID   process_command
+// @Tags Process
+// @Accept json
+// @Produce json
+// / ...
+// @Param process_id path string true "The name of the process" format(^[a-z]{0,32}$)
+// @Param command body types.CmdProcess true "The command to execute"
+// ...
+// @Success 200 {object} types.Process
+// @Failure 400 {object} perr.ErrorModel
+// @Failure 401 {object} perr.ErrorModel
+// @Failure 403 {object} perr.ErrorModel
+// @Failure 404 {object} perr.ErrorModel
+// @Failure 429 {object} perr.ErrorModel
+// @Failure 500 {object} perr.ErrorModel
+// @Router /process/{process_id}/command [post]
+func (api *APIService) cmdProcess(c *gin.Context) {
+	var uri types.ProcessRequestURI
+	if err := c.ShouldBindUri(&uri); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	var input types.CmdProcess
+	if err := c.ShouldBindJSON(&input); err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	if input.Command != "resume" {
+		common.AbortWithError(c, perr.BadRequestWithMessage("Invalid command"))
+	}
+
+	executionId := uri.ProcessId
+
+	// TODO: return result when the time come
+	_, _, err := ResumeProcess(executionId, api.EsService)
+	if err != nil {
+		common.AbortWithError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, nil)
+}
+
+func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecutionId, pipelineName string, err error) {
+
+	evt := &event.Event{
+		ExecutionID: executionId,
+	}
+
+	ex, err := execution.LoadExecutionFromProcessDB(evt)
+	if err != nil {
+		return "", "", err
+	}
+
+	if ex == nil {
+		return "", "", perr.NotFoundWithMessage("execution not found")
+	}
+
+	// Check if execution can be resumed, pipeline must be in a "paused" state
+	if !ex.IsPaused() {
+		return "", "", perr.BadRequestWithMessage("execution is not paused: " + executionId)
+	}
+
+	slog.Info("Resuming execution", "execution_id", executionId)
+	// Effectively forever
+	ok := cache.GetCache().SetWithTTL(executionId, ex, 10*365*24*time.Hour)
+	if !ok {
+		slog.Error("Error setting execution in cache", "execution_id", executionId)
+		return "", "", perr.InternalWithMessage("Error setting execution in cache")
+	}
+
+	// We have to do this after the execution is stored in the cache, there are code downstream
+	// that loads the execution from the cache
+	for _, pex := range ex.PipelineExecutions {
+		if !pex.IsPaused() {
+			return "", "", perr.BadRequestWithMessage("pipeline is not paused: " + pex.ID)
+		}
+		// Resume the execution
+		e := event.NewPipelineResume(ex.ID, pex.ID)
+		err := esService.Send(e)
+		if err != nil {
+			return "", "", err
+		}
+
+		// Just pick the last one for now. Not sure what to do here if there are multiple
+		// pipeline executions that are being paused. But I don't think the downstream
+		// logic (streaming logs in the CLI) can deal with that anyway.
+		pipelineExecutionId = pex.ID
+		pipelineName = pex.Name
+	}
+
+	return pipelineExecutionId, pipelineName, nil
 }

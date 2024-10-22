@@ -11,6 +11,10 @@ type PipelineQueued struct {
 	Event *Event `json:"event"`
 	// Name of the pipeline to be queued
 	Name string `json:"name"`
+	// The name of the mod including its version number. May be blank if not required,
+	// for example top level mod or 1st level children. Since the 1st level children must have
+	// unique names, we don't need ModFullVersion
+	ModFullVersion string `json:"mod_full_version"`
 	// Input to the pipeline
 	Args modconfig.Input `json:"args"`
 	// Unique identifier for this pipeline execution
@@ -18,6 +22,8 @@ type PipelineQueued struct {
 	// If this is a child pipeline then set the parent step execution ID
 	ParentStepExecutionID string `json:"parent_step_execution_id,omitempty"`
 	ParentExecutionID     string `json:"parent_execution_id,omitempty"`
+	Trigger               string `json:"trigger,omitempty"`
+	TriggerCapture        string `json:"trigger_capture,omitempty"`
 }
 
 func (e *PipelineQueued) GetEvent() *Event {
@@ -53,6 +59,7 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 	return func(e *PipelineQueued) error {
 		e.Event = NewFlowEvent(cmd.Event)
 		e.Name = cmd.Name
+		e.ModFullVersion = cmd.ModFullVersion
 		e.Args = cmd.Args
 		if cmd.PipelineExecutionID != "" {
 			// Only overwrite the default execution ID if we've been given one to use
@@ -60,6 +67,9 @@ func ForPipelineQueue(cmd *PipelineQueue) PipelineQueuedOption {
 		}
 		e.ParentStepExecutionID = cmd.ParentStepExecutionID
 		e.ParentExecutionID = cmd.ParentExecutionID
+		e.Trigger = cmd.Trigger
+		e.TriggerCapture = cmd.TriggerCapture
+
 		return nil
 	}
 }

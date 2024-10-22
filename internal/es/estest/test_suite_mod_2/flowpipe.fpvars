@@ -1,0 +1,2 @@
+notifier = notifier.admin
+connection = connection.steampipe.default

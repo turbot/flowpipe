@@ -6,6 +6,7 @@ command_exists() {
     type "$1" &> /dev/null
 }
 
+
 set -e
 
 if ! command -v tar >/dev/null; then

@@ -5,17 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
+	"reflect"
 	"time"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/utils"
 
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/fperr"
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/color"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/spf13/cobra"
@@ -43,8 +50,8 @@ func triggerListCmd() *cobra.Command {
 		Use:   "list",
 		Args:  cobra.NoArgs,
 		Run:   listTriggerFunc,
-		Short: "List triggers from the current mod",
-		Long:  `List triggers from the current mod.`,
+		Short: "List triggers from the current mod and it's first level dependent mods.",
+		Long:  `List triggers from the current mod and it's first level dependent mods..`,
 	}
 	// initialize hooks
 	cmdconfig.OnCmd(cmd)
@@ -106,7 +113,7 @@ func listTriggerLocal(cmd *cobra.Command, args []string) (*types.ListTriggerResp
 	}()
 
 	// now list the pipelines
-	return api.ListTriggers()
+	return api.ListTriggers(m.RootMod.Name())
 }
 
 // show
@@ -176,7 +183,7 @@ func getTriggerLocal(ctx context.Context, triggerName string) (*types.FpTrigger,
 	}()
 
 	// try to fetch the pipeline from the cache
-	return api.GetTrigger(triggerName)
+	return api.GetTrigger(triggerName, m.RootMod.Name())
 }
 
 func triggerRunCmd() *cobra.Command {
@@ -229,7 +236,15 @@ func runTriggerLocal(cmd *cobra.Command, args []string) (types.TriggerExecutionR
 		ArgsString: triggerArgs,
 	}
 
-	response, _, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+	executionId, err = api.ExecuteTrigger(ctx, input, executionId, triggerName, m.ESService)
+	if err != nil {
+		return response, m, err
+	}
+
+	response.Flowpipe = types.FlowpipeTriggerResponseMetadata{
+		ProcessID: executionId,
+		Name:      triggerName,
+	}
 
 	return response, m, err
 }
@@ -344,33 +359,85 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 	var m *manager.Manager
 	m, resp, pollLogFunc, err = executeTrigger(cmd, args, isRemote)
 	if err != nil {
-		error_helpers.FailOnErrorWithMessage(err, "failed executing pipeline")
+		error_helpers.ShowError(ctx, err)
+		if perr.IsNotFound(err) {
+			fperr.FailOnError(err, reflect.TypeOf(perr.NotFound), fperr.ErrorCodeResourceNotFound)
+		}
+
+		error_helpers.FailOnErrorWithMessage(err, "failed executing trigger")
 		return
 	}
+
+	lastStatus := ""
+	exitCode := 0
 
 	// ensure to shut the manager when we are done
 	defer func() {
 		if m != nil {
 			_ = m.Stop()
 		}
+		slog.Debug("Completed execution from resumeProcessFunc", "status", lastStatus, "exitCode", exitCode)
+		os.Exit(exitCode)
 	}()
 
-	for _, resp := range resp.Results {
-		if pipelineExecutionResponse, ok := resp.(types.PipelineExecutionResponse); ok {
-			switch {
-			case isDetach:
-				err := displayDetached(ctx, cmd, pipelineExecutionResponse)
-				if err != nil {
-					error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
-					return
-				}
-			case streamLogs:
-				displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-			case progressLogs:
-				displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-			default:
-				displayBasicOutput(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
-			}
-		}
+	pipelineExecutionResponse := types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID: resp.Flowpipe.ProcessID,
+			IsStale:     resp.Flowpipe.IsStale,
+		},
 	}
+
+	switch {
+	case isDetach:
+		err := displayDetached(ctx, cmd, pipelineExecutionResponse)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed printing execution information")
+			return
+		}
+	case streamLogs:
+		lastStatus = displayStreamingLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+	case progressLogs:
+		lastStatus = displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
+	default:
+		// TODO: hack here. We should have a printer for this
+		triggerResult, err := api.WaitForTrigger(resp.Flowpipe.Name, resp.Flowpipe.ProcessID, 500)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed waiting for trigger")
+			return
+		}
+
+		s, err := json.Marshal(triggerResult)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed marshaling trigger result")
+			return
+		}
+
+		// sanitize
+		s = []byte(sanitize.Instance.SanitizeString(string(s)))
+
+		// format
+		s, err = color.NewJsonFormatter(true).Format(s)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed formatting trigger result")
+			return
+		}
+
+		_, err = cmd.OutOrStdout().Write(s)
+		if err != nil {
+			error_helpers.FailOnErrorWithMessage(err, "failed writing trigger result")
+			return
+		}
+
+		lastStatus = triggerResult.LastStatus
+	}
+
+	switch lastStatus {
+	case event.HandlerExecutionFailed:
+		exitCode = fperr.ExitCodeExecutionFailed
+	case event.HandlerExecutionCancelled:
+		exitCode = fperr.ExitCodeExecutionCancelled
+	case event.HandlerExecutionPaused:
+		exitCode = fperr.ExitCodeExecutionPaused
+	}
+
 }

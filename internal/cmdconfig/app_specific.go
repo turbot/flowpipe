@@ -1,15 +1,17 @@
 package cmdconfig
 
 import (
-	"github.com/Masterminds/semver/v3"
-	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/spf13/viper"
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/app_specific_connection"
 	"github.com/turbot/pipe-fittings/cmdconfig"
+	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
 
@@ -63,4 +65,50 @@ func SetAppSpecificConstants() {
 		app_specific.InstallDir = defaultInstallDir
 	}
 	app_specific.DefaultConfigPath = strings.Join([]string{".", globalConfigPath}, ":")
+
+	// register supported connection types
+	registerConnections()
+
+}
+
+func registerConnections() {
+	app_specific_connection.RegisterConnections(
+		connection.NewAbuseIPDBConnection,
+		connection.NewAlicloudConnection,
+		connection.NewAwsConnection,
+		connection.NewAzureConnection,
+		connection.NewBitbucketConnection,
+		connection.NewClickUpConnection,
+		connection.NewDatadogConnection,
+		connection.NewDiscordConnection,
+		connection.NewFreshdeskConnection,
+		connection.NewGcpConnection,
+		connection.NewGithubConnection,
+		connection.NewGitLabConnection,
+		connection.NewIP2LocationIOConnection,
+		connection.NewIPstackConnection,
+		connection.NewJiraConnection,
+		connection.NewJumpCloudConnection,
+		connection.NewMastodonConnection,
+		connection.NewMicrosoftTeamsConnection,
+		connection.NewMysqlConnection,
+		connection.NewDuckDbConnection,
+		connection.NewOktaConnection,
+		connection.NewOpenAIConnection,
+		connection.NewOpsgenieConnection,
+		connection.NewPagerDutyConnection,
+		connection.NewPostgresConnection,
+		connection.NewSendGridConnection,
+		connection.NewServiceNowConnection,
+		connection.NewSlackConnection,
+		connection.NewSqliteConnection,
+		connection.NewSteampipePgConnection,
+		connection.NewTrelloConnection,
+		connection.NewGuardrailsConnection,
+		connection.NewPipesConnection,
+		connection.NewUptimeRobotConnection,
+		connection.NewUrlscanConnection,
+		connection.NewVaultConnection,
+		connection.NewVirusTotalConnection,
+		connection.NewZendeskConnection)
 }

@@ -2,6 +2,10 @@ run:
   timeout: 5m
   modules-download-mode: readonly
 
+issues:
+  exclude-dirs:
+    - scripts/mockserver
+
 linters:
   enable:
     - asasalint
@@ -10,7 +14,7 @@ linters:
     - depguard
     - durationcheck
     # - exhaustive
-    - exportloopref
+    - copyloopvar
     - forbidigo
     - gocritic
     - gocheckcompilerdirectives

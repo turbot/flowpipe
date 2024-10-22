@@ -9,13 +9,12 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
+	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
-
-var exitCode int
 
 var (
 	// These variables will be set by GoReleaser. We have them in main package because we put everything else in internal
@@ -30,13 +29,13 @@ func main() {
 	// Create a single, global context for the application
 	ctx := context.Background()
 	defer func() {
+		var err error
 		if r := recover(); r != nil {
-			error_helpers.ShowError(ctx, helpers.ToError(r))
-			if exitCode == 0 {
-				exitCode = 1
-			}
+			err = helpers.ToError(r)
+			error_helpers.ShowError(ctx, err)
+			exitCode := fperr.GetExitCode(err, true)
+			os.Exit(exitCode)
 		}
-		os.Exit(exitCode)
 	}()
 
 	viper.SetDefault(constants.ArgProcessRetention, 604800) // 7 days

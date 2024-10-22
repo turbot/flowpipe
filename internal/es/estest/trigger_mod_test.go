@@ -114,7 +114,7 @@ func (suite *TriggerModTestSuite) AfterTest(suiteName, testName string) {
 func (suite *TriggerModTestSuite) TestTriggerList() {
 	assert := assert.New(suite.T())
 
-	listTriggerResponse, err := api.ListTriggers()
+	listTriggerResponse, err := api.ListTriggers("mod.trigger_mod")
 	if err != nil {
 		assert.Fail("Error listing triggers: %v", err)
 		return
@@ -124,7 +124,7 @@ func (suite *TriggerModTestSuite) TestTriggerList() {
 	assert.Equal(4, len(listTriggerResponse.Items), "Expected 4 trigger")
 }
 
-func TestTriggertModTestingSuite(t *testing.T) {
+func TestTriggerModTestingSuite(t *testing.T) {
 	suite.Run(t, &TriggerModTestSuite{
 		FlowpipeTestSuite: &FlowpipeTestSuite{},
 	})

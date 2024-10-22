@@ -59,9 +59,15 @@ type PrintableProcess struct {
 }
 
 func NewPrintableProcess(resp *ListProcessResponse) *PrintableProcess {
-	return &PrintableProcess{
-		Items: resp.Items,
+	result := &PrintableProcess{
+		Items: []Process{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintableProcessFromSingle(input *Process) *PrintableProcess {
@@ -137,7 +143,7 @@ type ListProcessLogJSONResponse struct {
 }
 
 type CmdProcess struct {
-	Command             string `json:"command" binding:"required,oneof=run cancel pause resume"`
-	PipelineExecutionID string `json:"pipeline_execution_id,omitempty" format:"^(pexec|exec)_[0-9a-v]{20}$"`
+	Command             string `json:"command" binding:"required,oneof=resume"`
+	PipelineExecutionID string `json:"pipeline_execution_id,omitempty" format:"^(pexec)_[0-9a-v]{20}$"`
 	Reason              string `json:"reason,omitempty"`
 }

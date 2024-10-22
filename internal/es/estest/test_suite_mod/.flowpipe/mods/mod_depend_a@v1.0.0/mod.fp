@@ -5,6 +5,10 @@ mod "mod_depend_a" {
         mod "mod_depend_b" {
             version = "1.0.0"
         }
+
+        mod "mod_depend_x" {
+            version = "1.0.0"
+        }
     }
 }
 
@@ -59,4 +63,9 @@ pipeline "call_child_b" {
   output "out_from_b" {
     value = step.pipeline.child_mod.output.result
   }
+}
+
+
+pipeline "echo_b" {
+  description = "this is from the var ${var.var_a_number}"
 }

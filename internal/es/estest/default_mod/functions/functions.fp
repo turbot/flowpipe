@@ -10,4 +10,8 @@ pipeline "simple_function" {
       event     = param.event
       runtime = "nodejs:20"
   }
+
+  output "val" {
+    value = step.function.sleep
+  }
 }

@@ -14,7 +14,7 @@ on:
       version:
         description: "Version (without 'v')"
         required: true
-        default: 0.7.\invalid
+        default: 1.0.\invalid
       confirmDevelop:
         description: Confirm running on develop branch
         required: true
@@ -90,7 +90,7 @@ jobs:
           ssh-key: ${{ secrets.PIPE_FITTINGS_DEPLOY_PRIVATE_KEY }}
           repository: turbot/pipe-fittings
           path: pipe-fittings
-          ref: develop
+          ref: v1.6.x
 
       - name: Checkout Flowpipe SDK Go repository
         uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
           ssh-key: ${{ secrets.FLOWPIPE_GO_SDK_DEPLOY_PRIVATE_KEY }}
           repository: turbot/flowpipe-sdk-go
           path: flowpipe-sdk-go
-          ref: develop
+          ref: v1.0.x
 
       # - name: Unshallow
       #   run: git fetch --prune --unshallow
@@ -123,7 +123,7 @@ jobs:
       # this is required, check golangci-lint-action docs
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+          go-version: '1.23'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
 
       - uses: actions/setup-node@v4

@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/turbot/go-kit/helpers"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -17,12 +16,15 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
-	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
+	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -59,7 +61,7 @@ func GetExecution(executionID string) (*ExecutionInMemory, error) {
 func completeExecution(executionID string) error {
 	ex, err := GetExecution(executionID)
 	if err != nil && !perr.IsNotFound(err) {
-		slog.Error("Error getting execution from cache", "execution_id", executionID)
+		slog.Error("Error getting execution from cache to complete execution", "execution_id", executionID, "error", err)
 		return err
 	} else if perr.IsNotFound(err) {
 		return nil
@@ -87,6 +89,20 @@ func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*Exe
 	return ex, defn, nil
 }
 
+func (ex *ExecutionInMemory) IsPaused() bool {
+	paused := false
+	for _, pe := range ex.PipelineExecutions {
+		if pe.IsPaused() {
+			paused = true
+		} else {
+			paused = false
+			break
+		}
+	}
+
+	return paused
+}
+
 func (ex *ExecutionInMemory) EndExecution() error {
 	// This seems a convenient place to expire the execution from the cache
 	err := completeExecution(ex.ID)
@@ -110,21 +126,60 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		return nil, err
 	}
 
+	fpConfig, err := db.GetFlowpipeConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,
-		Functions: funcs.ContextFunctions(viper.GetString(pfconstants.ArgModLocation)),
+		Functions: funcs.ContextFunctions(viper.GetString(constants.ArgModLocation)),
 	}
 
 	params := map[string]cty.Value{}
 
+	// Why do we add notifier earlier? Because of the param validation before
+	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	if err != nil {
+		return nil, err
+	}
+
+	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
+
+	// **temporarily** add add connections to eval context .. we need to remove them later and only add connections
+	// that are used by the pipelines. The connections are special because they may need to be resolved before
+	// we use them i.e. temp AWS creds.
+
+	connMap := parse.BuildTemporaryConnectionMapForEvalContext(fpConfig.PipelingConnections)
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
+
 	for _, v := range pipelineDefn.Params {
 		if pe.Args[v.Name] != nil {
-			if !v.Type.HasDynamicTypes() {
+			paramArg := pe.Args[v.Name]
+
+			if !hclhelpers.IsComplexType(v.Type) && !v.Type.HasDynamicTypes() {
 				val, err := gocty.ToCtyValue(pe.Args[v.Name], v.Type)
 				if err != nil {
 					return nil, err
 				}
 				params[v.Name] = val
+			} else if mapParam, ok := paramArg.(map[string]any); ok && mapParam["resource_type"] == schema.BlockTypeNotifier {
+
+				// Special handling for Notifier type param. Connection type param is different, it has late binding requirement
+				// but notifier can be fully resolved here
+				// find the notifier in the fpConfig.Notifiers
+				notifierName := mapParam["name"].(string)
+				notifier, ok := fpConfig.Notifiers[notifierName]
+				if !ok {
+					return nil, perr.BadRequestWithMessage("notifier not found: " + notifierName)
+				}
+				notifierCtyValue, err := notifier.CtyValue()
+				if err != nil {
+					return nil, err
+				}
+
+				params[v.Name] = notifierCtyValue
+
 			} else {
 				// we'll do our best here
 				val, err := hclhelpers.ConvertInterfaceToCtyValue(pe.Args[v.Name])
@@ -136,6 +191,25 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 		} else {
 			params[v.Name] = v.Default
+		}
+
+		// validate pipeline param
+		//
+		// One of the validation is the "subtype" validation. There are only 2 subtypes supported:
+		// 1. connection
+		// 2. notifier
+		//
+		validParam, diags, err := v.ValidateSetting(params[v.Name], evalContext)
+		if err != nil {
+			slog.Error("Failed to validate pipeline param", "error", err)
+			return nil, err
+		}
+
+		if !validParam {
+			if len(diags) > 0 {
+				return nil, error_helpers.BetterHclDiagsToError(v.Name, diags)
+			}
+			return nil, perr.BadRequestWithMessage("invalid value for param " + v.Name)
 		}
 	}
 
@@ -153,7 +227,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	paramsCtyVal := cty.ObjectVal(params)
 	evalContext.Variables[schema.BlockTypeParam] = paramsCtyVal
 
-	pipelineMap, err := ex.buildPipelineMapForEvalContext()
+	pipelineMap, err := ex.buildPipelineMapForEvalContext(pipelineDefn)
 	if err != nil {
 		return nil, err
 	}
@@ -167,15 +241,12 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	notifierMap, err := buildNotifierMapForEvalContext()
-	if err != nil {
-		return nil, err
-	}
-
-	evalContext.Variables[schema.BlockTypeNotifier] = cty.ObjectVal(notifierMap)
-
 	// populate the variables and locals
-	variablesMap := make(map[string]cty.Value)
+	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables, true)
+
+	// add these to eval context
+	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
 	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
@@ -186,6 +257,22 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 		localsMap[local.ShortName] = local.Value
 	}
 	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
+
+	// get the nested mod resource (just the pipelines for now)
+	if pipelineDefn.GetMod().HasDependentMods() {
+		for _, dependentMod := range pipelineDefn.GetMod().ResourceMaps.Mods {
+			if dependentMod.Name() == pipelineDefn.GetMod().Name() {
+				continue
+			}
+
+			nestedModResources, err := buildNestedModResourcesForEvalContext(dependentMod)
+			if err != nil {
+				return nil, err
+			}
+
+			evalContext.Variables[dependentMod.ShortName] = nestedModResources
+		}
+	}
 
 	return evalContext, nil
 }
@@ -246,6 +333,47 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext
 	return evalContext, nil
 }
 
+func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+	stepDefns := pipelineDefn.Steps
+
+	allConnectionsDependsOn := []string{}
+	for _, stepDefn := range stepDefns {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, stepDefn.GetConnectionDependsOn()...)
+	}
+
+	pipelineOutputs := pipelineDefn.OutputConfig
+	for _, output := range pipelineOutputs {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, output.ConnectionDependsOn...)
+	}
+
+	params := map[string]cty.Value{}
+	if evalContext.Variables[schema.BlockTypeParam] != cty.NilVal {
+		params = evalContext.Variables[schema.BlockTypeParam].AsValueMap()
+	}
+
+	vars := map[string]cty.Value{}
+	if evalContext.Variables["var"] != cty.NilVal {
+		vars = evalContext.Variables["var"].AsValueMap()
+	}
+
+	// add in mod connection dependendencies
+	if mod := pipelineDefn.GetMod(); mod != nil {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, mod.GetConnectionDependsOn()...)
+	}
+
+	connectionMap, newParamsMap, varMap, err := BuildConnectionMapForEvalContext(allConnectionsDependsOn, params, vars, pipelineDefn.Params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override what we have
+	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
+	evalContext.Variables[schema.BlockTypeParam] = cty.ObjectVal(newParamsMap)
+	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(varMap)
+
+	return evalContext, nil
+}
+
 func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInContext []string, params map[string]cty.Value) (map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
@@ -284,7 +412,7 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 		}
 	}
 
-	credentialMap, err := buildCredentialMapForEvalContext(context.TODO(), relevantCredentials)
+	credentialMap, err := evalCredentialMapForEvalContext(context.TODO(), relevantCredentials)
 	if err != nil {
 		return nil, err
 	}
@@ -292,11 +420,28 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 	return credentialMap, nil
 }
 
-func (ex *ExecutionInMemory) buildPipelineMapForEvalContext() (map[string]cty.Value, error) {
-	allPipelines, err := db.ListAllPipelines()
+func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+
+	var allPipelines []*modconfig.Pipeline
+	var err error
+
+	if pipelineDefn != nil {
+		allPipelines, err = db.ListAllPipelines()
+	} else {
+		contextMod := pipelineDefn.GetMod()
+		for _, p := range contextMod.ResourceMaps.Pipelines {
+			allPipelines = append(allPipelines, p)
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
+
+	return buildPipelineMap(allPipelines)
+}
+
+func buildPipelineMap(allPipelines []*modconfig.Pipeline) (map[string]cty.Value, error) {
 
 	pipelineMap := map[string]cty.Value{}
 	for _, p := range allPipelines {
@@ -315,6 +460,31 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext() (map[string]cty.Va
 	}
 
 	return pipelineMap, nil
+}
+
+func buildNestedModResourcesForEvalContext(nestedMod *modconfig.Mod) (cty.Value, error) {
+
+	allPipelines := []*modconfig.Pipeline{}
+	for _, r := range nestedMod.ResourceMaps.Pipelines {
+		if r.ModName != nestedMod.ShortName {
+			continue
+		}
+
+		allPipelines = append(allPipelines, r)
+	}
+
+	pipelineMap, err := buildPipelineMap(allPipelines)
+	if err != nil {
+		return cty.NilVal, err
+	}
+
+	nestedModResources := cty.ObjectVal(
+		map[string]cty.Value{
+			"pipeline": cty.ObjectVal(pipelineMap),
+		},
+	)
+
+	return nestedModResources, nil
 }
 
 func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
@@ -374,25 +544,6 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 
 }
 
-func buildNotifierMapForEvalContext() (map[string]cty.Value, error) {
-	fpConfig, err := db.GetFlowpipeConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	varValueNotifierMap := make(map[string]cty.Value)
-
-	for k, i := range fpConfig.Notifiers {
-		var err error
-		varValueNotifierMap[k], err = i.CtyValue()
-		if err != nil {
-			slog.Warn("failed to convert notifier to cty value", "notifier", i.Name(), "error", err)
-		}
-	}
-
-	return varValueNotifierMap, nil
-}
-
 // StepDefinition returns the step definition for the given step execution ID.
 func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
 
@@ -420,11 +571,11 @@ func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*mo
 		return nil, perr.BadRequestWithMessage("pipeline execution " + pipelineExecutionID + " not found")
 	}
 
-	pipeline, err := db.GetPipeline(pe.Name)
-
+	pipeline, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 	if err != nil {
 		return nil, err
 	}
+
 	return pipeline, nil
 }
 
@@ -519,9 +670,266 @@ func (ex *ExecutionInMemory) ProcessEvents() error {
 	return nil
 }
 
+func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventLogImpl) error {
+
+	// logEntry.Detail is a map[string]interface{} because we just read it from the database
+	//
+	// we can do something smarter later check if it's interface{} or fully formed struct (not sure if the use case will appear later)
+	jsonData, err := json.Marshal(logEntry.GetDetail())
+	if err != nil {
+		slog.Error("Fail to marshal event detail", "execution", ex.ID, "error", err)
+		return perr.InternalWithMessage("Fail to marshal event detail")
+	}
+
+	switch logEntry.GetEventType() {
+	case ExecutionQueuedEvent.HandlerName(): // "handler.execution_queued"
+		var et event.ExecutionQueued
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_queued event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_queued event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case ExecutionStartedEvent.HandlerName(): // "handler.execution_started"
+		var et event.ExecutionStarted
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_started event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_started event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case ExecutionFinishedEvent.HandlerName(): // "handler.execution_finished"
+		var et event.ExecutionFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_finished event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_finished event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case ExecutionFailedEvent.HandlerName(): // "handler.execution_failed"
+		var et event.ExecutionFailed
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_failed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_failed event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineQueueCommand.HandlerName(): // "command.pipeline_queue"
+		var et event.PipelineQueue
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.pipeline_queue event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_queue event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
+		var et event.PipelineQueued
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_queued event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
+		var et event.PipelineStarted
+
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_started event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
+		var et event.PipelineStarted
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
+		var et event.PipelinePlanned
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_planned event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepQueueCommand.HandlerName(): //  "command.step_queue"
+		var et event.StepQueue
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.step_queue event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
+		}
+
+		db.MapStepExecutionID(logEntry.ProcessID, et.PipelineExecutionID, et.StepExecutionID)
+
+		return ex.appendEvent(&et)
+
+	case StepStartCommand.HandlerName(): // "command.step_start"
+		var et event.StepStart
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.step_start event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
+		var et event.StepPipelineStarted
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_pipeline_started event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
+		var et event.StepFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_finished event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
+		var et event.StepForEachPlanned
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_for_each_planned event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
+		var et event.PipelineCanceled
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_canceled event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
+		var et event.PipelinePaused
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_paused event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
+		var et event.PipelineFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall command.pipeline_finish event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
+		var et event.PipelineFinished
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_finished event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
+		}
+
+		return ex.appendEvent(&et)
+
+	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
+		var et event.PipelineFailed
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.pipeline_failed event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
+		}
+
+		return ex.appendEvent(&et)
+
+	default:
+		// TODO: should we ignore unknown types or error out?
+	}
+
+	return nil
+}
+
 func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) error {
 
 	switch logEntry.GetEventType() {
+
+	case ExecutionQueuedEvent.HandlerName(): // "handler.execution_queued"
+		et, ok := logEntry.GetDetail().(*event.ExecutionQueued)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_queued event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_queued event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionStartedEvent.HandlerName(): // "handler.execution_started"
+		et, ok := logEntry.GetDetail().(*event.ExecutionStarted)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_started event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_started event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionFinishedEvent.HandlerName(): // "handler.execution_finished"
+		et, ok := logEntry.GetDetail().(*event.ExecutionFinished)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_finished event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_finished event")
+		}
+
+		return ex.appendEvent(et)
+
+	case ExecutionFailedEvent.HandlerName(): // "handler.execution_failed"
+		et, ok := logEntry.GetDetail().(*event.ExecutionFailed)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_failed event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_failed event")
+		}
+
+		return ex.appendEvent(et)
+
+	case PipelineQueueCommand.HandlerName(): // "command.pipeline_queue"
+		et, ok := logEntry.GetDetail().(*event.PipelineQueue)
+		if !ok {
+			slog.Error("Fail to unmarshall command.pipeline_queue event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_queue event")
+		}
+
+		return ex.appendEvent(et)
 
 	case PipelineQueuedEvent.HandlerName(): // "handler.pipeline_queued"
 		et, ok := logEntry.GetDetail().(*event.PipelineQueued)
@@ -530,7 +938,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_queued event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineStartedEvent.HandlerName(): // "handler.pipeline_started"
 		et, ok := logEntry.GetDetail().(*event.PipelineStarted)
@@ -539,7 +947,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_started event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
 		et, ok := logEntry.GetDetail().(*event.PipelineResumed)
@@ -548,7 +956,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_resumed event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelinePlannedEvent.HandlerName(): // "handler.pipeline_planned"
 		et, ok := logEntry.GetDetail().(*event.PipelinePlanned)
@@ -557,7 +965,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_planned event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepQueueCommand.HandlerName(): //  "command.step_queue"
 		et, ok := logEntry.GetDetail().(*event.StepQueue)
@@ -566,7 +974,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall command.step_queue event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepStartCommand.HandlerName(): // "command.step_start"
 		et, ok := logEntry.GetDetail().(*event.StepStart)
@@ -575,7 +983,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall command.step_start event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepPipelineStartedEvent.HandlerName(): //  "handler.step_pipeline_started"
 		et, ok := logEntry.GetDetail().(*event.StepPipelineStarted)
@@ -584,7 +992,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_pipeline_started event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	// this is the generic step finish event that is fired by the command.step_start command
 	case StepFinishedEvent.HandlerName(): //  "handler.step_finished"
@@ -594,7 +1002,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_finished event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case StepForEachPlannedEvent.HandlerName(): // "handler.step_for_each_planned"
 		et, ok := logEntry.GetDetail().(*event.StepForEachPlanned)
@@ -603,7 +1011,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.step_for_each_planned event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineCanceledEvent.HandlerName(): // "handler.pipeline_canceled"
 		et, ok := logEntry.GetDetail().(*event.PipelineCanceled)
@@ -612,7 +1020,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_canceled event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelinePausedEvent.HandlerName(): //  "handler.pipeline_paused"
 		et, ok := logEntry.GetDetail().(*event.PipelinePaused)
@@ -621,7 +1029,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_paused event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineFinishCommand.HandlerName(): // "command.pipeline_finish"
 		et, ok := logEntry.GetDetail().(*event.PipelineFinish)
@@ -630,7 +1038,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall command.pipeline_finish event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineFinishedEvent.HandlerName(): // "handler.pipeline_finished"
 		et, ok := logEntry.GetDetail().(*event.PipelineFinished)
@@ -639,7 +1047,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_finished event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	case PipelineFailedEvent.HandlerName(): // "handler.pipeline_failed"
 		et, ok := logEntry.GetDetail().(*event.PipelineFailed)
@@ -648,7 +1056,7 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 			return perr.InternalWithMessage("Fail to unmarshall handler.pipeline_failed event")
 		}
 
-		return ex.Execution.appendEvent(et)
+		return ex.appendEvent(et)
 
 	default:
 		// TODO: should we ignore unknown types or error out?
@@ -677,4 +1085,93 @@ func SaveEventToSQLite(db *sql.DB, executionID string, event event.EventLogImpl)
 		return err
 	}
 	return nil
+}
+
+func LoadExecutionFromProcessDB(e *event.Event) (*ExecutionInMemory, error) {
+
+	if e.ExecutionID == "" {
+		return nil, perr.BadRequestWithMessage("event execution ID is empty")
+	}
+
+	ex := &ExecutionInMemory{
+		Execution: Execution{
+			ID:                 e.ExecutionID,
+			PipelineExecutions: map[string]*PipelineExecution{},
+		},
+	}
+
+	var localLock *sync.Mutex
+	if ex.Lock == nil {
+		localLock = event.GetEventStoreMutex(e.ExecutionID)
+		localLock.Lock()
+		defer func() {
+			if localLock != nil {
+				localLock.Unlock()
+			}
+		}()
+	}
+
+	db, err := store.OpenFlowpipeDB()
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare query to select all events
+	query := `select id, struct_version, process_id, message, level, created_at, detail from event where process_id = ? order by created_at asc`
+	rows, err := db.Query(query, e.ExecutionID)
+	if err != nil {
+		slog.Error("error querying event table", "error", err)
+		return nil, perr.InternalWithMessage("error querying event table")
+	}
+	defer rows.Close()
+
+	// Iterate through the result set
+	for rows.Next() {
+
+		var id string
+		var structVersion string
+		var processId string
+		var message string
+		var level string
+		var createdAt time.Time
+		var detailString string
+
+		err := rows.Scan(&id, &structVersion, &processId, &message, &level, &createdAt, &detailString)
+		if err != nil {
+			slog.Error("error scanning event table", "error", err)
+			return nil, perr.InternalWithMessage("error scanning event table")
+		}
+
+		ele := event.EventLogImpl{
+			ID:            id,
+			StructVersion: structVersion,
+			ProcessID:     processId,
+			Message:       message,
+			Level:         level,
+			CreatedAt:     createdAt,
+		}
+
+		// marshall the payload
+		var detail interface{}
+		err = json.Unmarshal([]byte(detailString), &detail)
+		if err != nil {
+			slog.Error("error unmarshalling event payload", "error", err)
+			return nil, perr.InternalWithMessage("error unmarshalling event payload")
+		}
+
+		ele.SetDetail(detail)
+
+		err = ex.AppendSerialisedEventLogEntry(ele)
+		if err != nil {
+			slog.Error("Fail to append event entry to execution", "execution", ex.ID, "error", err, "string", detailString)
+			return nil, err
+		}
+	}
+
+	if rows.Err() != nil {
+		slog.Error("error iterating event table", "error", rows.Err())
+		return nil, perr.InternalWithMessage("error iterating event table")
+	}
+
+	return ex, nil
 }

@@ -1,8 +1,8 @@
 <a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark_outline.png"></a>
 
-[![libraries](https://img.shields.io/badge/mods-62-blue)](https://hub.flowpipe.io) &nbsp;
-[![pipelines](https://img.shields.io/badge/pipelines-510-blue)](https://hub.flowpipe.io/mods) &nbsp;
-[![slack](https://img.shields.io/badge/slack-2297-blue)](https://turbot.com/community/join) &nbsp;
+[![libraries](https://img.shields.io/badge/mods-76-blue)](https://hub.flowpipe.io) &nbsp;
+[![pipelines](https://img.shields.io/badge/pipelines-1041-blue)](https://hub.flowpipe.io/mods) &nbsp;
+[![slack](https://img.shields.io/badge/slack-2695-blue)](https://turbot.com/community/join) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com)
 
 [Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Automation and workflow to connect your clouds to the people, systems and data that matter.
@@ -34,18 +34,16 @@ See the [documentation](https://flowpipe.io/docs) for:
 
 ## Install Flowpipe
 
-The <a href="https://flowpipe.io/downloads">downloads</a> page shows you how but tl;dr:
-
-Linux or WSL
+Install Flowpipe from the [downloads](https://flowpipe.io/downloads) page:
 
 ```sh
-sudo /bin/sh -c "$(curl -fsSL https://flowpipe.io/install/flowpipe.sh)"
+# MacOS
+brew install turbot/tap/flowpipe
 ```
 
-MacOS
-
 ```sh
-brew install turbot/tap/flowpipe
+# Linux or Windows (WSL)
+sudo /bin/sh -c "$(curl -fsSL https://flowpipe.io/install/flowpipe.sh)"
 ```
 
 Now, [create and run your first pipeline →](https://flowpipe.io/docs).
@@ -170,7 +168,7 @@ If you're interested in developing [Flowpipe mods](https://hub.flowpipe.io), see
 
 ## Turbot Pipes
 
- Coming soon: bring your team to [Turbot Pipes](https://turbot.com/pipes) to use Flowpipe together in the cloud.
+Coming soon: bring your team to [Turbot Pipes](https://turbot.com/pipes) to use Flowpipe together in the cloud.
 
 ## Open source and contributing
 This repository is published under the [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) license. Please see our [code of conduct](https://github.com/turbot/.github/blob/main/CODE_OF_CONDUCT.md). Contributors must sign our [Contributor License Agreement](https://turbot.com/open-source#cla) as part of their first pull request. We look forward to collaborating with you!

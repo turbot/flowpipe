@@ -1,6 +1,26 @@
 package event
 
+var EndEvents = []string{
+	"finished",
+	"failed",
+	"cancelled",
+}
+
 const (
+	CommandExecutionQueue     = "command.execution_queue"
+	HandlerExecutionQueued    = "handler.execution_queued"
+	CommandExecutionStart     = "command.execution_start"
+	HandlerExecutionStarted   = "handler.execution_started"
+	CommandExecutionPlan      = "command.execution_plan"
+	HandlerExecutionPlanned   = "handler.execution_planned"
+	CommandExecutionFinish    = "command.execution_finish"
+	HandlerExecutionFinished  = "handler.execution_finished"
+	CommandExecutionFail      = "command.execution_fail"
+	HandlerExecutionFailed    = "handler.execution_failed"
+	CommandExecutionPause     = "command.execution_pause"
+	HandlerExecutionPaused    = "handler.execution_paused"
+	HandlerExecutionCancelled = "handler.execution_cancelled"
+
 	CommandPipelineCancel      = "command.pipeline_cancel"
 	HandlerPipelineCancelled   = "handler.pipeline_canceled"
 	CommandPipelineFail        = "command.pipeline_fail"
@@ -27,4 +47,13 @@ const (
 	CommandStepQueue           = "command.step_queue"
 	HandlerStepQueued          = "handler.step_queued"
 	CommandStepStart           = "command.step_start"
+
+	CommandTriggerQueue    = "command.trigger_queue"
+	HandlerTriggerQueued   = "handler.trigger_queued"
+	CommandTriggerStart    = "command.trigger_start"
+	HandlerTriggerStarted  = "handler.trigger_started"
+	CommandTriggerFail     = "command.trigger_fail"
+	HandlerTriggerFailed   = "handler.trigger_failed"
+	CommandTriggerFinish   = "command.trigger_finish"
+	HandlerTriggerFinished = "handler.trigger_finished"
 )

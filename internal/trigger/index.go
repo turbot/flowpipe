@@ -6,22 +6,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/output"
-	o "github.com/turbot/flowpipe/internal/output"
-	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/flowpipe/internal/util"
-
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
-	"github.com/turbot/flowpipe/internal/es/handler"
-	"github.com/turbot/flowpipe/internal/fqueue"
+	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -29,134 +27,85 @@ import (
 )
 
 type TriggerRunnerBase struct {
-	Trigger    *modconfig.Trigger
-	commandBus handler.FpCommandBus
-	rootMod    *modconfig.Mod
-	Fqueue     *fqueue.FunctionQueue
+	ExecutionID        string
+	TriggerExecutionID string
+	Trigger            *modconfig.Trigger
+	rootMod            *modconfig.Mod
+	Type               string
 }
 
 type TriggerRunner interface {
-	Run()
 	GetTrigger() *modconfig.Trigger
-	GetFqueue() *fqueue.FunctionQueue
-	ExecuteTrigger() (types.TriggerExecutionResponse, []event.PipelineQueue, error)
-	ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.TriggerExecutionResponse, []event.PipelineQueue, error)
+	GetPipelineQueuesWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
+	GetTriggerResponse([]*event.PipelineQueue) (types.TriggerExecutionResponse, error)
 }
 
-func NewTriggerRunner(ctx context.Context, commandBus handler.FpCommandBus, rootMod *modconfig.Mod, trigger *modconfig.Trigger) TriggerRunner {
+func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionID string) TriggerRunner {
 
 	switch trigger.Config.(type) {
 	case *modconfig.TriggerSchedule:
 		return &TriggerRunnerBase{
-			Trigger:    trigger,
-			commandBus: commandBus,
-			rootMod:    rootMod,
-			Fqueue:     fqueue.NewFunctionQueue(trigger.FullName),
+			Trigger:            trigger,
+			rootMod:            trigger.GetMod(),
+			ExecutionID:        executionID,
+			TriggerExecutionID: triggerExecutionID,
+			Type:               "schedule",
 		}
 	case *modconfig.TriggerQuery:
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
-				Trigger:    trigger,
-				commandBus: commandBus,
-				rootMod:    rootMod,
-				Fqueue:     fqueue.NewFunctionQueue(trigger.FullName)},
+				Trigger:            trigger,
+				rootMod:            trigger.GetMod(),
+				ExecutionID:        executionID,
+				TriggerExecutionID: triggerExecutionID,
+				Type:               "query",
+			},
 		}
 	default:
 		return nil
 	}
 }
 
-func (tr *TriggerRunnerBase) Run() {
-	_, _, err := tr.ExecuteTrigger()
-	if err != nil {
-		slog.Error("Error executing trigger", "trigger", tr.Trigger.Name(), "error", err)
-	}
+func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
+	return tr.Trigger
 }
 
-func (tr *TriggerRunnerBase) ExecuteTrigger() (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-	return tr.ExecuteTriggerForExecutionID(util.NewExecutionId(), nil, nil)
-}
+func (tr *TriggerRunnerBase) GetPipelineQueuesWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error) {
+	triggerRunArgs, err := tr.validate(args, argsString)
 
-func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, args map[string]interface{}, argsString map[string]string) (types.TriggerExecutionResponse, []event.PipelineQueue, error) {
-
-	response := types.TriggerExecutionResponse{}
-	var triggerRunArgs map[string]interface{}
-	if len(args) > 0 || len(argsString) == 0 {
-		errs := tr.Trigger.ValidateTriggerParam(args)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
-		}
-		triggerRunArgs = args
-	} else if len(argsString) > 0 {
-		coercedArgs, errs := tr.Trigger.CoerceTriggerParams(argsString)
-		if len(errs) > 0 {
-			errStrs := error_helpers.MergeErrors(errs)
-			return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
-		}
-		triggerRunArgs = coercedArgs
-	}
-
-	pipeline := tr.Trigger.GetPipeline()
-
-	if pipeline == cty.NilVal {
-		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return response, nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
-	}
-
-	pipelineDefn := pipeline.AsValueMap()
-	pipelineName := pipelineDefn["name"].AsString()
-
-	modFullName := tr.Trigger.GetMetadata().ModFullName
-	slog.Info("Running trigger", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "mod", modFullName)
-
-	// We can only run trigger from root mod
-
-	if modFullName != tr.rootMod.FullName {
-		slog.Error("Trigger can only be run from root mod", "trigger", tr.Trigger.Name(), "mod", modFullName, "root_mod", tr.rootMod.FullName)
-		return response, nil, perr.BadRequestWithMessage("Trigger can only be run from root mod")
-	}
-
-	evalContext, err := buildEvalContext(tr.rootMod, tr.Trigger.Params, triggerRunArgs)
 	if err != nil {
-		slog.Error("Error building eval context", "error", err)
-		return response, nil, perr.InternalWithMessage("Error building eval context")
+		slog.Error("Error validating trigger", "error", err)
+		return nil, err
 	}
 
-	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
+	triggerArgs, err := tr.getTriggerArgs(triggerRunArgs)
 	if err != nil {
-		slog.Error("Error getting latest trigger", "trigger", tr.Trigger.Name(), "error", err)
-		return response, nil, perr.NotFoundWithMessage("trigger not found")
+		return nil, err
 	}
 
-	pipelineArgs, diags := latestTrigger.GetArgs(evalContext)
-
-	if diags.HasErrors() {
-		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		err := error_helpers.HclDiagsToError("trigger", diags)
-		return response, nil, err
-	}
-
-	pipelineCmd := &event.PipelineQueue{
-		Event:               event.NewEventForExecutionID(executionId),
-		PipelineExecutionID: util.NewPipelineExecutionId(),
-		Name:                pipelineName,
-		Args:                pipelineArgs,
-	}
-
-	slog.Info("Trigger fired", "trigger", tr.Trigger.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
-
-	if output.IsServerMode {
-		output.RenderServerOutput(context.TODO(), types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, tr.Trigger.Name(), pipelineName))
-	}
-
-	if err := tr.commandBus.Send(context.TODO(), pipelineCmd); err != nil {
+	cmds, err := tr.execute(ctx, tr.ExecutionID, triggerArgs, tr.Trigger)
+	if err != nil {
 		slog.Error("Error sending pipeline command", "error", err)
-		if o.IsServerMode {
-			o.RenderServerOutput(context.TODO(), types.NewServerOutputError(types.NewServerOutputPrefix(time.Now(), "flowpipe"), "error sending pipeline command", err))
-		}
-		return response, nil, err
+
+		return nil, err
 	}
+
+	return cmds, nil
+
+}
+
+func (tr *TriggerRunnerBase) GetTriggerResponse(pipelineCmds []*event.PipelineQueue) (types.TriggerExecutionResponse, error) {
+	response := types.TriggerExecutionResponse{}
+
+	if len(pipelineCmds) == 0 {
+		return response, perr.NotFoundWithMessage("no pipeline commands found")
+	}
+
+	if len(pipelineCmds) > 1 {
+		return response, perr.BadRequestWithMessage("multiple pipeline commands found")
+	}
+
+	pipelineCmd := pipelineCmds[0]
 
 	response.Results = map[string]interface{}{}
 	response.Results[tr.Trigger.Config.GetType()] = types.PipelineExecutionResponse{
@@ -172,53 +121,151 @@ func (tr *TriggerRunnerBase) ExecuteTriggerForExecutionID(executionId string, ar
 		Type: tr.Trigger.Config.GetType(),
 	}
 
-	return response, []event.PipelineQueue{*pipelineCmd}, nil
+	return response, nil
 }
 
-func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
-	return tr.Trigger
-}
+func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString map[string]string) (map[string]interface{}, error) {
+	var triggerRunArgs map[string]interface{}
 
-func (tr *TriggerRunnerBase) GetFqueue() *fqueue.FunctionQueue {
-	return tr.Fqueue
-}
-
-func buildEvalContext(rootMod *modconfig.Mod, triggerParams []modconfig.PipelineParam, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
-	vars := make(map[string]cty.Value)
-	if rootMod != nil {
-		for _, v := range rootMod.ResourceMaps.Variables {
-			vars[v.GetMetadata().ResourceName] = v.Value
-		}
+	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, nil)
+	if err != nil {
+		slog.Error("Error building eval context (trigger validation)", "error", err)
+		return nil, perr.InternalWithMessage("Error building eval context: " + err.Error())
 	}
+
+	if len(args) > 0 || len(argsString) == 0 {
+		errs := parse.ValidateParams(tr.Trigger, args, evalContext)
+
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			return nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		}
+		triggerRunArgs = args
+	} else if len(argsString) > 0 {
+		coercedArgs, errs := parse.CoerceParams(tr.Trigger, argsString, evalContext)
+		if len(errs) > 0 {
+			errStrs := error_helpers.MergeErrors(errs)
+			return nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
+		}
+		triggerRunArgs = coercedArgs
+	}
+
+	return triggerRunArgs, nil
+}
+
+func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
+
+	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, triggerRunArgs)
+	if err != nil {
+		slog.Error("Error building eval context", "error", err)
+		return nil, perr.InternalWithMessage("Error building eval context")
+	}
+
+	latestTrigger, err := db.GetTrigger(tr.Trigger.Name())
+	if err != nil {
+		slog.Error("Error getting latest trigger", "trigger", tr.Trigger.Name(), "error", err)
+		return nil, perr.NotFoundWithMessage("trigger not found")
+	}
+
+	pipelineArgs, diags := latestTrigger.GetArgs(evalContext)
+
+	if diags.HasErrors() {
+		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
+		err := error_helpers.HclDiagsToError("trigger", diags)
+		return nil, err
+	}
+
+	return pipelineArgs, nil
+}
+
+func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
+	pipelineDefn := trg.Pipeline.AsValueMap()
+	pipelineName := pipelineDefn["name"].AsString()
+
+	pipelineCmd := &event.PipelineQueue{
+		Event:               event.NewEventForExecutionID(executionID),
+		PipelineExecutionID: util.NewPipelineExecutionId(),
+		Name:                pipelineName,
+		Args:                triggerArgs,
+		Trigger:             trg.Name(),
+	}
+
+	slog.Info("Trigger fired", "trigger", trg.Name(), "pipeline", pipelineName, "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
+
+	if output.IsServerMode {
+		output.RenderServerOutput(ctx, types.NewServerOutputTriggerExecution(time.Now(), pipelineCmd.Event.ExecutionID, trg.Name(), pipelineName))
+	}
+
+	return []*event.PipelineQueue{pipelineCmd}, nil
+}
+
+func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []modconfig.PipelineParam, triggerConfig modconfig.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
+
 	executionVariables := map[string]cty.Value{}
-	executionVariables[schema.AttributeVar] = cty.ObjectVal(vars)
 
-	params := map[string]cty.Value{}
+	// populate the variables and locals
+	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
+	var modVars map[string]*modconfig.Variable
+	if rootMod != nil {
+		modVars = rootMod.ResourceMaps.Variables
+	}
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modVars, true)
 
-	for _, v := range triggerParams {
+	// add these to eval context
+	executionVariables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
+	for _, variable := range modVars {
+		variablesMap[variable.ShortName] = variable.Value
+	}
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
+
+	localsMap := make(map[string]cty.Value)
+	if rootMod != nil {
+		for _, local := range rootMod.ResourceMaps.Locals {
+			localsMap[local.ShortName] = local.Value
+		}
+		executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
+	}
+
+	runParams := map[string]cty.Value{}
+
+	for _, v := range defnTriggerParams {
 		if triggerRunArgs[v.Name] != nil {
 			if !v.Type.HasDynamicTypes() {
 				val, err := gocty.ToCtyValue(triggerRunArgs[v.Name], v.Type)
 				if err != nil {
 					return nil, err
 				}
-				params[v.Name] = val
+				runParams[v.Name] = val
 			} else {
 				// we'll do our best here
 				val, err := hclhelpers.ConvertInterfaceToCtyValue(triggerRunArgs[v.Name])
 				if err != nil {
 					return nil, err
 				}
-				params[v.Name] = val
+				runParams[v.Name] = val
 			}
 
 		} else {
-			params[v.Name] = v.Default
+			runParams[v.Name] = v.Default
 		}
 	}
 
-	paramsCtyVal := cty.ObjectVal(params)
+	paramsCtyVal := cty.ObjectVal(runParams)
 	executionVariables[schema.BlockTypeParam] = paramsCtyVal
+
+	// add in mod connection dependendencies
+	allConnectionsDependsOn := triggerConfig.GetConnectionDependsOn()
+	if rootMod != nil {
+		allConnectionsDependsOn = append(allConnectionsDependsOn, rootMod.GetConnectionDependsOn()...)
+	}
+	connectionMap, paramsMap, varMap, err := execution.BuildConnectionMapForEvalContext(allConnectionsDependsOn, runParams, variablesMap, defnTriggerParams)
+	if err != nil {
+		return nil, err
+	}
+
+	executionVariables[schema.BlockTypeConnection] = cty.ObjectVal(connectionMap)
+	executionVariables[schema.BlockTypeParam] = cty.ObjectVal(paramsMap)
+	executionVariables[schema.AttributeVar] = cty.ObjectVal(varMap)
 
 	evalContext := &hcl.EvalContext{
 		Variables: executionVariables,

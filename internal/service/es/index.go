@@ -79,7 +79,9 @@ func (es *ESService) Start() error {
 	eventsPubSub := gochannel.NewGoChannel(goChannelConfig, wLogger)
 
 	// CQRS is built on messages router. Detailed documentation: https://watermill.io/docs/messages-router/
-	router, err := message.NewRouter(message.RouterConfig{}, wLogger)
+	router, err := message.NewRouter(message.RouterConfig{
+		CloseTimeout: time.Second * 5,
+	}, wLogger)
 	if err != nil {
 		return err
 	}
@@ -130,6 +132,14 @@ func (es *ESService) Start() error {
 				command.StepQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.StepStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 				command.StepForEachPlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionPlanHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionFinishHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.ExecutionFailHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.TriggerQueueHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.TriggerStartHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
+				command.TriggerFinishHandler{EventBus: &command.FpEventBusImpl{Eb: eb}},
 			}
 		},
 		CommandsPublisher: commandsPubSub,
@@ -155,6 +165,16 @@ func (es *ESService) Start() error {
 				handler.StepQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 				handler.StepPipelineStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 				handler.StepForEachPlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionPlanned{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionFinished{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionFailed{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.ExecutionPaused{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerQueued{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerStarted{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerFailed{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
+				handler.TriggerFinished{CommandBus: &handler.FpCommandBusImpl{Cb: cb}},
 			}
 		},
 		EventsPublisher: eventsPubSub,

@@ -20,17 +20,14 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	"github.com/radovskyb/watcher"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/flowpipe/internal/runtime"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 	putils "github.com/turbot/pipe-fittings/utils"
 )
 
 type Function struct {
-
 	// fnuration information
 	Name                  string                 `json:"name"`
 	Runtime               string                 `json:"runtime"`
@@ -60,6 +57,7 @@ type Function struct {
 	ctx context.Context `json:"-"`
 
 	// Flowpipe run context (e.g. for logging)
+	BasePath     string               `json:"base_path"`
 	runCtx       context.Context      `json:"-"`
 	watcher      *watcher.Watcher     `json:"-"`
 	dockerClient *docker.DockerClient `json:"-"`
@@ -78,6 +76,13 @@ type FunctionOption func(*Function) error
 func WithContext(ctx context.Context) FunctionOption {
 	return func(c *Function) error {
 		c.ctx = ctx
+		return nil
+	}
+}
+
+func WithBasePath(basePath string) FunctionOption {
+	return func(c *Function) error {
+		c.BasePath = basePath
 		return nil
 	}
 }
@@ -258,10 +263,9 @@ func (fn *Function) Validate() error {
 	if fn.Source == "" {
 		return perr.BadRequestWithMessage("'source' required for function: " + fn.Name)
 	}
-	// Convert source to an absolute path
-	workspacePath := viper.GetString(constants.ArgModLocation)
 
-	path := filepath.Join(workspacePath, fn.Source)
+	// Convert source to an absolute path
+	path := filepath.Join(fn.BasePath, fn.Source)
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return perr.BadRequestWithMessage("failed to get absolute path to 'source 'for function: " + fn.Name)
@@ -365,7 +369,7 @@ func (fn *Function) Start(imageName string) (string, error) {
 	}
 
 	// Start the container
-	if err := fn.dockerClient.CLI.ContainerStart(fn.ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := fn.dockerClient.CLI.ContainerStart(fn.ctx, resp.ID, container.StartOptions{}); err != nil {
 		return "", err
 	}
 
@@ -495,7 +499,7 @@ func (fn *Function) Restart(containerId string) (string, error) {
 	}
 
 	// Remove the container
-	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, types.ContainerRemoveOptions{})
+	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, container.RemoveOptions{})
 	if err != nil {
 		slog.Error("Container remove failed", "error", err)
 		return newContainerId, err

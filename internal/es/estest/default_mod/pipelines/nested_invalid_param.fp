@@ -26,6 +26,6 @@ pipeline "nested_invalid_param" {
     }
 
     output "val" {
-        value = "${param.one}  - ${param.two}"
+        value = "${param.one}  - ${param.cred}"
     }
 }

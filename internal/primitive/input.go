@@ -67,13 +67,13 @@ type JSONPayload struct {
 }
 
 type InputIntegrationResponseOption struct {
-	Label    *string
-	Value    *string
-	Selected *bool
-	Style    *string
+	Label    *string `json:"label,omitempty"`
+	Value    *string `json:"value,omitempty"`
+	Selected *bool   `json:"selected,omitempty"`
+	Style    *string `json:"style,omitempty"`
 }
 
-func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func validateInputStepInput(ctx context.Context, i modconfig.Input) error {
 	// validate type
 	if i[schema.AttributeTypeType] == nil {
 		return perr.BadRequestWithMessage("Input must define a type")
@@ -98,15 +98,53 @@ func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
 		}
 
 		// ensure all options have a value
-		for i, o := range options {
-			option := o.(map[string]any)
+		for idx, opt := range options {
+			option := opt.(map[string]any)
 			if helpers.IsNil(option[schema.AttributeTypeValue]) {
-				return perr.BadRequestWithMessage(fmt.Sprintf("option %d has no value specified", i))
+				return perr.BadRequestWithMessage(fmt.Sprintf("option %d has no value specified", idx))
 			}
 		}
 	}
 
-	err := ip.validateInputNotifier(i)
+	return nil
+}
+
+func parseOptionsFromInput(i modconfig.Input) []InputIntegrationResponseOption {
+	var resOptions []InputIntegrationResponseOption
+
+	if options, hasOptions := i[schema.AttributeTypeOptions].([]any); hasOptions {
+		for _, op := range options {
+			opt := op.(map[string]any)
+			option := InputIntegrationResponseOption{}
+			if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
+				option.Label = &l
+			}
+			if v, ok := opt[schema.AttributeTypeValue].(string); ok {
+				option.Value = &v
+				if helpers.IsNil(option.Label) {
+					option.Label = &v
+				}
+			}
+			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
+				option.Selected = &s
+			}
+			if s, ok := opt[schema.AttributeTypeStyle].(string); ok {
+				option.Style = &s
+			}
+			resOptions = append(resOptions, option)
+		}
+	}
+
+	return resOptions
+}
+
+func (ip *Input) ValidateInput(ctx context.Context, i modconfig.Input) error {
+	err := validateInputStepInput(ctx, i)
+	if err != nil {
+		return err // will already be perr
+	}
+
+	err = ip.validateInputNotifier(i)
 	if err != nil {
 		return err // will already be perr
 	}
@@ -196,30 +234,7 @@ func (ip *Input) validateInputNotifier(i modconfig.Input) error {
 func (ip *Input) execute(ctx context.Context, input modconfig.Input, mc MessageCreator) (*modconfig.Output, error) {
 	output := &modconfig.Output{}
 
-	var resOptions []InputIntegrationResponseOption
-
-	if options, ok := input[schema.AttributeTypeOptions].([]any); ok {
-		for _, op := range options {
-			opt := op.(map[string]any)
-			option := InputIntegrationResponseOption{}
-			if l, ok := opt[schema.AttributeTypeLabel].(string); ok {
-				option.Label = &l
-			}
-			if v, ok := opt[schema.AttributeTypeValue].(string); ok {
-				option.Value = &v
-				if helpers.IsNil(option.Label) {
-					option.Label = &v
-				}
-			}
-			if s, ok := opt[schema.AttributeTypeSelected].(bool); ok {
-				option.Selected = &s
-			}
-			if s, ok := opt[schema.AttributeTypeStyle].(string); ok {
-				option.Style = &s
-			}
-			resOptions = append(resOptions, option)
-		}
-	}
+	resOptions := parseOptionsFromInput(input)
 
 	if o.IsServerMode || (os.Getenv("RUN_MODE") == "TEST_ES") {
 		extNotifySent, nErrors := ip.sendNotifications(ctx, input, mc, resOptions)

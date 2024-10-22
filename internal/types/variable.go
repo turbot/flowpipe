@@ -9,10 +9,13 @@ import (
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 func NewPrintableVariable(resp *ListVariableResponse) *PrintableVariable {
-	result := &PrintableVariable{}
+	result := &PrintableVariable{
+		Items: []FpVariable{},
+	}
 
 	for _, item := range resp.Items {
 		result.Items = append(result.Items, *item)
@@ -46,7 +49,7 @@ func (p PrintableVariable) GetTable() (*printers.Table, error) {
 
 		cells := []any{
 			item.ModName,
-			item.Name,
+			item.ResourceName,
 			item.Type,
 			description,
 			item.ValueDefault,
@@ -70,16 +73,20 @@ type ListVariableResponse struct {
 }
 
 type FpVariable struct {
-	ModName         string      `json:"mod_name"`
-	Type            string      `json:"type"`
-	TypeString      string      `json:"type_string"`
-	Name            string      `json:"name"`
-	Description     *string     `json:"description,omitempty"`
-	ValueDefault    interface{} `json:"value_default,omitempty" `
-	Value           interface{} `json:"value,omitempty"`
-	FileName        string      `json:"file_name,omitempty"`
-	StartLineNumber int         `json:"start_line_number,omitempty"`
-	EndLineNumber   int         `json:"end_line_number,omitempty"`
+	ModName         string            `json:"mod_name"`
+	Type            interface{}       `json:"type"`
+	TypeString      string            `json:"type_string"`
+	Enum            []interface{}     `json:"enum,omitempty"`
+	QualifiedName   string            `json:"qualified_name"`
+	ResourceName    string            `json:"resource_name"`
+	Description     *string           `json:"description,omitempty"`
+	ValueDefault    interface{}       `json:"value_default,omitempty" `
+	Value           interface{}       `json:"value,omitempty"`
+	Tags            map[string]string `json:"tags,omitempty"`
+	FileName        string            `json:"file_name,omitempty"`
+	StartLineNumber int               `json:"start_line_number,omitempty"`
+	EndLineNumber   int               `json:"end_line_number,omitempty"`
+	Format          string            `json:"format,omitempty"`
 }
 
 func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
@@ -95,14 +102,14 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 		return ""
 	}
 
-	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), p.Name)
+	output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Name:"), p.ResourceName)
 
 	if p.Description != nil && len(*p.Description) > 0 {
 		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Description:"), *p.Description)
 	}
 
-	if p.Type != "" {
-		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), p.Type)
+	if p.TypeString != "" {
+		output += fmt.Sprintf("%-*s%s\n", keyWidth, au.Blue("Type:"), p.TypeString)
 	}
 
 	if p.ValueDefault != nil {
@@ -118,11 +125,12 @@ func (p FpVariable) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOp
 
 func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 	var res = FpVariable{
-		ModName:     *apiVariable.ModName,
-		Type:        *apiVariable.Type,
-		TypeString:  *apiVariable.TypeString,
-		Name:        *apiVariable.Name,
-		Description: apiVariable.Description,
+		ModName:       utils.Deref(apiVariable.ModName, ""),
+		TypeString:    utils.Deref(apiVariable.TypeString, ""),
+		QualifiedName: utils.Deref(apiVariable.QualifiedName, ""),
+		ResourceName:  utils.Deref(apiVariable.ResourceName, ""),
+		Description:   apiVariable.Description,
+		Enum:          apiVariable.Enum,
 	}
 
 	if !helpers.IsNil(apiVariable.ValueDefault) {
@@ -133,22 +141,37 @@ func FpVariableFromApi(apiVariable flowpipeapiclient.FpVariable) *FpVariable {
 		res.Value = *apiVariable.Value
 	}
 
+	if !helpers.IsNil(apiVariable.Tags) {
+		res.Tags = *apiVariable.Tags
+	}
+
+	if !helpers.IsNil(apiVariable.Type) {
+		res.Type = apiVariable.Type
+	}
+
 	return &res
 }
 
 func FpVariableFromModVariable(variable *modconfig.Variable) *FpVariable {
-	return &FpVariable{
+	fpVar := &FpVariable{
 		ModName:         variable.ModName,
 		Type:            variable.TypeString,
 		TypeString:      variable.TypeString,
-		Name:            variable.Name(),
+		Tags:            variable.Tags,
+		QualifiedName:   variable.Name(),
+		Enum:            variable.EnumGo,
+		ResourceName:    variable.ResourceName,
 		Description:     variable.Description,
 		ValueDefault:    variable.DefaultGo,
 		Value:           variable.ValueGo,
 		StartLineNumber: variable.ValueSourceStartLineNumber,
 		EndLineNumber:   variable.ValueSourceEndLineNumber,
 		FileName:        variable.ValueSourceFileName,
+		Format:          variable.Format,
 	}
+
+	return fpVar
+
 }
 
 func ListVariableResponseFromAPI(apiResp *flowpipeapiclient.ListVariableResponse) *ListVariableResponse {

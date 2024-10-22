@@ -15,6 +15,7 @@ type InMemoryCache struct {
 
 var inMemoryCache *InMemoryCache
 var credentialCache *InMemoryCache
+var connectionCache *InMemoryCache
 
 func InMemoryInitialize(config *ristretto.Config) *InMemoryCache {
 	if config == nil {
@@ -33,6 +34,7 @@ func InMemoryInitialize(config *ristretto.Config) *InMemoryCache {
 	inMemoryCache = &InMemoryCache{cache}
 
 	initializeCredentialCache()
+	initializeConnectionCache()
 
 	return inMemoryCache
 }
@@ -57,13 +59,38 @@ func initializeCredentialCache() {
 	credentialCache = &InMemoryCache{credCache}
 }
 
+func initializeConnectionCache() {
+	connCacheConfig := &ristretto.Config{
+		NumCounters: 100000,   // number of keys to track frequency
+		MaxCost:     67108864, // maximum cost of cache (64mb).
+		BufferItems: 64,       // number of keys per Get buffer.
+	}
+
+	connCache, err := ristretto.NewCache(connCacheConfig)
+	if err != nil {
+		slog.Error("error initializing in-memory cache for connections", "error", err)
+		os.Exit(1)
+	}
+
+	connectionCache = &InMemoryCache{connCache}
+}
+
 func GetCredentialCache() *InMemoryCache {
 	return credentialCache
+}
+
+func GetConnectionCache() *InMemoryCache {
+	return connectionCache
 }
 
 func ResetCredentialCache() {
 	credentialCache = nil
 	initializeCredentialCache()
+}
+
+func ResetConnectionCache() {
+	connectionCache = nil
+	initializeConnectionCache()
 }
 
 func (cache *InMemoryCache) SetWithTTL(key string, value interface{}, ttl time.Duration) bool {

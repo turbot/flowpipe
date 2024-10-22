@@ -7,14 +7,13 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-
-	"log/slog"
 
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
@@ -216,7 +215,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	if resp.StatusCode >= 400 {
 		output.Errors = []modconfig.StepError{
 			{
-				Error: perr.FromHttpError(fmt.Errorf(resp.Status), resp.StatusCode),
+				Error: perr.FromHttpError(errors.New(resp.Status), resp.StatusCode),
 			},
 		}
 	}

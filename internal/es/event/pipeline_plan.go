@@ -80,6 +80,14 @@ func ForPipelineStepFinished(e *StepFinished) PipelinePlanOption {
 	}
 }
 
+func PipelinePlanFromPipelinePlanned(e *PipelinePlanned) *PipelinePlan {
+	cmd := &PipelinePlan{
+		Event:               NewFlowEvent(e.Event),
+		PipelineExecutionID: e.PipelineExecutionID,
+	}
+	return cmd
+}
+
 func ForChildPipelineFinished(e *PipelineFinished, parentPipelineExecutionID string) PipelinePlanOption {
 	return func(cmd *PipelinePlan) error {
 		cmd.Event = NewFlowEvent(e.Event)

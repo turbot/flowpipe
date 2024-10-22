@@ -1,11 +1,52 @@
 # Flowpipe
 
-## v0.7.2 [TBC]
+## v1.0.0 [2024-10-22]
+
+_What's new?_
+
+* `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/connection).
+* `connection` and `notifier` types for variables and params. ([#871](https://github.com/turbot/flowpipe/issues/871))
+* `enum` validation for [variables](https://flowpipe.io/docs/flowpipe-hcl/variable#variable-types) and [params](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments-1).
+* Defined exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/reference/cli#exit-codes).
+
+_Bug fixes_
+
+* Passing pipeline references to nested mods for execution. ([#908](https://github.com/turbot/flowpipe/issues/908))
+* Do not crash if pipeline reference is set to a string. ([#911](https://github.com/turbot/flowpipe/issues/911))
+
+_Deprecation_
+
+* `credential` and `credential_import` are deprecated to be replaced with `connection` and `connection_import`.
+
+## v0.9.1 [2024-09-09]
+
+_Bug fixes_
+
+* `trigger` introspection output correctly shows `param` attribute. ([#900](https://github.com/turbot/flowpipe/issues/900))
+
+## v0.9.0 [2024-09-04]
+
+_What's new?_
+
+* `tags` attribute in `pipeline param` and `mod variable` resources. ([#898](https://github.com/turbot/flowpipe/issues/898)).
+* Updated `Docker` dependency to v27.1.2.
+
+## v0.8.1 [2024-08-30]
+
+_Bug fixes_
+
+* `source` attribute in function step is now evaluated relative to the its mod directory rather than the root mod directory. ([#895](https://github.com/turbot/flowpipe/issues/895)).
+
+## v0.8.0 [2024-08-26]
+
+_What's new?_
+
+* `trigger list` command includes triggers from root mod's immediate dependencies. ([#892](https://github.com/turbot/flowpipe/issues/892)).
 
 _Bug fixes_
 
 * Function step will no longer randomly fail in slower host machines. ([#888](https://github.com/turbot/flowpipe/issues/888)).
-* Mod variable definition matches Powerpipe's definition. ([#889](https://github.com/turbot/flowpipe/issues/889)).
+* Mod variable definition now matches Powerpipe's definition. ([#889](https://github.com/turbot/flowpipe/issues/889)).
 
 ## v0.7.1 [2024-08-14]
 

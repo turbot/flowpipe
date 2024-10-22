@@ -58,13 +58,13 @@ func ListVariables() (*types.ListVariableResponse, error) {
 		return nil, err
 	}
 
-	fpVars := []*types.FpVariable{}
+	var fpVars []*types.FpVariable
 	for _, v := range variables {
 		fpVars = append(fpVars, types.FpVariableFromModVariable(v))
 	}
 
 	sort.Slice(fpVars, func(i, j int) bool {
-		return fpVars[i].Name < fpVars[j].Name
+		return fpVars[i].QualifiedName < fpVars[j].QualifiedName
 	})
 
 	result := types.ListVariableResponse{

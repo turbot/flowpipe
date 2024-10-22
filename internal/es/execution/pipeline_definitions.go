@@ -12,7 +12,7 @@ func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*modconfig.
 		return nil, perr.BadRequestWithMessage("pipeline execution " + pipelineExecutionID + " not found")
 	}
 
-	pipeline, err := db.GetPipeline(pe.Name)
+	pipeline, err := db.GetPipelineWithModFullVersion(pe.ModFullVersion, pe.Name)
 
 	if err != nil {
 		return nil, err

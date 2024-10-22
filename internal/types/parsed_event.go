@@ -448,29 +448,33 @@ func (p *PrintableParsedEvent) GetItems() []sanitize.SanitizedStringer {
 	return p.Items
 }
 
-func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
+func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) (string, error) {
 	var out []sanitize.SanitizedStringer
+
+	lastStatus := ""
 
 	for _, log := range logs {
 		jsonPayload, err := json.Marshal(log.Detail)
 		if err != nil {
 			slog.Error("Error marshalling JSON", "error", err)
-			return perr.InternalWithMessage("Error marshalling JSON")
+			return lastStatus, perr.InternalWithMessage("Error marshalling JSON")
 		}
 
 		switch log.Message {
+		case event.HandlerExecutionFinished, event.HandlerExecutionFailed, event.HandlerExecutionPaused, event.HandlerExecutionCancelled:
+			lastStatus = log.Message
 		case event.HandlerPipelineQueued:
 			var e event.PipelineQueued
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline queued event")
+				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for pipeline queued event")
 			}
 			p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{e.Name, e.Event.CreatedAt, &e.Args}
 		case event.HandlerPipelineStarted:
 			var e event.PipelineStarted
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline started event")
+				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for pipeline started event")
 			}
 			fullName := "unknown.unknown"
 			var args modconfig.Input
@@ -494,7 +498,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			var e event.PipelineFinished
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for pipeline finished event")
 			}
 			fullName := "unknown.unknown"
 			started := e.Event.CreatedAt
@@ -519,7 +523,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			var e event.PipelineFailed
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for pipeline failed event")
+				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for pipeline failed event")
 			}
 			fullName := "unknown.unknown"
 			started := e.Event.CreatedAt
@@ -566,7 +570,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			var e event.StepQueued
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for step queued event")
+				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for step queued event")
 			}
 			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{
 				Name:    e.StepName,
@@ -576,7 +580,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			var e event.StepStart
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return perr.InternalWithMessage("Error unmarshalling JSON for step start event")
+				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for step start event")
 			}
 
 			p.Registry[e.StepExecutionID] = ParsedEventRegistryItem{e.StepName, e.Event.CreatedAt, &e.StepInput}
@@ -615,7 +619,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 			var e event.StepFinished
 			err := json.Unmarshal(jsonPayload, &e)
 			if err != nil {
-				return fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
+				return lastStatus, fmt.Errorf("failed to unmarshal %s event: %v", e.HandlerName(), err)
 			}
 
 			if e.Output != nil && e.Output.Status != "skipped" {
@@ -684,13 +688,14 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) error {
 					out = append(out, parsed)
 				}
 			}
+
 		default:
 			// ignore other events
 		}
 	}
 
 	p.Items = out
-	return nil
+	return lastStatus, nil
 
 }
 

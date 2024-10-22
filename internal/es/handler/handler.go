@@ -68,9 +68,16 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 
 	newExecution := false
 
-	pipelineQueueCmd, ok := commandEvent.(*event.PipelineQueue)
-	if ok && pipelineQueueCmd.ParentStepExecutionID == "" {
+	var name string
+	if executionQueueCmd, ok := commandEvent.(*event.ExecutionQueue); ok {
 		newExecution = true
+		if executionQueueCmd.TriggerQueue != nil {
+			name = executionQueueCmd.TriggerQueue.Name
+		} else if executionQueueCmd.PipelineQueue != nil {
+			name = executionQueueCmd.PipelineQueue.Name
+		} else {
+			return perr.BadRequestWithMessage("Invalid ExecutionQueue command, no TriggerQueue or PipelineQueue")
+		}
 	}
 
 	var ex *execution.ExecutionInMemory
@@ -91,9 +98,9 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 			return perr.InternalWithMessage("Error setting execution in cache")
 		}
 
-		metrics.RunMetricInstance.StartExecution(executionID, pipelineQueueCmd.Name)
+		metrics.RunMetricInstance.StartExecution(executionID, name)
 
-		err = store.StartPipeline(executionID, pipelineQueueCmd.Name)
+		err = store.StartPipeline(executionID, name)
 		if err != nil {
 			slog.Error("Unable to save pipeline in the database", "error", err)
 			return err
@@ -103,8 +110,8 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 		var err error
 		ex, err = execution.GetExecution(executionID)
 		if err != nil {
-			slog.Error("Error getting execution from cache", "execution_id", executionID)
-			return perr.InternalWithMessage("Error getting execution from cache")
+			slog.Error("Error getting execution from cache to log event.", "execution_id", executionID, "error", err)
+			return perr.InternalWithMessage("Error getting execution from cache to log event")
 		}
 	}
 

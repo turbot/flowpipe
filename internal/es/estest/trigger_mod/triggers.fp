@@ -1,7 +1,7 @@
 trigger "schedule" "report_trigger" {
   schedule = "* * * * *"
 
-  enabled = false
+  enabled = true
 
   param "param_one" {
     type = string

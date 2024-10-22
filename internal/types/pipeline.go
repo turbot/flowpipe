@@ -154,21 +154,6 @@ func (p FpPipeline) pipelineDisplayName() string {
 	return p.Name
 }
 
-//
-//func (p FpPipeline) usage() string {
-//	var pArg string
-//	if len(p.Params) > 0 {
-//		for _, param := range p.Params {
-//			if !helpers.IsNil(param.Default) || (param.Optional != nil && *param.Optional) {
-//				continue
-//			}
-//			pArg += " --arg " + param.Name + "=<value>"
-//		}
-//	}
-//
-//	return fmt.Sprintf("\n  flowpipe pipeline run %s%s\n", p.pipelineDisplayName(), pArg)
-//}
-
 func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
 	resp := &FpPipeline{
 		Name:          pipeline.Name(),
@@ -198,10 +183,13 @@ func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*F
 		pipelineParams = append(pipelineParams, FpPipelineParam{
 			Name:        param.Name,
 			Description: utils.ToStringPointer(param.Description),
+			Tags:        param.Tags,
+			Enum:        param.EnumGo,
 			Optional:    &pipeline.Params[i].Optional,
 			Type:        param.Type,
 			TypeString:  param.TypeString,
 			Default:     paramDefault,
+			Format:      param.Format,
 		})
 
 		resp.Params = pipelineParams
@@ -221,11 +209,9 @@ func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipelin
 		Mod:           typehelpers.SafeString(apiResp.Mod),
 		Title:         apiResp.Title,
 		Documentation: apiResp.Documentation,
-		Tags:          make(map[string]string),
-
-		Steps:        make([]modconfig.PipelineStep, 0, len(apiResp.Steps)),
-		Params:       make([]FpPipelineParam, 0, len(apiResp.Params)),
-		OutputConfig: make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
+		Steps:         make([]modconfig.PipelineStep, 0, len(apiResp.Steps)),
+		Params:        make([]FpPipelineParam, 0, len(apiResp.Params)),
+		OutputConfig:  make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
 
 		RootMod: typehelpers.SafeString(apiResp.RootMod),
 	}
@@ -298,8 +284,18 @@ func pipelineParamFromApiResponse(paramApiResponse flowpipeapiclient.FpPipelineP
 		Description: paramApiResponse.Description,
 		Default:     paramApiResponse.Default,
 		Optional:    paramApiResponse.Optional,
-		// Type:        *paramApiResponse.Type,
+		TypeString:  utils.Deref(paramApiResponse.TypeString, ""),
+		Enum:        paramApiResponse.Enum,
 	}
+
+	if paramApiResponse.Tags != nil {
+		param.Tags = *paramApiResponse.Tags
+	}
+
+	if paramApiResponse.Type != nil {
+		param.Type = *paramApiResponse.Type
+	}
+
 	return param
 }
 
@@ -320,27 +316,16 @@ func pipelineOutputFromApiResponse(outputApiResponse flowpipeapiclient.Modconfig
 }
 
 type FpPipelineParam struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description,omitempty"`
-	Optional    *bool   `json:"optional,omitempty"`
-	Default     any     `json:"default,omitempty"`
-	Type        any     `json:"type"`
-	TypeString  string  `json:"type_string"`
+	Name        string            `json:"name"`
+	Description *string           `json:"description,omitempty"`
+	Tags        map[string]string `json:"tags,omitempty"`
+	Enum        []interface{}     `json:"enum,omitempty"`
+	Optional    *bool             `json:"optional,omitempty"`
+	Default     any               `json:"default,omitempty"`
+	Type        any               `json:"-"`
+	TypeString  string            `json:"type_string"`
+	Format      string            `json:"format,omitempty"`
 }
-
-//func (p FpPipelineParam) GetShowData() *printers.RowData {
-//	return printers.NewRowData(
-//		printers.NewFieldValue("Name", p.Name, printers.WithListKeyRender(p.renderName)),
-//		printers.NewFieldValue("Type", p.Type),
-//		printers.NewFieldValue("Description", p.Description),
-//		printers.NewFieldValue("Default", p.Default, printers.WithRenderValueFunc(p.renderDefault)))
-//}
-//
-//func (p FpPipelineParam) GetListData() *printers.RowData {
-//	return printers.NewRowData(
-//		printers.NewFieldValue("Name", p.Name),
-//		printers.NewFieldValue("Type", p.Type))
-//}
 
 func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {
 	au := aurora.NewAurora(opts.ColorEnabled)
@@ -405,9 +390,7 @@ type FlowpipeResponseMetadata struct {
 }
 
 type CmdPipeline struct {
-	Command string `json:"command" binding:"required,oneof=run"`
-
-	// Sepcify execution id, if not specified, a new execution id will be created
+	Command       string                 `json:"command" binding:"required,oneof=run"`
 	ExecutionID   string                 `json:"execution_id,omitempty"`
 	Args          map[string]interface{} `json:"args,omitempty"`
 	ArgsString    map[string]string      `json:"args_string,omitempty"`
@@ -428,9 +411,15 @@ type PrintablePipeline struct {
 }
 
 func NewPrintablePipeline(resp *ListPipelineResponse) *PrintablePipeline {
-	return &PrintablePipeline{
-		Items: resp.Items,
+	result := &PrintablePipeline{
+		Items: []FpPipeline{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintablePipelineFromSingle(input *FpPipeline) *PrintablePipeline {

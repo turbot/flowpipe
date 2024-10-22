@@ -6,6 +6,9 @@ import (
 	"time"
 
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/pipe-fittings/hclhelpers"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -13,6 +16,7 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/logrusorgru/aurora"
+	"github.com/turbot/go-kit/helpers"
 	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -20,6 +24,7 @@ import (
 
 type FpTrigger struct {
 	Name            string              `json:"name"`
+	Mod             string              `json:"mod"`
 	Type            string              `json:"type"`
 	Enabled         bool                `json:"enabled"`
 	Description     *string             `json:"description,omitempty"`
@@ -33,6 +38,8 @@ type FpTrigger struct {
 	Tags            map[string]string   `json:"tags,omitempty"`
 	Schedule        *string             `json:"schedule,omitempty"`
 	Query           *string             `json:"query,omitempty"`
+	RootMod         string              `json:"root_mod"`
+	Params          []FpPipelineParam   `json:"params,omitempty"`
 }
 
 type FpTriggerPipeline struct {
@@ -109,6 +116,20 @@ func (t FpTrigger) getTypeAndName() string {
 	return fmt.Sprintf("%s.%s", t.Type, shortName)
 }
 
+func (t FpTrigger) TriggerDisplayName() string {
+	if t.Mod == t.RootMod {
+		// Find the first dot
+
+		// Split the string into components and keep only the last two parts
+		parts := strings.SplitN(t.Name, ".", 3)
+
+		// Rejoin the last part
+		result := parts[2]
+		return result
+	}
+	return t.Name
+}
+
 func (t FpTrigger) getPipelineDisplay(pipeline string) string {
 	rootMod := strings.Split(t.Name, ".")[0]
 	if strings.Split(pipeline, ".")[0] == rootMod {
@@ -152,6 +173,8 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 	}
 	res := FpTrigger{
 		Name:          typehelpers.SafeString(apiTrigger.Name),
+		Mod:           typehelpers.SafeString(apiTrigger.Mod),
+		RootMod:       typehelpers.SafeString(apiTrigger.RootMod),
 		Type:          typehelpers.SafeString(apiTrigger.Type),
 		Enabled:       *apiTrigger.Enabled,
 		Description:   apiTrigger.Description,
@@ -166,6 +189,9 @@ func FpTriggerFromAPI(apiTrigger flowpipeapiclient.FpTrigger) FpTrigger {
 	if apiTrigger.Tags != nil {
 		res.Tags = *apiTrigger.Tags
 	}
+	for _, p := range apiTrigger.Params {
+		res.Params = append(res.Params, pipelineParamFromApiResponse(p))
+	}
 	return res
 }
 
@@ -178,9 +204,15 @@ func (p PrintableTrigger) GetItems() []FpTrigger {
 }
 
 func NewPrintableTrigger(resp *ListTriggerResponse) *PrintableTrigger {
-	return &PrintableTrigger{
-		Items: resp.Items,
+	result := &PrintableTrigger{
+		Items: []FpTrigger{},
 	}
+
+	if resp.Items != nil {
+		result.Items = resp.Items
+	}
+
+	return result
 }
 
 func NewPrintableTriggerFromSingle(input *FpTrigger) *PrintableTrigger {
@@ -211,7 +243,8 @@ func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 		}
 
 		cells := []any{
-			item.getTypeAndName(),
+			item.Mod[4:],
+			item.TriggerDisplayName(),
 			item.Enabled,
 			pipelineText,
 			description,
@@ -223,12 +256,14 @@ func (p PrintableTrigger) GetTable() (*printers.Table, error) {
 }
 
 func (PrintableTrigger) getColumns() (columns []string) {
-	return []string{"NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
+	return []string{"MOD", "NAME", "ENABLED", "PIPELINE", "DESCRIPTION"}
 }
 
 type TriggerExecutionResponse struct {
-	Results  map[string]interface{}          `json:"results"`
-	Flowpipe FlowpipeTriggerResponseMetadata `json:"flowpipe"`
+	Results    map[string]interface{}          `json:"results,omitempty"`
+	Errors     []perr.ErrorModel               `json:"errors,omitempty"`
+	Flowpipe   FlowpipeTriggerResponseMetadata `json:"flowpipe"`
+	LastStatus string                          `json:"last_status,omitempty"`
 }
 
 type FlowpipeTriggerResponseMetadata struct {
@@ -256,4 +291,85 @@ func (c *CmdTrigger) GetExecutionMode() string {
 
 func (c *CmdTrigger) GetWaitRetry() int {
 	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
+}
+
+func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, error) {
+	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+
+	fpTrigger := FpTrigger{
+		Name:            t.FullName,
+		Mod:             t.GetMod().Name(),
+		Type:            tt,
+		Description:     t.Description,
+		Title:           t.Title,
+		Tags:            t.Tags,
+		Documentation:   t.Documentation,
+		FileName:        t.FileName,
+		StartLineNumber: t.StartLineNumber,
+		EndLineNumber:   t.EndLineNumber,
+		Enabled:         helpers.IsNil(t.Enabled) || *t.Enabled,
+		RootMod:         rootMod,
+	}
+
+	var pipelineParams []FpPipelineParam
+	for i, param := range t.Params {
+
+		var paramDefault any
+		if !param.Default.IsNull() {
+			paramDefaultGoVal, err := hclhelpers.CtyToGo(param.Default)
+			if err != nil {
+				return nil, perr.BadRequestWithMessage("unable to convert param default to go value: " + param.Name)
+			}
+			paramDefault = paramDefaultGoVal
+		}
+
+		pipelineParams = append(pipelineParams, FpPipelineParam{
+			Name:        param.Name,
+			Description: utils.ToStringPointer(param.Description),
+			Tags:        param.Tags,
+			Optional:    &t.Params[i].Optional,
+			Type:        param.Type,
+			TypeString:  param.TypeString,
+			Default:     paramDefault,
+		})
+
+		fpTrigger.Params = pipelineParams
+	}
+
+	switch tt {
+	case schema.TriggerTypeHttp:
+		cfg := t.Config.(*modconfig.TriggerHttp)
+		fpTrigger.Url = &cfg.Url
+		for _, method := range cfg.Methods {
+			pipelineInfo := method.Pipeline.AsValueMap()
+			pipelineName := pipelineInfo["name"].AsString()
+			fpTrigger.Pipelines = append(fpTrigger.Pipelines, FpTriggerPipeline{
+				CaptureGroup: method.Type,
+				Pipeline:     pipelineName,
+			})
+		}
+	case schema.TriggerTypeQuery:
+		cfg := t.Config.(*modconfig.TriggerQuery)
+		fpTrigger.Schedule = &cfg.Schedule
+		fpTrigger.Query = &cfg.Sql
+		for _, capture := range cfg.Captures {
+			pipelineInfo := capture.Pipeline.AsValueMap()
+			pipelineName := pipelineInfo["name"].AsString()
+			fpTrigger.Pipelines = append(fpTrigger.Pipelines, FpTriggerPipeline{
+				CaptureGroup: capture.Type,
+				Pipeline:     pipelineName,
+			})
+		}
+	case schema.TriggerTypeSchedule:
+		cfg := t.Config.(*modconfig.TriggerSchedule)
+		fpTrigger.Schedule = &cfg.Schedule
+		pipelineInfo := t.GetPipeline().AsValueMap()
+		pipelineName := pipelineInfo["name"].AsString()
+		fpTrigger.Pipelines = append(fpTrigger.Pipelines, FpTriggerPipeline{
+			CaptureGroup: "default",
+			Pipeline:     pipelineName,
+		})
+	}
+
+	return &fpTrigger, nil
 }
