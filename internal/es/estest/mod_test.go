@@ -13,8 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/turbot/pipe-fittings/sanitize"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hokaccha/go-prettyjson"
@@ -32,6 +30,7 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
