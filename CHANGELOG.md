@@ -7,7 +7,7 @@ _What's new?_
 * `connection` resource to manage credentials. [Documentation](https://flowpipe.io/docs/reference/config-files/connection).
 * `connection` and `notifier` types for variables and params. ([#871](https://github.com/turbot/flowpipe/issues/871))
 * `enum` validation for [variables](https://flowpipe.io/docs/flowpipe-hcl/variable#variable-types) and [params](https://flowpipe.io/docs/flowpipe-hcl/pipeline#arguments-1).
-* Defined exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/reference/cli#exit-code).
+* Defined exit codes for various CLI operations. [Documentation](https://flowpipe.io/docs/reference/cli#exit-codes).
 
 _Bug fixes_
 
