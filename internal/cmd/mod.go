@@ -96,6 +96,7 @@ func runModInstallCmd(cmd *cobra.Command, args []string) {
 		if r := recover(); r != nil {
 			err := helpers.ToError(r)
 			error_helpers.ShowError(ctx, err)
+			os.Exit(constants.ExitCodeModInstallFailed)
 		}
 	}()
 
@@ -150,7 +151,7 @@ func runModUninstallCmd(cmd *cobra.Command, args []string) {
 		utils.LogTime("cmd.runModInstallCmd end")
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
-			//exitCode = constants.ExitCodeUnknownErrorPanic
+			os.Exit(constants.ExitCodeUnknownErrorPanic)
 		}
 	}()
 
@@ -199,7 +200,7 @@ func runModUpdateCmd(cmd *cobra.Command, args []string) {
 		utils.LogTime("cmd.runModUpdateCmd end")
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
-			//exitCode = constants.ExitCodeUnknownErrorPanic
+			os.Exit(constants.ExitCodeUnknownErrorPanic)
 		}
 	}()
 
@@ -243,7 +244,7 @@ func runModListCmd(cmd *cobra.Command, _ []string) {
 		utils.LogTime("cmd.runModListCmd end")
 		if r := recover(); r != nil {
 			error_helpers.ShowError(ctx, helpers.ToError(r))
-			//exitCode = constants.ExitCodeUnknownErrorPanic
+			os.Exit(constants.ExitCodeUnknownErrorPanic)
 		}
 	}()
 

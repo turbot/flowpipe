@@ -685,7 +685,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConn() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(string))
+	assert.Equal("default_host", pex.PipelineOutput["val"].(string))
 }
 
 func (suite *ModTwoTestSuite) TestSteampipeConnWithParam() {
@@ -707,7 +707,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConnWithParam() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"])
+	assert.Equal("default_host", pex.PipelineOutput["val"].(map[string]any)["value"])
 }
 
 func (suite *ModTwoTestSuite) TestSteampipeConnectionVarParam() {
@@ -729,7 +729,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConnectionVarParam() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"])
+	assert.Equal("default_host", pex.PipelineOutput["val"].(map[string]any)["value"])
 }
 
 func (suite *ModTwoTestSuite) TestSteampipeConnectionVar() {
@@ -751,7 +751,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConnectionVar() {
 	}
 
 	assert.Equal("finished", pex.Status)
-	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"])
+	assert.Equal("default_host", pex.PipelineOutput["val"].(map[string]any)["value"])
 }
 
 func (suite *ModTwoTestSuite) TestConnectionParamChildPipeline() {
@@ -779,7 +779,7 @@ func (suite *ModTwoTestSuite) TestConnectionParamChildPipeline() {
 
 	assert.Equal("finished", pex.Status)
 
-	assert.Equal("default_conn_string", pex.PipelineOutput["val"].(map[string]any)["value"].(string))
+	assert.Equal("default_host", pex.PipelineOutput["val"].(map[string]any)["value"].(string))
 }
 
 func (suite *ModTwoTestSuite) TestConnectionReferenceFromAnotherStep() {

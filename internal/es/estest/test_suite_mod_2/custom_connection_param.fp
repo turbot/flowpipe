@@ -7,7 +7,7 @@ variable "connection" {
 pipeline "steampipe_conn" {
 
     step "transform" "one" {
-        value = connection.steampipe.default.connection_string
+        value = connection.steampipe.default.host
     }
 
     output "val" {
@@ -23,7 +23,7 @@ pipeline "steampipe_conn_with_param" {
     }
 
     step "transform" "one" {
-        value = param.connection.connection_string
+        value = param.connection.host
     }
 
     output "val" {
@@ -56,7 +56,7 @@ pipeline "connection_param_child" {
     }
 
     step "transform" "t" {
-        value = param.child_connection.connection_string
+        value = param.child_connection.host
     }
 
     output "val" {
@@ -72,7 +72,7 @@ pipeline "connection_var_param" {
     }
 
     step "transform" "connection" {
-        value = param.connection.connection_string
+        value = param.connection.host
     }
 
     output "val" {
@@ -83,7 +83,7 @@ pipeline "connection_var_param" {
 pipeline "connection_var" {
 
     step "transform" "connection" {
-        value = var.connection.connection_string
+        value = var.connection.host
     }
 
     output "val" {

@@ -6,16 +6,13 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/app_specific_connection"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/connection"
-	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/utils"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
@@ -94,6 +91,7 @@ func registerConnections() {
 		connection.NewJumpCloudConnection,
 		connection.NewMastodonConnection,
 		connection.NewMicrosoftTeamsConnection,
+		connection.NewMysqlConnection,
 		connection.NewDuckDbConnection,
 		connection.NewOktaConnection,
 		connection.NewOpenAIConnection,
@@ -113,10 +111,4 @@ func registerConnections() {
 		connection.NewVaultConnection,
 		connection.NewVirusTotalConnection,
 		connection.NewZendeskConnection)
-
-	// set default connections
-	var defaultSteampipeConnection = connection.NewSteampipePgConnection("default", hcl.Range{})
-	defaultSteampipeConnection.(*connection.SteampipePgConnection).ConnectionString = utils.ToStringPointer(constants.DefaultSteampipeConnectionString)
-	app_specific_connection.DefaultConnections["steampipe"] = defaultSteampipeConnection
-
 }

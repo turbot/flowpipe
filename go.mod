@@ -2,13 +2,9 @@ module github.com/turbot/flowpipe
 
 go 1.23.0
 
-replace (
-	// uncomment for goland devcontainer
-	//github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
-	//github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
-	github.com/turbot/flowpipe-sdk-go => ../flowpipe-sdk-go
-	github.com/turbot/pipe-fittings => ../pipe-fittings
-)
+// uncomment for goland devcontainer
+//github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
+//github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
@@ -53,8 +49,8 @@ require (
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
-	github.com/turbot/flowpipe-sdk-go v0.7.1
-	github.com/turbot/pipe-fittings v1.5.7
+	github.com/turbot/flowpipe-sdk-go v1.0.0
+	github.com/turbot/pipe-fittings v1.6.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.8.0
 )
