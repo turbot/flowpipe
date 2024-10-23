@@ -13,4 +13,5 @@ variable "notifier" {
 variable "number_var" {
   type = number
   description = "A number variable."
+  default = 42
 }
