@@ -1,5 +1,13 @@
 # Flowpipe
 
+## v1.0.1 [tbd]
+
+_Bug fixes_
+
+* `--output json` flag will no longer crash in some scenarios.([#594](https://github.com/turbot/pipe-fittings/issues/594)).
+* Variable set from the interactive console will not be coerced into its declared type. ([#595](https://github.com/turbot/pipe-fittings/issues/595)).
+* `form_url` is now sanitized.
+
 ## v1.0.0 [2024-10-22]
 
 _What's new?_
