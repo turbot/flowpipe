@@ -27,3 +27,20 @@ variable "var_string" {
     "Owner" = "me"
   }
 }
+
+variable "complex_var" {
+  type = map(object({
+    name = string
+    age = number
+  }))
+  default = {
+    "first" = {
+      name = "John"
+      age = 42
+    }
+    "second" = {
+      name = "Jane"
+      age = 43
+    }
+  }
+}

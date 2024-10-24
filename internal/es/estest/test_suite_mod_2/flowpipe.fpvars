@@ -1,2 +1,13 @@
 notifier = notifier.admin
 connection = connection.steampipe.default
+
+complex_var = {
+  "first": {
+    "name": "Billy",
+    "age": 2,
+  },
+  "second": {
+    "name": "Joe",
+    "age": 5,
+  }
+}

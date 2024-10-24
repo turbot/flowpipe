@@ -90,17 +90,7 @@ func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*Exe
 }
 
 func (ex *ExecutionInMemory) IsPaused() bool {
-	paused := false
-	for _, pe := range ex.PipelineExecutions {
-		if pe.IsPaused() {
-			paused = true
-		} else {
-			paused = false
-			break
-		}
-	}
-
-	return paused
+	return ex.Status == "paused"
 }
 
 func (ex *ExecutionInMemory) EndExecution() error {
@@ -722,6 +712,16 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 
 		return ex.appendEvent(&et)
 
+	case ExecutionPausedEvent.HandlerName(): // "handler.execution_paused"
+		var et event.ExecutionPaused
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.execution_paused event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_paused event")
+		}
+
+		return ex.appendEvent(&et)
+
 	case PipelineQueueCommand.HandlerName(): // "command.pipeline_queue"
 		var et event.PipelineQueue
 		err := json.Unmarshal(jsonData, &et)
@@ -754,7 +754,7 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 		return ex.appendEvent(&et)
 
 	case PipelineResumedEvent.HandlerName(): // "handler.pipeline_resumed"
-		var et event.PipelineStarted
+		var et event.PipelineResumed
 		err := json.Unmarshal(jsonData, &et)
 		if err != nil {
 			slog.Error("Fail to unmarshall handler.pipeline_resumed event", "execution", ex.ID, "error", err)

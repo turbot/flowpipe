@@ -40,8 +40,9 @@ var ExecutionMode string
 // pipelines being executed.
 type Execution struct {
 	// Unique identifier for this execution.
-	ID     string `json:"id"`
-	Status string `json:"status"`
+	ID        string    `json:"id"`
+	Status    string    `json:"status"`
+	ResumedAt time.Time `json:"resumed_at,omitempty"`
 
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
@@ -1017,6 +1018,11 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 		ex.Status = "failed"
 		ex.Errors = append(ex.Errors, et.Error)
 
+	case *event.ExecutionPaused:
+		ex.Status = "paused"
+
+	
+
 	case *event.TriggerQueue:
 		if ex.TriggerExecution != nil {
 			return perr.BadRequestWithMessage("trigger execution already exists")
@@ -1068,6 +1074,9 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 		// TODO: is this right?
 		pe.Status = "started"
 		pe.ResumedAt = et.Event.CreatedAt
+
+		ex.Status = "started"
+		ex.ResumedAt = et.Event.CreatedAt
 
 	case *event.PipelinePlanned:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]

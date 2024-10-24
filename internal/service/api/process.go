@@ -395,7 +395,17 @@ func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecuti
 
 	// Check if execution can be resumed, pipeline must be in a "paused" state
 	if !ex.IsPaused() {
-		return "", "", perr.BadRequestWithMessage("execution is not paused: " + executionId)
+		// pipeline is not paused but we can load it and save it in cache
+		slog.Info("execution loaded", "execution_id", executionId, "status", ex.Status)
+
+		// Effectively forever
+		ok := cache.GetCache().SetWithTTL(executionId, ex, 10*365*24*time.Hour)
+		if !ok {
+			slog.Error("Error setting execution in cache", "execution_id", executionId)
+			return "", "", perr.InternalWithMessage("Error setting execution in cache")
+		}
+
+		return "", "", nil
 	}
 
 	slog.Info("Resuming execution", "execution_id", executionId)
@@ -410,7 +420,8 @@ func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecuti
 	// that loads the execution from the cache
 	for _, pex := range ex.PipelineExecutions {
 		if !pex.IsPaused() {
-			return "", "", perr.BadRequestWithMessage("pipeline is not paused: " + pex.ID)
+			// Skip if the pipeline is not paused (could be finished already)
+			continue
 		}
 		// Resume the execution
 		e := event.NewPipelineResume(ex.ID, pex.ID)

@@ -39,6 +39,19 @@ pipeline "parent_with_no_input_step" {
     step "pipeline" "nested" {
         pipeline = pipeline.input_step_child_with_no_sleep
     }
+
+    step "pipeline" "nested_2" {
+        pipeline = pipeline.input_step_child_with_no_sleep
+    }
+
+
+    output "val" {
+        value = step.pipeline.nested
+    }
+
+    output "val_2" {
+        value = step.pipeline.nested_2
+    }
 }
 
 pipeline "input_step_child_with_no_sleep" {
