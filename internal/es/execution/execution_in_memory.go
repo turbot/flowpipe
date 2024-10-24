@@ -270,7 +270,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 // This function mutates evalContext
 func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
 
-	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. Credentials need to be resolved, and some (AWS) resolution
+	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. credentials need to be resolved, and some (AWS) resolution
 	// can be expensive, i.e. getting session token. So we try to "guess" which credentials are required. It's not perfect, especially when the credentials
 	// need to be resolved at runtime. This is because we don't know what the value would be until we run the step.
 	//

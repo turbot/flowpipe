@@ -3,6 +3,7 @@ package cmdconfig
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -13,6 +14,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
@@ -68,6 +70,11 @@ func SetAppSpecificConstants() {
 
 	// register supported connection types
 	registerConnections()
+
+	// set custom types
+	var notifierImpl *flowpipe.NotifierImpl
+	var notifierImplTypeName = reflect.TypeOf(notifierImpl).String()
+	app_specific.CustomTypes = []string{notifierImplTypeName}
 
 }
 

@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/workspace/flowpipe"
 	"log/slog"
 	"time"
 
@@ -122,13 +123,13 @@ func (m *Manager) loadMod() error {
 		return err
 	}
 
-	w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
+	w, errorAndWarning := flowpipe.LoadWorkspacePromptingForVariables(
 		m.ctx,
 		modLocation,
-		workspace.WithCredentials(flowpipeConfig.Credentials),
-		workspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
-		workspace.WithIntegrations(flowpipeConfig.Integrations),
-		workspace.WithNotifiers(flowpipeConfig.Notifiers))
+		flowpipe.WithCredentials(flowpipeConfig.Credentials),
+		flowpipe.WithPipelingConnections(flowpipeConfig.PipelingConnections),
+		flowpipe.WithIntegrations(flowpipeConfig.Integrations),
+		flowpipe.WithNotifiers(flowpipeConfig.Notifiers))
 	if errorAndWarning.Error != nil {
 		return errorAndWarning.Error
 	}

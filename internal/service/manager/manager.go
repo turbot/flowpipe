@@ -213,7 +213,7 @@ func (m *Manager) initializeResources() error {
 		fperr.FailOnError(ew.Error, nil, fperr.ErrorCodeModLoadFailed)
 		ew.ShowWarnings()
 
-		// Add the "Credentials" in the context
+		// Add the "credentials" in the context
 		// effectively forever .. we don't want to expire the config
 		if flowpipeConfig != nil {
 			cache.GetCache().SetWithTTL(fpconstants.FlowpipeConfigCacheKey, flowpipeConfig, 24*7*52*99*time.Hour)
