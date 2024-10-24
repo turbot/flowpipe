@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"github.com/turbot/flowpipe/internal/constants"
 	"io"
 	"log/slog"
@@ -163,6 +164,9 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 	notifierName := "default"
 	if notifier, ok := i[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if name, hasName := notifier[schema.AttributeTypeNotifierName].(string); hasName {
+			if name == "" {
+				return nil, perr.BadRequestWithMessage("Notifier name can not be empty string.")
+			}
 			notifierName = name
 		}
 	}
@@ -266,6 +270,11 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 	if err != nil {
 		slog.Error("failed to read response body", "error", err)
 		return "", perr.InternalWithMessage("failed to read response body")
+	}
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		slog.Error("failed to create routed input", "status", resp.StatusCode, "body", string(resBody))
+		return "", perr.InternalWithMessage(fmt.Sprintf("failed to create routed input input, received status code: %d", resp.StatusCode))
 	}
 
 	var response RoutedInputResponse
