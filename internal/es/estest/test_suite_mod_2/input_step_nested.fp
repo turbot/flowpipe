@@ -33,3 +33,23 @@ pipeline "input_step_child" {
         notifier = notifier.admin
     }
 }
+
+pipeline "parent_with_no_input_step" {
+
+    step "pipeline" "nested" {
+        pipeline = pipeline.input_step_child_with_no_sleep
+    }
+}
+
+pipeline "input_step_child_with_no_sleep" {
+
+    step "input" "my_step" {
+        type   = "button"
+        prompt = "Do you want to approve?"
+
+        option "Approve" {}
+        option "Deny" {}
+
+        notifier = notifier.admin
+    }
+}

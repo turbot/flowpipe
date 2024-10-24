@@ -28,6 +28,8 @@ func (h ExecutionPaused) Handle(ctx context.Context, ei interface{}) error {
 		return perr.BadRequestWithMessage("invalid event type expected *event.ExecutionPaused")
 	}
 
+	slog.Info("Received execution paused event", "execution_id", evt.Event.ExecutionID)
+
 	plannerMutex := event.GetEventStoreMutex(evt.Event.ExecutionID)
 	plannerMutex.Lock()
 	defer func() {
@@ -35,6 +37,8 @@ func (h ExecutionPaused) Handle(ctx context.Context, ei interface{}) error {
 			plannerMutex.Unlock()
 		}
 	}()
+
+	slog.Info("Execution paused", "execution_id", evt.Event.ExecutionID)
 
 	return nil
 }

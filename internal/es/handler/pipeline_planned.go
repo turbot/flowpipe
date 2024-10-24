@@ -82,17 +82,43 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			//
 			// We need to figure out if the steps are still running or all of the steps are in "steady state" waiting
 			// for external events to trigger them. Currently, this only applies to input steps
+			//
+			// And also it applies to pipeline step where the pipeline is currently in paused state
 			onlyInputStepsRunning := false
 			var latestActionTimestamp time.Time
 			for _, stepExecution := range pex.StepExecutions {
 				slog.Debug("Checking step", "step", stepExecution.Name, "status", stepExecution.Status)
-				if stepExecution.Status == "starting" {
+				if stepExecution.Status == "starting" || stepExecution.Status == "started" {
 					stepName := stepExecution.Name
 					stepDefn := pipelineDefn.GetStep(stepName)
 					if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
 						onlyInputStepsRunning = true
 						if latestActionTimestamp.IsZero() || stepExecution.StartTime.After(latestActionTimestamp) {
 							latestActionTimestamp = stepExecution.StartTime
+						}
+					} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline {
+						slog.Debug("pipeline step, checking status of pipeline")
+						childPex := ex.FindPipelineExecutionByItsParentStepExecution(stepExecution.ID)
+						if childPex == nil {
+							slog.Error("pipeline step has no child pipeline execution ... may not started yet", "step", stepName)
+							onlyInputStepsRunning = false
+							break
+						}
+
+						if childPex.IsPaused() {
+							slog.Info("child pipeline is paused", "pipeline", pipelineDefn.Name(), "child_pipeline", childPex.Name,
+								"status", childPex.Status, "childPipelineExecutionId", childPex.ID, "stepExecutionId", stepExecution.ID)
+							onlyInputStepsRunning = true
+
+							if latestActionTimestamp.IsZero() || stepExecution.StartTime.After(latestActionTimestamp) {
+								latestActionTimestamp = stepExecution.StartTime
+							}
+
+							continue
+						} else {
+							onlyInputStepsRunning = false
+							// As soon as there's another non-input step that is running, we break
+							break
 						}
 					} else {
 						onlyInputStepsRunning = false

@@ -33,6 +33,8 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
+	slog.Info("Received execution plan command", "execution_id", cmd.Event.ExecutionID)
+
 	ex, err := execution.GetExecution(cmd.Event.ExecutionID)
 	if err != nil {
 		slog.Error("Error loading execution", "error", err)
@@ -70,6 +72,7 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	// check if all pipelines are paused
+	slog.Info("Checking if all pipelines are paused", "execution_id", cmd.Event.ExecutionID)
 	allPaused := true
 	for _, pex := range ex.PipelineExecutions {
 		if pex.Status != "paused" {
@@ -79,6 +82,7 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 	}
 
 	if allPaused {
+		slog.Info("All pipelines are paused", "execution_id", cmd.Event.ExecutionID)
 		// raise execution paused
 		cmd := event.ExecutionPausedFromExecutionPlan(cmd)
 		err = h.EventBus.Publish(ctx, cmd)

@@ -55,6 +55,15 @@ type Execution struct {
 	Errors []perr.ErrorModel `json:"errors"`
 }
 
+func (ex *Execution) FindPipelineExecutionByItsParentStepExecution(stepExecutionId string) *PipelineExecution {
+	for _, pe := range ex.PipelineExecutions {
+		if pe.ParentStepExecutionID == stepExecutionId {
+			return pe
+		}
+	}
+	return nil
+}
+
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {

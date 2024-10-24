@@ -4,8 +4,9 @@
 
 _Bug fixes_
 
-* `--output json` flag will no longer crash in some scenarios.([#594](https://github.com/turbot/pipe-fittings/issues/594)).
-* Variable set from the interactive console will not be coerced into its declared type. ([#595](https://github.com/turbot/pipe-fittings/issues/595)).
+* Paused nested pipelines now correctly pause parent pipelines. ([#955](https://github.com/turbot/flowpipe/issues/955)).
+* Fix crashing cases when using `--output json`. ([#594](https://github.com/turbot/pipe-fittings/issues/594)).
+* Coerce variables set in interactive console to their declared type. ([#595](https://github.com/turbot/pipe-fittings/issues/595)).
 * `form_url` is now sanitized.
 
 ## v1.0.0 [2024-10-22]
