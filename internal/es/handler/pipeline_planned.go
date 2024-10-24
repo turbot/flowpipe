@@ -100,9 +100,10 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						slog.Debug("pipeline step, checking status of pipeline")
 						childPex := ex.FindPipelineExecutionByItsParentStepExecution(stepExecution.ID)
 						if childPex == nil {
-							slog.Error("pipeline step has no child pipeline execution ... may not started yet", "step", stepName)
-							onlyInputStepsRunning = false
-							break
+							slog.Warn("pipeline step has no child pipeline execution ... may not started yet", "step", stepName)
+							// Don't break here .. if we have max_concurrency being set (say 1) the rest of the pipeline steps will not
+							// be started until this step is complete, so we do want to pause.
+							continue
 						}
 
 						if childPex.IsPaused() {
