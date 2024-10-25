@@ -1,6 +1,7 @@
 package db
 
 import (
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"reflect"
 	"strings"
 
@@ -54,8 +55,8 @@ func GetCachedItem[T any](name string) (T, error) {
 	return item, nil
 }
 
-func GetNotifier(name string) (modconfig.Notifier, error) {
-	return GetCachedItem[modconfig.Notifier](name)
+func GetNotifier(name string) (flowpipe.Notifier, error) {
+	return GetCachedItem[flowpipe.Notifier](name)
 }
 
 func GetIntegration(name string) (modconfig.Integration, error) {
@@ -202,7 +203,7 @@ func ListAllVariables() ([]*modconfig.Variable, error) {
 
 }
 
-func ListAllNotifiers() ([]modconfig.Notifier, error) {
+func ListAllNotifiers() ([]flowpipe.Notifier, error) {
 	notifierNamesCached, found := cache.GetCache().Get("#notifier.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("notifier names not found")
@@ -213,7 +214,7 @@ func ListAllNotifiers() ([]modconfig.Notifier, error) {
 		return nil, perr.InternalWithMessage("invalid notifier names")
 	}
 
-	var notifiers []modconfig.Notifier
+	var notifiers []flowpipe.Notifier
 	for _, name := range notifierNames {
 		notifier, err := GetNotifier(name)
 		if err != nil {

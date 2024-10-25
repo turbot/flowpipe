@@ -1,7 +1,6 @@
 package cmdconfig
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,6 +14,7 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/parse"
 	fparse "github.com/turbot/pipe-fittings/parse/flowpipe"
@@ -81,7 +81,7 @@ func SetAppSpecificConstants() {
 
 	// set app specific parse related constants
 	parse.ModDecoderFunc = fparse.NewFlowpipeModDecoder
-	modconfig.AppSpecificNewResourceMapsFunc = flowpipe.NewFlowpipeResourceMaps
+	modconfig.AppSpecificNewResourceMapsFunc = flowpipe.NewModResources
 }
 
 func registerConnections() {

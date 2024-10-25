@@ -3,7 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/pipe-fittings/workspace/flowpipe"
 	"log/slog"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/workspace"
+	"github.com/turbot/pipe-fittings/workspace/flowpipe"
 )
 
 func (m *Manager) flowpipeConfigUpdated(ctx context.Context, newFpConfig *flowpipeconfig.FlowpipeConfig) {
