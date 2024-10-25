@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v1.0.2 [tbd]
+
+_Bug fixes_
+
+* Event jsonl output file deletion is now handled correctly. ([#960](https://github.com/turbot/flowpipe/issues/960)).
+
 ## v1.0.1 [2024-10-25]
 
 _Bug fixes_
