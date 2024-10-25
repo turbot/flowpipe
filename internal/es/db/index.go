@@ -81,7 +81,7 @@ func GetPipeline(name string) (*modconfig.Pipeline, error) {
 	return GetCachedItem[*modconfig.Pipeline](name)
 }
 
-func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*modconfig.Pipeline, error) {
+func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*modconfig.Pipeline, error) {
 
 	// check if the pipeline is coming from the given mod
 	pipelineParts := strings.Split(name, ".")
@@ -113,7 +113,7 @@ func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*modconfig.Pip
 	return nil, perr.NotFoundWithMessage("pipeline not found: " + name + " from mod " + mod.Name())
 }
 
-func GetPipelineFromCurrentMod(mod *modconfig.Mod, name string) (*modconfig.Pipeline, error) {
+func GetPipelineFromCurrentMod(mod modconfig.ModI, name string) (*modconfig.Pipeline, error) {
 	if mod == nil {
 		return nil, perr.BadRequestWithMessage("mod is nil")
 	}

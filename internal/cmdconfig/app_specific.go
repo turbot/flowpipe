@@ -1,6 +1,7 @@
 package cmdconfig
 
 import (
+	"github.com/turbot/pipe-fittings/modconfig"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -15,6 +16,8 @@ import (
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/pipe-fittings/parse"
+	fparse "github.com/turbot/pipe-fittings/parse/flowpipe"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
@@ -76,6 +79,9 @@ func SetAppSpecificConstants() {
 	var notifierImplTypeName = reflect.TypeOf(notifierImpl).String()
 	app_specific.CustomTypes = []string{notifierImplTypeName}
 
+	// set app specific parse related constants
+	parse.ModDecoderFunc = fparse.NewFlowpipeModDecoder
+	modconfig.NewResourceMapsFunc = flowpipe.NewFlowpipeResourceMaps
 }
 
 func registerConnections() {

@@ -57,8 +57,8 @@ const (
 type Manager struct {
 	ctx context.Context
 
-	RootMod   *modconfig.Mod
-	workspace *workspace.Workspace
+	RootMod   modconfig.ModI
+	workspace workspace.WorkspaceI
 
 	// Services
 	ESService        *es.ESService
@@ -198,7 +198,7 @@ func (m *Manager) initializeResources() error {
 	modLocation := viper.GetString(constants.ArgModLocation)
 	slog.Info("Starting Flowpipe", "modLocation", modLocation)
 
-	var mod *modconfig.Mod
+	var mod modconfig.ModI
 
 	var rootModName string
 
@@ -420,7 +420,7 @@ func (m *Manager) cacheConfigData() error {
 	return nil
 }
 
-func (m *Manager) cacheModData(mod *modconfig.Mod) error {
+func (m *Manager) cacheModData(mod modconfig.ModI) error {
 
 	err := cacheHclResource("pipeline", mod.ResourceMaps.Pipelines, true, nil)
 	if err != nil {
@@ -446,7 +446,7 @@ func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 	return nil
 }
 
-func cacheModPipeline(mod *modconfig.Mod) {
+func cacheModPipeline(mod modconfig.ModI) {
 
 	modCacheKey := mod.CacheKey()
 

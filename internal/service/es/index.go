@@ -28,7 +28,7 @@ type ESService struct {
 	EventBus   command.FpEventBus
 	router     *message.Router
 
-	RootMod   *modconfig.Mod
+	RootMod   modconfig.ModI
 	Status    string     `json:"status"`
 	StartedAt *time.Time `json:"started_at,omitempty"`
 	StoppedAt *time.Time `json:"stopped_at,omitempty"`

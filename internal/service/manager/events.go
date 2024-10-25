@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/Masterminds/semver/v3"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -93,7 +91,7 @@ func (m *Manager) modUpdated() {
 	}
 }
 
-func (m *Manager) setupWatcher(w *workspace.Workspace) error {
+func (m *Manager) setupWatcher(w workspace.WorkspaceI) error {
 	if !viper.GetBool(constants.ArgWatch) {
 		return nil
 	}
@@ -150,13 +148,13 @@ func (m *Manager) loadMod() error {
 		flowpipeCliVersion := viper.GetString("main.version")
 		flowpipeSemverVersion := semver.MustParse(flowpipeCliVersion)
 		if !mod.Require.Flowpipe.Constraint.Check(flowpipeSemverVersion) {
-			return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, mod.ShortName, mod.Require.Flowpipe.MinVersionString))
+			return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, Mod.GetShortName(), mod.Require.Flowpipe.MinVersionString))
 		}
 	}
 
 	m.triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
 
-	cache.GetCache().SetWithTTL("#rootmod.name", mod.ShortName, 24*7*52*99*time.Hour)
+	cache.GetCache().SetWithTTL("#rootmod.name", Mod.GetShortName(), 24*7*52*99*time.Hour)
 	err = m.cacheModData(mod)
 	if err != nil {
 		return err

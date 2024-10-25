@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -260,7 +259,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 				return nil, err
 			}
 
-			evalContext.Variables[dependentMod.ShortName] = nestedModResources
+			evalContext.Variables[dependentMod.GetShortName()] = nestedModResources
 		}
 	}
 
@@ -452,11 +451,11 @@ func buildPipelineMap(allPipelines []*modconfig.Pipeline) (map[string]cty.Value,
 	return pipelineMap, nil
 }
 
-func buildNestedModResourcesForEvalContext(nestedMod *modconfig.Mod) (cty.Value, error) {
+func buildNestedModResourcesForEvalContext(nestedMod modconfig.ModI) (cty.Value, error) {
 
 	allPipelines := []*modconfig.Pipeline{}
 	for _, r := range nestedMod.ResourceMaps.Pipelines {
-		if r.ModName != nestedMod.ShortName {
+		if r.ModName != nestedMod.GetShortName() {
 			continue
 		}
 

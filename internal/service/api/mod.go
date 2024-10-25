@@ -3,7 +3,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/perr"
@@ -42,7 +41,7 @@ func (api *APIService) getMod(c *gin.Context) {
 	rootMod := api.EsService.RootMod
 
 	// TODO: need to be able to return the dependent mod?
-	if rootMod.ShortName != uri.ModName {
+	if rootMod.GetShortName() != uri.ModName {
 		common.AbortWithError(c, perr.NotFoundWithMessage("not found"))
 		return
 	}

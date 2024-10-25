@@ -30,7 +30,7 @@ type ModVersionConstraint struct {
 	VersionString string `json:"version,omitempty"`
 }
 
-func NewModFromModConfigMod(mod *modconfig.Mod) *Mod {
+func NewModFromModConfigMod(mod modconfig.ModI) *Mod {
 	fpMod := Mod{
 		Name:          mod.Name(),
 		Title:         mod.Title,

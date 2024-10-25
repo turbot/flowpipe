@@ -30,7 +30,7 @@ type TriggerRunnerBase struct {
 	ExecutionID        string
 	TriggerExecutionID string
 	Trigger            *modconfig.Trigger
-	rootMod            *modconfig.Mod
+	rootMod            modconfig.ModI
 	Type               string
 }
 
@@ -199,7 +199,7 @@ func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, tr
 	return []*event.PipelineQueue{pipelineCmd}, nil
 }
 
-func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []modconfig.PipelineParam, triggerConfig modconfig.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
+func buildEvalContextForTriggerExecution(rootMod modconfig.ModI, defnTriggerParams []modconfig.PipelineParam, triggerConfig modconfig.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 
 	executionVariables := map[string]cty.Value{}
 
