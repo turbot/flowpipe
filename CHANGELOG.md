@@ -1,5 +1,16 @@
 # Flowpipe
 
+## v1.0.1 [2024-10-25]
+
+_Bug fixes_
+
+* Fix crashing cases when using `--output json`. ([#594](https://github.com/turbot/pipe-fittings/issues/594)).
+* Coerce variables set in interactive console to their declared type. ([#595](https://github.com/turbot/pipe-fittings/issues/595)).
+* Nested pipelines now correctly pauses parent pipelines. ([#955](https://github.com/turbot/flowpipe/issues/955)).
+* Pipeline with `max_concurrency` setting is now automatically paused and will successfully resume. ([#957](https://github.com/turbot/flowpipe/issues/957)).
+* `form_url` is now sanitized.
+
+
 ## v1.0.0 [2024-10-22]
 
 _What's new?_

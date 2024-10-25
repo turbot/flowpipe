@@ -26,13 +26,25 @@ func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modc
 		return nil
 	}
 
+	return GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID, stepDefn, stepDefnMaxConcurrency, false)
+}
+
+func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string, stepDefn modconfig.PipelineStep, stepDefnMaxConcurrency *int, tryAcquire bool) error {
+	if stepDefnMaxConcurrency == nil {
+		return nil
+	}
+
+	if stepDefn == nil || pipelineExecutionID == "" {
+		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step semaphore")
+		return nil
+	}
+
 	addToPipelineExecutionStepIndex(pipelineExecutionID, stepDefn)
 	cacheKey := pipelineStepSemaphoreCacheKey(pipelineExecutionID, stepDefn)
 	cachedChannel, found := cache.GetCache().Get(cacheKey)
 
 	var sem *semaphore.Weighted
 	if !found {
-
 		sem = semaphore.NewWeighted(int64(*stepDefnMaxConcurrency))
 		// Effectively forever
 		cache.GetCache().SetWithTTL(cacheKey, sem, 10*365*24*time.Hour)
@@ -42,13 +54,18 @@ func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn modc
 		sem = cachedChannel.(*semaphore.Weighted)
 	}
 
-	slog.Debug("Getting semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
-	err := sem.Acquire(context.Background(), 1)
-	if err != nil {
-		slog.Error("Error acquiring semaphore", "error", err)
-		return err
+	slog.Info("Getting semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+	if tryAcquire {
+		res := sem.TryAcquire(1)
+		slog.Info("Try acquire semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName(), "result", res)
+	} else {
+		err := sem.Acquire(context.Background(), 1)
+		if err != nil {
+			slog.Error("Error acquiring semaphore", "error", err)
+			return err
+		}
 	}
-	slog.Debug("Semaphore acquired for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+	slog.Info("Semaphore acquired for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
 	return nil
 }
 
