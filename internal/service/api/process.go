@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -378,8 +379,54 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
+func reorderStepExecutions(pex map[string]*execution.StepExecution) []*execution.StepExecution {
+	// Define the priority of each status
+
+	// reversed order because we want to (re)-aquire semaphores for the steps that have started, because the
+	// assumption is that they have managed to get the semaphore before the execution was paused
+	statusPriority := map[string]int{
+		"started":  1,
+		"starting": 2,
+		"queued":   3,
+		"queueing": 4,
+	}
+
+	// Copy the map values into a slice
+	stepExecutionsSlice := make([]*execution.StepExecution, 0, len(pex))
+	for _, stepExecution := range pex {
+		stepExecutionsSlice = append(stepExecutionsSlice, stepExecution)
+	}
+
+	// Sort the slice based on the custom status priority
+	sort.Slice(stepExecutionsSlice, func(i, j int) bool {
+		// Get the priorities of the statuses
+		priorityI, foundI := statusPriority[stepExecutionsSlice[i].Status]
+		priorityJ, foundJ := statusPriority[stepExecutionsSlice[j].Status]
+
+		// If both statuses have priorities, compare them
+		if foundI && foundJ {
+			return priorityI < priorityJ
+		}
+
+		// If only one status has a priority, that one should come first
+		if foundI {
+			return true
+		}
+		if foundJ {
+			return false
+		}
+
+		// If neither has a priority, keep their order unchanged
+		return false
+	})
+
+	return stepExecutionsSlice
+}
+
 func requeueQueuedButNotStartedSteps(ex *execution.ExecutionInMemory, pex *execution.PipelineExecution, esService *es.ESService) error {
-	for _, stepExecution := range pex.StepExecutions {
+
+	stepExecs := reorderStepExecutions(pex.StepExecutions)
+	for _, stepExecution := range stepExecs {
 
 		stepDefn, err := ex.StepDefinition(pex.ID, stepExecution.ID)
 		if err != nil {
@@ -396,10 +443,10 @@ func requeueQueuedButNotStartedSteps(ex *execution.ExecutionInMemory, pex *execu
 		// 	continue
 		// }
 
-		if stepExecution.Status == "started" {
+		if stepExecution.Status == "starting" || stepExecution.Status == "started" {
 			if stepExecution.MaxConcurrency != nil {
 				// This should work ... if the step is started, we should have a semaphore already for that particular step
-				// make sure the tryAquire flag is set to tru when we're calling from here, we're just replaying the aquire that would have
+				// make sure the tryAquire flag is set to true when we're calling from here, we're just replaying the aquire that would have
 				// been done when the step was first queued
 				err := execution.GetPipelineExecutionStepSemaphoreMaxConcurrency(pex.ID, stepDefn, stepExecution.MaxConcurrency, true)
 				if err != nil {
@@ -421,6 +468,7 @@ func requeueQueuedButNotStartedSteps(ex *execution.ExecutionInMemory, pex *execu
 				StepForEach:         stepExecution.StepForEach,
 				StepLoop:            stepExecution.StepLoop,
 				NextStepAction:      stepExecution.NextStepAction,
+				MaxConcurrency:      stepExecution.MaxConcurrency,
 			}
 			err := esService.Send(cmd)
 			if err != nil {

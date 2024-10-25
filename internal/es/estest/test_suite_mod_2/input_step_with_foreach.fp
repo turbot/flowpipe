@@ -11,12 +11,16 @@ pipeline "nested_one" {
     step "pipeline" "nested_one" {
         pipeline = pipeline.nested_two
     }
+
+    output "val" {
+        value = step.pipeline.nested_one
+    }
 }
 
 pipeline "nested_two" {
 
     step "pipeline" "nested_two" {
-        for_each = ["one", "two", "three"]
+        for_each = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
 
         pipeline = pipeline.nested_three
 

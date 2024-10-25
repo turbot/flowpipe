@@ -563,8 +563,12 @@ func (s *StepStatus) Queue(seID string) {
 // Start marks the given execution as started.
 func (s *StepStatus) Start(seID string) {
 	// Can't start if the step already finished or started (safety check)
-	if s.Finished[seID] || s.Failed[seID] {
+	if s.Failed[seID] {
 		panic(perr.BadRequestWithMessage("Step " + seID + " already failed"))
+	}
+
+	if s.Finished[seID] {
+		panic(perr.BadRequestWithMessage("Step " + seID + " already finished"))
 	}
 
 	s.Initializing = false
@@ -617,7 +621,7 @@ type StepExecution struct {
 	// The name of the step in the pipeline definition
 	Name string `json:"name"`
 
-	// The status of the step execution: "started", "finished", "failed", "skipped", "queued"
+	// The status of the step execution: "started", "finished", "failed", "skipped", "queued", "queueing", "starting"
 	Status string `json:"status"`
 
 	// Input to the step

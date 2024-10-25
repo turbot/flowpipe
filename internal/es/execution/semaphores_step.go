@@ -54,10 +54,10 @@ func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string,
 		sem = cachedChannel.(*semaphore.Weighted)
 	}
 
-	slog.Debug("Getting semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+	slog.Info("Getting semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
 	if tryAcquire {
 		res := sem.TryAcquire(1)
-		slog.Debug("Try acquire semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName(), "result", res)
+		slog.Info("Try acquire semaphore for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName(), "result", res)
 	} else {
 		err := sem.Acquire(context.Background(), 1)
 		if err != nil {
@@ -65,7 +65,7 @@ func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string,
 			return err
 		}
 	}
-	slog.Debug("Semaphore acquired for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
+	slog.Info("Semaphore acquired for pipeline execution step", "pipeline_execution_id", pipelineExecutionID, "step_name", stepDefn.GetName())
 	return nil
 }
 
