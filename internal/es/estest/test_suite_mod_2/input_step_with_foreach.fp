@@ -26,6 +26,10 @@ pipeline "nested_two" {
             nested_three_param = each.value
         }
     }
+
+    output "val" {
+        value = step.pipeline.nested_two
+    }
 }
 
 pipeline "nested_three" {

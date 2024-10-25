@@ -1021,8 +1021,6 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 	case *event.ExecutionPaused:
 		ex.Status = "paused"
 
-	
-
 	case *event.TriggerQueue:
 		if ex.TriggerExecution != nil {
 			return perr.BadRequestWithMessage("trigger execution already exists")
@@ -1096,7 +1094,8 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			PipelineExecutionID: et.PipelineExecutionID,
 			ID:                  et.StepExecutionID,
 			Name:                et.StepName,
-			Status:              "starting",
+			Status:              "queueing",
+			MaxConcurrency:      et.MaxConcurrency,
 		}
 
 		stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
@@ -1123,8 +1122,13 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].Queue(et.StepExecutionID)
 
+	case *event.StepQueued:
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.StepExecutions[et.StepExecutionID].Status = "queued"
+
 	case *event.StepStart:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.StepExecutions[et.StepExecutionID].Status = "starting"
 		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 		pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
 		pe.StepExecutions[et.StepExecutionID].StepRetry = et.StepRetry

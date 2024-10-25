@@ -2,7 +2,7 @@ pipeline "input_step_parent" {
 
     step "input" "my_step" {
         type   = "button"
-        prompt = "Do you want to approve?"
+        prompt = "input_step_parent - Do you want to approve?"
 
         option "Approve" {}
         option "Deny" {}
@@ -12,6 +12,10 @@ pipeline "input_step_parent" {
 
     step "pipeline" "nested" {
         pipeline = pipeline.input_step_child
+    }
+
+    output "val" {
+        value = step.pipeline.nested
     }
 }
 
@@ -25,7 +29,7 @@ pipeline "input_step_child" {
         depends_on = [step.sleep.sleep]
 
         type   = "button"
-        prompt = "Do you want to approve?"
+        prompt = "input_step_child - Do you want to approve?"
 
         option "Approve" {}
         option "Deny" {}

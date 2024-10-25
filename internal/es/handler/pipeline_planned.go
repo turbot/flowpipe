@@ -102,7 +102,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 						if childPex == nil {
 							slog.Warn("pipeline step has no child pipeline execution ... may not started yet", "step", stepName)
 							// Don't break here .. if we have max_concurrency being set (say 1) the rest of the pipeline steps will not
-							// be started until this step is complete, so we do want to pause.
+							// be started until this step is complete
 							continue
 						}
 
@@ -250,6 +250,7 @@ func runNonForEachStep(ctx context.Context, commandBus FpCommandBus, e *event.Pi
 
 	cmd, err := event.NewStepQueue(event.StepQueueForPipelinePlanned(e), event.StepQueueWithStep(nextStep.StepName, input, forEachControl, nextStep.StepLoop, forEachNextStepAction))
 	cmd.StepLoop = stepLoop
+	cmd.MaxConcurrency = nextStep.MaxConcurrency
 
 	if err != nil {
 		err := commandBus.Send(ctx, event.NewPipelineFailFromPipelinePlanned(e, err))

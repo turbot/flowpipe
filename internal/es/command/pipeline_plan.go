@@ -130,9 +130,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 			continue
 		}
 
+		maxConcurency := stepDefn.GetMaxConcurrency(evalContext)
+
 		nextStep := modconfig.NextStep{
-			StepName: stepDefn.GetFullyQualifiedName(),
-			Action:   modconfig.NextStepActionStart,
+			StepName:       stepDefn.GetFullyQualifiedName(),
+			Action:         modconfig.NextStepActionStart,
+			MaxConcurrency: maxConcurency,
 		}
 
 		// Check if there's a for_each.

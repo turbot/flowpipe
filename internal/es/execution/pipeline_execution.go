@@ -617,11 +617,12 @@ type StepExecution struct {
 	// The name of the step in the pipeline definition
 	Name string `json:"name"`
 
-	// The status of the step execution: "started", "finished", "failed", "skipped"
+	// The status of the step execution: "started", "finished", "failed", "skipped", "queued"
 	Status string `json:"status"`
 
 	// Input to the step
-	Input modconfig.Input `json:"input"`
+	Input          modconfig.Input `json:"input"`
+	MaxConcurrency *int            `json:"max_concurrency,omitempty"`
 
 	// for_each controls
 	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`

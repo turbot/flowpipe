@@ -319,7 +319,7 @@ func (suite *DefaultModTestSuite) TestNestedWithConn() {
 		return
 	}
 
-	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 40, "finished")
+	_, pex, err := getPipelineExAndWait(suite.FlowpipeTestSuite, pipelineCmd.Event, pipelineCmd.PipelineExecutionID, 100*time.Millisecond, 100, "finished")
 	if err != nil {
 		assert.Fail("Error getting pipeline execution", err)
 		return

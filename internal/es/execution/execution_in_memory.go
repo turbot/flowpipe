@@ -785,6 +785,16 @@ func (ex *ExecutionInMemory) AppendSerialisedEventLogEntry(logEntry event.EventL
 
 		return ex.appendEvent(&et)
 
+	case StepQueuedEvent.HandlerName(): // "handler.step_queued"
+		var et event.StepQueued
+		err := json.Unmarshal(jsonData, &et)
+		if err != nil {
+			slog.Error("Fail to unmarshall handler.step_queued event", "execution", ex.ID, "error", err)
+			return perr.InternalWithMessage("Fail to unmarshall handler.step_queued event")
+		}
+
+		return ex.appendEvent(&et)
+
 	case StepStartCommand.HandlerName(): // "command.step_start"
 		var et event.StepStart
 		err := json.Unmarshal(jsonData, &et)
