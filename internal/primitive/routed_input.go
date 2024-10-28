@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/turbot/flowpipe/internal/constants"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -12,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/constants"
 
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -163,6 +165,9 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 	notifierName := "default"
 	if notifier, ok := i[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if name, hasName := notifier[schema.AttributeTypeNotifierName].(string); hasName {
+			if name == "" {
+				return nil, perr.BadRequestWithMessage("Notifier name can not be empty string.")
+			}
 			notifierName = name
 		}
 	}
@@ -257,7 +262,7 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error("failed to execute request", "error", err)
+		slog.Error("failed to execute request", "error", err, "routedUrl", r.RoutedUrl)
 		return "", perr.InternalWithMessage("failed to execute request")
 	}
 	defer resp.Body.Close()
@@ -266,6 +271,11 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 	if err != nil {
 		slog.Error("failed to read response body", "error", err)
 		return "", perr.InternalWithMessage("failed to read response body")
+	}
+
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		slog.Error("failed to create routed input", "status", resp.StatusCode, "body", string(resBody))
+		return "", perr.InternalWithMessage(fmt.Sprintf("failed to create routed input input, received status code: %d", resp.StatusCode))
 	}
 
 	var response RoutedInputResponse
@@ -293,7 +303,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 			time.Sleep(2 * time.Second) // TODO: #refactor better approach - this is at loop initialisation to handle continue from err delay before retry
 
 			count++
-			slog.Info("RoutedInput polling ..", "url", pollUrl, "count", count)
+			slog.Debug("RoutedInput polling ..", "url", pollUrl, "count", count)
 			resp, err := client.Do(req)
 			if err != nil {
 				// TODO: #error handle errors in polling?

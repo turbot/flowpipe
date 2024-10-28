@@ -305,7 +305,8 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 		}
 
 		// Wait for the execution to finish
-		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" {
+		slog.Info("Waiting for trigger execution", "trigger", triggerName, "execution_id", executionId, "retry", i, "status", ex.Status)
+		if ex.Status == expectedState || ex.Status == "failed" || ex.Status == "finished" || ex.Status == "paused" {
 			if ex.Status == "failed" {
 				lastStatus = event.HandlerExecutionFailed
 			} else if ex.Status == "finished" {

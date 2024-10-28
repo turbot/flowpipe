@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"sort"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -378,6 +379,108 @@ func (api *APIService) cmdProcess(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
+func reorderStepExecutions(pex map[string]*execution.StepExecution) []*execution.StepExecution {
+	// Define the priority of each status
+
+	// reversed order because we want to (re)-aquire semaphores for the steps that have started, because the
+	// assumption is that they have managed to get the semaphore before the execution was paused
+	statusPriority := map[string]int{
+		"started":  1,
+		"starting": 2,
+		"queued":   3,
+		"queueing": 4,
+	}
+
+	// Copy the map values into a slice
+	stepExecutionsSlice := make([]*execution.StepExecution, 0, len(pex))
+	for _, stepExecution := range pex {
+		stepExecutionsSlice = append(stepExecutionsSlice, stepExecution)
+	}
+
+	// Sort the slice based on the custom status priority
+	sort.Slice(stepExecutionsSlice, func(i, j int) bool {
+		// Get the priorities of the statuses
+		priorityI, foundI := statusPriority[stepExecutionsSlice[i].Status]
+		priorityJ, foundJ := statusPriority[stepExecutionsSlice[j].Status]
+
+		// If both statuses have priorities, compare them
+		if foundI && foundJ {
+			return priorityI < priorityJ
+		}
+
+		// If only one status has a priority, that one should come first
+		if foundI {
+			return true
+		}
+		if foundJ {
+			return false
+		}
+
+		// If neither has a priority, keep their order unchanged
+		return false
+	})
+
+	return stepExecutionsSlice
+}
+
+func requeueQueuedButNotStartedSteps(ex *execution.ExecutionInMemory, pex *execution.PipelineExecution, esService *es.ESService) error {
+
+	stepExecs := reorderStepExecutions(pex.StepExecutions)
+	for _, stepExecution := range stepExecs {
+
+		stepDefn, err := ex.StepDefinition(pex.ID, stepExecution.ID)
+		if err != nil {
+			slog.Error("Error getting step definition", "error", err)
+			return err
+		}
+
+		if stepDefn == nil {
+			continue
+		}
+
+		// Only requeue input steps
+		// if stepDefn.GetType() != "input" {
+		// 	continue
+		// }
+
+		if stepExecution.Status == "starting" || stepExecution.Status == "started" {
+			if stepExecution.MaxConcurrency != nil {
+				// This should work ... if the step is started, we should have a semaphore already for that particular step
+				// make sure the tryAquire flag is set to true when we're calling from here, we're just replaying the aquire that would have
+				// been done when the step was first queued
+				err := execution.GetPipelineExecutionStepSemaphoreMaxConcurrency(pex.ID, stepDefn, stepExecution.MaxConcurrency, true)
+				if err != nil {
+					slog.Error("Error getting step type semaphore", "error", err)
+					return err
+				}
+			}
+		} else if stepExecution.Status == "queued" {
+			// Requeue the step
+			cmd := &event.StepQueue{
+				Event: &event.Event{
+					ExecutionID: ex.ID,
+					CreatedAt:   time.Now().UTC(),
+				},
+				PipelineExecutionID: pex.ID,
+				StepExecutionID:     stepExecution.ID,
+				StepName:            stepExecution.Name,
+				StepInput:           stepExecution.Input,
+				StepForEach:         stepExecution.StepForEach,
+				StepLoop:            stepExecution.StepLoop,
+				NextStepAction:      stepExecution.NextStepAction,
+				MaxConcurrency:      stepExecution.MaxConcurrency,
+			}
+			err := esService.Send(cmd)
+			if err != nil {
+				slog.Error("Error requeueing step", "error", err)
+				return err
+			}
+		}
+
+	}
+	return nil
+}
+
 func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecutionId, pipelineName string, err error) {
 
 	evt := &event.Event{
@@ -395,7 +498,28 @@ func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecuti
 
 	// Check if execution can be resumed, pipeline must be in a "paused" state
 	if !ex.IsPaused() {
-		return "", "", perr.BadRequestWithMessage("execution is not paused: " + executionId)
+		// pipeline is not paused but we can load it and save it in cache
+		slog.Info("execution loaded", "execution_id", executionId, "status", ex.Status)
+
+		// Effectively forever
+		ok := cache.GetCache().SetWithTTL(executionId, ex, 10*365*24*time.Hour)
+		if !ok {
+			slog.Error("Error setting execution in cache", "execution_id", executionId)
+			return "", "", perr.InternalWithMessage("Error setting execution in cache")
+		}
+
+		for _, pex := range ex.PipelineExecutions {
+			if !pex.IsPaused() {
+				continue
+			}
+
+			err := requeueQueuedButNotStartedSteps(ex, pex, esService)
+			if err != nil {
+				return "", "", err
+			}
+		}
+
+		return "", "", nil
 	}
 
 	slog.Info("Resuming execution", "execution_id", executionId)
@@ -410,11 +534,18 @@ func ResumeProcess(executionId string, esService *es.ESService) (pipelineExecuti
 	// that loads the execution from the cache
 	for _, pex := range ex.PipelineExecutions {
 		if !pex.IsPaused() {
-			return "", "", perr.BadRequestWithMessage("pipeline is not paused: " + pex.ID)
+			// Skip if the pipeline is not paused (could be finished already)
+			continue
 		}
 		// Resume the execution
 		e := event.NewPipelineResume(ex.ID, pex.ID)
 		err := esService.Send(e)
+		if err != nil {
+			return "", "", err
+		}
+
+		// also requeue steps that are queued but not started
+		err = requeueQueuedButNotStartedSteps(ex, pex, esService)
 		if err != nil {
 			return "", "", err
 		}

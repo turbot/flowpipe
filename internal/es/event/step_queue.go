@@ -18,9 +18,10 @@ type StepQueue struct {
 	StepInput           modconfig.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
-	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
-	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
+	StepForEach    *modconfig.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop       *modconfig.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry      *modconfig.StepRetry   `json:"step_retry,omitempty"`
+	MaxConcurrency *int                   `json:"max_concurrency,omitempty"`
 
 	NextStepAction modconfig.NextStepAction `json:"action,omitempty"`
 }

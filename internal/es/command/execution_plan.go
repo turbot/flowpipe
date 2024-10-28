@@ -33,6 +33,8 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 		plannerMutex.Unlock()
 	}()
 
+	// slog.Info("Received execution plan command", "execution_id", cmd.Event.ExecutionID)
+
 	ex, err := execution.GetExecution(cmd.Event.ExecutionID)
 	if err != nil {
 		slog.Error("Error loading execution", "error", err)
@@ -66,26 +68,6 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 			return nil
 		}
 
-		return nil
-	}
-
-	// check if all pipelines are paused
-	allPaused := true
-	for _, pex := range ex.PipelineExecutions {
-		if pex.Status != "paused" {
-			allPaused = false
-			break
-		}
-	}
-
-	if allPaused {
-		// raise execution paused
-		cmd := event.ExecutionPausedFromExecutionPlan(cmd)
-		err = h.EventBus.Publish(ctx, cmd)
-		if err != nil {
-			slog.Error("Error publishing event", "error", err)
-			return nil
-		}
 		return nil
 	}
 
@@ -151,7 +133,59 @@ func (h ExecutionPlanHandler) Handle(ctx context.Context, c interface{}) error {
 				return nil
 			}
 		}
+	}
 
+	// check if all pipelines are paused
+	slog.Info("Checking if all pipelines are paused", "execution_id", cmd.Event.ExecutionID)
+	allPausedOrFailed := true
+	for _, pex := range ex.PipelineExecutions {
+		if pex.Status != "paused" && !slices.Contains(event.EndEvents, pex.Status) {
+			allPausedOrFailed = false
+			break
+		}
+	}
+
+	if allPausedOrFailed {
+		slog.Info("All pipelines are paused, failed, cancelled or finished", "execution_id", cmd.Event.ExecutionID)
+		failure := false
+		// any failure?
+		for _, pex := range ex.PipelineExecutions {
+			if pex.Status == "failed" {
+				failure = true
+				break
+			}
+		}
+
+		if failure {
+			if ex.TriggerExecution != nil {
+				slog.Info("Raising trigger fail event", "execution_id", cmd.Event.ExecutionID)
+				cmd := event.TriggerFailedFromExecutionPlan(cmd, ex.TriggerExecution.Name)
+				err = h.EventBus.Publish(ctx, cmd)
+				if err != nil {
+					slog.Error("Error publishing event", "error", err)
+					return nil
+				}
+				return nil
+			} else {
+				slog.Info("Raising execution fail event", "execution_id", cmd.Event.ExecutionID)
+				cmd := event.ExecutionFailedFromExecutionPlan(cmd, perr.InternalWithMessage("pipeline failed"))
+				err = h.EventBus.Publish(ctx, cmd)
+				if err != nil {
+					slog.Error("Error publishing event", "error", err)
+					return nil
+				}
+				return nil
+			}
+		}
+
+		// raise execution paused
+		cmd := event.ExecutionPausedFromExecutionPlan(cmd)
+		err = h.EventBus.Publish(ctx, cmd)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+			return nil
+		}
+		return nil
 	}
 
 	// Right now there's not much to do in execution plan, we still need to start with either a single

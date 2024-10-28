@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math"
 	"os"
 	"reflect"
 	"time"
@@ -400,7 +401,8 @@ func runTriggerFunc(cmd *cobra.Command, args []string) {
 		lastStatus = displayProgressLogs(ctx, cmd, pipelineExecutionResponse, pollLogFunc)
 	default:
 		// TODO: hack here. We should have a printer for this
-		triggerResult, err := api.WaitForTrigger(resp.Flowpipe.Name, resp.Flowpipe.ProcessID, 500)
+		slog.Info("Execution ID:", "executionID", resp.Flowpipe.ProcessID)
+		triggerResult, err := api.WaitForTrigger(resp.Flowpipe.Name, resp.Flowpipe.ProcessID, math.MaxInt64)
 		if err != nil {
 			error_helpers.FailOnErrorWithMessage(err, "failed waiting for trigger")
 			return

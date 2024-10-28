@@ -260,6 +260,9 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		}
 		nextStep.StepForEach = forEachControl
 
+		maxConcurrency := stepDefn.GetMaxConcurrency(evalContext)
+		nextStep.MaxConcurrency = maxConcurrency
+
 		nextSteps = append(nextSteps, nextStep)
 	}
 
