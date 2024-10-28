@@ -932,6 +932,15 @@ func (ex *ExecutionInMemory) AppendEventLogEntry(logEntry event.EventLogImpl) er
 
 		return ex.appendEvent(et)
 
+	case ExecutionPausedEvent.HandlerName(): // "handler.execution_paused"
+		et, ok := logEntry.GetDetail().(*event.ExecutionPaused)
+		if !ok {
+			slog.Error("Fail to unmarshall handler.execution_paused event", "execution", ex.ID)
+			return perr.InternalWithMessage("Fail to unmarshall handler.execution_paused event")
+		}
+
+		return ex.appendEvent(et)
+
 	case PipelineQueueCommand.HandlerName(): // "command.pipeline_queue"
 		et, ok := logEntry.GetDetail().(*event.PipelineQueue)
 		if !ok {
