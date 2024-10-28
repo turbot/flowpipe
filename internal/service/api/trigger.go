@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -17,7 +18,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	putils "github.com/turbot/pipe-fittings/utils"
 )
@@ -159,7 +159,7 @@ func GetTrigger(triggerName string, rootMod string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	trigger, ok := triggerCached.(*modconfig.Trigger)
+	trigger, ok := triggerCached.(*flowpipe.Trigger)
 	if !ok {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
@@ -286,7 +286,7 @@ func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExec
 			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
 			pipelineExecutionResponse.Flowpipe.Status = "failed"
 
-			pipelineExecutionResponse.Errors = []modconfig.StepError{
+			pipelineExecutionResponse.Errors = []flowpipe.StepError{
 				{
 					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
 					Pipeline:            pipelineCmd.Name,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -44,7 +44,7 @@ func TestSendEmail(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "TestSendEmail",
 		schema.AttributeTypeFrom:         "test.send.email@example.com",
 		schema.AttributeTypeSmtpPassword: "",
@@ -87,7 +87,7 @@ func TestSendEmailWithCc(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "TestSendEmailWithCc",
 		schema.AttributeTypeFrom:         "test.send.email.with.cc@example.com",
 		schema.AttributeTypeSmtpUsername: "test.send.email.with.cc@example.com",
@@ -133,7 +133,7 @@ func TestSendEmailWithBcc(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "TestSendEmailWithBcc",
 		schema.AttributeTypeFrom:         "test.send.email.with.bcc@example.com",
 		schema.AttributeTypeSmtpUsername: "test.send.email.with.bcc@example.com",
@@ -179,7 +179,7 @@ func TestSendEmailWithMissingRecipient(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "Flowpipe",
 		schema.AttributeTypeFrom:         "sender@example.com",
 		schema.AttributeTypeSmtpUsername: "sender@example.com",
@@ -203,7 +203,7 @@ func TestSendEmailWithEmptyRecipient(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "Flowpipe",
 		schema.AttributeTypeFrom:         "sender@example.com",
 		schema.AttributeTypeSmtpUsername: "sender@example.com",
@@ -228,7 +228,7 @@ func TestInvalidPortInput(t *testing.T) {
 	hr := Email{}
 
 	// Use a dummy SMTP server for testing (e.g., MailHog)
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "TestSendEmail",
 		schema.AttributeTypeFrom:         "test.send.email@example.com",
 		schema.AttributeTypeSmtpUsername: "test.send.email@example.com",
@@ -249,7 +249,7 @@ func TestEmailInvalidCreds(t *testing.T) {
 	assert := assert.New(t)
 	hr := Email{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeSenderName:   "Flowpipe",
 		schema.AttributeTypeFrom:         "test@example.com",
 		schema.AttributeTypeSmtpUsername: "test@example.com",

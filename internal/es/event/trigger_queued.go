@@ -1,12 +1,14 @@
 package event
 
-import "github.com/turbot/pipe-fittings/modconfig"
+import (
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+)
 
 type TriggerQueued struct {
-	Event              *Event          `json:"event"`
-	TriggerExecutionID string          `json:"trigger_execution_id"`
-	Name               string          `json:"name"`
-	Args               modconfig.Input `json:"args"`
+	Event              *Event         `json:"event"`
+	TriggerExecutionID string         `json:"trigger_execution_id"`
+	Name               string         `json:"name"`
+	Args               flowpipe.Input `json:"args"`
 }
 
 func (e *TriggerQueued) GetEvent() *Event {

@@ -1,12 +1,14 @@
 package event
 
-import "github.com/turbot/pipe-fittings/modconfig"
+import (
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+)
 
 type TriggerFinish struct {
 	Event              *Event `json:"event"`
 	TriggerExecutionID string
-	Name               string          `json:"name"`
-	Args               modconfig.Input `json:"args"`
+	Name               string         `json:"name"`
+	Args               flowpipe.Input `json:"args"`
 }
 
 func (e *TriggerFinish) GetEvent() *Event {

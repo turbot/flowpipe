@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"os"
 	"strings"
 
@@ -14,7 +15,6 @@ import (
 	o "github.com/turbot/flowpipe/internal/output"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type InputIntegrationConsole struct {
@@ -27,8 +27,8 @@ func NewInputIntegrationConsole(base InputIntegrationBase) InputIntegrationConso
 	}
 }
 
-func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
-	output := modconfig.Output{}
+func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*flowpipe.Output, error) {
+	output := flowpipe.Output{}
 
 	text, form, response, err := mc.ConsoleMessage(ip, options)
 	if err != nil {

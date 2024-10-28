@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
@@ -11,16 +12,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 type Email struct {
-	Input modconfig.Input
+	Input flowpipe.Input
 }
 
-func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (h *Email) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
@@ -161,7 +161,7 @@ func (h *Email) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	return nil
 }
 
-func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (h *Email) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -273,7 +273,7 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	message += "\r\n" + body
 
 	// Construct the output
-	output := modconfig.Output{
+	output := flowpipe.Output{
 		Data: map[string]interface{}{},
 	}
 
@@ -294,19 +294,19 @@ func (h *Email) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 		if smtpErr.Code >= 400 {
 			switch {
 			case smtpErr.Code >= 400 && smtpErr.Code <= 499:
-				output.Errors = []modconfig.StepError{
+				output.Errors = []flowpipe.StepError{
 					{
 						Error: perr.BadRequestWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
 					},
 				}
 			case smtpErr.Code >= 500 && smtpErr.Code <= 599:
-				output.Errors = []modconfig.StepError{
+				output.Errors = []flowpipe.StepError{
 					{
 						Error: perr.ServiceUnavailableWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
 					},
 				}
 			default:
-				output.Errors = []modconfig.StepError{
+				output.Errors = []flowpipe.StepError{
 					{
 						Error: perr.InternalWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
 					},

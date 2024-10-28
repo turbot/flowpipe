@@ -2,8 +2,8 @@ package event
 
 import (
 	"errors"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -13,7 +13,7 @@ type PipelineFail struct {
 	// Pipeline execution details
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// Error details
-	Error *modconfig.StepError `json:"error,omitempty"`
+	Error *flowpipe.StepError `json:"error,omitempty"`
 }
 
 func (e *PipelineFail) GetEvent() *Event {
@@ -49,7 +49,7 @@ func NewPipelineFailFromPipelinePlanned(e *PipelinePlanned, err error) *Pipeline
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -68,7 +68,7 @@ func PipelineFailFromPipelinePaused(e *PipelinePaused, err error) *PipelineFail 
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -85,7 +85,7 @@ func NewPipelineFailFromStepForEachPlanned(e *StepForEachPlanned, err error) *Pi
 		if ok := errors.As(err, &errorModel); !ok {
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -101,7 +101,7 @@ func ForPipelineLoadedToPipelineFail(e *PipelineLoaded, err error) PipelineFailO
 		}
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -118,7 +118,7 @@ func ForPipelineQueuedToPipelineFail(e *PipelineQueued, err error) PipelineFailO
 		}
 
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -134,7 +134,7 @@ func ForPipelineStartedToPipelineFail(e *PipelineStarted, err error) PipelineFai
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -151,7 +151,7 @@ func ForPipelineResumedToPipelineFail(e *PipelineResumed, err error) PipelineFai
 		}
 
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -168,7 +168,7 @@ func ForStepPipelineStartedToPipelineFail(e *StepPipelineStarted, err error) Pip
 		}
 
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -186,7 +186,7 @@ func ForPipelineStepFinishedToPipelineFail(e *StepFinished, err error) PipelineF
 			if ok := errors.As(err, &errorModel); !ok {
 				errorModel = perr.InternalWithMessage(err.Error())
 			}
-			cmd.Error = &modconfig.StepError{
+			cmd.Error = &flowpipe.StepError{
 				Error:               errorModel,
 				PipelineExecutionID: e.PipelineExecutionID,
 			}
@@ -202,7 +202,7 @@ func ForStepQueuedToPipelineFail(e *StepQueued, err error) PipelineFailOption {
 		}
 		cmd.Event = NewFlowEvent(e.Event)
 		cmd.PipelineExecutionID = e.PipelineExecutionID
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}
@@ -219,7 +219,7 @@ func ForPipelineFinishedToPipelineFail(e *PipelineFinished, err error) PipelineF
 			errorModel = perr.InternalWithMessage(err.Error())
 		}
 
-		cmd.Error = &modconfig.StepError{
+		cmd.Error = &flowpipe.StepError{
 			Error:               errorModel,
 			PipelineExecutionID: e.PipelineExecutionID,
 		}

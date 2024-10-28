@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"fmt"
+	flowpipe2 "github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/workspace"
@@ -152,7 +152,7 @@ func (m *Manager) loadMod() error {
 		}
 	}
 
-	m.triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
+	m.triggers = workspace.GetWorkspaceResourcesOfType[*flowpipe2.Trigger](w)
 
 	cache.GetCache().SetWithTTL("#rootmod.name", Mod.GetShortName(), 24*7*52*99*time.Hour)
 	err = m.cacheModData(mod)

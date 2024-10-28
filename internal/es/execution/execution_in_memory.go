@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"strings"
 	"sync"
@@ -75,7 +76,7 @@ func completeExecution(executionID string) error {
 	return nil
 }
 
-func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*ExecutionInMemory, *modconfig.Pipeline, error) {
+func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*ExecutionInMemory, *flowpipe.Pipeline, error) {
 	ex, err := GetExecution(executionID)
 	if err != nil {
 		return nil, nil, err
@@ -109,7 +110,7 @@ func (ex *ExecutionInMemory) AddEvent(evt event.EventLogImpl) error {
 	return err
 }
 
-func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *flowpipe.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -267,7 +268,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 }
 
 // This function mutates evalContext
-func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn flowpipe.PipelineStep) (*hcl.EvalContext, error) {
 
 	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. credentials need to be resolved, and some (AWS) resolution
 	// can be expensive, i.e. getting session token. So we try to "guess" which credentials are required. It's not perfect, especially when the credentials
@@ -293,7 +294,7 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalCo
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *flowpipe.Pipeline) (*hcl.EvalContext, error) {
 	stepDefns := pipelineDefn.Steps
 
 	allCredentialsDependsOn := []string{}
@@ -322,7 +323,7 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *flowpipe.Pipeline) (*hcl.EvalContext, error) {
 	stepDefns := pipelineDefn.Steps
 
 	allConnectionsDependsOn := []string{}
@@ -409,9 +410,9 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 	return credentialMap, nil
 }
 
-func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *flowpipe.Pipeline) (map[string]cty.Value, error) {
 
-	var allPipelines []*modconfig.Pipeline
+	var allPipelines []*flowpipe.Pipeline
 	var err error
 
 	if pipelineDefn != nil {
@@ -430,7 +431,7 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *modcon
 	return buildPipelineMap(allPipelines)
 }
 
-func buildPipelineMap(allPipelines []*modconfig.Pipeline) (map[string]cty.Value, error) {
+func buildPipelineMap(allPipelines []*flowpipe.Pipeline) (map[string]cty.Value, error) {
 
 	pipelineMap := map[string]cty.Value{}
 	for _, p := range allPipelines {
@@ -453,7 +454,7 @@ func buildPipelineMap(allPipelines []*modconfig.Pipeline) (map[string]cty.Value,
 
 func buildNestedModResourcesForEvalContext(nestedMod modconfig.ModI) (cty.Value, error) {
 
-	allPipelines := []*modconfig.Pipeline{}
+	allPipelines := []*flowpipe.Pipeline{}
 	for _, r := range nestedMod.ResourceMaps.Pipelines {
 		if r.ModName != nestedMod.GetShortName() {
 			continue
@@ -534,7 +535,7 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
+func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (flowpipe.PipelineStep, error) {
 
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -553,7 +554,7 @@ func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID
 	return sd, nil
 }
 
-func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*modconfig.Pipeline, error) {
+func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*flowpipe.Pipeline, error) {
 
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {

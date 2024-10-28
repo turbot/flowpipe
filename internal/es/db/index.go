@@ -30,7 +30,7 @@ func GetCachedItem[T any](name string) (T, error) {
 	var defaultT T // default zero value for type T
 
 	// Special handling for pipeline names
-	if _, ok := any(defaultT).(*modconfig.Pipeline); ok {
+	if _, ok := any(defaultT).(*flowpipe.Pipeline); ok {
 		parts := strings.Split(name, ".")
 		if len(parts) == 1 {
 			name = "local.pipeline." + name
@@ -59,30 +59,30 @@ func GetNotifier(name string) (flowpipe.Notifier, error) {
 	return GetCachedItem[flowpipe.Notifier](name)
 }
 
-func GetIntegration(name string) (modconfig.Integration, error) {
-	return GetCachedItem[modconfig.Integration](name)
+func GetIntegration(name string) (flowpipe.Integration, error) {
+	return GetCachedItem[flowpipe.Integration](name)
 }
 
 func GetVariable(name string) (*modconfig.Variable, error) {
 	return GetCachedItem[*modconfig.Variable](name)
 }
 
-func GetPipelineWithModFullVersion(modFullVersion, name string) (*modconfig.Pipeline, error) {
+func GetPipelineWithModFullVersion(modFullVersion, name string) (*flowpipe.Pipeline, error) {
 	if modFullVersion == "" {
 		return GetPipeline(name)
 	}
-	p, err := GetCachedItem[*modconfig.Pipeline](modFullVersion + "." + name)
+	p, err := GetCachedItem[*flowpipe.Pipeline](modFullVersion + "." + name)
 	if perr.IsNotFound(err) {
 		return GetPipeline(name)
 	}
 	return p, err
 }
 
-func GetPipeline(name string) (*modconfig.Pipeline, error) {
-	return GetCachedItem[*modconfig.Pipeline](name)
+func GetPipeline(name string) (*flowpipe.Pipeline, error) {
+	return GetCachedItem[*flowpipe.Pipeline](name)
 }
 
-func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*modconfig.Pipeline, error) {
+func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*flowpipe.Pipeline, error) {
 
 	// check if the pipeline is coming from the given mod
 	pipelineParts := strings.Split(name, ".")
@@ -93,7 +93,7 @@ func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*modconfig.Pip
 	pipelineModName := pipelineParts[0]
 
 	if pipelineParts[0] == "local" {
-		return GetCachedItem[*modconfig.Pipeline](name)
+		return GetCachedItem[*flowpipe.Pipeline](name)
 	}
 
 	// check if it's coming from the current mod
@@ -114,7 +114,7 @@ func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*modconfig.Pip
 	return nil, perr.NotFoundWithMessage("pipeline not found: " + name + " from mod " + mod.Name())
 }
 
-func GetPipelineFromCurrentMod(mod modconfig.ModI, name string) (*modconfig.Pipeline, error) {
+func GetPipelineFromCurrentMod(mod modconfig.ModI, name string) (*flowpipe.Pipeline, error) {
 	if mod == nil {
 		return nil, perr.BadRequestWithMessage("mod is nil")
 	}
@@ -126,14 +126,14 @@ func GetPipelineFromCurrentMod(mod modconfig.ModI, name string) (*modconfig.Pipe
 
 	cacheKey := prefixCacheKey + "." + name
 
-	return GetCachedItem[*modconfig.Pipeline](cacheKey)
+	return GetCachedItem[*flowpipe.Pipeline](cacheKey)
 }
 
-func GetTrigger(name string) (*modconfig.Trigger, error) {
-	return GetCachedItem[*modconfig.Trigger](name)
+func GetTrigger(name string) (*flowpipe.Trigger, error) {
+	return GetCachedItem[*flowpipe.Trigger](name)
 }
 
-func ListAllPipelines() ([]*modconfig.Pipeline, error) {
+func ListAllPipelines() ([]*flowpipe.Pipeline, error) {
 	pipelineNamesCached, found := cache.GetCache().Get("#pipeline.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("pipeline names not found")
@@ -144,7 +144,7 @@ func ListAllPipelines() ([]*modconfig.Pipeline, error) {
 		return nil, perr.InternalWithMessage("invalid pipeline names")
 	}
 
-	var pipelines []*modconfig.Pipeline
+	var pipelines []*flowpipe.Pipeline
 	for _, name := range pipelineNames {
 		pipeline, err := GetPipeline(name)
 		if err != nil {
@@ -156,7 +156,7 @@ func ListAllPipelines() ([]*modconfig.Pipeline, error) {
 	return pipelines, nil
 }
 
-func ListAllIntegrations() ([]modconfig.Integration, error) {
+func ListAllIntegrations() ([]flowpipe.Integration, error) {
 	integrationNamesCached, found := cache.GetCache().Get("#integration.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("integration names not found")
@@ -167,7 +167,7 @@ func ListAllIntegrations() ([]modconfig.Integration, error) {
 		return nil, perr.InternalWithMessage("integration name cached is not a list of string")
 	}
 
-	var integrations []modconfig.Integration
+	var integrations []flowpipe.Integration
 	for _, name := range integrationNames {
 		integration, err := GetIntegration(name)
 		if err != nil {
@@ -226,7 +226,7 @@ func ListAllNotifiers() ([]flowpipe.Notifier, error) {
 	return notifiers, nil
 }
 
-func ListAllTriggers() ([]modconfig.Trigger, error) {
+func ListAllTriggers() ([]flowpipe.Trigger, error) {
 
 	triggerNamesCached, found := cache.GetCache().Get("#trigger.names")
 	if !found {
@@ -238,7 +238,7 @@ func ListAllTriggers() ([]modconfig.Trigger, error) {
 		return nil, perr.InternalWithMessage("invalid trigger names")
 	}
 
-	var triggers []modconfig.Trigger
+	var triggers []flowpipe.Trigger
 	for _, name := range triggerNames {
 		trigger, err := GetTrigger(name)
 		if err != nil {

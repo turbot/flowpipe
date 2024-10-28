@@ -2,20 +2,20 @@ package types
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 )
 
 type ProgressOutput struct {
 	ExecutionId string                `json:"execution_id"`
-	Output      map[string]any        `json:"output"`
-	Errors      []modconfig.StepError `json:"errors"`
+	Output      map[string]any       `json:"output"`
+	Errors      []flowpipe.StepError `json:"errors"`
 }
 
-func NewProgressOutput(executionId string, output map[string]any, errors []modconfig.StepError) ProgressOutput {
+func NewProgressOutput(executionId string, output map[string]any, errors []flowpipe.StepError) ProgressOutput {
 	return ProgressOutput{
 		ExecutionId: executionId,
 		Output:      output,

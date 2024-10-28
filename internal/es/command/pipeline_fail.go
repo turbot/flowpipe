@@ -2,13 +2,13 @@ package command
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -47,7 +47,7 @@ func (h PipelineFailHandler) Handle(ctx context.Context, c interface{}) error {
 	output := make(map[string]any, 1)
 
 	// Collect all the step output, but don't also add the error in the cmd/event
-	var pipelineErrors []modconfig.StepError
+	var pipelineErrors []flowpipe.StepError
 	if cmd.Error != nil {
 		pipelineErrors = append(pipelineErrors, *cmd.Error)
 	}

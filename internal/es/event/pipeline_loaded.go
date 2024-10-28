@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 type PipelineLoaded struct {
@@ -10,7 +10,7 @@ type PipelineLoaded struct {
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// Pipeline definition that was loaded
-	Pipeline *modconfig.Pipeline `json:"pipeline"`
+	Pipeline *flowpipe.Pipeline `json:"pipeline"`
 }
 
 func (e *PipelineLoaded) GetEvent() *Event {
@@ -22,7 +22,7 @@ func (e *PipelineLoaded) HandlerName() string {
 }
 
 // NewPipelineLoaded creates a new PipelineLoaded event.
-func NewPipelineLoadedFromPipelineLoad(cmd *PipelineLoad, pipeline *modconfig.Pipeline) *PipelineLoaded {
+func NewPipelineLoadedFromPipelineLoad(cmd *PipelineLoad, pipeline *flowpipe.Pipeline) *PipelineLoaded {
 	// Defaults
 	e := &PipelineLoaded{
 		Event:               NewFlowEvent(cmd.Event),

@@ -2,9 +2,9 @@ package execution
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"time"
 
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	putils "github.com/turbot/pipe-fittings/utils"
@@ -628,7 +628,7 @@ func (ex *Execution) StepExecutionSnapshotPanels(pipelineExecutionID string, ste
 	return panels, nil
 }
 
-func (ex *Execution) StepExecutionNodeRow(panelName string, sd modconfig.PipelineStep, se *StepExecution) SnapshotPanelDataRow {
+func (ex *Execution) StepExecutionNodeRow(panelName string, sd flowpipe.PipelineStep, se *StepExecution) SnapshotPanelDataRow {
 
 	var row SnapshotPanelDataRow
 

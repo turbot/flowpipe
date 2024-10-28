@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"io"
 	"net/http"
 	"net/url"
@@ -23,7 +24,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -258,7 +258,7 @@ func decodePayload(input string) (JSONPayload, error) {
 	return out, nil
 }
 
-func parseLabelsFromValues(input modconfig.Input, values any) (string, error) {
+func parseLabelsFromValues(input flowpipe.Input, values any) (string, error) {
 	valueKeyLabels := make(map[string]string)
 
 	if input[schema.AttributeTypeType] == "text" {
@@ -302,7 +302,7 @@ func parseLabelsFromValues(input modconfig.Input, values any) (string, error) {
 	}
 }
 
-func validValues(values any, stepInput modconfig.Input) bool {
+func validValues(values any, stepInput flowpipe.Input) bool {
 	inputType := stepInput[schema.AttributeTypeType].(string)
 	if inputType == constants.InputTypeText {
 		return true
@@ -378,7 +378,7 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 		return false, nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid value(s) '%v' specified", value))
 	}
 
-	out := modconfig.Output{
+	out := flowpipe.Output{
 		Data: map[string]any{
 			"value": value,
 		},

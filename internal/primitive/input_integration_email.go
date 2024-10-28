@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"net/smtp"
 	"net/textproto"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/templates"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 
@@ -48,7 +48,7 @@ func NewInputIntegrationEmail(base InputIntegrationBase) InputIntegrationEmail {
 	}
 }
 
-func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i modconfig.Input) error {
+func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i flowpipe.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
@@ -186,7 +186,7 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*flowpipe.Output, error) {
 	var err error
 	host := kitTypes.SafeString(ip.Host)
 	tls := kitTypes.SafeString(ip.Tls)
@@ -217,7 +217,7 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 	addr := fmt.Sprintf("%s:%d", host, port)
 	auth := smtp.PlainAuth("", kitTypes.SafeString(ip.User), kitTypes.SafeString(ip.Pass), host)
 
-	output := modconfig.Output{
+	output := flowpipe.Output{
 		Data: map[string]interface{}{},
 	}
 

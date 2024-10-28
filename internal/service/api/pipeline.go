@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -20,7 +21,6 @@ import (
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -139,7 +139,7 @@ func GetPipeline(pipelineName string, rootMod string) (*types.FpPipeline, error)
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
+	pipeline, ok := pipelineCached.(*flowpipe.Pipeline)
 	if !ok {
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
@@ -218,7 +218,7 @@ func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecu
 			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
 			pipelineExecutionResponse.Flowpipe.Status = "failed"
 
-			pipelineExecutionResponse.Errors = []modconfig.StepError{
+			pipelineExecutionResponse.Errors = []flowpipe.StepError{
 				{
 					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
 					Pipeline:            pipelineCmd.Name,

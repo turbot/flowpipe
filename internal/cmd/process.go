@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"io"
 	"log/slog"
 	"net/http"
@@ -27,7 +28,6 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/schema"
@@ -232,8 +232,8 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 	// restart all input step poller (if there's any)
 	if routerUrl, routed := primitive.GetInputRouter(); routed {
 		type definitions struct {
-			PipelineDef       *modconfig.Pipeline
-			StepDef           modconfig.PipelineStep
+			PipelineDef       *flowpipe.Pipeline
+			StepDef           flowpipe.PipelineStep
 			PipelineExecution *execution.PipelineExecution
 			StepExecution     *execution.StepExecution
 		}
@@ -277,7 +277,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 				case "pending", "started":
 					if step, ok := unfinishedInputSteps[input.StepExecutionID]; ok {
 						slog.Info("Resuming input step poller", "step", input.StepExecutionID)
-						endStepFunc := func(stepExecution *execution.StepExecution, out *modconfig.Output) error {
+						endStepFunc := func(stepExecution *execution.StepExecution, out *flowpipe.Output) error {
 							return command.EndStepFromApi(ex, stepExecution, step.PipelineDef, step.StepDef, out, m.ESService.EventBus)
 						}
 						p := primitive.NewRoutedInput(executionId, step.PipelineExecution.ID, step.StepExecution.ID, step.PipelineDef.PipelineName, step.StepExecution.Name, step.StepDef.GetType(), routerUrl, endStepFunc)
@@ -287,7 +287,7 @@ func resumeProcessLocal(ctx context.Context, executionId string) (*manager.Manag
 					if step, ok := unfinishedInputSteps[input.StepExecutionID]; ok {
 						slog.Info("Resuming input step with result", "step", input.StepExecutionID)
 						stepShortName := strings.Split(step.StepExecution.Name, ".")[len(strings.Split(step.StepExecution.Name, "."))-1]
-						out := modconfig.Output{
+						out := flowpipe.Output{
 							Data: map[string]any{
 								"value": input.Inputs[stepShortName].Response,
 							},

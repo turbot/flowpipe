@@ -3,11 +3,11 @@ package primitive
 import (
 	"context"
 	"errors"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -17,7 +17,7 @@ func TestMessageWithSlackNotifierUsingTokenNoChannelSet(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -52,7 +52,7 @@ func TestMessageWithSlackNotifierUsingTokenChannelSetOnStep(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt:  "Test Prompt",
 		schema.AttributeTypeType:    constants.InputTypeButton,
 		schema.AttributeTypeChannel: "#step",
@@ -85,7 +85,7 @@ func TestMessageWithSlackNotifierUsingTokenChannelSetOnNotifier(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -118,7 +118,7 @@ func TestMessageWithSlackNotifierUsingTokenChannelSetOnIntegration(t *testing.T)
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -151,7 +151,7 @@ func TestMessageWithSlackNotifierUsingWebHookChannelNotSet(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -183,7 +183,7 @@ func TestMessageWithEmailNotifierNoRecipients(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -219,7 +219,7 @@ func TestMessageWithEmailNotifierRecipientsOnStep(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -253,7 +253,7 @@ func TestMessageWithEmailNotifierRecipientsOnNotifier(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -287,7 +287,7 @@ func TestMessageWithEmailNotifierRecipientsOnIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewMessagePrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := modconfig.Input(map[string]any{
+	input := flowpipe.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{

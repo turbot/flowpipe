@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"strings"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
@@ -61,10 +61,10 @@ type FpPipeline struct {
 	FileName        string                     `json:"file_name,omitempty"`
 	StartLineNumber int                        `json:"start_line_number,omitempty"`
 	EndLineNumber   int                        `json:"end_line_number,omitempty"`
-	Tags            map[string]string          `json:"tags,omitempty"`
-	Steps           []modconfig.PipelineStep   `json:"steps,omitempty"`
-	OutputConfig    []modconfig.PipelineOutput `json:"outputs,omitempty"`
-	Params          []FpPipelineParam          `json:"params,omitempty"`
+	Tags            map[string]string         `json:"tags,omitempty"`
+	Steps           []flowpipe.PipelineStep   `json:"steps,omitempty"`
+	OutputConfig    []flowpipe.PipelineOutput `json:"outputs,omitempty"`
+	Params          []FpPipelineParam         `json:"params,omitempty"`
 	RootMod         string                     `json:"root_mod"`
 }
 
@@ -154,7 +154,7 @@ func (p FpPipeline) pipelineDisplayName() string {
 	return p.Name
 }
 
-func FpPipelineFromModPipeline(pipeline *modconfig.Pipeline, rootMod string) (*FpPipeline, error) {
+func FpPipelineFromModPipeline(pipeline *flowpipe.Pipeline, rootMod string) (*FpPipeline, error) {
 	resp := &FpPipeline{
 		Name:          pipeline.Name(),
 		Description:   pipeline.Description,
@@ -209,9 +209,9 @@ func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipelin
 		Mod:           typehelpers.SafeString(apiResp.Mod),
 		Title:         apiResp.Title,
 		Documentation: apiResp.Documentation,
-		Steps:         make([]modconfig.PipelineStep, 0, len(apiResp.Steps)),
+		Steps:         make([]flowpipe.PipelineStep, 0, len(apiResp.Steps)),
 		Params:        make([]FpPipelineParam, 0, len(apiResp.Params)),
-		OutputConfig:  make([]modconfig.PipelineOutput, 0, len(apiResp.Outputs)),
+		OutputConfig:  make([]flowpipe.PipelineOutput, 0, len(apiResp.Outputs)),
 
 		RootMod: typehelpers.SafeString(apiResp.RootMod),
 	}
@@ -238,30 +238,30 @@ func FpPipelineFromAPIResponse(apiResp flowpipeapiclient.FpPipeline) (*FpPipelin
 }
 
 // pipelineStepFromApiResponse converts the API response steps to the internal representation.
-func pipelineStepFromApiResponse(apiStep map[string]any) (modconfig.PipelineStep, error) {
+func pipelineStepFromApiResponse(apiStep map[string]any) (flowpipe.PipelineStep, error) {
 	stepType := apiStep["step_type"].(string)
-	var step modconfig.PipelineStep
+	var step flowpipe.PipelineStep
 	switch stepType {
 	case schema.BlockTypePipelineStepHttp:
-		step = &modconfig.PipelineStepHttp{}
+		step = &flowpipe.PipelineStepHttp{}
 	case schema.BlockTypePipelineStepSleep:
-		step = &modconfig.PipelineStepSleep{}
+		step = &flowpipe.PipelineStepSleep{}
 	case schema.BlockTypePipelineStepEmail:
-		step = &modconfig.PipelineStepEmail{}
+		step = &flowpipe.PipelineStepEmail{}
 	case schema.BlockTypePipelineStepTransform:
-		step = &modconfig.PipelineStepTransform{}
+		step = &flowpipe.PipelineStepTransform{}
 	case schema.BlockTypePipelineStepQuery:
-		step = &modconfig.PipelineStepQuery{}
+		step = &flowpipe.PipelineStepQuery{}
 	case schema.BlockTypePipelineStepPipeline:
-		step = &modconfig.PipelineStepPipeline{}
+		step = &flowpipe.PipelineStepPipeline{}
 	case schema.BlockTypePipelineStepFunction:
-		step = &modconfig.PipelineStepFunction{}
+		step = &flowpipe.PipelineStepFunction{}
 	case schema.BlockTypePipelineStepContainer:
-		step = &modconfig.PipelineStepContainer{}
+		step = &flowpipe.PipelineStepContainer{}
 	case schema.BlockTypePipelineStepInput:
-		step = &modconfig.PipelineStepInput{}
+		step = &flowpipe.PipelineStepInput{}
 	case schema.BlockTypePipelineStepMessage:
-		step = &modconfig.PipelineStepMessage{}
+		step = &flowpipe.PipelineStepMessage{}
 	default:
 		// Handle unknown step type
 		return nil, perr.BadRequestWithMessage(fmt.Sprintf("unknown step type: %s", stepType))
@@ -299,8 +299,8 @@ func pipelineParamFromApiResponse(paramApiResponse flowpipeapiclient.FpPipelineP
 	return param
 }
 
-func pipelineOutputFromApiResponse(outputApiResponse flowpipeapiclient.ModconfigPipelineOutput) modconfig.PipelineOutput {
-	output := modconfig.PipelineOutput{
+func pipelineOutputFromApiResponse(outputApiResponse flowpipeapiclient.ModconfigPipelineOutput) flowpipe.PipelineOutput {
+	output := flowpipe.PipelineOutput{
 		DependsOn: outputApiResponse.DependsOn,
 	}
 
@@ -376,7 +376,7 @@ func (p FpPipelineParam) String(sanitizer *sanitize.Sanitizer, opts sanitize.Ren
 type PipelineExecutionResponse struct {
 	Results  map[string]interface{}   `json:"results,omitempty"`
 	Flowpipe FlowpipeResponseMetadata `json:"flowpipe,omitempty"`
-	Errors   []modconfig.StepError    `json:"errors,omitempty"`
+	Errors   []flowpipe.StepError     `json:"errors,omitempty"`
 }
 
 type FlowpipeResponseMetadata struct {
@@ -461,8 +461,8 @@ type FpPipelineExecution struct {
 	Status              string                `json:"status"`
 	PipelineName        *string               `json:"pipeline,omitempty"`
 	CreatedAt           *time.Time            `json:"created_at,omitempty"`
-	Outputs             map[string]any        `json:"outputs,omitempty"`
-	Errors              []modconfig.StepError `json:"errors,omitempty"`
+	Outputs             map[string]any       `json:"outputs,omitempty"`
+	Errors              []flowpipe.StepError `json:"errors,omitempty"`
 }
 
 func (p FpPipelineExecution) String(sanitizer *sanitize.Sanitizer, opts sanitize.RenderOptions) string {

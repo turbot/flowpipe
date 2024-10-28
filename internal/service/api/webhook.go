@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"io"
 	"log/slog"
 	"net/http"
@@ -26,7 +27,6 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -70,7 +70,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	}
 
 	// check if the t is a webhook trigger
-	t, ok := triggerCached.(*modconfig.Trigger)
+	t, ok := triggerCached.(*flowpipe.Trigger)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a trigger"))
 		return
@@ -83,7 +83,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	httpTriggerConfig, ok := t.Config.(*modconfig.TriggerHttp)
+	httpTriggerConfig, ok := t.Config.(*flowpipe.TriggerHttp)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
 		return
@@ -272,7 +272,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 	pipelineExecutionResponse.Results = pipelineOutput
 
 	if pipelineOutput["errors"] != nil {
-		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]flowpipe.StepError)
 	}
 
 	pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
@@ -358,7 +358,7 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 			pipelineResponse.Results = pipelineOutput
 
 			if pipelineOutput["errors"] != nil {
-				pipelineResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+				pipelineResponse.Errors = pipelineOutput["errors"].([]flowpipe.StepError)
 			}
 
 			if trg.Config.GetType() == "schedule" {

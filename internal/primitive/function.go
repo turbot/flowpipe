@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"encoding/json"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"math"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/turbot/flowpipe/internal/docker"
 	function "github.com/turbot/flowpipe/internal/functions"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -25,7 +25,7 @@ type Function struct {
 	ModPath string
 }
 
-func (e *Function) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (e *Function) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 	// Validate the timeout attribute
 	if i[schema.AttributeTypeTimeout] != nil {
 		switch duration := i[schema.AttributeTypeTimeout].(type) {
@@ -50,7 +50,7 @@ func (e *Function) ValidateInput(ctx context.Context, i modconfig.Input) error {
 	return nil
 }
 
-func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (e *Function) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (e *Function) Run(ctx context.Context, input modconfig.Input) (*modconfig.O
 		return nil, perr.InternalWithMessage("Function returned an error: " + responseJson["errorMessage"].(string))
 	}
 
-	output := modconfig.Output{
+	output := flowpipe.Output{
 		Data: map[string]interface{}{
 			schema.AttributeTypeResponse:   responseJson,
 			schema.AttributeTypeStatusCode: statusCode,

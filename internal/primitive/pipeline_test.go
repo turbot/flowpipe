@@ -2,10 +2,10 @@ package primitive
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 func TestPipelineOK(t *testing.T) {
@@ -13,7 +13,7 @@ func TestPipelineOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := RunPipeline{}
-	input := modconfig.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
+	input := flowpipe.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)

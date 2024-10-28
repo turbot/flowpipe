@@ -11,9 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/utils"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
@@ -28,9 +25,11 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
+	"github.com/turbot/pipe-fittings/utils"
 )
 
 // pipeline commands
@@ -350,10 +349,10 @@ func FlowpipeResponseMetadataFromAPIResponse(apiResp flowpipeapiclient.FlowpipeR
 	return response
 }
 
-func ModConfigStepErrorsFromAPIErrors(apiErrors []flowpipeapiclient.ModconfigStepError) []modconfig.StepError {
-	var stepErrors []modconfig.StepError
+func ModConfigStepErrorsFromAPIErrors(apiErrors []flowpipeapiclient.ModconfigStepError) []flowpipe.StepError {
+	var stepErrors []flowpipe.StepError
 	for _, e := range apiErrors {
-		se := modconfig.StepError{
+		se := flowpipe.StepError{
 			PipelineExecutionID: utils.Deref(e.PipelineExecutionId, ""),
 			StepExecutionID:     utils.Deref(e.StepExecutionId, ""),
 			Pipeline:            utils.Deref(e.Pipeline, ""),
@@ -501,7 +500,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 	lastIndex := -1
 	status := fmt.Sprintf("[flowpipe] Execution ID: %s", executionId)
 	pipelineOutput := make(map[string]any)
-	var pipelineErrors []modconfig.StepError
+	var pipelineErrors []flowpipe.StepError
 	exit := false
 	o.PipelineProgress.Update(status)
 

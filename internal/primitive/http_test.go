@@ -2,10 +2,10 @@ package primitive
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -17,7 +17,7 @@ func TestHTTPMethodGET(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl: "https://steampipe.io/",
 	})
 
@@ -35,7 +35,7 @@ func TestHTTPMethodGETWithQueryString(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl: "https://hub.steampipe.io/plugins?categories=saas",
 	})
 
@@ -53,9 +53,9 @@ func XTestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://api.open-notify.org/astros.json",
-		schema.AttributeTypeMethod: modconfig.HttpMethodGet,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodGet,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -72,9 +72,9 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://steampipe.io/asdlkfjasdlfkjnotfound/",
-		schema.AttributeTypeMethod: modconfig.HttpMethodGet,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodGet,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -94,9 +94,9 @@ func TestHTTPMethodGETUnauthorized(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://cloud.steampipe.io/api/v0/user/flowpipe/connection",
-		schema.AttributeTypeMethod: modconfig.HttpMethodGet,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodGet,
 		schema.AttributeTypeRequestBody: `{
 			"Authorization": "Bearer spt_flo3pipe00g0t1nvali_3test0axy78ic8h6http77o24"
 		}`,
@@ -119,9 +119,9 @@ func TestHTTPMethodPOST(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -142,9 +142,9 @@ func TestHTTPMethodPOSTWithTextBody(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod:      modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod:      flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: "Test",
 	})
 
@@ -162,9 +162,9 @@ func XTestHTTPMethodPOSTNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -183,9 +183,9 @@ func TestHTTPMethodPOSTWithRequestHeaders(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -214,9 +214,9 @@ func TestHTTPMethodPOSTWithTimeout(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -238,9 +238,9 @@ func TestHTTPMethodPOSTWithNoVerifyCertificate(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -264,9 +264,9 @@ func TestHTTPMethodPOSTWithVerifyInvalidCertificate(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -286,9 +286,9 @@ func TestHTTPMethodPOSTWithVerifyCertificate(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPost,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPost,
 		schema.AttributeTypeRequestBody: `{
 			"userId": 1001,
 			"it": 1001,
@@ -310,9 +310,9 @@ func TestHTTPMethodDELETE(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod: modconfig.HttpMethodDelete,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodDelete,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -328,9 +328,9 @@ func TestHTTPMethodDELETENotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: modconfig.HttpMethodDelete,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodDelete,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -350,9 +350,9 @@ func TestHTTPMethodPUT(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPut,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPut,
 		schema.AttributeTypeRequestHeaders: map[string]interface{}{
 			"Content-Type": "application/json",
 		},
@@ -379,9 +379,9 @@ func TestHTTPMethodPUTWithTextBody(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod:      modconfig.HttpMethodPut,
+		schema.AttributeTypeMethod:      flowpipe.HttpMethodPut,
 		schema.AttributeTypeRequestBody: "test",
 	})
 
@@ -399,9 +399,9 @@ func TestHTTPMethodPUTNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.google.com/notfound",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPut,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPut,
 	})
 
 	output, err := hr.Run(ctx, input)
@@ -421,9 +421,9 @@ func TestHTTPMethodPATCH(t *testing.T) {
 
 	assert := assert.New(t)
 	hr := HTTPRequest{}
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPatch,
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPatch,
 		schema.AttributeTypeRequestHeaders: map[string]interface{}{
 			"Content-Type": "application/json",
 		},
@@ -446,9 +446,9 @@ func TestHTTPMethodPATCHWithTextBody(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:         "https://jsonplaceholder.typicode.com/posts/1",
-		schema.AttributeTypeMethod:      modconfig.HttpMethodPatch,
+		schema.AttributeTypeMethod:      flowpipe.HttpMethodPatch,
 		schema.AttributeTypeRequestBody: "test",
 	})
 
@@ -466,9 +466,9 @@ func TestHTTPMethodPATCHNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: modconfig.HttpMethodPatch})
+		schema.AttributeTypeMethod: flowpipe.HttpMethodPatch})
 
 	output, err := hr.Run(ctx, input)
 	assert.Nil(err)
@@ -486,7 +486,7 @@ func TestHTTPMethodGETWithTimeoutNumber(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:     "https://steampipe.io/",
 		schema.AttributeTypeTimeout: int64(1),
 	})
@@ -502,7 +502,7 @@ func TestHTTPMethodGETWithTimeoutString(t *testing.T) {
 	assert := assert.New(t)
 	hr := HTTPRequest{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := flowpipe.Input(map[string]interface{}{
 		schema.AttributeTypeUrl:     "https://steampipe.io/",
 		schema.AttributeTypeTimeout: "1ms",
 	})

@@ -4,26 +4,26 @@ package primitive
 
 import (
 	"context"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"time"
 
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 type Transform struct{}
 
-func (e *Transform) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (e *Transform) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 	return nil
 }
 
-func (e *Transform) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (e *Transform) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
 	start := time.Now().UTC()
 
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := modconfig.Output{
+	output := flowpipe.Output{
 		Data: map[string]interface{}{},
 	}
 

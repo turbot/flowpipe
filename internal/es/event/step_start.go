@@ -2,9 +2,9 @@ package event
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -15,15 +15,15 @@ type StepStart struct {
 	PipelineExecutionID string          `json:"pipeline_execution_id"`
 	StepExecutionID     string          `json:"step_execution_id"`
 	StepName            string          `json:"step_name"`
-	StepType            string          `json:"step_type"`
-	StepInput           modconfig.Input `json:"input"`
+	StepType  string         `json:"step_type"`
+	StepInput flowpipe.Input `json:"input"`
 
 	// for_each controls
-	StepForEach *modconfig.StepForEach `json:"step_for_each,omitempty"`
-	StepLoop    *modconfig.StepLoop    `json:"step_loop,omitempty"`
-	StepRetry   *modconfig.StepRetry   `json:"step_retry,omitempty"`
+	StepForEach *flowpipe.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *flowpipe.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *flowpipe.StepRetry   `json:"step_retry,omitempty"`
 
-	NextStepAction modconfig.NextStepAction `json:"next_step_action,omitempty"`
+	NextStepAction flowpipe.NextStepAction `json:"next_step_action,omitempty"`
 }
 
 func (e *StepStart) GetEvent() *Event {
@@ -91,7 +91,7 @@ func ForPipelinePlanned(e *PipelinePlanned) StepStartOption {
 	}
 }
 
-func WithStepLoop(stepLoop *modconfig.StepLoop) StepStartOption {
+func WithStepLoop(stepLoop *flowpipe.StepLoop) StepStartOption {
 	return func(cmd *StepStart) error {
 		cmd.StepLoop = stepLoop
 		return nil

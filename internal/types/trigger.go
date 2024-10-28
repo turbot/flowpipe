@@ -2,12 +2,12 @@ package types
 
 import (
 	"fmt"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"strings"
 	"time"
 
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
@@ -293,8 +293,8 @@ func (c *CmdTrigger) GetWaitRetry() int {
 	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
 }
 
-func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, error) {
-	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+func FpTriggerFromModTrigger(t flowpipe.Trigger, rootMod string) (*FpTrigger, error) {
+	tt := flowpipe.GetTriggerTypeFromTriggerConfig(t.Config)
 
 	fpTrigger := FpTrigger{
 		Name:            t.FullName,
@@ -338,7 +338,7 @@ func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, e
 
 	switch tt {
 	case schema.TriggerTypeHttp:
-		cfg := t.Config.(*modconfig.TriggerHttp)
+		cfg := t.Config.(*flowpipe.TriggerHttp)
 		fpTrigger.Url = &cfg.Url
 		for _, method := range cfg.Methods {
 			pipelineInfo := method.Pipeline.AsValueMap()
@@ -349,7 +349,7 @@ func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, e
 			})
 		}
 	case schema.TriggerTypeQuery:
-		cfg := t.Config.(*modconfig.TriggerQuery)
+		cfg := t.Config.(*flowpipe.TriggerQuery)
 		fpTrigger.Schedule = &cfg.Schedule
 		fpTrigger.Query = &cfg.Sql
 		for _, capture := range cfg.Captures {
@@ -361,7 +361,7 @@ func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, e
 			})
 		}
 	case schema.TriggerTypeSchedule:
-		cfg := t.Config.(*modconfig.TriggerSchedule)
+		cfg := t.Config.(*flowpipe.TriggerSchedule)
 		fpTrigger.Schedule = &cfg.Schedule
 		pipelineInfo := t.GetPipeline().AsValueMap()
 		pipelineName := pipelineInfo["name"].AsString()
