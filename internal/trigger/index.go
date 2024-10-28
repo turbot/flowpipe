@@ -31,7 +31,7 @@ type TriggerRunnerBase struct {
 	ExecutionID        string
 	TriggerExecutionID string
 	Trigger            *flowpipe.Trigger
-	rootMod            modconfig.ModI
+	rootMod            *modconfig.Mod
 	Type               string
 }
 
@@ -200,15 +200,16 @@ func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, tr
 	return []*event.PipelineQueue{pipelineCmd}, nil
 }
 
-func buildEvalContextForTriggerExecution(rootMod modconfig.ModI, defnTriggerParams []flowpipe.PipelineParam, triggerConfig flowpipe.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
+func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []flowpipe.PipelineParam, triggerConfig flowpipe.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 
 	executionVariables := map[string]cty.Value{}
+	resourceMaps := rootMod.ResourceMaps.(*flowpipe.ModResources)
 
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	var modVars map[string]*modconfig.Variable
 	if rootMod != nil {
-		modVars = rootMod.ResourceMaps.Variables
+		modVars = resourceMaps.Variables
 	}
 	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modVars, true)
 
@@ -221,7 +222,7 @@ func buildEvalContextForTriggerExecution(rootMod modconfig.ModI, defnTriggerPara
 
 	localsMap := make(map[string]cty.Value)
 	if rootMod != nil {
-		for _, local := range rootMod.ResourceMaps.Locals {
+		for _, local := range resourceMaps.Locals {
 			localsMap[local.ShortName] = local.Value
 		}
 		executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)

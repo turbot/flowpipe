@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/gin-gonic/gin"
 	"net/http"
 
 	"github.com/turbot/flowpipe/internal/service/api/common"

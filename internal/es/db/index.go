@@ -82,7 +82,7 @@ func GetPipeline(name string) (*flowpipe.Pipeline, error) {
 	return GetCachedItem[*flowpipe.Pipeline](name)
 }
 
-func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*flowpipe.Pipeline, error) {
+func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*flowpipe.Pipeline, error) {
 
 	// check if the pipeline is coming from the given mod
 	pipelineParts := strings.Split(name, ".")
@@ -105,7 +105,7 @@ func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*flowpipe.Pipe
 	//
 	// Don't recurse because you can only call a pipeline from a mod that is a direct dependency
 	// not a dependency of a dependency
-	for _, m := range mod.ResourceMaps.Mods {
+	for _, m := range mod.ResourceMaps.GetMods() {
 		if m.ModName == pipelineModName {
 			return GetPipelineFromCurrentMod(m, name)
 		}
@@ -114,7 +114,7 @@ func GetPipelineResolvedFromMod(mod modconfig.ModI, name string) (*flowpipe.Pipe
 	return nil, perr.NotFoundWithMessage("pipeline not found: " + name + " from mod " + mod.Name())
 }
 
-func GetPipelineFromCurrentMod(mod modconfig.ModI, name string) (*flowpipe.Pipeline, error) {
+func GetPipelineFromCurrentMod(mod *modconfig.Mod, name string) (*flowpipe.Pipeline, error) {
 	if mod == nil {
 		return nil, perr.BadRequestWithMessage("mod is nil")
 	}

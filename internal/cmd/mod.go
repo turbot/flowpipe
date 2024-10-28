@@ -283,7 +283,7 @@ func modInitCmd() *cobra.Command {
 	return cmd
 }
 
-func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath string) (modconfig.ModI, error) {
+func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath string) (*modconfig.Mod, error) {
 	if !modinstaller.ValidateModLocation(ctx, workspacePath) {
 		return nil, fmt.Errorf("mod %s cancelled", cmd.Name())
 	}
@@ -292,7 +292,7 @@ func createWorkspaceMod(ctx context.Context, cmd *cobra.Command, workspacePath s
 		fmt.Println("Working folder already contains a mod definition file")
 		return nil, nil
 	}
-	mod := modconfig.CreateDefaultMod[*flowpipe.ModResources](workspacePath)
+	mod := modconfig.CreateDefaultMod(workspacePath)
 	if err := mod.Save(); err != nil {
 		return nil, err
 	}
