@@ -59,7 +59,7 @@ type Manager struct {
 	ctx context.Context
 
 	RootMod   *modconfig.Mod
-	workspace workspace.WorkspaceI
+	workspace *workspace.Workspace
 
 	// Services
 	ESService        *es.ESService
@@ -265,7 +265,7 @@ func (m *Manager) initializeResources() error {
 
 		rootModName = "local"
 		mod = &modconfig.Mod{
-			ResourceMaps: &modconfig.ResourceMaps{
+			ResourceMaps: &flowpipe.ModResources{
 				Pipelines: pipelines,
 				Triggers:  triggers,
 			},
@@ -422,19 +422,21 @@ func (m *Manager) cacheConfigData() error {
 }
 
 func (m *Manager) cacheModData(mod *modconfig.Mod) error {
+	// retrieve the mod resources
+	modResources := flowpipe.GetModResources(mod)
 
-	err := cacheHclResource("pipeline", mod.ResourceMaps.Pipelines, true, nil)
+	err := cacheHclResource("pipeline", modResources.Pipelines, true, nil)
 	if err != nil {
 		return err
 	}
 
-	triggers := mod.ResourceMaps.Triggers
+	triggers := modResources.Triggers
 	err = cacheHclResource("trigger", triggers, true, triggerUrlProcessor)
 	if err != nil {
 		return err
 	}
 
-	variables := mod.ResourceMaps.Variables
+	variables := modResources.Variables
 	err = cacheHclResource("variable", variables, true, nil)
 	if err != nil {
 		return err
@@ -448,12 +450,14 @@ func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 }
 
 func cacheModPipeline(mod *modconfig.Mod) {
+	// retrieve the mod resources
+	modResources := flowpipe.GetModResources(mod)
 
 	modCacheKey := mod.CacheKey()
 
 	cache.GetCache().SetWithTTL(modCacheKey, mod, 24*7*52*99*time.Hour)
 
-	for _, pipeline := range mod.ResourceMaps.Pipelines {
+	for _, pipeline := range modResources.Pipelines {
 		if pipeline.ModFullName != mod.Name() {
 			continue
 		}
@@ -462,7 +466,7 @@ func cacheModPipeline(mod *modconfig.Mod) {
 		cache.GetCache().SetWithTTL(cacheKey, pipeline, 24*7*52*99*time.Hour)
 	}
 
-	for _, m := range mod.ResourceMaps.Mods {
+	for _, m := range modResources.Mods {
 		if m.Name() == mod.Name() {
 			continue
 		}

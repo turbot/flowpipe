@@ -42,7 +42,7 @@ func (api *APIService) getMod(c *gin.Context) {
 	rootMod := api.EsService.RootMod
 
 	// TODO: need to be able to return the dependent mod?
-	if rootMod.GetShortName() != uri.ModName {
+	if root  mod.ShortName != uri.ModName {
 		common.AbortWithError(c, perr.NotFoundWithMessage("not found"))
 		return
 	}

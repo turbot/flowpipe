@@ -3,10 +3,11 @@ package manager
 import (
 	"context"
 	"fmt"
-	flowpipe2 "github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"log/slog"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
+	"github.com/spf13/viper"
 	"github.com/turbot/flowpipe/internal/cache"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
@@ -14,10 +15,11 @@ import (
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/workspace"
-	"github.com/turbot/pipe-fittings/workspace/flowpipe"
+	fpworkspace "github.com/turbot/pipe-fittings/workspace/flowpipe"
 )
 
 func (m *Manager) flowpipeConfigUpdated(ctx context.Context, newFpConfig *flowpipeconfig.FlowpipeConfig) {
@@ -55,11 +57,14 @@ func (m *Manager) modUpdated() {
 	// At this point the w.Mod has already been updated, the code that does it is in pipe-fittings handleFileWatcherEvent function
 	m.RootMod = m.workspace.Mod
 
+	// get resources from mod
+	resourceMaps := flowpipe.GetModResources(m.RootMod)
+
 	var serverOutput []sanitize.SanitizedStringer
 	var err error
 	slog.Info("caching pipelines and triggers")
 	serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "flowpipe"), m.RootMod.Name(), true))
-	m.triggers = m.RootMod.ResourceMaps.Triggers
+	m.triggers = resourceMaps.Triggers
 	err = m.cacheModData(m.RootMod)
 	if err != nil {
 		slog.Error("error caching pipelines and triggers", "error", err)
@@ -74,7 +79,7 @@ func (m *Manager) modUpdated() {
 	// Reload scheduled triggers
 	slog.Info("rescheduling triggers")
 	if m.schedulerService != nil {
-		m.schedulerService.Triggers = m.RootMod.ResourceMaps.Triggers
+		m.schedulerService.Triggers = resourceMaps.Triggers
 		err := m.schedulerService.RescheduleTriggers()
 		if err != nil {
 			slog.Error("error rescheduling triggers", "error", err)
@@ -91,7 +96,7 @@ func (m *Manager) modUpdated() {
 	}
 }
 
-func (m *Manager) setupWatcher(w workspace.WorkspaceI) error {
+func (m *Manager) setupWatcher(w *workspace.Workspace) error {
 	if !viper.GetBool(constants.ArgWatch) {
 		return nil
 	}
@@ -121,13 +126,13 @@ func (m *Manager) loadMod() error {
 		return err
 	}
 
-	w, errorAndWarning := flowpipe.LoadWorkspacePromptingForVariables(
+	w, errorAndWarning := fpworkspace.LoadWorkspacePromptingForVariables(
 		m.ctx,
 		modLocation,
-		flowpipe.WithCredentials(flowpipeConfig.Credentials),
-		flowpipe.WithPipelingConnections(flowpipeConfig.PipelingConnections),
-		flowpipe.WithIntegrations(flowpipeConfig.Integrations),
-		flowpipe.WithNotifiers(flowpipeConfig.Notifiers))
+		fpworkspace.WithCredentials(flowpipeConfig.Credentials),
+		fpworkspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
+		fpworkspace.WithIntegrations(flowpipeConfig.Integrations),
+		fpworkspace.WithNotifiers(flowpipeConfig.Notifiers))
 	if errorAndWarning.Error != nil {
 		return errorAndWarning.Error
 	}
@@ -148,13 +153,13 @@ func (m *Manager) loadMod() error {
 		flowpipeCliVersion := viper.GetString("main.version")
 		flowpipeSemverVersion := semver.MustParse(flowpipeCliVersion)
 		if !mod.Require.Flowpipe.Constraint.Check(flowpipeSemverVersion) {
-			return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, Mod.GetShortName(), mod.Require.Flowpipe.MinVersionString))
+			return perr.BadRequestWithMessage(fmt.Sprintf("flowpipe version %s does not satisfy %s which requires version %s", flowpipeCliVersion, mod.ShortName, mod.Require.Flowpipe.MinVersionString))
 		}
 	}
 
-	m.triggers = workspace.GetWorkspaceResourcesOfType[*flowpipe2.Trigger](w)
+	m.triggers = workspace.GetWorkspaceResourcesOfType[*flowpipe.Trigger](w)
 
-	cache.GetCache().SetWithTTL("#rootmod.name", Mod.GetShortName(), 24*7*52*99*time.Hour)
+	cache.GetCache().SetWithTTL("#rootmod.name", mod.ShortName, 24*7*52*99*time.Hour)
 	err = m.cacheModData(mod)
 	if err != nil {
 		return err
