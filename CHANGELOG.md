@@ -1,12 +1,11 @@
 # Flowpipe
 
-## v1.0.2 [tbd]
+## v1.0.2 [2024-10-29]
 
 _Bug fixes_
 
 * Event jsonl output file deletion is now handled correctly. ([#960](https://github.com/turbot/flowpipe/issues/960)).
 * `trigger run` command now exits when the execution is paused. ([#962](https://github.com/turbot/flowpipe/issues/962)).
-
 
 ## v1.0.1 [2024-10-25]
 
