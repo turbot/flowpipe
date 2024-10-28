@@ -151,8 +151,8 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *flowpipe.Pipeline, pe *Pipel
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
+	resourceMaps := flowpipe.GetModResources(pipelineDefn.GetMod())
 
-	resourceMaps := pipelineDefn.GetMod().ResourceMaps.(*flowpipe.ModResources)
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	// NOTE: the late binding vars map contains a list of the late-binding resources that the var depends on
 	// (i.e pipeling connections)
@@ -306,7 +306,7 @@ func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, s
 	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true, nil)
 }
 
-// func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+// func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn  flowpipe.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
 // 	fpConfig, err := db.GetFlowpipeConfig()
 // 	if err != nil {
 // 		return nil, err

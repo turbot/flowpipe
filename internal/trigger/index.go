@@ -203,7 +203,8 @@ func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, tr
 func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []flowpipe.PipelineParam, triggerConfig flowpipe.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 
 	executionVariables := map[string]cty.Value{}
-	resourceMaps := rootMod.ResourceMaps.(*flowpipe.ModResources)
+
+	resourceMaps := flowpipe.GetModResources(rootMod)
 
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars

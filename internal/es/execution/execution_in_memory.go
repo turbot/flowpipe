@@ -232,7 +232,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *flowpipe.Pipeline, p
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	resourceMaps := pipelineDefn.GetMod().ResourceMaps.(*flowpipe.ModResources)
+	resourceMaps := flowpipe.GetModResources(pipelineDefn.GetMod())
 
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
@@ -421,7 +421,8 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *flowpi
 	if pipelineDefn != nil {
 		allPipelines, err = db.ListAllPipelines()
 	} else {
-		resourceMaps := pipelineDefn.GetMod().ResourceMaps.(*flowpipe.ModResources)
+		resourceMaps := flowpipe.GetModResources(pipelineDefn.GetMod())
+
 		for _, p := range resourceMaps.Pipelines {
 			allPipelines = append(allPipelines, p)
 		}
@@ -456,8 +457,7 @@ func buildPipelineMap(allPipelines []*flowpipe.Pipeline) (map[string]cty.Value, 
 }
 
 func buildNestedModResourcesForEvalContext(nestedMod *modconfig.Mod) (cty.Value, error) {
-
-	resourceMaps := nestedMod.ResourceMaps.(*flowpipe.ModResources)
+	resourceMaps := flowpipe.GetModResources(nestedMod.GetMod())
 
 	var allPipelines []*flowpipe.Pipeline
 	for _, r := range resourceMaps.Pipelines {

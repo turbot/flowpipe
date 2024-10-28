@@ -29,7 +29,7 @@ func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn flow
 	return GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID, stepDefn, stepDefnMaxConcurrency, false)
 }
 
-func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string, stepDefn modconfig.PipelineStep, stepDefnMaxConcurrency *int, tryAcquire bool) error {
+func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string, stepDefn flowpipe.PipelineStep, stepDefnMaxConcurrency *int, tryAcquire bool) error {
 	if stepDefnMaxConcurrency == nil {
 		return nil
 	}

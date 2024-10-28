@@ -144,7 +144,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		selfObject[k] = ctyVal
 	}
 
-	resourceMaps := mod.ResourceMaps.(*flowpipe.ModResources)
+	resourceMaps := flowpipe.GetModResources(mod.GetMod())
 
 	vars := map[string]cty.Value{}
 	for _, v := range resourceMaps.Variables {
