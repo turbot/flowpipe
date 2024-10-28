@@ -1,7 +1,6 @@
 package cmdconfig
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -16,6 +15,7 @@ import (
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/parse"
 	fparse "github.com/turbot/pipe-fittings/parse/flowpipe"
 )

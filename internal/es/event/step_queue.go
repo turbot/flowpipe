@@ -2,9 +2,9 @@ package event
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -12,10 +12,10 @@ type StepQueue struct {
 	// Event metadata
 	Event *Event `json:"event"`
 	// Step execution details
-	PipelineExecutionID string          `json:"pipeline_execution_id"`
-	StepExecutionID     string          `json:"step_execution_id"`
-	StepName  string         `json:"step_name"`
-	StepInput flowpipe.Input `json:"input"`
+	PipelineExecutionID string         `json:"pipeline_execution_id"`
+	StepExecutionID     string         `json:"step_execution_id"`
+	StepName            string         `json:"step_name"`
+	StepInput           flowpipe.Input `json:"input"`
 
 	// for_each controls
 	StepForEach    *flowpipe.StepForEach `json:"step_for_each,omitempty"`

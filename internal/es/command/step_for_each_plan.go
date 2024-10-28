@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"strconv"
 
 	"log/slog"
@@ -11,6 +10,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"

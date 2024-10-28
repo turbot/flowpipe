@@ -2,8 +2,8 @@ package event
 
 import (
 	"errors"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

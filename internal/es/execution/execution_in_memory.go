@@ -263,12 +263,11 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *flowpipe.Pipeline, p
 				return nil, err
 			}
 
-			evalContext.Variables[dependent
-			 mod.ShortName] = nestedModResources
-}
-}
+			evalContext.Variables[dependentMod.ShortName] = nestedModResources
+		}
+	}
 
-return evalContext, nil
+	return evalContext, nil
 }
 
 // This function mutates evalContext
@@ -462,7 +461,7 @@ func buildNestedModResourcesForEvalContext(nestedMod *modconfig.Mod) (cty.Value,
 
 	var allPipelines []*flowpipe.Pipeline
 	for _, r := range resourceMaps.Pipelines {
-		if r.ModName != nested  mod.ShortName {
+		if r.ModName != nestedMod.ShortName {
 			continue
 		}
 

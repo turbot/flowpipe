@@ -1,7 +1,6 @@
 package db
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"reflect"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

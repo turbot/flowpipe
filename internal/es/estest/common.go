@@ -3,13 +3,13 @@ package estest
 import (
 	"errors"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"slices"
 	"strings"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

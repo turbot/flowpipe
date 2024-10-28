@@ -2,9 +2,9 @@ package event
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 // ! This event is only for starting Pipeline Step, not a general step start command.
@@ -18,8 +18,8 @@ type StepPipelineStarted struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 	// Optional details for step execution
-	ChildPipelineExecutionID    string          `json:"child_pipeline_execution_id,omitempty"`
-	ChildPipelineName           string          `json:"child_pipeline_name,omitempty"`
+	ChildPipelineExecutionID    string         `json:"child_pipeline_execution_id,omitempty"`
+	ChildPipelineName           string         `json:"child_pipeline_name,omitempty"`
 	ChildPipelineModFullVersion string         `json:"child_pipeline_mod_full_version,omitempty"`
 	ChildPipelineArgs           flowpipe.Input `json:"child_pipeline_args,omitempty"`
 

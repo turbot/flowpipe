@@ -2,7 +2,6 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"time"
 
 	"log/slog"
@@ -13,6 +12,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

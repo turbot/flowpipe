@@ -3,7 +3,6 @@ package estest
 // Basic imports
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"net/http"
 	"os"
 	"path"
@@ -23,6 +22,7 @@ import (
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 // Define the suite, and absorb the built-in basic suite
