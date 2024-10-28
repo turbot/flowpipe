@@ -40,8 +40,9 @@ var ExecutionMode string
 // pipelines being executed.
 type Execution struct {
 	// Unique identifier for this execution.
-	ID     string `json:"id"`
-	Status string `json:"status"`
+	ID        string    `json:"id"`
+	Status    string    `json:"status"`
+	ResumedAt time.Time `json:"resumed_at,omitempty"`
 
 	// Pipelines triggered by the execution. Even if the pipelines are nested,
 	// we maintain a flat list of all pipelines for easy lookup and querying.
@@ -53,6 +54,15 @@ type Execution struct {
 
 	// Execution level errors - new concept since we elevated the importance of execution
 	Errors []perr.ErrorModel `json:"errors"`
+}
+
+func (ex *Execution) FindPipelineExecutionByItsParentStepExecution(stepExecutionId string) *PipelineExecution {
+	for _, pe := range ex.PipelineExecutions {
+		if pe.ParentStepExecutionID == stepExecutionId {
+			return pe
+		}
+	}
+	return nil
 }
 
 func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
@@ -1008,6 +1018,9 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 		ex.Status = "failed"
 		ex.Errors = append(ex.Errors, et.Error)
 
+	case *event.ExecutionPaused:
+		ex.Status = "paused"
+
 	case *event.TriggerQueue:
 		if ex.TriggerExecution != nil {
 			return perr.BadRequestWithMessage("trigger execution already exists")
@@ -1060,6 +1073,9 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 		pe.Status = "started"
 		pe.ResumedAt = et.Event.CreatedAt
 
+		ex.Status = "started"
+		ex.ResumedAt = et.Event.CreatedAt
+
 	case *event.PipelinePlanned:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
 
@@ -1078,7 +1094,8 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			PipelineExecutionID: et.PipelineExecutionID,
 			ID:                  et.StepExecutionID,
 			Name:                et.StepName,
-			Status:              "starting",
+			Status:              "queueing",
+			MaxConcurrency:      et.MaxConcurrency,
 		}
 
 		stepDefn, err := ex.StepDefinition(et.PipelineExecutionID, et.StepExecutionID)
@@ -1105,8 +1122,13 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 
 		pe.StepStatus[stepDefn.GetFullyQualifiedName()][et.StepForEach.Key].Queue(et.StepExecutionID)
 
+	case *event.StepQueued:
+		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.StepExecutions[et.StepExecutionID].Status = "queued"
+
 	case *event.StepStart:
 		pe := ex.PipelineExecutions[et.PipelineExecutionID]
+		pe.StepExecutions[et.StepExecutionID].Status = "starting"
 		pe.StepExecutions[et.StepExecutionID].StartTime = et.Event.CreatedAt
 		pe.StepExecutions[et.StepExecutionID].StepLoop = et.StepLoop
 		pe.StepExecutions[et.StepExecutionID].StepRetry = et.StepRetry

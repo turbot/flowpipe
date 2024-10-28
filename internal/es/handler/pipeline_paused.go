@@ -55,5 +55,25 @@ func (h PipelinePaused) Handle(ctx context.Context, ei interface{}) error {
 		}
 	}
 
+	pex := ex.PipelineExecutions[evt.PipelineExecutionID]
+	if pex.ParentExecutionID != "" {
+		// raise a pipeline plan command for the parent
+		cmd, err := event.NewPipelinePlan()
+		if err != nil {
+			slog.Error("Error creating PipelinePlan command", "error", err)
+			return nil
+		}
+
+		slog.Info("PipelinePaused event handled - raising parent pipeline plan event", "execution_id", evt.Event.ExecutionID, "pipeline_execution_id", evt.PipelineExecutionID,
+			"parent_execution_id", pex.ParentExecutionID)
+
+		cmd.Event = event.NewFlowEvent(evt.Event)
+		cmd.PipelineExecutionID = pex.ParentExecutionID
+		err = h.CommandBus.Send(ctx, cmd)
+		if err != nil {
+			slog.Error("Error publishing event", "error", err)
+		}
+	}
+
 	return nil
 }

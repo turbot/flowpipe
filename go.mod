@@ -50,7 +50,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
 	github.com/turbot/flowpipe-sdk-go v1.0.0
-	github.com/turbot/pipe-fittings v1.6.0
+	github.com/turbot/pipe-fittings v1.6.5
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.8.0
 )
@@ -166,6 +166,8 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgproto3/v2 v2.3.3 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
+	github.com/jackc/pgx/v5 v5.6.0 // indirect
+	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -201,7 +203,7 @@ require (
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
+	github.com/onsi/ginkgo/v2 v2.13.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/otiai10/copy v1.14.0 // indirect
