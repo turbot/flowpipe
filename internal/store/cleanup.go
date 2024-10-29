@@ -104,7 +104,7 @@ func CleanupRunner() {
 
 	slog.Info("Cleaned up flowpipe db", "rowsAffected", rowsAffected)
 
-	deleteOldJsonlFiles(filepaths.EventStoreDir(), offset)
+	deleteOldJsonlFiles(filepaths.EventStoreDir(), retentionInSecond)
 }
 
 // Force cleanup run if we haven't run it more than 1 day
@@ -172,7 +172,7 @@ func ForceCleanup() {
 }
 
 // This function should be removed eventually. SQLite store is out in v0.3.
-func deleteOldJsonlFiles(dir string, olderThan time.Duration) {
+func deleteOldJsonlFiles(dir string, ageInSeconds int) {
 	// Read files in directory
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -199,11 +199,11 @@ func deleteOldJsonlFiles(dir string, olderThan time.Duration) {
 			continue
 		}
 
-		// Calculate the file's age
-		fileAge := now.Sub(info.ModTime())
+		// Calculate the age of the file
+		fileAge := now.Sub(info.ModTime()).Seconds()
 
 		// Check if the file is older than the specified duration
-		if fileAge > olderThan {
+		if fileAge > float64(ageInSeconds) {
 			// Construct file path
 			filePath := dir + "/" + entry.Name()
 

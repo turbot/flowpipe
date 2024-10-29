@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/constants"
 	"io"
 	"log/slog"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/turbot/flowpipe/internal/constants"
 
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -261,7 +262,7 @@ func (r *RoutedInput) initialCreate(ctx context.Context, client *http.Client, to
 
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error("failed to execute request", "error", err)
+		slog.Error("failed to execute request", "error", err, "routedUrl", r.RoutedUrl)
 		return "", perr.InternalWithMessage("failed to execute request")
 	}
 	defer resp.Body.Close()
@@ -302,7 +303,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 			time.Sleep(2 * time.Second) // TODO: #refactor better approach - this is at loop initialisation to handle continue from err delay before retry
 
 			count++
-			slog.Info("RoutedInput polling ..", "url", pollUrl, "count", count)
+			slog.Debug("RoutedInput polling ..", "url", pollUrl, "count", count)
 			resp, err := client.Do(req)
 			if err != nil {
 				// TODO: #error handle errors in polling?
