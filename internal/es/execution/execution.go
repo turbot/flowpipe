@@ -137,7 +137,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *flowpipe.Pipeline, pe *Pipel
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	notifierMap, err := fpConfig.NotifierValueMap()
 	if err != nil {
 		return nil, err
 	}

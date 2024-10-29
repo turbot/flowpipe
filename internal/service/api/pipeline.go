@@ -269,7 +269,7 @@ func buildTempEvalContextForApi() (*hcl.EvalContext, error) {
 		return nil, err
 	}
 	// Why do we add notifier earlier? Because of the param validation before
-	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	notifierMap, err := fpConfig.NotifierValueMap()
 	if err != nil {
 		return nil, err
 	}

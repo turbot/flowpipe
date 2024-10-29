@@ -2,15 +2,12 @@ package api
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"io"
 	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/turbot/pipe-fittings/sanitize"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
@@ -27,7 +24,9 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
+	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -144,8 +143,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		selfObject[k] = ctyVal
 	}
 
-	resourceMaps := flowpipe.GetModResources(mod.GetMod())
-
+	resourceMaps := flowpipe.GetModResources(mod)
 	vars := map[string]cty.Value{}
 	for _, v := range resourceMaps.Variables {
 		vars[v.GetMetadata().ResourceName] = v.Value
