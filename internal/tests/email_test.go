@@ -3,15 +3,16 @@ package pipeline_test
 import (
 	"context"
 	"github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/tests/test_init"
 	"testing"
 
-	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
 	"github.com/zclconf/go-cty/cty"
 )
 
 func TestEmailStep(t *testing.T) {
+	test_init.SetAppSpecificConstants()
 	assert := assert.New(t)
 
 	pipelines, _, err := parse.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
