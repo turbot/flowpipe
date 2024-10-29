@@ -3,11 +3,11 @@ package pipeline_test
 import (
 	"context"
 	"encoding/json"
-	"github.com/turbot/flowpipe/internal/flowpipe"
-	"github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -247,7 +247,7 @@ func TestMarshallUnmarshal(t *testing.T) {
 		data, err := json.Marshal(pipelines[pp])
 		assert.Nil(err, "error found, can't marshall")
 
-		var p flowpipe.Pipeline
+		var p resources.Pipeline
 		err = json.Unmarshal(data, &p)
 		assert.Nil(err, "error found, can't unmarshall")
 
