@@ -1,13 +1,13 @@
 package event
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 )
 
 type TriggerStarted struct {
-	Event   *Event            `json:"event"`
-	Trigger *flowpipe.Trigger `json:"trigger"`
-	Args    flowpipe.Input    `json:"args"`
+	Event   *Event             `json:"event"`
+	Trigger *flowpipe2.Trigger `json:"trigger"`
+	Args    flowpipe2.Input    `json:"args"`
 }
 
 func (e *TriggerStarted) GetEvent() *Event {
@@ -18,7 +18,7 @@ func (e *TriggerStarted) HandlerName() string {
 	return HandlerTriggerStarted
 }
 
-func TriggerStartedFromTriggerStart(s *TriggerStart, trigger *flowpipe.Trigger) *TriggerStarted {
+func TriggerStartedFromTriggerStart(s *TriggerStart, trigger *flowpipe2.Trigger) *TriggerStarted {
 	return &TriggerStarted{
 		Event:   NewFlowEvent(s.Event),
 		Args:    s.Args,

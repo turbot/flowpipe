@@ -2,8 +2,8 @@ package event
 
 import (
 	"fmt"
+	"github.com/turbot/flowpipe/internal/resources"
 
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -19,16 +19,16 @@ type StepFinished struct {
 	StepExecutionID     string `json:"step_execution_id"`
 
 	// Output from the primitive, this is the "native" output of the primitive
-	Output *flowpipe.Output `json:"output,omitempty"`
+	Output *resources.Output `json:"output,omitempty"`
 
 	// Step output configured from the output block, we need a separate field for this because
 	// we don't want the StepOutput accidentally override the native primtive outputs
 	StepOutput map[string]interface{} `json:"step_output,omitempty"`
 
 	// loop controls
-	StepForEach *flowpipe.StepForEach `json:"step_for_each,omitempty"`
-	StepLoop    *flowpipe.StepLoop    `json:"step_loop,omitempty"`
-	StepRetry   *flowpipe.StepRetry   `json:"step_retry,omitempty"`
+	StepForEach *resources.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *resources.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *resources.StepRetry   `json:"step_retry,omitempty"`
 }
 
 func (e *StepFinished) GetEvent() *Event {
@@ -55,7 +55,7 @@ func NewStepFinished(opts ...StepFinishedOption) (*StepFinished, error) {
 	return e, nil
 }
 
-func NewStepFinishedFromStepStart(cmd *StepStart, output *flowpipe.Output, stepOutput map[string]interface{}, stepLoop *flowpipe.StepLoop) (*StepFinished, error) {
+func NewStepFinishedFromStepStart(cmd *StepStart, output *resources.Output, stepOutput map[string]interface{}, stepLoop *resources.StepLoop) (*StepFinished, error) {
 	e := StepFinished{
 		Event: NewFlowEvent(cmd.Event),
 	}

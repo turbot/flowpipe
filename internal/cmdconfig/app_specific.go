@@ -1,6 +1,8 @@
 package cmdconfig
 
 import (
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/zclconf/go-cty/cty"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -8,6 +10,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/app_specific_connection"
@@ -15,9 +18,7 @@ import (
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/parse"
-	fparse "github.com/turbot/pipe-fittings/parse/flowpipe"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
@@ -75,13 +76,12 @@ func SetAppSpecificConstants() {
 	registerConnections()
 
 	// set custom types
-	var notifierImpl *flowpipe.NotifierImpl
-	var notifierImplTypeName = reflect.TypeOf(notifierImpl).String()
-	app_specific.CustomTypes = []string{notifierImplTypeName}
+	app_specific.CustomTypes = map[string]cty.Type{"notifier": cty.Capsule("BaseNotifierCtyType", reflect.TypeOf(&resources.NotifierImpl{}))}
 
 	// set app specific parse related constants
 	parse.ModDecoderFunc = fparse.NewFlowpipeModDecoder
-	modconfig.AppSpecificNewResourceMapsFunc = flowpipe.NewModResources
+
+	modconfig.AppSpecificNewResourceMapsFunc = resources.NewModResources
 }
 
 func registerConnections() {

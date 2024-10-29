@@ -3,7 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"strings"
 
 	"github.com/atc0005/go-teams-notify/v2/messagecard"
@@ -22,11 +22,11 @@ func NewMessagePrimitive(executionId, pipelineExecutionId, stepExecutionId, pipe
 	}
 }
 
-func (mp *Message) ValidateInput(ctx context.Context, input flowpipe.Input) error {
+func (mp *Message) ValidateInput(ctx context.Context, input resources.Input) error {
 	return mp.Input.validateInputNotifier(input)
 }
 
-func (mp *Message) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (mp *Message) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	err := mp.ValidateInput(ctx, input)
 	if err != nil {
 		return nil, err

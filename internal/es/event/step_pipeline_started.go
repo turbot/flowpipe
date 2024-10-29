@@ -2,9 +2,9 @@ package event
 
 import (
 	"fmt"
+	"github.com/turbot/flowpipe/internal/resources"
 
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 // ! This event is only for starting Pipeline Step, not a general step start command.
@@ -20,8 +20,8 @@ type StepPipelineStarted struct {
 	// Optional details for step execution
 	ChildPipelineExecutionID    string         `json:"child_pipeline_execution_id,omitempty"`
 	ChildPipelineName           string         `json:"child_pipeline_name,omitempty"`
-	ChildPipelineModFullVersion string         `json:"child_pipeline_mod_full_version,omitempty"`
-	ChildPipelineArgs           flowpipe.Input `json:"child_pipeline_args,omitempty"`
+	ChildPipelineModFullVersion string          `json:"child_pipeline_mod_full_version,omitempty"`
+	ChildPipelineArgs           resources.Input `json:"child_pipeline_args,omitempty"`
 
 	// The key for a single step is always "0" but say this pipeline step start is part of for_each, the key is
 	// populated with the actual key: "0"/"1"/"2" or "foo"/"bar"/"baz" (for map based for_each)
@@ -89,7 +89,7 @@ func WithChildPipelineExecutionID(id string) StepPipelineStartedOption {
 	}
 }
 
-func WithChildPipeline(name string, args flowpipe.Input) StepPipelineStartedOption {
+func WithChildPipeline(name string, args resources.Input) StepPipelineStartedOption {
 	return func(cmd *StepPipelineStarted) error {
 		cmd.ChildPipelineName = name
 		cmd.ChildPipelineArgs = args

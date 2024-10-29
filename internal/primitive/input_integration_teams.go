@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	mst "github.com/atc0005/go-teams-notify/v2"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 type InputIntegrationMsTeams struct {
@@ -18,8 +18,8 @@ func NewInputIntegrationMsTeams(base InputIntegrationBase, name string) InputInt
 	return InputIntegrationMsTeams{InputIntegrationBase: base, IntegrationName: name}
 }
 
-func (ip *InputIntegrationMsTeams) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*flowpipe.Output, error) {
-	output := flowpipe.Output{}
+func (ip *InputIntegrationMsTeams) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*resources.Output, error) {
+	output := resources.Output{}
 	teams := mst.NewTeamsClient()
 	err := teams.ValidateWebhook(*ip.WebhookUrl)
 	if err != nil {

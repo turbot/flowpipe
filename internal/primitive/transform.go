@@ -4,7 +4,7 @@ package primitive
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"time"
 
 	"github.com/turbot/pipe-fittings/schema"
@@ -12,18 +12,18 @@ import (
 
 type Transform struct{}
 
-func (e *Transform) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (e *Transform) ValidateInput(ctx context.Context, i resources.Input) error {
 	return nil
 }
 
-func (e *Transform) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (e *Transform) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	start := time.Now().UTC()
 
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := flowpipe.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 

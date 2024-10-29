@@ -3,7 +3,7 @@ package primitive
 import (
 	"context"
 	"encoding/json"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"math"
 	"sync"
@@ -25,7 +25,7 @@ type Function struct {
 	ModPath string
 }
 
-func (e *Function) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (e *Function) ValidateInput(ctx context.Context, i resources.Input) error {
 	// Validate the timeout attribute
 	if i[schema.AttributeTypeTimeout] != nil {
 		switch duration := i[schema.AttributeTypeTimeout].(type) {
@@ -50,7 +50,7 @@ func (e *Function) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 	return nil
 }
 
-func (e *Function) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (e *Function) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (e *Function) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Out
 		return nil, perr.InternalWithMessage("Function returned an error: " + responseJson["errorMessage"].(string))
 	}
 
-	output := flowpipe.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{
 			schema.AttributeTypeResponse:   responseJson,
 			schema.AttributeTypeStatusCode: statusCode,

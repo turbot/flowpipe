@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -21,12 +21,12 @@ import (
 
 type SchedulerService struct {
 	ctx           context.Context
-	Triggers      map[string]*flowpipe.Trigger
+	Triggers      map[string]*resources.Trigger
 	esService     *es.ESService
 	cronScheduler *gocron.Scheduler
 }
 
-func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*flowpipe.Trigger) *SchedulerService {
+func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*resources.Trigger) *SchedulerService {
 	return &SchedulerService{
 		ctx:       ctx,
 		esService: esService,
@@ -44,14 +44,14 @@ func (s *SchedulerService) RescheduleTriggers() error {
 	for _, t := range s.Triggers {
 		var scheduleString string
 		switch config := t.Config.(type) {
-		case *flowpipe.TriggerSchedule:
+		case *resources.TriggerSchedule:
 			scheduleString = config.Schedule
-		case *flowpipe.TriggerQuery:
+		case *resources.TriggerQuery:
 			scheduleString = config.Schedule
 			if scheduleString == "" {
 				scheduleString = "hourly"
 			}
-		case *flowpipe.TriggerHttp:
+		case *resources.TriggerHttp:
 			continue
 		}
 
@@ -123,14 +123,14 @@ func (s *SchedulerService) RescheduleTriggers() error {
 	return nil
 }
 
-func (s *SchedulerService) scheduleTrigger(t *flowpipe.Trigger) error {
+func (s *SchedulerService) scheduleTrigger(t *resources.Trigger) error {
 
 	scheduleString := ""
 
 	switch config := t.Config.(type) {
-	case *flowpipe.TriggerSchedule:
+	case *resources.TriggerSchedule:
 		scheduleString = config.Schedule
-	case *flowpipe.TriggerQuery:
+	case *resources.TriggerQuery:
 		scheduleString = config.Schedule
 		if scheduleString == "" {
 			scheduleString = "hourly"

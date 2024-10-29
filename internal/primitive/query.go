@@ -3,7 +3,7 @@ package primitive
 import (
 	"context"
 	"database/sql"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -29,7 +29,7 @@ type Query struct {
 	QueryReader QueryReader
 }
 
-func (e *Query) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (e *Query) ValidateInput(ctx context.Context, i resources.Input) error {
 	// A database connection string must be provided to set up the connection, unless we are using the mock database for the tests
 	if i[schema.AttributeTypeDatabase] == nil {
 		return perr.BadRequestWithMessage("Query input must define database")
@@ -63,7 +63,7 @@ func (e *Query) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 	return nil
 }
 
-func (e *Query) RunWithMetadata(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, map[string]*sql.ColumnType, error) {
+func (e *Query) RunWithMetadata(ctx context.Context, input resources.Input) (*resources.Output, map[string]*sql.ColumnType, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, nil, err
 	}
@@ -125,7 +125,7 @@ func (e *Query) RunWithMetadata(ctx context.Context, input flowpipe.Input) (*flo
 
 	finish := time.Now().UTC()
 
-	output := &flowpipe.Output{
+	output := &resources.Output{
 		Data: map[string]interface{}{},
 	}
 
@@ -135,7 +135,7 @@ func (e *Query) RunWithMetadata(ctx context.Context, input flowpipe.Input) (*flo
 	return output, md, nil
 }
 
-func (e *Query) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (e *Query) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	output, _, err := e.RunWithMetadata(ctx, input)
 	return output, err
 }

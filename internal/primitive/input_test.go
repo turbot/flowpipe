@@ -3,8 +3,8 @@ package primitive
 import (
 	"context"
 	"errors"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"testing"
@@ -19,7 +19,7 @@ func TestInputWithoutOptionsAndButtonType(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeNotifier: map[string]any{
@@ -45,7 +45,7 @@ func TestInputWithoutOptionsAndTextType(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeText,
 		schema.AttributeTypeNotifier: map[string]any{
@@ -68,7 +68,7 @@ func TestInputWithSlackNotifierUsingTokenNoChannelSet(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -103,7 +103,7 @@ func TestInputWithSlackNotifierUsingTokenChannelSetOnStep(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt:  "Test Prompt",
 		schema.AttributeTypeType:    constants.InputTypeButton,
 		schema.AttributeTypeChannel: "#step",
@@ -136,7 +136,7 @@ func TestInputWithSlackNotifierUsingTokenChannelSetOnNotifier(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -169,7 +169,7 @@ func TestInputWithSlackNotifierUsingTokenChannelSetOnIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -202,7 +202,7 @@ func TestInputWithSlackNotifierUsingWebHookChannelNotSet(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -234,7 +234,7 @@ func TestInputWithEmailNotifierNoRecipients(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -270,7 +270,7 @@ func TestInputWithEmailNotifierRecipientsOnStep(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -304,7 +304,7 @@ func TestInputWithEmailNotifierRecipientsOnNotifier(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{
@@ -338,7 +338,7 @@ func TestInputWithEmailNotifierRecipientsOnIntegration(t *testing.T) {
 	ctx := context.Background()
 
 	step := NewInputPrimitive("exec_123test", "pexec_456test", "sexec_789test", "pipeline.test", "input.test")
-	input := flowpipe.Input(map[string]any{
+	input := resources.Input(map[string]any{
 		schema.AttributeTypePrompt: "Test Prompt",
 		schema.AttributeTypeType:   constants.InputTypeButton,
 		schema.AttributeTypeOptions: []any{

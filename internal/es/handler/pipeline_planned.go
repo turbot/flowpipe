@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"os"
 	"time"
 
@@ -187,7 +187,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// TODO: but for now take the simplest route
 	pipelineInaccessible := false
 	for _, nextStep := range evt.NextSteps {
-		if nextStep.Action == flowpipe.NextStepActionInaccessible {
+		if nextStep.Action == resources.NextStepActionInaccessible {
 			pipelineInaccessible = true
 			break
 		}
@@ -224,24 +224,24 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			continue
 		}
 
-		var stepLoop *flowpipe.StepLoop
+		var stepLoop *resources.StepLoop
 		if !helpers.IsNil(stepDefn.GetLoopConfig()) {
-			stepLoop = &flowpipe.StepLoop{
+			stepLoop = &resources.StepLoop{
 				Index: 0,
 			}
 		}
 
 		// Start each step in parallel
-		runNonForEachStep(ctx, h.CommandBus, evt, flowpipe.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
+		runNonForEachStep(ctx, h.CommandBus, evt, resources.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
 	}
 
 	return nil
 }
 
-func runNonForEachStep(ctx context.Context, commandBus FpCommandBus, e *event.PipelinePlanned, forEachOutput flowpipe.Output, forEachNextStepAction flowpipe.NextStepAction, nextStep flowpipe.NextStep, input flowpipe.Input, stepLoop *flowpipe.StepLoop) {
+func runNonForEachStep(ctx context.Context, commandBus FpCommandBus, e *event.PipelinePlanned, forEachOutput resources.Output, forEachNextStepAction resources.NextStepAction, nextStep resources.NextStep, input resources.Input, stepLoop *resources.StepLoop) {
 
 	// If a step does not have a for_each, we still build a for_each control but with key of "0"
-	forEachControl := &flowpipe.StepForEach{
+	forEachControl := &resources.StepForEach{
 		ForEachStep: false,
 		Key:         "0",
 		TotalCount:  1,

@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"strings"
 	"time"
 
@@ -293,8 +293,8 @@ func (c *CmdTrigger) GetWaitRetry() int {
 	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
 }
 
-func FpTriggerFromModTrigger(t flowpipe.Trigger, rootMod string) (*FpTrigger, error) {
-	tt := flowpipe.GetTriggerTypeFromTriggerConfig(t.Config)
+func FpTriggerFromModTrigger(t resources.Trigger, rootMod string) (*FpTrigger, error) {
+	tt := resources.GetTriggerTypeFromTriggerConfig(t.Config)
 
 	fpTrigger := FpTrigger{
 		Name:            t.FullName,
@@ -338,7 +338,7 @@ func FpTriggerFromModTrigger(t flowpipe.Trigger, rootMod string) (*FpTrigger, er
 
 	switch tt {
 	case schema.TriggerTypeHttp:
-		cfg := t.Config.(*flowpipe.TriggerHttp)
+		cfg := t.Config.(*resources.TriggerHttp)
 		fpTrigger.Url = &cfg.Url
 		for _, method := range cfg.Methods {
 			pipelineInfo := method.Pipeline.AsValueMap()
@@ -349,7 +349,7 @@ func FpTriggerFromModTrigger(t flowpipe.Trigger, rootMod string) (*FpTrigger, er
 			})
 		}
 	case schema.TriggerTypeQuery:
-		cfg := t.Config.(*flowpipe.TriggerQuery)
+		cfg := t.Config.(*resources.TriggerQuery)
 		fpTrigger.Schedule = &cfg.Schedule
 		fpTrigger.Query = &cfg.Sql
 		for _, capture := range cfg.Captures {
@@ -361,7 +361,7 @@ func FpTriggerFromModTrigger(t flowpipe.Trigger, rootMod string) (*FpTrigger, er
 			})
 		}
 	case schema.TriggerTypeSchedule:
-		cfg := t.Config.(*flowpipe.TriggerSchedule)
+		cfg := t.Config.(*resources.TriggerSchedule)
 		fpTrigger.Schedule = &cfg.Schedule
 		pipelineInfo := t.GetPipeline().AsValueMap()
 		pipelineName := pipelineInfo["name"].AsString()

@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"sync"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -119,9 +119,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				// If one of the dependencies failed, and it is not ignored, AND it is the final failure, then this
 				// step will never start. Put it down in the "Inaccessible" list so we know that the Pipeline must
 				// be ended in the handler/pipeline_planned stage
-				e.NextSteps = append(e.NextSteps, flowpipe.NextStep{
+				e.NextSteps = append(e.NextSteps, resources.NextStep{
 					StepName: stepDefn.GetFullyQualifiedName(),
-					Action:   flowpipe.NextStepActionInaccessible})
+					Action:   resources.NextStepActionInaccessible})
 				break
 			}
 		}
@@ -132,9 +132,9 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 
 		maxConcurency := stepDefn.GetMaxConcurrency(evalContext)
 
-		nextStep := flowpipe.NextStep{
+		nextStep := resources.NextStep{
 			StepName:       stepDefn.GetFullyQualifiedName(),
-			Action:         flowpipe.NextStepActionStart,
+			Action:         resources.NextStepActionStart,
 			MaxConcurrency: maxConcurency,
 		}
 
@@ -147,8 +147,8 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 		if helpers.IsNil(stepForEach) {
 
 			// there's no step for each
-			var nextStepAction flowpipe.NextStepAction
-			var input flowpipe.Input
+			var nextStepAction resources.NextStepAction
+			var input resources.Input
 
 			if !helpers.IsNil(stepDefn.GetLoopConfig()) {
 				// If the execution falls here, it means it's the beginning of the loop
@@ -173,12 +173,12 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 				if val.False() {
 					slog.Debug("if condition not met for step", "step", stepDefn.GetName())
 					calculateInput = false
-					nextStepAction = flowpipe.NextStepActionSkip
+					nextStepAction = resources.NextStepActionSkip
 				} else {
-					nextStepAction = flowpipe.NextStepActionStart
+					nextStepAction = resources.NextStepActionStart
 				}
 			} else {
-				nextStepAction = flowpipe.NextStepActionStart
+				nextStepAction = resources.NextStepActionStart
 			}
 
 			if calculateInput {
@@ -206,7 +206,7 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 						slog.Error("Error adding connections to eval context during pipeline plan (2)", "error", err)
 						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())
 					}
-					var connDepend2 []flowpipe.ConnectionDependency
+					var connDepend2 []resources.ConnectionDependency
 					stepInputs, connDepend2, err = stepDefn.GetInputs2(evalContext)
 					if err != nil {
 						return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, pex.Name, stepDefn.GetName())

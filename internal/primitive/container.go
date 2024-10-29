@@ -3,7 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"math"
 	"os"
 	"strings"
@@ -23,7 +23,7 @@ type Container struct {
 var containerCache = map[string]*container.Container{}
 var containerCacheMutex sync.Mutex
 
-func (cp *Container) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (cp *Container) ValidateInput(ctx context.Context, i resources.Input) error {
 
 	// Validate the name attribute
 	if i[schema.LabelName] == nil {
@@ -188,7 +188,7 @@ func convertMapToStrings(input map[string]interface{}) map[string]string {
 	return result
 }
 
-func (cp *Container) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (cp *Container) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := cp.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -314,20 +314,20 @@ func (cp *Container) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.O
 	}
 
 	// Construct the output
-	output := flowpipe.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 
 	containerID, exitCode, err := c.Run(cConfig)
 	if err != nil {
 		if e, ok := err.(perr.ErrorModel); !ok {
-			output.Errors = []flowpipe.StepError{
+			output.Errors = []resources.StepError{
 				{
 					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
 				},
 			}
 		} else {
-			output.Errors = []flowpipe.StepError{
+			output.Errors = []resources.StepError{
 				{
 					Error: e,
 				},
@@ -354,7 +354,7 @@ func (cp *Container) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.O
 	return &output, nil
 }
 
-func (cp *Container) getFromCacheOrNew(ctx context.Context, input flowpipe.Input, stepFullName string) (*container.Container, error) {
+func (cp *Container) getFromCacheOrNew(ctx context.Context, input resources.Input, stepFullName string) (*container.Container, error) {
 	c := containerCache[stepFullName]
 
 	// if Dockerfile source path changed ignore cache & rebuild

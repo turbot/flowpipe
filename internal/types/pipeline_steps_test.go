@@ -1,7 +1,7 @@
 package types
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"testing"
 
 	"github.com/turbot/pipe-fittings/perr"
@@ -14,7 +14,7 @@ import (
 func TestStepAsHclVariables(t *testing.T) {
 	assert := assert.New(t)
 
-	stepOutput := flowpipe.Output{
+	stepOutput := resources.Output{
 		Data: map[string]any{},
 	}
 
@@ -22,7 +22,7 @@ func TestStepAsHclVariables(t *testing.T) {
 	stepOutput.Data["int"] = 25
 	stepOutput.Data["bool"] = true
 
-	stepOutput.Errors = []flowpipe.StepError{
+	stepOutput.Errors = []resources.StepError{
 		{
 			Error: perr.ErrorModel{Detail: "one"},
 		},

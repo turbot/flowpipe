@@ -2,8 +2,8 @@ package event
 
 import (
 	"fmt"
+	"github.com/turbot/flowpipe/internal/resources"
 
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -15,14 +15,14 @@ type StepQueued struct {
 
 	StepExecutionID string         `json:"step_execution_id"`
 	StepName        string         `json:"step_name"`
-	StepType        string         `json:"step_type"`
-	StepInput       flowpipe.Input `json:"input"`
+	StepType  string          `json:"step_type"`
+	StepInput resources.Input `json:"input"`
 
 	// for_each controls
-	StepForEach    *flowpipe.StepForEach   `json:"step_for_each,omitempty"`
-	StepLoop       *flowpipe.StepLoop      `json:"step_loop,omitempty"`
-	StepRetry      *flowpipe.StepRetry     `json:"step_retry,omitempty"`
-	NextStepAction flowpipe.NextStepAction `json:"next_step_action,omitempty"`
+	StepForEach    *resources.StepForEach   `json:"step_for_each,omitempty"`
+	StepLoop       *resources.StepLoop      `json:"step_loop,omitempty"`
+	StepRetry      *resources.StepRetry     `json:"step_retry,omitempty"`
+	NextStepAction resources.NextStepAction `json:"next_step_action,omitempty"`
 }
 
 func (e *StepQueued) GetEvent() *Event {

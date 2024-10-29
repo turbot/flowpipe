@@ -2,6 +2,8 @@ package command
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/parse"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -16,8 +18,6 @@ import (
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
-	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -75,7 +75,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			if stepDefn.GetType() == schema.BlockTypePipelineStepInput && o.IsServerMode {
 				slog.Debug("Step execution is an input step, not releasing semaphore", "step_name", cmd.StepName, "pipeline_execution_id", cmd.PipelineExecutionID)
 				return
-			} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline && cmd.NextStepAction != flowpipe.NextStepActionSkip {
+			} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline && cmd.NextStepAction != flowpipe2.NextStepActionSkip {
 				slog.Debug("Step execution is a pipeline step, not releasing semaphore", "step_name", cmd.StepName, "pipeline_execution_id", cmd.PipelineExecutionID)
 				return
 			}
@@ -122,8 +122,8 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 		// Check if the step should be skipped. This is determined by the evaluation of the IF clause during the
 		// pipeline_plan phase
-		if cmd.NextStepAction == flowpipe.NextStepActionSkip {
-			output := &flowpipe.Output{
+		if cmd.NextStepAction == flowpipe2.NextStepActionSkip {
+			output := &flowpipe2.Output{
 				Status: "skipped",
 			}
 
@@ -131,7 +131,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			return
 		}
 
-		var output *flowpipe.Output
+		var output *flowpipe2.Output
 
 		if o.IsServerMode {
 			var feKey *string
@@ -186,7 +186,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			output, primitiveError = p.Run(ctx, cmd.StepInput)
 		case schema.BlockTypePipelineStepInput:
 			if routerUrl, routed := primitive.GetInputRouter(); routed {
-				endStepFunc := func(stepExecution *execution.StepExecution, out *flowpipe.Output) error {
+				endStepFunc := func(stepExecution *execution.StepExecution, out *flowpipe2.Output) error {
 					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
 				}
 				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, schema.BlockTypePipelineStepInput, routerUrl, endStepFunc)
@@ -198,7 +198,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 			}
 		case schema.BlockTypePipelineStepMessage:
 			if routerUrl, routed := primitive.GetInputRouter(); routed {
-				endStepFunc := func(stepExecution *execution.StepExecution, out *flowpipe.Output) error {
+				endStepFunc := func(stepExecution *execution.StepExecution, out *flowpipe2.Output) error {
 					return EndStepFromApi(ex, stepExecution, pipelineDefn, stepDefn, out, h.EventBus)
 				}
 				p := primitive.NewRoutedInput(cmd.Event.ExecutionID, cmd.PipelineExecutionID, cmd.StepExecutionID, pipelineDefn.PipelineName, cmd.StepName, schema.BlockTypePipelineStepMessage, routerUrl, endStepFunc)
@@ -228,13 +228,13 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		if primitiveError != nil {
 			slog.Error("primitive failed", "error", primitiveError)
 			if output == nil {
-				output = &flowpipe.Output{}
+				output = &flowpipe2.Output{}
 			}
 			if output.Errors == nil {
-				output.Errors = []flowpipe.StepError{}
+				output.Errors = []flowpipe2.StepError{}
 			}
 
-			output.Errors = append(output.Errors, flowpipe.StepError{
+			output.Errors = append(output.Errors, flowpipe2.StepError{
 				Error: perr.InternalWithMessage(primitiveError.Error()),
 			})
 
@@ -315,7 +315,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 				// Append the error and set the state to failed
 				output.Status = constants.StateFailed
 				output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-				output.Errors = append(output.Errors, flowpipe.StepError{
+				output.Errors = append(output.Errors, flowpipe2.StepError{
 					PipelineExecutionID: cmd.PipelineExecutionID,
 					StepExecutionID:     cmd.StepExecutionID,
 					Pipeline:            pipelineDefn.Name(),
@@ -336,7 +336,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 
 // This should only be called by input steps. It raises a pipeline planned event which in turn will do a regular check
 // to see if the pipeline needs to be automatically paused
-func raisePipelinePlannedFromStepStart(stepDefn flowpipe.PipelineStep, cmd *event.StepStart, eventBus FpEventBus) {
+func raisePipelinePlannedFromStepStart(stepDefn flowpipe2.PipelineStep, cmd *event.StepStart, eventBus FpEventBus) {
 	if stepDefn.GetType() != schema.BlockTypePipelineStepInput {
 		return
 	}
@@ -344,7 +344,7 @@ func raisePipelinePlannedFromStepStart(stepDefn flowpipe.PipelineStep, cmd *even
 	go func() {
 		e := event.PipelinePlanned{
 			Event:     event.NewFlowEvent(cmd.Event),
-			NextSteps: []flowpipe.NextStep{},
+			NextSteps: []flowpipe2.NextStep{},
 		}
 
 		e.PipelineExecutionID = cmd.PipelineExecutionID
@@ -364,7 +364,7 @@ func raisePipelinePlannedFromStepStart(stepDefn flowpipe.PipelineStep, cmd *even
 // Evaluation error, i.e. calculating the output, it fails the step and the retry and ignore error directives are not followed.
 //
 // The way this function is returned, whatever output currently calculated will be returned.
-func calculateStepConfiguredOutput(ctx context.Context, stepDefn flowpipe.PipelineStep, evalContext *hcl.EvalContext, cmdStepForEach *flowpipe.StepForEach, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
+func calculateStepConfiguredOutput(ctx context.Context, stepDefn flowpipe2.PipelineStep, evalContext *hcl.EvalContext, cmdStepForEach *flowpipe2.StepForEach, stepOutput map[string]interface{}) (*hcl.EvalContext, map[string]interface{}, error) {
 	for _, outputConfig := range stepDefn.GetOutputConfig() {
 		if outputConfig.UnresolvedValue != nil {
 
@@ -400,10 +400,10 @@ func calculateStepConfiguredOutput(ctx context.Context, stepDefn flowpipe.Pipeli
 // If it's a pipeline step, we need to do something else, we we need to start
 // a new pipeline execution for the child pipeline
 // If it's an input step, we can't complete the step until the API receives the input's answer
-func specialStepHandler(ctx context.Context, stepDefn flowpipe.PipelineStep, cmd *event.StepStart, evalCtx *hcl.EvalContext, h StepStartHandler) bool {
+func specialStepHandler(ctx context.Context, stepDefn flowpipe2.PipelineStep, cmd *event.StepStart, evalCtx *hcl.EvalContext, h StepStartHandler) bool {
 
 	if stepDefn.GetType() == schema.AttributeTypePipeline {
-		args := flowpipe.Input{}
+		args := flowpipe2.Input{}
 		if cmd.StepInput[schema.AttributeTypeArgs] != nil {
 			args = cmd.StepInput[schema.AttributeTypeArgs].(map[string]interface{})
 		}
@@ -477,7 +477,7 @@ func specialStepHandler(ctx context.Context, stepDefn flowpipe.PipelineStep, cmd
 	return false
 }
 
-func EndStepFromApi(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *flowpipe.Pipeline, stepDefn flowpipe.PipelineStep, output *flowpipe.Output, eventBus FpEventBus) error {
+func EndStepFromApi(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *flowpipe2.Pipeline, stepDefn flowpipe2.PipelineStep, output *flowpipe2.Output, eventBus FpEventBus) error {
 
 	stepStartCmdRecreated := event.StepStart{
 		Event: &event.Event{
@@ -513,7 +513,7 @@ func EndStepFromApi(ex *execution.ExecutionInMemory, stepExecution *execution.St
 	return nil
 }
 
-func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flowpipe.Output, stepOutput map[string]interface{}, stepDefn flowpipe.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context, eventBus FpEventBus) {
+func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flowpipe2.Output, stepOutput map[string]interface{}, stepDefn flowpipe2.PipelineStep, evalContext *hcl.EvalContext, ctx context.Context, eventBus FpEventBus) {
 
 	// we need this to calculate the throw and loop, so might as well add it here for convenience
 	endStepEvalContext, err := execution.AddStepCalculatedOutputAsResults(stepDefn.GetName(), stepOutput, &cmd.StepInput, evalContext)
@@ -538,7 +538,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 		// Append the error and set the state to failed
 		output.Status = constants.StateFailed
 		output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-		output.Errors = append(output.Errors, flowpipe.StepError{
+		output.Errors = append(output.Errors, flowpipe2.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			Pipeline:            stepDefn.GetPipelineName(),
 			StepExecutionID:     cmd.StepExecutionID,
@@ -549,7 +549,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 		slog.Debug("Step error calculated from throw", "error", stepError)
 		errorFromThrow = true
 		output.Status = constants.StateFailed
-		output.Errors = append(output.Errors, flowpipe.StepError{
+		output.Errors = append(output.Errors, flowpipe2.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			Pipeline:            stepDefn.GetPipelineName(),
 			StepExecutionID:     cmd.StepExecutionID,
@@ -559,7 +559,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 	}
 
 	if output.Status == constants.StateFailed && output.FailureMode != constants.FailureModeFatal {
-		var stepRetry *flowpipe.StepRetry
+		var stepRetry *flowpipe2.StepRetry
 		var diags hcl.Diagnostics
 
 		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
@@ -572,7 +572,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
 				output.Status = constants.StateFailed
 				output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-				output.Errors = append(output.Errors, flowpipe.StepError{
+				output.Errors = append(output.Errors, flowpipe2.StepError{
 					PipelineExecutionID: cmd.PipelineExecutionID,
 					Pipeline:            stepDefn.GetPipelineName(),
 					StepExecutionID:     cmd.StepExecutionID,
@@ -592,7 +592,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 			}
 			// we have exhausted our retry, do not try to loop call step finish immediately
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
-			stepRetry = &flowpipe.StepRetry{
+			stepRetry = &flowpipe2.StepRetry{
 				Count:          retryIndex,
 				RetryCompleted: true,
 			}
@@ -635,10 +635,10 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 
 	loopConfig := stepDefn.GetLoopConfig()
 
-	var stepLoop *flowpipe.StepLoop
+	var stepLoop *flowpipe2.StepLoop
 
 	// Loop is calculated last, so it needs to respect the IF block evaluation
-	if !helpers.IsNil(loopConfig) && cmd.NextStepAction != flowpipe.NextStepActionSkip {
+	if !helpers.IsNil(loopConfig) && cmd.NextStepAction != flowpipe2.NextStepActionSkip {
 		var err error
 		stepLoop, err = calculateLoop(ctx, ex, loopConfig, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
 		if err != nil {
@@ -650,7 +650,7 @@ func endStep(ex *execution.ExecutionInMemory, cmd *event.StepStart, output *flow
 
 			output.Status = constants.StateFailed
 			output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-			output.Errors = append(output.Errors, flowpipe.StepError{
+			output.Errors = append(output.Errors, flowpipe2.StepError{
 				PipelineExecutionID: cmd.PipelineExecutionID,
 				Pipeline:            stepDefn.GetPipelineName(),
 				StepExecutionID:     cmd.StepExecutionID,
@@ -682,7 +682,7 @@ func raisePipelineFailedEventFromPipelineStepStart(ctx context.Context, eventBus
 
 // This function returns 2 error. The first error is the result of the "throw" calculation, the second
 // error is system error that should lead directly to pipeline fail
-func calculateThrow(ctx context.Context, stepDefn flowpipe.PipelineStep, evalContext *hcl.EvalContext) (*perr.ErrorModel, error) {
+func calculateThrow(ctx context.Context, stepDefn flowpipe2.PipelineStep, evalContext *hcl.EvalContext) (*perr.ErrorModel, error) {
 	throwConfigs := stepDefn.GetThrowConfig()
 
 	if len(throwConfigs) == 0 {
@@ -716,7 +716,7 @@ func calculateThrow(ctx context.Context, stepDefn flowpipe.PipelineStep, evalCon
 	return nil, nil
 }
 
-func calculateRetry(ctx context.Context, stepRetry *flowpipe.StepRetry, stepDefn flowpipe.PipelineStep, evalContext *hcl.EvalContext) (*flowpipe.StepRetry, hcl.Diagnostics) {
+func calculateRetry(ctx context.Context, stepRetry *flowpipe2.StepRetry, stepDefn flowpipe2.PipelineStep, evalContext *hcl.EvalContext) (*flowpipe2.StepRetry, hcl.Diagnostics) {
 	// we have error, check the if there's a retry block
 	retryConfig, diags := stepDefn.GetRetryConfig(evalContext, true)
 
@@ -731,7 +731,7 @@ func calculateRetry(ctx context.Context, stepRetry *flowpipe.StepRetry, stepDefn
 
 	// if step retry == nil means this is the first time we encountered this issue
 	if stepRetry == nil {
-		stepRetry = &flowpipe.StepRetry{
+		stepRetry = &flowpipe2.StepRetry{
 			Count: 0,
 		}
 	}
@@ -749,7 +749,7 @@ func calculateRetry(ctx context.Context, stepRetry *flowpipe.StepRetry, stepDefn
 	return stepRetry, hcl.Diagnostics{}
 }
 
-func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopConfig flowpipe.LoopDefn, stepLoop *flowpipe.StepLoop, stepForEach *flowpipe.StepForEach, stepDefn flowpipe.PipelineStep, evalContext *hcl.EvalContext) (*flowpipe.StepLoop, error) {
+func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopConfig flowpipe2.LoopDefn, stepLoop *flowpipe2.StepLoop, stepForEach *flowpipe2.StepForEach, stepDefn flowpipe2.PipelineStep, evalContext *hcl.EvalContext) (*flowpipe2.StepLoop, error) {
 
 	// If this is the first iteration of the loop, the cmd.StepLoop should be nil
 	// thus the loop.index in the evaluation context should be 0
@@ -819,7 +819,7 @@ func calculateLoop(ctx context.Context, ex *execution.ExecutionInMemory, loopCon
 		currentIndex = previousIndex + 1
 	}
 
-	newStepLoop := &flowpipe.StepLoop{
+	newStepLoop := &flowpipe2.StepLoop{
 		Index: currentIndex,
 		// Input: &newInput,
 	}

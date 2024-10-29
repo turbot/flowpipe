@@ -1,15 +1,15 @@
 package event
 
 import (
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 // PipelineQueue commands a pipeline to be queued for execution.
 type PipelineQueue struct {
 	Event *Event          `json:"event"`
-	Name string         `json:"name"`
-	Args flowpipe.Input `json:"args"`
+	Name string          `json:"name"`
+	Args resources.Input `json:"args"`
 
 	// The name of the mod including its version number. May be blank if not required,
 	// for example top level mod or 1st level children. Since the 1st level children must have

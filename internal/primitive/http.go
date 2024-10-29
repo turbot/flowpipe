@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"io"
 	"log/slog"
 	"net/http"
@@ -22,7 +22,7 @@ import (
 )
 
 type HTTPRequest struct {
-	Input flowpipe.Input
+	Input flowpipe2.Input
 }
 
 type HTTPInput struct {
@@ -35,7 +35,7 @@ type HTTPInput struct {
 	Timeout        time.Duration
 }
 
-func (h *HTTPRequest) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (h *HTTPRequest) ValidateInput(ctx context.Context, i flowpipe2.Input) error {
 	if i[schema.AttributeTypeUrl] == nil {
 		return perr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
@@ -95,7 +95,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i flowpipe.Input) error
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input flowpipe2.Input) (*flowpipe2.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.
 }
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
-func doRequest(ctx context.Context, inputParams *HTTPInput) (*flowpipe.Output, error) {
+func doRequest(ctx context.Context, inputParams *HTTPInput) (*flowpipe2.Output, error) {
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -184,7 +184,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*flowpipe.Output, e
 	headers := mapResponseHeaders(resp)
 
 	// Construct the output
-	output := flowpipe.Output{
+	output := flowpipe2.Output{
 		Data: map[string]interface{}{},
 	}
 	output.Data[schema.AttributeTypeStatus] = resp.Status
@@ -213,7 +213,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*flowpipe.Output, e
 	}
 
 	if resp.StatusCode >= 400 {
-		output.Errors = []flowpipe.StepError{
+		output.Errors = []flowpipe2.StepError{
 			{
 				Error: perr.FromHttpError(errors.New(resp.Status), resp.StatusCode),
 			},
@@ -224,12 +224,12 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*flowpipe.Output, e
 }
 
 // buildHTTPInput builds the HTTPInput struct from the input parameters
-func buildHTTPInput(input flowpipe.Input) (*HTTPInput, error) {
+func buildHTTPInput(input flowpipe2.Input) (*HTTPInput, error) {
 	// Check for method
 	method, ok := input[schema.AttributeTypeMethod].(string)
 	if !ok {
 		// If not provided, default to GET
-		method = flowpipe.HttpMethodGet
+		method = flowpipe2.HttpMethodGet
 	}
 
 	// Method should be case insensitive

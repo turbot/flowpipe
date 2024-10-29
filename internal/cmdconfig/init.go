@@ -1,6 +1,7 @@
 package cmdconfig
 
 import (
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
 	"maps"
 	"os"
 	"path/filepath"
@@ -17,7 +18,6 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/workspace_profile"
 )

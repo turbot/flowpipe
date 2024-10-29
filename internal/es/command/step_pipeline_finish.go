@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/resources"
 	"time"
 
 	"log/slog"
@@ -12,7 +13,6 @@ import (
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/primitive"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -103,7 +103,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 			// Append the error and set the state to failed
 			cmd.Output.Status = constants.StateFailed
 			cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-			cmd.Output.Errors = append(cmd.Output.Errors, flowpipe.StepError{
+			cmd.Output.Errors = append(cmd.Output.Errors, resources.StepError{
 				PipelineExecutionID: cmd.PipelineExecutionID,
 				StepExecutionID:     cmd.StepExecutionID,
 				Pipeline:            pipelineDefn.Name(),
@@ -148,7 +148,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 		// Append the error and set the state to failed
 		cmd.Output.Status = constants.StateFailed
 		cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-		cmd.Output.Errors = append(cmd.Output.Errors, flowpipe.StepError{
+		cmd.Output.Errors = append(cmd.Output.Errors, resources.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			Pipeline:            stepDefn.GetPipelineName(),
 			StepExecutionID:     cmd.StepExecutionID,
@@ -160,7 +160,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 		errorFromThrow = true
 		cmd.Output.Status = constants.StateFailed
-		cmd.Output.Errors = append(cmd.Output.Errors, flowpipe.StepError{
+		cmd.Output.Errors = append(cmd.Output.Errors, resources.StepError{
 			PipelineExecutionID: cmd.PipelineExecutionID,
 			StepExecutionID:     cmd.StepExecutionID,
 			Step:                stepDefn.GetName(),
@@ -169,7 +169,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 
 	if cmd.Output.Status == constants.StateFailed && cmd.Output.FailureMode != constants.FailureModeFatal {
-		var stepRetry *flowpipe.StepRetry
+		var stepRetry *resources.StepRetry
 		var diags hcl.Diagnostics
 		// Retry does not catch throw, so do not calculate the "retry" and automatically set the stepRetry to nil
 		// to "complete" the error
@@ -182,7 +182,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 				err := error_helpers.HclDiagsToError(stepDefn.GetName(), diags)
 				cmd.Output.Status = constants.StateFailed
 				cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-				cmd.Output.Errors = append(cmd.Output.Errors, flowpipe.StepError{
+				cmd.Output.Errors = append(cmd.Output.Errors, resources.StepError{
 					PipelineExecutionID: cmd.PipelineExecutionID,
 					Pipeline:            stepDefn.GetPipelineName(),
 					StepExecutionID:     cmd.StepExecutionID,
@@ -202,7 +202,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 			}
 
 			// means we need to retry, ignore the loop right now, we need to retry first to clear the error
-			stepRetry = &flowpipe.StepRetry{
+			stepRetry = &resources.StepRetry{
 				Count:          retryIndex,
 				RetryCompleted: true,
 			}
@@ -239,7 +239,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 	}
 
 	loopConfig := stepDefn.GetLoopConfig()
-	var stepLoop *flowpipe.StepLoop
+	var stepLoop *resources.StepLoop
 	if loopConfig != nil {
 		var err error
 		stepLoop, err = calculateLoop(ctx, ex, loopConfig, cmd.StepLoop, cmd.StepForEach, stepDefn, endStepEvalContext)
@@ -250,7 +250,7 @@ func (h StepPipelineFinishHandler) Handle(ctx context.Context, c interface{}) er
 
 			cmd.Output.Status = constants.StateFailed
 			cmd.Output.FailureMode = constants.FailureModeFatal // this is a indicator that this step should be retried or error ignored
-			cmd.Output.Errors = append(cmd.Output.Errors, flowpipe.StepError{
+			cmd.Output.Errors = append(cmd.Output.Errors, resources.StepError{
 				PipelineExecutionID: cmd.PipelineExecutionID,
 				Pipeline:            stepDefn.GetPipelineName(),
 				StepExecutionID:     cmd.StepExecutionID,

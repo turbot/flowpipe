@@ -2,19 +2,19 @@ package pipeline_test
 
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/zclconf/go-cty/cty"
 )
 
 func TestEmailStep(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := load_mod.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
+	pipelines, _, err := parse.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")
@@ -50,7 +50,7 @@ func TestEmailStep(t *testing.T) {
 func TestEmailStepWithParam(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := load_mod.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
+	pipelines, _, err := parse.LoadPipelines(context.TODO(), "./test_pipelines/email.fp")
 	assert.Nil(err, "error found")
 
 	assert.GreaterOrEqual(len(pipelines), 1, "wrong number of pipelines")

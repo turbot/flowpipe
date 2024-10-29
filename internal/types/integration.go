@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
 	typehelpers "github.com/turbot/go-kit/types"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -177,7 +177,7 @@ func FpIntegrationFromAPI(apiIntegration flowpipeapiclient.FpIntegration) FpInte
 	return res
 }
 
-func FpIntegrationFromModIntegration(integration flowpipe.Integration) (*FpIntegration, error) {
+func FpIntegrationFromModIntegration(integration resources.Integration) (*FpIntegration, error) {
 	resp := &FpIntegration{
 		Name:        integration.Name(),
 		Type:        integration.GetIntegrationType(),
@@ -191,7 +191,7 @@ func FpIntegrationFromModIntegration(integration flowpipe.Integration) (*FpInteg
 	redactedValue := sanitize.RedactedStr
 	switch integration.GetIntegrationType() {
 	case schema.IntegrationTypeSlack:
-		slack := integration.(*flowpipe.SlackIntegration)
+		slack := integration.(*resources.SlackIntegration)
 		resp.Channel = slack.Channel
 		if slack.Token != nil {
 			resp.Token = &redactedValue
@@ -203,7 +203,7 @@ func FpIntegrationFromModIntegration(integration flowpipe.Integration) (*FpInteg
 			resp.SigningSecret = &redactedValue
 		}
 	case schema.IntegrationTypeEmail:
-		email := integration.(*flowpipe.EmailIntegration)
+		email := integration.(*resources.EmailIntegration)
 		resp.SmtpHost = email.SmtpHost
 		resp.SmtpPort = email.SmtpPort
 		resp.SmtpsPort = email.SmtpsPort
@@ -218,7 +218,7 @@ func FpIntegrationFromModIntegration(integration flowpipe.Integration) (*FpInteg
 		resp.Bcc = email.Bcc
 		resp.Subject = email.Subject
 	case schema.IntegrationTypeMsTeams:
-		teams := integration.(*flowpipe.MsTeamsIntegration)
+		teams := integration.(*resources.MsTeamsIntegration)
 		if teams.WebhookUrl != nil {
 			resp.WebhookUrl = &redactedValue
 		}

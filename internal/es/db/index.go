@@ -1,15 +1,15 @@
 package db
 
 import (
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"reflect"
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -30,7 +30,7 @@ func GetCachedItem[T any](name string) (T, error) {
 	var defaultT T // default zero value for type T
 
 	// Special handling for pipeline names
-	if _, ok := any(defaultT).(*flowpipe.Pipeline); ok {
+	if _, ok := any(defaultT).(*flowpipe2.Pipeline); ok {
 		parts := strings.Split(name, ".")
 		if len(parts) == 1 {
 			name = "local.pipeline." + name
@@ -55,34 +55,34 @@ func GetCachedItem[T any](name string) (T, error) {
 	return item, nil
 }
 
-func GetNotifier(name string) (flowpipe.Notifier, error) {
-	return GetCachedItem[flowpipe.Notifier](name)
+func GetNotifier(name string) (flowpipe2.Notifier, error) {
+	return GetCachedItem[flowpipe2.Notifier](name)
 }
 
-func GetIntegration(name string) (flowpipe.Integration, error) {
-	return GetCachedItem[flowpipe.Integration](name)
+func GetIntegration(name string) (flowpipe2.Integration, error) {
+	return GetCachedItem[flowpipe2.Integration](name)
 }
 
 func GetVariable(name string) (*modconfig.Variable, error) {
 	return GetCachedItem[*modconfig.Variable](name)
 }
 
-func GetPipelineWithModFullVersion(modFullVersion, name string) (*flowpipe.Pipeline, error) {
+func GetPipelineWithModFullVersion(modFullVersion, name string) (*flowpipe2.Pipeline, error) {
 	if modFullVersion == "" {
 		return GetPipeline(name)
 	}
-	p, err := GetCachedItem[*flowpipe.Pipeline](modFullVersion + "." + name)
+	p, err := GetCachedItem[*flowpipe2.Pipeline](modFullVersion + "." + name)
 	if perr.IsNotFound(err) {
 		return GetPipeline(name)
 	}
 	return p, err
 }
 
-func GetPipeline(name string) (*flowpipe.Pipeline, error) {
-	return GetCachedItem[*flowpipe.Pipeline](name)
+func GetPipeline(name string) (*flowpipe2.Pipeline, error) {
+	return GetCachedItem[*flowpipe2.Pipeline](name)
 }
 
-func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*flowpipe.Pipeline, error) {
+func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*flowpipe2.Pipeline, error) {
 
 	// check if the pipeline is coming from the given mod
 	pipelineParts := strings.Split(name, ".")
@@ -93,7 +93,7 @@ func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*flowpipe.Pipe
 	pipelineModName := pipelineParts[0]
 
 	if pipelineParts[0] == "local" {
-		return GetCachedItem[*flowpipe.Pipeline](name)
+		return GetCachedItem[*flowpipe2.Pipeline](name)
 	}
 
 	// check if it's coming from the current mod
@@ -114,7 +114,7 @@ func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*flowpipe.Pipe
 	return nil, perr.NotFoundWithMessage("pipeline not found: " + name + " from mod " + mod.Name())
 }
 
-func GetPipelineFromCurrentMod(mod *modconfig.Mod, name string) (*flowpipe.Pipeline, error) {
+func GetPipelineFromCurrentMod(mod *modconfig.Mod, name string) (*flowpipe2.Pipeline, error) {
 	if mod == nil {
 		return nil, perr.BadRequestWithMessage("mod is nil")
 	}
@@ -126,14 +126,14 @@ func GetPipelineFromCurrentMod(mod *modconfig.Mod, name string) (*flowpipe.Pipel
 
 	cacheKey := prefixCacheKey + "." + name
 
-	return GetCachedItem[*flowpipe.Pipeline](cacheKey)
+	return GetCachedItem[*flowpipe2.Pipeline](cacheKey)
 }
 
-func GetTrigger(name string) (*flowpipe.Trigger, error) {
-	return GetCachedItem[*flowpipe.Trigger](name)
+func GetTrigger(name string) (*flowpipe2.Trigger, error) {
+	return GetCachedItem[*flowpipe2.Trigger](name)
 }
 
-func ListAllPipelines() ([]*flowpipe.Pipeline, error) {
+func ListAllPipelines() ([]*flowpipe2.Pipeline, error) {
 	pipelineNamesCached, found := cache.GetCache().Get("#pipeline.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("pipeline names not found")
@@ -144,7 +144,7 @@ func ListAllPipelines() ([]*flowpipe.Pipeline, error) {
 		return nil, perr.InternalWithMessage("invalid pipeline names")
 	}
 
-	var pipelines []*flowpipe.Pipeline
+	var pipelines []*flowpipe2.Pipeline
 	for _, name := range pipelineNames {
 		pipeline, err := GetPipeline(name)
 		if err != nil {
@@ -156,7 +156,7 @@ func ListAllPipelines() ([]*flowpipe.Pipeline, error) {
 	return pipelines, nil
 }
 
-func ListAllIntegrations() ([]flowpipe.Integration, error) {
+func ListAllIntegrations() ([]flowpipe2.Integration, error) {
 	integrationNamesCached, found := cache.GetCache().Get("#integration.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("integration names not found")
@@ -167,7 +167,7 @@ func ListAllIntegrations() ([]flowpipe.Integration, error) {
 		return nil, perr.InternalWithMessage("integration name cached is not a list of string")
 	}
 
-	var integrations []flowpipe.Integration
+	var integrations []flowpipe2.Integration
 	for _, name := range integrationNames {
 		integration, err := GetIntegration(name)
 		if err != nil {
@@ -203,7 +203,7 @@ func ListAllVariables() ([]*modconfig.Variable, error) {
 
 }
 
-func ListAllNotifiers() ([]flowpipe.Notifier, error) {
+func ListAllNotifiers() ([]flowpipe2.Notifier, error) {
 	notifierNamesCached, found := cache.GetCache().Get("#notifier.names")
 	if !found {
 		return nil, perr.NotFoundWithMessage("notifier names not found")
@@ -214,7 +214,7 @@ func ListAllNotifiers() ([]flowpipe.Notifier, error) {
 		return nil, perr.InternalWithMessage("invalid notifier names")
 	}
 
-	var notifiers []flowpipe.Notifier
+	var notifiers []flowpipe2.Notifier
 	for _, name := range notifierNames {
 		notifier, err := GetNotifier(name)
 		if err != nil {
@@ -226,7 +226,7 @@ func ListAllNotifiers() ([]flowpipe.Notifier, error) {
 	return notifiers, nil
 }
 
-func ListAllTriggers() ([]flowpipe.Trigger, error) {
+func ListAllTriggers() ([]flowpipe2.Trigger, error) {
 
 	triggerNamesCached, found := cache.GetCache().Get("#trigger.names")
 	if !found {
@@ -238,7 +238,7 @@ func ListAllTriggers() ([]flowpipe.Trigger, error) {
 		return nil, perr.InternalWithMessage("invalid trigger names")
 	}
 
-	var triggers []flowpipe.Trigger
+	var triggers []flowpipe2.Trigger
 	for _, name := range triggerNames {
 		trigger, err := GetTrigger(name)
 		if err != nil {

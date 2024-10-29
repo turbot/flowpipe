@@ -2,7 +2,7 @@ package handler
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"os"
 	"strings"
@@ -130,7 +130,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 	return nil
 }
 
-func pipelineCompletionHandler(executionID, pipelineExecutionID string, pipelineDefn *flowpipe.Pipeline, stepExecutions map[string]*execution.StepExecution) {
+func pipelineCompletionHandler(executionID, pipelineExecutionID string, pipelineDefn *resources.Pipeline, stepExecutions map[string]*execution.StepExecution) {
 	event.ReleaseEventLogMutex(executionID)
 	execution.CompletePipelineExecutionStepSemaphore(pipelineExecutionID)
 	err := execution.ReleasePipelineSemaphore(pipelineDefn)

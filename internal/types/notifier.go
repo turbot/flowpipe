@@ -2,10 +2,9 @@ package types
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
-
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
@@ -108,7 +107,7 @@ func printItems(items []string, baseLeftPad int) string {
 	return output
 }
 
-func FpNotifierFromModNotifier(notifier flowpipe.Notifier) (*FpNotifier, error) {
+func FpNotifierFromModNotifier(notifier resources.Notifier) (*FpNotifier, error) {
 	resp := &FpNotifier{
 		Name:        notifier.Name(),
 		Description: notifier.GetHclResourceImpl().Description,

@@ -3,7 +3,7 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
@@ -17,10 +17,10 @@ import (
 )
 
 type Email struct {
-	Input flowpipe.Input
+	Input resources.Input
 }
 
-func (h *Email) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (h *Email) ValidateInput(ctx context.Context, i resources.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
@@ -161,7 +161,7 @@ func (h *Email) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 	return nil
 }
 
-func (h *Email) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (h *Email) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -273,7 +273,7 @@ func (h *Email) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output
 	message += "\r\n" + body
 
 	// Construct the output
-	output := flowpipe.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 
@@ -294,19 +294,19 @@ func (h *Email) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output
 		if smtpErr.Code >= 400 {
 			switch {
 			case smtpErr.Code >= 400 && smtpErr.Code <= 499:
-				output.Errors = []flowpipe.StepError{
+				output.Errors = []resources.StepError{
 					{
 						Error: perr.BadRequestWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
 					},
 				}
 			case smtpErr.Code >= 500 && smtpErr.Code <= 599:
-				output.Errors = []flowpipe.StepError{
+				output.Errors = []resources.StepError{
 					{
 						Error: perr.ServiceUnavailableWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
 					},
 				}
 			default:
-				output.Errors = []flowpipe.StepError{
+				output.Errors = []resources.StepError{
 					{
 						Error: perr.InternalWithMessage(fmt.Sprintf("%d %s", smtpErr.Code, smtpErr.Msg)),
 					},

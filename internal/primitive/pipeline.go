@@ -2,15 +2,14 @@ package primitive
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
-
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 type RunPipeline struct{}
 
-func (e *RunPipeline) ValidateInput(ctx context.Context, input flowpipe.Input) error {
+func (e *RunPipeline) ValidateInput(ctx context.Context, input resources.Input) error {
 
 	if input[schema.AttributeTypePipeline] == nil {
 		return perr.BadRequestWithMessage("pipeline input must define a name")
@@ -30,12 +29,12 @@ func (e *RunPipeline) ValidateInput(ctx context.Context, input flowpipe.Input) e
 	return nil
 }
 
-func (e *RunPipeline) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (e *RunPipeline) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := &flowpipe.Output{
+	output := &resources.Output{
 		Data: map[string]interface{}{},
 	}
 

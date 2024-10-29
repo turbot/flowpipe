@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 )
 
 // There's only one use case for this, which is to handle the "Pipeline Step" finish **command**.
@@ -12,14 +12,14 @@ type StepPipelineFinish struct {
 	Event *Event `json:"event"`
 	// Step execution details
 	PipelineExecutionID string            `json:"pipeline_execution_id"`
-	StepExecutionID     string           `json:"step_execution_id"`
-	Output              *flowpipe.Output `json:"output,omitempty"`
+	StepExecutionID     string            `json:"step_execution_id"`
+	Output              *resources.Output `json:"output,omitempty"`
 
 	// for_each controls
-	StepForEach *flowpipe.StepForEach `json:"step_for_each,omitempty"`
-	StepLoop    *flowpipe.StepLoop    `json:"step_loop,omitempty"`
-	StepRetry   *flowpipe.StepRetry   `json:"step_retry,omitempty"`
-	StepInput   flowpipe.Input        `json:"step_input,omitempty"`
+	StepForEach *resources.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *resources.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *resources.StepRetry   `json:"step_retry,omitempty"`
+	StepInput   resources.Input        `json:"step_input,omitempty"`
 }
 
 func (e *StepPipelineFinish) GetEvent() *Event {
@@ -49,7 +49,7 @@ func NewStepPipelineFinish(opts ...StepPipelineFinishOption) (*StepPipelineFinis
 func ForPipelineFinished(e *PipelineFinished) StepPipelineFinishOption {
 	return func(cmd *StepPipelineFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
-		cmd.Output = &flowpipe.Output{
+		cmd.Output = &resources.Output{
 			Status: "", // output is only relevant for step
 			Data: map[string]interface{}{
 				"output": e.PipelineOutput,
@@ -63,7 +63,7 @@ func ForPipelineFinished(e *PipelineFinished) StepPipelineFinishOption {
 func ForPipelineFailed(e *PipelineFailed) StepPipelineFinishOption {
 	return func(cmd *StepPipelineFinish) error {
 		cmd.Event = NewChildEvent(e.Event)
-		cmd.Output = &flowpipe.Output{
+		cmd.Output = &resources.Output{
 			Status: "failed",
 			Data: map[string]interface{}{
 				"output": e.PipelineOutput,
@@ -81,7 +81,7 @@ func WithPipelineExecutionID(id string) StepPipelineFinishOption {
 	}
 }
 
-func WithStepForEach(stepForEach *flowpipe.StepForEach) StepPipelineFinishOption {
+func WithStepForEach(stepForEach *resources.StepForEach) StepPipelineFinishOption {
 	return func(cmd *StepPipelineFinish) error {
 		cmd.StepForEach = stepForEach
 		return nil

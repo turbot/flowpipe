@@ -2,11 +2,11 @@ package execution
 
 import (
 	"github.com/turbot/flowpipe/internal/es/db"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*flowpipe.Pipeline, error) {
+func (ex *Execution) PipelineDefinition(pipelineExecutionID string) (*resources.Pipeline, error) {
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {
 		return nil, perr.BadRequestWithMessage("pipeline execution " + pipelineExecutionID + " not found")

@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -121,7 +121,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		},
 	}
 
-	trigger := &flowpipe.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
@@ -134,27 +134,27 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	insertCapture := &flowpipe.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &flowpipe.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &flowpipe.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &flowpipe.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*flowpipe.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -592,7 +592,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	trigger := &flowpipe.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
@@ -605,26 +605,26 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	insertCapture := &flowpipe.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &flowpipe.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &flowpipe.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &flowpipe.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database: connectionString,
 		Sql:      "select * from test_one",
-		Captures: map[string]*flowpipe.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -959,7 +959,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		},
 	}
 
-	trigger := &flowpipe.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger_b",
 		},
@@ -972,27 +972,27 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	insertCapture := &flowpipe.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &flowpipe.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &flowpipe.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &flowpipe.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*flowpipe.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -1263,7 +1263,7 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		},
 	}
 
-	trigger := &flowpipe.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger_b",
 		},
@@ -1275,22 +1275,22 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	updateCapture := &flowpipe.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &flowpipe.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &flowpipe.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*flowpipe.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"update": updateCapture,
 			"delete": deleteCapture,
 		},
@@ -1411,7 +1411,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		},
 	}
 
-	trigger := &flowpipe.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
@@ -1423,27 +1423,27 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
-	insertCapture := &flowpipe.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &flowpipe.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &flowpipe.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &flowpipe.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*flowpipe.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,

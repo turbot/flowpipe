@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"os"
 	"reflect"
@@ -25,7 +26,6 @@ import (
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
@@ -349,10 +349,10 @@ func FlowpipeResponseMetadataFromAPIResponse(apiResp flowpipeapiclient.FlowpipeR
 	return response
 }
 
-func ModConfigStepErrorsFromAPIErrors(apiErrors []flowpipeapiclient.ModconfigStepError) []flowpipe.StepError {
-	var stepErrors []flowpipe.StepError
+func ModConfigStepErrorsFromAPIErrors(apiErrors []flowpipeapiclient.ModconfigStepError) []resources.StepError {
+	var stepErrors []resources.StepError
 	for _, e := range apiErrors {
-		se := flowpipe.StepError{
+		se := resources.StepError{
 			PipelineExecutionID: utils.Deref(e.PipelineExecutionId, ""),
 			StepExecutionID:     utils.Deref(e.StepExecutionId, ""),
 			Pipeline:            utils.Deref(e.Pipeline, ""),
@@ -500,7 +500,7 @@ func displayProgressLogs(ctx context.Context, cmd *cobra.Command, resp types.Pip
 	lastIndex := -1
 	status := fmt.Sprintf("[flowpipe] Execution ID: %s", executionId)
 	pipelineOutput := make(map[string]any)
-	var pipelineErrors []flowpipe.StepError
+	var pipelineErrors []resources.StepError
 	exit := false
 	o.PipelineProgress.Update(status)
 

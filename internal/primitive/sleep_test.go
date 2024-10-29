@@ -2,7 +2,7 @@ package primitive
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"math"
 	"testing"
 	"time"
@@ -17,7 +17,7 @@ func TestSleepOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := flowpipe.Input(map[string]interface{}{"duration": "1s"})
+	input := resources.Input(map[string]interface{}{"duration": "1s"})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
@@ -34,7 +34,7 @@ func TestSleepWithDurationInNumber(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := flowpipe.Input(map[string]interface{}{"duration": int64(1000)})
+	input := resources.Input(map[string]interface{}{"duration": int64(1000)})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)
@@ -52,7 +52,7 @@ func TestSleepInvalidDuration(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := flowpipe.Input(map[string]interface{}{"duration": "5"})
+	input := resources.Input(map[string]interface{}{"duration": "5"})
 
 	_, err := q.Run(ctx, input)
 	assert.NotNil(err)
@@ -67,7 +67,7 @@ func TestSleepNegativeDuration(t *testing.T) {
 
 	assert := assert.New(t)
 	q := Sleep{}
-	input := flowpipe.Input(map[string]interface{}{"duration": int64(-1)})
+	input := resources.Input(map[string]interface{}{"duration": int64(-1)})
 
 	_, err := q.Run(ctx, input)
 	assert.NotNil(err)

@@ -1,7 +1,7 @@
 package execution
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +28,7 @@ type PipelineExecution struct {
 	ModFullVersion string `json:"mod_full_version"`
 
 	// The input to the pipeline
-	Args flowpipe.Input `json:"args,omitempty"`
+	Args resources.Input `json:"args,omitempty"`
 
 	// The output of the pipeline
 	PipelineOutput map[string]interface{} `json:"pipeline_output,omitempty"`
@@ -90,7 +90,7 @@ type PipelineExecution struct {
 	TriggerCapture string `json:"trigger_capture,omitempty"`
 
 	// All errors from the step execution + any errors that can be added to the pipeline execution manually
-	Errors []flowpipe.StepError `json:"errors,omitempty"`
+	Errors []resources.StepError `json:"errors,omitempty"`
 
 	// Steps triggered by pipelines in the execution.
 	StepExecutions map[string]*StepExecution `json:"-"`
@@ -397,7 +397,7 @@ func (pe *PipelineExecution) IsStepFail(stepName string) bool {
 }
 
 // TODO: this is where we collect the failures so the "ShouldFail" test works .. not sure if this is the correct place?
-func (pe *PipelineExecution) Fail(stepName string, stepError ...flowpipe.StepError) {
+func (pe *PipelineExecution) Fail(stepName string, stepError ...resources.StepError) {
 	pe.Errors = append(pe.Errors, stepError...)
 }
 
@@ -625,18 +625,18 @@ type StepExecution struct {
 	Status string `json:"status"`
 
 	// Input to the step
-	Input          flowpipe.Input `json:"input"`
+	Input          resources.Input `json:"input"`
 	MaxConcurrency *int            `json:"max_concurrency,omitempty"`
 
 	// for_each controls
-	StepForEach *flowpipe.StepForEach `json:"step_for_each,omitempty"`
-	StepLoop    *flowpipe.StepLoop    `json:"step_loop,omitempty"`
-	StepRetry   *flowpipe.StepRetry   `json:"step_retry,omitempty"`
+	StepForEach *resources.StepForEach `json:"step_for_each,omitempty"`
+	StepLoop    *resources.StepLoop    `json:"step_loop,omitempty"`
+	StepRetry   *resources.StepRetry   `json:"step_retry,omitempty"`
 
-	NextStepAction flowpipe.NextStepAction `json:"next_step_action,omitempty"`
+	NextStepAction resources.NextStepAction `json:"next_step_action,omitempty"`
 
 	// Native/primitive output of the step
-	Output *flowpipe.Output `json:"output,omitempty"`
+	Output *resources.Output `json:"output,omitempty"`
 
 	// The output from the Step's output block:
 	// output "foo" {

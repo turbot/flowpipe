@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"os"
 	"strings"
 	"time"
@@ -43,7 +43,7 @@ func NewInputPrimitive(executionId, pipelineExecutionId, stepExecutionId, pipeli
 }
 
 type InputIntegration interface {
-	PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*flowpipe.Output, error)
+	PostMessage(ctx context.Context, inputType string, prompt string, options []InputIntegrationResponseOption) (*resources.Output, error)
 }
 
 type InputIntegrationBase struct {
@@ -73,7 +73,7 @@ type InputIntegrationResponseOption struct {
 	Style    *string `json:"style,omitempty"`
 }
 
-func validateInputStepInput(ctx context.Context, i flowpipe.Input) error {
+func validateInputStepInput(ctx context.Context, i resources.Input) error {
 	// validate type
 	if i[schema.AttributeTypeType] == nil {
 		return perr.BadRequestWithMessage("Input must define a type")
@@ -109,7 +109,7 @@ func validateInputStepInput(ctx context.Context, i flowpipe.Input) error {
 	return nil
 }
 
-func parseOptionsFromInput(i flowpipe.Input) []InputIntegrationResponseOption {
+func parseOptionsFromInput(i resources.Input) []InputIntegrationResponseOption {
 	var resOptions []InputIntegrationResponseOption
 
 	if options, hasOptions := i[schema.AttributeTypeOptions].([]any); hasOptions {
@@ -138,7 +138,7 @@ func parseOptionsFromInput(i flowpipe.Input) []InputIntegrationResponseOption {
 	return resOptions
 }
 
-func (ip *Input) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (ip *Input) ValidateInput(ctx context.Context, i resources.Input) error {
 	err := validateInputStepInput(ctx, i)
 	if err != nil {
 		return err // will already be perr
@@ -152,7 +152,7 @@ func (ip *Input) ValidateInput(ctx context.Context, i flowpipe.Input) error {
 	return nil
 }
 
-func (ip *Input) validateInputNotifier(i flowpipe.Input) error {
+func (ip *Input) validateInputNotifier(i resources.Input) error {
 	notifier := i[schema.AttributeTypeNotifier].(map[string]any)
 	if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 		for _, n := range notifies {
@@ -232,8 +232,8 @@ func (ip *Input) validateInputNotifier(i flowpipe.Input) error {
 	return nil
 }
 
-func (ip *Input) execute(ctx context.Context, input flowpipe.Input, mc MessageCreator) (*flowpipe.Output, error) {
-	output := &flowpipe.Output{}
+func (ip *Input) execute(ctx context.Context, input resources.Input, mc MessageCreator) (*resources.Output, error) {
+	output := &resources.Output{}
 
 	resOptions := parseOptionsFromInput(input)
 
@@ -274,7 +274,7 @@ func (ip *Input) execute(ctx context.Context, input flowpipe.Input, mc MessageCr
 	return ip.consoleIntegration(ctx, input, mc, resOptions)
 }
 
-func (ip *Input) sendNotifications(ctx context.Context, input flowpipe.Input, mc MessageCreator, opts []InputIntegrationResponseOption) (bool, []error) {
+func (ip *Input) sendNotifications(ctx context.Context, input resources.Input, mc MessageCreator, opts []InputIntegrationResponseOption) (bool, []error) {
 	base := NewInputIntegrationBase(ip)
 	externalNotificationSent := false
 	var notificationErrors []error
@@ -428,12 +428,12 @@ func (ip *Input) sendNotifications(ctx context.Context, input flowpipe.Input, mc
 	return externalNotificationSent, notificationErrors
 }
 
-func (ip *Input) consoleIntegration(ctx context.Context, input flowpipe.Input, mc MessageCreator, options []InputIntegrationResponseOption) (*flowpipe.Output, error) {
+func (ip *Input) consoleIntegration(ctx context.Context, input resources.Input, mc MessageCreator, options []InputIntegrationResponseOption) (*resources.Output, error) {
 	c := NewInputIntegrationConsole(NewInputIntegrationBase(ip))
 	return c.PostMessage(ctx, mc, options)
 }
 
-func (ip *Input) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (ip *Input) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := ip.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}

@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"slices"
 	"strings"
 	"sync"
@@ -328,7 +328,7 @@ func httpFormDataFromId(id string) (httpFormData, error) {
 	return output, nil
 }
 
-func httpFormDataInputFromInputStep(input flowpipe.Input) httpFormDataInput {
+func httpFormDataInputFromInputStep(input flowpipe2.Input) httpFormDataInput {
 	var output httpFormDataInput
 
 	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
@@ -399,8 +399,8 @@ func httpFormValidateNotifiers(sexec *execution.StepExecution) bool {
 	return false
 }
 
-func (api *APIService) finishInputStepFromForm(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *flowpipe.Pipeline, stepDefn flowpipe.PipelineStep, value any) error {
-	out := flowpipe.Output{
+func (api *APIService) finishInputStepFromForm(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *flowpipe2.Pipeline, stepDefn flowpipe2.PipelineStep, value any) error {
+	out := flowpipe2.Output{
 		Data: map[string]any{
 			"value": value,
 		},

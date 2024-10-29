@@ -3,7 +3,7 @@ package primitive
 import (
 	"bufio"
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"os/exec"
 	"syscall"
 	"time"
@@ -14,14 +14,14 @@ import (
 
 type Exec struct{}
 
-func (e *Exec) ValidateInput(ctx context.Context, i flowpipe.Input) error {
+func (e *Exec) ValidateInput(ctx context.Context, i resources.Input) error {
 	if i["command"] == nil {
 		return perr.BadRequestWithMessage("Exec input must define a command")
 	}
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output, error) {
+func (e *Exec) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (e *Exec) Run(ctx context.Context, input flowpipe.Input) (*flowpipe.Output,
 	}
 	finish := time.Now().UTC()
 
-	output := flowpipe.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 

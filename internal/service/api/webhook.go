@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"io"
 	"log/slog"
 	"net/http"
@@ -24,7 +25,6 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
@@ -69,7 +69,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	}
 
 	// check if the t is a webhook trigger
-	t, ok := triggerCached.(*flowpipe.Trigger)
+	t, ok := triggerCached.(*flowpipe2.Trigger)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a trigger"))
 		return
@@ -82,7 +82,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	httpTriggerConfig, ok := t.Config.(*flowpipe.TriggerHttp)
+	httpTriggerConfig, ok := t.Config.(*flowpipe2.TriggerHttp)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
 		return
@@ -143,7 +143,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		selfObject[k] = ctyVal
 	}
 
-	resourceMaps := flowpipe.GetModResources(mod)
+	resourceMaps := flowpipe2.GetModResources(mod)
 	vars := map[string]cty.Value{}
 	for _, v := range resourceMaps.Variables {
 		vars[v.GetMetadata().ResourceName] = v.Value
@@ -272,7 +272,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 	pipelineExecutionResponse.Results = pipelineOutput
 
 	if pipelineOutput["errors"] != nil {
-		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]flowpipe.StepError)
+		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]flowpipe2.StepError)
 	}
 
 	pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
@@ -358,7 +358,7 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 			pipelineResponse.Results = pipelineOutput
 
 			if pipelineOutput["errors"] != nil {
-				pipelineResponse.Errors = pipelineOutput["errors"].([]flowpipe.StepError)
+				pipelineResponse.Errors = pipelineOutput["errors"].([]flowpipe2.StepError)
 			}
 
 			if trg.Config.GetType() == "schedule" {

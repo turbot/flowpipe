@@ -2,7 +2,7 @@ package execution
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -14,7 +14,7 @@ func pipelineSemaphoreCacheKey(name string) string {
 	return name + "-pipeline-sempahore"
 }
 
-func GetPipelineSemaphore(pipelineDefn *flowpipe.Pipeline) error {
+func GetPipelineSemaphore(pipelineDefn *resources.Pipeline) error {
 	if pipelineDefn == nil {
 		slog.Warn("Pipeline definition is nil, unable to get pipeline semaphore")
 		return nil
@@ -49,7 +49,7 @@ func GetPipelineSemaphore(pipelineDefn *flowpipe.Pipeline) error {
 	return nil
 }
 
-func ReleasePipelineSemaphore(pipelineDefn *flowpipe.Pipeline) error {
+func ReleasePipelineSemaphore(pipelineDefn *resources.Pipeline) error {
 	if pipelineDefn == nil {
 		slog.Warn("Pipeline definition is nil, unable to release pipeline semaphore")
 		return nil

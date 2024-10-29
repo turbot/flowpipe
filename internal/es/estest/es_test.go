@@ -3,6 +3,7 @@ package estest
 // Basic imports
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/resources"
 	"net/http"
 	"os"
 	"path"
@@ -22,7 +23,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -316,7 +316,7 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 	assert.Equal(404, pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
 
 	assert.NotNil(pex.PipelineOutput["errors"])
-	assert.Equal(404, pex.PipelineOutput["errors"].([]flowpipe.StepError)[0].Error.Status)
+	assert.Equal(404, pex.PipelineOutput["errors"].([]resources.StepError)[0].Error.Status)
 }
 
 func (suite *EsTestSuite) TestParentChildPipeline() {
@@ -683,7 +683,7 @@ func (suite *EsTestSuite) TestParam() {
 func (suite *EsTestSuite) TestParamOverride() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 
@@ -709,7 +709,7 @@ func (suite *EsTestSuite) TestParamOverride() {
 func (suite *EsTestSuite) TestParamOptional() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 
@@ -740,7 +740,7 @@ func (suite *EsTestSuite) TestParamOptional() {
 func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 
@@ -766,7 +766,7 @@ func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 func (suite *EsTestSuite) TestChildPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 

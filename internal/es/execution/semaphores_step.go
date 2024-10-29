@@ -2,7 +2,7 @@ package execution
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -11,11 +11,11 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-func pipelineStepSemaphoreCacheKey(pipelineExecutionID string, stepDefn flowpipe.PipelineStep) string {
+func pipelineStepSemaphoreCacheKey(pipelineExecutionID string, stepDefn resources.PipelineStep) string {
 	return pipelineExecutionID + "-" + stepDefn.GetFullyQualifiedName()
 }
 
-func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn flowpipe.PipelineStep, evalContext *hcl.EvalContext) error {
+func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn resources.PipelineStep, evalContext *hcl.EvalContext) error {
 	if stepDefn == nil || pipelineExecutionID == "" {
 		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step semaphore")
 		return nil
@@ -29,7 +29,7 @@ func GetPipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn flow
 	return GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID, stepDefn, stepDefnMaxConcurrency, false)
 }
 
-func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string, stepDefn flowpipe.PipelineStep, stepDefnMaxConcurrency *int, tryAcquire bool) error {
+func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string, stepDefn resources.PipelineStep, stepDefnMaxConcurrency *int, tryAcquire bool) error {
 	if stepDefnMaxConcurrency == nil {
 		return nil
 	}
@@ -69,7 +69,7 @@ func GetPipelineExecutionStepSemaphoreMaxConcurrency(pipelineExecutionID string,
 	return nil
 }
 
-func ReleasePipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn flowpipe.PipelineStep) error {
+func ReleasePipelineExecutionStepSemaphore(pipelineExecutionID string, stepDefn resources.PipelineStep) error {
 	if stepDefn == nil || pipelineExecutionID == "" {
 		slog.Warn("Step definition or pipeline execution ID is nil, unable to release pipeline execution step semaphore")
 		return nil
@@ -114,7 +114,7 @@ func pipelineExecutionStepSemaphoreCacheKey(pipelineExecutionID string) string {
 	return pipelineExecutionID + "-pipeline_step_execution_cache_map"
 }
 
-func addToPipelineExecutionStepIndex(pipelineExecutionID string, stepDefn flowpipe.PipelineStep) {
+func addToPipelineExecutionStepIndex(pipelineExecutionID string, stepDefn resources.PipelineStep) {
 	if stepDefn == nil || pipelineExecutionID == "" {
 		slog.Warn("Step definition or pipeline execution ID is nil, unable to get pipeline execution step index")
 		return

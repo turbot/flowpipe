@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"io"
 	"net/http"
 	"net/url"
@@ -258,7 +258,7 @@ func decodePayload(input string) (JSONPayload, error) {
 	return out, nil
 }
 
-func parseLabelsFromValues(input flowpipe.Input, values any) (string, error) {
+func parseLabelsFromValues(input resources.Input, values any) (string, error) {
 	valueKeyLabels := make(map[string]string)
 
 	if input[schema.AttributeTypeType] == "text" {
@@ -302,7 +302,7 @@ func parseLabelsFromValues(input flowpipe.Input, values any) (string, error) {
 	}
 }
 
-func validValues(values any, stepInput flowpipe.Input) bool {
+func validValues(values any, stepInput resources.Input) bool {
 	inputType := stepInput[schema.AttributeTypeType].(string)
 	if inputType == constants.InputTypeText {
 		return true
@@ -378,7 +378,7 @@ func (api *APIService) finishInputStep(execId string, pExecId string, sExecId st
 		return false, nil, perr.BadRequestWithMessage(fmt.Sprintf("invalid value(s) '%v' specified", value))
 	}
 
-	out := flowpipe.Output{
+	out := resources.Output{
 		Data: map[string]any{
 			"value": value,
 		},

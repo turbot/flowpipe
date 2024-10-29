@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"os"
 	"strings"
 
@@ -27,8 +27,8 @@ func NewInputIntegrationConsole(base InputIntegrationBase) InputIntegrationConso
 	}
 }
 
-func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*flowpipe.Output, error) {
-	output := flowpipe.Output{}
+func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*resources.Output, error) {
+	output := resources.Output{}
 
 	text, form, response, err := mc.ConsoleMessage(ip, options)
 	if err != nil {

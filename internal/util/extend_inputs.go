@@ -2,7 +2,7 @@ package util
 
 import (
 	"encoding/json"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"strings"
 
@@ -16,12 +16,12 @@ import (
 // We have tried to encapsulate this in the:
 // 1) Step Definition's getInput() in pipe-fittings, but it needs the salt and we believe that it's not appropriate to use the salt in pipe-fittings.
 // 2) In the primitive itself, but it's too late. We need this information in the Event for the remote CLI use case.
-func ExtendInputs(executionId, pipelineExecutionId, stepExecutionId, stepName string, input flowpipe.Input) flowpipe.Input {
+func ExtendInputs(executionId, pipelineExecutionId, stepExecutionId, stepName string, input flowpipe2.Input) flowpipe2.Input {
 	stepType := strings.Split(stepName, ".")[0]
 	switch stepType {
 	case "input":
 		var notifyMap any
-		if notifyImpl, ok := input[schema.AttributeTypeNotifier].(flowpipe.NotifierImpl); ok {
+		if notifyImpl, ok := input[schema.AttributeTypeNotifier].(flowpipe2.NotifierImpl); ok {
 			// serialise notifyCty to json
 			jsonData, err := json.Marshal(notifyImpl)
 			if err != nil {

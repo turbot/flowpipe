@@ -3,6 +3,7 @@ package estest
 // Basic imports
 import (
 	"context"
+	"github.com/turbot/flowpipe/internal/resources"
 	"net/http"
 	"os"
 	"path"
@@ -20,7 +21,6 @@ import (
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
 	putils "github.com/turbot/pipe-fittings/utils"
 )
 
@@ -117,7 +117,7 @@ func (suite *DefaultModTestSuite) AfterTest(suiteName, testName string) {
 func (suite *DefaultModTestSuite) TestEchoOne() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.echo_one", 100*time.Millisecond, pipelineInput)
 
@@ -141,7 +141,7 @@ func (suite *DefaultModTestSuite) TestEchoOne() {
 func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	// make sure that ./event-store-test-dir/flowpipe.db does not exist
 	_, err := os.Stat("./event-store-test-dir/flowpipe.db")
@@ -191,7 +191,7 @@ func (suite *DefaultModTestSuite) TestEchoOneCustomEventStoreLocation() {
 func (suite *DefaultModTestSuite) TestBasicAuth() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{
+	pipelineInput := resources.Input{
 		"user_email": "asdf",
 		"token":      "12345",
 	}
@@ -214,7 +214,7 @@ func (suite *DefaultModTestSuite) TestBasicAuth() {
 	assert.Equal("401 Unauthorized", pex.Errors[0].Error.Detail)
 
 	// Now re-run with the correct credentials
-	pipelineInput = flowpipe.Input{
+	pipelineInput = resources.Input{
 		"user_email": "testuser",
 		"token":      "testpass",
 	}
@@ -235,7 +235,7 @@ func (suite *DefaultModTestSuite) TestBasicAuth() {
 	assert.Equal("Authenticated successfully", pex.PipelineOutput["val"])
 
 	// re-run with bad creds, should fail again
-	pipelineInput = flowpipe.Input{
+	pipelineInput = resources.Input{
 		"user_email": "testuser",
 		"token":      "testpassxxxxx",
 	}
@@ -260,7 +260,7 @@ func (suite *DefaultModTestSuite) TestBasicAuth() {
 func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.simple_pipeline_loop_with_args_and_function", 100*time.Millisecond, pipelineInput)
 
@@ -287,7 +287,7 @@ func (suite *DefaultModTestSuite) TestLoopWithFunction() {
 func (suite *DefaultModTestSuite) TestNestedWithCreds() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_with_creds", 100*time.Millisecond, pipelineInput)
 
@@ -309,7 +309,7 @@ func (suite *DefaultModTestSuite) TestNestedWithCreds() {
 func (suite *DefaultModTestSuite) TestNestedWithConn() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_with_conn", 100*time.Millisecond, pipelineInput)
 
@@ -333,7 +333,7 @@ func (suite *DefaultModTestSuite) TestNestedModWithCreds() {
 
 	os.Setenv("GITHUB_TOKEN", "12345")
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_call_nested_mod_with_cred", 100*time.Millisecond, pipelineInput)
 
@@ -358,7 +358,7 @@ func (suite *DefaultModTestSuite) TestNestedModWithConns() {
 
 	os.Setenv("GITHUB_TOKEN", "12345")
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_call_nested_mod_with_conn", 100*time.Millisecond, pipelineInput)
 
@@ -380,7 +380,7 @@ func (suite *DefaultModTestSuite) TestNestedModWithConns() {
 func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_invalid_param", 200*time.Millisecond, pipelineInput)
 
@@ -404,7 +404,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidParam() {
 func (suite *DefaultModTestSuite) TestNestedWithInvalidCred() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_call_nested_mod_with_cred_with_invalid_cred", 100*time.Millisecond, pipelineInput)
 
@@ -427,7 +427,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidCred() {
 func (suite *DefaultModTestSuite) TestNestedWithInvalidConn() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_call_nested_mod_with_conn_with_invalid_conn", 100*time.Millisecond, pipelineInput)
 
@@ -450,7 +450,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidConn() {
 func (suite *DefaultModTestSuite) TestNestedWithInvalidCredIncorrectErrorMessage() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.incorrect_better_error_message_from_id_attribute", 100*time.Millisecond, pipelineInput)
 
@@ -473,7 +473,7 @@ func (suite *DefaultModTestSuite) TestNestedWithInvalidCredIncorrectErrorMessage
 func (suite *DefaultModTestSuite) TestCredInStepOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.cred_in_step_output", 100*time.Millisecond, pipelineInput)
 
@@ -496,7 +496,7 @@ func (suite *DefaultModTestSuite) TestCredInStepOutput() {
 func (suite *DefaultModTestSuite) TestConnInStepOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.conn_in_step_output", 100*time.Millisecond, pipelineInput)
 
@@ -519,7 +519,7 @@ func (suite *DefaultModTestSuite) TestConnInStepOutput() {
 func (suite *DefaultModTestSuite) TestCredInOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.cred_in_output", 100*time.Millisecond, pipelineInput)
 
@@ -542,7 +542,7 @@ func (suite *DefaultModTestSuite) TestCredInOutput() {
 func (suite *DefaultModTestSuite) TestConnInOutput() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.conn_in_output", 100*time.Millisecond, pipelineInput)
 
@@ -565,7 +565,7 @@ func (suite *DefaultModTestSuite) TestConnInOutput() {
 func (suite *DefaultModTestSuite) TestStalledPipelineWithIf() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	// default_mod.pipeline.caller was failing due to issue https://github.com/turbot/flowpipe/issues/836
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.caller", 100*time.Millisecond, pipelineInput)
@@ -589,7 +589,7 @@ func (suite *DefaultModTestSuite) TestStalledPipelineWithIf() {
 func (suite *DefaultModTestSuite) TestDynamicCredResolution() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.dynamic_cred", 100*time.Millisecond, pipelineInput)
 
@@ -612,7 +612,7 @@ func (suite *DefaultModTestSuite) TestDynamicCredResolution() {
 func (suite *DefaultModTestSuite) TestDynamicConnResolution() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.dynamic_conn", 100*time.Millisecond, pipelineInput)
 
@@ -635,7 +635,7 @@ func (suite *DefaultModTestSuite) TestDynamicConnResolution() {
 func (suite *DefaultModTestSuite) TestDynamicCredResolutionNested() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.dynamic_cred_parent", 100*time.Millisecond, pipelineInput)
 
@@ -659,7 +659,7 @@ func (suite *DefaultModTestSuite) TestDynamicCredResolutionNested() {
 func (suite *DefaultModTestSuite) TestDynamicConnResolutionNested() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.dynamic_conn_parent", 100*time.Millisecond, pipelineInput)
 
@@ -683,7 +683,7 @@ func (suite *DefaultModTestSuite) TestDynamicConnResolutionNested() {
 func (suite *DefaultModTestSuite) TestInputStepWithDefaultNotifier() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.integration_pipe_default_with_param", 100*time.Millisecond, pipelineInput)
 
@@ -711,7 +711,7 @@ func (suite *DefaultModTestSuite) TestInputStepOptionResolution() {
 
 func (suite *DefaultModTestSuite) testInputStepOptionResolution(pipelineName string) {
 	assert := assert.New(suite.T())
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 	waitTime := 100 * time.Millisecond
 	stepName := "input.input_test"
 
@@ -753,7 +753,7 @@ func (suite *DefaultModTestSuite) testInputStepOptionResolution(pipelineName str
 func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadata() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	// has reference to the built in flowpipe attribute
 	//
@@ -797,7 +797,7 @@ func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadata() {
 func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadataInPipelineStep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.parent_of_nested", 1*time.Second, pipelineInput)
 
@@ -835,7 +835,7 @@ func (suite *DefaultModTestSuite) TestSleepStepReferenceToFlowpipeMetadataInPipe
 func (suite *DefaultModTestSuite) TestInputStepError() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.input_step_error_out", 1*time.Second, pipelineInput)
 	if err != nil {
@@ -856,7 +856,7 @@ func (suite *DefaultModTestSuite) TestInputStepError() {
 func (suite *DefaultModTestSuite) TestInputStepErrorIgnored() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.input_step_error_out_error_config", 1*time.Second, pipelineInput)
 	if err != nil {
@@ -882,7 +882,7 @@ func (suite *DefaultModTestSuite) TestInputStepErrorIgnored() {
 func (suite *DefaultModTestSuite) TestInputStepErrorRetried() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.input_step_error_out_retry", 1*time.Second, pipelineInput)
 	if err != nil {
@@ -910,7 +910,7 @@ func (suite *DefaultModTestSuite) TestInputStepErrorRetried() {
 func (suite *DefaultModTestSuite) TestIfLoop() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := flowpipe.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "default_mod.pipeline.if_loop", 1*time.Second, pipelineInput)
 	if err != nil {

@@ -3,7 +3,7 @@ package util
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"regexp"
 	"strconv"
 
@@ -11,7 +11,7 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-func ValidateEmailInput(ctx context.Context, i flowpipe.Input) error {
+func ValidateEmailInput(ctx context.Context, i resources.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {

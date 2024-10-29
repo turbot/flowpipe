@@ -6,7 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"reflect"
 	"sort"
@@ -78,7 +78,7 @@ func hashRow(row map[string]interface{}) string {
 	return hex.EncodeToString(hashBytes)
 }
 
-func queuePipeline(capture *flowpipe.TriggerQueryCapture, executionID string, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
+func queuePipeline(capture *flowpipe2.TriggerQueryCapture, executionID string, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
 		return nil, nil
@@ -355,7 +355,7 @@ func (tr *TriggerRunnerQuery) GetPipelineQueuesWithArgs(ctx context.Context, arg
 
 }
 
-func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, triggerArgs flowpipe.Input, trg *flowpipe.Trigger) ([]*event.PipelineQueue, error) {
+func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, triggerArgs flowpipe2.Input, trg *flowpipe2.Trigger) ([]*event.PipelineQueue, error) {
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
@@ -366,7 +366,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 		return nil, err
 	}
 
-	config := tr.Trigger.Config.(*flowpipe.TriggerQuery)
+	config := tr.Trigger.Config.(*flowpipe2.TriggerQuery)
 
 	resolvedConfig, err := config.GetConfig(evalContext, tr.rootMod)
 	if err != nil {
@@ -374,7 +374,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 		return nil, err
 	}
 
-	resolvedTriggerConfig, ok := resolvedConfig.(*flowpipe.TriggerQuery)
+	resolvedTriggerConfig, ok := resolvedConfig.(*flowpipe2.TriggerQuery)
 	if !ok {
 		slog.Error("Error converting resolved config to TriggerQueryConfig", "error", err)
 		return nil, perr.InternalWithMessage("Error converting resolved config to TriggerQueryConfig")
@@ -382,7 +382,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 
 	queryPrimitive := primitive.Query{}
 
-	input := flowpipe.Input{
+	input := flowpipe2.Input{
 		schema.AttributeTypeSql:      resolvedTriggerConfig.Sql,
 		schema.AttributeTypeDatabase: resolvedTriggerConfig.Database,
 	}

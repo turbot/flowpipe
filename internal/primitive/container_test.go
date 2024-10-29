@@ -2,7 +2,7 @@ package primitive
 
 import (
 	"context"
-	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	"github.com/turbot/flowpipe/internal/resources"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +23,7 @@ func TestSimpleContainerStep(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{FullyQualifiedStepName: "container_test"}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeImage:             "alpine:3.7",
 		schema.AttributeTypeCmd:               []interface{}{"sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'"},
 		schema.AttributeTypeEnv:               map[string]interface{}{"FOO": "bar"},
@@ -74,7 +74,7 @@ func TestContainerStepMissingImageAndSource(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeCmd:     []interface{}{"echo", "hello world"},
 		schema.AttributeTypeEnv:     map[string]interface{}{"FOO": "bar"},
 		schema.AttributeTypeTimeout: int64(120000),
@@ -95,7 +95,7 @@ func TestContainerStepInvalidImage(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeImage:   123,
 		schema.AttributeTypeCmd:     []interface{}{"echo", "hello world"},
 		schema.AttributeTypeEnv:     map[string]interface{}{"FOO": "bar"},
@@ -121,7 +121,7 @@ func TestContainerStepInvalidMemory(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{FullyQualifiedStepName: "container_test_invalid_memory"}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeImage:   "alpine:3.7",
 		schema.AttributeTypeCmd:     []interface{}{"echo", "hello world"},
 		schema.AttributeTypeEnv:     map[string]interface{}{"FOO": "bar"},
@@ -145,7 +145,7 @@ func TestContainerStepInvalidCmd(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{FullyQualifiedStepName: "container_test"}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeImage:   "alpine:3.7",
 		schema.AttributeTypeCmd:     "echo",
 		schema.AttributeTypeEnv:     map[string]interface{}{"FOO": "bar"},
@@ -167,7 +167,7 @@ func TestContainerStepInvalidEntrypoint(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{FullyQualifiedStepName: "container_test"}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeImage:      "alpine:3.7",
 		schema.AttributeTypeEntrypoint: "echo",
 		schema.AttributeTypeEnv:        map[string]interface{}{"FOO": "bar"},
@@ -193,7 +193,7 @@ func TestContainerStepTimeoutString(t *testing.T) {
 	assert := assert.New(t)
 	hr := Container{FullyQualifiedStepName: "container_test"}
 
-	input := flowpipe.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeImage:             "alpine:3.7",
 		schema.AttributeTypeCmd:               []interface{}{"sh", "-c", "echo 'Line 1'; echo 'Line 2'; echo 'Line 3'"},
 		schema.AttributeTypeEnv:               map[string]interface{}{"FOO": "bar"},
