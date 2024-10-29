@@ -33,6 +33,7 @@ type loadConfigOptions struct {
 
 func LoadFlowpipeConfig(configPaths []string) (config *FlowpipeConfig, errorsAndWarnings error_helpers.ErrorAndWarnings) {
 	errorsAndWarnings = error_helpers.NewErrorsAndWarning(nil)
+
 	defer func() {
 		if r := recover(); r != nil {
 			errorsAndWarnings = error_helpers.NewErrorsAndWarning(helpers.ToError(r))
