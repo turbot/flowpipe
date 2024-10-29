@@ -16,10 +16,10 @@ import (
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/modconfig/flowpipe"
+	fpparse "github.com/turbot/pipe-fittings/parse/flowpipe"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/workspace"
-	fpworkspace "github.com/turbot/pipe-fittings/workspace/flowpipe"
 )
 
 func (m *Manager) flowpipeConfigUpdated(ctx context.Context, newFpConfig *flowpipeconfig.FlowpipeConfig) {
@@ -126,13 +126,13 @@ func (m *Manager) loadMod() error {
 		return err
 	}
 
-	w, errorAndWarning := fpworkspace.LoadWorkspacePromptingForVariables(
+	w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
 		m.ctx,
 		modLocation,
-		fpworkspace.WithCredentials(flowpipeConfig.Credentials),
-		fpworkspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
-		fpworkspace.WithIntegrations(flowpipeConfig.Integrations),
-		fpworkspace.WithNotifiers(flowpipeConfig.Notifiers))
+		workspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
+		workspace.WithDecoderOptions(fpparse.WithCredentials(flowpipeConfig.Credentials)),
+	)
+
 	if errorAndWarning.Error != nil {
 		return errorAndWarning.Error
 	}
