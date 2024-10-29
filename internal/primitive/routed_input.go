@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/flowpipe/internal/resources"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,6 +15,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
