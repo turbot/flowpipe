@@ -14,7 +14,7 @@ on:
       version:
         description: "Version (without 'v')"
         required: true
-        default: 1.0.\invalid
+        default: 1.1.\invalid
       confirmDevelop:
         description: Confirm running on develop branch
         required: true
