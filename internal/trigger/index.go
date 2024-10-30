@@ -205,13 +205,17 @@ func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerPara
 
 	executionVariables := map[string]cty.Value{}
 
-	resourceMaps := resources.GetModResources(rootMod)
-
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	var modVars map[string]*modconfig.Variable
+	localsMap := make(map[string]cty.Value)
 	if rootMod != nil {
+		resourceMaps := resources.GetModResources(rootMod)
 		modVars = resourceMaps.Variables
+		for _, local := range resourceMaps.Locals {
+			localsMap[local.ShortName] = local.Value
+		}
+		executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
 	}
 	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modVars, true)
 
@@ -221,14 +225,6 @@ func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerPara
 		variablesMap[variable.ShortName] = variable.Value
 	}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
-
-	localsMap := make(map[string]cty.Value)
-	if rootMod != nil {
-		for _, local := range resourceMaps.Locals {
-			localsMap[local.ShortName] = local.Value
-		}
-		executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
-	}
 
 	runParams := map[string]cty.Value{}
 
