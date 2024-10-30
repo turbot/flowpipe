@@ -2,16 +2,15 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
-	"time"
-
 	"log/slog"
+	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"
 )

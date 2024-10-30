@@ -2,12 +2,12 @@ package execution
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/resources"
 	"golang.org/x/sync/semaphore"
 )
 

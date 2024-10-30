@@ -3,10 +3,10 @@ package util
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"regexp"
 	"strconv"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )

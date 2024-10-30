@@ -2,8 +2,6 @@ package trigger
 
 import (
 	"context"
-	fparse "github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"strings"
 	"time"
@@ -14,6 +12,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"

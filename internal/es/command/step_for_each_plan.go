@@ -2,13 +2,12 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
-	"strconv"
-
 	"log/slog"
+	"strconv"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/perr"

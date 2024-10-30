@@ -2,8 +2,8 @@ package event
 
 import (
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

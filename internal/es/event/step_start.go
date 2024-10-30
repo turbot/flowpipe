@@ -2,6 +2,7 @@ package event
 
 import (
 	"fmt"
+
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/perr"
@@ -14,8 +15,8 @@ type StepStart struct {
 	PipelineExecutionID string          `json:"pipeline_execution_id"`
 	StepExecutionID     string          `json:"step_execution_id"`
 	StepName            string          `json:"step_name"`
-	StepType  string          `json:"step_type"`
-	StepInput resources.Input `json:"input"`
+	StepType            string          `json:"step_type"`
+	StepInput           resources.Input `json:"input"`
 
 	// for_each controls
 	StepForEach *resources.StepForEach `json:"step_for_each,omitempty"`

@@ -3,13 +3,13 @@ package primitive
 import (
 	"context"
 	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 // Validations

@@ -1,8 +1,6 @@
 package cmdconfig
 
 import (
-	fparse "github.com/turbot/flowpipe/internal/parse"
-	"github.com/zclconf/go-cty/cty"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
+	fparse "github.com/turbot/flowpipe/internal/parse"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
@@ -19,6 +18,7 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/parse"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"os"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/metrics"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/pipe-fittings/perr"
 )

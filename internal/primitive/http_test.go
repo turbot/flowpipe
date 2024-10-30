@@ -2,10 +2,10 @@ package primitive
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/schema"
 )
 

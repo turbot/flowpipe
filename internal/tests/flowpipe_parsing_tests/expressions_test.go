@@ -2,12 +2,12 @@ package pipeline_test
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/parse"
 	"github.com/zclconf/go-cty/cty"
 )
 

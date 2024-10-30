@@ -3,12 +3,12 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"strings"
 
 	"github.com/atc0005/go-teams-notify/v2/messagecard"
 	"github.com/charmbracelet/huh"
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/schema"
 )
 

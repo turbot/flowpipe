@@ -2,9 +2,9 @@ package execution
 
 import (
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	putils "github.com/turbot/pipe-fittings/utils"

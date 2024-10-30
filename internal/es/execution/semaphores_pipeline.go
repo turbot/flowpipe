@@ -2,11 +2,11 @@ package execution
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/flowpipe/internal/resources"
 	"golang.org/x/sync/semaphore"
 )
 

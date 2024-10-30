@@ -2,8 +2,6 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -13,7 +11,9 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/parse"
 	"github.com/turbot/flowpipe/internal/primitive"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"

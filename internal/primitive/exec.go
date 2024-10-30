@@ -3,12 +3,12 @@ package primitive
 import (
 	"bufio"
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"os/exec"
 	"syscall"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

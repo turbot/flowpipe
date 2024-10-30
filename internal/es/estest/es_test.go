@@ -3,7 +3,6 @@ package estest
 // Basic imports
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"net/http"
 	"os"
 	"path"
@@ -20,6 +19,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"

@@ -2,12 +2,12 @@ package flowpipe_invalid_tests
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/tests/test_init"
 )
 
 type testSetup struct {

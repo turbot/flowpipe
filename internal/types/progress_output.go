@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/printers"

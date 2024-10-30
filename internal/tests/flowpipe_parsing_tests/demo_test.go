@@ -2,10 +2,10 @@ package pipeline_test
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/parse"
 )
 
 func TestDemoPipeline(t *testing.T) {

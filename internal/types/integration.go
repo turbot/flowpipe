@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+
 	"github.com/logrusorgru/aurora"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 	"github.com/turbot/flowpipe/internal/resources"

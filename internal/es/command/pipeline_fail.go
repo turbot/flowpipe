@@ -2,12 +2,12 @@ package command
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

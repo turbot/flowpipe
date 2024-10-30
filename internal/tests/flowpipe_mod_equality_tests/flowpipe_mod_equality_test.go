@@ -2,15 +2,15 @@ package pipeline_test
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/flowpipeconfig"
-	fpparse "github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"os"
 	"path"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
+	fpparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"github.com/turbot/pipe-fittings/utils"
 	"github.com/turbot/pipe-fittings/workspace"
 )

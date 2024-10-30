@@ -2,10 +2,10 @@ package pipeline_test
 
 import (
 	"context"
-	fparse "github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	fparse "github.com/turbot/flowpipe/internal/parse"
 )
 
 func TestParamEnum(t *testing.T) {

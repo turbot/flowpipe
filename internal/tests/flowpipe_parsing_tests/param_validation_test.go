@@ -2,12 +2,12 @@ package pipeline_test
 
 import (
 	"context"
-	fpparse "github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
+	fpparse "github.com/turbot/flowpipe/internal/parse"
 )
 
 func TestParamValidation(t *testing.T) {

@@ -1,13 +1,13 @@
 package execution
 
 import (
-	"github.com/turbot/flowpipe/internal/resources"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/fperr"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/perr"

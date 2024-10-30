@@ -3,9 +3,6 @@ package invalid_mod_tests
 import (
 	"context"
 	"errors"
-	"github.com/turbot/flowpipe/internal/flowpipeconfig"
-	fpparse "github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"os"
 	"path"
 	"testing"
@@ -13,6 +10,9 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
+	fpparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/workspace"
 )

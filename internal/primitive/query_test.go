@@ -3,13 +3,13 @@ package primitive
 import (
 	"context"
 	"database/sql"
-	"github.com/turbot/flowpipe/internal/resources"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )

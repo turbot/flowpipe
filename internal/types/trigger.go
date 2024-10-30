@@ -2,11 +2,14 @@ package types
 
 import (
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"strings"
 	"time"
 
+	"github.com/logrusorgru/aurora"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/go-kit/helpers"
+	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
@@ -14,10 +17,6 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 	"golang.org/x/exp/maps"
-
-	"github.com/logrusorgru/aurora"
-	"github.com/turbot/go-kit/helpers"
-	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )

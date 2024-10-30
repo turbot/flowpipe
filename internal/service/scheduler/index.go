@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"slices"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/schedule"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/store"

@@ -2,11 +2,11 @@ package util
 
 import (
 	"encoding/json"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/schema"
 )
 

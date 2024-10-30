@@ -3,7 +3,6 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"math"
 	"os"
 	"strings"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )

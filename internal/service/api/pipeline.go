@@ -2,8 +2,6 @@ package api
 
 import (
 	"fmt"
-	fparse "github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -16,6 +14,8 @@ import (
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"

@@ -3,6 +3,7 @@ package primitive
 import (
 	"context"
 	"encoding/json"
+
 	mst "github.com/atc0005/go-teams-notify/v2"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"

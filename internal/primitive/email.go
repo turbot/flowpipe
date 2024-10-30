@@ -3,7 +3,6 @@ package primitive
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
@@ -12,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )

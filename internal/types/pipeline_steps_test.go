@@ -1,12 +1,11 @@
 package types
 
 import (
-	"github.com/turbot/flowpipe/internal/resources"
 	"testing"
 
-	"github.com/turbot/pipe-fittings/perr"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )

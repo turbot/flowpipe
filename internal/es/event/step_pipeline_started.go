@@ -2,8 +2,8 @@ package event
 
 import (
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"
 )
 
@@ -18,8 +18,8 @@ type StepPipelineStarted struct {
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	StepExecutionID     string `json:"step_execution_id"`
 	// Optional details for step execution
-	ChildPipelineExecutionID    string         `json:"child_pipeline_execution_id,omitempty"`
-	ChildPipelineName           string         `json:"child_pipeline_name,omitempty"`
+	ChildPipelineExecutionID    string          `json:"child_pipeline_execution_id,omitempty"`
+	ChildPipelineName           string          `json:"child_pipeline_name,omitempty"`
 	ChildPipelineModFullVersion string          `json:"child_pipeline_mod_full_version,omitempty"`
 	ChildPipelineArgs           resources.Input `json:"child_pipeline_args,omitempty"`
 

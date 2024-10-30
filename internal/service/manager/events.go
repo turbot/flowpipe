@@ -3,9 +3,6 @@ package manager
 import (
 	"context"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/flowpipeconfig"
-	fpparse "github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -14,7 +11,10 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
 	"github.com/turbot/flowpipe/internal/output"
+	fpparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/perr"

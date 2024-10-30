@@ -3,7 +3,6 @@ package primitive
 import (
 	"context"
 	"database/sql"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	_ "github.com/marcboeker/go-duckdb"
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )

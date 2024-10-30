@@ -2,14 +2,13 @@ package handler
 
 import (
 	"context"
-	"github.com/turbot/flowpipe/internal/resources"
+	"log/slog"
 	"os"
 	"time"
 
-	"log/slog"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"

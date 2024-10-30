@@ -3,7 +3,6 @@ package primitive
 import (
 	"context"
 	"encoding/json"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"math"
 	"sync"
@@ -13,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/turbot/flowpipe/internal/docker"
 	function "github.com/turbot/flowpipe/internal/functions"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )

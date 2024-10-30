@@ -3,7 +3,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/color"

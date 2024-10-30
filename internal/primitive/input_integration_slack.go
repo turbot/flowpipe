@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+
 	"github.com/slack-go/slack"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"

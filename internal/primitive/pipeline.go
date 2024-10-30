@@ -2,6 +2,7 @@ package primitive
 
 import (
 	"context"
+
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"

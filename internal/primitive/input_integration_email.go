@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"net/smtp"
 	"net/textproto"
@@ -14,11 +13,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/templates"
+	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-
-	kitTypes "github.com/turbot/go-kit/types"
 )
 
 type InputIntegrationEmailMessage interface {
