@@ -8,12 +8,12 @@ import (
 )
 
 func GetModResources(mod *modconfig.Mod) *FlowpipeModResources {
-	resourceMaps, ok := mod.GetResourceMaps().(*FlowpipeModResources)
+	modResources, ok := mod.GetModResources().(*FlowpipeModResources)
 	if !ok {
 		// should never happen
-		panic(fmt.Sprintf("mod.GetResourceMaps() did not return a flowpipe ModResources: %T", mod.GetResourceMaps()))
+		panic(fmt.Sprintf("mod.GetModResources() did not return a flowpipe ModResources: %T", mod.GetModResources()))
 	}
-	return resourceMaps
+	return modResources
 }
 
 // FlowpipeModResources is a struct containing maps of all mod resource types
@@ -290,7 +290,7 @@ func (m *FlowpipeModResources) GetMods() map[string]*modconfig.Mod {
 	return m.Mods
 }
 
-// TopLevelResources returns a new PowerpipeResourceMaps containing only top level resources (i.e. no dependencies)
+// TopLevelResources returns a new PowerpipeModResources containing only top level resources (i.e. no dependencies)
 func (m *FlowpipeModResources) TopLevelResources() modconfig.ModResources {
 	res := NewModResources(m.Mod)
 

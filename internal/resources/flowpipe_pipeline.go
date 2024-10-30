@@ -446,7 +446,7 @@ func (p *Pipeline) SetAttributes(hclAttributes hcl.Attributes, evalContext *hcl.
 
 // Pipeline HclResource interface functions
 
-func (p *Pipeline) OnDecoded(*hcl.Block, modconfig.ResourceMapsProvider) hcl.Diagnostics {
+func (p *Pipeline) OnDecoded(*hcl.Block, modconfig.ModResourcesProvider) hcl.Diagnostics {
 	p.setBaseProperties()
 	return nil
 }

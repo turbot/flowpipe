@@ -40,10 +40,10 @@ func LoadPipelines(ctx context.Context, configPath string) (map[string]*resource
 	var pipelines map[string]*resources.Pipeline
 	var triggers map[string]*resources.Trigger
 
-	if mod != nil && mod.GetResourceMaps() != nil {
-		resourceMaps := resources.GetModResources(mod)
-		pipelines = resourceMaps.Pipelines
-		triggers = resourceMaps.Triggers
+	if mod != nil && mod.GetModResources() != nil {
+		modResources := resources.GetModResources(mod)
+		pipelines = modResources.Pipelines
+		triggers = modResources.Triggers
 	}
 
 	return pipelines, triggers, err

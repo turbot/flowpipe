@@ -3,10 +3,11 @@ module github.com/turbot/flowpipe
 go 1.23.1
 
 // uncomment for goland devcontainer
-//replace(
-//github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
-//github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
+//replace (
+//	github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
+//	github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
 //)
+
 replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
 require (

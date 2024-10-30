@@ -265,7 +265,7 @@ func (m *Manager) initializeResources() error {
 
 		rootModName = "local"
 		mod = &modconfig.Mod{
-			ResourceMaps: &resources.FlowpipeModResources{
+			ModResources: &resources.FlowpipeModResources{
 				Pipelines: pipelines,
 				Triggers:  triggers,
 			},

@@ -58,13 +58,13 @@ func (m *Manager) modUpdated() {
 	m.RootMod = m.workspace.Mod
 
 	// get resources from mod
-	resourceMaps := resources.GetModResources(m.RootMod)
+	modResources := resources.GetModResources(m.RootMod)
 
 	var serverOutput []sanitize.SanitizedStringer
 	var err error
 	slog.Info("caching pipelines and triggers")
 	serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "flowpipe"), m.RootMod.Name(), true))
-	m.triggers = resourceMaps.Triggers
+	m.triggers = modResources.Triggers
 	err = m.cacheModData(m.RootMod)
 	if err != nil {
 		slog.Error("error caching pipelines and triggers", "error", err)
@@ -79,7 +79,7 @@ func (m *Manager) modUpdated() {
 	// Reload scheduled triggers
 	slog.Info("rescheduling triggers")
 	if m.schedulerService != nil {
-		m.schedulerService.Triggers = resourceMaps.Triggers
+		m.schedulerService.Triggers = modResources.Triggers
 		err := m.schedulerService.RescheduleTriggers()
 		if err != nil {
 			slog.Error("error rescheduling triggers", "error", err)

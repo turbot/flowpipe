@@ -105,7 +105,7 @@ func GetPipelineResolvedFromMod(mod *modconfig.Mod, name string) (*resources.Pip
 	//
 	// Don't recurse because you can only call a pipeline from a mod that is a direct dependency
 	// not a dependency of a dependency
-	for _, m := range mod.ResourceMaps.GetMods() {
+	for _, m := range mod.ModResources.GetMods() {
 		if m.ModName == pipelineModName {
 			return GetPipelineFromCurrentMod(m, name)
 		}

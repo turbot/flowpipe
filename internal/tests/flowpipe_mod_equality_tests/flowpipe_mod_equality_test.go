@@ -634,7 +634,7 @@ func (suite *FlowpipeModEqualityTestSuite) TestFlowpipeModEquality() {
 			assert.Nil(ew.Error)
 			assert.Equal(0, len(ew.Warnings))
 
-			assert.Equal(tc.equal, wA.GetResourceMaps().Equals(wB.GetResourceMaps()))
+			assert.Equal(tc.equal, wA.GetModResources().Equals(wB.GetModResources()))
 		})
 	}
 

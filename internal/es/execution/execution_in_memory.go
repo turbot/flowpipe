@@ -232,28 +232,28 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *resources.Pipeline, 
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	resourceMaps := resources.GetModResources(pipelineDefn.GetMod())
+	modResources := resources.GetModResources(pipelineDefn.GetMod())
 
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
-	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(resourceMaps.Variables, true)
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modResources.Variables, true)
 
 	// add these to eval context
 	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
-	for _, variable := range resourceMaps.Variables {
+	for _, variable := range modResources.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
 	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
 
 	localsMap := make(map[string]cty.Value)
-	for _, local := range resourceMaps.Locals {
+	for _, local := range modResources.Locals {
 		localsMap[local.ShortName] = local.Value
 	}
 	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
 
 	// get the nested mod resource (just the pipelines for now)
 	if pipelineDefn.GetMod().HasDependentMods() {
-		for _, dependentMod := range resourceMaps.Mods {
+		for _, dependentMod := range modResources.Mods {
 			if dependentMod.Name() == pipelineDefn.GetMod().Name() {
 				continue
 			}
@@ -421,9 +421,9 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *resour
 	if pipelineDefn != nil {
 		allPipelines, err = db.ListAllPipelines()
 	} else {
-		resourceMaps := resources.GetModResources(pipelineDefn.GetMod())
+		modResources := resources.GetModResources(pipelineDefn.GetMod())
 
-		for _, p := range resourceMaps.Pipelines {
+		for _, p := range modResources.Pipelines {
 			allPipelines = append(allPipelines, p)
 		}
 	}
@@ -457,10 +457,10 @@ func buildPipelineMap(allPipelines []*resources.Pipeline) (map[string]cty.Value,
 }
 
 func buildNestedModResourcesForEvalContext(nestedMod *modconfig.Mod) (cty.Value, error) {
-	resourceMaps := resources.GetModResources(nestedMod)
+	modResources := resources.GetModResources(nestedMod)
 
 	var allPipelines []*resources.Pipeline
-	for _, r := range resourceMaps.Pipelines {
+	for _, r := range modResources.Pipelines {
 		if r.ModName != nestedMod.ShortName {
 			continue
 		}
