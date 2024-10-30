@@ -14,10 +14,9 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/constants"
-
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/app_specific"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -87,7 +86,7 @@ type RoutedInputOverrides struct {
 }
 
 // RoutedInputEndStepFunc is a function that ends a step
-type RoutedInputEndStepFunc func(stepExecution *execution.StepExecution, out *modconfig.Output) error
+type RoutedInputEndStepFunc func(stepExecution *execution.StepExecution, out *resources.Output) error
 
 func NewRoutedInput(executionID, pipelineExecutionID, stepExecutionID, pipelineName, stepName, stepType, url string, endStepFunc RoutedInputEndStepFunc) *RoutedInput {
 	return &RoutedInput{
@@ -136,7 +135,7 @@ func (r *RoutedInput) GetShortStepName() string {
 	return strings.Split(r.StepName, ".")[len(strings.Split(r.StepName, "."))-1]
 }
 
-func (r *RoutedInput) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (r *RoutedInput) ValidateInput(ctx context.Context, i resources.Input) error {
 	switch r.StepType {
 	case "input":
 		err := validateInputStepInput(ctx, i)
@@ -150,7 +149,7 @@ func (r *RoutedInput) ValidateInput(ctx context.Context, i modconfig.Input) erro
 	return nil
 }
 
-func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Output, error) {
+func (r *RoutedInput) Run(ctx context.Context, i resources.Input) (*resources.Output, error) {
 	// Validate
 	if e := r.ValidateInput(ctx, i); e != nil {
 		return nil, e
@@ -218,8 +217,8 @@ func (r *RoutedInput) Run(ctx context.Context, i modconfig.Input) (*modconfig.Ou
 	return output, nil
 }
 
-func (r *RoutedInput) execute(ctx context.Context, payload *RoutedInputCreatePayload) (*modconfig.Output, error) {
-	output := &modconfig.Output{}
+func (r *RoutedInput) execute(ctx context.Context, payload *RoutedInputCreatePayload) (*resources.Output, error) {
+	output := &resources.Output{}
 
 	if payload == nil {
 		return nil, perr.BadRequestWithMessage("missing payload")
@@ -325,14 +324,14 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 				continue
 			}
 
-			var out modconfig.Output
+			var out resources.Output
 			switch response.State {
 			case "finished":
 				switch {
 				case r.StepType == schema.BlockTypePipelineStepInput:
 					if form, ok := response.Inputs[r.GetShortStepName()]; ok {
 						if form.Response != nil {
-							out = modconfig.Output{
+							out = resources.Output{
 								Data: map[string]any{
 									"value": form.Response,
 								},
@@ -341,7 +340,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 						}
 					}
 				case r.StepType == schema.BlockTypePipelineStepMessage:
-					out = modconfig.Output{
+					out = resources.Output{
 						Data:   make(map[string]any),
 						Status: constants.StateFinished,
 					}
@@ -365,10 +364,10 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 				return
 			case "error":
 				stateErr := perr.InternalWithMessage(response.StateReason)
-				out = modconfig.Output{
+				out = resources.Output{
 					Status:      constants.StateFailed,
 					FailureMode: constants.FailureModeFatal,
-					Errors: []modconfig.StepError{{
+					Errors: []resources.StepError{{
 						Error:               stateErr,
 						PipelineExecutionID: r.PipelineExecutionID,
 						StepExecutionID:     r.StepExecutionID,
@@ -398,7 +397,7 @@ func (r *RoutedInput) Poll(ctx context.Context, client *http.Client, token strin
 	}()
 }
 
-func (r *RoutedInput) GetOverrides(stepInput modconfig.Input) *RoutedInputOverrides {
+func (r *RoutedInput) GetOverrides(stepInput resources.Input) *RoutedInputOverrides {
 	overrides := &RoutedInputOverrides{}
 	hasOverrides := false
 

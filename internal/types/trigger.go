@@ -5,19 +5,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/logrusorgru/aurora"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
+	"github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/go-kit/helpers"
+	typehelpers "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/turbot/pipe-fittings/utils"
 	"golang.org/x/exp/maps"
-
-	"github.com/logrusorgru/aurora"
-	"github.com/turbot/go-kit/helpers"
-	typehelpers "github.com/turbot/go-kit/types"
 
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"
 )
@@ -293,8 +292,8 @@ func (c *CmdTrigger) GetWaitRetry() int {
 	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
 }
 
-func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, error) {
-	tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+func FpTriggerFromModTrigger(t resources.Trigger, rootMod string) (*FpTrigger, error) {
+	tt := resources.GetTriggerTypeFromTriggerConfig(t.Config)
 
 	fpTrigger := FpTrigger{
 		Name:            t.FullName,
@@ -338,7 +337,7 @@ func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, e
 
 	switch tt {
 	case schema.TriggerTypeHttp:
-		cfg := t.Config.(*modconfig.TriggerHttp)
+		cfg := t.Config.(*resources.TriggerHttp)
 		fpTrigger.Url = &cfg.Url
 		for _, method := range cfg.Methods {
 			pipelineInfo := method.Pipeline.AsValueMap()
@@ -349,7 +348,7 @@ func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, e
 			})
 		}
 	case schema.TriggerTypeQuery:
-		cfg := t.Config.(*modconfig.TriggerQuery)
+		cfg := t.Config.(*resources.TriggerQuery)
 		fpTrigger.Schedule = &cfg.Schedule
 		fpTrigger.Query = &cfg.Sql
 		for _, capture := range cfg.Captures {
@@ -361,7 +360,7 @@ func FpTriggerFromModTrigger(t modconfig.Trigger, rootMod string) (*FpTrigger, e
 			})
 		}
 	case schema.TriggerTypeSchedule:
-		cfg := t.Config.(*modconfig.TriggerSchedule)
+		cfg := t.Config.(*resources.TriggerSchedule)
 		fpTrigger.Schedule = &cfg.Schedule
 		pipelineInfo := t.GetPipeline().AsValueMap()
 		pipelineName := pipelineInfo["name"].AsString()

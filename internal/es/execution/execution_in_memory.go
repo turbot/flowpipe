@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/log"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
@@ -76,7 +77,7 @@ func completeExecution(executionID string) error {
 	return nil
 }
 
-func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*ExecutionInMemory, *modconfig.Pipeline, error) {
+func GetPipelineDefnFromExecution(executionID, pipelineExecutionID string) (*ExecutionInMemory, *resources.Pipeline, error) {
 	ex, err := GetExecution(executionID)
 	if err != nil {
 		return nil, nil, err
@@ -110,7 +111,7 @@ func (ex *ExecutionInMemory) AddEvent(evt event.EventLogImpl) error {
 	return err
 }
 
-func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *resources.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -129,7 +130,7 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 	params := map[string]cty.Value{}
 
 	// Why do we add notifier earlier? Because of the param validation before
-	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	notifierMap, err := fpConfig.NotifierValueMap()
 	if err != nil {
 		return nil, err
 	}
@@ -231,26 +232,28 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
+	modResources := resources.GetModResources(pipelineDefn.GetMod())
+
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
-	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables, true)
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modResources.Variables, true)
 
 	// add these to eval context
 	evalContext.Variables[constants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
-	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
+	for _, variable := range modResources.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
 	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
 
 	localsMap := make(map[string]cty.Value)
-	for _, local := range pipelineDefn.GetMod().ResourceMaps.Locals {
+	for _, local := range modResources.Locals {
 		localsMap[local.ShortName] = local.Value
 	}
 	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
 
 	// get the nested mod resource (just the pipelines for now)
 	if pipelineDefn.GetMod().HasDependentMods() {
-		for _, dependentMod := range pipelineDefn.GetMod().ResourceMaps.Mods {
+		for _, dependentMod := range modResources.Mods {
 			if dependentMod.Name() == pipelineDefn.GetMod().Name() {
 				continue
 			}
@@ -268,9 +271,9 @@ func (ex *ExecutionInMemory) BuildEvalContext(pipelineDefn *modconfig.Pipeline, 
 }
 
 // This function mutates evalContext
-func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep) (*hcl.EvalContext, error) {
 
-	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. Credentials need to be resolved, and some (AWS) resolution
+	// We should NOT add all credentials in EvalContext, this is why it's done a bit complicated. credentials need to be resolved, and some (AWS) resolution
 	// can be expensive, i.e. getting session token. So we try to "guess" which credentials are required. It's not perfect, especially when the credentials
 	// need to be resolved at runtime. This is because we don't know what the value would be until we run the step.
 	//
@@ -294,7 +297,7 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContext(evalContext *hcl.EvalCo
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *resources.Pipeline) (*hcl.EvalContext, error) {
 	stepDefns := pipelineDefn.Steps
 
 	allCredentialsDependsOn := []string{}
@@ -323,7 +326,7 @@ func (ex *ExecutionInMemory) AddCredentialsToEvalContextFromPipeline(evalContext
 	return evalContext, nil
 }
 
-func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+func (ex *ExecutionInMemory) AddConnectionsToEvalContextFromPipeline(evalContext *hcl.EvalContext, pipelineDefn *resources.Pipeline) (*hcl.EvalContext, error) {
 	stepDefns := pipelineDefn.Steps
 
 	allConnectionsDependsOn := []string{}
@@ -410,16 +413,17 @@ func (ex *ExecutionInMemory) buildCredentialMapForEvalContext(credentialsInConte
 	return credentialMap, nil
 }
 
-func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *modconfig.Pipeline) (map[string]cty.Value, error) {
+func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *resources.Pipeline) (map[string]cty.Value, error) {
 
-	var allPipelines []*modconfig.Pipeline
+	var allPipelines []*resources.Pipeline
 	var err error
 
 	if pipelineDefn != nil {
 		allPipelines, err = db.ListAllPipelines()
 	} else {
-		contextMod := pipelineDefn.GetMod()
-		for _, p := range contextMod.ResourceMaps.Pipelines {
+		modResources := resources.GetModResources(pipelineDefn.GetMod())
+
+		for _, p := range modResources.Pipelines {
 			allPipelines = append(allPipelines, p)
 		}
 	}
@@ -431,7 +435,7 @@ func (ex *ExecutionInMemory) buildPipelineMapForEvalContext(pipelineDefn *modcon
 	return buildPipelineMap(allPipelines)
 }
 
-func buildPipelineMap(allPipelines []*modconfig.Pipeline) (map[string]cty.Value, error) {
+func buildPipelineMap(allPipelines []*resources.Pipeline) (map[string]cty.Value, error) {
 
 	pipelineMap := map[string]cty.Value{}
 	for _, p := range allPipelines {
@@ -453,9 +457,10 @@ func buildPipelineMap(allPipelines []*modconfig.Pipeline) (map[string]cty.Value,
 }
 
 func buildNestedModResourcesForEvalContext(nestedMod *modconfig.Mod) (cty.Value, error) {
+	modResources := resources.GetModResources(nestedMod)
 
-	allPipelines := []*modconfig.Pipeline{}
-	for _, r := range nestedMod.ResourceMaps.Pipelines {
+	var allPipelines []*resources.Pipeline
+	for _, r := range modResources.Pipelines {
 		if r.ModName != nestedMod.ShortName {
 			continue
 		}
@@ -535,7 +540,7 @@ func buildIntegrationMapForEvalContext() (map[string]cty.Value, error) {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
+func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID string) (resources.PipelineStep, error) {
 
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -554,7 +559,7 @@ func (ex *ExecutionInMemory) StepDefinition(pipelineExecutionID, stepExecutionID
 	return sd, nil
 }
 
-func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*modconfig.Pipeline, error) {
+func (ex *ExecutionInMemory) PipelineDefinition(pipelineExecutionID string) (*resources.Pipeline, error) {
 
 	pe, ok := ex.PipelineExecutions[pipelineExecutionID]
 	if !ok {

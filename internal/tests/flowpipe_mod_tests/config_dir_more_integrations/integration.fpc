@@ -1,0 +1,39 @@
+
+integration "slack" "my_slack_app" {
+  token           = "xoxp-111111"
+  channel         = "#infosec"
+
+  # optional - if you want to verify the source
+  signing_secret  = "Q#$$#@#$$#W"
+}
+
+integration "slack" "slack_with_webhook" {
+  webhook_url = "https://hooks.slack.com/services/T1234567890/B0123456789/XXXXXXXXXX"
+}
+
+integration "email" "email_min" {
+  smtp_host = "smtp.host.tld"
+  from      = "turbie@flowpipe.io"
+}
+
+integration "email" "email_with_all" {
+  smtp_host     = "123.456.789.000"
+  smtp_tls      = "auto"
+  smtp_port     = 25
+  smtps_port    = 587
+  smtp_username = "turbie"
+  smtp_password = "some_password_here"
+
+  from              = "turbie@flowpipe.io"
+  to                = ["user@test.tld"]
+  subject           = "Flowpipe: Action Required"
+}
+
+notifier "admins" {
+  description = "notifier for admins"
+  
+  notify {
+    integration = integration.email.email_with_all 
+    to = ["foo@bar.com", "baz@bar.com"]
+  }
+}

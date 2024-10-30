@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -20,7 +20,7 @@ func TestQueryListAll(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:./database_files/employee.db",
 		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
@@ -133,7 +133,7 @@ func TestQueryWithArgs(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
 		schema.AttributeTypeSql:      "select * from employee where id = $1;",
 		schema.AttributeTypeArgs:     []interface{}{10},
@@ -163,7 +163,7 @@ func TestQueryWithArgsContainsRegexExpression(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
 		schema.AttributeTypeSql:      "SELECT * from employee where name like $1;",
 		schema.AttributeTypeArgs:     []interface{}{"Jo%"},
@@ -199,7 +199,7 @@ func TestQueryTableNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
 		schema.AttributeTypeSql:      "select * from user;",
 	})
@@ -215,7 +215,7 @@ func TestQueryNoRows(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
 		schema.AttributeTypeSql:      "select * from department;",
 	})
@@ -231,7 +231,7 @@ func TestQueryBadQueryStatement(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
 		schema.AttributeTypeSql:      "SELECT * employee;",
 	})
@@ -247,7 +247,7 @@ func TestQueryWithMissingAttributeSql(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "this is a connection string",
 	})
 
@@ -265,7 +265,7 @@ func TestQueryWithInvalidAttribute(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "this is a connection string",
 		"sql1":                       "select * from employee;",
 	})
@@ -284,7 +284,7 @@ func TestQueryWithTimestamp(t *testing.T) {
 	assert := assert.New(t)
 	queryPrimitive := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "this is a connection string",
 
 		// This query string used to cause issue because we were trying to detect args in the query string, i.e. $1, ? or :name (Oracle)
@@ -303,7 +303,7 @@ func TestQueryMissingConnectionString(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeSql:  "SELECT * from aws_ec2_instance where instance_id = $1",
 		schema.AttributeTypeArgs: []interface{}{"i-000a000b0000c00d1"},
 	})
@@ -322,7 +322,7 @@ func TestQueryDuckDB(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "duckdb:./database_files/new_database.duckdb",
 		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
@@ -355,7 +355,7 @@ func TestQuerySQLiteDB(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "sqlite:database_files/employee.db",
 		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
@@ -388,7 +388,7 @@ func TestQueryInvalidDatabase(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "abcd",
 		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
@@ -411,7 +411,7 @@ func TestPostgresSqlQueryListAll(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: connectionString,
 		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
@@ -547,7 +547,7 @@ func TestPostgresSqlQueryWithArgs(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: connectionString,
 		schema.AttributeTypeSql:      "select * from employee where id = $1;",
 		schema.AttributeTypeArgs:     []interface{}{1},
@@ -617,7 +617,7 @@ func TestPostgresSqlQueryWithArgsContainsRegexExpression(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: connectionString,
 		schema.AttributeTypeSql:      "SELECT * from employee where name like $1;",
 		schema.AttributeTypeArgs:     []interface{}{"A%"},
@@ -687,7 +687,7 @@ func TestPostgresSqlQueryTableNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: connectionString,
 		schema.AttributeTypeSql:      "select * from notable;",
 	})
@@ -710,7 +710,7 @@ func TestPostgresSqlQueryNoRows(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: connectionString,
 		schema.AttributeTypeSql:      "select * from department;",
 	})
@@ -733,7 +733,7 @@ func TestPostgresSqlQueryBadQueryStatement(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: connectionString,
 		schema.AttributeTypeSql:      "SELECT * employee;",
 	})
@@ -755,7 +755,7 @@ func TestMariaDbQueryListAll(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "mysql://" + connectionString,
 		schema.AttributeTypeSql:      "select * from employee order by id;",
 	})
@@ -883,7 +883,7 @@ func TestMariaDbQueryWithArgs(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "mysql://" + connectionString,
 		schema.AttributeTypeSql:      "select * from employee where id = ?;",
 		schema.AttributeTypeArgs:     []interface{}{1},
@@ -947,7 +947,7 @@ func TestMariaDbQueryWithArgsContainsRegexExpression(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "mysql://" + connectionString,
 		schema.AttributeTypeSql:      "SELECT * from employee where name like ?;",
 		schema.AttributeTypeArgs:     []interface{}{"A%"},
@@ -1011,7 +1011,7 @@ func TestMariaDbQueryTableNotFound(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "mysql://" + connectionString,
 		schema.AttributeTypeSql:      "select * from notable;",
 	})
@@ -1034,7 +1034,7 @@ func TestMariaDbQueryNoRows(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "mysql://" + connectionString,
 		schema.AttributeTypeSql:      "select * from department;",
 	})
@@ -1057,7 +1057,7 @@ func TestMariaDbQueryBadQueryStatement(t *testing.T) {
 	assert := assert.New(t)
 	hr := Query{}
 
-	input := modconfig.Input(map[string]interface{}{
+	input := resources.Input(map[string]interface{}{
 		schema.AttributeTypeDatabase: "mysql://" + connectionString,
 		schema.AttributeTypeSql:      "SELECT * employee;",
 	})

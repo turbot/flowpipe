@@ -1,0 +1,10 @@
+
+var_two = "value from var file"
+
+var_three = "var_three from var file"
+
+mod_depend_b.var_b_number = 42
+
+string_with_enum = "enum2"
+
+number_with_enum = 3

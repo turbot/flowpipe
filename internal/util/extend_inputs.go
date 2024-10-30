@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
@@ -16,12 +16,12 @@ import (
 // We have tried to encapsulate this in the:
 // 1) Step Definition's getInput() in pipe-fittings, but it needs the salt and we believe that it's not appropriate to use the salt in pipe-fittings.
 // 2) In the primitive itself, but it's too late. We need this information in the Event for the remote CLI use case.
-func ExtendInputs(executionId, pipelineExecutionId, stepExecutionId, stepName string, input modconfig.Input) modconfig.Input {
+func ExtendInputs(executionId, pipelineExecutionId, stepExecutionId, stepName string, input resources.Input) resources.Input {
 	stepType := strings.Split(stepName, ".")[0]
 	switch stepType {
 	case "input":
 		var notifyMap any
-		if notifyImpl, ok := input[schema.AttributeTypeNotifier].(modconfig.NotifierImpl); ok {
+		if notifyImpl, ok := input[schema.AttributeTypeNotifier].(resources.NotifierImpl); ok {
 			// serialise notifyCty to json
 			jsonData, err := json.Marshal(notifyImpl)
 			if err != nil {

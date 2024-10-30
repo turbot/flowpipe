@@ -1,0 +1,6 @@
+credential_import "steampipe" {
+  source      = "./steampipe_config/aws.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+

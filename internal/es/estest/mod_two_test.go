@@ -15,10 +15,10 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type ModTwoTestSuite struct {
@@ -110,7 +110,7 @@ func (suite *ModTwoTestSuite) TearDownSuite() {
 func (suite *ModTwoTestSuite) TestEnumParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.enum_param", 100*time.Millisecond, pipelineInput)
 
@@ -143,7 +143,7 @@ func (suite *ModTwoTestSuite) TestValidParam() {
 	      }
 
 	*/
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"string_param": "value2",
 	}
 
@@ -176,7 +176,7 @@ func (suite *ModTwoTestSuite) TestValidParam() {
 		    }
 	*/
 
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"num_param": 2,
 	}
 
@@ -208,7 +208,7 @@ func (suite *ModTwoTestSuite) TestValidParam() {
 		    }
 	*/
 
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"list_of_string_param": []string{"value2", "value3"},
 	}
 
@@ -231,7 +231,7 @@ func (suite *ModTwoTestSuite) TestValidParam() {
 func (suite *ModTwoTestSuite) TestValidCustomParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"aws_conn": map[string]string{
 			"short_name":    "example_2",
 			"name":          "aws.example_2",
@@ -256,7 +256,7 @@ func (suite *ModTwoTestSuite) TestValidCustomParam() {
 	assert.Equal("finished", pex.Status)
 	assert.Equal("example2_access_key", pex.PipelineOutput["val"])
 
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"aws_conn": map[string]string{
 			"short_name":    "example_3",
 			"name":          "aws.example_3",
@@ -286,7 +286,7 @@ func (suite *ModTwoTestSuite) TestValidCustomParam() {
 func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"aws_conn": "foo",
 	}
 
@@ -307,7 +307,7 @@ func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
 	assert.Equal("Internal Error: aws_conn: Invalid type for param aws_conn: The param type is not compatible with the given value", pex.Errors[0].Error.Error())
 
 	// Wrong connection, expect slack not aws
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"aws_conn": map[string]string{
 			"short_name":    "example_2",
 			"name":          "slack.example_2",
@@ -333,7 +333,7 @@ func (suite *ModTwoTestSuite) TestInvalidCustomParam() {
 	assert.Equal("Internal Error: aws_conn: Invalid type for param aws_conn: The param type is not compatible with the given value", pex.Errors[0].Error.Error())
 
 	// connection not found
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"aws_conn": map[string]string{
 			"name":          "aws.example_50",
 			"short_name":    "example_50",
@@ -375,7 +375,7 @@ func (suite *ModTwoTestSuite) TestInvalidParam() {
 
 	   	we will supply a value that is not in the num
 	*/
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"string_param": "value4",
 	}
 
@@ -409,7 +409,7 @@ func (suite *ModTwoTestSuite) TestInvalidParam() {
 		    }
 	*/
 
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"num_param": 5,
 	}
 
@@ -442,7 +442,7 @@ func (suite *ModTwoTestSuite) TestInvalidParam() {
 		    }
 	*/
 
-	pipelineInput = modconfig.Input{
+	pipelineInput = resources.Input{
 		"list_of_string_param": []string{"value3", "value4"},
 	}
 
@@ -466,7 +466,7 @@ func (suite *ModTwoTestSuite) TestInvalidParam() {
 func (suite *ModTwoTestSuite) TestNotifierParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"notifier": map[string]interface{}{
 			"resource_type": "notifier",
 			"name":          "backend",
@@ -493,7 +493,7 @@ func (suite *ModTwoTestSuite) TestNotifierParam() {
 func (suite *ModTwoTestSuite) TestNotifierVarParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_var_param", 100*time.Millisecond, pipelineInput)
 
@@ -515,7 +515,7 @@ func (suite *ModTwoTestSuite) TestNotifierVarParam() {
 func (suite *ModTwoTestSuite) TestNotifierVar() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_var", 100*time.Millisecond, pipelineInput)
 
@@ -537,7 +537,7 @@ func (suite *ModTwoTestSuite) TestNotifierVar() {
 func (suite *ModTwoTestSuite) TestNotifierParamChildPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"notifier": map[string]interface{}{
 			"resource_type": "notifier",
 			"name":          "backend",
@@ -565,7 +565,7 @@ func (suite *ModTwoTestSuite) TestNotifierParamChildPipeline() {
 func (suite *ModTwoTestSuite) TestListNotifierParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"notifiers": []map[string]interface{}{
 			{
 				"resource_type": "notifier",
@@ -598,7 +598,7 @@ func (suite *ModTwoTestSuite) TestListNotifierParam() {
 func (suite *ModTwoTestSuite) TestListNotifierDefaultParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_list_param", 100*time.Millisecond, pipelineInput)
 
@@ -619,7 +619,7 @@ func (suite *ModTwoTestSuite) TestListNotifierDefaultParam() {
 func (suite *ModTwoTestSuite) TestInvalidNotifierParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"notifier": map[string]interface{}{
 			"resource_type": "notifier",
 			"name":          "does_not_exist",
@@ -647,7 +647,7 @@ func (suite *ModTwoTestSuite) TestInvalidNotifierParam() {
 func (suite *ModTwoTestSuite) TestNotifierDefaultParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.notifier_param", 100*time.Millisecond, pipelineInput)
 
@@ -669,7 +669,7 @@ func (suite *ModTwoTestSuite) TestNotifierDefaultParam() {
 func (suite *ModTwoTestSuite) TestSteampipeConn() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.steampipe_conn", 100*time.Millisecond, pipelineInput)
 
@@ -691,7 +691,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConn() {
 func (suite *ModTwoTestSuite) TestSteampipeConnWithParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.steampipe_conn_with_param", 100*time.Millisecond, pipelineInput)
 
@@ -713,7 +713,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConnWithParam() {
 func (suite *ModTwoTestSuite) TestSteampipeConnectionVarParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.connection_var_param", 100*time.Millisecond, pipelineInput)
 
@@ -735,7 +735,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConnectionVarParam() {
 func (suite *ModTwoTestSuite) TestSteampipeConnectionVar() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.connection_var", 100*time.Millisecond, pipelineInput)
 
@@ -757,7 +757,7 @@ func (suite *ModTwoTestSuite) TestSteampipeConnectionVar() {
 func (suite *ModTwoTestSuite) TestConnectionParamChildPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"Connection": map[string]interface{}{
 			"resource_type": "Connection",
 			"name":          "backend",
@@ -785,7 +785,7 @@ func (suite *ModTwoTestSuite) TestConnectionParamChildPipeline() {
 func (suite *ModTwoTestSuite) TestConnectionReferenceFromAnotherStep() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.from_another_step", 100*time.Millisecond, pipelineInput)
 
@@ -808,7 +808,7 @@ func (suite *ModTwoTestSuite) TestConnectionReferenceFromAnotherStep() {
 func (suite *ModTwoTestSuite) TestConnectionReferenceFromParam() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.from_param", 100*time.Millisecond, pipelineInput)
 
@@ -831,7 +831,7 @@ func (suite *ModTwoTestSuite) TestConnectionReferenceFromParam() {
 func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEach() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.foreach_with_conn_simple", 100*time.Millisecond, pipelineInput)
 
@@ -858,7 +858,7 @@ func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEach() {
 func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInLiteral() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.foreach_with_conn_literal", 100*time.Millisecond, pipelineInput)
 
@@ -885,7 +885,7 @@ func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInLiteral() {
 func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInObject() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.foreach_with_conn_object", 100*time.Millisecond, pipelineInput)
 
@@ -912,7 +912,7 @@ func (suite *ModTwoTestSuite) TestConnectionReferenceWithForEachInObject() {
 func (suite *ModTwoTestSuite) TestForEachConnectedNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.parent_foreach_connection", 100*time.Millisecond, pipelineInput)
 
@@ -938,7 +938,7 @@ func (suite *ModTwoTestSuite) TestForEachConnectedNestedPipeline() {
 func (suite *ModTwoTestSuite) TestComplexForEachConnectedNestedPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod_2.pipeline.parent_foreach_connection", 100*time.Millisecond, pipelineInput)
 

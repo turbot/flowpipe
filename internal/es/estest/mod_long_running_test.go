@@ -15,10 +15,10 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type ModLongRunningTestSuite struct {
@@ -112,7 +112,7 @@ func (suite *ModLongRunningTestSuite) AfterTest(suiteName, testName string) {
 
 func (suite *ModLongRunningTestSuite) TestSleepWithLoop() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_sleep", 5*time.Second, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -136,7 +136,7 @@ func (suite *ModLongRunningTestSuite) TestSleepWithLoop() {
 
 func (suite *ModLongRunningTestSuite) TestHttpWithLoop() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_http", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -155,7 +155,7 @@ func (suite *ModLongRunningTestSuite) TestHttpWithLoop() {
 
 func (suite *ModLongRunningTestSuite) TestTransformWithLoop() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_transform", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -174,7 +174,7 @@ func (suite *ModLongRunningTestSuite) TestTransformWithLoop() {
 
 func (suite *ModLongRunningTestSuite) TestTransformWithLoopMap() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_transform_map", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -204,7 +204,7 @@ func (suite *ModLongRunningTestSuite) TestTransformWithLoopMap() {
 
 func (suite *ModLongRunningTestSuite) TestContainerWithLoop() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_container", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -228,7 +228,7 @@ func (suite *ModLongRunningTestSuite) TestContainerWithLoop() {
 
 func (suite *ModLongRunningTestSuite) TestMessageWithLoop() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_message", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -255,7 +255,7 @@ func (suite *ModLongRunningTestSuite) TestMessageWithLoop() {
 
 func (suite *ModLongRunningTestSuite) TestMessageWithLoop2() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_message_2", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)
@@ -277,7 +277,7 @@ func (suite *ModLongRunningTestSuite) TestMessageWithLoop2() {
 
 func (suite *ModLongRunningTestSuite) TestMessageWithLoopFailed() {
 	assert := assert.New(suite.T())
-	pipelineInput := modconfig.Input{}
+	pipelineInput := resources.Input{}
 	_, pipelineCmd, err := runPipeline(suite.FlowpipeTestSuite, "test_suite_mod.pipeline.loop_message_failed", 40*time.Millisecond, pipelineInput)
 	if err != nil {
 		assert.Fail("Error creating execution", err)

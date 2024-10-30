@@ -12,12 +12,12 @@ import (
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -328,7 +328,7 @@ func httpFormDataFromId(id string) (httpFormData, error) {
 	return output, nil
 }
 
-func httpFormDataInputFromInputStep(input modconfig.Input) httpFormDataInput {
+func httpFormDataInputFromInputStep(input resources.Input) httpFormDataInput {
 	var output httpFormDataInput
 
 	if p, ok := input[schema.AttributeTypePrompt].(string); ok {
@@ -399,8 +399,8 @@ func httpFormValidateNotifiers(sexec *execution.StepExecution) bool {
 	return false
 }
 
-func (api *APIService) finishInputStepFromForm(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *modconfig.Pipeline, stepDefn modconfig.PipelineStep, value any) error {
-	out := modconfig.Output{
+func (api *APIService) finishInputStepFromForm(ex *execution.ExecutionInMemory, stepExecution *execution.StepExecution, pipelineDefn *resources.Pipeline, stepDefn resources.PipelineStep, value any) error {
+	out := resources.Output{
 		Data: map[string]any{
 			"value": value,
 		},

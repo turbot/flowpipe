@@ -11,11 +11,12 @@ import (
 	"github.com/turbot/flowpipe/internal/cache"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
 	"github.com/turbot/flowpipe/internal/output"
+	fpparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/flowpipeconfig"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/workspace"
@@ -56,11 +57,14 @@ func (m *Manager) modUpdated() {
 	// At this point the w.Mod has already been updated, the code that does it is in pipe-fittings handleFileWatcherEvent function
 	m.RootMod = m.workspace.Mod
 
+	// get resources from mod
+	modResources := resources.GetModResources(m.RootMod)
+
 	var serverOutput []sanitize.SanitizedStringer
 	var err error
 	slog.Info("caching pipelines and triggers")
 	serverOutput = append(serverOutput, types.NewServerOutputLoaded(types.NewServerOutputPrefix(time.Now(), "flowpipe"), m.RootMod.Name(), true))
-	m.triggers = m.RootMod.ResourceMaps.Triggers
+	m.triggers = modResources.Triggers
 	err = m.cacheModData(m.RootMod)
 	if err != nil {
 		slog.Error("error caching pipelines and triggers", "error", err)
@@ -75,7 +79,7 @@ func (m *Manager) modUpdated() {
 	// Reload scheduled triggers
 	slog.Info("rescheduling triggers")
 	if m.schedulerService != nil {
-		m.schedulerService.Triggers = m.RootMod.ResourceMaps.Triggers
+		m.schedulerService.Triggers = modResources.Triggers
 		err := m.schedulerService.RescheduleTriggers()
 		if err != nil {
 			slog.Error("error rescheduling triggers", "error", err)
@@ -122,13 +126,20 @@ func (m *Manager) loadMod() error {
 		return err
 	}
 
+	notifierValueMap, err := flowpipeConfig.NotifierValueMap()
+	if err != nil {
+		slog.Error("error getting notifier value map", "error", err)
+		return err
+	}
+
 	w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
 		m.ctx,
 		modLocation,
-		workspace.WithCredentials(flowpipeConfig.Credentials),
 		workspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
-		workspace.WithIntegrations(flowpipeConfig.Integrations),
-		workspace.WithNotifiers(flowpipeConfig.Notifiers))
+		workspace.WithDecoderOptions(fpparse.WithCredentials(flowpipeConfig.Credentials)),
+		workspace.WithConfigValueMap("notifier", notifierValueMap),
+	)
+
 	if errorAndWarning.Error != nil {
 		return errorAndWarning.Error
 	}
@@ -153,7 +164,7 @@ func (m *Manager) loadMod() error {
 		}
 	}
 
-	m.triggers = workspace.GetWorkspaceResourcesOfType[*modconfig.Trigger](w)
+	m.triggers = workspace.GetWorkspaceResourcesOfType[*resources.Trigger](w)
 
 	cache.GetCache().SetWithTTL("#rootmod.name", mod.ShortName, 24*7*52*99*time.Hour)
 	err = m.cacheModData(mod)

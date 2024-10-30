@@ -1,0 +1,185 @@
+connection_import "steampipe" {
+  source      = "./steampipe_config/aws.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_slack" {
+  source      = "./steampipe_config/slack.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_abuseipdb" {
+  source      = "./steampipe_config/abuseipdb.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_sendgrid" {
+  source      = "./steampipe_config/sendgrid.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_urlscan" {
+  source      = "./steampipe_config/urlscan.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_clickup" {
+  source      = "./steampipe_config/clickup.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_discord" {
+  source      = "./steampipe_config/discord.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_pagerduty" {
+  source      = "./steampipe_config/pagerduty.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_ip2locationio" {
+  source      = "./steampipe_config/ip2locationio.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_github" {
+  source      = "./steampipe_config/github.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_gitlab" {
+  source      = "./steampipe_config/gitlab.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_openai" {
+  source      = "./steampipe_config/openai.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_pipes" {
+  source      = "./steampipe_config/pipes.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_jumpcloud" {
+  source      = "./steampipe_config/jumpcloud.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_trello" {
+  source      = "./steampipe_config/trello.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_vault" {
+  source      = "./steampipe_config/vault.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_servicenow" {
+  source      = "./steampipe_config/servicenow.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_freshdesk" {
+  source      = "./steampipe_config/freshdesk.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_zendesk" {
+  source      = "./steampipe_config/zendesk.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_opsgenie" {
+  source      = "./steampipe_config/opsgenie.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_okta" {
+  source      = "./steampipe_config/okta.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_datadog" {
+  source      = "./steampipe_config/datadog.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_guardrails" {
+  source      = "./steampipe_config/guardrails.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_bitbucket" {
+  source      = "./steampipe_config/bitbucket.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_azure" {
+  source      = "./steampipe_config/azure.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_gcp" {
+  source      = "./steampipe_config/gcp.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_alicloud" {
+  source      = "./steampipe_config/alicloud.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_jira" {
+  source      = "./steampipe_config/jira.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_mastodon" {
+  source      = "./steampipe_config/mastodon.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "steampipe_ipstack" {
+  source      = "./steampipe_config/ipstack.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}
+
+connection_import "invalid_creds" {
+  source      = "./steampipe_config/invalid.spc"
+  connections = ["*"]
+  prefix      = "sp1_" # prefix is optional
+}

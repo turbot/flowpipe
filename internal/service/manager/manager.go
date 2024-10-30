@@ -19,8 +19,11 @@ import (
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
 	"github.com/turbot/flowpipe/internal/fperr"
 	"github.com/turbot/flowpipe/internal/output"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/service/scheduler"
@@ -32,8 +35,6 @@ import (
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/flowpipeconfig"
-	"github.com/turbot/pipe-fittings/load_mod"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
@@ -65,7 +66,7 @@ type Manager struct {
 	apiService       *api.APIService
 	schedulerService *scheduler.SchedulerService
 
-	triggers map[string]*modconfig.Trigger
+	triggers map[string]*resources.Trigger
 
 	HTTPAddress string
 	HTTPPort    int
@@ -213,7 +214,7 @@ func (m *Manager) initializeResources() error {
 		fperr.FailOnError(ew.Error, nil, fperr.ErrorCodeModLoadFailed)
 		ew.ShowWarnings()
 
-		// Add the "Credentials" in the context
+		// Add the "credentials" in the context
 		// effectively forever .. we don't want to expire the config
 		if flowpipeConfig != nil {
 			cache.GetCache().SetWithTTL(fpconstants.FlowpipeConfigCacheKey, flowpipeConfig, 24*7*52*99*time.Hour)
@@ -257,14 +258,14 @@ func (m *Manager) initializeResources() error {
 	} else {
 		// there is no mod, just load pipelines and triggers from the directory
 		var err error
-		pipelines, triggers, err := load_mod.LoadPipelines(m.ctx, modLocation)
+		pipelines, triggers, err := fparse.LoadPipelines(m.ctx, modLocation)
 		if err != nil {
 			return err
 		}
 
 		rootModName = "local"
 		mod = &modconfig.Mod{
-			ResourceMaps: &modconfig.ResourceMaps{
+			Resources: &resources.FlowpipeModResources{
 				Pipelines: pipelines,
 				Triggers:  triggers,
 			},
@@ -421,19 +422,21 @@ func (m *Manager) cacheConfigData() error {
 }
 
 func (m *Manager) cacheModData(mod *modconfig.Mod) error {
+	// retrieve the mod resources
+	modResources := resources.GetModResources(mod)
 
-	err := cacheHclResource("pipeline", mod.ResourceMaps.Pipelines, true, nil)
+	err := cacheHclResource("pipeline", modResources.Pipelines, true, nil)
 	if err != nil {
 		return err
 	}
 
-	triggers := mod.ResourceMaps.Triggers
+	triggers := modResources.Triggers
 	err = cacheHclResource("trigger", triggers, true, triggerUrlProcessor)
 	if err != nil {
 		return err
 	}
 
-	variables := mod.ResourceMaps.Variables
+	variables := modResources.Variables
 	err = cacheHclResource("variable", variables, true, nil)
 	if err != nil {
 		return err
@@ -447,12 +450,14 @@ func (m *Manager) cacheModData(mod *modconfig.Mod) error {
 }
 
 func cacheModPipeline(mod *modconfig.Mod) {
+	// retrieve the mod resources
+	modResources := resources.GetModResources(mod)
 
 	modCacheKey := mod.CacheKey()
 
 	cache.GetCache().SetWithTTL(modCacheKey, mod, 24*7*52*99*time.Hour)
 
-	for _, pipeline := range mod.ResourceMaps.Pipelines {
+	for _, pipeline := range modResources.Pipelines {
 		if pipeline.ModFullName != mod.Name() {
 			continue
 		}
@@ -461,7 +466,7 @@ func cacheModPipeline(mod *modconfig.Mod) {
 		cache.GetCache().SetWithTTL(cacheKey, pipeline, 24*7*52*99*time.Hour)
 	}
 
-	for _, m := range mod.ResourceMaps.Mods {
+	for _, m := range modResources.Mods {
 		if m.Name() == mod.Name() {
 			continue
 		}
@@ -477,26 +482,26 @@ func cacheModPipeline(mod *modconfig.Mod) {
 	}
 }
 
-func triggerUrlProcessor(trigger *modconfig.Trigger) error {
+func triggerUrlProcessor(trigger *resources.Trigger) error {
 	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
 		// don't calculate trigger url in test mode, there's no global salt and it's not needed
 		return nil
 	}
 
-	_, ok := trigger.Config.(*modconfig.TriggerHttp)
+	_, ok := trigger.Config.(*resources.TriggerHttp)
 	if ok {
 		triggerUrl, err := calculateTriggerUrl(trigger)
 		if err != nil {
 			slog.Error("error calculating trigger url", "error", err)
 			return err
 		}
-		trigger.Config.(*modconfig.TriggerHttp).Url = triggerUrl
+		trigger.Config.(*resources.TriggerHttp).Url = triggerUrl
 	}
 
 	return nil
 }
 
-func integrationUrlProcessor(integration modconfig.Integration) error {
+func integrationUrlProcessor(integration resources.Integration) error {
 	if strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") {
 		// don't calculate trigger url in test mode, there's no global salt and it's not needed
 		return nil
@@ -560,7 +565,7 @@ func cacheHclResource[T modconfig.HclResource](resourceType string, items map[st
 	return nil
 }
 
-func calculateTriggerUrl(trigger *modconfig.Trigger) (string, error) {
+func calculateTriggerUrl(trigger *resources.Trigger) (string, error) {
 	shortName := strings.TrimPrefix(trigger.UnqualifiedName, "trigger.")
 	salt, err := util.GetModSaltOrDefault()
 	if err != nil {
@@ -599,16 +604,16 @@ func (m *Manager) renderServerShutdownOutput() {
 	output.RenderServerOutput(m.ctx, types.NewServerOutputStatusChange(stopTime, "Stopped", ""))
 }
 
-func renderServerTriggers(triggers map[string]*modconfig.Trigger) []sanitize.SanitizedStringer {
+func renderServerTriggers(triggers map[string]*resources.Trigger) []sanitize.SanitizedStringer {
 	var outputs []sanitize.SanitizedStringer
 
 	for key, t := range triggers {
-		tt := modconfig.GetTriggerTypeFromTriggerConfig(t.Config)
+		tt := resources.GetTriggerTypeFromTriggerConfig(t.Config)
 		prefix := types.NewServerOutputPrefix(time.Now(), "trigger")
 		o := types.NewServerOutputTrigger(prefix, key, tt, t.Enabled)
 		switch tt {
 		case schema.TriggerTypeHttp:
-			if tc, ok := t.Config.(*modconfig.TriggerHttp); ok {
+			if tc, ok := t.Config.(*resources.TriggerHttp); ok {
 				// TODO: Add Payload Requirements?
 				methods := strings.Join(utils.SortedMapKeys(tc.Methods), " ")
 				o.Method = &methods
@@ -616,12 +621,12 @@ func renderServerTriggers(triggers map[string]*modconfig.Trigger) []sanitize.San
 				outputs = append(outputs, o)
 			}
 		case schema.TriggerTypeSchedule:
-			if tc, ok := t.Config.(*modconfig.TriggerSchedule); ok {
+			if tc, ok := t.Config.(*resources.TriggerSchedule); ok {
 				o.Schedule = &tc.Schedule
 				outputs = append(outputs, o)
 			}
 		case schema.TriggerTypeQuery:
-			if tc, ok := t.Config.(*modconfig.TriggerQuery); ok {
+			if tc, ok := t.Config.(*resources.TriggerQuery); ok {
 				o.Schedule = &tc.Schedule
 				o.Sql = &tc.Sql
 				outputs = append(outputs, o)

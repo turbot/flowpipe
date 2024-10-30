@@ -1,8 +1,8 @@
 package event
 
 import (
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/util"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 // PipelineQueued is published when a pipeline is queued
@@ -16,7 +16,7 @@ type PipelineQueued struct {
 	// unique names, we don't need ModFullVersion
 	ModFullVersion string `json:"mod_full_version"`
 	// Input to the pipeline
-	Args modconfig.Input `json:"args"`
+	Args resources.Input `json:"args"`
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// If this is a child pipeline then set the parent step execution ID

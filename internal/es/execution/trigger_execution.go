@@ -1,9 +1,11 @@
 package execution
 
-import "github.com/turbot/pipe-fittings/modconfig"
+import (
+	"github.com/turbot/flowpipe/internal/resources"
+)
 
 type TriggerExecution struct {
-	ID   string          `json:"id"`
+	ID   string         `json:"id"`
 	Name string          `json:"name"`
-	Args modconfig.Input `json:"args,omitempty"`
+	Args resources.Input `json:"args,omitempty"`
 }

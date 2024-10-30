@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/pipe-fittings/sanitize"
-
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
@@ -19,6 +17,7 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
@@ -26,8 +25,8 @@ import (
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
+	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
 )
@@ -70,7 +69,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	}
 
 	// check if the t is a webhook trigger
-	t, ok := triggerCached.(*modconfig.Trigger)
+	t, ok := triggerCached.(*resources.Trigger)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a trigger"))
 		return
@@ -83,7 +82,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	httpTriggerConfig, ok := t.Config.(*modconfig.TriggerHttp)
+	httpTriggerConfig, ok := t.Config.(*resources.TriggerHttp)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
 		return
@@ -98,8 +97,8 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	mod := api.EsService.RootMod
 	modFullName := t.GetMetadata().ModFullName
 
-	if modFullName != mod.FullName {
-		slog.Error("HTTP trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.FullName)
+	if modFullName != mod.GetFullName() {
+		slog.Error("HTTP trigger can only be run from root mod", "trigger", t.Name(), "mod", modFullName, "root_mod", mod.GetFullName())
 		return
 	}
 
@@ -144,8 +143,9 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		selfObject[k] = ctyVal
 	}
 
+	modResources := resources.GetModResources(mod)
 	vars := map[string]cty.Value{}
-	for _, v := range mod.ResourceMaps.Variables {
+	for _, v := range modResources.Variables {
 		vars[v.GetMetadata().ResourceName] = v.Value
 	}
 
@@ -272,7 +272,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 	pipelineExecutionResponse.Results = pipelineOutput
 
 	if pipelineOutput["errors"] != nil {
-		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]resources.StepError)
 	}
 
 	pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
@@ -358,7 +358,7 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 			pipelineResponse.Results = pipelineOutput
 
 			if pipelineOutput["errors"] != nil {
-				pipelineResponse.Errors = pipelineOutput["errors"].([]modconfig.StepError)
+				pipelineResponse.Errors = pipelineOutput["errors"].([]resources.StepError)
 			}
 
 			if trg.Config.GetType() == "schedule" {

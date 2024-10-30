@@ -2,15 +2,14 @@ package handler
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"time"
 
-	"log/slog"
-
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -187,7 +186,7 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 	// TODO: but for now take the simplest route
 	pipelineInaccessible := false
 	for _, nextStep := range evt.NextSteps {
-		if nextStep.Action == modconfig.NextStepActionInaccessible {
+		if nextStep.Action == resources.NextStepActionInaccessible {
 			pipelineInaccessible = true
 			break
 		}
@@ -224,24 +223,24 @@ func (h PipelinePlanned) Handle(ctx context.Context, ei interface{}) error {
 			continue
 		}
 
-		var stepLoop *modconfig.StepLoop
+		var stepLoop *resources.StepLoop
 		if !helpers.IsNil(stepDefn.GetLoopConfig()) {
-			stepLoop = &modconfig.StepLoop{
+			stepLoop = &resources.StepLoop{
 				Index: 0,
 			}
 		}
 
 		// Start each step in parallel
-		runNonForEachStep(ctx, h.CommandBus, evt, modconfig.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
+		runNonForEachStep(ctx, h.CommandBus, evt, resources.Output{}, nextStep.Action, nextStep, nextStep.Input, stepLoop)
 	}
 
 	return nil
 }
 
-func runNonForEachStep(ctx context.Context, commandBus FpCommandBus, e *event.PipelinePlanned, forEachOutput modconfig.Output, forEachNextStepAction modconfig.NextStepAction, nextStep modconfig.NextStep, input modconfig.Input, stepLoop *modconfig.StepLoop) {
+func runNonForEachStep(ctx context.Context, commandBus FpCommandBus, e *event.PipelinePlanned, forEachOutput resources.Output, forEachNextStepAction resources.NextStepAction, nextStep resources.NextStep, input resources.Input, stepLoop *resources.StepLoop) {
 
 	// If a step does not have a for_each, we still build a for_each control but with key of "0"
-	forEachControl := &modconfig.StepForEach{
+	forEachControl := &resources.StepForEach{
 		ForEachStep: false,
 		Key:         "0",
 		TotalCount:  1,

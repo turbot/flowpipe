@@ -2,15 +2,14 @@ package command
 
 import (
 	"context"
-	"strconv"
-
 	"log/slog"
+	"strconv"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -136,7 +135,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 	}
 
-	var nextSteps []modconfig.NextStep
+	var nextSteps []resources.NextStep
 
 	stepStatusList := pex.StepStatus[cmd.StepName]
 
@@ -150,7 +149,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 	//  in the above map the key are foo and baz
 	for k, v := range forEachCtyVals {
 
-		nextStep := modconfig.NextStep{
+		nextStep := resources.NextStep{
 			StepName: cmd.StepName,
 		}
 
@@ -189,12 +188,12 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 			if val.False() {
 				slog.Debug("if condition not met for step", "step", stepDefn.GetName())
 				calculateInput = false
-				nextStep.Action = modconfig.NextStepActionSkip
+				nextStep.Action = resources.NextStepActionSkip
 			} else {
-				nextStep.Action = modconfig.NextStepActionStart
+				nextStep.Action = resources.NextStepActionStart
 			}
 		} else {
-			nextStep.Action = modconfig.NextStepActionStart
+			nextStep.Action = resources.NextStepActionStart
 		}
 
 		if calculateInput {
@@ -222,7 +221,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 					slog.Error("Error adding connections to eval context during pipeline plan (2)", "error", err)
 					return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
 				}
-				var connDepend2 []modconfig.ConnectionDependency
+				var connDepend2 []resources.ConnectionDependency
 				stepInputs, connDepend2, err = stepDefn.GetInputs2(evalContext)
 				if err != nil {
 					return h.raiseNewPipelineFailedEvent(ctx, cmd, err)
@@ -252,7 +251,7 @@ func (h StepForEachPlanHandler) Handle(ctx context.Context, c interface{}) error
 		}
 
 		forEachCtyVal := forEachCtyVals[k][schema.AttributeTypeValue]
-		forEachControl := &modconfig.StepForEach{
+		forEachControl := &resources.StepForEach{
 			ForEachStep: true,
 			Key:         k,
 			TotalCount:  len(forEachCtyVals),

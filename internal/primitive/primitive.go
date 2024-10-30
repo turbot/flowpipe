@@ -1,9 +1,9 @@
 package primitive
 
 import (
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 )
 
 type Primitive interface {
-	Run(modconfig.Input) (*modconfig.Output, error)
+	Run(resources.Input) (*resources.Output, error)
 }

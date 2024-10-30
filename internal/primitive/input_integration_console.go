@@ -12,9 +12,9 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/viper"
 	o "github.com/turbot/flowpipe/internal/output"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/constants"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type InputIntegrationConsole struct {
@@ -27,8 +27,8 @@ func NewInputIntegrationConsole(base InputIntegrationBase) InputIntegrationConso
 	}
 }
 
-func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
-	output := modconfig.Output{}
+func (ip *InputIntegrationConsole) PostMessage(_ context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*resources.Output, error) {
+	output := resources.Output{}
 
 	text, form, response, err := mc.ConsoleMessage(ip, options)
 	if err != nil {

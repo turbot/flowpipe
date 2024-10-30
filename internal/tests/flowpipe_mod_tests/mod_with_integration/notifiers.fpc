@@ -1,0 +1,28 @@
+notifier "admins" {
+  notify {
+    integration = integration.slack.my_slack_app 
+    channel = "#admins"
+  }
+}
+
+notifier "devs" {
+  description = "bar"
+  title = "dev notifier"
+
+  notify {
+    integration = integration.slack.my_slack_app 
+    channel = "#devs"
+  }
+  notify {
+    integration = integration.http.default
+  }    
+}
+
+notifier "with_default_integration" {
+
+  description = "this notifier uses the default integration"
+
+  notify {
+    integration = integration.http.default
+  }
+}

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/go-co-op/gocron"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/schedule"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/trigger"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	"github.com/zclconf/go-cty/cty"
@@ -21,12 +21,12 @@ import (
 
 type SchedulerService struct {
 	ctx           context.Context
-	Triggers      map[string]*modconfig.Trigger
+	Triggers      map[string]*resources.Trigger
 	esService     *es.ESService
 	cronScheduler *gocron.Scheduler
 }
 
-func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*modconfig.Trigger) *SchedulerService {
+func NewSchedulerService(ctx context.Context, esService *es.ESService, triggers map[string]*resources.Trigger) *SchedulerService {
 	return &SchedulerService{
 		ctx:       ctx,
 		esService: esService,
@@ -44,14 +44,14 @@ func (s *SchedulerService) RescheduleTriggers() error {
 	for _, t := range s.Triggers {
 		var scheduleString string
 		switch config := t.Config.(type) {
-		case *modconfig.TriggerSchedule:
+		case *resources.TriggerSchedule:
 			scheduleString = config.Schedule
-		case *modconfig.TriggerQuery:
+		case *resources.TriggerQuery:
 			scheduleString = config.Schedule
 			if scheduleString == "" {
 				scheduleString = "hourly"
 			}
-		case *modconfig.TriggerHttp:
+		case *resources.TriggerHttp:
 			continue
 		}
 
@@ -123,14 +123,14 @@ func (s *SchedulerService) RescheduleTriggers() error {
 	return nil
 }
 
-func (s *SchedulerService) scheduleTrigger(t *modconfig.Trigger) error {
+func (s *SchedulerService) scheduleTrigger(t *resources.Trigger) error {
 
 	scheduleString := ""
 
 	switch config := t.Config.(type) {
-	case *modconfig.TriggerSchedule:
+	case *resources.TriggerSchedule:
 		scheduleString = config.Schedule
-	case *modconfig.TriggerQuery:
+	case *resources.TriggerQuery:
 		scheduleString = config.Schedule
 		if scheduleString == "" {
 			scheduleString = "hourly"

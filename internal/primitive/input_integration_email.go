@@ -13,12 +13,11 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/templates"
-	"github.com/turbot/pipe-fittings/modconfig"
+	kitTypes "github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
-
-	kitTypes "github.com/turbot/go-kit/types"
 )
 
 type InputIntegrationEmailMessage interface {
@@ -48,7 +47,7 @@ func NewInputIntegrationEmail(base InputIntegrationBase) InputIntegrationEmail {
 	}
 }
 
-func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i modconfig.Input) error {
+func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Context, i resources.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {
@@ -186,7 +185,7 @@ func (ip *InputIntegrationEmail) ValidateInputIntegrationEmail(ctx context.Conte
 	return nil
 }
 
-func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*resources.Output, error) {
 	var err error
 	host := kitTypes.SafeString(ip.Host)
 	tls := kitTypes.SafeString(ip.Tls)
@@ -217,7 +216,7 @@ func (ip *InputIntegrationEmail) PostMessage(ctx context.Context, mc MessageCrea
 	addr := fmt.Sprintf("%s:%d", host, port)
 	auth := smtp.PlainAuth("", kitTypes.SafeString(ip.User), kitTypes.SafeString(ip.Pass), host)
 
-	output := modconfig.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 

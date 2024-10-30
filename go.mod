@@ -1,10 +1,14 @@
 module github.com/turbot/flowpipe
 
-go 1.23.0
+go 1.23.1
 
 // uncomment for goland devcontainer
-//github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
-//github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
+//replace (
+//	github.com/turbot/flowpipe-sdk-go => /workspaces/flowpipe-sdk-go
+//	github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
+//)
+
+//replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
@@ -50,9 +54,16 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
 	github.com/turbot/flowpipe-sdk-go v1.0.0
-	github.com/turbot/pipe-fittings v1.6.5
+	// develop branch d7decaf1e82d8538970cc7d7821d5a8f1c3994d4 (app specific resource refactor)
+	github.com/turbot/pipe-fittings v1.6.6-0.20241030182756-d7decaf1e82d
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.8.0
+)
+
+require (
+	github.com/iancoleman/strcase v0.3.0
+	github.com/robfig/cron/v3 v3.0.1
+	github.com/turbot/terraform-components v0.0.0-20231213122222-1f3526cab7a7
 )
 
 require (
@@ -159,7 +170,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/terraform-registry-address v0.2.1 // indirect
 	github.com/hashicorp/terraform-svchost v0.1.1 // indirect
-	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.14.3 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -211,7 +221,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shiena/ansicolor v0.0.0-20230509054315-a9deabde6e02 // indirect
@@ -225,7 +234,6 @@ require (
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
 	github.com/turbot/pipes-sdk-go v0.9.1 // indirect
 	github.com/turbot/steampipe-plugin-code v0.7.0 // indirect
-	github.com/turbot/terraform-components v0.0.0-20231213122222-1f3526cab7a7 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
 	github.com/ulikunitz/xz v0.5.10 // indirect
@@ -267,7 +275,7 @@ require (
 )
 
 require (
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gin-contrib/gzip v0.0.6
 	github.com/gin-gonic/gin v1.9.1
 	github.com/hashicorp/hcl v1.0.0 // indirect

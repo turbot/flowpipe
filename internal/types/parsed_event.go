@@ -11,10 +11,10 @@ import (
 	"github.com/logrusorgru/aurora"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/go-kit/types"
 	"github.com/turbot/pipe-fittings/color"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
@@ -369,14 +369,14 @@ func (p ParsedEventWithOutput) String(sanitizer *sanitize.Sanitizer, opts saniti
 // ParsedErrorEvent is a ParsedEvent which Failed.
 type ParsedErrorEvent struct {
 	ParsedEvent
-	Errors          []modconfig.StepError `json:"errors"`
+	Errors          []resources.StepError `json:"errors"`
 	Output          map[string]any        `json:"attributes"`
 	Duration        *string               `json:"duration,omitempty"`
 	isClosingEvent  bool
 	retriesComplete bool
 }
 
-func NewParsedErrorEvent(parsedEvent ParsedEvent, errors []modconfig.StepError, output map[string]any, duration *string, isClosingEvent bool, retriesComplete bool) ParsedErrorEvent {
+func NewParsedErrorEvent(parsedEvent ParsedEvent, errors []resources.StepError, output map[string]any, duration *string, isClosingEvent bool, retriesComplete bool) ParsedErrorEvent {
 	return ParsedErrorEvent{
 		ParsedEvent:     parsedEvent,
 		Errors:          errors,
@@ -428,7 +428,7 @@ func (p ParsedErrorEvent) String(sanitizer *sanitize.Sanitizer, opts sanitize.Re
 type ParsedEventRegistryItem struct {
 	Name    string
 	Started time.Time
-	Args    *modconfig.Input
+	Args    *resources.Input
 }
 
 type PrintableParsedEvent struct {
@@ -477,7 +477,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) (string, error) 
 				return lastStatus, perr.InternalWithMessage("Error unmarshalling JSON for pipeline started event")
 			}
 			fullName := "unknown.unknown"
-			var args modconfig.Input
+			var args resources.Input
 			if entry, exists := p.Registry[e.PipelineExecutionID]; exists {
 				p.Registry[e.PipelineExecutionID] = ParsedEventRegistryItem{entry.Name, e.Event.CreatedAt, entry.Args}
 				fullName = entry.Name
@@ -534,7 +534,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) (string, error) 
 			duration := utils.HumanizeDuration(e.Event.CreatedAt.Sub(started))
 
 			allErrors := e.Errors
-			pipelineOutputErrors, ok := e.PipelineOutput["errors"].([]modconfig.StepError)
+			pipelineOutputErrors, ok := e.PipelineOutput["errors"].([]resources.StepError)
 			if ok && len(pipelineOutputErrors) > 0 {
 
 				for _, e := range pipelineOutputErrors {
@@ -649,7 +649,7 @@ func (p *PrintableParsedEvent) SetEvents(logs ProcessEventLogs) (string, error) 
 
 				}
 				if helpers.IsNil(e.Output.Data) {
-					e.Output.Data = modconfig.OutputData{}
+					e.Output.Data = resources.OutputData{}
 				}
 				if e.Output.Flowpipe != nil {
 					e.Output.Data["flowpipe"] = e.Output.Flowpipe
@@ -800,7 +800,7 @@ func sortAndParseMap(input map[string]any, typeString string, prefix string, au 
 	return out
 }
 
-func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOptions) (string, *[]string) {
+func parseInputStepNotifierToLines(input resources.Input, opts sanitize.RenderOptions) (string, *[]string) {
 	au := aurora.NewAurora(opts.ColorEnabled)
 	formUrl, hasFormUrl := input[constants.FormUrl].(string)
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
@@ -970,7 +970,7 @@ func parseInputStepNotifierToLines(input modconfig.Input, opts sanitize.RenderOp
 	return formUrl, nil
 }
 
-func stepNotifierHasHttp(input modconfig.Input) bool {
+func stepNotifierHasHttp(input resources.Input) bool {
 	if notifier, ok := input[schema.AttributeTypeNotifier].(map[string]any); ok {
 		if notifies, ok := notifier[schema.AttributeTypeNotifies].([]any); ok {
 			for _, n := range notifies {

@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/cache"
-	"github.com/turbot/pipe-fittings/modconfig"
-
+	"github.com/turbot/flowpipe/internal/resources"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -15,7 +14,7 @@ func pipelineSemaphoreCacheKey(name string) string {
 	return name + "-pipeline-sempahore"
 }
 
-func GetPipelineSemaphore(pipelineDefn *modconfig.Pipeline) error {
+func GetPipelineSemaphore(pipelineDefn *resources.Pipeline) error {
 	if pipelineDefn == nil {
 		slog.Warn("Pipeline definition is nil, unable to get pipeline semaphore")
 		return nil
@@ -50,7 +49,7 @@ func GetPipelineSemaphore(pipelineDefn *modconfig.Pipeline) error {
 	return nil
 }
 
-func ReleasePipelineSemaphore(pipelineDefn *modconfig.Pipeline) error {
+func ReleasePipelineSemaphore(pipelineDefn *resources.Pipeline) error {
 	if pipelineDefn == nil {
 		slog.Warn("Pipeline definition is nil, unable to release pipeline semaphore")
 		return nil

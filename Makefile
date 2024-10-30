@@ -43,7 +43,12 @@ build-ui:
 .PHONY: test
 test:
 	go clean -testcache
-	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
+	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest | grep -v /internal/tests) -timeout 60s
+
+.PHONY: test2
+test2:
+	go clean -testcache
+	go test ./internal/tests/... -timeout 240s -v
 
 .PHONY: integration-test
 integration-test:

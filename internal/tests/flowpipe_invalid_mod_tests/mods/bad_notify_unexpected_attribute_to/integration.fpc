@@ -1,0 +1,10 @@
+integration "slack" "default" {
+  token = "dummy"
+}
+
+notifier "slack_test" {
+  notify {
+    integration = integration.slack.default 
+    to          = ["gob@bluthenterprises.com"]
+  }
+}

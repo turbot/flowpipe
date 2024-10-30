@@ -14,8 +14,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/metrics"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/store"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -130,7 +130,7 @@ func LogEventMessage(ctx context.Context, cmd interface{}, lock *sync.Mutex) err
 	return nil
 }
 
-func pipelineCompletionHandler(executionID, pipelineExecutionID string, pipelineDefn *modconfig.Pipeline, stepExecutions map[string]*execution.StepExecution) {
+func pipelineCompletionHandler(executionID, pipelineExecutionID string, pipelineDefn *resources.Pipeline, stepExecutions map[string]*execution.StepExecution) {
 	event.ReleaseEventLogMutex(executionID)
 	execution.CompletePipelineExecutionStepSemaphore(pipelineExecutionID)
 	err := execution.ReleasePipelineSemaphore(pipelineDefn)
