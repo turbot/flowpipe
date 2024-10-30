@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/turbot/flowpipe/internal/flowpipeconfig"
 	fpparse "github.com/turbot/flowpipe/internal/parse"
-	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"time"
 
@@ -58,7 +58,7 @@ func (m *Manager) modUpdated() {
 	m.RootMod = m.workspace.Mod
 
 	// get resources from mod
-	resourceMaps := flowpipe2.GetModResources(m.RootMod)
+	resourceMaps := resources.GetModResources(m.RootMod)
 
 	var serverOutput []sanitize.SanitizedStringer
 	var err error
@@ -164,7 +164,7 @@ func (m *Manager) loadMod() error {
 		}
 	}
 
-	m.triggers = workspace.GetWorkspaceResourcesOfType[*flowpipe2.Trigger](w)
+	m.triggers = workspace.GetWorkspaceResourcesOfType[*resources.Trigger](w)
 
 	cache.GetCache().SetWithTTL("#rootmod.name", mod.ShortName, 24*7*52*99*time.Hour)
 	err = m.cacheModData(mod)

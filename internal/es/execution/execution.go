@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"slices"
 	"strings"
@@ -66,7 +66,7 @@ func (ex *Execution) FindPipelineExecutionByItsParentStepExecution(stepExecution
 	return nil
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *flowpipe2.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func (ex *Execution) BuildEvalContext(pipelineDefn *resources.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *flowpipe2.Pipeline, pe *Pipe
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
-	resourceMaps := flowpipe2.GetModResources(pipelineDefn.GetMod())
+	resourceMaps := resources.GetModResources(pipelineDefn.GetMod())
 
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	// NOTE: the late binding vars map contains a list of the late-binding resources that the var depends on
@@ -175,7 +175,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *flowpipe2.Pipeline, pe *Pipe
 }
 
 // This function mutates evalContext
-func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn flowpipe2.PipelineStep) (*hcl.EvalContext, error) {
+func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep) (*hcl.EvalContext, error) {
 	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
 		params := map[string]cty.Value{}
 
@@ -195,7 +195,7 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn flowpipe2.PipelineStep, pipelineDefn *flowpipe2.Pipeline, withForEach bool, newlyDiscoveredConnections []flowpipe2.ConnectionDependency) (*hcl.EvalContext, error) {
+func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep, pipelineDefn *resources.Pipeline, withForEach bool, newlyDiscoveredConnections []resources.ConnectionDependency) (*hcl.EvalContext, error) {
 	addConn := false
 
 	if stepDefn != nil && (len(stepDefn.GetConnectionDependsOn()) > 0 || len(newlyDiscoveredConnections) > 0) {
@@ -302,7 +302,7 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn flowpipe2.PipelineStep, pipelineDefn *flowpipe2.Pipeline) (*hcl.EvalContext, error) {
+func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep, pipelineDefn *resources.Pipeline) (*hcl.EvalContext, error) {
 	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true, nil)
 }
 
@@ -391,7 +391,7 @@ func extractConnection(connName string, allConnections map[string]connection.Pip
 
 // runParams = the params supplied when the pipeline is run
 // defnParams = the params as defined in the HCL files
-func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, vars map[string]cty.Value, defnParam []flowpipe2.PipelineParam) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
+func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, vars map[string]cty.Value, defnParam []resources.PipelineParam) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
 		return nil, nil, nil, err
@@ -755,7 +755,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (flowpipe2.PipelineStep, error) {
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (resources.PipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -1058,7 +1058,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			StepStatus:            map[string]map[string]*StepStatus{},
 			ParentStepExecutionID: et.ParentStepExecutionID,
 			ParentExecutionID:     et.ParentExecutionID,
-			Errors:                []flowpipe2.StepError{},
+			Errors:                []resources.StepError{},
 			StepExecutions:        map[string]*StepExecution{},
 			Trigger:               et.Trigger,
 			TriggerCapture:        et.TriggerCapture,
@@ -1285,14 +1285,14 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			for _, e := range et.Errors {
 
 				found := false
-				for _, pipelineErr := range pe.PipelineOutput["errors"].([]flowpipe2.StepError) {
+				for _, pipelineErr := range pe.PipelineOutput["errors"].([]resources.StepError) {
 					if e.Error.ID == pipelineErr.Error.ID {
 						found = true
 						break
 					}
 				}
 				if !found {
-					pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]flowpipe2.StepError), et.Errors...)
+					pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]resources.StepError), et.Errors...)
 				}
 			}
 

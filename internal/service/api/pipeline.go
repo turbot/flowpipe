@@ -2,8 +2,8 @@ package api
 
 import (
 	"fmt"
-	parse2 "github.com/turbot/flowpipe/internal/parse"
-	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"net/http"
 	"sort"
@@ -140,7 +140,7 @@ func GetPipeline(pipelineName string, rootMod string) (*types.FpPipeline, error)
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	pipeline, ok := pipelineCached.(*flowpipe2.Pipeline)
+	pipeline, ok := pipelineCached.(*resources.Pipeline)
 	if !ok {
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
@@ -219,7 +219,7 @@ func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecu
 			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
 			pipelineExecutionResponse.Flowpipe.Status = "failed"
 
-			pipelineExecutionResponse.Errors = []flowpipe2.StepError{
+			pipelineExecutionResponse.Errors = []resources.StepError{
 				{
 					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
 					Pipeline:            pipelineCmd.Name,
@@ -315,7 +315,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		}
 
 		if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-			errs := parse2.ValidateParams(pipelineDefn, input.Args, evalContext)
+			errs := fparse.ValidateParams(pipelineDefn, input.Args, evalContext)
 			if len(errs) > 0 {
 				errStrs := error_helpers.MergeErrors(errs)
 				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
@@ -323,7 +323,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 			executionCmd.PipelineQueue.Args = input.Args
 
 		} else if len(input.ArgsString) > 0 {
-			args, errs := parse2.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
+			args, errs := fparse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
 			if len(errs) > 0 {
 				errStrs := error_helpers.MergeErrors(errs)
 				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))

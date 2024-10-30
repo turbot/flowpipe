@@ -2,7 +2,7 @@ package pipeline_test
 
 import (
 	"context"
-	parse2 "github.com/turbot/flowpipe/internal/parse"
+	fparse "github.com/turbot/flowpipe/internal/parse"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,7 +11,7 @@ import (
 func TestParamOptional(t *testing.T) {
 	assert := assert.New(t)
 
-	pipelines, _, err := parse2.LoadPipelines(context.TODO(), "./pipelines/param_optional.fp")
+	pipelines, _, err := fparse.LoadPipelines(context.TODO(), "./pipelines/param_optional.fp")
 	assert.Nil(err, "error found")
 
 	validateMyParam := pipelines["local.pipeline.test_param_optional"]
@@ -22,5 +22,5 @@ func TestParamOptional(t *testing.T) {
 
 	stringValid := map[string]interface{}{}
 
-	assert.Equal(0, len(parse2.ValidateParams(validateMyParam, stringValid, nil)))
+	assert.Equal(0, len(fparse.ValidateParams(validateMyParam, stringValid, nil)))
 }

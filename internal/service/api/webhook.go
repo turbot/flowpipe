@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	flowpipe2 "github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/flowpipe/internal/resources"
 	"io"
 	"log/slog"
 	"net/http"
@@ -69,7 +69,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	}
 
 	// check if the t is a webhook trigger
-	t, ok := triggerCached.(*flowpipe2.Trigger)
+	t, ok := triggerCached.(*resources.Trigger)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a trigger"))
 		return
@@ -82,7 +82,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		return
 	}
 
-	httpTriggerConfig, ok := t.Config.(*flowpipe2.TriggerHttp)
+	httpTriggerConfig, ok := t.Config.(*resources.TriggerHttp)
 	if !ok {
 		common.AbortWithError(c, perr.NotFoundWithMessage("object is not a webhook trigger"))
 		return
@@ -143,7 +143,7 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 		selfObject[k] = ctyVal
 	}
 
-	resourceMaps := flowpipe2.GetModResources(mod)
+	resourceMaps := resources.GetModResources(mod)
 	vars := map[string]cty.Value{}
 	for _, v := range resourceMaps.Variables {
 		vars[v.GetMetadata().ResourceName] = v.Value
@@ -272,7 +272,7 @@ func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetr
 	pipelineExecutionResponse.Results = pipelineOutput
 
 	if pipelineOutput["errors"] != nil {
-		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]flowpipe2.StepError)
+		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]resources.StepError)
 	}
 
 	pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
@@ -358,7 +358,7 @@ func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.Trigg
 			pipelineResponse.Results = pipelineOutput
 
 			if pipelineOutput["errors"] != nil {
-				pipelineResponse.Errors = pipelineOutput["errors"].([]flowpipe2.StepError)
+				pipelineResponse.Errors = pipelineOutput["errors"].([]resources.StepError)
 			}
 
 			if trg.Config.GetType() == "schedule" {
