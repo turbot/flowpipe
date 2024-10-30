@@ -8,8 +8,6 @@ go 1.23.1
 //	github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
 //)
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings
-
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
 	github.com/dgraph-io/ristretto v0.1.1
