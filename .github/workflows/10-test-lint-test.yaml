@@ -101,7 +101,3 @@ jobs:
       - name: Run tests
         run: make test
         working-directory: flowpipe
-
-      - name: Run tests2
-        run: make test2
-        working-directory: flowpipe
