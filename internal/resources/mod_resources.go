@@ -11,7 +11,7 @@ func GetModResources(mod *modconfig.Mod) *FlowpipeModResources {
 	modResources, ok := mod.GetModResources().(*FlowpipeModResources)
 	if !ok {
 		// should never happen
-		panic(fmt.Sprintf("mod.GetModResources() did not return a flowpipe ModResources: %T", mod.GetModResources()))
+		panic(fmt.Sprintf("mod.GetModResources() did not return a FlowpipeModResources: %T", mod.GetModResources()))
 	}
 	return modResources
 }
