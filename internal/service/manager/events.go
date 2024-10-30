@@ -126,11 +126,18 @@ func (m *Manager) loadMod() error {
 		return err
 	}
 
+	notifierValueMap, err := flowpipeConfig.NotifierValueMap()
+	if err != nil {
+		slog.Error("error getting notifier value map", "error", err)
+		return err
+	}
+
 	w, errorAndWarning := workspace.LoadWorkspacePromptingForVariables(
 		m.ctx,
 		modLocation,
 		workspace.WithPipelingConnections(flowpipeConfig.PipelingConnections),
 		workspace.WithDecoderOptions(fpparse.WithCredentials(flowpipeConfig.Credentials)),
+		workspace.WithConfigValueMap("notifier", notifierValueMap),
 	)
 
 	if errorAndWarning.Error != nil {
