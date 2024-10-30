@@ -8,7 +8,7 @@ go 1.23.1
 //	github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
 //)
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings
+//replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
@@ -54,8 +54,8 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/sagikazarmark/slog-shim v0.1.0
 	github.com/turbot/flowpipe-sdk-go v1.0.0
-	// develop branch 281024164508bc549bb702da27381e28ab77eb0b (spp specific resource refactor)
-	github.com/turbot/pipe-fittings v1.6.6-0.20241030175007-281024164508
+	// develop branch d7decaf1e82d8538970cc7d7821d5a8f1c3994d4 (app specific resource refactor)
+	github.com/turbot/pipe-fittings v1.6.6-0.20241030182756-d7decaf1e82d
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.8.0
 )
