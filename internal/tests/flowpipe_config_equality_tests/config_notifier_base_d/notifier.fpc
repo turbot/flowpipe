@@ -1,0 +1,12 @@
+notifier "admin" {
+
+    title = "admin"
+
+    notify {
+        integration = integration.http.default
+    }
+
+    notify {
+        integration = integration.http.default
+    }
+}

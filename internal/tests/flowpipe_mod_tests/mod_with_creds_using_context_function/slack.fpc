@@ -1,0 +1,4 @@
+
+credential "slack" "slack_creds" {
+  token = env("TEST_SLACK_TOKEN")
+}

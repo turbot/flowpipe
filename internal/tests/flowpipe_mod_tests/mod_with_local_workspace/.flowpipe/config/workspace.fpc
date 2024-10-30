@@ -1,0 +1,8 @@
+workspace "local" {
+
+}
+
+credential "aws" "aws_static" {
+    access_key = "foo"
+    secret_key = "bar"
+}

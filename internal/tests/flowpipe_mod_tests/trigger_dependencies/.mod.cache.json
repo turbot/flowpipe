@@ -1,0 +1,24 @@
+{
+  "mod_depend_a@v1.0.0": {
+    "mod_depend_a_1": {
+      "version": "1.0.0",
+      "name": "mod_depend_a_1",
+      "struct_version": 20240429,
+      "alias": "mod_depend_a_1"
+    }
+  },
+  "trigger_mod": {
+    "mod_depend_a": {
+      "version": "1.0.0",
+      "name": "mod_depend_a",
+      "struct_version": 20240429,
+      "alias": "mod_depend_a"
+    },
+    "mod_depend_b": {
+      "version": "1.0.0",
+      "name": "mod_depend_b",
+      "struct_version": 20240429,
+      "alias": "mod_depend_b"
+    }
+  }
+}

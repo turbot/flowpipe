@@ -1,0 +1,6 @@
+
+
+# should be slack not slacks
+credential "slacks" "my_slack" { 
+    token = "xoxp-..."
+}

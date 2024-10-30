@@ -1,0 +1,2 @@
+integration "email" "my_email_app" {
+}

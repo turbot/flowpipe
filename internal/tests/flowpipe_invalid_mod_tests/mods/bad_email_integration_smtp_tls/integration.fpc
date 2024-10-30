@@ -1,0 +1,5 @@
+integration "email" "my_email_app" {
+  from      = "test@example.com"
+  smtp_host = "test.example.com"
+  smtp_tls  = "dummy"
+}
