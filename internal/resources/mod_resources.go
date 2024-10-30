@@ -7,8 +7,8 @@ import (
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-func GetModResources(mod *modconfig.Mod) *ModResources {
-	resourceMaps, ok := mod.GetResourceMaps().(*ModResources)
+func GetModResources(mod *modconfig.Mod) *FlowpipeModResources {
+	resourceMaps, ok := mod.GetResourceMaps().(*FlowpipeModResources)
 	if !ok {
 		// should never happen
 		panic(fmt.Sprintf("mod.GetResourceMaps() did not return a flowpipe ModResources: %T", mod.GetResourceMaps()))
@@ -16,9 +16,9 @@ func GetModResources(mod *modconfig.Mod) *ModResources {
 	return resourceMaps
 }
 
-// ModResources is a struct containing maps of all mod resource types
+// FlowpipeModResources is a struct containing maps of all mod resource types
 // This is provided to avoid db needing to reference workspace package
-type ModResources struct {
+type FlowpipeModResources struct {
 	// the parent mod
 	Mod *modconfig.Mod
 
@@ -32,7 +32,7 @@ type ModResources struct {
 	Locals     map[string]*modconfig.Local
 }
 
-func NewModResources(mod *modconfig.Mod, sourceMaps ...modconfig.ResourceMapsI) modconfig.ResourceMapsI {
+func NewModResources(mod *modconfig.Mod, sourceMaps ...modconfig.ModResources) modconfig.ModResources {
 	res := emptyFlowpipeModResources()
 	res.Mod = mod
 	res.Mods[mod.GetInstallCacheKey()] = mod
@@ -40,8 +40,8 @@ func NewModResources(mod *modconfig.Mod, sourceMaps ...modconfig.ResourceMapsI) 
 	return res
 }
 
-func emptyFlowpipeModResources() *ModResources {
-	return &ModResources{
+func emptyFlowpipeModResources() *FlowpipeModResources {
+	return &FlowpipeModResources{
 
 		Mods:      make(map[string]*modconfig.Mod),
 		Variables: make(map[string]*modconfig.Variable),
@@ -73,8 +73,8 @@ func emptyFlowpipeModResources() *ModResources {
 //	return res
 //}
 
-func (m *ModResources) Equals(o modconfig.ResourceMapsI) bool {
-	other, ok := o.(*ModResources)
+func (m *FlowpipeModResources) Equals(o modconfig.ModResources) bool {
+	other, ok := o.(*FlowpipeModResources)
 	if !ok {
 		return false
 	}
@@ -135,7 +135,7 @@ func (m *ModResources) Equals(o modconfig.ResourceMapsI) bool {
 
 // GetResource tries to find a resource with the given name in the ModResources
 // NOTE: this does NOT support inputs, which are NOT uniquely named in a mod
-func (m *ModResources) GetResource(parsedName *modconfig.ParsedResourceName) (resource modconfig.HclResource, found bool) {
+func (m *FlowpipeModResources) GetResource(parsedName *modconfig.ParsedResourceName) (resource modconfig.HclResource, found bool) {
 	modName := parsedName.Mod
 	if modName == "" {
 		modName = m.Mod.ShortName
@@ -165,7 +165,7 @@ func (m *ModResources) GetResource(parsedName *modconfig.ParsedResourceName) (re
 	return resource, found
 }
 
-func (m *ModResources) Empty() bool {
+func (m *FlowpipeModResources) Empty() bool {
 	return len(m.Mods)+
 		len(m.Variables)+
 		len(m.Pipelines)+
@@ -174,7 +174,7 @@ func (m *ModResources) Empty() bool {
 
 // WalkResources calls resourceFunc for every resource in the mod
 // if any resourceFunc returns false or an error, return immediately
-func (m *ModResources) WalkResources(resourceFunc func(item modconfig.HclResource) (bool, error)) error {
+func (m *FlowpipeModResources) WalkResources(resourceFunc func(item modconfig.HclResource) (bool, error)) error {
 	for _, r := range m.Mods {
 		if continueWalking, err := resourceFunc(r); err != nil || !continueWalking {
 			return err
@@ -207,7 +207,7 @@ func (m *ModResources) WalkResources(resourceFunc func(item modconfig.HclResourc
 	return nil
 }
 
-func (m *ModResources) AddResource(item modconfig.HclResource) hcl.Diagnostics {
+func (m *FlowpipeModResources) AddResource(item modconfig.HclResource) hcl.Diagnostics {
 	var diags hcl.Diagnostics
 	switch r := item.(type) {
 	case *Pipeline:
@@ -244,9 +244,9 @@ func (m *ModResources) AddResource(item modconfig.HclResource) hcl.Diagnostics {
 	return diags
 }
 
-func (m *ModResources) AddMaps(sourceMaps ...modconfig.ResourceMapsI) {
+func (m *FlowpipeModResources) AddMaps(sourceMaps ...modconfig.ModResources) {
 	for _, s := range sourceMaps {
-		source := s.(*ModResources)
+		source := s.(*FlowpipeModResources)
 		for k, v := range source.
 			Pipelines {
 			m.Pipelines[k] = v
@@ -273,25 +273,25 @@ func (m *ModResources) AddMaps(sourceMaps ...modconfig.ResourceMapsI) {
 
 	}
 }
-func (m *ModResources) AddReference(ref *modconfig.ResourceReference) {
+func (m *FlowpipeModResources) AddReference(ref *modconfig.ResourceReference) {
 	m.References[ref.String()] = ref
 }
 
-func (m *ModResources) GetReferences() map[string]*modconfig.ResourceReference {
+func (m *FlowpipeModResources) GetReferences() map[string]*modconfig.ResourceReference {
 	return m.References
 }
 
-func (m *ModResources) GetVariables() map[string]*modconfig.Variable {
+func (m *FlowpipeModResources) GetVariables() map[string]*modconfig.Variable {
 	return m.Variables
 }
 
-func (m *ModResources) GetMods() map[string]*modconfig.Mod {
+func (m *FlowpipeModResources) GetMods() map[string]*modconfig.Mod {
 
 	return m.Mods
 }
 
 // TopLevelResources returns a new PowerpipeResourceMaps containing only top level resources (i.e. no dependencies)
-func (m *ModResources) TopLevelResources() modconfig.ResourceMapsI {
+func (m *FlowpipeModResources) TopLevelResources() modconfig.ModResources {
 	res := NewModResources(m.Mod)
 
 	f := func(item modconfig.HclResource) (bool, error) {

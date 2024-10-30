@@ -151,22 +151,22 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *resources.Pipeline, pe *Pipe
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
-	resourceMaps := resources.GetModResources(pipelineDefn.GetMod())
+	modResources := resources.GetModResources(pipelineDefn.GetMod())
 
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	// NOTE: the late binding vars map contains a list of the late-binding resources that the var depends on
 	// (i.e pipeling connections)
-	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(resourceMaps.Variables, true)
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modResources.Variables, true)
 
 	// add these to eval context
 	evalContext.Variables[pfconstants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
-	for _, variable := range resourceMaps.Variables {
+	for _, variable := range modResources.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
 	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
 
 	localsMap := make(map[string]cty.Value)
-	for _, local := range resourceMaps.Locals {
+	for _, local := range modResources.Locals {
 		localsMap[local.ShortName] = local.Value
 	}
 	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
