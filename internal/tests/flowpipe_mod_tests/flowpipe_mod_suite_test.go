@@ -306,7 +306,7 @@ func (suite *FlowpipeModTestSuite) TestGoodMod() {
 		return
 	}
 
-	assert.Equal("0.1.0", mod.GetRequire().Flowpipe.MinVersionString)
+	assert.Equal("0.1.0", mod.Require.Flowpipe.MinVersionString)
 	assert.Equal("day", mod.GetTags()["green"])
 
 	// check if all pipelines are there
