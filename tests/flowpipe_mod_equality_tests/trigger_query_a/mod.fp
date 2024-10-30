@@ -1,3 +1,0 @@
-mod "equality_test" {
-
-}

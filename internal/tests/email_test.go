@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/parse"
-	"github.com/turbot/flowpipe/tests/test_init"
+	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"testing"
 
 	"github.com/hashicorp/hcl/v2/gohcl"

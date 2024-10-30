@@ -3,6 +3,7 @@ package invalid_mod_tests
 import (
 	"context"
 	"errors"
+	"github.com/turbot/flowpipe/internal/tests/test_init"
 	"github.com/turbot/pipe-fittings/workspace"
 	"os"
 	"path"
@@ -11,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/turbot/flowpipe/tests/test_init"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
