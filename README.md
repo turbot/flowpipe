@@ -5,7 +5,9 @@
 [![slack](https://img.shields.io/badge/slack-2695-blue)](https://turbot.com/community/join) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com)
 
-[Flowpipe](https://flowpipe.io) is **Workflow for DevOps**. Automation and workflow to connect your clouds to the people, systems and data that matter.
+## Workflow for DevOps
+
+[Flowpipe](https://flowpipe.io) enables automation and workflow to connect your clouds to the people, systems and data that matter.
 
 **Pipelines**. A [pipeline](https://flowpipe.io/docs/flowpipe-hcl/pipeline) is a sequence of [steps](https://flowpipe.io/docs/flowpipe-hcl/pipeline) to do work.
 
