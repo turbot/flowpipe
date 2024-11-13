@@ -170,7 +170,8 @@ If you're interested in developing [Flowpipe mods](https://hub.flowpipe.io), see
 
 ## Turbot Pipes
 
-Bring your team to [Turbot Pipes](https://turbot.com/pipes) to use Flowpipe together in the cloud.
+Bring your team to [Turbot Pipes](https://turbot.com/pipes) to use Flowpipe together in the cloud. In a Pipes workspace you can use [Steampipe](https://github.com/turbot/steampipe) for data access, [Powerpipe](https://github.com/turbot/powerpipe) to visualize query results, and Flowpipe to automate workflow.
+
 
 ## Open source and contributing
 This repository is published under the [AGPL 3.0](https://www.gnu.org/licenses/agpl-3.0.html) license. Please see our [code of conduct](https://github.com/turbot/.github/blob/main/CODE_OF_CONDUCT.md). Contributors must sign our [Contributor License Agreement](https://turbot.com/open-source#cla) as part of their first pull request. We look forward to collaborating with you!
