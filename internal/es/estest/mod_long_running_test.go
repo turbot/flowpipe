@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/resources"
@@ -75,9 +74,6 @@ func (suite *ModLongRunningTestSuite) SetupSuite() {
 	// Create a single, global context for the application
 	ctx := context.Background()
 	suite.ctx = ctx
-
-	// We use the cache to store the pipelines
-	cache.InMemoryInitialize(nil)
 
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()

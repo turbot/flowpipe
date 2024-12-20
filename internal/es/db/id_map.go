@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/cache"
+	"github.com/turbot/pipe-fittings/cache"
 )
 
 func MapStepExecutionID(executionID, pipelineExecutionID, stepExecutionID string) string {

@@ -4,11 +4,11 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/flowpipeconfig"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 )

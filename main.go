@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/cmd"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/fperr"
@@ -50,7 +49,6 @@ func main() {
 
 	localcmdconfig.SetAppSpecificConstants()
 	log.SetDefaultLogger()
-	cache.InMemoryInitialize(nil)
 
 	// Run the CLI
 	cmd.RunCLI(ctx)

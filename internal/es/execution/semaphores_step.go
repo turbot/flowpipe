@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/pipe-fittings/cache"
 	"golang.org/x/sync/semaphore"
 )
 
