@@ -30,13 +30,14 @@ func main() {
 	ctx := context.Background()
 	utils.LogTime("main start")
 	defer func() {
+		utils.LogTime("main end")
+		utils.DisplayProfileDataJsonl(os.Stderr)
+
 		var err error
 		if r := recover(); r != nil {
 			err = helpers.ToError(r)
 			error_helpers.ShowError(ctx, err)
 			exitCode := fperr.GetExitCode(err, true)
-			utils.LogTime("main end")
-			utils.DisplayProfileDataJsonl(os.Stderr)
 			os.Exit(exitCode)
 		}
 	}()

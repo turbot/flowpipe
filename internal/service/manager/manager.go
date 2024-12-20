@@ -374,6 +374,9 @@ func (m *Manager) Stop() error {
 		m.renderServerShutdownOutput()
 	}
 
+	utils.LogTime("manager stop")
+	utils.DisplayProfileDataJsonl(os.Stderr)
+
 	return nil
 }
 
