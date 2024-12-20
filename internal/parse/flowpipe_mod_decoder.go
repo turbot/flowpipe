@@ -2,6 +2,8 @@ package parse
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
@@ -13,8 +15,8 @@ import (
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/parse"
+	"github.com/turbot/pipe-fittings/utils"
 	"github.com/zclconf/go-cty/cty"
-	"strings"
 
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -468,11 +470,14 @@ func (d *FlowpipeModDecoder) decodeTrigger(block *hcl.Block, parseCtx *parse.Mod
 // TODO: validation - if you specify invalid depends_on it doesn't error out
 // TODO: validation - invalid name?
 func (d *FlowpipeModDecoder) decodePipeline(block *hcl.Block, parseCtx *parse.ModParseContext) (modconfig.HclResource, *parse.DecodeResult) {
+
 	res := parse.NewDecodeResult()
 
 	mod := parseCtx.CurrentMod
 	// get shell pipelineHcl
 	pipelineHcl := resources.NewPipeline(mod, block)
+
+	utils.LogTime(fmt.Sprintf("decode pipeline %s start", pipelineHcl.FullName))
 
 	pipelineOptions, diags := block.Body.Content(resources.PipelineBlockSchema)
 	if diags.HasErrors() {
@@ -491,6 +496,8 @@ func (d *FlowpipeModDecoder) decodePipeline(block *hcl.Block, parseCtx *parse.Mo
 	// we don't use up unnecessary memory
 	// foundOptions := map[string]struct{}{}
 	for _, block := range pipelineOptions.Blocks {
+		utils.LogTime(fmt.Sprintf("decode pipeline.block %s start", block.Type))
+
 		switch block.Type {
 		case schema.BlockTypePipelineStep:
 			step, diags := d.decodeStep(mod, block, parseCtx, pipelineHcl)
@@ -577,6 +584,8 @@ func (d *FlowpipeModDecoder) decodePipeline(block *hcl.Block, parseCtx *parse.Mo
 				Subject:  &block.DefRange,
 			})
 		}
+
+		utils.LogTime(fmt.Sprintf("decode pipeline.block %s end", block.Type))
 	}
 
 	diags = validatePipelineSteps(pipelineHcl)
@@ -605,6 +614,7 @@ func (d *FlowpipeModDecoder) decodePipeline(block *hcl.Block, parseCtx *parse.Mo
 		pipelineHcl.SetFileReference(block.DefRange.Filename, block.DefRange.Start.Line, block.DefRange.End.Line)
 	}
 
+	utils.LogTime(fmt.Sprintf("decode pipeline %s end", pipelineHcl.FullName))
 	return pipelineHcl, res
 }
 
