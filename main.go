@@ -36,7 +36,7 @@ func main() {
 			error_helpers.ShowError(ctx, err)
 			exitCode := fperr.GetExitCode(err, true)
 			utils.LogTime("main end")
-			utils.DisplayProfileData(os.Stdout)
+			utils.DisplayProfileDataJsonl(os.Stderr)
 			os.Exit(exitCode)
 		}
 	}()
