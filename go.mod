@@ -12,7 +12,7 @@ replace github.com/turbot/pipe-fittings => ../pipe-fittings
 
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
-	github.com/dgraph-io/ristretto v0.1.1
+	github.com/dgraph-io/ristretto v0.2.0
 	github.com/didip/tollbooth/v7 v7.0.1
 	github.com/docker/cli v24.0.6+incompatible
 	github.com/docker/docker v27.1.2+incompatible
@@ -148,7 +148,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
