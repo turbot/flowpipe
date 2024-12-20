@@ -180,11 +180,21 @@ func (d *FlowpipeModDecoder) decodePipelineParam(block *hcl.Block, parseCtx *par
 		Name: block.Labels[0],
 	}
 
+	utils.LogTime(fmt.Sprintf("decode pipeline param %s start", o.Name))
+
 	// because we want to use late binding for temp creds *and* the ability for pipeline param to define custom type,
 	// we do the validation with with a list of temporary connections
+
+	utils.LogTime(fmt.Sprintf("decode pipeline param %s start: set include late binding resources(true)", o.Name))
 	parseCtx.SetIncludeLateBindingResources(true)
+	utils.LogTime(fmt.Sprintf("decode pipeline param %s end: set include late binding resources(true)", o.Name))
+
 	// be sure to revert the eval context to remove the temporary connections again
-	defer parseCtx.SetIncludeLateBindingResources(false)
+	defer func() {
+		utils.LogTime(fmt.Sprintf("decode pipeline param %s start: set include late binding resources(false)", o.Name))
+		parseCtx.SetIncludeLateBindingResources(false)
+		utils.LogTime(fmt.Sprintf("decode pipeline param %s end: set include late binding resources(false)", o.Name))
+	}()
 
 	paramOptions, diags := block.Body.Content(resources.PipelineParamBlockSchema)
 
@@ -221,7 +231,9 @@ func (d *FlowpipeModDecoder) decodePipelineParam(block *hcl.Block, parseCtx *par
 		}
 
 		// Does the default value matches the specified type?
+		utils.LogTime(fmt.Sprintf("decode pipeline param %s start: validate value matches type", o.Name))
 		moreDiags = modconfig.ValidateValueMatchesType(ctyVal, o.Type, attr.Range.Ptr())
+		utils.LogTime(fmt.Sprintf("decode pipeline param %s end: validate value matches type", o.Name))
 		diags = append(diags, moreDiags...)
 		if diags.HasErrors() {
 			return o, diags
@@ -305,6 +317,8 @@ func (d *FlowpipeModDecoder) decodePipelineParam(block *hcl.Block, parseCtx *par
 		// if this is a string param, default to text
 		o.Format = constants.VariableFormatText
 	}
+
+	utils.LogTime(fmt.Sprintf("decode pipeline param %s end", o.Name))
 
 	return o, diags
 }
@@ -496,7 +510,7 @@ func (d *FlowpipeModDecoder) decodePipeline(block *hcl.Block, parseCtx *parse.Mo
 	// we don't use up unnecessary memory
 	// foundOptions := map[string]struct{}{}
 	for _, block := range pipelineOptions.Blocks {
-		utils.LogTime(fmt.Sprintf("decode pipeline.block %s start", block.Type))
+		utils.LogTime(fmt.Sprintf("decode pipeline.block %s - %v start", block.Type, block.Labels))
 
 		switch block.Type {
 		case schema.BlockTypePipelineStep:
@@ -585,7 +599,7 @@ func (d *FlowpipeModDecoder) decodePipeline(block *hcl.Block, parseCtx *parse.Mo
 			})
 		}
 
-		utils.LogTime(fmt.Sprintf("decode pipeline.block %s end", block.Type))
+		utils.LogTime(fmt.Sprintf("decode pipeline.block %s - %v end", block.Type, block.Labels))
 	}
 
 	diags = validatePipelineSteps(pipelineHcl)
