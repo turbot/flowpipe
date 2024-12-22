@@ -16,6 +16,7 @@ import (
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 )
@@ -41,6 +42,8 @@ func (suite *ModTwoTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	cache.ResetAllCache()
 
 	suite.server = StartServer()
 

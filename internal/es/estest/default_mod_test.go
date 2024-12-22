@@ -18,6 +18,7 @@ import (
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	putils "github.com/turbot/pipe-fittings/utils"
@@ -44,6 +45,8 @@ func (suite *DefaultModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	cache.ResetAllCache()
 
 	// sets app specific constants defined in pipe-fittings
 	viper.SetDefault("main.version", "0.0.0-test.0")

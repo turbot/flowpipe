@@ -59,7 +59,6 @@ require (
 require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/turbot/pipe-fittings v1.7.0
 	github.com/turbot/terraform-components v0.0.0-20231213122222-1f3526cab7a7
 )
 
@@ -228,6 +227,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
+	github.com/turbot/pipe-fittings v1.7.1 // indirect
 	github.com/turbot/pipes-sdk-go v0.9.1 // indirect
 	github.com/turbot/steampipe-plugin-code v0.7.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
