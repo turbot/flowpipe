@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	fpconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/container"
@@ -28,6 +27,7 @@ import (
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/sanitize"
@@ -56,6 +56,7 @@ func (suite *ModTestSuite) SetupSuite() {
 		panic(err)
 	}
 
+	cache.ResetAllCache()
 	suite.server = StartServer()
 
 	// sets app specific constants defined in pipe-fittings
@@ -89,9 +90,6 @@ func (suite *ModTestSuite) SetupSuite() {
 	ctx := context.Background()
 	suite.ctx = ctx
 
-	// We use the cache to store the pipelines
-	cache.InMemoryInitialize(nil)
-
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()
 	error_helpers.FailOnError(err)
@@ -100,7 +98,7 @@ func (suite *ModTestSuite) SetupSuite() {
 	suite.manager = m
 
 	suite.SetupSuiteRunCount++
-}
+ }
 
 // The TearDownSuite method will be run by testify once, at the very
 // end of the testing suite, after all tests have been run.

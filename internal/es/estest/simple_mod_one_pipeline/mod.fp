@@ -35,13 +35,13 @@ pipeline "echo_one" {
         ]
     }
 
-    param "value4" {
-        type = map(list(number))
-    }
+    # param "value4" {
+    #     type = map(list(number))
+    # }
 
-    param "value5" {
-        type = list(list(list(map(string))))
-    }
+    # param "value5" {
+    #     type = list(list(list(map(string))))
+    # }
 
     param "actions" {
         description = "A map of actions, if approvers are set these will be offered as options to select, else the one matching the default_action will be used."

@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/pipe-fittings/cache"
 	"golang.org/x/sync/semaphore"
 )
 

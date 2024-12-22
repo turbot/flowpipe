@@ -8,11 +8,9 @@ go 1.23.2
 //	github.com/turbot/pipe-fittings => /workspaces/pipe-fittings
 //)
 
-replace github.com/turbot/pipe-fittings => ../pipe-fittings
-
 require (
 	github.com/ThreeDotsLabs/watermill v1.3.3
-	github.com/dgraph-io/ristretto v0.1.1
+	github.com/dgraph-io/ristretto v0.2.0 // indirect
 	github.com/didip/tollbooth/v7 v7.0.1
 	github.com/docker/cli v24.0.6+incompatible
 	github.com/docker/docker v27.1.2+incompatible
@@ -52,7 +50,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/marcboeker/go-duckdb v1.5.6
 	github.com/mattn/go-sqlite3 v1.14.19
-	github.com/sagikazarmark/slog-shim v0.1.0
+	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/turbot/flowpipe-sdk-go v1.0.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/sync v0.8.0
@@ -61,7 +59,6 @@ require (
 require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/turbot/pipe-fittings v0.0.0-00010101000000-000000000000
 	github.com/turbot/terraform-components v0.0.0-20231213122222-1f3526cab7a7
 )
 
@@ -148,7 +145,6 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/golang/glog v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -231,6 +227,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
 	github.com/tkrajina/go-reflector v0.5.6 // indirect
+	github.com/turbot/pipe-fittings v1.7.1 // indirect
 	github.com/turbot/pipes-sdk-go v0.9.1 // indirect
 	github.com/turbot/steampipe-plugin-code v0.7.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
