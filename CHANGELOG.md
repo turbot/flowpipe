@@ -1,11 +1,10 @@
 # Flowpipe
 
-## v1.1.0 [tbd]
+## v1.1.0 [2024-12-23]
 
 _What's new?_
 
-* Improve mod loading performance when there are many connection resources in the workspace.
-* Added `FLOWPIPE_PROFILE` env variable to enable CLI profiling.
+* Improved CLI load time for environments with many connection resources.
 * Updated Go to v1.23.0
 
 _Bug fixes_
