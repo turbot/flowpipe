@@ -5,7 +5,7 @@
 _What's new?_
 
 * Improved CLI load time for environments with many connection resources.
-* Updated Go to v1.23.0
+* Updated Go to v1.23.
 
 _Bug fixes_
 
