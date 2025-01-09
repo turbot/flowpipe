@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/metrics"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/store"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/perr"
 )
 

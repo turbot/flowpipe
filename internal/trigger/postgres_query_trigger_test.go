@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"math/rand"
 	"os"
@@ -12,12 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/zclconf/go-cty/cty"
@@ -25,8 +26,6 @@ import (
 
 func TestPostgresSqlTriggerQuery(t *testing.T) {
 	ctx := context.Background()
-
-	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -496,8 +495,6 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 
 func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	ctx := context.Background()
-
-	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -1163,8 +1160,6 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	ctx := context.Background()
 
-	cache.InMemoryInitialize(nil)
-
 	assert := assert.New(t)
 
 	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
@@ -1315,8 +1310,6 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 
 func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	ctx := context.Background()
-
-	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 

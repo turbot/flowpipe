@@ -11,11 +11,11 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/service/api"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/constants"
 
 	"github.com/turbot/pipe-fittings/error_helpers"
@@ -42,6 +42,8 @@ func (suite *TriggerModTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	cache.ResetAllCache()
 
 	// sets app specific constants defined in pipe-fittings
 	viper.SetDefault("main.version", "0.0.0-test.0")
@@ -75,9 +77,6 @@ func (suite *TriggerModTestSuite) SetupSuite() {
 	// Create a single, global context for the application
 	ctx := context.Background()
 	suite.ctx = ctx
-
-	// We use the cache to store the pipelines
-	cache.InMemoryInitialize(nil)
 
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(ctx, manager.WithESService()).Start()

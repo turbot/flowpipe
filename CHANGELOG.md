@@ -1,10 +1,11 @@
 # Flowpipe
 
-## v1.1.0 [tbd]
+## v1.1.0 [2024-12-23]
 
 _What's new?_
 
-* Updated Go to v1.23.0
+* Improved CLI load time for environments with many connection resources.
+* Updated Go to v1.23.
 
 _Bug fixes_
 
