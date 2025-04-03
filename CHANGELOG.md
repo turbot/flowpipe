@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v1.1.1 [2025-04-03]
+
+_Dependencies_
+
+* Upgrade `containerd`, `golang.org/x/net` and `vite` packages to remediate moderate vulnerabilities.
+
 ## v1.1.0 [2024-12-23] 
 
 _What's new?_
