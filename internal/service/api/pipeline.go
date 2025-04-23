@@ -10,17 +10,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/hcl/v2"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
+	"github.com/turbot/pipe-fittings/cache"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
 	"github.com/turbot/pipe-fittings/funcs"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/parse"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
@@ -139,7 +140,7 @@ func GetPipeline(pipelineName string, rootMod string) (*types.FpPipeline, error)
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
 
-	pipeline, ok := pipelineCached.(*modconfig.Pipeline)
+	pipeline, ok := pipelineCached.(*resources.Pipeline)
 	if !ok {
 		return nil, perr.NotFoundWithMessage("pipeline not found")
 	}
@@ -218,7 +219,7 @@ func (api *APIService) processSinglePipelineResult(c *gin.Context, pipelineExecu
 			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
 			pipelineExecutionResponse.Flowpipe.Status = "failed"
 
-			pipelineExecutionResponse.Errors = []modconfig.StepError{
+			pipelineExecutionResponse.Errors = []resources.StepError{
 				{
 					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
 					Pipeline:            pipelineCmd.Name,
@@ -269,7 +270,7 @@ func buildTempEvalContextForApi() (*hcl.EvalContext, error) {
 		return nil, err
 	}
 	// Why do we add notifier earlier? Because of the param validation before
-	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	notifierMap, err := fpConfig.NotifierValueMap()
 	if err != nil {
 		return nil, err
 	}
@@ -314,7 +315,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 		}
 
 		if len(input.Args) > 0 || len(input.ArgsString) == 0 {
-			errs := parse.ValidateParams(pipelineDefn, input.Args, evalContext)
+			errs := fparse.ValidateParams(pipelineDefn, input.Args, evalContext)
 			if len(errs) > 0 {
 				errStrs := error_helpers.MergeErrors(errs)
 				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
@@ -322,7 +323,7 @@ func ExecutePipeline(input types.CmdPipeline, executionId, pipelineName string, 
 			executionCmd.PipelineQueue.Args = input.Args
 
 		} else if len(input.ArgsString) > 0 {
-			args, errs := parse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
+			args, errs := fparse.CoerceParams(pipelineDefn, input.ArgsString, evalContext)
 			if len(errs) > 0 {
 				errStrs := error_helpers.MergeErrors(errs)
 				return response, nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))

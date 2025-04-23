@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -13,7 +13,7 @@ type PipelinePlanned struct {
 	// Unique identifier for this pipeline execution
 	PipelineExecutionID string `json:"pipeline_execution_id"`
 	// The planner outputs a list of the next steps to be executed in the types.
-	NextSteps []modconfig.NextStep `json:"next_steps"`
+	NextSteps []resources.NextStep `json:"next_steps"`
 }
 
 func (e *PipelinePlanned) GetEvent() *Event {
@@ -31,7 +31,7 @@ type PipelinePlannedOption func(*PipelinePlanned) error
 func NewPipelinePlanned(opts ...PipelinePlannedOption) (*PipelinePlanned, error) {
 	// Defaults
 	e := &PipelinePlanned{
-		NextSteps: []modconfig.NextStep{},
+		NextSteps: []resources.NextStep{},
 	}
 	// Set options
 	for _, opt := range opts {

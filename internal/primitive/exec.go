@@ -8,20 +8,20 @@ import (
 	"time"
 
 	"github.com/turbot/flowpipe/internal/constants"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
 type Exec struct{}
 
-func (e *Exec) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (e *Exec) ValidateInput(ctx context.Context, i resources.Input) error {
 	if i["command"] == nil {
 		return perr.BadRequestWithMessage("Exec input must define a command")
 	}
 	return nil
 }
 
-func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (e *Exec) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (e *Exec) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outpu
 	}
 	finish := time.Now().UTC()
 
-	output := modconfig.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 

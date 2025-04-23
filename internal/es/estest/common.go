@@ -9,11 +9,11 @@ import (
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
-func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
+func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initialWaitTime time.Duration, args resources.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
 	parts := strings.Split(name, ".")
 	if len(parts) != 3 {
 		name = "local.pipeline." + name
@@ -52,7 +52,7 @@ func runPipelineWithId(suite *FlowpipeTestSuite, executionId, name string, initi
 	return ex, executionCmd.PipelineQueue, nil
 }
 
-func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args modconfig.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
+func runPipeline(suite *FlowpipeTestSuite, name string, initialWaitTime time.Duration, args resources.Input) (*execution.ExecutionInMemory, *event.PipelineQueue, error) {
 	return runPipelineWithId(suite, "", name, initialWaitTime, args)
 }
 

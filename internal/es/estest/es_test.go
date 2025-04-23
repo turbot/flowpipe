@@ -14,15 +14,15 @@ import (
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
-	"github.com/turbot/flowpipe/internal/cache"
 	localcmdconfig "github.com/turbot/flowpipe/internal/cmdconfig"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/manager"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 // Define the suite, and absorb the built-in basic suite
@@ -45,6 +45,8 @@ func (suite *EsTestSuite) SetupSuite() {
 	if err != nil {
 		panic(err)
 	}
+
+	cache.ResetAllCache()
 
 	suite.server = StartServer()
 
@@ -75,9 +77,6 @@ func (suite *EsTestSuite) SetupSuite() {
 
 	// Create a single, global context for the application
 	suite.ctx = context.Background()
-
-	// We use the cache to store the pipelines
-	cache.InMemoryInitialize(nil)
 
 	// create and start the manager in local mode (i.e. do not set listen address)
 	m, err := manager.NewManager(suite.ctx, manager.WithESService()).Start()
@@ -316,7 +315,7 @@ func (suite *EsTestSuite) TestPipelineErrorBubbleUp() {
 	assert.Equal(404, pex.StepStatus["http.my_step_1"]["0"].StepExecutions[0].Output.Data["status_code"])
 
 	assert.NotNil(pex.PipelineOutput["errors"])
-	assert.Equal(404, pex.PipelineOutput["errors"].([]modconfig.StepError)[0].Error.Status)
+	assert.Equal(404, pex.PipelineOutput["errors"].([]resources.StepError)[0].Error.Status)
 }
 
 func (suite *EsTestSuite) TestParentChildPipeline() {
@@ -683,7 +682,7 @@ func (suite *EsTestSuite) TestParam() {
 func (suite *EsTestSuite) TestParamOverride() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 
@@ -709,7 +708,7 @@ func (suite *EsTestSuite) TestParamOverride() {
 func (suite *EsTestSuite) TestParamOptional() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 
@@ -740,7 +739,7 @@ func (suite *EsTestSuite) TestParamOptional() {
 func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 
@@ -766,7 +765,7 @@ func (suite *EsTestSuite) TestParamOverrideWithCtyTypes() {
 func (suite *EsTestSuite) TestChildPipeline() {
 	assert := assert.New(suite.T())
 
-	pipelineInput := modconfig.Input{
+	pipelineInput := resources.Input{
 		"simple": "bar",
 	}
 

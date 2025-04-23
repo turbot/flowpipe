@@ -15,14 +15,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 type HTTPRequest struct {
-	Input modconfig.Input
+	Input resources.Input
 }
 
 type HTTPInput struct {
@@ -35,7 +35,7 @@ type HTTPInput struct {
 	Timeout        time.Duration
 }
 
-func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (h *HTTPRequest) ValidateInput(ctx context.Context, i resources.Input) error {
 	if i[schema.AttributeTypeUrl] == nil {
 		return perr.BadRequestWithMessage("HTTPRequest input must define a url")
 	}
@@ -95,7 +95,7 @@ func (h *HTTPRequest) ValidateInput(ctx context.Context, i modconfig.Input) erro
 	return nil
 }
 
-func (h *HTTPRequest) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (h *HTTPRequest) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	// Validate the inputs
 	if err := h.ValidateInput(ctx, input); err != nil {
 		return nil, err
@@ -121,7 +121,7 @@ func (h *HTTPRequest) Run(ctx context.Context, input modconfig.Input) (*modconfi
 }
 
 // doRequest performs the HTTP request based on the inputs provided and returns the output
-func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, error) {
+func doRequest(ctx context.Context, inputParams *HTTPInput) (*resources.Output, error) {
 	// Create the HTTP request
 	client := &http.Client{}
 	req, err := http.NewRequest(strings.ToUpper(inputParams.Method), inputParams.URL, bytes.NewBuffer([]byte(inputParams.RequestBody)))
@@ -184,7 +184,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	headers := mapResponseHeaders(resp)
 
 	// Construct the output
-	output := modconfig.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 	output.Data[schema.AttributeTypeStatus] = resp.Status
@@ -213,7 +213,7 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 	}
 
 	if resp.StatusCode >= 400 {
-		output.Errors = []modconfig.StepError{
+		output.Errors = []resources.StepError{
 			{
 				Error: perr.FromHttpError(errors.New(resp.Status), resp.StatusCode),
 			},
@@ -224,12 +224,12 @@ func doRequest(ctx context.Context, inputParams *HTTPInput) (*modconfig.Output, 
 }
 
 // buildHTTPInput builds the HTTPInput struct from the input parameters
-func buildHTTPInput(input modconfig.Input) (*HTTPInput, error) {
+func buildHTTPInput(input resources.Input) (*HTTPInput, error) {
 	// Check for method
 	method, ok := input[schema.AttributeTypeMethod].(string)
 	if !ok {
 		// If not provided, default to GET
-		method = modconfig.HttpMethodGet
+		method = resources.HttpMethodGet
 	}
 
 	// Method should be case insensitive

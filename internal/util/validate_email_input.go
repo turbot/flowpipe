@@ -6,12 +6,12 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
-func ValidateEmailInput(ctx context.Context, i modconfig.Input) error {
+func ValidateEmailInput(ctx context.Context, i resources.Input) error {
 
 	// Validate sender's information
 	if i[schema.AttributeTypeFrom] == nil {

@@ -1,12 +1,14 @@
 package event
 
-import "github.com/turbot/pipe-fittings/modconfig"
+import (
+	"github.com/turbot/flowpipe/internal/resources"
+)
 
 type StepForEachPlanned struct {
-	Event               *Event               `json:"event"`
-	StepName            string               `json:"step_name"`
+	Event               *Event              `json:"event"`
+	StepName            string              `json:"step_name"`
 	PipelineExecutionID string               `json:"pipeline_execution_id"`
-	NextSteps           []modconfig.NextStep `json:"next_steps"`
+	NextSteps           []resources.NextStep `json:"next_steps"`
 }
 
 func (e *StepForEachPlanned) GetEvent() *Event {
@@ -17,7 +19,7 @@ func (e *StepForEachPlanned) HandlerName() string {
 	return HandlerStepForEachPlanned
 }
 
-func NewStepForEachPlannedFromStepForEachPlan(cmd *StepForEachPlan, nextSteps []modconfig.NextStep) *StepForEachPlanned {
+func NewStepForEachPlannedFromStepForEachPlan(cmd *StepForEachPlan, nextSteps []resources.NextStep) *StepForEachPlanned {
 	return &StepForEachPlanned{
 		Event:               cmd.Event,
 		PipelineExecutionID: cmd.PipelineExecutionID,

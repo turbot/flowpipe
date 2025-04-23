@@ -6,18 +6,19 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/flowpipeconfig"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/cache"
 	constant "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/log"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/app_specific"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/error_helpers"
-	"github.com/turbot/pipe-fittings/flowpipeconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/workspace_profile"
 )

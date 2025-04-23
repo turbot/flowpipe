@@ -1,0 +1,3 @@
+integration "slack" "flowpipe_bot" {
+  token = "xoxb-abcdefg"
+}

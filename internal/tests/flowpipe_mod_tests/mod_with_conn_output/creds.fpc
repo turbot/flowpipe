@@ -1,0 +1,4 @@
+connection "aws" "example" {
+    access_key = "ASIAQGDFAKEKGUI5MCEU"
+    secret_key = "QhLNLGM5MBkXiZm2k2tfake+TduEaCkCdpCSLl6U"
+}

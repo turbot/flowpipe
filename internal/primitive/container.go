@@ -11,7 +11,7 @@ import (
 
 	"github.com/turbot/flowpipe/internal/container"
 	"github.com/turbot/flowpipe/internal/docker"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
@@ -23,7 +23,7 @@ type Container struct {
 var containerCache = map[string]*container.Container{}
 var containerCacheMutex sync.Mutex
 
-func (cp *Container) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (cp *Container) ValidateInput(ctx context.Context, i resources.Input) error {
 
 	// Validate the name attribute
 	if i[schema.LabelName] == nil {
@@ -188,7 +188,7 @@ func convertMapToStrings(input map[string]interface{}) map[string]string {
 	return result
 }
 
-func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (cp *Container) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := cp.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -314,20 +314,20 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 	}
 
 	// Construct the output
-	output := modconfig.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 
 	containerID, exitCode, err := c.Run(cConfig)
 	if err != nil {
 		if e, ok := err.(perr.ErrorModel); !ok {
-			output.Errors = []modconfig.StepError{
+			output.Errors = []resources.StepError{
 				{
 					Error: perr.InternalWithMessage("Error loading function config: " + err.Error()),
 				},
 			}
 		} else {
-			output.Errors = []modconfig.StepError{
+			output.Errors = []resources.StepError{
 				{
 					Error: e,
 				},
@@ -354,7 +354,7 @@ func (cp *Container) Run(ctx context.Context, input modconfig.Input) (*modconfig
 	return &output, nil
 }
 
-func (cp *Container) getFromCacheOrNew(ctx context.Context, input modconfig.Input, stepFullName string) (*container.Container, error) {
+func (cp *Container) getFromCacheOrNew(ctx context.Context, input resources.Input, stepFullName string) (*container.Container, error) {
 	c := containerCache[stepFullName]
 
 	// if Dockerfile source path changed ignore cache & rebuild

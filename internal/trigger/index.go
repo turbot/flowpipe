@@ -12,6 +12,8 @@ import (
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
 	"github.com/turbot/flowpipe/internal/output"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/types"
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/pipe-fittings/constants"
@@ -29,21 +31,21 @@ import (
 type TriggerRunnerBase struct {
 	ExecutionID        string
 	TriggerExecutionID string
-	Trigger            *modconfig.Trigger
+	Trigger            *resources.Trigger
 	rootMod            *modconfig.Mod
 	Type               string
 }
 
 type TriggerRunner interface {
-	GetTrigger() *modconfig.Trigger
+	GetTrigger() *resources.Trigger
 	GetPipelineQueuesWithArgs(ctx context.Context, args map[string]interface{}, argsString map[string]string) ([]*event.PipelineQueue, error)
 	GetTriggerResponse([]*event.PipelineQueue) (types.TriggerExecutionResponse, error)
 }
 
-func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionID string) TriggerRunner {
+func NewTriggerRunner(trigger *resources.Trigger, executionID, triggerExecutionID string) TriggerRunner {
 
 	switch trigger.Config.(type) {
-	case *modconfig.TriggerSchedule:
+	case *resources.TriggerSchedule:
 		return &TriggerRunnerBase{
 			Trigger:            trigger,
 			rootMod:            trigger.GetMod(),
@@ -51,7 +53,7 @@ func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionI
 			TriggerExecutionID: triggerExecutionID,
 			Type:               "schedule",
 		}
-	case *modconfig.TriggerQuery:
+	case *resources.TriggerQuery:
 		return &TriggerRunnerQuery{
 			TriggerRunnerBase: TriggerRunnerBase{
 				Trigger:            trigger,
@@ -66,7 +68,7 @@ func NewTriggerRunner(trigger *modconfig.Trigger, executionID, triggerExecutionI
 	}
 }
 
-func (tr *TriggerRunnerBase) GetTrigger() *modconfig.Trigger {
+func (tr *TriggerRunnerBase) GetTrigger() *resources.Trigger {
 	return tr.Trigger
 }
 
@@ -134,7 +136,7 @@ func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString ma
 	}
 
 	if len(args) > 0 || len(argsString) == 0 {
-		errs := parse.ValidateParams(tr.Trigger, args, evalContext)
+		errs := fparse.ValidateParams(tr.Trigger, args, evalContext)
 
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
@@ -142,7 +144,7 @@ func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString ma
 		}
 		triggerRunArgs = args
 	} else if len(argsString) > 0 {
-		coercedArgs, errs := parse.CoerceParams(tr.Trigger, argsString, evalContext)
+		coercedArgs, errs := fparse.CoerceParams(tr.Trigger, argsString, evalContext)
 		if len(errs) > 0 {
 			errStrs := error_helpers.MergeErrors(errs)
 			return nil, perr.BadRequestWithMessage(strings.Join(errStrs, "; "))
@@ -153,7 +155,7 @@ func (tr *TriggerRunnerBase) validate(args map[string]interface{}, argsString ma
 	return triggerRunArgs, nil
 }
 
-func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{}) (modconfig.Input, error) {
+func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{}) (resources.Input, error) {
 
 	evalContext, err := buildEvalContextForTriggerExecution(tr.rootMod, tr.Trigger.Params, tr.Trigger.Config, triggerRunArgs)
 	if err != nil {
@@ -178,7 +180,7 @@ func (tr *TriggerRunnerBase) getTriggerArgs(triggerRunArgs map[string]interface{
 	return pipelineArgs, nil
 }
 
-func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
+func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, triggerArgs resources.Input, trg *resources.Trigger) ([]*event.PipelineQueue, error) {
 	pipelineDefn := trg.Pipeline.AsValueMap()
 	pipelineName := pipelineDefn["name"].AsString()
 
@@ -199,15 +201,21 @@ func (tr *TriggerRunnerBase) execute(ctx context.Context, executionID string, tr
 	return []*event.PipelineQueue{pipelineCmd}, nil
 }
 
-func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []modconfig.PipelineParam, triggerConfig modconfig.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
+func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerParams []resources.PipelineParam, triggerConfig resources.TriggerConfig, triggerRunArgs map[string]interface{}) (*hcl.EvalContext, error) {
 
 	executionVariables := map[string]cty.Value{}
 
 	// populate the variables and locals
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	var modVars map[string]*modconfig.Variable
+	localsMap := make(map[string]cty.Value)
 	if rootMod != nil {
-		modVars = rootMod.ResourceMaps.Variables
+		modResources := resources.GetModResources(rootMod)
+		modVars = modResources.Variables
+		for _, local := range modResources.Locals {
+			localsMap[local.ShortName] = local.Value
+		}
+		executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
 	}
 	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modVars, true)
 
@@ -217,14 +225,6 @@ func buildEvalContextForTriggerExecution(rootMod *modconfig.Mod, defnTriggerPara
 		variablesMap[variable.ShortName] = variable.Value
 	}
 	executionVariables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
-
-	localsMap := make(map[string]cty.Value)
-	if rootMod != nil {
-		for _, local := range rootMod.ResourceMaps.Locals {
-			localsMap[local.ShortName] = local.Value
-		}
-		executionVariables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
-	}
 
 	runParams := map[string]cty.Value{}
 

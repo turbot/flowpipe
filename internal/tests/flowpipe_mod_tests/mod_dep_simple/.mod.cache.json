@@ -1,0 +1,10 @@
+{
+  "mod_parent": {
+    "mod_child_a": {
+      "version": "1.0.0",
+      "name": "mod_child_a",
+      "struct_version": 20240429,
+      "alias": "mod_child_a"
+    }
+  }
+}

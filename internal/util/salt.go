@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/filepaths"
+	"github.com/turbot/pipe-fittings/cache"
 )
 
 // Assumes that the dir exists

@@ -3,10 +3,9 @@ package types
 import (
 	"testing"
 
-	"github.com/turbot/pipe-fittings/perr"
-
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
+	"github.com/turbot/pipe-fittings/perr"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/gocty"
 )
@@ -14,7 +13,7 @@ import (
 func TestStepAsHclVariables(t *testing.T) {
 	assert := assert.New(t)
 
-	stepOutput := modconfig.Output{
+	stepOutput := resources.Output{
 		Data: map[string]any{},
 	}
 
@@ -22,7 +21,7 @@ func TestStepAsHclVariables(t *testing.T) {
 	stepOutput.Data["int"] = 25
 	stepOutput.Data["bool"] = true
 
-	stepOutput.Errors = []modconfig.StepError{
+	stepOutput.Errors = []resources.StepError{
 		{
 			Error: perr.ErrorModel{Detail: "one"},
 		},

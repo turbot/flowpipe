@@ -1,0 +1,12 @@
+ connection "aws" "prod_conn" {
+    profile = "prod1_connection"
+}
+
+credential "aws" "prod_conn" {
+    profile = "prod1_credential"
+}
+
+
+credential "slack" "slack_conn" {
+    token = "abc1"
+}

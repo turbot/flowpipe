@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"reflect"
 	"sort"
@@ -21,7 +22,6 @@ import (
 	"github.com/turbot/flowpipe/internal/util"
 	"github.com/turbot/go-kit/helpers"
 	"github.com/turbot/pipe-fittings/hclhelpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 	putils "github.com/turbot/pipe-fittings/utils"
@@ -78,7 +78,7 @@ func hashRow(row map[string]interface{}) string {
 	return hex.EncodeToString(hashBytes)
 }
 
-func queuePipeline(capture *modconfig.TriggerQueryCapture, executionID string, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
+func queuePipeline(capture *resources.TriggerQueryCapture, executionID string, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
 		return nil, nil
@@ -355,7 +355,7 @@ func (tr *TriggerRunnerQuery) GetPipelineQueuesWithArgs(ctx context.Context, arg
 
 }
 
-func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, triggerArgs modconfig.Input, trg *modconfig.Trigger) ([]*event.PipelineQueue, error) {
+func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, triggerArgs resources.Input, trg *resources.Trigger) ([]*event.PipelineQueue, error) {
 
 	slog.Info("Running trigger", "trigger", tr.Trigger.Name())
 
@@ -366,7 +366,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 		return nil, err
 	}
 
-	config := tr.Trigger.Config.(*modconfig.TriggerQuery)
+	config := tr.Trigger.Config.(*resources.TriggerQuery)
 
 	resolvedConfig, err := config.GetConfig(evalContext, tr.rootMod)
 	if err != nil {
@@ -374,7 +374,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 		return nil, err
 	}
 
-	resolvedTriggerConfig, ok := resolvedConfig.(*modconfig.TriggerQuery)
+	resolvedTriggerConfig, ok := resolvedConfig.(*resources.TriggerQuery)
 	if !ok {
 		slog.Error("Error converting resolved config to TriggerQueryConfig", "error", err)
 		return nil, perr.InternalWithMessage("Error converting resolved config to TriggerQueryConfig")
@@ -382,7 +382,7 @@ func (tr *TriggerRunnerQuery) execute(ctx context.Context, executionID string, t
 
 	queryPrimitive := primitive.Query{}
 
-	input := modconfig.Input{
+	input := resources.Input{
 		schema.AttributeTypeSql:      resolvedTriggerConfig.Sql,
 		schema.AttributeTypeDatabase: resolvedTriggerConfig.Database,
 	}

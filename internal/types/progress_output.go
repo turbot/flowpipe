@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/logrusorgru/aurora"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/printers"
 	"github.com/turbot/pipe-fittings/sanitize"
 )
@@ -12,10 +12,10 @@ import (
 type ProgressOutput struct {
 	ExecutionId string                `json:"execution_id"`
 	Output      map[string]any        `json:"output"`
-	Errors      []modconfig.StepError `json:"errors"`
+	Errors      []resources.StepError `json:"errors"`
 }
 
-func NewProgressOutput(executionId string, output map[string]any, errors []modconfig.StepError) ProgressOutput {
+func NewProgressOutput(executionId string, output map[string]any, errors []resources.StepError) ProgressOutput {
 	return ProgressOutput{
 		ExecutionId: executionId,
 		Output:      output,

@@ -1,0 +1,3 @@
+integration "slack" "my_slack_app" {
+
+}

@@ -5,14 +5,14 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 type Sleep struct{}
 
-func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error {
+func (e *Sleep) ValidateInput(ctx context.Context, input resources.Input) error {
 	if input[schema.AttributeTypeDuration] == nil {
 		return perr.BadRequestWithMessage("Sleep input must define a duration")
 	}
@@ -38,7 +38,7 @@ func (e *Sleep) ValidateInput(ctx context.Context, input modconfig.Input) error 
 	return nil
 }
 
-func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (e *Sleep) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func (e *Sleep) Run(ctx context.Context, input modconfig.Input) (*modconfig.Outp
 	time.Sleep(duration)
 	finish := time.Now().UTC()
 
-	output := &modconfig.Output{
+	output := &resources.Output{
 		Data: map[string]interface{}{},
 	}
 

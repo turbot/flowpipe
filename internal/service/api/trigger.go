@@ -9,15 +9,15 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/turbot/flowpipe/internal/cache"
 	localconstants "github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/fperr"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/service/api/common"
 	"github.com/turbot/flowpipe/internal/service/es"
 	"github.com/turbot/flowpipe/internal/types"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/perr"
 	putils "github.com/turbot/pipe-fittings/utils"
 )
@@ -159,7 +159,7 @@ func GetTrigger(triggerName string, rootMod string) (*types.FpTrigger, error) {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
 
-	trigger, ok := triggerCached.(*modconfig.Trigger)
+	trigger, ok := triggerCached.(*resources.Trigger)
 	if !ok {
 		return nil, perr.NotFoundWithMessage("trigger not found")
 	}
@@ -286,7 +286,7 @@ func (api *APIService) processTriggerExecutionResult(c *gin.Context, triggerExec
 			pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
 			pipelineExecutionResponse.Flowpipe.Status = "failed"
 
-			pipelineExecutionResponse.Errors = []modconfig.StepError{
+			pipelineExecutionResponse.Errors = []resources.StepError{
 				{
 					PipelineExecutionID: pipelineCmd.PipelineExecutionID,
 					Pipeline:            pipelineCmd.Name,

@@ -1,0 +1,4 @@
+integration "slack" "my_slack_app" {
+  webhook_url    = "https://hooks.slack.com/services/T1234567890/B0123456789/XXXXXXXXXX"
+  signing_secret = "Q#$$#@#$$#W"
+}

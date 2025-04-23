@@ -1,0 +1,25 @@
+integration "slack" "flowpipe_bot" {
+  token = "xoxb-abcdefg"
+}
+
+integration "email" "my_email_app" {
+  # required?  or default to os behavior?
+  smtp_host = "smtp.gmail.com"
+  from      = "victor@turbot.com"
+  to = ["ictor@turbot.com"]
+
+
+  # usually set `subject` on the step, but
+  # this would be default if not specified
+  subject = "Flowpipe: Action Requested"
+
+
+  smtp_tls   = "required"  # required | off | auto
+  smtp_port  = 25   # optional - default 25
+  smtps_port = 587 # optional - default 587
+
+
+  # optional - not all smtp servers are authenticated though most are now...
+  smtp_username = "victor@turbot.com"
+  smtp_password = "abcdefg"
+}

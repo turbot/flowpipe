@@ -3,16 +3,22 @@ package cmdconfig
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/viper"
+	fparse "github.com/turbot/flowpipe/internal/parse"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/files"
 	"github.com/turbot/pipe-fittings/app_specific"
 	"github.com/turbot/pipe-fittings/app_specific_connection"
 	"github.com/turbot/pipe-fittings/cmdconfig"
 	"github.com/turbot/pipe-fittings/connection"
 	"github.com/turbot/pipe-fittings/error_helpers"
+	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/pipe-fittings/parse"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // SetAppSpecificConstants sets app specific constants defined in pipe-fittings
@@ -69,6 +75,13 @@ func SetAppSpecificConstants() {
 	// register supported connection types
 	registerConnections()
 
+	// set custom types
+	app_specific.CustomTypes = map[string]cty.Type{"notifier": cty.Capsule("BaseNotifierCtyType", reflect.TypeOf(&resources.NotifierImpl{}))}
+
+	// set app specific parse related constants
+	parse.ModDecoderFunc = fparse.NewFlowpipeModDecoder
+
+	modconfig.AppSpecificNewModResourcesFunc = resources.NewModResources
 }
 
 func registerConnections() {

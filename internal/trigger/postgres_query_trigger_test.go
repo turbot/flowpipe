@@ -11,12 +11,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/turbot/flowpipe/internal/resources"
+
 	"github.com/hashicorp/hcl/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/filepaths"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/flowpipe/internal/util"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/hclhelpers"
 	"github.com/turbot/pipe-fittings/modconfig"
 	"github.com/zclconf/go-cty/cty"
@@ -24,8 +26,6 @@ import (
 
 func TestPostgresSqlTriggerQuery(t *testing.T) {
 	ctx := context.Background()
-
-	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -120,7 +120,7 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 		},
 	}
 
-	trigger := &modconfig.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
@@ -133,27 +133,27 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	insertCapture := &modconfig.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &modconfig.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &modconfig.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &modconfig.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*modconfig.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -496,8 +496,6 @@ func TestPostgresSqlTriggerQuery(t *testing.T) {
 func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	ctx := context.Background()
 
-	cache.InMemoryInitialize(nil)
-
 	assert := assert.New(t)
 
 	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
@@ -591,7 +589,7 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 		},
 	}
 
-	trigger := &modconfig.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
@@ -604,26 +602,26 @@ func TestPostgresSqlTriggerQueryNoPrimaryKey(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	insertCapture := &modconfig.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &modconfig.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &modconfig.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &modconfig.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database: connectionString,
 		Sql:      "select * from test_one",
-		Captures: map[string]*modconfig.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -958,7 +956,7 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 		},
 	}
 
-	trigger := &modconfig.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger_b",
 		},
@@ -971,27 +969,27 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	insertCapture := &modconfig.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &modconfig.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &modconfig.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &modconfig.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*modconfig.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,
@@ -1162,8 +1160,6 @@ func TestPostgresSqlTriggerQueryB(t *testing.T) {
 func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	ctx := context.Background()
 
-	cache.InMemoryInitialize(nil)
-
 	assert := assert.New(t)
 
 	connectionString := "postgres://flowpipe:password@localhost:5432/flowpipe-test?sslmode=disable"
@@ -1262,7 +1258,7 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 		},
 	}
 
-	trigger := &modconfig.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger_b",
 		},
@@ -1274,22 +1270,22 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
 	// TODO: args?
-	updateCapture := &modconfig.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &modconfig.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &modconfig.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*modconfig.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"update": updateCapture,
 			"delete": deleteCapture,
 		},
@@ -1314,8 +1310,6 @@ func TestPostgresSqlTriggerQueryBCustomCapture(t *testing.T) {
 
 func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	ctx := context.Background()
-
-	cache.InMemoryInitialize(nil)
 
 	assert := assert.New(t)
 
@@ -1410,7 +1404,7 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 		},
 	}
 
-	trigger := &modconfig.Trigger{
+	trigger := &resources.Trigger{
 		HclResourceImpl: modconfig.HclResourceImpl{
 			FullName: "query.test_trigger",
 		},
@@ -1422,27 +1416,27 @@ func TestPostgresSqlTriggerQueryWithNull(t *testing.T) {
 	updatePipelineCty := cty.ObjectVal(updatePipelineMap)
 	deletePipelineCty := cty.ObjectVal(deletePipelineMap)
 
-	insertCapture := &modconfig.TriggerQueryCapture{
+	insertCapture := &resources.TriggerQueryCapture{
 		Type:     "insert",
 		Pipeline: insertPipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	updateCapture := &modconfig.TriggerQueryCapture{
+	updateCapture := &resources.TriggerQueryCapture{
 		Type:     "update",
 		Pipeline: updatePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
-	deleteCapture := &modconfig.TriggerQueryCapture{
+	deleteCapture := &resources.TriggerQueryCapture{
 		Type:     "delete",
 		Pipeline: deletePipelineCty,
 		ArgsRaw:  hclExpressionMock,
 	}
 
-	trigger.Config = &modconfig.TriggerQuery{
+	trigger.Config = &resources.TriggerQuery{
 		Database:   connectionString,
 		Sql:        "select * from test_one",
 		PrimaryKey: "id",
-		Captures: map[string]*modconfig.TriggerQueryCapture{
+		Captures: map[string]*resources.TriggerQueryCapture{
 			"insert": insertCapture,
 			"update": updateCapture,
 			"delete": deleteCapture,

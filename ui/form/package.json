@@ -34,8 +34,11 @@
     "prettier": "^3.3.3",
     "tailwindcss": "^3.4.12",
     "typescript": "^5.6.2",
-    "vite": "^5.4.6",
+    "vite": "^5.4.12",
     "vite-plugin-svgr": "^4.2.0"
   },
-  "packageManager": "yarn@4.5.0"
+  "packageManager": "yarn@4.5.0",
+  "resolutions": {
+    "esbuild": "0.25.0"
+  }
 }

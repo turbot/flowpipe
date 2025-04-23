@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 )
 
 func TestPipelineOK(t *testing.T) {
@@ -13,7 +13,7 @@ func TestPipelineOK(t *testing.T) {
 
 	assert := assert.New(t)
 	q := RunPipeline{}
-	input := modconfig.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
+	input := resources.Input(map[string]interface{}{"pipeline": "my_pipeline", "args": map[string]interface{}{}})
 
 	output, err := q.Run(ctx, input)
 	assert.Nil(err)

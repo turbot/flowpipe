@@ -1,0 +1,11 @@
+integration "email" "default" {
+  from      = "gob@bluthenterprises.com"
+  smtp_host = "test.example.com"
+}
+
+notifier "email_test" {
+  notify {
+    integration = integration.email.default 
+    channel     = "#default"
+  }
+}

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/slack-go/slack"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/go-kit/helpers"
-	"github.com/turbot/pipe-fittings/modconfig"
 )
 
 type InputIntegrationSlack struct {
@@ -22,7 +22,7 @@ func NewInputIntegrationSlack(base InputIntegrationBase) InputIntegrationSlack {
 	}
 }
 
-func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*modconfig.Output, error) {
+func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, mc MessageCreator, options []InputIntegrationResponseOption) (*resources.Output, error) {
 	var blocks slack.Blocks
 
 	blocks, err := mc.SlackMessage(ip, options)
@@ -30,7 +30,7 @@ func (ip *InputIntegrationSlack) PostMessage(ctx context.Context, mc MessageCrea
 		return nil, err
 	}
 
-	output := modconfig.Output{}
+	output := resources.Output{}
 	if !helpers.IsNil(ip.Token) && !helpers.IsNil(ip.Channel) {
 		msgOption := slack.MsgOptionBlocks(blocks.BlockSet...)
 		api := slack.New(*ip.Token)

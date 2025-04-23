@@ -2,12 +2,11 @@ package handler
 
 import (
 	"context"
-
 	"log/slog"
 
 	"github.com/turbot/flowpipe/internal/es/event"
 	"github.com/turbot/flowpipe/internal/es/execution"
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -51,7 +50,7 @@ func (h StepForEachPlanned) Handle(ctx context.Context, ei interface{}) error {
 	return nil
 }
 
-func runOneStep(ctx context.Context, commandBus FpCommandBus, e *event.StepForEachPlanned, nextStep *modconfig.NextStep) {
+func runOneStep(ctx context.Context, commandBus FpCommandBus, e *event.StepForEachPlanned, nextStep *resources.NextStep) {
 
 	cmd, err := event.NewStepQueueFromStepForEachPlanned(e, nextStep)
 	if err != nil {

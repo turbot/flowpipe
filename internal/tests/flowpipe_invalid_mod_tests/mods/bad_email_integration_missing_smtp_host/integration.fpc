@@ -1,0 +1,3 @@
+integration "email" "my_email_app" {
+  from = "test@example.com"
+}

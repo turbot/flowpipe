@@ -6,24 +6,24 @@ import (
 	"context"
 	"time"
 
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/schema"
 )
 
 type Transform struct{}
 
-func (e *Transform) ValidateInput(ctx context.Context, i modconfig.Input) error {
+func (e *Transform) ValidateInput(ctx context.Context, i resources.Input) error {
 	return nil
 }
 
-func (e *Transform) Run(ctx context.Context, input modconfig.Input) (*modconfig.Output, error) {
+func (e *Transform) Run(ctx context.Context, input resources.Input) (*resources.Output, error) {
 	start := time.Now().UTC()
 
 	if err := e.ValidateInput(ctx, input); err != nil {
 		return nil, err
 	}
 
-	output := modconfig.Output{
+	output := resources.Output{
 		Data: map[string]interface{}{},
 	}
 

@@ -1,5 +1,5 @@
 PACKAGE_NAME          := github.com/turbot/flowpipe
-GOLANG_CROSS_VERSION  ?= v1.22.4
+GOLANG_CROSS_VERSION  ?= v1.23.2
 
 .PHONY: build
 build: build-ui
@@ -41,9 +41,17 @@ build-ui:
 	cd ui/form && corepack enable && yarn install && yarn build
 
 .PHONY: test
-test:
+test: test1 test2
+
+.PHONY: test1
+test1:
 	go clean -testcache
-	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest) -timeout 60s
+	RUN_MODE=TEST_ES go test  $$(go list ./... | grep -v /internal/es/estest | grep -v /internal/tests) -timeout 60s
+
+.PHONY: test2
+test2:
+	go clean -testcache
+	go test ./internal/tests/... -timeout 240s -v
 
 .PHONY: integration-test
 integration-test:

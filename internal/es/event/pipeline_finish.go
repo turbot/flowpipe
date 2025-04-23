@@ -3,7 +3,7 @@ package event
 import (
 	"fmt"
 
-	"github.com/turbot/pipe-fittings/modconfig"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -12,7 +12,7 @@ type PipelineFinish struct {
 	Event *Event `json:"event"`
 	// Pipeline execution details
 	PipelineExecutionID string            `json:"pipeline_execution_id"`
-	Output              *modconfig.Output `json:"output,omitempty"`
+	Output              *resources.Output `json:"output,omitempty"`
 }
 
 func (e *PipelineFinish) GetEvent() *Event {
@@ -52,7 +52,7 @@ func ForPipelinePlannedToPipelineFinish(e *PipelinePlanned) PipelineFinishOption
 	}
 }
 
-func WithPipelineOutput(output *modconfig.Output) PipelineFinishOption {
+func WithPipelineOutput(output *resources.Output) PipelineFinishOption {
 	return func(e *PipelineFinish) error {
 		e.Output = output
 		return nil

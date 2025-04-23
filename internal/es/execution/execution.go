@@ -13,12 +13,13 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 	"github.com/spf13/viper"
-	"github.com/turbot/flowpipe/internal/cache"
 	"github.com/turbot/flowpipe/internal/constants"
 	"github.com/turbot/flowpipe/internal/es/db"
 	"github.com/turbot/flowpipe/internal/es/event"
+	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/flowpipe/internal/store"
 	"github.com/turbot/go-kit/helpers"
+	"github.com/turbot/pipe-fittings/cache"
 	"github.com/turbot/pipe-fittings/connection"
 	pfconstants "github.com/turbot/pipe-fittings/constants"
 	"github.com/turbot/pipe-fittings/credential"
@@ -65,7 +66,7 @@ func (ex *Execution) FindPipelineExecutionByItsParentStepExecution(stepExecution
 	return nil
 }
 
-func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
+func (ex *Execution) BuildEvalContext(pipelineDefn *resources.Pipeline, pe *PipelineExecution) (*hcl.EvalContext, error) {
 	executionVariables, err := pe.GetExecutionVariables()
 	if err != nil {
 		return nil, err
@@ -136,7 +137,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 
 	evalContext.Variables[schema.BlockTypeIntegration] = cty.ObjectVal(integrationMap)
 
-	notifierMap, err := parse.BuildNotifierMapForEvalContext(fpConfig.Notifiers)
+	notifierMap, err := fpConfig.NotifierValueMap()
 	if err != nil {
 		return nil, err
 	}
@@ -150,21 +151,22 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 	evalContext.Variables[schema.BlockTypeConnection] = cty.ObjectVal(connMap)
 
 	// populate the variables and locals
+	modResources := resources.GetModResources(pipelineDefn.GetMod())
 
 	// build a variables map _excluding_ late binding vars, and a separate map for late binding vars
 	// NOTE: the late binding vars map contains a list of the late-binding resources that the var depends on
 	// (i.e pipeling connections)
-	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(pipelineDefn.GetMod().ResourceMaps.Variables, true)
+	variablesMap, _, lateBindingVarDeps := parse.VariableValueCtyMap(modResources.Variables, true)
 
 	// add these to eval context
 	evalContext.Variables[pfconstants.LateBindingVarsKey] = cty.ObjectVal(lateBindingVarDeps)
-	for _, variable := range pipelineDefn.GetMod().ResourceMaps.Variables {
+	for _, variable := range modResources.Variables {
 		variablesMap[variable.ShortName] = variable.Value
 	}
 	evalContext.Variables[schema.AttributeVar] = cty.ObjectVal(variablesMap)
 
 	localsMap := make(map[string]cty.Value)
-	for _, local := range pipelineDefn.GetMod().ResourceMaps.Locals {
+	for _, local := range modResources.Locals {
 		localsMap[local.ShortName] = local.Value
 	}
 	evalContext.Variables[schema.AttributeLocal] = cty.ObjectVal(localsMap)
@@ -173,7 +175,7 @@ func (ex *Execution) BuildEvalContext(pipelineDefn *modconfig.Pipeline, pe *Pipe
 }
 
 // This function mutates evalContext
-func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep) (*hcl.EvalContext, error) {
+func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep) (*hcl.EvalContext, error) {
 	if stepDefn != nil && len(stepDefn.GetCredentialDependsOn()) > 0 {
 		params := map[string]cty.Value{}
 
@@ -193,7 +195,7 @@ func (ex *Execution) AddCredentialsToEvalContext(evalContext *hcl.EvalContext, s
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline, withForEach bool, newlyDiscoveredConnections []modconfig.ConnectionDependency) (*hcl.EvalContext, error) {
+func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep, pipelineDefn *resources.Pipeline, withForEach bool, newlyDiscoveredConnections []resources.ConnectionDependency) (*hcl.EvalContext, error) {
 	addConn := false
 
 	if stepDefn != nil && (len(stepDefn.GetConnectionDependsOn()) > 0 || len(newlyDiscoveredConnections) > 0) {
@@ -300,11 +302,11 @@ func (ex *Execution) AddConnectionsToEvalContextWithForEach(evalContext *hcl.Eva
 	return evalContext, nil
 }
 
-func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+func (ex *Execution) AddConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn resources.PipelineStep, pipelineDefn *resources.Pipeline) (*hcl.EvalContext, error) {
 	return ex.AddConnectionsToEvalContextWithForEach(evalContext, stepDefn, pipelineDefn, true, nil)
 }
 
-// func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn modconfig.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
+// func (ex *Execution) AddTemporaryConnectionsToEvalContext(evalContext *hcl.EvalContext, stepDefn  flowpipe.PipelineStep, pipelineDefn *modconfig.Pipeline) (*hcl.EvalContext, error) {
 // 	fpConfig, err := db.GetFlowpipeConfig()
 // 	if err != nil {
 // 		return nil, err
@@ -389,7 +391,7 @@ func extractConnection(connName string, allConnections map[string]connection.Pip
 
 // runParams = the params supplied when the pipeline is run
 // defnParams = the params as defined in the HCL files
-func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, vars map[string]cty.Value, defnParam []modconfig.PipelineParam) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
+func BuildConnectionMapForEvalContext(connectionsInContext []string, runParams, vars map[string]cty.Value, defnParam []resources.PipelineParam) (map[string]cty.Value, map[string]cty.Value, map[string]cty.Value, error) {
 	fpConfig, err := db.GetFlowpipeConfig()
 	if err != nil {
 		return nil, nil, nil, err
@@ -753,7 +755,7 @@ func WithEvent(e *event.Event) ExecutionOption {
 }
 
 // StepDefinition returns the step definition for the given step execution ID.
-func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (modconfig.PipelineStep, error) {
+func (ex *Execution) StepDefinition(pipelineExecutionID, stepExecutionID string) (resources.PipelineStep, error) {
 	pe := ex.PipelineExecutions[pipelineExecutionID]
 
 	se, ok := pe.StepExecutions[stepExecutionID]
@@ -1056,7 +1058,7 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			StepStatus:            map[string]map[string]*StepStatus{},
 			ParentStepExecutionID: et.ParentStepExecutionID,
 			ParentExecutionID:     et.ParentExecutionID,
-			Errors:                []modconfig.StepError{},
+			Errors:                []resources.StepError{},
 			StepExecutions:        map[string]*StepExecution{},
 			Trigger:               et.Trigger,
 			TriggerCapture:        et.TriggerCapture,
@@ -1283,14 +1285,14 @@ func (ex *Execution) appendEvent(entry interface{}) error {
 			for _, e := range et.Errors {
 
 				found := false
-				for _, pipelineErr := range pe.PipelineOutput["errors"].([]modconfig.StepError) {
+				for _, pipelineErr := range pe.PipelineOutput["errors"].([]resources.StepError) {
 					if e.Error.ID == pipelineErr.Error.ID {
 						found = true
 						break
 					}
 				}
 				if !found {
-					pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]modconfig.StepError), et.Errors...)
+					pe.PipelineOutput["errors"] = append(pe.PipelineOutput["errors"].([]resources.StepError), et.Errors...)
 				}
 			}
 
