@@ -459,11 +459,11 @@ func tailProcessLocal() error {
 	return fmt.Errorf("tail requires a remote server via --host <host>")
 }
 
-func buildLogDisplayInput(executionId, pipelineExecutionId string) map[string]any {
-	return map[string]any{
-		"flowpipe": map[string]any{
-			"execution_id":          executionId,
-			"pipeline_execution_id": pipelineExecutionId,
+func buildLogDisplayInput(executionId, pipelineExecutionId string) types.PipelineExecutionResponse {
+	return types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID:         executionId,
+			PipelineExecutionID: pipelineExecutionId,
 		},
 	}
 }

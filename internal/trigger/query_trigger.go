@@ -81,20 +81,20 @@ func hashRow(row map[string]interface{}) string {
 func queuePipeline(capture *resources.TriggerQueryCapture, executionID string, tr *TriggerRunnerQuery, evalContext *hcl.EvalContext, queryStat map[string]int) (*event.PipelineQueue, error) {
 
 	if queryStat[capture.Type] <= 0 {
-		return nil
+		return nil, nil
 	}
 
 	pipelineArgs, diags := capture.GetArgs(evalContext)
 	if diags.HasErrors() {
 		slog.Error("Error getting trigger args", "trigger", tr.Trigger.Name(), "errors", diags)
-		return perr.InternalWithMessage("Error getting trigger args")
+		return nil, perr.InternalWithMessage("parsing trigger args")
 	}
 
 	pipeline := capture.Pipeline
 
 	if pipeline == cty.NilVal {
 		slog.Error("Pipeline is nil, cannot run trigger", "trigger", tr.Trigger.Name())
-		return perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
+		return nil, perr.BadRequestWithMessage("Pipeline is nil, cannot run trigger")
 	}
 
 	pipelineDefn := pipeline.AsValueMap()
@@ -122,7 +122,7 @@ func queuePipeline(capture *resources.TriggerQueryCapture, executionID string, t
 	// 	return nil, err
 	// }
 
-	return nil
+	return pipelineCmd, nil
 }
 
 func calculatedNewUpdatedDeletedData(db *sql.DB, triggerName string, controlItems []queryTriggerMetadata) ([]string, []string, []string, error) {

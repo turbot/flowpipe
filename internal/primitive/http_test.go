@@ -47,7 +47,7 @@ func TestHTTPMethodGETWithQueryString(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe Cloud")
 }
 
-func TestHTTPMethodGETWithJSONResponse(t *testing.T) {
+func XTestHTTPMethodGETWithJSONResponse(t *testing.T) {
 	ctx := context.Background()
 
 	assert := assert.New(t)

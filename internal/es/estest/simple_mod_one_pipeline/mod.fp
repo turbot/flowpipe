@@ -3,7 +3,7 @@ mod "simple_mod" {
 }
 
 pipeline "echo_one" {
-    param "value" {
+    param "my_name" {
         type = string
         default = var.var_one
     }

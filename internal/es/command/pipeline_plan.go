@@ -3,8 +3,6 @@ package command
 import (
 	"context"
 	"log/slog"
-	"os"
-	"strings"
 	"sync"
 
 	"github.com/turbot/flowpipe/internal/es/event"
@@ -76,11 +74,6 @@ func (h PipelinePlanHandler) Handle(ctx context.Context, c interface{}) error {
 	// loop). So, we need to track the overall status of the step separately
 	// from the status of each execution.
 	for _, stepDefn := range pipelineDefn.Steps {
-
-		if !strings.HasPrefix(os.Getenv("RUN_MODE"), "TEST") && stepDefn.GetType() == schema.BlockTypePipelineStepInput && !o.IsServerMode {
-			err := perr.ServiceUnavailableWithMessage("input step requires flowpipe server to be running")
-			return h.raiseNewPipelineFailedEvent(ctx, plannerMutex, cmd, err, "", "")
-		}
 
 		// This mean the step has been initialized
 		if pex.StepStatus[stepDefn.GetFullyQualifiedName()] != nil {

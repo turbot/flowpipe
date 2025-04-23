@@ -37,7 +37,12 @@ func GetCachedItem[T any](name string) (T, error) {
 		}
 	}
 
-	cachedItem, found := cache.GetCache().Get(name)
+	fpCache := cache.GetCache()
+	if fpCache == nil {
+		return defaultT, perr.InternalWithMessage("cache not initialized")
+	}
+
+	cachedItem, found := fpCache.Get(name)
 	if !found {
 		return defaultT, perr.NotFoundWithMessage(typeName(defaultT) + " definition not found: " + name)
 	}

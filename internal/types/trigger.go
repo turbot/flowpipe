@@ -372,3 +372,35 @@ func FpTriggerFromModTrigger(t resources.Trigger, rootMod string) (*FpTrigger, e
 
 	return &fpTrigger, nil
 }
+
+type TriggerExecutionResponse struct {
+	Results  map[string]interface{}          `json:"results"`
+	Flowpipe FlowpipeTriggerResponseMetadata `json:"flowpipe"`
+}
+
+type FlowpipeTriggerResponseMetadata struct {
+	ProcessID  string     `json:"process_id,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Type       string     `json:"type,omitempty"`
+	IsStale    *bool      `json:"is_stale,omitempty"`
+	LastLoaded *time.Time `json:"last_loaded,omitempty"`
+}
+
+type CmdTrigger struct {
+	Command string `json:"command" binding:"required,oneof=run reset"`
+
+	// Sepcify execution id, if not specified, a new execution id will be created
+	ExecutionID   string                 `json:"execution_id,omitempty"`
+	Args          map[string]interface{} `json:"args,omitempty"`
+	ArgsString    map[string]string      `json:"args_string,omitempty"`
+	ExecutionMode *string                `json:"execution_mode,omitempty" binding:"omitempty,oneof=synchronous asynchronous"`
+	WaitRetry     *int                   `json:"wait_retry,omitempty"`
+}
+
+func (c *CmdTrigger) GetExecutionMode() string {
+	return utils.Deref(c.ExecutionMode, localconstants.DefaultExecutionMode)
+}
+
+func (c *CmdTrigger) GetWaitRetry() int {
+	return utils.Deref(c.WaitRetry, localconstants.DefaultWaitRetry)
+}

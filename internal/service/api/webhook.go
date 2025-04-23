@@ -28,7 +28,6 @@ import (
 	"github.com/turbot/pipe-fittings/perr"
 	"github.com/turbot/pipe-fittings/sanitize"
 	"github.com/turbot/pipe-fittings/schema"
-	putils "github.com/turbot/pipe-fittings/utils"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -206,16 +205,24 @@ func (api *APIService) runTriggerHook(c *gin.Context) {
 	}
 
 	if triggerMethod.ExecutionMode == "synchronous" {
-		api.waitForPipeline(c, pipelineCmd, waitRetry)
+		pipelineExecutionResponse, err := api.waitForPipeline(pipelineCmd, waitRetry)
+		api.processSinglePipelineResult(c, &pipelineExecutionResponse, &pipelineCmd, err)
 		return
+	}
+
+	pipelineExecutionResponse := types.PipelineExecutionResponse{
+		Flowpipe: types.FlowpipeResponseMetadata{
+			ExecutionID:         pipelineCmd.Event.ExecutionID,
+			PipelineExecutionID: pipelineCmd.PipelineExecutionID,
+		},
 	}
 
 	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
 	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
-	c.String(http.StatusOK, "")
+	c.JSON(http.StatusOK, pipelineExecutionResponse)
 }
 
-func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.PipelineQueue, waitRetry int) {
+func (api *APIService) waitForPipeline(pipelineCmd event.PipelineQueue, waitRetry int) (types.PipelineExecutionResponse, error) {
 	if waitRetry == 0 {
 		waitRetry = 60
 	}
@@ -231,35 +238,14 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		ex, err := execution.GetExecution(pipelineCmd.Event.ExecutionID)
 
 		if err != nil {
-			if errorModel, ok := err.(perr.ErrorModel); ok {
-				response := map[string]interface{}{}
-
-				response["errors"] = []modconfig.StepError{
-					{
-						PipelineExecutionID: pipelineCmd.PipelineExecutionID,
-						Pipeline:            pipelineCmd.Name,
-						Error:               errorModel,
-					},
-				}
-
-				c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
-				c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
-				c.Header("flowpipe-status", "failed")
-
-				c.JSON(500, response)
-				return
-			} else {
-				common.AbortWithError(c, err)
-				return
-			}
+			return types.PipelineExecutionResponse{}, err
 		}
 
 		// Integrity check
 		pex = ex.PipelineExecutions[pipelineCmd.PipelineExecutionID]
 		if pex == nil {
 			slog.Warn("Pipeline execution not found", "pipeline_execution_id", pipelineCmd.PipelineExecutionID)
-			common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution not found"))
-			return
+			return types.PipelineExecutionResponse{}, perr.NotFoundWithMessage("pipeline execution not found")
 		}
 
 		// Wait for the execution to finish
@@ -269,18 +255,18 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 	}
 
 	if pex == nil {
-		common.AbortWithError(c, perr.NotFoundWithMessage("pipeline execution not found"))
-		return
+		return types.PipelineExecutionResponse{}, perr.NotFoundWithMessage("pipeline execution not found")
 	}
 
-	response := pex.PipelineOutput
+	pipelineExecutionResponse := types.PipelineExecutionResponse{}
+	pipelineOutput := pex.PipelineOutput
 
-	if response == nil {
-		response = map[string]interface{}{}
+	if pipelineOutput == nil {
+		pipelineOutput = map[string]interface{}{}
 	}
 
 	for k, v := range pex.PipelineOutput {
-		response[k] = sanitize.Instance.Sanitize(v)
+		pipelineOutput[k] = sanitize.Instance.Sanitize(v)
 	}
 
 	pipelineExecutionResponse.Results = pipelineOutput
@@ -289,22 +275,12 @@ func (api *APIService) waitForPipeline(c *gin.Context, pipelineCmd *event.Pipeli
 		pipelineExecutionResponse.Errors = pipelineOutput["errors"].([]resources.StepError)
 	}
 
-	c.Header("flowpipe-execution-id", pipelineCmd.Event.ExecutionID)
-	c.Header("flowpipe-pipeline-execution-id", pipelineCmd.PipelineExecutionID)
-	c.Header("flowpipe-status", pex.Status)
+	pipelineExecutionResponse.Flowpipe.ExecutionID = pipelineCmd.Event.ExecutionID
+	pipelineExecutionResponse.Flowpipe.PipelineExecutionID = pipelineCmd.PipelineExecutionID
+	pipelineExecutionResponse.Flowpipe.Pipeline = pipelineCmd.Name
+	pipelineExecutionResponse.Flowpipe.Status = pex.Status
 
-	if api.ModMetadata.IsStale {
-		response["flowpipe"].(map[string]interface{})["is_stale"] = api.ModMetadata.IsStale
-		response["flowpipe"].(map[string]interface{})["last_loaded"] = api.ModMetadata.LastLoaded
-		c.Header("flowpipe-mod-is-stale", "true")
-		c.Header("flowpipe-mod-last-loaded", api.ModMetadata.LastLoaded.Format(putils.RFC3339WithMS))
-	}
-
-	if pex.Status == expectedState {
-		c.JSON(http.StatusOK, response)
-	} else {
-		c.JSON(209, response)
-	}
+	return pipelineExecutionResponse, nil
 }
 
 func WaitForTrigger(triggerName, executionId string, waitRetry int) (types.TriggerExecutionResponse, error) {

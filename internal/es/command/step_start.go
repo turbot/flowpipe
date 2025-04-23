@@ -72,7 +72,7 @@ func (h StepStartHandler) Handle(ctx context.Context, c interface{}) error {
 		stepDefn := pipelineDefn.GetStep(cmd.StepName)
 
 		defer func() {
-			if stepDefn.GetType() == schema.BlockTypePipelineStepInput {
+			if stepDefn.GetType() == schema.BlockTypePipelineStepInput && o.IsServerMode {
 				slog.Debug("Step execution is an input step, not releasing semaphore", "step_name", cmd.StepName, "pipeline_execution_id", cmd.PipelineExecutionID)
 				return
 			} else if stepDefn.GetType() == schema.BlockTypePipelineStepPipeline && cmd.NextStepAction != resources.NextStepActionSkip {

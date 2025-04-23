@@ -67,14 +67,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: validate
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/develop'
         env:
-          CONFIRM_MAIN: ${{ github.event.inputs.confirmMain }}
+          CONFIRM_MAIN: ${{ github.event.inputs.confirmDevelop }}
         run: |
           if [ "$CONFIRM_MAIN" == 'false' ]; then
-            echo "It looks like you've accidentally tried to run this action in main branch. Either: "
+            echo "It looks like you've accidentally tried to run this action in develop branch. Either: "
             echo " - Re-run the action and select the branch you wanted, or"
-            echo " - If you really do want to run this for main, then re-run and tick the box to confirm"
+            echo " - If you really do want to run this for develop, then re-run and tick the box to confirm"
             exit 1
           fi
 
@@ -125,6 +125,10 @@ jobs:
         with:
           go-version: '1.23'
           cache: false # setup-go v4 caches by default, do not change this parameter, check golangci-lint-action doc: https://github.com/golangci/golangci-lint-action/pull/704
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Setup release environment
         run: |-
