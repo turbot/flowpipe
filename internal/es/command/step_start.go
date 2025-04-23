@@ -434,7 +434,7 @@ func specialStepHandler(ctx context.Context, stepDefn resources.PipelineStep, cm
 		pipelineDefnToCall, err := db.GetPipelineWithModFullVersion(nestedPipelineModFullVersion, nestedPipelineName)
 
 		if err != nil {
-			slog.Error("Unable to get pipeline "+nestedPipelineName+" from cache", "error", err)
+			slog.Error("Unable to get pipeline " + nestedPipelineName + " from cache", "error", err)
 			raisePipelineFailedEventFromPipelineStepStart(ctx, h.EventBus, cmd, err)
 			return true
 		}

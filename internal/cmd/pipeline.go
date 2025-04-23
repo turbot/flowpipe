@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/turbot/pipe-fittings/utils"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	flowpipeapiclient "github.com/turbot/flowpipe-sdk-go"

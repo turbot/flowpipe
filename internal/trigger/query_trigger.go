@@ -6,13 +6,12 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"github.com/turbot/flowpipe/internal/resources"
 	"log/slog"
 	"reflect"
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/turbot/flowpipe/internal/resources"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/turbot/flowpipe/internal/es/event"
