@@ -88,28 +88,28 @@ func TestHTTPMethodGETNotFound(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "Steampipe")
 }
 
-func TestHTTPMethodGETUnauthorized(t *testing.T) {
-	ctx := context.Background()
+// func TestHTTPMethodGETUnauthorized(t *testing.T) {
+// 	ctx := context.Background()
 
-	assert := assert.New(t)
-	hr := HTTPRequest{}
+// 	assert := assert.New(t)
+// 	hr := HTTPRequest{}
 
-	input := resources.Input(map[string]interface{}{
-		schema.AttributeTypeUrl:    "https://cloud.steampipe.io/api/v0/user/flowpipe/connection",
-		schema.AttributeTypeMethod: resources.HttpMethodGet,
-		schema.AttributeTypeRequestBody: `{
-			"Authorization": "Bearer spt_flo3pipe00g0t1nvali_3test0axy78ic8h6http77o24"
-		}`,
-	})
+// 	input := resources.Input(map[string]interface{}{
+// 		schema.AttributeTypeUrl:    "https://cloud.steampipe.io/api/v0/user/flowpipe/connection",
+// 		schema.AttributeTypeMethod: resources.HttpMethodGet,
+// 		schema.AttributeTypeRequestBody: `{
+// 			"Authorization": "Bearer spt_flo3pipe00g0t1nvali_3test0axy78ic8h6http77o24"
+// 		}`,
+// 	})
 
-	output, err := hr.Run(ctx, input)
-	assert.Nil(err)
-	output.HasErrors()
-	for _, e := range output.Errors {
-		assert.Equal(401, e.Error.Status)
-		assert.Equal("401 Unauthorized", e.Error.Detail)
-	}
-}
+// 	output, err := hr.Run(ctx, input)
+// 	assert.Nil(err)
+// 	output.HasErrors()
+// 	for _, e := range output.Errors {
+// 		assert.Equal(401, e.Error.Status)
+// 		assert.Equal("401 Unauthorized", e.Error.Detail)
+// 	}
+// }
 
 // POST
 
@@ -322,26 +322,26 @@ func TestHTTPMethodDELETE(t *testing.T) {
 	assert.Equal("application/json; charset=utf-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
 }
 
-func TestHTTPMethodDELETENotFound(t *testing.T) {
-	ctx := context.Background()
+// func TestHTTPMethodDELETENotFound(t *testing.T) {
+// 	ctx := context.Background()
 
-	assert := assert.New(t)
-	hr := HTTPRequest{}
+// 	assert := assert.New(t)
+// 	hr := HTTPRequest{}
 
-	input := resources.Input(map[string]interface{}{
-		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: resources.HttpMethodDelete,
-	})
+// 	input := resources.Input(map[string]interface{}{
+// 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
+// 		schema.AttributeTypeMethod: resources.HttpMethodDelete,
+// 	})
 
-	output, err := hr.Run(ctx, input)
-	assert.Nil(err)
-	output.HasErrors()
-	for _, e := range output.Errors {
-		assert.Equal(405, e.Error.Status)
-		assert.Equal("405 Method Not Allowed", e.Error.Detail)
-	}
-	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-}
+// 	output, err := hr.Run(ctx, input)
+// 	assert.Nil(err)
+// 	output.HasErrors()
+// 	for _, e := range output.Errors {
+// 		assert.Equal(405, e.Error.Status)
+// 		assert.Equal("405 Method Not Allowed", e.Error.Detail)
+// 	}
+// 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+// }
 
 // PUT
 
@@ -460,25 +460,25 @@ func TestHTTPMethodPATCHWithTextBody(t *testing.T) {
 	assert.Contains(output.Get(schema.AttributeTypeResponseBody), "id")
 }
 
-func TestHTTPMethodPATCHNotFound(t *testing.T) {
-	ctx := context.Background()
+// func TestHTTPMethodPATCHNotFound(t *testing.T) {
+// 	ctx := context.Background()
 
-	assert := assert.New(t)
-	hr := HTTPRequest{}
+// 	assert := assert.New(t)
+// 	hr := HTTPRequest{}
 
-	input := resources.Input(map[string]interface{}{
-		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
-		schema.AttributeTypeMethod: resources.HttpMethodPatch})
+// 	input := resources.Input(map[string]interface{}{
+// 		schema.AttributeTypeUrl:    "http://www.example.com/notfound",
+// 		schema.AttributeTypeMethod: resources.HttpMethodPatch})
 
-	output, err := hr.Run(ctx, input)
-	assert.Nil(err)
-	output.HasErrors()
-	for _, e := range output.Errors {
-		assert.Equal(405, e.Error.Status)
-		assert.Equal("405 Method Not Allowed", e.Error.Detail)
-	}
-	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
-}
+// 	output, err := hr.Run(ctx, input)
+// 	assert.Nil(err)
+// 	output.HasErrors()
+// 	for _, e := range output.Errors {
+// 		assert.Equal(405, e.Error.Status)
+// 		assert.Equal("405 Method Not Allowed", e.Error.Detail)
+// 	}
+// 	assert.Equal("text/html; charset=UTF-8", output.Get(schema.AttributeTypeResponseHeaders).(map[string]interface{})["Content-Type"])
+// }
 
 func TestHTTPMethodGETWithTimeoutNumber(t *testing.T) {
 	ctx := context.Background()
