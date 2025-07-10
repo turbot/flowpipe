@@ -74,7 +74,7 @@ release-dry-run:
 		-v `pwd`/../flowpipe-sdk-go:/go/src/flowpipe-sdk-go \
 		-w /go/src/flowpipe \
 		ghcr.io/goreleaser/goreleaser-cross:${GOLANG_CROSS_VERSION} \
-		--clean --skip=validate --skip=publish
+		--clean --skip=validate --skip=publish --snapshot
 
 
 .PHONY: release
