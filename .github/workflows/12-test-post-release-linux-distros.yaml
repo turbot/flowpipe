@@ -175,10 +175,10 @@ jobs:
           sudo tar -xzf ./artifacts/linux.tar.gz -C /usr/local/bin
           sudo chmod +x /usr/local/bin/flowpipe
 
-      - name: Install jq
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+      # - name: Install jq
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y jq
 
       - name: Get runner/container info
         run: |
