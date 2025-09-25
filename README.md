@@ -1,8 +1,8 @@
 <a href="https://flowpipe.io"><img width="67%" src="https://flowpipe.io/images/flowpipe_wordmark_outline.png"></a>
 
-[![libraries](https://img.shields.io/badge/mods-76-blue)](https://hub.flowpipe.io) &nbsp;
-[![pipelines](https://img.shields.io/badge/pipelines-1041-blue)](https://hub.flowpipe.io/mods) &nbsp;
-[![slack](https://img.shields.io/badge/slack-2695-blue)](https://turbot.com/community/join) &nbsp;
+[![libraries](https://img.shields.io/endpoint?url=https://turbot.com/api/badge-stats?stat=fp_libraries)](https://hub.flowpipe.io) &nbsp;
+[![pipelines](https://img.shields.io/endpoint?url=https://turbot.com/api/badge-stats?stat=fp_pipelines)](https://hub.flowpipe.io/mods) &nbsp;
+[![slack](https://img.shields.io/endpoint?url=https://turbot.com/api/badge-stats?stat=slack)](https://turbot.com/community/join) &nbsp;
 [![maintained by](https://img.shields.io/badge/maintained%20by-Turbot-blue)](https://turbot.com)
 
 ## Workflow for DevOps
