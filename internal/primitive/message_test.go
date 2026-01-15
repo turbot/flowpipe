@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/slack-go/slack"
 	"github.com/stretchr/testify/assert"
 	"github.com/turbot/flowpipe/internal/resources"
 	"github.com/turbot/pipe-fittings/constants"
@@ -314,4 +315,152 @@ func TestMessageWithEmailNotifierRecipientsOnIntegration(t *testing.T) {
 
 	err := step.ValidateInput(ctx, input)
 	assert.Nil(err)
+}
+
+// TestMessageStepSlackMessagePlainText tests that SlackMessage uses PlainTextType by default
+func TestMessageStepSlackMessagePlainText(t *testing.T) {
+	assert := assert.New(t)
+
+	creator := &MessageStepMessageCreator{
+		Text:   "*bold* and _italic_ text with <https://example.com|link>",
+		Mrkdwn: false,
+	}
+
+	blocks, err := creator.SlackMessage(nil, nil)
+	assert.Nil(err)
+	assert.Equal(1, len(blocks.BlockSet))
+
+	section, ok := blocks.BlockSet[0].(*slack.SectionBlock)
+	assert.True(ok, "expected SectionBlock")
+	assert.Equal(slack.PlainTextType, section.Text.Type)
+	assert.Equal("*bold* and _italic_ text with <https://example.com|link>", section.Text.Text)
+}
+
+// TestMessageStepSlackMessageMrkdwn tests that SlackMessage uses MarkdownType when mrkdwn=true
+func TestMessageStepSlackMessageMrkdwn(t *testing.T) {
+	assert := assert.New(t)
+
+	creator := &MessageStepMessageCreator{
+		Text:   "*bold* and _italic_ text with <https://example.com|link>",
+		Mrkdwn: true,
+	}
+
+	blocks, err := creator.SlackMessage(nil, nil)
+	assert.Nil(err)
+	assert.Equal(1, len(blocks.BlockSet))
+
+	section, ok := blocks.BlockSet[0].(*slack.SectionBlock)
+	assert.True(ok, "expected SectionBlock")
+	assert.Equal(slack.MarkdownType, section.Text.Type)
+	assert.Equal("*bold* and _italic_ text with <https://example.com|link>", section.Text.Text)
+}
+
+// TestMessageStepSlackMessageMrkdwnComparison demonstrates the difference between PlainTextType and MarkdownType
+// This test serves as evidence for the PR showing what each type produces
+func TestMessageStepSlackMessageMrkdwnComparison(t *testing.T) {
+	assert := assert.New(t)
+
+	testCases := []struct {
+		name         string
+		text         string
+		mrkdwn       bool
+		expectedType string
+		description  string
+	}{
+		{
+			name:         "PlainText_Bold",
+			text:         "*bold text*",
+			mrkdwn:       false,
+			expectedType: slack.PlainTextType,
+			description:  "Without mrkdwn, asterisks are literal: *bold text*",
+		},
+		{
+			name:         "Mrkdwn_Bold",
+			text:         "*bold text*",
+			mrkdwn:       true,
+			expectedType: slack.MarkdownType,
+			description:  "With mrkdwn, asterisks create bold: bold text",
+		},
+		{
+			name:         "PlainText_Italic",
+			text:         "_italic text_",
+			mrkdwn:       false,
+			expectedType: slack.PlainTextType,
+			description:  "Without mrkdwn, underscores are literal: _italic text_",
+		},
+		{
+			name:         "Mrkdwn_Italic",
+			text:         "_italic text_",
+			mrkdwn:       true,
+			expectedType: slack.MarkdownType,
+			description:  "With mrkdwn, underscores create italic: italic text",
+		},
+		{
+			name:         "PlainText_Link",
+			text:         "<https://flowpipe.io|Flowpipe>",
+			mrkdwn:       false,
+			expectedType: slack.PlainTextType,
+			description:  "Without mrkdwn, link syntax is literal: <https://flowpipe.io|Flowpipe>",
+		},
+		{
+			name:         "Mrkdwn_Link",
+			text:         "<https://flowpipe.io|Flowpipe>",
+			mrkdwn:       true,
+			expectedType: slack.MarkdownType,
+			description:  "With mrkdwn, link syntax creates clickable link: Flowpipe",
+		},
+		{
+			name:         "PlainText_Code",
+			text:         "`code block`",
+			mrkdwn:       false,
+			expectedType: slack.PlainTextType,
+			description:  "Without mrkdwn, backticks are literal: `code block`",
+		},
+		{
+			name:         "Mrkdwn_Code",
+			text:         "`code block`",
+			mrkdwn:       true,
+			expectedType: slack.MarkdownType,
+			description:  "With mrkdwn, backticks create inline code formatting",
+		},
+		{
+			name:         "PlainText_ComplexMessage",
+			text:         "🚨 *Alert*: Check <https://example.com|dashboard> for _details_",
+			mrkdwn:       false,
+			expectedType: slack.PlainTextType,
+			description:  "Complex message without mrkdwn shows raw formatting characters",
+		},
+		{
+			name:         "Mrkdwn_ComplexMessage",
+			text:         "🚨 *Alert*: Check <https://example.com|dashboard> for _details_",
+			mrkdwn:       true,
+			expectedType: slack.MarkdownType,
+			description:  "Complex message with mrkdwn renders bold, links, and italic properly",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			creator := &MessageStepMessageCreator{
+				Text:   tc.text,
+				Mrkdwn: tc.mrkdwn,
+			}
+
+			blocks, err := creator.SlackMessage(nil, nil)
+			assert.Nil(err)
+			assert.Equal(1, len(blocks.BlockSet))
+
+			section, ok := blocks.BlockSet[0].(*slack.SectionBlock)
+			assert.True(ok, "expected SectionBlock")
+			assert.Equal(tc.expectedType, section.Text.Type, tc.description)
+			assert.Equal(tc.text, section.Text.Text)
+
+			// Log the block JSON for PR evidence
+			t.Logf("Test: %s", tc.name)
+			t.Logf("  Text: %s", tc.text)
+			t.Logf("  Mrkdwn: %v", tc.mrkdwn)
+			t.Logf("  Block Type: %s", section.Text.Type)
+			t.Logf("  Description: %s", tc.description)
+		})
+	}
 }

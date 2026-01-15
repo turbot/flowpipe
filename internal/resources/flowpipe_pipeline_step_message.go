@@ -10,10 +10,14 @@ import (
 	"github.com/zclconf/go-cty/cty"
 )
 
+// AttributeTypeMrkdwn is a local constant for the mrkdwn attribute (not defined in pipe-fittings schema)
+const AttributeTypeMrkdwn = "mrkdwn"
+
 type PipelineStepMessage struct {
 	PipelineStepBase
 
-	Text string `json:"text" hcl:"text" cty:"text"`
+	Text   string `json:"text" hcl:"text" cty:"text"`
+	Mrkdwn *bool  `json:"mrkdwn,omitempty" cty:"mrkdwn" hcl:"mrkdwn,optional"`
 
 	// Notifier cty.Value `json:"-" cty:"notify"`
 	Notifier NotifierImpl `json:"notify" cty:"-"`
@@ -45,6 +49,7 @@ func (p *PipelineStepMessage) Equals(iOther PipelineStep) bool {
 	}
 
 	return p.Text == other.Text &&
+		utils.BoolPtrEqual(p.Mrkdwn, other.Mrkdwn) &&
 		utils.PtrEqual(p.Subject, other.Subject) &&
 		helpers.StringSliceEqualIgnoreOrder(p.Cc, other.Cc) &&
 		helpers.StringSliceEqualIgnoreOrder(p.Bcc, other.Bcc) &&
@@ -71,6 +76,14 @@ func (p *PipelineStepMessage) GetInputs2(evalContext *hcl.EvalContext) (map[stri
 		return nil, nil, error_helpers.BetterHclDiagsToError(p.Name, diags)
 	}
 	results[schema.AttributeTypeText] = textValue
+	allConnectionDependencies = append(allConnectionDependencies, connectionDependencies...)
+
+	// mrkdwn - optional boolean for Slack markdown formatting
+	mrkdwnValue, connectionDependencies, diags := decodeStepAttribute(p.UnresolvedAttributes, evalContext, p.Name, AttributeTypeMrkdwn, p.Mrkdwn)
+	if diags.HasErrors() {
+		return nil, nil, error_helpers.BetterHclDiagsToError(p.Name, diags)
+	}
+	results[AttributeTypeMrkdwn] = mrkdwnValue
 	allConnectionDependencies = append(allConnectionDependencies, connectionDependencies...)
 
 	// channel
@@ -142,6 +155,13 @@ func (p *PipelineStepMessage) SetAttributes(hclAttributes hcl.Attributes, evalCo
 
 		case schema.AttributeTypeText:
 			stepDiags := setStringAttribute(attr, evalContext, p, "Text", false)
+			if stepDiags.HasErrors() {
+				diags = append(diags, stepDiags...)
+				continue
+			}
+
+		case AttributeTypeMrkdwn:
+			stepDiags := setBoolAttribute(attr, evalContext, p, "Mrkdwn", true)
 			if stepDiags.HasErrors() {
 				diags = append(diags, stepDiags...)
 				continue

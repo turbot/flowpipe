@@ -33,24 +33,40 @@ func (mp *Message) Run(ctx context.Context, input resources.Input) (*resources.O
 	}
 
 	var text string
+	var mrkdwn bool
 
 	if b, ok := input[schema.AttributeTypeText].(string); ok {
 		text = b
 	}
 
+	// Extract mrkdwn flag - defaults to false if not set
+	if b, ok := input["mrkdwn"].(*bool); ok && b != nil {
+		mrkdwn = *b
+	} else if b, ok := input["mrkdwn"].(bool); ok {
+		mrkdwn = b
+	}
+
 	return mp.Input.execute(ctx, input, &MessageStepMessageCreator{
-		Text: text,
+		Text:   text,
+		Mrkdwn: mrkdwn,
 	})
 }
 
 type MessageStepMessageCreator struct {
-	Text string
+	Text   string
+	Mrkdwn bool
 }
 
 func (icm *MessageStepMessageCreator) SlackMessage(ip *InputIntegrationSlack, options []InputIntegrationResponseOption) (slack.Blocks, error) {
 	var blocks slack.Blocks
 
-	promptBlock := slack.NewTextBlockObject(slack.PlainTextType, icm.Text, false, false)
+	// Use MarkdownType when mrkdwn is enabled, otherwise PlainTextType
+	textType := slack.PlainTextType
+	if icm.Mrkdwn {
+		textType = slack.MarkdownType
+	}
+
+	promptBlock := slack.NewTextBlockObject(textType, icm.Text, false, false)
 
 	header := slack.NewSectionBlock(promptBlock, nil, nil)
 	blocks.BlockSet = append(blocks.BlockSet, header)
