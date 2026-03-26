@@ -11,6 +11,9 @@ on:
   workflow_dispatch:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   golangci:
     name: Integration Test
