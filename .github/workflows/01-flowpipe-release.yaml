@@ -20,6 +20,9 @@ on:
         required: true
         type: boolean
 
+permissions:
+  contents: write
+
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 

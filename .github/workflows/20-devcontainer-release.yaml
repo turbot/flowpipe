@@ -7,6 +7,10 @@ on:
         description: "Flowpipe DevContainer Version (without 'v')"
         required: true
 
+permissions:
+  contents: read
+  packages: write
+
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
