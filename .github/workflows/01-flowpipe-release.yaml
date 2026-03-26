@@ -21,7 +21,7 @@ on:
         type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
