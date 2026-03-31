@@ -1,5 +1,11 @@
 # Flowpipe
 
+## vTBD [TBD]
+
+_Dependencies_
+
+* Upgrade `axios`, `tar`, `rollup`, `minimatch`, `flatted`, `picomatch` and `yaml` packages to remediate vulnerabilities. ([#1045](https://github.com/turbot/flowpipe/issues/1045))
+
 ## v1.2.0 [2025-08-01]
 
 _What's new?_

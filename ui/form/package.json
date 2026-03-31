@@ -43,9 +43,12 @@
     "vite": "5.4.21",
     "@babel/runtime": "7.27.0",
     "glob": "10.5.0",
-    "tar": "7.5.7",
+    "tar": "7.5.13",
     "@remix-run/router": "1.23.2",
     "lodash": "4.17.23",
-    "lodash-es": "4.17.23"
+    "lodash-es": "4.17.23",
+    "axios": "1.14.0",
+    "rollup": "4.60.1",
+    "flatted": "3.4.2"
   }
 }
