@@ -1,10 +1,15 @@
 # Flowpipe
 
-## vTBD [TBD]
+## v1.2.1 [2026-04-15]
+
+_Security_
+
+* Hardened GitHub Actions workflows: pinned actions to SHAs and set explicit permissions.
 
 _Dependencies_
 
-* Upgrade `axios`, `tar`, `rollup`, `minimatch`, `flatted`, `picomatch` and `yaml` packages to remediate vulnerabilities. ([#1045](https://github.com/turbot/flowpipe/issues/1045))
+* Upgrade `axios`, `js-yaml`, `tar`, `rollup`, `minimatch`, `flatted`, `picomatch` and `yaml` npm packages to remediate vulnerabilities. ([#1045](https://github.com/turbot/flowpipe/issues/1045))
+* Upgrade `google.golang.org/grpc`, `github.com/go-git/go-git/v5` and `github.com/cloudflare/circl` Go packages to remediate vulnerabilities.
 
 ## v1.2.0 [2025-08-01]
 
