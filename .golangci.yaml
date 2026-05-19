@@ -20,6 +20,12 @@ linters:
     - sqlclosecheck
     - unconvert
   settings:
+    govet:
+      # The govet "inline" analyzer (golangci-lint v2.12.2) emits false
+      # positives such as "Constant reflect.Ptr should be inlined" on
+      # pre-existing code; disable it to preserve the prior lint baseline.
+      disable:
+        - inline
     staticcheck:
       # golangci-lint v2 staticcheck absorbed stylecheck (ST*) and quickfix (QF*),
       # neither of which was enforced under the v1.64.8 ruleset this repo was
