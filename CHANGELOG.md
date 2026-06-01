@@ -1,5 +1,27 @@
 # Flowpipe
 
+## v1.2.2 [2026-05-19]
+
+_Security_
+
+* Bump `github.com/jackc/pgx/v5` to v5.9.2 to remediate CVE-2026-41889 ([GHSA-j88v-2chj-qfwx](https://github.com/advisories/GHSA-j88v-2chj-qfwx)).
+
+_Dependencies_
+
+* Update Go to 1.26.1.
+* Upgrade `go.opentelemetry.io/otel/sdk` and sibling `go.opentelemetry.io/otel` modules to v1.43.0 to remediate vulnerabilities.
+
+## v1.2.1 [2026-04-15]
+
+_Security_
+
+* Hardened GitHub Actions workflows: pinned actions to SHAs and set explicit permissions.
+
+_Dependencies_
+
+* Upgrade `axios`, `js-yaml`, `tar`, `rollup`, `minimatch`, `flatted`, `picomatch` and `yaml` npm packages to remediate vulnerabilities. ([#1045](https://github.com/turbot/flowpipe/issues/1045))
+* Upgrade `google.golang.org/grpc`, `github.com/go-git/go-git/v5` and `github.com/cloudflare/circl` Go packages to remediate vulnerabilities.
+
 ## v1.2.0 [2025-08-01]
 
 _What's new?_
