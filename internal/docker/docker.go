@@ -126,9 +126,9 @@ func New(options ...Option) (*DockerClient, error) {
 
 func (dc *DockerClient) ImageExists(imageName string) (bool, error) {
 	// Inspect the image to check if it exists
-	_, _, err := dc.CLI.ImageInspectWithRaw(dc.ctx, imageName)
+	_, _, err := dc.CLI.ImageInspectWithRaw(dc.ctx, imageName) //nolint:staticcheck // docker 28.x deprecation; ImageInspect migration deferred
 	if err != nil {
-		if client.IsErrNotFound(err) {
+		if client.IsErrNotFound(err) { //nolint:staticcheck // docker 28.x deprecation; cerrdefs.IsNotFound migration deferred
 			return false, nil
 		}
 		return false, perr.InternalWithMessage(fmt.Sprintf("error checking for image %s: %v", imageName, err.Error()))

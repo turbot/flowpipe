@@ -579,7 +579,7 @@ func (fn *Function) PullParentImageDueNow() bool {
 func (fn *Function) buildImage() error {
 
 	// Tar up the function code for use in the build
-	buildCtx, err := archive.TarWithOptions(fn.AbsolutePath, &archive.TarOptions{})
+	buildCtx, err := archive.TarWithOptions(fn.AbsolutePath, &archive.TarOptions{}) //nolint:staticcheck // docker 28.x deprecation; moby/go-archive migration deferred
 	if err != nil {
 		return err
 	}
@@ -601,7 +601,7 @@ func (fn *Function) buildImage() error {
 		return err
 	}
 
-	buildOptions := types.ImageBuildOptions{
+	buildOptions := types.ImageBuildOptions{ //nolint:staticcheck // docker 28.x deprecation; build.ImageBuildOptions migration deferred
 		// The image name is specific to every build, ensuring we're always running
 		// an exact version.
 		Tags: []string{fn.GetImageTag(), fn.GetImageLatestTag()},

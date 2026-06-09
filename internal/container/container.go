@@ -543,13 +543,13 @@ func (c *Container) buildImage() error {
 	df := filepath.Join(wd, c.Source)
 	dockerFilePath := strings.TrimSuffix(df, "/Dockerfile")
 
-	buildCtx, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{})
+	buildCtx, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{}) //nolint:staticcheck // docker 28.x deprecation; moby/go-archive migration deferred
 	if err != nil {
 		return err
 	}
 	defer buildCtx.Close()
 
-	buildOptions := types.ImageBuildOptions{
+	buildOptions := types.ImageBuildOptions{ //nolint:staticcheck // docker 28.x deprecation; build.ImageBuildOptions migration deferred
 		Tags: []string{
 			c.GetImageTag(),
 			c.GetImageLatestTag(),
