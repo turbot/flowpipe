@@ -59,7 +59,7 @@ require (
 require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/robfig/cron/v3 v3.0.1
-	github.com/turbot/pipe-fittings v1.7.2
+	github.com/turbot/pipe-fittings v1.7.4
 	github.com/turbot/terraform-components v0.0.0-20231213122222-1f3526cab7a7
 )
 
