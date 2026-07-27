@@ -9,10 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
+	cerrdefs "github.com/containerd/errdefs"
+	"github.com/moby/moby/client"
 	"github.com/turbot/pipe-fittings/perr"
 )
 
@@ -81,7 +79,7 @@ func WithPingTest() Option {
 	return func(c *DockerClient) error {
 		pingCtx, cancel := context.WithTimeout(c.ctx, time.Second*5)
 		defer cancel()
-		_, err := c.CLI.Ping(pingCtx)
+		_, err := c.CLI.Ping(pingCtx, client.PingOptions{})
 		if err != nil {
 			return err
 		}
@@ -126,9 +124,9 @@ func New(options ...Option) (*DockerClient, error) {
 
 func (dc *DockerClient) ImageExists(imageName string) (bool, error) {
 	// Inspect the image to check if it exists
-	_, _, err := dc.CLI.ImageInspectWithRaw(dc.ctx, imageName) //nolint:staticcheck // docker 28.x deprecation; ImageInspect migration deferred
+	_, err := dc.CLI.ImageInspect(dc.ctx, imageName)
 	if err != nil {
-		if client.IsErrNotFound(err) { //nolint:staticcheck // docker 28.x deprecation; cerrdefs.IsNotFound migration deferred
+		if cerrdefs.IsNotFound(err) {
 			return false, nil
 		}
 		return false, perr.InternalWithMessage(fmt.Sprintf("error checking for image %s: %v", imageName, err.Error()))
@@ -137,7 +135,7 @@ func (dc *DockerClient) ImageExists(imageName string) (bool, error) {
 }
 
 func (dc *DockerClient) ImagePull(imageName string) error {
-	resp, err := dc.CLI.ImagePull(dc.ctx, imageName, image.PullOptions{})
+	resp, err := dc.CLI.ImagePull(dc.ctx, imageName, client.ImagePullOptions{})
 	if err != nil {
 		return err
 	}
@@ -168,14 +166,14 @@ func (dc *DockerClient) CleanupArtifacts() error {
 
 // deleteContainersWithLabel deletes all containers with the specified label.
 func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
-	containers, err := dc.CLI.ContainerList(dc.ctx, container.ListOptions{All: true})
+	res, err := dc.CLI.ContainerList(dc.ctx, client.ContainerListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
 	}
 
-	for _, ctr := range containers {
+	for _, ctr := range res.Items {
 		if ctr.Labels[labelKey] != "" {
-			err = dc.CLI.ContainerRemove(dc.ctx, ctr.ID, container.RemoveOptions{Force: true})
+			_, err = dc.CLI.ContainerRemove(dc.ctx, ctr.ID, client.ContainerRemoveOptions{Force: true})
 			if err != nil {
 				slog.Error("failed to remove container", "containerID", ctr.ID, "error", err)
 			} else {
@@ -190,15 +188,15 @@ func (dc *DockerClient) deleteContainersWithLabelKey(labelKey string) error {
 // deleteImagesWithLabel deletes all images with the specified label.
 func (dc *DockerClient) deleteImagesWithLabelKey(labelKey string) error {
 
-	images, err := dc.CLI.ImageList(dc.ctx, image.ListOptions{})
+	res, err := dc.CLI.ImageList(dc.ctx, client.ImageListOptions{})
 	if err != nil {
 		slog.Error("failed to list images", "error", err)
 		return perr.InternalWithMessage("failed to list images: " + err.Error())
 	}
 
-	for _, img := range images {
+	for _, img := range res.Items {
 		if img.Labels[labelKey] != "" {
-			imgRemoveOpts := image.RemoveOptions{
+			imgRemoveOpts := client.ImageRemoveOptions{
 				Force: true,
 				// Prevent dangling images from being left around, but this means we have
 				// to rebuild parts of the basic image on each startup (e.g. pip
@@ -259,27 +257,26 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 	cli := dc.CLI
 
 	// Prepare filters to match containers by label key and value
-	labelFilter := filters.NewArgs()
-	labelFilter.Add("label", fmt.Sprintf("%s=%s", key, value))
-	listOptions := container.ListOptions{
+	labelFilter := client.Filters{"label": {fmt.Sprintf("%s=%s", key, value): true}}
+	listOptions := client.ContainerListOptions{
 		// Include both running and stopped containers
 		All:     true,
 		Filters: labelFilter,
 	}
 
-	containers, err := cli.ContainerList(dc.ctx, listOptions)
+	res, err := cli.ContainerList(dc.ctx, listOptions)
 	if err != nil {
 		return fmt.Errorf("failed to list containers: %s", err)
 	}
 
 	// Iterate through the containers and stop/remove them
-	for _, c := range containers {
+	for _, c := range res.Items {
 		if cleanupOptions.SkipLatest && strings.HasSuffix(c.Image, ":latest") {
 			continue
 		}
 		// Gracefully stop the container if it's running
 		if c.State == "running" {
-			err = cli.ContainerStop(dc.ctx, c.ID, container.StopOptions{})
+			_, err = cli.ContainerStop(dc.ctx, c.ID, client.ContainerStopOptions{})
 			if err != nil {
 				slog.Warn(fmt.Sprintf("failed to stop container %s: %s", c.ID, err))
 			} else {
@@ -287,7 +284,7 @@ func (dc *DockerClient) deleteContainersWithLabel(key string, value string, opts
 			}
 		}
 		// Remove the container
-		err = cli.ContainerRemove(dc.ctx, c.ID, container.RemoveOptions{Force: true})
+		_, err = cli.ContainerRemove(dc.ctx, c.ID, client.ContainerRemoveOptions{Force: true})
 		if err != nil {
 			slog.Warn(fmt.Sprintf("failed to remove container %s: %s\n", c.ID, err))
 		} else {
@@ -313,21 +310,20 @@ func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...
 	cli := dc.CLI
 
 	// Prepare filters to match containers by label key and value
-	labelFilter := filters.NewArgs()
-	labelFilter.Add("label", fmt.Sprintf("%s=%s", key, value))
-	listOptions := image.ListOptions{
+	labelFilter := client.Filters{"label": {fmt.Sprintf("%s=%s", key, value): true}}
+	listOptions := client.ImageListOptions{
 		// Do not include intermediate images in the results, since
 		// they are removed through the PruneChildren option below.
 		All:     false,
 		Filters: labelFilter,
 	}
 
-	images, err := cli.ImageList(dc.ctx, listOptions)
+	imgRes, err := cli.ImageList(dc.ctx, listOptions)
 	if err != nil {
 		return fmt.Errorf("failed to list images: %s", err)
 	}
 
-	for _, cmd := range images {
+	for _, cmd := range imgRes.Items {
 		if cleanupOptions.SkipLatest {
 			isLatest := false
 			for _, tag := range cmd.RepoTags {
@@ -339,7 +335,7 @@ func (dc *DockerClient) deleteImagesWithLabel(key string, value string, opts ...
 				continue
 			}
 		}
-		imgRemoveOpts := image.RemoveOptions{
+		imgRemoveOpts := client.ImageRemoveOptions{
 			// Just in case, since we should only be deleting images that
 			// are not in use.
 			Force: true,
