@@ -90,14 +90,10 @@ func WithPingTest() Option {
 // New creates a new Docker client with the provided options.
 func New(options ...Option) (*DockerClient, error) {
 
-	// Create Docker client
-	cli, err := client.NewClientWithOpts(
-		client.FromEnv,
-		client.WithAPIVersionNegotiation(),
-		client.WithHostFromEnv(),
-		client.WithVersionFromEnv(),
-		client.WithTLSClientConfigFromEnv(),
-	)
+	// Create Docker client configured from the environment (DOCKER_HOST,
+	// DOCKER_API_VERSION, DOCKER_TLS_VERIFY/DOCKER_CERT_PATH); API version
+	// negotiation is enabled by default in the moby client.
+	cli, err := client.New(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}
