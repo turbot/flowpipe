@@ -8,17 +8,17 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/docker/cli/cli/command/image/build"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
-	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/go-connections/nat"
+	"github.com/moby/go-archive"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/radovskyb/watcher"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
@@ -334,15 +334,17 @@ func (fn *Function) Watch() error {
 func (fn *Function) Start(imageName string) (string, error) {
 
 	// Only allow the local machine to connect
-	hostIP := "127.0.0.1"
+	hostIP := netip.MustParseAddr("127.0.0.1")
 	// But allow any port to be allocated
 	hostPort := "0"
+
+	lambdaPort := network.MustParsePort("8080/tcp")
 
 	containerfn := container.Config{
 		Image: imageName,
 		Cmd:   []string{fn.GetHandler()},
-		ExposedPorts: nat.PortSet{
-			"8080/tcp": struct{}{},
+		ExposedPorts: network.PortSet{
+			lambdaPort: struct{}{},
 		},
 		Labels: map[string]string{
 			// TODO - Is this standard for containers?
@@ -352,8 +354,8 @@ func (fn *Function) Start(imageName string) (string, error) {
 	}
 
 	containerHostfn := &container.HostConfig{
-		PortBindings: nat.PortMap{
-			"8080/tcp": []nat.PortBinding{{HostIP: hostIP, HostPort: hostPort}},
+		PortBindings: network.PortMap{
+			lambdaPort: []network.PortBinding{{HostIP: hostIP, HostPort: hostPort}},
 		},
 	}
 
@@ -363,22 +365,26 @@ func (fn *Function) Start(imageName string) (string, error) {
 	}
 
 	// Create a container using the specified image
-	resp, err := fn.dockerClient.CLI.ContainerCreate(fn.ctx, &containerfn, containerHostfn, &network.NetworkingConfig{}, nil, "")
+	resp, err := fn.dockerClient.CLI.ContainerCreate(fn.ctx, client.ContainerCreateOptions{
+		Config:           &containerfn,
+		HostConfig:       containerHostfn,
+		NetworkingConfig: &network.NetworkingConfig{},
+	})
 	if err != nil {
 		return "", err
 	}
 
 	// Start the container
-	if err := fn.dockerClient.CLI.ContainerStart(fn.ctx, resp.ID, container.StartOptions{}); err != nil {
+	if _, err := fn.dockerClient.CLI.ContainerStart(fn.ctx, resp.ID, client.ContainerStartOptions{}); err != nil {
 		return "", err
 	}
 
 	// Get the allocated port for the Lambda function
-	info, err := fn.dockerClient.CLI.ContainerInspect(fn.ctx, resp.ID)
+	info, err := fn.dockerClient.CLI.ContainerInspect(fn.ctx, resp.ID, client.ContainerInspectOptions{})
 	if err != nil {
 		return "", err
 	}
-	port := info.NetworkSettings.Ports["8080/tcp"][0].HostPort
+	port := info.Container.NetworkSettings.Ports[lambdaPort][0].HostPort
 
 	// TODO - gross way to set the version
 	v := fn.Versions[imageName]
@@ -492,14 +498,14 @@ func (fn *Function) Restart(containerId string) (string, error) {
 	slog.Info("restartDockerContainer", "imageTag", fn.GetImageTag(), "containerId", containerId)
 
 	// Stop the container
-	err := fn.dockerClient.CLI.ContainerStop(fn.ctx, containerId, container.StopOptions{})
+	_, err := fn.dockerClient.CLI.ContainerStop(fn.ctx, containerId, client.ContainerStopOptions{})
 	if err != nil {
 		slog.Error("Container stop failed", "error", err)
 		return newContainerId, err
 	}
 
 	// Remove the container
-	err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, container.RemoveOptions{})
+	_, err = fn.dockerClient.CLI.ContainerRemove(fn.ctx, containerId, client.ContainerRemoveOptions{})
 	if err != nil {
 		slog.Error("Container remove failed", "error", err)
 		return newContainerId, err
@@ -579,7 +585,7 @@ func (fn *Function) PullParentImageDueNow() bool {
 func (fn *Function) buildImage() error {
 
 	// Tar up the function code for use in the build
-	buildCtx, err := archive.TarWithOptions(fn.AbsolutePath, &archive.TarOptions{}) //nolint:staticcheck // docker 28.x deprecation; moby/go-archive migration deferred
+	buildCtx, err := archive.TarWithOptions(fn.AbsolutePath, &archive.TarOptions{})
 	if err != nil {
 		return err
 	}
@@ -601,7 +607,7 @@ func (fn *Function) buildImage() error {
 		return err
 	}
 
-	buildOptions := types.ImageBuildOptions{ //nolint:staticcheck // docker 28.x deprecation; build.ImageBuildOptions migration deferred
+	buildOptions := client.ImageBuildOptions{
 		// The image name is specific to every build, ensuring we're always running
 		// an exact version.
 		Tags: []string{fn.GetImageTag(), fn.GetImageLatestTag()},

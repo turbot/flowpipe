@@ -11,14 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/docker/pkg/archive"
+	"github.com/moby/go-archive"
 	"github.com/radovskyb/watcher"
 	"github.com/spf13/viper"
 	"github.com/turbot/pipe-fittings/constants"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/network"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/network"
+	"github.com/moby/moby/client"
 	"github.com/turbot/flowpipe/internal/docker"
 	"github.com/turbot/flowpipe/internal/fqueue"
 	"github.com/turbot/pipe-fittings/perr"
@@ -334,7 +334,11 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 	}
 
 	containerCreateStart := time.Now()
-	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, &createConfig, &hostConfig, &network.NetworkingConfig{}, nil, "")
+	containerResp, err := c.dockerClient.CLI.ContainerCreate(c.ctx, client.ContainerCreateOptions{
+		Config:           &createConfig,
+		HostConfig:       &hostConfig,
+		NetworkingConfig: &network.NetworkingConfig{},
+	})
 	slog.Debug("container create", "elapsed", time.Since(containerCreateStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, -1, perr.InternalWithMessage("Error creating container: " + err.Error())
@@ -347,7 +351,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 
 	// Start the container
 	containerStartStart := time.Now()
-	err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, container.StartOptions{})
+	_, err = c.dockerClient.CLI.ContainerStart(c.ctx, containerID, client.ContainerStartOptions{})
 	slog.Debug("container start", "elapsed", time.Since(containerStartStart), "image", c.Image, "container", containerResp.ID)
 	if err != nil {
 		return containerID, -1, perr.InternalWithMessage("Error starting container: " + err.Error())
@@ -360,13 +364,13 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 	// Wait for the container to finish
 	var exitCode int64
 	containerWaitStart := time.Now()
-	statusCh, errCh := c.dockerClient.CLI.ContainerWait(c.ctx, containerID, container.WaitConditionNotRunning)
+	waitRes := c.dockerClient.CLI.ContainerWait(c.ctx, containerID, client.ContainerWaitOptions{Condition: container.WaitConditionNotRunning})
 	select {
-	case err := <-errCh:
+	case err := <-waitRes.Error:
 		if err != nil {
 			return containerID, 1, perr.InternalWithMessage("Error waiting for container: " + err.Error())
 		}
-	case status := <-statusCh:
+	case status := <-waitRes.Result:
 		// Set the status code of the container run
 		exitCode = status.StatusCode
 	}
@@ -378,7 +382,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 	}
 
 	// Retrieve the container output
-	containerLogsOptions := container.LogsOptions{
+	containerLogsOptions := client.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		// Timstamps inject timestamp text into the output, making it hard to parse
@@ -418,7 +422,7 @@ func (c *Container) Run(cConfig ContainerRunConfig) (string, int, error) {
 		slog.Debug("retain artifacts", "name", c.Name)
 	} else {
 		containerRemoveStart := time.Now()
-		err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, container.RemoveOptions{})
+		_, err = c.dockerClient.CLI.ContainerRemove(c.ctx, containerID, client.ContainerRemoveOptions{})
 
 		slog.Debug("container remove", "elapsed", time.Since(containerRemoveStart), "image", c.Image, "container", containerResp.ID)
 		if err != nil {
@@ -543,13 +547,13 @@ func (c *Container) buildImage() error {
 	df := filepath.Join(wd, c.Source)
 	dockerFilePath := strings.TrimSuffix(df, "/Dockerfile")
 
-	buildCtx, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{}) //nolint:staticcheck // docker 28.x deprecation; moby/go-archive migration deferred
+	buildCtx, err := archive.TarWithOptions(dockerFilePath, &archive.TarOptions{})
 	if err != nil {
 		return err
 	}
 	defer buildCtx.Close()
 
-	buildOptions := types.ImageBuildOptions{ //nolint:staticcheck // docker 28.x deprecation; build.ImageBuildOptions migration deferred
+	buildOptions := client.ImageBuildOptions{
 		Tags: []string{
 			c.GetImageTag(),
 			c.GetImageLatestTag(),
