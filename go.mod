@@ -57,7 +57,7 @@ require (
 require (
 	github.com/containerd/errdefs v1.0.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/moby/go-archive v0.2.1
+	github.com/moby/go-archive v0.3.0
 	github.com/moby/moby/api v1.55.0
 	github.com/moby/moby/client v0.5.0
 	github.com/robfig/cron/v3 v3.0.1
