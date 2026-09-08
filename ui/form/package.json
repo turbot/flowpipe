@@ -16,7 +16,7 @@
     "formik": "^2.4.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2",
+    "react-router-dom": "^6.30.6",
     "react-select": "^5.8.0",
     "swr": "^2.2.5"
   },
@@ -47,7 +47,7 @@
     "@remix-run/router": "1.23.3",
     "postcss": "8.5.23",
     "react-router": "6.30.4",
-    "react-router-dom": "6.30.4",
+    "react-router-dom": "6.30.6",
     "brace-expansion@^1.1.7": "1.1.18",
     "brace-expansion@^2.0.2": "2.1.4",
     "lodash": "4.18.1",
