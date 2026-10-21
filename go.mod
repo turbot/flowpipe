@@ -1,6 +1,6 @@
 module github.com/turbot/flowpipe
 
-go 1.26.1
+go 1.26.10
 
 // uncomment for goland devcontainer
 //replace (
