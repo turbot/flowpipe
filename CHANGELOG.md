@@ -1,5 +1,11 @@
 # Flowpipe
 
+## v1.2.3 [2026-10-22]
+
+_Security_
+
+* Compiled with Go 1.26.10, which rejects certificate chains through the compromised eMudhra intermediate CAs ([golang/go#82345](https://github.com/golang/go/issues/82345)).
+
 ## v1.2.2 [2026-05-19]
 
 _Security_
