@@ -1,0 +1,74 @@
+# What a change to flowpipe must run and show before an agent's PR counts as done.
+#
+# Left out on purpose:
+# - The tests in internal/primitive and internal/trigger: they expect Postgres, MariaDB and
+#   MailHog on fixed ports (5432, 3306, 1025, 8025), as CI starts them. On a shared worker those
+#   ports can't be held for one run, so CI covers these packages.
+# - The integration tests (`make integration-test`): CI runs them.
+# - The form UI's eslint (`yarn lint`): it reports 34 errors on develop.
+
+ci_is_proof: false
+
+never_run:
+  # Releases and published artifacts
+  - gh workflow run
+  - gh release
+  - git tag
+  - goreleaser
+  - docker push
+  - make release*
+  # Installs outside the checkout
+  - scripts/install.sh
+  - scripts/test-install.sh
+  # Changes the machine it runs on, or installs from the live site
+  - scripts/prepare_*
+  - scripts/smoke_test.sh
+  # Posts the API spec to converter.swagger.io
+  - scripts/generate-open-api.sh
+  - make build-open-api
+  # Enables corepack globally, which changes the machine's Node install
+  - make build-ui
+  - make build
+  - corepack enable
+  # Clears the Go test cache shared by every repo on the machine
+  - make test*
+  - make integration-test*
+  - go clean -testcache
+  # A real login writes credentials to the machine
+  - flowpipe login
+
+checks:
+  # The binary embeds the form UI, so the UI is built first.
+  build: {run: "cd ui/form && yarn build && cd ../.. && go build ./...", cost: 2}
+  unit:
+    run: 'cd ui/form && yarn build && cd ../.. && RUN_MODE=TEST_ES go test -count=1 $(go list ./... | grep -v /internal/es/estest | grep -v /internal/tests | grep -v /internal/primitive$ | grep -v /internal/trigger$) -timeout 60s && go test -count=1 ./internal/tests/... -timeout 240s'
+    cost: 2
+  lint:
+    run: 'd=$(mktemp -d) && GOBIN="$d" go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.15.0 && "$d/golangci-lint" run --timeout=15m'
+    cost: 2
+
+surfaces:
+  form:
+    paths: ["ui/form/src/**", "ui/form/public/**", "ui/form/index.html"]
+    # Builds the UI and the binary, then serves the test mod. To reach a form, run
+    # `flowpipe pipeline run input_webform_button_styles --host http://localhost:{port}` from
+    # internal/es/estest/test_suite_mod and open the /form/... URL the server logs.
+    run: 'cd ui/form && yarn build && cd ../.. && P=$(mktemp -d) && go build -o "$P/flowpipe" . && cd internal/es/estest/test_suite_mod && FLOWPIPE_INSTALL_DIR="$P/install" FLOWPIPE_UPDATE_CHECK=false "$P/flowpipe" server --port {port}'
+    theme: "follows the browser's prefers-color-scheme, or localStorage key steampipe.ui.theme set to pipeling-default (light) or pipeling-dark"
+
+kinds:
+  go:
+    paths: ["**/*.go", "go.mod", "go.sum", "internal/**", ".golangci.yaml"]
+    checks: [build, unit, lint]
+    show: [test]
+  ui:
+    paths: ["ui/form/**"]
+    checks: [build]
+    show: [test, shots]
+    skills: [pr-screenshots]
+  workflows:
+    paths: [".github/**", ".goreleaser.yaml", "Makefile", "scripts/**", ".devcontainer/**", ".gitignore", ".gitattributes"]
+    show: [none]
+  docs:
+    paths: ["**/*.md", ".claude/**", "LICENSE", "ui/.gitignore", "ui/input_parcel/**"]
+    show: [none]
