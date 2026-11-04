@@ -1,0 +1,49 @@
+# Gitleaks allowlist, in the file:rule:line form the secret scan reads.
+#
+# These aws-access-token matches are test fixtures: made-up AWS keys in test mods (.fpc and .fp
+# files) and in the Go assertions that check how they parse. No AWS call is made with them.
+# Each entry covers one place (file, rule, line) and nothing else. Some files are gone from the
+# tip of develop; their entries stay because the scan also reads history.
+#
+internal/tests/flowpipe_mod_tests/mod_with_creds_output/creds.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/mod_with_conn_output/creds.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type_two/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_two/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_two/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type_notifier/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_notifier/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_notifier/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type_four/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_four/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_four/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_parsing_tests/pipelines/credentials.fp:aws-access-token:3
+internal/es/estest/mod_two_test.go:aws-access-token:828
+internal/es/estest/mod_two_test.go:aws-access-token:853
+internal/es/estest/mod_two_test.go:aws-access-token:880
+internal/es/estest/mod_two_test.go:aws-access-token:907
+internal/es/estest/mod_two_test.go:aws-access-token:934
+internal/es/estest/mod_two_test.go:aws-access-token:960
+internal/tests/flowpipe_mod_tests/flowpipe_mod_suite_test.go:aws-access-token:605
+internal/tests/flowpipe_mod_tests/flowpipe_mod_suite_test.go:aws-access-token:640
+internal/es/estest/test_suite_mod_2/conn.fpc:aws-access-token:2
+internal/es/estest/test_suite_mod_2/conn.fpc:aws-access-token:7
+internal/es/estest/test_suite_mod_2/conn.fpc:aws-access-token:12
+internal/es/estest/default_mod_test.go:aws-access-token:154
+internal/es/estest/default_mod_test.go:aws-access-token:200
+internal/es/estest/default_mod_test.go:aws-access-token:516
+internal/es/estest/default_mod_test.go:aws-access-token:562
+internal/es/estest/default_mod_test.go:aws-access-token:632
+internal/es/estest/default_mod/connection.fpc:aws-access-token:2
+internal/es/estest/default_mod/credential.fpc:aws-access-token:2
+scripts/sanity_check_mod/credential.fpc:aws-access-token:2
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:aws-access-token:2
+internal/es/estest/test_suite_mod/pipelines/credentials.fp:aws-access-token:3
+internal/es/estest/test_suite_mod/creds.fpc:aws-access-token:2
+internal/es/estest/mod_test.go:aws-access-token:2008
+internal/es/estest/mod_test.go:aws-access-token:2013
