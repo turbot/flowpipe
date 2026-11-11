@@ -55,7 +55,8 @@ var otherFixtureHits = map[string]map[string][]int{
 var entryPattern = regexp.MustCompile(`^[^\s:]+:[a-z0-9-]+:[1-9][0-9]*$`)
 
 // parseIgnoreFile returns the entries of a .gitleaksignore body, skipping blank lines and
-// comments. A line that is not file:rule:line is an error, since gitleaks would never match it.
+// comments. A line that is not file:rule:line is an error: this file lists entries in that form
+// only, although gitleaks also accepts commit:file:rule:line.
 func parseIgnoreFile(body string) (map[string]bool, error) {
 	entries := map[string]bool{}
 	scanner := bufio.NewScanner(strings.NewReader(body))
