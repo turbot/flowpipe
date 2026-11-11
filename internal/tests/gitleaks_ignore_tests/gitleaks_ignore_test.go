@@ -35,10 +35,28 @@ var awsFixtureLines = map[string][]int{
 	"internal/es/estest/mod_test.go":                                    {2008, 2013},
 }
 
+// Other places the scan reports that are fixtures or public samples, not credentials: the rule
+// and the lines it reports in each file, as of the history the scan reads.
+var otherFixtureHits = map[string]map[string][]int{
+	"internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc":     {"generic-api-key": {4, 10}},
+	"internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc":    {"generic-api-key": {3, 8}},
+	"internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc": {"generic-api-key": {4, 5, 12, 13}},
+	"internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc":    {"generic-api-key": {6, 14}},
+	"internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc":    {"generic-api-key": {4, 6, 12, 14}},
+	"internal/es/estest/mod_test.go":                                    {"generic-api-key": {2117, 2134}, "gitlab-pat": {2193}},
+	"internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc": {"gitlab-pat": {24}, "generic-api-key": {24}},
+	"pipeparser/lang/funcs/crypto_test.go":                              {"private-key": {687, 716, 745, 774}},
+	"service/certificate/server.key":                                    {"private-key": {1}},
+	"internal/sanitize/sanitizer_test.go":                               {"github-pat": {35}},
+	"internal/es/estest/test_suite_mod/pipelines/input_slack.fp":        {"generic-api-key": {2}},
+	"internal/es/test/test_suite_mod/pipelines/input_slack.hcl":         {"generic-api-key": {2}},
+}
+
 var entryPattern = regexp.MustCompile(`^[^\s:]+:[a-z0-9-]+:[1-9][0-9]*$`)
 
 // parseIgnoreFile returns the entries of a .gitleaksignore body, skipping blank lines and
-// comments. A line that is not file:rule:line is an error, since gitleaks would never match it.
+// comments. A line that is not file:rule:line is an error: this file lists entries in that form
+// only, although gitleaks also accepts commit:file:rule:line.
 func parseIgnoreFile(body string) (map[string]bool, error) {
 	entries := map[string]bool{}
 	scanner := bufio.NewScanner(strings.NewReader(body))
@@ -76,6 +94,29 @@ func TestGitleaksIgnoreCoversAwsFixtures(t *testing.T) {
 	}
 }
 
+func TestGitleaksIgnoreCoversOtherFixtureHits(t *testing.T) {
+	assert := assert.New(t)
+
+	body, err := os.ReadFile("../../../.gitleaksignore")
+	if !assert.Nil(err, "could not read .gitleaksignore") {
+		return
+	}
+
+	entries, err := parseIgnoreFile(string(body))
+	if !assert.Nil(err) {
+		return
+	}
+
+	for path, rules := range otherFixtureHits {
+		for rule, lines := range rules {
+			for _, line := range lines {
+				entry := fmt.Sprintf("%s:%s:%d", path, rule, line)
+				assert.True(entries[entry], "missing .gitleaksignore entry %s", entry)
+			}
+		}
+	}
+}
+
 func TestGitleaksIgnoreOnlyAllowsListedFixtures(t *testing.T) {
 	assert := assert.New(t)
 
@@ -95,6 +136,13 @@ func TestGitleaksIgnoreOnlyAllowsListedFixtures(t *testing.T) {
 	for path, lines := range awsFixtureLines {
 		for _, line := range lines {
 			allowed[fmt.Sprintf("%s:aws-access-token:%d", path, line)] = true
+		}
+	}
+	for path, rules := range otherFixtureHits {
+		for rule, lines := range rules {
+			for _, line := range lines {
+				allowed[fmt.Sprintf("%s:%s:%d", path, rule, line)] = true
+			}
 		}
 	}
 	for entry := range entries {

@@ -1,10 +1,11 @@
 # Gitleaks allowlist, in the file:rule:line form the secret scan reads.
 #
-# These aws-access-token matches are test fixtures: made-up AWS keys in test mods (.fpc and .fp
-# files) and in the Go assertions that check how they parse. No AWS call is made with them.
-# Each entry covers one place (file, rule, line) and nothing else. Some files are gone from the
+# Each entry covers one file, rule and line, in any commit: a new finding of the same rule at
+# that line of a file still in the tree would not be reported. Some files are gone from the
 # tip of develop; their entries stay because the scan also reads history.
 #
+# These aws-access-token matches are test fixtures: made-up AWS keys in test mods (.fpc and .fp
+# files) and in the Go assertions that check how they parse. No AWS call is made with them.
 internal/tests/flowpipe_mod_tests/mod_with_creds_output/creds.fpc:aws-access-token:2
 internal/tests/flowpipe_mod_tests/mod_with_conn_output/creds.fpc:aws-access-token:2
 internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:2
@@ -47,3 +48,45 @@ internal/es/estest/test_suite_mod/pipelines/credentials.fp:aws-access-token:3
 internal/es/estest/test_suite_mod/creds.fpc:aws-access-token:2
 internal/es/estest/mod_test.go:aws-access-token:2008
 internal/es/estest/mod_test.go:aws-access-token:2013
+#
+# Sample Steampipe connections the mod tests load as connections and as credentials.
+internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:10
+internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:3
+internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:8
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:5
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:12
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:13
+internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc:generic-api-key:6
+internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc:generic-api-key:14
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:6
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:12
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:14
+#
+# Sample GitLab token and API key values in the credential tests, which check that they are
+# redacted or resolved from a credential block.
+internal/es/estest/mod_test.go:generic-api-key:2117
+internal/es/estest/mod_test.go:generic-api-key:2134
+internal/es/estest/mod_test.go:gitlab-pat:2193
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:gitlab-pat:24
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:generic-api-key:24
+#
+# Terraform's rsadecrypt test keys, copied from its published lang/funcs tests.
+pipeparser/lang/funcs/crypto_test.go:private-key:687
+pipeparser/lang/funcs/crypto_test.go:private-key:716
+pipeparser/lang/funcs/crypto_test.go:private-key:745
+pipeparser/lang/funcs/crypto_test.go:private-key:774
+#
+# Self-signed localhost development key; its certificate expired on 2022-02-10.
+service/certificate/server.key:private-key:1
+#
+# Made-up Slack token the input step test had in history: 20 characters of letters and digits
+# after the xoxp- prefix, not the dash-separated numeric format of a Slack token. The tip of
+# input_slack.fp now holds a plain fake; the entry stays for the history the scan reads.
+internal/es/estest/test_suite_mod/pipelines/input_slack.fp:generic-api-key:2
+internal/es/test/test_suite_mod/pipelines/input_slack.hcl:generic-api-key:2
+#
+# Sample GitHub token the sanitizer test checks is redacted.
+internal/sanitize/sanitizer_test.go:github-pat:35
