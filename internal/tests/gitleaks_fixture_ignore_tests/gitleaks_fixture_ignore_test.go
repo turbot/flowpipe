@@ -23,6 +23,8 @@ var fixtureHits = map[string]map[string][]int{
 	"pipeparser/lang/funcs/crypto_test.go":                              {"private-key": {687, 716, 745, 774}},
 	"service/certificate/server.key":                                    {"private-key": {1}},
 	"internal/sanitize/sanitizer_test.go":                               {"github-pat": {35}},
+	"internal/es/estest/test_suite_mod/pipelines/input_slack.fp":        {"generic-api-key": {2}},
+	"internal/es/test/test_suite_mod/pipelines/input_slack.hcl":         {"generic-api-key": {2}},
 }
 
 func TestGitleaksIgnoreCoversFixtureHits(t *testing.T) {
