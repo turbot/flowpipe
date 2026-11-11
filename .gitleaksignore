@@ -1,0 +1,40 @@
+# Gitleaks allowlist, in the file:rule:line form the secret scan reads.
+#
+# Each entry covers one place (file, rule, line) and nothing else. Some files are gone from the
+# tip of develop; their entries stay because the scan also reads history.
+#
+# Sample Steampipe connections the mod tests load to check connection parsing.
+internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:10
+internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:3
+internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:8
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:5
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:12
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:13
+internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc:generic-api-key:6
+internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc:generic-api-key:14
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:6
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:12
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:14
+#
+# GitLab token values in the credential tests, which set GITLAB_TOKEN and check that the static
+# credential resolves to it.
+internal/es/estest/mod_test.go:generic-api-key:2117
+internal/es/estest/mod_test.go:generic-api-key:2134
+internal/es/estest/mod_test.go:gitlab-pat:2193
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:gitlab-pat:24
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:generic-api-key:24
+#
+# Terraform's rsadecrypt test keys, copied from its published lang/funcs tests.
+pipeparser/lang/funcs/crypto_test.go:private-key:687
+pipeparser/lang/funcs/crypto_test.go:private-key:716
+pipeparser/lang/funcs/crypto_test.go:private-key:745
+pipeparser/lang/funcs/crypto_test.go:private-key:774
+#
+# Self-signed localhost development key; its certificate expired on 2022-02-10.
+service/certificate/server.key:private-key:1
+#
+# Sample GitHub token the sanitizer test checks is redacted.
+internal/sanitize/sanitizer_test.go:github-pat:35
