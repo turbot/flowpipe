@@ -1,7 +1,7 @@
 # Gitleaks allowlist, in the file:rule:line form the secret scan reads.
 #
-# Each entry covers one file, rule and line, in any commit: a new secret at the same line of a
-# file still in the tree would not be reported. Some files are gone from the tip of develop;
+# Each entry covers one file, rule and line, in any commit: a new finding of the same rule at
+# that line of a file still in the tree would not be reported. Some files are gone from the tip of develop;
 # their entries stay because the scan also reads history.
 #
 # Sample Steampipe connections the mod tests load as connections and as credentials.
