@@ -10,7 +10,8 @@ import (
 )
 
 // Places the secret scan reports that are fixtures or public samples, not credentials: the
-// rule and the lines it reports in each file, as of the history the scan reads.
+// rule and the lines it reports in each file, as of the history the scan reads. The test checks
+// the allowlist holds these places; it does not run gitleaks.
 var fixtureHits = map[string]map[string][]int{
 	"internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc":     {"generic-api-key": {4, 10}},
 	"internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc":    {"generic-api-key": {3, 8}},
