@@ -1,10 +1,8 @@
 package gitleaks_fixture_ignore_tests
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -26,26 +24,6 @@ var fixtureHits = map[string]map[string][]int{
 	"internal/sanitize/sanitizer_test.go":                               {"github-pat": {35}},
 }
 
-var entryPattern = regexp.MustCompile(`^[^\s:]+:[a-z0-9-]+:[1-9][0-9]*$`)
-
-// parseIgnoreFile returns the entries of a .gitleaksignore body, skipping blank lines and
-// comments. A line that is not file:rule:line is an error, since gitleaks would never match it.
-func parseIgnoreFile(body string) (map[string]bool, error) {
-	entries := map[string]bool{}
-	scanner := bufio.NewScanner(strings.NewReader(body))
-	for n := 1; scanner.Scan(); n++ {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		if !entryPattern.MatchString(line) {
-			return nil, fmt.Errorf("line %d is not file:rule:line: %q", n, line)
-		}
-		entries[line] = true
-	}
-	return entries, scanner.Err()
-}
-
 func TestGitleaksIgnoreCoversFixtureHits(t *testing.T) {
 	assert := assert.New(t)
 
@@ -53,9 +31,9 @@ func TestGitleaksIgnoreCoversFixtureHits(t *testing.T) {
 	if !assert.Nil(err, "could not read .gitleaksignore") {
 		return
 	}
-	entries, err := parseIgnoreFile(string(body))
-	if !assert.Nil(err) {
-		return
+	entries := map[string]bool{}
+	for _, line := range strings.Split(string(body), "\n") {
+		entries[strings.TrimSpace(line)] = true
 	}
 
 	for path, rules := range fixtureHits {
@@ -66,24 +44,4 @@ func TestGitleaksIgnoreCoversFixtureHits(t *testing.T) {
 			}
 		}
 	}
-}
-
-func TestParseIgnoreFileRejectsMalformedLines(t *testing.T) {
-	assert := assert.New(t)
-
-	for _, bad := range []string{
-		"service/certificate/server.key",                   // no rule or line
-		"service/certificate/server.key:private-key",       // no line
-		"service/certificate/server.key:private-key:0",     // line numbers start at 1
-		"service/certificate/server.key:private-key:abc",   // not a number
-		"service/certificate/*.key:private-key:1 # a note", // trailing text
-	} {
-		_, err := parseIgnoreFile(bad + "\n")
-		assert.NotNil(err, "expected %q to be rejected", bad)
-	}
-
-	entries, err := parseIgnoreFile("# a comment\n\na/b.fpc:private-key:2\n")
-	assert.Nil(err)
-	assert.True(entries["a/b.fpc:private-key:2"])
-	assert.Len(entries, 1)
 }

@@ -1,9 +1,10 @@
 # Gitleaks allowlist, in the file:rule:line form the secret scan reads.
 #
-# Each entry covers one place (file, rule, line) and nothing else. Some files are gone from the
-# tip of develop; their entries stay because the scan also reads history.
+# Each entry covers one file, rule and line, in any commit: a new secret at the same line of a
+# file still in the tree would not be reported. Some files are gone from the tip of develop;
+# their entries stay because the scan also reads history.
 #
-# Sample Steampipe connections the mod tests load to check connection parsing.
+# Sample Steampipe connections the mod tests load as connections and as credentials.
 internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:4
 internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:10
 internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:3
@@ -19,8 +20,8 @@ internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:6
 internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:12
 internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:14
 #
-# GitLab token values in the credential tests, which set GITLAB_TOKEN and check that the static
-# credential resolves to it.
+# Sample GitLab token and API key values in the credential tests, which check that they are
+# redacted or resolved from a credential block.
 internal/es/estest/mod_test.go:generic-api-key:2117
 internal/es/estest/mod_test.go:generic-api-key:2134
 internal/es/estest/mod_test.go:gitlab-pat:2193
