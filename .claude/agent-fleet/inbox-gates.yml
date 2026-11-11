@@ -67,7 +67,7 @@ kinds:
     show: [test, shots]
     skills: [pr-screenshots]
   workflows:
-    paths: [".github/**", ".goreleaser.yaml", "Makefile", "scripts/**", ".devcontainer/**", ".gitignore", ".gitattributes"]
+    paths: [".github/**", ".goreleaser.yaml", "Makefile", "scripts/**", ".devcontainer/**", ".gitignore", ".gitattributes", ".gitleaksignore"]
     show: [none]
   docs:
     paths: ["**/*.md", ".claude/**", "LICENSE", "ui/.gitignore", "ui/input_parcel/**"]
