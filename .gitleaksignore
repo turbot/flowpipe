@@ -37,8 +37,9 @@ pipeparser/lang/funcs/crypto_test.go:private-key:774
 # Self-signed localhost development key; its certificate expired on 2022-02-10.
 service/certificate/server.key:private-key:1
 #
-# Made-up Slack token in the input step test: 20 characters of letters and digits, not the
-# dash-separated numeric format of a Slack token.
+# Made-up Slack token the input step test had in history: 20 characters of letters and digits
+# after the xoxp- prefix, not the dash-separated numeric format of a Slack token. The tip of
+# input_slack.fp now holds a plain fake; the entry stays for the history the scan reads.
 internal/es/estest/test_suite_mod/pipelines/input_slack.fp:generic-api-key:2
 internal/es/test/test_suite_mod/pipelines/input_slack.hcl:generic-api-key:2
 #
