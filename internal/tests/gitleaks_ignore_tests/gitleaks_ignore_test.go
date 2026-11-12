@@ -52,6 +52,27 @@ var otherFixtureHits = map[string]map[string][]int{
 	"internal/es/test/test_suite_mod/pipelines/input_slack.hcl":         {"generic-api-key": {2}},
 }
 
+// Credentials the scan reports in history that were confirmed dead on 2026-11-11 (AWS keys,
+// OpenAI keys and Slack webhook URLs, one of which is a placeholder): the rule and the lines it
+// reports in each file. The test only compares this list with .gitleaksignore; it does not run
+// the scan, so a wrong line number in both places would pass.
+var deadCredentialHits = map[string]map[string][]int{
+	"examples/functions/config.yaml":                                                              {"aws-access-token": {18, 19}, "generic-api-key": {19, 20}},
+	"internal/es/test/test_suite_mod/pipelines/with_functions.hcl":                                {"aws-access-token": {47, 59, 151}, "generic-api-key": {60, 152}},
+	"internal/es/test/integrated2023_functions_and_containers_mod/slack_aws.hcl.bak":              {"aws-access-token": {20}, "generic-api-key": {21}},
+	"internal/es/test/test_suite_mod/pipelines/slack_slash.hcl":                                   {"aws-access-token": {20}, "generic-api-key": {21}},
+	"internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak":          {"aws-access-token": {8, 20, 30}, "generic-api-key": {21, 31}},
+	"internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak":       {"aws-access-token": {57}, "generic-api-key": {58}, "openai-api-key": {20}},
+	"internal/es/test/test_suite_mod/pipelines/open_ai.hcl":                                       {"aws-access-token": {57}, "generic-api-key": {58}, "openai-api-key": {20}},
+	"internal/es/test/integrated2023_functions_and_containers_mod/pipelines/slack_openai_aws.hcl": {"openai-api-key": {61}},
+	"internal/tests/flowpipe_mod_tests/mod_try_function/mod.fp":                                   {"slack-webhook-url": {83}},
+	"internal/tests/flowpipe_parsing_tests/pipelines/demo.fp":                                     {"slack-webhook-url": {37, 71, 82}},
+	"internal/es/estest/test_suite_mod/integrations.fpc":                                          {"slack-webhook-url": {63}},
+	"internal/fpconfig/test/test_pipelines/integrations.fp":                                       {"slack-webhook-url": {12}},
+	"internal/fpconfig/test/test_pipelines/complex_one.fp":                                        {"slack-webhook-url": {37, 71, 82}},
+	"internal/pipeline/collections/slack.fp":                                                      {"slack-webhook-url": {7}},
+}
+
 var entryPattern = regexp.MustCompile(`^[^\s:]+:[a-z0-9-]+:[1-9][0-9]*$`)
 
 // parseIgnoreFile returns the entries of a .gitleaksignore body, skipping blank lines and
@@ -117,7 +138,7 @@ func TestGitleaksIgnoreCoversOtherFixtureHits(t *testing.T) {
 	}
 }
 
-func TestGitleaksIgnoreOnlyAllowsListedFixtures(t *testing.T) {
+func TestGitleaksIgnoreCoversDeadCredentials(t *testing.T) {
 	assert := assert.New(t)
 
 	body, err := os.ReadFile("../../../.gitleaksignore")
@@ -130,8 +151,31 @@ func TestGitleaksIgnoreOnlyAllowsListedFixtures(t *testing.T) {
 		return
 	}
 
-	// Every entry must be one of the listed fixture places: no wildcard, no whole-file or
-	// whole-rule allowance that would hide a real leak.
+	for path, rules := range deadCredentialHits {
+		for rule, lines := range rules {
+			for _, line := range lines {
+				entry := fmt.Sprintf("%s:%s:%d", path, rule, line)
+				assert.True(entries[entry], "missing .gitleaksignore entry %s", entry)
+			}
+		}
+	}
+}
+
+func TestGitleaksIgnoreOnlyAllowsListedEntries(t *testing.T) {
+	assert := assert.New(t)
+
+	body, err := os.ReadFile("../../../.gitleaksignore")
+	if !assert.Nil(err, "could not read .gitleaksignore") {
+		return
+	}
+
+	entries, err := parseIgnoreFile(string(body))
+	if !assert.Nil(err) {
+		return
+	}
+
+	// Every entry must be one of the listed places (fixtures, public samples or dead
+	// credentials): no wildcard, no whole-file or whole-rule allowance that would hide a live leak.
 	allowed := map[string]bool{}
 	for path, lines := range awsFixtureLines {
 		for _, line := range lines {
@@ -139,6 +183,13 @@ func TestGitleaksIgnoreOnlyAllowsListedFixtures(t *testing.T) {
 		}
 	}
 	for path, rules := range otherFixtureHits {
+		for rule, lines := range rules {
+			for _, line := range lines {
+				allowed[fmt.Sprintf("%s:%s:%d", path, rule, line)] = true
+			}
+		}
+	}
+	for path, rules := range deadCredentialHits {
 		for rule, lines := range rules {
 			for _, line := range lines {
 				allowed[fmt.Sprintf("%s:%s:%d", path, rule, line)] = true
