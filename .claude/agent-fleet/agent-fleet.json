@@ -1,0 +1,19 @@
+{
+  "warm": "go mod download && cd ui/form && yarn install --immutable",
+  "warmProbe": "ui/form/node_modules",
+  "platforms": ["darwin", "linux"],
+  "tools": ["go", "node", "yarn"],
+  "secrets": {},
+  "chores": {
+    "security-audit": {
+      "when": "mon week 3",
+      "areas": [
+        "the HTTP API, webhook triggers and form submission (internal/service/api, internal/trigger)",
+        "step primitives that run commands, containers, functions, HTTP and email (internal/primitive, internal/docker, internal/container, internal/functions)",
+        "credentials and connection resolution (internal/flowpipeconfig, internal/cmdconfig)",
+        "mod parsing and templating (internal/parse, internal/templates)",
+        "Pipes login and token handling (internal/cmd)"
+      ]
+    }
+  }
+}

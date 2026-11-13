@@ -80,7 +80,7 @@ pipeline "try_function_within_json_encode" {
   param "slack_webhook_url" {
     type        = string
     description = "The webhook URL for the Slack channel."
-   #  default     = "https://hooks.slack.com/services/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"
+   #  default     = "https://hooks.slack.com/services/T00000000/B00000000/FAKEWEBHOOKTOKEN"
   }
 
   param "stories" {
