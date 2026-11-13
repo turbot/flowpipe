@@ -1,0 +1,139 @@
+# Gitleaks allowlist, in the file:rule:line form the secret scan reads.
+#
+# Each entry covers one file, rule and line, in any commit: a new finding of the same rule at
+# that line of a file still in the tree would not be reported. Some files are gone from the
+# tip of develop; their entries stay because the scan also reads history.
+#
+# These aws-access-token matches are test fixtures: made-up AWS keys in test mods (.fpc and .fp
+# files) and in the Go assertions that check how they parse. No AWS call is made with them.
+internal/tests/flowpipe_mod_tests/mod_with_creds_output/creds.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/mod_with_conn_output/creds.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_three/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type_two/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_two/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_two/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type_notifier/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_notifier/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_notifier/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_mod_tests/custom_type_four/conn.fpc:aws-access-token:2
+internal/tests/flowpipe_mod_tests/custom_type_four/conn.fpc:aws-access-token:7
+internal/tests/flowpipe_mod_tests/custom_type_four/conn.fpc:aws-access-token:12
+internal/tests/flowpipe_parsing_tests/pipelines/credentials.fp:aws-access-token:3
+internal/es/estest/mod_two_test.go:aws-access-token:828
+internal/es/estest/mod_two_test.go:aws-access-token:853
+internal/es/estest/mod_two_test.go:aws-access-token:880
+internal/es/estest/mod_two_test.go:aws-access-token:907
+internal/es/estest/mod_two_test.go:aws-access-token:934
+internal/es/estest/mod_two_test.go:aws-access-token:960
+internal/tests/flowpipe_mod_tests/flowpipe_mod_suite_test.go:aws-access-token:605
+internal/tests/flowpipe_mod_tests/flowpipe_mod_suite_test.go:aws-access-token:640
+internal/es/estest/test_suite_mod_2/conn.fpc:aws-access-token:2
+internal/es/estest/test_suite_mod_2/conn.fpc:aws-access-token:7
+internal/es/estest/test_suite_mod_2/conn.fpc:aws-access-token:12
+internal/es/estest/default_mod_test.go:aws-access-token:154
+internal/es/estest/default_mod_test.go:aws-access-token:200
+internal/es/estest/default_mod_test.go:aws-access-token:516
+internal/es/estest/default_mod_test.go:aws-access-token:562
+internal/es/estest/default_mod_test.go:aws-access-token:632
+internal/es/estest/default_mod/connection.fpc:aws-access-token:2
+internal/es/estest/default_mod/credential.fpc:aws-access-token:2
+scripts/sanity_check_mod/credential.fpc:aws-access-token:2
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:aws-access-token:2
+internal/es/estest/test_suite_mod/pipelines/credentials.fp:aws-access-token:3
+internal/es/estest/test_suite_mod/creds.fpc:aws-access-token:2
+internal/es/estest/mod_test.go:aws-access-token:2008
+internal/es/estest/mod_test.go:aws-access-token:2013
+#
+# Sample Steampipe connections the mod tests load as connections and as credentials.
+internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/gitlab.spc:generic-api-key:10
+internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:3
+internal/tests/flowpipe_mod_tests/steampipe_config/ipstack.spc:generic-api-key:8
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:5
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:12
+internal/tests/flowpipe_mod_tests/steampipe_config/guardrails.spc:generic-api-key:13
+internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc:generic-api-key:6
+internal/tests/flowpipe_mod_tests/steampipe_config/zendesk.spc:generic-api-key:14
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:4
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:6
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:12
+internal/tests/flowpipe_mod_tests/steampipe_config/datadog.spc:generic-api-key:14
+#
+# Sample GitLab token and API key values in the credential tests, which check that they are
+# redacted or resolved from a credential block.
+internal/es/estest/mod_test.go:generic-api-key:2117
+internal/es/estest/mod_test.go:generic-api-key:2134
+internal/es/estest/mod_test.go:gitlab-pat:2193
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:gitlab-pat:24
+internal/es/estest/test_suite_mod/.flowpipe/config/workspaces.fpc:generic-api-key:24
+#
+# Terraform's rsadecrypt test keys, copied from its published lang/funcs tests.
+pipeparser/lang/funcs/crypto_test.go:private-key:687
+pipeparser/lang/funcs/crypto_test.go:private-key:716
+pipeparser/lang/funcs/crypto_test.go:private-key:745
+pipeparser/lang/funcs/crypto_test.go:private-key:774
+#
+# Self-signed localhost development key; its certificate expired on 2022-02-10.
+service/certificate/server.key:private-key:1
+#
+# Made-up Slack token the input step test had in history: 20 characters of letters and digits
+# after the xoxp- prefix, not the dash-separated numeric format of a Slack token. The tip of
+# input_slack.fp now holds a plain fake; the entry stays for the history the scan reads.
+internal/es/estest/test_suite_mod/pipelines/input_slack.fp:generic-api-key:2
+internal/es/test/test_suite_mod/pipelines/input_slack.hcl:generic-api-key:2
+#
+# Sample GitHub token the sanitizer test checks is redacted.
+internal/sanitize/sanitizer_test.go:github-pat:35
+#
+# Real AWS access keys (ending DV6I, ZQJM and ASUB) committed in test pipelines and an example
+# config in 2023. Confirmed dead on 2026-11-11: aws sts get-caller-identity returns
+# InvalidClientTokenId for all three. The files are gone from the tip of develop; the entries
+# stay for the history the scan reads.
+examples/functions/config.yaml:aws-access-token:18
+examples/functions/config.yaml:aws-access-token:19
+examples/functions/config.yaml:generic-api-key:19
+examples/functions/config.yaml:generic-api-key:20
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:aws-access-token:47
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:aws-access-token:59
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:aws-access-token:151
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:generic-api-key:60
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:generic-api-key:152
+internal/es/test/integrated2023_functions_and_containers_mod/slack_aws.hcl.bak:aws-access-token:20
+internal/es/test/integrated2023_functions_and_containers_mod/slack_aws.hcl.bak:generic-api-key:21
+internal/es/test/test_suite_mod/pipelines/slack_slash.hcl:aws-access-token:20
+internal/es/test/test_suite_mod/pipelines/slack_slash.hcl:generic-api-key:21
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:aws-access-token:8
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:aws-access-token:20
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:aws-access-token:30
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:generic-api-key:21
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:generic-api-key:31
+internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak:aws-access-token:57
+internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak:generic-api-key:58
+internal/es/test/test_suite_mod/pipelines/open_ai.hcl:aws-access-token:57
+internal/es/test/test_suite_mod/pipelines/open_ai.hcl:generic-api-key:58
+#
+# OpenAI API keys (ending Ay7J and fHdy) committed as a Bearer header in October 2023.
+# Confirmed dead on 2026-11-11: GET /v1/models returns HTTP 401 for both.
+internal/es/test/integrated2023_functions_and_containers_mod/pipelines/slack_openai_aws.hcl:openai-api-key:61
+internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak:openai-api-key:20
+internal/es/test/test_suite_mod/pipelines/open_ai.hcl:openai-api-key:20
+#
+# Slack incoming-webhook URLs (ending 0x0x, AJlW and 32w8) in test pipelines, an integration
+# config and the Slack collection; the one ending 0x0x is a placeholder. Confirmed dead on
+# 2026-11-11: a POST of {} returns 404 no_team or no_service for each.
+internal/tests/flowpipe_mod_tests/mod_try_function/mod.fp:slack-webhook-url:83
+internal/tests/flowpipe_parsing_tests/pipelines/demo.fp:slack-webhook-url:37
+internal/tests/flowpipe_parsing_tests/pipelines/demo.fp:slack-webhook-url:71
+internal/tests/flowpipe_parsing_tests/pipelines/demo.fp:slack-webhook-url:82
+internal/es/estest/test_suite_mod/integrations.fpc:slack-webhook-url:63
+internal/fpconfig/test/test_pipelines/integrations.fp:slack-webhook-url:12
+internal/fpconfig/test/test_pipelines/complex_one.fp:slack-webhook-url:37
+internal/fpconfig/test/test_pipelines/complex_one.fp:slack-webhook-url:71
+internal/fpconfig/test/test_pipelines/complex_one.fp:slack-webhook-url:82
+internal/pipeline/collections/slack.fp:slack-webhook-url:7

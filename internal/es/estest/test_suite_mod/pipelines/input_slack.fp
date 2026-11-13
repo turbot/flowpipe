@@ -1,5 +1,5 @@
 // integration "slack" "my_slack" {
-//   token = "xoxp-hkfkhfkafha131424255"
+//   token = "xoxp-fake-token"
 // }
 
 // pipeline "input_slack_pipeline" {
