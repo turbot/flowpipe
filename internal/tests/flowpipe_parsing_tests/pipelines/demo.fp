@@ -34,7 +34,7 @@ pipeline "complex_one" {
 
     step "http" "send_to_slack" {
         for_each = jsondecode(step.http.run_query.response_body).items
-        url      = "https://hooks.slack.com/services/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"
+        url      = "https://hooks.slack.com/services/T00000000/B00000000/FAKEWEBHOOKTOKEN"
         method   = "post"
 
         request_body   = jsonencode({
@@ -68,7 +68,7 @@ pipeline "complex_one" {
     step "http" "send_error_to_slack" {
         for_each = step.http.delete_snap
         if       = is_error(each.value)
-        url      = "https://hooks.slack.com/services/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"
+        url      = "https://hooks.slack.com/services/T00000000/B00000000/FAKEWEBHOOKTOKEN"
         method   = "post"
 
         request_body   = jsonencode({
@@ -79,7 +79,7 @@ pipeline "complex_one" {
     step "http" "send_success_to_slack" {
         for_each = step.http.delete_snap
         if       = !is_error(each.value)
-        url      = "https://hooks.slack.com/services/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"
+        url      = "https://hooks.slack.com/services/T00000000/B00000000/FAKEWEBHOOKTOKEN"
         method   = "post"
 
         request_body   = jsonencode({
