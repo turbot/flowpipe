@@ -1,5 +1,22 @@
 # Flowpipe
 
+## v1.2.4 [2026-11-13]
+
+_Bug fixes_
+
+* Fix `flowpipe mod install` failing with a `permission denied` error when reinstalling or updating a mod whose git packs are read-only.
+
+_Security_
+
+* Migrate the Docker client from `github.com/docker/docker` to the `github.com/moby/moby/client` and `github.com/moby/moby/api` modules to remediate CVE-2026-34040, CVE-2026-41567, CVE-2026-42306, CVE-2026-41568 and CVE-2026-33997.
+* Upgrade `axios` to v1.20.0 in the form UI to remediate CVE-2026-101898, CVE-2026-101899, CVE-2026-101900, CVE-2026-101901, CVE-2026-101903, CVE-2026-101904, CVE-2026-101905, CVE-2026-101906, CVE-2026-101907 and CVE-2026-101909.
+
+_Dependencies_
+
+* Upgrade `google.golang.org/grpc`, `github.com/go-git/go-git/v5`, `github.com/go-jose/go-jose/v4`, `github.com/containerd/containerd`, `github.com/hashicorp/go-getter`, `golang.org/x/crypto`, `golang.org/x/net` and `github.com/docker/cli` Go packages to remediate vulnerabilities.
+* Upgrade `github.com/slack-go/slack` to v0.23.1 and `github.com/turbot/pipe-fittings` to v1.7.4.
+* Upgrade `vite` to v6, and `axios`, `js-yaml`, `lodash`, `postcss`, `react-router-dom`, `brace-expansion`, `follow-redirects`, `ip-address`, `nanoid`, `tar` and other form UI npm packages to remediate vulnerabilities.
+
 ## v1.2.3 [2026-10-22]
 
 _Security_

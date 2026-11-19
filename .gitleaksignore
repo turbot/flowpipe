@@ -90,3 +90,50 @@ internal/es/test/test_suite_mod/pipelines/input_slack.hcl:generic-api-key:2
 #
 # Sample GitHub token the sanitizer test checks is redacted.
 internal/sanitize/sanitizer_test.go:github-pat:35
+#
+# Real AWS access keys (ending DV6I, ZQJM and ASUB) committed in test pipelines and an example
+# config in 2023. Confirmed dead on 2026-11-11: aws sts get-caller-identity returns
+# InvalidClientTokenId for all three. The files are gone from the tip of develop; the entries
+# stay for the history the scan reads.
+examples/functions/config.yaml:aws-access-token:18
+examples/functions/config.yaml:aws-access-token:19
+examples/functions/config.yaml:generic-api-key:19
+examples/functions/config.yaml:generic-api-key:20
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:aws-access-token:47
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:aws-access-token:59
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:aws-access-token:151
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:generic-api-key:60
+internal/es/test/test_suite_mod/pipelines/with_functions.hcl:generic-api-key:152
+internal/es/test/integrated2023_functions_and_containers_mod/slack_aws.hcl.bak:aws-access-token:20
+internal/es/test/integrated2023_functions_and_containers_mod/slack_aws.hcl.bak:generic-api-key:21
+internal/es/test/test_suite_mod/pipelines/slack_slash.hcl:aws-access-token:20
+internal/es/test/test_suite_mod/pipelines/slack_slash.hcl:generic-api-key:21
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:aws-access-token:8
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:aws-access-token:20
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:aws-access-token:30
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:generic-api-key:21
+internal/es/test/integrated2023_functions_and_containers_mod/steampipe_aws.hcl.bak:generic-api-key:31
+internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak:aws-access-token:57
+internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak:generic-api-key:58
+internal/es/test/test_suite_mod/pipelines/open_ai.hcl:aws-access-token:57
+internal/es/test/test_suite_mod/pipelines/open_ai.hcl:generic-api-key:58
+#
+# OpenAI API keys (ending Ay7J and fHdy) committed as a Bearer header in October 2023.
+# Confirmed dead on 2026-11-11: GET /v1/models returns HTTP 401 for both.
+internal/es/test/integrated2023_functions_and_containers_mod/pipelines/slack_openai_aws.hcl:openai-api-key:61
+internal/es/test/integrated2023_functions_and_containers_mod/slack_openai_aws.hcl.bak:openai-api-key:20
+internal/es/test/test_suite_mod/pipelines/open_ai.hcl:openai-api-key:20
+#
+# Slack incoming-webhook URLs (ending 0x0x, AJlW and 32w8) in test pipelines, an integration
+# config and the Slack collection; the one ending 0x0x is a placeholder. Confirmed dead on
+# 2026-11-11: a POST of {} returns 404 no_team or no_service for each.
+internal/tests/flowpipe_mod_tests/mod_try_function/mod.fp:slack-webhook-url:83
+internal/tests/flowpipe_parsing_tests/pipelines/demo.fp:slack-webhook-url:37
+internal/tests/flowpipe_parsing_tests/pipelines/demo.fp:slack-webhook-url:71
+internal/tests/flowpipe_parsing_tests/pipelines/demo.fp:slack-webhook-url:82
+internal/es/estest/test_suite_mod/integrations.fpc:slack-webhook-url:63
+internal/fpconfig/test/test_pipelines/integrations.fp:slack-webhook-url:12
+internal/fpconfig/test/test_pipelines/complex_one.fp:slack-webhook-url:37
+internal/fpconfig/test/test_pipelines/complex_one.fp:slack-webhook-url:71
+internal/fpconfig/test/test_pipelines/complex_one.fp:slack-webhook-url:82
+internal/pipeline/collections/slack.fp:slack-webhook-url:7
