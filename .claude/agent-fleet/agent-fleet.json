@@ -13,7 +13,14 @@
         "credentials and connection resolution (internal/flowpipeconfig, internal/cmdconfig)",
         "mod parsing and templating (internal/parse, internal/templates)",
         "Pipes login and token handling (internal/cmd)"
-      ]
+      ],
+      "off": true
+    },
+    "secret-scan": {
+      "off": true
+    },
+    "dependabot-cant-fix": {
+      "off": true
     }
   }
 }
